@@ -132,7 +132,7 @@ We are replacing Zed's existing UI components with our custom implementations:
 
 | Zed Component | Our Replacement | Purpose |
 |---------------|-----------------|---------|
-| Workspace Sidebar (left) | Custom Sidebar | Workspaces, folders, tabs, logo container |
+| Workspace Sidebar (right) | Custom Sidebar | Workspaces, folders, tabs, logo container |
 | Editor Tabs (top) | Screen Carousel | Resizable panels with directional gravity |
 | Tab Bar | macOS-Style Dock | Visual tab control at top of editor |
 | (New) Demo Tab | Animation Showcase | Testing environment with dimensions |
