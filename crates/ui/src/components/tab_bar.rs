@@ -99,56 +99,49 @@ impl RenderOnce for TabBar {
             .w_full()
             .h(Tab::container_height(cx))
             .bg(cx.theme().colors().tab_bar_background)
-            .when(!self.start_children.is_empty(), |this| {
-                this.child(
-                    h_flex()
-                        .flex_none()
-                        .gap(DynamicSpacing::Base04.rems(cx))
-                        .px(DynamicSpacing::Base06.rems(cx))
-                        .border_b_1()
-                        .border_r_1()
-                        .border_color(cx.theme().colors().border)
-                        .children(self.start_children),
-                )
-            })
             .child(
-                div()
-                    .relative()
-                    .flex_1()
-                    .h_full()
-                    .overflow_x_hidden()
-                    .child(
-                        div()
-                            .absolute()
-                            .top_0()
-                            .left_0()
-                            .size_full()
-                            .border_b_1()
-                            .border_color(cx.theme().colors().border),
-                    )
+                h_flex()
+                    .mx(DynamicSpacing::Base04.px(cx))
+                    .my(px(2.))
+                    .w_full()
+                    .h(Tab::content_height(cx))
+                    .items_center()
+                    .gap(DynamicSpacing::Base04.rems(cx))
+                    .px(DynamicSpacing::Base04.px(cx))
+                    .rounded_full()
+                    .border_1()
+                    .border_color(cx.theme().colors().border.opacity(0.75))
+                    .bg(cx.theme().colors().panel_background.opacity(0.92))
+                    .shadow_sm()
+                    .when(!self.start_children.is_empty(), |this| {
+                        this.child(
+                            h_flex()
+                                .flex_none()
+                                .gap(DynamicSpacing::Base04.rems(cx))
+                                .children(self.start_children),
+                        )
+                    })
                     .child(
                         h_flex()
                             .id("tabs")
-                            .flex_grow()
+                            .flex_1()
+                            .h_full()
+                            .items_center()
                             .overflow_x_scroll()
                             .when_some(self.scroll_handle, |cx, scroll_handle| {
                                 cx.track_scroll(&scroll_handle)
                             })
                             .children(self.children),
-                    ),
+                    )
+                    .when(!self.end_children.is_empty(), |this| {
+                        this.child(
+                            h_flex()
+                                .flex_none()
+                                .gap(DynamicSpacing::Base04.rems(cx))
+                                .children(self.end_children),
+                        )
+                    }),
             )
-            .when(!self.end_children.is_empty(), |this| {
-                this.child(
-                    h_flex()
-                        .flex_none()
-                        .gap(DynamicSpacing::Base04.rems(cx))
-                        .px(DynamicSpacing::Base06.rems(cx))
-                        .border_color(cx.theme().colors().border)
-                        .border_b_1()
-                        .border_l_1()
-                        .children(self.end_children),
-                )
-            })
     }
 }
 

@@ -1,4 +1,4 @@
-// Disable command line from opening on release mode
+﻿// Disable command line from opening on release mode
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod reliability;
@@ -741,6 +741,7 @@ fn main() {
         markdown_preview::init(cx);
         csv_preview::init(cx);
         svg_preview::init(cx);
+        rich_file_preview::init(cx);
         onboarding::init(cx);
         settings_ui::init(cx);
         keymap_editor::init(cx);
@@ -1001,7 +1002,7 @@ fn handle_open_request(request: OpenRequest, app_state: Arc<AppState>, cx: &mut 
                                     panel.open_thread(
                                         session_id,
                                         None,
-                                        Some(format!("🔗 {}", response.title).into()),
+                                        Some(format!("ðŸ”— {}", response.title).into()),
                                         window,
                                         cx,
                                     );
@@ -1926,3 +1927,6 @@ fn check_for_conpty_dll() {
         log::warn!("Failed to load conpty.dll. Terminal will work with reduced functionality.");
     }
 }
+
+
+

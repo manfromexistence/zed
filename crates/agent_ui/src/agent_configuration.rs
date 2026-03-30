@@ -25,7 +25,7 @@ use language_model::{
     IconOrSvg, LanguageModelProvider, LanguageModelProviderId, LanguageModelRegistry,
     ZED_CLOUD_PROVIDER_ID,
 };
-use language_models::AllLanguageModelSettings;
+use language_models::{AllLanguageModelSettings, provider_hub::ProviderHubStore};
 use notifications::status_toast::{StatusToast, ToastIcon};
 use project::{
     agent_server_store::{AgentId, AgentServerStore, ExternalAgentSource},
@@ -232,6 +232,16 @@ impl AgentConfiguration {
                 !workspace.client().status().borrow().is_signed_out()
             })
             .unwrap_or(false);
+        let provider_metadata = ProviderHubStore::try_global(cx).and_then(|store| {
+            let store = store.read(cx);
+            store.provider_manifest(provider.id().0.as_ref()).map(|manifest| {
+                (
+                    store.provider_category(&provider.id()),
+                    manifest.model_count(),
+                    manifest.featured_in_settings,
+                )
+            })
+        });
 
         v_flex()
             .min_w_0()
@@ -274,12 +284,17 @@ impl AgentConfiguration {
                                         .size(IconSize::Small)
                                         .color(Color::Muted),
                                     )
-                                    .child(
-                                        h_flex()
-                                            .w_full()
-                                            .gap_1()
-                                            .child(Label::new(provider_name.clone()))
-                                            .map(|this| {
+                                        .child(
+                                            h_flex()
+                                                .w_full()
+                                                .gap_1()
+                                                .child(Label::new(provider_name.clone()))
+                                                .when_some(provider_metadata, |this, (category, model_count, featured)| {
+                                                    this.child(Chip::new(category.label()))
+                                                        .child(Chip::new(format!("{model_count} models")))
+                                                        .when(featured, |this| this.child(Chip::new("Featured")))
+                                                })
+                                                .map(|this| {
                                                 if is_zed_provider && is_signed_in {
                                                     this.child(
                                                         self.render_zed_plan_info(current_plan, cx),
@@ -428,7 +443,25 @@ impl AgentConfiguration {
         &mut self,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
-        let providers = LanguageModelRegistry::read_global(cx).visible_providers();
+        let mut providers = LanguageModelRegistry::read_global(cx).visible_providers();
+        if let Some(store) = ProviderHubStore::try_global(cx) {
+            let store = store.read(cx);
+            providers.sort_by(|left, right| {
+                let left_key = (
+                    store.provider_category(&left.id()).sort_key(),
+                    left.name().0.to_string(),
+                );
+                let right_key = (
+                    store.provider_category(&right.id()).sort_key(),
+                    right.name().0.to_string(),
+                );
+                left_key.cmp(&right_key)
+            });
+        }
+
+        let catalog_status = ProviderHubStore::try_global(cx)
+            .and_then(|store| store.read(cx).sync_state().label());
+        let preset_count = LlmCompatibleProvider::featured().len();
 
         let popover_menu = PopoverMenu::new("add-provider-popover")
             .trigger(
@@ -445,21 +478,25 @@ impl AgentConfiguration {
                 let workspace = self.workspace.clone();
                 move |window, cx| {
                     Some(ContextMenu::build(window, cx, |menu, _window, _cx| {
-                        menu.header("Compatible APIs").entry("OpenAI", None, {
-                            let workspace = workspace.clone();
-                            move |window, cx| {
-                                workspace
-                                    .update(cx, |workspace, cx| {
-                                        AddLlmProviderModal::toggle(
-                                            LlmCompatibleProvider::OpenAi,
-                                            workspace,
-                                            window,
-                                            cx,
-                                        );
-                                    })
-                                    .log_err();
-                            }
-                        })
+                        LlmCompatibleProvider::featured().iter().fold(
+                            menu.header("Compatible APIs"),
+                            |menu, provider| {
+                                let provider = *provider;
+                                let workspace = workspace.clone();
+                                menu.entry(provider.name(), None, move |window, cx| {
+                                    workspace
+                                        .update(cx, |workspace, cx| {
+                                            AddLlmProviderModal::toggle(
+                                                provider,
+                                                workspace,
+                                                window,
+                                                cx,
+                                            );
+                                        })
+                                        .log_err();
+                                })
+                            },
+                        )
                     }))
                 }
             })
@@ -474,9 +511,34 @@ impl AgentConfiguration {
             .w_full()
             .child(self.render_section_title(
                 "LLM Providers",
-                "Add at least one provider to use AI-powered features with Zed's native agent.",
-                popover_menu.into_any_element(),
+                "Configure native providers, add compatible APIs, and keep the model catalog synced for the right-side model picker.",
+                h_flex()
+                    .gap_2()
+                    .child(
+                        Button::new("refresh-provider-catalog", "Refresh Catalog")
+                            .style(ButtonStyle::Outlined)
+                            .start_icon(
+                                Icon::new(IconName::ArrowCircle)
+                                    .size(IconSize::Small)
+                                    .color(Color::Muted),
+                            )
+                            .label_size(LabelSize::Small)
+                            .on_click(|_, _, cx| {
+                                ProviderHubStore::refresh_global(cx);
+                            }),
+                    )
+                    .child(popover_menu)
+                    .into_any_element(),
             ))
+            .child(
+                h_flex()
+                    .pl_4()
+                    .pb_2()
+                    .pr_5()
+                    .gap_2()
+                    .when_some(catalog_status, |this, status| this.child(Chip::new(status)))
+                    .child(Chip::new(format!("{preset_count} quick-add presets"))),
+            )
             .child(
                 div()
                     .w_full()

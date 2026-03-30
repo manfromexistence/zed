@@ -9,6 +9,7 @@ use provider::deepseek::DeepSeekLanguageModelProvider;
 
 pub mod extension;
 pub mod provider;
+pub mod provider_hub;
 mod settings;
 
 pub use crate::extension::init_proxy as init_extension_proxy;
@@ -35,6 +36,7 @@ pub fn init(user_store: Entity<UserStore>, client: Arc<Client>, cx: &mut App) {
     registry.update(cx, |registry, cx| {
         register_language_model_providers(registry, user_store, client.clone(), cx);
     });
+    provider_hub::init(client.http_client(), cx);
 
     // Subscribe to extension store events to track LLM extension installations
     if let Some(extension_store) = extension_host::ExtensionStore::try_global(cx) {

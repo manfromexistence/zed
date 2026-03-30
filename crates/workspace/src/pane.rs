@@ -17,11 +17,12 @@ use anyhow::Result;
 use collections::{BTreeSet, HashMap, HashSet, VecDeque};
 use futures::{StreamExt, stream::FuturesUnordered};
 use gpui::{
-    Action, AnyElement, App, AsyncWindowContext, ClickEvent, ClipboardItem, Context, Corner, Div,
-    DragMoveEvent, Entity, EntityId, EventEmitter, ExternalPaths, FocusHandle, FocusOutEvent,
-    Focusable, KeyContext, MouseButton, NavigationDirection, Pixels, Point, PromptLevel, Render,
-    ScrollHandle, Subscription, Task, WeakEntity, WeakFocusHandle, Window, actions, anchored,
-    deferred, prelude::*,
+    Action, AnyElement, App, AsyncWindowContext, Bounds, ClickEvent, ClipboardItem, Context,
+    Corner, Div, DragMoveEvent, Entity, EntityId, EventEmitter, ExternalPaths, FocusHandle,
+    FocusOutEvent, Focusable, KeyContext, MouseButton, MouseMoveEvent, MouseUpEvent,
+    NavigationDirection, Pixels, Point, PromptLevel, Render, ScrollHandle,
+    Subscription, Task, WeakEntity, WeakFocusHandle, Window, actions, anchored, canvas, deferred,
+    prelude::*,
 };
 use itertools::Itertools;
 use language::{Capability, DiagnosticSeverity};
@@ -40,7 +41,7 @@ use std::{
         Arc,
         atomic::{AtomicUsize, Ordering},
     },
-    time::Duration,
+    time::{Duration, Instant},
 };
 use theme_settings::ThemeSettings;
 use ui::{
@@ -411,6 +412,10 @@ pub struct Pane {
     pub new_item_context_menu_handle: PopoverMenuHandle<ContextMenu>,
     pub split_item_context_menu_handle: PopoverMenuHandle<ContextMenu>,
     pinned_tab_count: usize,
+    carousel_bounds: Bounds<Pixels>,
+    carousel_screens: HashMap<EntityId, CarouselScreenState>,
+    carousel_resize: Option<CarouselResizeState>,
+    carousel_motion: CarouselSpring,
     diagnostics: HashMap<ProjectPath, DiagnosticSeverity>,
     zoom_out_on_close: bool,
     diagnostic_summary_update: Task<()>,
@@ -491,6 +496,127 @@ pub struct DraggedTab {
     pub ix: usize,
     pub detail: usize,
     pub is_active: bool,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+enum CarouselGravity {
+    #[default]
+    Right,
+    Left,
+    Both,
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+struct CarouselScreenState {
+    manual_width: Option<Pixels>,
+    used_left_edge: bool,
+    used_right_edge: bool,
+}
+
+impl CarouselScreenState {
+    fn gravity(&self) -> CarouselGravity {
+        match (self.used_left_edge, self.used_right_edge) {
+            (true, true) => CarouselGravity::Both,
+            (true, false) => CarouselGravity::Left,
+            (false, true) | (false, false) => CarouselGravity::Right,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum CarouselResizeEdge {
+    Left,
+    Right,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct CarouselResizeState {
+    edge: CarouselResizeEdge,
+    item_id: EntityId,
+    start_position: Point<Pixels>,
+    start_width: Pixels,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct CarouselSpringConfig {
+    stiffness: f32,
+    damping: f32,
+    mass: f32,
+    rest_threshold: f32,
+}
+
+impl CarouselSpringConfig {
+    const fn carousel() -> Self {
+        Self {
+            stiffness: 300.0,
+            damping: 30.0,
+            mass: 1.0,
+            rest_threshold: 0.1,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+struct CarouselSpring {
+    config: CarouselSpringConfig,
+    value: f32,
+    target: f32,
+    velocity: f32,
+    last_update: Instant,
+}
+
+impl Default for CarouselSpring {
+    fn default() -> Self {
+        Self {
+            config: CarouselSpringConfig::carousel(),
+            value: 0.0,
+            target: 0.0,
+            velocity: 0.0,
+            last_update: Instant::now(),
+        }
+    }
+}
+
+impl CarouselSpring {
+    fn snap(&mut self, value: f32) {
+        self.value = value;
+        self.target = value;
+        self.velocity = 0.0;
+        self.last_update = Instant::now();
+    }
+
+    fn advance_to(&mut self, target: f32, window: &mut Window) -> f32 {
+        if (self.target - target).abs() > 0.25 {
+            self.target = target;
+        }
+
+        let now = Instant::now();
+        let dt = (now - self.last_update).as_secs_f32().min(1.0 / 60.0);
+        self.last_update = now;
+
+        if dt <= 0.0 {
+            return self.value;
+        }
+
+        let displacement = self.target - self.value;
+        let acceleration = ((displacement * self.config.stiffness)
+            - (self.velocity * self.config.damping))
+            / self.config.mass.max(0.0001);
+        self.velocity += acceleration * dt;
+        self.value += self.velocity * dt;
+
+        let remaining = self.target - self.value;
+        let settled = remaining.abs() <= self.config.rest_threshold
+            && self.velocity.abs() <= self.config.rest_threshold;
+        if settled {
+            self.value = self.target;
+            self.velocity = 0.0;
+        } else {
+            window.request_animation_frame();
+        }
+
+        self.value
+    }
 }
 
 impl EventEmitter<Event> for Pane {}
@@ -583,6 +709,10 @@ impl Pane {
             split_item_context_menu_handle: Default::default(),
             new_item_context_menu_handle: Default::default(),
             pinned_tab_count: 0,
+            carousel_bounds: Bounds::default(),
+            carousel_screens: HashMap::default(),
+            carousel_resize: None,
+            carousel_motion: CarouselSpring::default(),
             diagnostics: Default::default(),
             zoom_out_on_close: true,
             diagnostic_summary_update: Task::ready(()),
@@ -1385,6 +1515,433 @@ impl Pane {
 
     pub fn item_for_index(&self, ix: usize) -> Option<&dyn ItemHandle> {
         self.items.get(ix).map(|i| i.as_ref())
+    }
+
+    fn pixels_to_f32(pixels: Pixels) -> f32 {
+        pixels.to_f64() as f32
+    }
+
+    fn prune_carousel_state(&mut self) {
+        let live_item_ids: HashSet<_> = self.items.iter().map(|item| item.item_id()).collect();
+        self.carousel_screens
+            .retain(|item_id, _| live_item_ids.contains(item_id));
+
+        if self
+            .carousel_resize
+            .is_some_and(|resize| !live_item_ids.contains(&resize.item_id))
+        {
+            self.carousel_resize = None;
+        }
+    }
+
+    fn carousel_screen_state_mut(&mut self, item_id: EntityId) -> &mut CarouselScreenState {
+        self.carousel_screens.entry(item_id).or_default()
+    }
+
+    fn clamped_carousel_width(&mut self, item_id: EntityId, container_width: Pixels) -> Pixels {
+        let minimum_width = px(400.0).min(container_width);
+        let state = self.carousel_screen_state_mut(item_id);
+        if let Some(width) = state.manual_width {
+            let clamped = width.max(minimum_width).min(container_width);
+            state.manual_width = Some(clamped);
+            clamped
+        } else {
+            container_width
+        }
+    }
+
+    fn carousel_width_for_index(&mut self, ix: usize, container_width: Pixels) -> Option<Pixels> {
+        let item_id = self.item_for_index(ix).map(|item| item.item_id())?;
+        Some(self.clamped_carousel_width(item_id, container_width))
+    }
+
+    fn carousel_gravity(&self, item_id: EntityId) -> CarouselGravity {
+        self.carousel_screens
+            .get(&item_id)
+            .copied()
+            .unwrap_or_default()
+            .gravity()
+    }
+
+    fn carousel_target_offset(&mut self, item_id: EntityId, container_width: Pixels) -> f32 {
+        let active_width = self.clamped_carousel_width(item_id, container_width);
+        let available_space =
+            Self::pixels_to_f32((container_width - active_width).max(px(0.0))).max(0.0);
+
+        match self.carousel_gravity(item_id) {
+            CarouselGravity::Left => available_space,
+            CarouselGravity::Both => available_space * 0.5,
+            CarouselGravity::Right => 0.0,
+        }
+    }
+
+    fn wrap_item_index(&self, index: isize) -> usize {
+        let len = self.items.len() as isize;
+        index.rem_euclid(len) as usize
+    }
+
+    fn begin_carousel_resize(
+        &mut self,
+        item_id: EntityId,
+        edge: CarouselResizeEdge,
+        position: Point<Pixels>,
+        cx: &mut Context<Self>,
+    ) {
+        let container_width = self.carousel_bounds.size.width;
+        if container_width <= px(0.0) {
+            return;
+        }
+
+        let start_width = self.clamped_carousel_width(item_id, container_width);
+        self.carousel_resize = Some(CarouselResizeState {
+            edge,
+            item_id,
+            start_position: position,
+            start_width,
+        });
+        self.carousel_motion
+            .snap(self.carousel_target_offset(item_id, container_width));
+        cx.notify();
+    }
+
+    fn update_carousel_resize(&mut self, position: Point<Pixels>, cx: &mut Context<Self>) {
+        let Some(resize) = self.carousel_resize else {
+            return;
+        };
+        let container_width = self.carousel_bounds.size.width;
+        if container_width <= px(0.0) {
+            return;
+        }
+
+        let minimum_width = px(400.0).min(container_width);
+        let delta = position.x - resize.start_position.x;
+        let raw_width = match resize.edge {
+            CarouselResizeEdge::Left => resize.start_width - delta,
+            CarouselResizeEdge::Right => resize.start_width + delta,
+        };
+        let width = raw_width.max(minimum_width).min(container_width);
+
+        let state = self.carousel_screen_state_mut(resize.item_id);
+        state.manual_width = Some(width);
+        match resize.edge {
+            CarouselResizeEdge::Left => state.used_left_edge = true,
+            CarouselResizeEdge::Right => state.used_right_edge = true,
+        }
+
+        self.carousel_motion
+            .snap(self.carousel_target_offset(resize.item_id, container_width));
+        cx.notify();
+    }
+
+    fn end_carousel_resize(&mut self, cx: &mut Context<Self>) {
+        if self.carousel_resize.take().is_some() {
+            cx.notify();
+        }
+    }
+
+    fn render_carousel_screen(
+        &mut self,
+        ix: usize,
+        left: f32,
+        wrapper_width: Pixels,
+        screen_width: Pixels,
+        is_active: bool,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let Some(item) = self.item_for_index(ix) else {
+            return div().into_any_element();
+        };
+
+        let pane = cx.entity();
+        let pane_for_activate = pane.clone();
+        let item_id = item.item_id();
+        let content = item.to_any_view();
+        let show_handles = is_active && self.items.len() > 1;
+
+        div()
+            .id(format!("pane-carousel-wrapper-{ix}"))
+            .absolute()
+            .top_0()
+            .left(px(left))
+            .h_full()
+            .w(wrapper_width)
+            .relative()
+            .overflow_hidden()
+            .child(
+                div()
+                    .id(format!("pane-carousel-screen-{ix}"))
+                    .h_full()
+                    .w(screen_width)
+                    .relative()
+                    .overflow_hidden()
+                    .rounded_md()
+                    .border_1()
+                    .bg(cx.theme().colors().editor_background)
+                    .map(|this| {
+                        if is_active {
+                            this.border_color(cx.theme().colors().border_selected)
+                                .shadow_md()
+                        } else {
+                            this.border_color(cx.theme().colors().border.opacity(0.75))
+                                .opacity(0.82)
+                                .shadow_sm()
+                        }
+                    })
+                    .child(content)
+                    .when(!is_active, |this| {
+                        this.child(
+                            div()
+                                .absolute()
+                                .top_0()
+                                .left_0()
+                                .right_0()
+                                .bottom_0()
+                                .cursor_pointer()
+                                .on_mouse_down(MouseButton::Left, move |_, window, cx| {
+                                    pane_for_activate.update(cx, |pane, cx| {
+                                        pane.activate_item(ix, true, true, window, cx);
+                                    });
+                                    cx.stop_propagation();
+                                }),
+                        )
+                    })
+                    .when(show_handles, |this| {
+                        let pane_for_left = pane.clone();
+                        let pane_for_right = pane.clone();
+
+                        this.child(
+                            div()
+                                .absolute()
+                                .top(px(12.0))
+                                .left_0()
+                                .bottom(px(12.0))
+                                .w(px(10.0))
+                                .cursor_col_resize()
+                                .child(
+                                    div()
+                                        .absolute()
+                                        .top_0()
+                                        .bottom_0()
+                                        .left(px(3.0))
+                                        .w(px(2.0))
+                                        .rounded_full()
+                                        .bg(cx.theme().colors().border_selected.opacity(0.9)),
+                                )
+                                .on_mouse_down(MouseButton::Left, move |event, _window, cx| {
+                                    pane_for_left.update(cx, |pane, cx| {
+                                        pane.begin_carousel_resize(
+                                            item_id,
+                                            CarouselResizeEdge::Left,
+                                            event.position,
+                                            cx,
+                                        );
+                                    });
+                                    cx.stop_propagation();
+                                }),
+                        )
+                        .child(
+                            div()
+                                .absolute()
+                                .top(px(12.0))
+                                .right_0()
+                                .bottom(px(12.0))
+                                .w(px(10.0))
+                                .cursor_col_resize()
+                                .child(
+                                    div()
+                                        .absolute()
+                                        .top_0()
+                                        .bottom_0()
+                                        .right(px(3.0))
+                                        .w(px(2.0))
+                                        .rounded_full()
+                                        .bg(cx.theme().colors().border_selected.opacity(0.9)),
+                                )
+                                .on_mouse_down(MouseButton::Left, move |event, _window, cx| {
+                                    pane_for_right.update(cx, |pane, cx| {
+                                        pane.begin_carousel_resize(
+                                            item_id,
+                                            CarouselResizeEdge::Right,
+                                            event.position,
+                                            cx,
+                                        );
+                                    });
+                                    cx.stop_propagation();
+                                }),
+                        )
+                    }),
+            )
+            .into_any_element()
+    }
+
+    fn render_carousel_content(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        self.prune_carousel_state();
+
+        let pane = cx.entity();
+        let Some(active_item_id) = self.active_item().map(|item| item.item_id()) else {
+            return div().into_any_element();
+        };
+
+        let container_width = self.carousel_bounds.size.width;
+        if container_width <= px(1.0) {
+            let pane_for_initial_bounds = pane.clone();
+            let Some(active_view) = self.active_item().map(|item| item.to_any_view()) else {
+                return div().into_any_element();
+            };
+            return div()
+                .relative()
+                .size_full()
+                .child(
+                    canvas(
+                        move |bounds, _window, cx| {
+                            pane_for_initial_bounds.update(cx, |this, cx| {
+                                let max_width = bounds.size.width;
+                                let bounds_changed = this.carousel_bounds != bounds;
+                                this.carousel_bounds = bounds;
+                                for state in this.carousel_screens.values_mut() {
+                                    if let Some(width) = state.manual_width {
+                                        state.manual_width = Some(width.min(max_width));
+                                    }
+                                }
+                                if bounds_changed {
+                                    cx.notify();
+                                }
+                            });
+                        },
+                        |_, _, _, _| {},
+                    )
+                    .absolute()
+                    .size_full(),
+                )
+                .child(active_view)
+                .into_any_element();
+        }
+
+        let active_width = self.clamped_carousel_width(active_item_id, container_width);
+        let target_offset = self.carousel_target_offset(active_item_id, container_width);
+        let current_offset = if self
+            .carousel_resize
+            .is_some_and(|resize| resize.item_id == active_item_id)
+        {
+            self.carousel_motion.snap(target_offset);
+            target_offset
+        } else {
+            self.carousel_motion.advance_to(target_offset, window)
+        };
+
+        let gap = px(8.0);
+        let reveal_neighbors =
+            Self::pixels_to_f32(container_width - active_width) > Self::pixels_to_f32(gap);
+        let gravity = self.carousel_gravity(active_item_id);
+
+        let previous_index =
+            (self.items.len() > 1 && reveal_neighbors && matches!(gravity, CarouselGravity::Left | CarouselGravity::Both))
+                .then(|| self.wrap_item_index(self.active_item_index as isize - 1));
+        let mut next_index =
+            (self.items.len() > 1 && reveal_neighbors && matches!(gravity, CarouselGravity::Right | CarouselGravity::Both))
+                .then(|| self.wrap_item_index(self.active_item_index as isize + 1));
+
+        if previous_index.is_some() && previous_index == next_index {
+            next_index = None;
+        }
+        let previous_width =
+            previous_index.and_then(|ix| self.carousel_width_for_index(ix, container_width));
+        let next_width = next_index.and_then(|ix| self.carousel_width_for_index(ix, container_width));
+
+        let previous_left = current_offset - Self::pixels_to_f32(container_width + gap);
+        let next_left = current_offset + Self::pixels_to_f32(active_width + gap);
+
+        let pane_for_bounds = pane.clone();
+        let pane_for_overlay_move = cx.entity();
+        let pane_for_overlay_up = pane_for_overlay_move.clone();
+
+        div()
+            .relative()
+            .size_full()
+            .overflow_hidden()
+            .bg(cx.theme().colors().editor_background)
+            .child(
+                canvas(
+                    move |bounds, _window, cx| {
+                        pane_for_bounds.update(cx, |this, cx| {
+                            let max_width = bounds.size.width;
+                            let bounds_changed = this.carousel_bounds != bounds;
+                            this.carousel_bounds = bounds;
+                            for state in this.carousel_screens.values_mut() {
+                                if let Some(width) = state.manual_width {
+                                    state.manual_width = Some(width.min(max_width));
+                                }
+                            }
+                            if bounds_changed {
+                                cx.notify();
+                            }
+                        });
+                    },
+                    |_, _, _, _| {},
+                )
+                .absolute()
+                .size_full(),
+            )
+            .when_some(previous_index.zip(previous_width), |this, (ix, width)| {
+                this.child(self.render_carousel_screen(
+                    ix,
+                    previous_left,
+                    container_width,
+                    width,
+                    false,
+                    window,
+                    cx,
+                ))
+            })
+            .when_some(next_index.zip(next_width), |this, (ix, width)| {
+                this.child(self.render_carousel_screen(
+                    ix,
+                    next_left,
+                    container_width,
+                    width,
+                    false,
+                    window,
+                    cx,
+                ))
+            })
+            .child(self.render_carousel_screen(
+                self.active_item_index,
+                current_offset,
+                active_width,
+                active_width,
+                true,
+                window,
+                cx,
+            ))
+            .when(self.carousel_resize.is_some(), |this| {
+                this.child(
+                    div()
+                        .absolute()
+                        .top_0()
+                        .left_0()
+                        .right_0()
+                        .bottom_0()
+                        .cursor_col_resize()
+                        .on_mouse_move(move |event: &MouseMoveEvent, _window, cx| {
+                            if event.dragging() {
+                                pane_for_overlay_move.update(cx, |pane, cx| {
+                                    pane.update_carousel_resize(event.position, cx);
+                                });
+                            }
+                        })
+                        .on_mouse_up(MouseButton::Left, move |_: &MouseUpEvent, _window, cx| {
+                            pane_for_overlay_up.update(cx, |pane, cx| {
+                                pane.end_carousel_resize(cx);
+                            });
+                        }),
+                )
+            })
+            .into_any_element()
     }
 
     pub fn toggle_zoom(&mut self, _: &ToggleZoom, window: &mut Window, cx: &mut Context<Self>) {
@@ -2871,7 +3428,7 @@ impl Pane {
             .drag_over::<DraggedTab>(move |tab, dragged_tab: &DraggedTab, _, cx| {
                 let mut styled_tab = tab
                     .bg(cx.theme().colors().drop_target_background)
-                    .border_color(cx.theme().colors().drop_target_border)
+                    .border_color(cx.theme().colors().element_selected)
                     .border_0();
 
                 if ix < dragged_tab.ix {
@@ -2884,6 +3441,8 @@ impl Pane {
             })
             .drag_over::<DraggedSelection>(|tab, _, _, cx| {
                 tab.bg(cx.theme().colors().drop_target_background)
+                    .border_1()
+                    .border_color(cx.theme().colors().element_selected.opacity(0.6))
             })
             .when_some(self.can_drop_predicate.clone(), |this, p| {
                 this.can_drop(move |a, window, cx| p(a, window, cx))
@@ -3553,17 +4112,40 @@ impl Pane {
     ) -> impl IntoElement {
         div()
             .id("tab_bar_drop_target")
+            .relative()
             .min_w_6()
             .h(Tab::container_height(cx))
             .flex_grow()
             // HACK: This empty child is currently necessary to force the drop target to appear
             // despite us setting a min width above.
-            .child("")
+            .child(
+                v_flex()
+                    .size_full()
+                    .items_center()
+                    .justify_center()
+                    .child(
+                        div()
+                            .size(px(8.))
+                            .rounded_full()
+                            .bg(cx.theme().colors().element_selected.opacity(0.22)),
+                    )
+                    .child(
+                        div()
+                            .w(px(2.))
+                            .h(px(18.))
+                            .rounded_full()
+                            .bg(cx.theme().colors().element_selected.opacity(0.22)),
+                    ),
+            )
             .drag_over::<DraggedTab>(|bar, _, _, cx| {
                 bar.bg(cx.theme().colors().drop_target_background)
+                    .border_1()
+                    .border_color(cx.theme().colors().element_selected)
             })
             .drag_over::<DraggedSelection>(|bar, _, _, cx| {
                 bar.bg(cx.theme().colors().drop_target_background)
+                    .border_1()
+                    .border_color(cx.theme().colors().element_selected)
             })
             .on_drop(
                 cx.listener(move |this, dragged_tab: &DraggedTab, window, cx| {
@@ -3597,6 +4179,7 @@ impl Pane {
         div()
             .id("pinned_tabs_border")
             .debug_selector(|| "pinned_tabs_border".into())
+            .relative()
             .min_w_6()
             .h(Tab::container_height(cx))
             .flex_grow()
@@ -3604,12 +4187,34 @@ impl Pane {
             .border_color(cx.theme().colors().border)
             // HACK: This empty child is currently necessary to force the drop target to appear
             // despite us setting a min width above.
-            .child("")
+            .child(
+                v_flex()
+                    .size_full()
+                    .items_center()
+                    .justify_center()
+                    .child(
+                        div()
+                            .size(px(8.))
+                            .rounded_full()
+                            .bg(cx.theme().colors().element_selected.opacity(0.22)),
+                    )
+                    .child(
+                        div()
+                            .w(px(2.))
+                            .h(px(18.))
+                            .rounded_full()
+                            .bg(cx.theme().colors().element_selected.opacity(0.22)),
+                    ),
+            )
             .drag_over::<DraggedTab>(|bar, _, _, cx| {
                 bar.bg(cx.theme().colors().drop_target_background)
+                    .border_color(cx.theme().colors().element_selected)
+                    .border_1()
             })
             .drag_over::<DraggedSelection>(|bar, _, _, cx| {
                 bar.bg(cx.theme().colors().drop_target_background)
+                    .border_color(cx.theme().colors().element_selected)
+                    .border_1()
             })
             .on_drop(
                 cx.listener(move |this, dragged_tab: &DraggedTab, window, cx| {
@@ -4393,13 +4998,13 @@ impl Render for Pane {
                         div.on_drag_move::<ExternalPaths>(cx.listener(Self::handle_drag_move))
                     })
                     .map(|div| {
-                        if let Some(item) = self.active_item() {
+                        if self.active_item().is_some() {
                             div.id("pane_placeholder")
                                 .v_flex()
                                 .size_full()
                                 .overflow_hidden()
                                 .child(self.toolbar.clone())
-                                .child(item.to_any_view())
+                                .child(self.render_carousel_content(window, cx))
                         } else {
                             let placeholder = div
                                 .id("pane_placeholder")
@@ -4873,6 +5478,8 @@ impl Render for DraggedTab {
             .child(label)
             .render(window, cx)
             .font(ui_font)
+            .opacity(0.55)
+            .shadow_lg()
     }
 }
 

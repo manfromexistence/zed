@@ -30,6 +30,7 @@ use settings::Settings as _;
 use std::collections::{HashMap, HashSet};
 use std::mem;
 use std::rc::Rc;
+use std::time::{Duration, Instant};
 use theme::ActiveTheme;
 use ui::{
     AgentThreadStatus, CommonAnimationExt, ContextMenu, Divider, HighlightedLabel, KeyBinding,
@@ -72,6 +73,10 @@ const DEFAULT_WIDTH: Pixels = px(300.0);
 const MIN_WIDTH: Pixels = px(200.0);
 const MAX_WIDTH: Pixels = px(800.0);
 const DEFAULT_THREADS_SHOWN: usize = 5;
+const GROUP_ANIMATION_DURATION: Duration = Duration::from_millis(200);
+const GROUP_CHILD_ROW_HEIGHT: Pixels = px(42.0);
+const GROUP_THREAD_ROW_HEIGHT: Pixels = px(72.0);
+const GROUP_THREAD_WRAP_ROW_HEIGHT: Pixels = px(18.0);
 
 #[derive(Debug, Default)]
 enum SidebarView {
@@ -111,6 +116,7 @@ struct ThreadEntry {
     icon: IconName,
     icon_from_external_svg: Option<SharedString>,
     status: AgentThreadStatus,
+    group_path: PathList,
     workspace: ThreadEntryWorkspace,
     is_live: bool,
     is_background: bool,
@@ -138,6 +144,30 @@ impl ThreadEntry {
     }
 }
 
+#[derive(Clone, Debug)]
+struct GroupAnimation {
+    from: f32,
+    to: f32,
+    started_at: Instant,
+}
+
+impl GroupAnimation {
+    fn progress(&self) -> f32 {
+        (self.started_at.elapsed().as_secs_f32() / GROUP_ANIMATION_DURATION.as_secs_f32())
+            .clamp(0.0, 1.0)
+    }
+
+    fn value(&self) -> f32 {
+        let t = self.progress();
+        let eased = t * t * (3.0 - (2.0 * t));
+        self.from + ((self.to - self.from) * eased)
+    }
+
+    fn is_finished(&self) -> bool {
+        self.progress() >= 1.0
+    }
+}
+
 #[derive(Clone)]
 enum ListEntry {
     ProjectHeader {
@@ -159,6 +189,21 @@ enum ListEntry {
         workspace: Entity<Workspace>,
         is_active_draft: bool,
     },
+}
+
+impl ListEntry {
+    fn group_path(&self) -> &PathList {
+        match self {
+            ListEntry::ProjectHeader { path_list, .. }
+            | ListEntry::ViewMore { path_list, .. }
+            | ListEntry::NewThread { path_list, .. } => path_list,
+            ListEntry::Thread(thread_entry) => &thread_entry.group_path,
+        }
+    }
+
+    fn is_group_header(&self) -> bool {
+        matches!(self, ListEntry::ProjectHeader { .. })
+    }
 }
 
 #[cfg(test)]
@@ -303,6 +348,7 @@ pub struct Sidebar {
     hovered_thread_index: Option<usize>,
     collapsed_groups: HashSet<PathList>,
     expanded_groups: HashMap<PathList, usize>,
+    group_animations: HashMap<PathList, GroupAnimation>,
     /// Updated only in response to explicit user actions (clicking a
     /// thread, confirming in the thread switcher, etc.) — never from
     /// background data changes. Used to sort the thread switcher popup.
@@ -402,6 +448,7 @@ impl Sidebar {
             hovered_thread_index: None,
             collapsed_groups: HashSet::new(),
             expanded_groups: HashMap::new(),
+            group_animations: HashMap::new(),
             thread_last_accessed: HashMap::new(),
             thread_last_message_sent_or_queued: HashMap::new(),
             thread_switcher: None,
@@ -717,7 +764,9 @@ impl Sidebar {
             let label = group_name.display_name();
 
             let is_collapsed = self.collapsed_groups.contains(&path_list);
-            let should_load_threads = !is_collapsed || !query.is_empty();
+            let should_keep_children_visible = self.group_animation_active(&path_list);
+            let should_load_threads =
+                !is_collapsed || !query.is_empty() || should_keep_children_visible;
 
             let is_active = active_workspace
                 .as_ref()
@@ -762,6 +811,7 @@ impl Sidebar {
                             icon,
                             icon_from_external_svg,
                             status: AgentThreadStatus::default(),
+                            group_path: path_list.clone(),
                             workspace: ThreadEntryWorkspace::Open(workspace.clone()),
                             is_live: false,
                             is_background: false,
@@ -804,6 +854,7 @@ impl Sidebar {
                             icon,
                             icon_from_external_svg,
                             status: AgentThreadStatus::default(),
+                            group_path: path_list.clone(),
                             workspace: ThreadEntryWorkspace::Closed(worktree_path_list.clone()),
                             is_live: false,
                             is_background: false,
@@ -948,7 +999,7 @@ impl Sidebar {
                     is_active,
                 });
 
-                if is_collapsed {
+                if is_collapsed && !should_keep_children_visible {
                     continue;
                 }
 
@@ -1042,6 +1093,16 @@ impl Sidebar {
 
         self.list_state.reset(self.contents.entries.len());
         self.list_state.scroll_to(scroll_position);
+        self.selection = self.selection.and_then(|ix| {
+            if ix < self.contents.entries.len()
+                && self.entry_is_visible_for_navigation(&self.contents.entries[ix])
+            {
+                Some(ix)
+            } else {
+                self.previous_visible_entry(ix)
+                    .or_else(|| self.next_visible_entry(ix.saturating_sub(1)))
+            }
+        });
 
         if had_notifications != self.has_notifications(cx) {
             multi_workspace.update(cx, |_, cx| {
@@ -1052,19 +1113,124 @@ impl Sidebar {
         cx.notify();
     }
 
+    fn group_progress(&self, path_list: &PathList) -> f32 {
+        if let Some(animation) = self.group_animations.get(path_list) {
+            animation.value()
+        } else if self.collapsed_groups.contains(path_list) {
+            0.0
+        } else {
+            1.0
+        }
+    }
+
+    fn group_animation_active(&self, path_list: &PathList) -> bool {
+        self.group_animations.contains_key(path_list)
+    }
+
+    fn advance_group_animations(&mut self, window: &mut Window) {
+        self.group_animations
+            .retain(|_, animation| !animation.is_finished());
+
+        if !self.group_animations.is_empty() {
+            window.request_animation_frame();
+        }
+    }
+
+    fn set_group_collapsed_state(&mut self, path_list: &PathList, collapsed: bool) {
+        let from = self.group_progress(path_list);
+        let to = if collapsed { 0.0 } else { 1.0 };
+
+        if collapsed {
+            self.collapsed_groups.insert(path_list.clone());
+        } else {
+            self.collapsed_groups.remove(path_list);
+        }
+
+        if (from - to).abs() <= f32::EPSILON {
+            self.group_animations.remove(path_list);
+        } else {
+            self.group_animations.insert(
+                path_list.clone(),
+                GroupAnimation {
+                    from,
+                    to,
+                    started_at: Instant::now(),
+                },
+            );
+        }
+    }
+
+    fn set_group_collapsed(
+        &mut self,
+        path_list: &PathList,
+        collapsed: bool,
+        cx: &mut Context<Self>,
+    ) {
+        self.set_group_collapsed_state(path_list, collapsed);
+        self.update_entries(cx);
+    }
+
+    fn entry_is_visible_for_navigation(&self, entry: &ListEntry) -> bool {
+        entry.is_group_header() || self.group_progress(entry.group_path()) > 0.05
+    }
+
+    fn next_visible_entry(&self, current_ix: usize) -> Option<usize> {
+        if self.contents.entries.is_empty() {
+            return None;
+        }
+        let current_ix = current_ix.min(self.contents.entries.len().saturating_sub(1));
+
+        ((current_ix + 1)..self.contents.entries.len())
+            .chain(0..=current_ix.min(self.contents.entries.len().saturating_sub(1)))
+            .find(|&ix| self.entry_is_visible_for_navigation(&self.contents.entries[ix]))
+    }
+
+    fn previous_visible_entry(&self, current_ix: usize) -> Option<usize> {
+        if self.contents.entries.is_empty() {
+            return None;
+        }
+        let current_ix = current_ix.min(self.contents.entries.len());
+
+        (0..current_ix)
+            .rev()
+            .find(|&ix| self.entry_is_visible_for_navigation(&self.contents.entries[ix]))
+    }
+
+    fn first_visible_entry(&self) -> Option<usize> {
+        self.contents
+            .entries
+            .iter()
+            .position(|entry| self.entry_is_visible_for_navigation(entry))
+    }
+
+    fn last_visible_entry(&self) -> Option<usize> {
+        self.contents
+            .entries
+            .iter()
+            .rposition(|entry| self.entry_is_visible_for_navigation(entry))
+    }
+
+    fn estimated_group_child_height(&self, entry: &ListEntry) -> Pixels {
+        match entry {
+            ListEntry::Thread(thread) => {
+                let extra_rows = thread.worktrees.len().saturating_sub(2);
+                let extra_rows = ((extra_rows + 2) / 3) as f32;
+                GROUP_THREAD_ROW_HEIGHT + (GROUP_THREAD_WRAP_ROW_HEIGHT * extra_rows)
+            }
+            ListEntry::ViewMore { .. } | ListEntry::NewThread { .. } => GROUP_CHILD_ROW_HEIGHT,
+            ListEntry::ProjectHeader { .. } => GROUP_CHILD_ROW_HEIGHT,
+        }
+    }
+
     fn select_first_entry(&mut self) {
         self.selection = self
             .contents
             .entries
             .iter()
-            .position(|entry| matches!(entry, ListEntry::Thread(_)))
-            .or_else(|| {
-                if self.contents.entries.is_empty() {
-                    None
-                } else {
-                    Some(0)
-                }
-            });
+            .position(|entry| {
+                matches!(entry, ListEntry::Thread(_)) && self.entry_is_visible_for_navigation(entry)
+            })
+            .or_else(|| self.first_visible_entry());
     }
 
     fn render_list_entry(
@@ -1082,6 +1248,11 @@ impl Sidebar {
 
         let is_group_header_after_first =
             ix > 0 && matches!(entry, ListEntry::ProjectHeader { .. });
+        let group_progress = if entry.is_group_header() {
+            1.0
+        } else {
+            self.group_progress(entry.group_path())
+        };
 
         let rendered = match entry {
             ListEntry::ProjectHeader {
@@ -1117,6 +1288,32 @@ impl Sidebar {
             } => {
                 self.render_new_thread(ix, path_list, workspace, *is_active_draft, is_selected, cx)
             }
+        };
+        let rendered = if entry.is_group_header() {
+            rendered
+        } else if group_progress <= 0.01 {
+            div()
+                .w_full()
+                .h(px(0.0))
+                .overflow_hidden()
+                .opacity(0.0)
+                .into_any_element()
+        } else {
+            let max_height = self.estimated_group_child_height(entry) * group_progress.max(0.0);
+            div()
+                .w_full()
+                .overflow_hidden()
+                .max_h(max_height + px(1.0))
+                .opacity(group_progress)
+                .child(
+                    div()
+                        .w_full()
+                        .relative()
+                        .top(px((1.0 - group_progress) * -8.0))
+                        .scale(0.96 + (group_progress * 0.04))
+                        .child(rendered),
+                )
+                .into_any_element()
         };
 
         if is_group_header_after_first {
@@ -1177,7 +1374,8 @@ impl Sidebar {
         let id = SharedString::from(format!("{id_prefix}project-header-{ix}"));
         let group_name = SharedString::from(format!("{id_prefix}header-group-{ix}"));
 
-        let is_collapsed = self.collapsed_groups.contains(path_list);
+        let group_progress = self.group_progress(path_list);
+        let is_collapsed = group_progress <= 0.05;
         let disclosure_icon = if is_collapsed {
             IconName::ChevronRight
         } else {
@@ -1230,7 +1428,7 @@ impl Sidebar {
                 }
             })
             .justify_between()
-            .hover(|s| s.bg(hover_color))
+            .hover(|s| s.bg(hover_color).scale(1.01))
             .child(
                 h_flex()
                     .relative()
@@ -1362,10 +1560,9 @@ impl Sidebar {
                                 let workspace_for_new_thread = workspace_for_new_thread.clone();
                                 let path_list_for_new_thread = path_list_for_new_thread.clone();
                                 move |this, _, window, cx| {
-                                    // Uncollapse the group if collapsed so
-                                    // the new-thread entry becomes visible.
-                                    this.collapsed_groups.remove(&path_list_for_new_thread);
+                                    this.set_group_collapsed_state(&path_list_for_new_thread, false);
                                     this.selection = None;
+                                    this.update_entries(cx);
                                     this.create_new_thread(&workspace_for_new_thread, window, cx);
                                 }
                             })),
@@ -1650,12 +1847,7 @@ impl Sidebar {
         _window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if self.collapsed_groups.contains(path_list) {
-            self.collapsed_groups.remove(path_list);
-        } else {
-            self.collapsed_groups.insert(path_list.clone());
-        }
-        self.update_entries(cx);
+        self.set_group_collapsed(path_list, !self.collapsed_groups.contains(path_list), cx);
     }
 
     fn dispatch_context(&self, window: &Window, cx: &Context<Self>) -> KeyContext {
@@ -1766,10 +1958,11 @@ impl Sidebar {
 
     fn select_next(&mut self, _: &SelectNext, _window: &mut Window, cx: &mut Context<Self>) {
         let next = match self.selection {
-            Some(ix) if ix + 1 < self.contents.entries.len() => ix + 1,
-            Some(_) if !self.contents.entries.is_empty() => 0,
-            None if !self.contents.entries.is_empty() => 0,
-            _ => return,
+            Some(ix) => self.next_visible_entry(ix),
+            None => self.first_visible_entry(),
+        };
+        let Some(next) = next else {
+            return;
         };
         self.selection = Some(next);
         self.list_state.scroll_to_reveal_item(next);
@@ -1778,36 +1971,38 @@ impl Sidebar {
 
     fn select_previous(&mut self, _: &SelectPrevious, window: &mut Window, cx: &mut Context<Self>) {
         match self.selection {
-            Some(0) => {
-                self.selection = None;
-                self.filter_editor.focus_handle(cx).focus(window, cx);
-                cx.notify();
-            }
             Some(ix) => {
-                self.selection = Some(ix - 1);
-                self.list_state.scroll_to_reveal_item(ix - 1);
-                cx.notify();
+                if let Some(previous) = self.previous_visible_entry(ix) {
+                    self.selection = Some(previous);
+                    self.list_state.scroll_to_reveal_item(previous);
+                    cx.notify();
+                } else {
+                    self.selection = None;
+                    self.filter_editor.focus_handle(cx).focus(window, cx);
+                    cx.notify();
+                }
             }
-            None if !self.contents.entries.is_empty() => {
-                let last = self.contents.entries.len() - 1;
+            None => {
+                let Some(last) = self.last_visible_entry() else {
+                    return;
+                };
                 self.selection = Some(last);
                 self.list_state.scroll_to_reveal_item(last);
                 cx.notify();
             }
-            None => {}
         }
     }
 
     fn select_first(&mut self, _: &SelectFirst, _window: &mut Window, cx: &mut Context<Self>) {
-        if !self.contents.entries.is_empty() {
-            self.selection = Some(0);
-            self.list_state.scroll_to_reveal_item(0);
+        if let Some(first) = self.first_visible_entry() {
+            self.selection = Some(first);
+            self.list_state.scroll_to_reveal_item(first);
             cx.notify();
         }
     }
 
     fn select_last(&mut self, _: &SelectLast, _window: &mut Window, cx: &mut Context<Self>) {
-        if let Some(last) = self.contents.entries.len().checked_sub(1) {
+        if let Some(last) = self.last_visible_entry() {
             self.selection = Some(last);
             self.list_state.scroll_to_reveal_item(last);
             cx.notify();
@@ -2104,12 +2299,13 @@ impl Sidebar {
             Some(ListEntry::ProjectHeader { path_list, .. }) => {
                 if self.collapsed_groups.contains(path_list) {
                     let path_list = path_list.clone();
-                    self.collapsed_groups.remove(&path_list);
-                    self.update_entries(cx);
+                    self.set_group_collapsed(&path_list, false, cx);
                 } else if ix + 1 < self.contents.entries.len() {
-                    self.selection = Some(ix + 1);
-                    self.list_state.scroll_to_reveal_item(ix + 1);
-                    cx.notify();
+                    if let Some(next) = self.next_visible_entry(ix) {
+                        self.selection = Some(next);
+                        self.list_state.scroll_to_reveal_item(next);
+                        cx.notify();
+                    }
                 }
             }
             _ => {}
@@ -2128,8 +2324,7 @@ impl Sidebar {
             Some(ListEntry::ProjectHeader { path_list, .. }) => {
                 if !self.collapsed_groups.contains(path_list) {
                     let path_list = path_list.clone();
-                    self.collapsed_groups.insert(path_list);
-                    self.update_entries(cx);
+                    self.set_group_collapsed(&path_list, true, cx);
                 }
             }
             Some(
@@ -2141,8 +2336,7 @@ impl Sidebar {
                     {
                         let path_list = path_list.clone();
                         self.selection = Some(i);
-                        self.collapsed_groups.insert(path_list);
-                        self.update_entries(cx);
+                        self.set_group_collapsed(&path_list, true, cx);
                         break;
                     }
                 }
@@ -2179,10 +2373,10 @@ impl Sidebar {
             {
                 let path_list = path_list.clone();
                 if self.collapsed_groups.contains(&path_list) {
-                    self.collapsed_groups.remove(&path_list);
+                    self.set_group_collapsed_state(&path_list, false);
                 } else {
                     self.selection = Some(header_ix);
-                    self.collapsed_groups.insert(path_list);
+                    self.set_group_collapsed_state(&path_list, true);
                 }
                 self.update_entries(cx);
             }
@@ -2195,10 +2389,18 @@ impl Sidebar {
         _window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        for entry in &self.contents.entries {
-            if let ListEntry::ProjectHeader { path_list, .. } = entry {
-                self.collapsed_groups.insert(path_list.clone());
-            }
+        let path_lists: Vec<_> = self
+            .contents
+            .entries
+            .iter()
+            .filter_map(|entry| match entry {
+                ListEntry::ProjectHeader { path_list, .. } => Some(path_list.clone()),
+                _ => None,
+            })
+            .collect();
+
+        for path_list in path_lists {
+            self.set_group_collapsed_state(&path_list, true);
         }
         self.update_entries(cx);
     }
@@ -2209,7 +2411,10 @@ impl Sidebar {
         _window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        self.collapsed_groups.clear();
+        let path_lists: Vec<_> = self.collapsed_groups.iter().cloned().collect();
+        for path_list in path_lists {
+            self.set_group_collapsed_state(&path_list, false);
+        }
         self.update_entries(cx);
     }
 
@@ -3282,6 +3487,7 @@ impl Focusable for Sidebar {
 
 impl Render for Sidebar {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        self.advance_group_animations(window);
         let _titlebar_height = ui::utils::platform_title_bar_height(window);
         let ui_font = theme_settings::setup_ui_font(window, cx);
         let sticky_header = self.render_sticky_header(window, cx);
@@ -3294,7 +3500,7 @@ impl Render for Sidebar {
         let no_open_projects = !self.contents.has_open_projects;
         let no_search_results = self.contents.entries.is_empty();
 
-        v_flex()
+        let sidebar = v_flex()
             .id("workspace-sidebar")
             .key_context(self.dispatch_context(window, cx))
             .track_focus(&self.focus_handle)
@@ -3356,7 +3562,13 @@ impl Render for Sidebar {
                     }),
                 SidebarView::Archive(archive_view) => this.child(archive_view.clone()),
             })
-            .child(self.render_sidebar_bottom_bar(cx))
+            .child(self.render_sidebar_bottom_bar(cx));
+
+        if self.side(cx) == SidebarSide::Right {
+            sidebar.animate_in_from_right(true)
+        } else {
+            sidebar.animate_in_from_left(true)
+        }
     }
 }
 

@@ -4,6 +4,14 @@
 4. Theme, icon, font
 5. rainbow animated cursor, particles effect
 
+up until now you have done a really nice job. Due to our low-end device we can instantly verify the project status but now we are going to test it. Please do a pre-check of all the changes that you have done so that we can fix all the errors before they happen. We can't be running the project again and again because even if it runs in one go, that one single go will take like hours.
+Please:
+- format+lint all files
+- make all files follow best practices
+- have the best folder structure
+- do a quick error check
+Don't run any command; just check it by files. If you think any code can call some error then please fix the error right away. We really can't be doing `cargo run` again and again and debug everything because it will take ages. Try to pinpoint all the errors before they happen and then only after that please do "just run" command and do any other command
+
 Awesome, right let's get going. Using our local ggdf model direct running technique, we are going to dethrone the WisprFlow because WisprFlow costs money. We can use the latest open source models to do sound-to-text and text-to-sound and then enhance the text with a small model that can run on any operating system, even on a going device, free and unlimited.
 Please do research about the latest best models for STT, TTS, and text enhancement that can be run easily and fast even on a going device. Create a tier list like: if the hardware is 2 GB then we will download this model; if the hardware is 8 GB we will download this model and so on, and create a proper tier list so that we can provide the best experience for all kinds of users. Today is 35th March 2026 so please search for the latest best models for every user. Think about it: we can literally learn any of the 45 million GGF or more GGF models directly, like how much, even LLM arena or ulama can run. They can only support some models that they are running but we can literally run every single model that has a GGF model, meaning we can literally support all of the models.
 How would it be if we can do this and also literally provide a faster and unlimited free version of WisprFlow? That's why our Friday project will go viral because we will use Rust and WisprFlow uses Node.js so we will always have a faster version of WisprFlow. Please give me the best models to do so.

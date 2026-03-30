@@ -11,6 +11,7 @@ use language_model::{
     AuthenticateError, ConfiguredModel, IconOrSvg, LanguageModel, LanguageModelId,
     LanguageModelProvider, LanguageModelProviderId, LanguageModelRegistry,
 };
+use language_models::provider_hub::{ProviderCategory, ProviderHubStore};
 use ordered_float::OrderedFloat;
 use picker::{Picker, PickerDelegate};
 use settings::Settings;
@@ -73,7 +74,7 @@ fn all_models(cx: &App) -> GroupedModels {
             provider
                 .recommended_models(cx)
                 .into_iter()
-                .map(|model| ModelInfo::new(&**provider, model, &favorites_index))
+                .map(|model| ModelInfo::new(&**provider, model, &favorites_index, cx))
         })
         .collect();
 
@@ -83,7 +84,7 @@ fn all_models(cx: &App) -> GroupedModels {
             provider
                 .provided_models(cx)
                 .into_iter()
-                .map(|model| ModelInfo::new(&**provider, model, &favorites_index))
+                .map(|model| ModelInfo::new(&**provider, model, &favorites_index, cx))
         })
         .collect();
 
@@ -97,6 +98,10 @@ struct ModelInfo {
     model: Arc<dyn LanguageModel>,
     icon: IconOrSvg,
     is_favorite: bool,
+    provider_name: SharedString,
+    category: ProviderCategory,
+    context_info: Option<SharedString>,
+    badges: Vec<SharedString>,
 }
 
 impl ModelInfo {
@@ -104,15 +109,43 @@ impl ModelInfo {
         provider: &dyn LanguageModelProvider,
         model: Arc<dyn LanguageModel>,
         favorites_index: &FavoritesIndex,
+        cx: &App,
     ) -> Self {
         let is_favorite = favorites_index
             .get(&provider.id())
             .map_or(false, |set| set.contains(&model.id()));
 
+        let provider_hub = ProviderHubStore::try_global(cx);
+        let category = provider_hub
+            .as_ref()
+            .map(|store| store.read(cx).provider_category(&provider.id()))
+            .unwrap_or_default();
+        let manifest = provider_hub
+            .as_ref()
+            .and_then(|store| store.read(cx).model_manifest(&provider.id(), model.id().0.as_ref()).cloned());
+        let context_info = manifest.as_ref().and_then(|manifest| {
+            let context = manifest
+                .metadata
+                .context_window
+                .unwrap_or(manifest.max_tokens);
+            if context > 0 {
+                Some(format_context_window(context))
+            } else {
+                None
+            }
+        });
+        let badges = manifest
+            .map(|manifest| badges_for_manifest(&manifest))
+            .unwrap_or_default();
+
         Self {
             model,
             icon: provider.icon(),
             is_favorite,
+            provider_name: provider.name().0,
+            category,
+            context_info,
+            badges,
         }
     }
 }
@@ -144,6 +177,33 @@ impl LanguageModelPickerDelegate {
         let models = all_models(cx);
         let entries = models.entries();
 
+        let mut subscriptions = vec![cx.subscribe_in(
+            &LanguageModelRegistry::global(cx),
+            window,
+            |picker, _, event, window, cx| {
+                match event {
+                    language_model::Event::ProviderStateChanged(_)
+                    | language_model::Event::AddedProvider(_)
+                    | language_model::Event::RemovedProvider(_) => {
+                        let query = picker.query(cx);
+                        picker.delegate.all_models = Arc::new(all_models(cx));
+                        // Update matches will automatically drop the previous task
+                        // if we get a provider event again
+                        picker.update_matches(query, window, cx)
+                    }
+                    _ => {}
+                }
+            },
+        )];
+
+        if let Some(provider_hub) = ProviderHubStore::try_global(cx) {
+            subscriptions.push(cx.observe_in(&provider_hub, window, |picker, _, window, cx| {
+                let query = picker.query(cx);
+                picker.delegate.all_models = Arc::new(all_models(cx));
+                picker.update_matches(query, window, cx);
+            }));
+        }
+
         Self {
             on_model_changed,
             all_models: Arc::new(models),
@@ -152,24 +212,7 @@ impl LanguageModelPickerDelegate {
             get_active_model: Arc::new(get_active_model),
             on_toggle_favorite: Arc::new(on_toggle_favorite),
             _authenticate_all_providers_task: Self::authenticate_all_providers(cx),
-            _subscriptions: vec![cx.subscribe_in(
-                &LanguageModelRegistry::global(cx),
-                window,
-                |picker, _, event, window, cx| {
-                    match event {
-                        language_model::Event::ProviderStateChanged(_)
-                        | language_model::Event::AddedProvider(_)
-                        | language_model::Event::RemovedProvider(_) => {
-                            let query = picker.query(cx);
-                            picker.delegate.all_models = Arc::new(all_models(cx));
-                            // Update matches will automatically drop the previous task
-                            // if we get a provider event again
-                            picker.update_matches(query, window, cx)
-                        }
-                        _ => {}
-                    }
-                },
-            )],
+            _subscriptions: subscriptions,
             popover_styles,
             focus_handle,
         }
@@ -339,13 +382,30 @@ impl GroupedModels {
             }
         }
 
-        for models in self.all.values() {
+        let mut grouped = self
+            .all
+            .values()
+            .filter(|models| !models.is_empty())
+            .collect::<Vec<_>>();
+        grouped.sort_by_key(|models| {
+            (
+                models[0].category.sort_key(),
+                models[0].provider_name.to_string(),
+            )
+        });
+
+        let mut current_category = None;
+        for models in grouped {
             if models.is_empty() {
                 continue;
             }
-            entries.push(LanguageModelPickerEntry::Separator(
-                models[0].model.provider_name().0,
-            ));
+            if current_category != Some(models[0].category) {
+                current_category = Some(models[0].category);
+                entries.push(LanguageModelPickerEntry::Separator(
+                    models[0].category.label().into(),
+                ));
+            }
+            entries.push(LanguageModelPickerEntry::Separator(models[0].provider_name.clone()));
             for info in models {
                 entries.push(LanguageModelPickerEntry::Model(info.clone()));
             }
@@ -358,6 +418,43 @@ impl GroupedModels {
 enum LanguageModelPickerEntry {
     Model(ModelInfo),
     Separator(SharedString),
+}
+
+fn format_context_window(value: u64) -> SharedString {
+    if value >= 1_000_000 {
+        format!("{:.1}M", value as f64 / 1_000_000.0).into()
+    } else if value >= 1_000 {
+        format!("{:.0}K", value as f64 / 1_000.0).into()
+    } else {
+        value.to_string().into()
+    }
+}
+
+fn badges_for_manifest(manifest: &language_models::provider_hub::ModelManifest) -> Vec<SharedString> {
+    let mut badges = Vec::new();
+    if manifest.metadata.supports_reasoning {
+        badges.push("Reasoning".into());
+    }
+    if manifest.capabilities.tools || manifest.metadata.supports_tool_calling {
+        badges.push("Tools".into());
+    }
+    if manifest.metadata.supports_structured_output {
+        badges.push("JSON".into());
+    }
+    if manifest.metadata.supports_vision {
+        badges.push("Vision".into());
+    }
+    if manifest.metadata.supports_audio {
+        badges.push("Audio".into());
+    }
+    if manifest.metadata.supports_video {
+        badges.push("Video".into());
+    }
+    if manifest.metadata.supports_pdf {
+        badges.push("PDF".into());
+    }
+    badges.truncate(4);
+    badges
 }
 
 struct ModelMatcher {
@@ -591,7 +688,9 @@ impl PickerDelegate for LanguageModelPickerDelegate {
                         .is_focused(selected)
                         .is_latest(model_info.model.is_latest())
                         .is_favorite(is_favorite)
+                        .context_info(model_info.context_info.clone())
                         .cost_info(model_cost)
+                        .badges(model_info.badges.clone())
                         .on_toggle_favorite(handle_action_click)
                         .into_any_element(),
                 )
@@ -610,7 +709,14 @@ impl PickerDelegate for LanguageModelPickerDelegate {
             return None;
         }
 
-        Some(ModelSelectorFooter::new(OpenSettings.boxed_clone(), focus_handle).into_any_element())
+        let status_text = ProviderHubStore::try_global(_cx)
+            .and_then(|store| store.read(_cx).sync_state().label());
+
+        Some(
+            ModelSelectorFooter::new(OpenSettings.boxed_clone(), focus_handle)
+                .status_text(status_text)
+                .into_any_element(),
+        )
     }
 }
 

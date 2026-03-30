@@ -1,14 +1,14 @@
-# Zed Animation Project - Task Tracker
+﻿# Zed Animation Project - Task Tracker
 
 **Project Start Date:** March 31, 2026  
 **Last Updated:** March 31, 2026  
-**Status:** 🟡 In Progress
+**Status:** ðŸŸ¡ In Progress
 
 ---
 
 ## Project Phases
 
-### Phase 1: Project Setup & Infrastructure ⏳ IN PROGRESS
+### Phase 1: Project Setup & Infrastructure â³ IN PROGRESS
 - [x] Create `animation_demo` crate structure
 - [x] Set up project dependencies in `Cargo.toml`
 - [x] Copy web reference code to `www/` folder
@@ -18,12 +18,12 @@
 - [ ] Verify `just run` command works correctly
 
 **Estimated Time:** 2-3 hours  
-**Priority:** 🔴 Critical  
+**Priority:** ðŸ”´ Critical  
 **Dependencies:** None
 
 ---
 
-### Phase 2: Core Animation Components 🔜 PENDING
+### Phase 2: Core Animation Components ðŸ”œ PENDING
 - [x] Implement spring physics system (`spring.rs`)
 - [x] Implement easing curves (`easing.rs`)
 - [x] Create animated value system (`animator.rs`)
@@ -32,28 +32,28 @@
 - [x] Test all animation primitives in demo tab
 
 **Estimated Time:** 4-5 hours  
-**Priority:** 🔴 Critical  
+**Priority:** ðŸ”´ Critical  
 **Dependencies:** Phase 1
 
 ---
 
-### Phase 3: Friday Border Effect ⏸️ NOT STARTED
+### Phase 3: Friday Border Effect â¸ï¸ NOT STARTED
 - [x] Create `friday.rs` component
 - [ ] Implement rainbow gradient shader (Metal/Vulkan)
 - [x] Add border slide-in animation (750ms)
 - [x] Implement dual glow layers (8px + 12px blur)
 - [x] Add scroll bounce effect with spring physics
-- [ ] Test gradient shift animation (0% → 200%)
+- [ ] Test gradient shift animation (0% â†’ 200%)
 - [ ] Verify 120 FPS performance
 - [x] Add to demo tab with dimensions display
 
 **Estimated Time:** 3-4 hours  
-**Priority:** 🔴 Critical  
+**Priority:** ðŸ”´ Critical  
 **Dependencies:** Phase 2
 
 ---
 
-### Phase 4: Hello Glow Effect ⏸️ NOT STARTED
+### Phase 4: Hello Glow Effect â¸ï¸ NOT STARTED
 - [x] Create `hello_glow.rs` component
 - [ ] Implement 25-color HSL gradient shader
 - [x] Add dual-layer blur (6px + 18px)
@@ -63,87 +63,87 @@
 - [x] Add to demo tab with live preview
 
 **Estimated Time:** 2-3 hours  
-**Priority:** 🔴 Critical  
+**Priority:** ðŸ”´ Critical  
 **Dependencies:** Phase 2
 
 ---
 
-### Phase 5: Sidebar Animations ⏸️ NOT STARTED
-- [ ] Create `sidebar.rs` component
-- [ ] Implement width transition (56px ↔ 360px, 200ms)
-- [ ] Add content fade animation (opacity 0 → 1, 150ms)
-- [ ] Implement folder collapse (height auto → 0, 200ms)
+### Phase 5: Sidebar Animations ðŸš§ IN PROGRESS
+- [x] Create `sidebar.rs` component
+- [x] Implement width transition (56px â†” 360px, 200ms)
+- [x] Add content fade animation (opacity 0 â†’ 1, 150ms)
+- [x] Implement folder collapse (height auto â†’ 0, 200ms)
 - [ ] Add workspace scroll with spring animation
-- [ ] Implement media player slide-up (y: 20 → 0)
-- [ ] Add hover effects (scale 1.0 → 1.25)
+- [ ] Implement media player slide-up (y: 20 â†’ 0)
+- [ ] Add hover effects (scale 1.0 â†’ 1.25)
 - [ ] Implement drag constraints with elastic (0.1-0.2)
 - [ ] Test smooth scroll with continuous hold detection
-- [ ] Replace Zed's default sidebar in `workspace/src/sidebar.rs`
+- [x] Replace Zed's default sidebar in `workspace/src/sidebar.rs`
 
 **Estimated Time:** 5-6 hours  
-**Priority:** 🔴 Critical  
+**Priority:** ðŸ”´ Critical  
 **Dependencies:** Phase 2
 
 ---
 
-### Phase 6: Screen Carousel ⏸️ NOT STARTED
-- [ ] Create `carousel.rs` component
-- [ ] Implement resizable screen system
-- [ ] Add directional gravity logic:
-  - [ ] Left resize → push screen right
-  - [ ] Right resize → push screen left
-  - [ ] Both sides → center
-- [ ] Implement smooth positioning (spring: stiffness 300, damping 30)
-- [ ] Add live resize with wrapper width updates
-- [ ] Implement circular wrapping (first/last screens)
-- [ ] Add screen transitions (scale 0.95 → 1, opacity 0 → 1)
+### Phase 6: Screen Carousel ðŸš§ IN PROGRESS
+- [x] Create `carousel.rs` component
+- [x] Implement resizable screen system
+- [x] Add directional gravity logic:
+  - [x] Left resize â†’ push screen right
+  - [x] Right resize â†’ push screen left
+  - [x] Both sides â†’ center
+- [x] Implement smooth positioning (spring: stiffness 300, damping 30)
+- [x] Add live resize with wrapper width updates
+- [x] Implement circular wrapping (first/last screens)
+- [ ] Add screen transitions (scale 0.95 â†’ 1, opacity 0 â†’ 1)
 - [ ] Test with multiple screens
 - [ ] Replace Zed's tab system in `editor/src/tabs.rs`
 
 **Estimated Time:** 6-7 hours  
-**Priority:** 🔴 Critical  
+**Priority:** ðŸ”´ Critical  
 **Dependencies:** Phase 2
 
 ---
 
-### Phase 7: macOS-Style Dock ⏸️ NOT STARTED
-- [ ] Create `macos_dock.rs` component
-- [ ] Implement dock icon rendering
-- [ ] Add hover magnification (scale 1.0 → 1.3 with spring)
-- [ ] Implement active indicator with pulsing glow
-- [ ] Add click-to-switch functionality
-- [ ] Implement drag-to-reorder with visual feedback
-- [ ] Add plus button for new screen
+### Phase 7: macOS-Style Dock â¸ï¸ NOT STARTED
+- [x] Create `macos_dock.rs` component
+- [x] Implement dock icon rendering
+- [ ] Add hover magnification (scale 1.0 â†’ 1.3 with spring)
+- [x] Implement active indicator with pulsing glow
+- [x] Add click-to-switch functionality
+- [x] Implement drag-to-reorder with visual feedback
+- [x] Add plus button for new screen
 - [ ] Add close button (X) with animation
 - [ ] Connect dock to carousel state
-- [ ] Integrate into workspace top bar
+- [x] Integrate into workspace top bar
 
 **Estimated Time:** 4-5 hours  
-**Priority:** 🔴 Critical  
+**Priority:** ðŸ”´ Critical  
 **Dependencies:** Phase 6
 
 ---
 
-### Phase 8: Drag-and-Drop System ⏸️ NOT STARTED
-- [ ] Create drag-and-drop event handling system
-- [ ] Implement sortable tabs
+### Phase 8: Drag-and-Drop System â¸ï¸ NOT STARTED
+- [x] Create drag-and-drop event handling system
+- [x] Implement sortable tabs
 - [ ] Implement sortable folders
 - [ ] Add drop position indicators (before/after/inside)
-- [ ] Create drag overlay with shadow
+- [x] Create drag overlay with shadow
 - [ ] Implement logo container as drop target
 - [ ] Add visual feedback:
-  - [ ] Dragging: 50% opacity, cursor-grabbing
-  - [ ] Drop indicators: blue dots (8px) + lines (2px)
-  - [ ] Hover states with background transitions
+  - [x] Dragging: 50% opacity, cursor-grabbing
+  - [x] Drop indicators: blue dots (8px) + lines (2px)
+  - [x] Hover states with background transitions
 - [ ] Test workspace organization
 
 **Estimated Time:** 5-6 hours  
-**Priority:** 🟡 Medium  
+**Priority:** ðŸŸ¡ Medium  
 **Dependencies:** Phase 5
 
 ---
 
-### Phase 9: Video & 3D Rendering ⏸️ NOT STARTED
+### Phase 9: Video & 3D Rendering â¸ï¸ NOT STARTED
 - [x] Research and select video player crate (e.g., `gstreamer`, `ffmpeg-next`)
 - [x] Research and select 3D rendering crate (e.g., `wgpu`, `three-d`)
 - [ ] Implement video player component
@@ -155,12 +155,12 @@
 - [ ] Add controls (play/pause, seek, rotate)
 
 **Estimated Time:** 8-10 hours  
-**Priority:** 🟡 Medium  
+**Priority:** ðŸŸ¡ Medium  
 **Dependencies:** Phase 1
 
 ---
 
-### Phase 10: Integration & Polish ⏸️ NOT STARTED
+### Phase 10: Integration & Polish â¸ï¸ NOT STARTED
 - [ ] Integrate all components into Zed workspace
 - [ ] Test all animations together
 - [ ] Performance optimization pass
@@ -170,18 +170,38 @@
 - [ ] Final demo tab polish
 
 **Estimated Time:** 4-5 hours  
-**Priority:** 🟢 Low  
+**Priority:** ðŸŸ¢ Low  
 **Dependencies:** All previous phases
 
 ---
 
+## Additional Preview Work
+
+### Rich File Preview and WebView
+- [x] Create `crates/rich_file_preview/` workspace crate
+- [x] Register extension-driven `ProjectItem` handlers for media, 3D, document, markdown, SVG, and audio previews
+- [x] Add native `gpui::View` preview surface for PDF, DOCX, spreadsheet, presentation, markdown, SVG, audio, video, LaTeX, and 3D assets
+- [x] Add dockable embedded web preview panel with Wry devtools actions
+- [x] Add DOM element capture flow that forwards HTML/CSS context into the Agent panel composer
+- [x] Auto-detect local browser profiles and real installed extensions for the embedded web preview
+- [x] Add isolated shared/per-origin/incognito web preview sessions with localhost auth clearing controls
+- [x] Upgrade the embedded inspector with live hover capture and CSS override editing
+- [ ] Validate all new preview handlers with `just run`
+
+### AI Provider Hub and Model Picker
+- [x] Add a live provider-hub catalog sync that merges `models.dev`, OpenRouter, and optional LiteLLM model metadata
+- [x] Cache the merged provider catalog to disk and surface cached/live sync state in the real Zed UI
+- [x] Register manifest-backed OpenAI-compatible providers dynamically from the synced catalog
+- [x] Upgrade the real AI settings Add Provider modal with curated presets and live model discovery
+- [x] Add provider category, model-count, context-window, and capability metadata to the real model picker and AI settings panel
+- [ ] Validate the provider hub, presets, and model discovery flow with `just run`
 ## Current Sprint
 
-**Active Phase:** Phase 3 - Friday Border Effect  
+**Active Phase:** Phase 6 - Screen Carousel  
 **Started:** March 31, 2026  
 **Target Completion:** March 31, 2026
 
-**Next Up:** Phase 4 - Hello Glow Effect
+**Next Up:** Phase 7 - macOS-Style Dock
 
 ---
 
@@ -197,11 +217,11 @@
 
 ## Performance Targets
 
-- ✅ Maintain 120 FPS (8.33ms frame budget)
-- ✅ GPU-accelerated rendering (Metal/Vulkan)
-- ✅ Minimal CPU usage during animations
-- ✅ Memory efficient (no leaks)
-- ✅ Works on low-end devices
+- âœ… Maintain 120 FPS (8.33ms frame budget)
+- âœ… GPU-accelerated rendering (Metal/Vulkan)
+- âœ… Minimal CPU usage during animations
+- âœ… Memory efficient (no leaks)
+- âœ… Works on low-end devices
 
 ---
 
@@ -234,10 +254,14 @@
 
 ## Completion Metrics
 
-**Total Tasks:** 24 / 100+  
+**Total Tasks:** 60 / 106+  
 **Phases Completed:** 2 / 10  
-**Overall Progress:** 24%
+**Overall Progress:** 57%
 
 **Estimated Total Time:** 45-55 hours  
 **Time Spent:** 2.75 hours  
 **Time Remaining:** 42.25-52.25 hours
+
+
+
+

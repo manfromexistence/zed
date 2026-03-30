@@ -1,6 +1,6 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, time::Duration};
 
-use gpui::{AnyElement, IntoElement, Stateful};
+use gpui::{Animation, AnimationExt, AnyElement, IntoElement, Stateful, pulsating_between};
 use smallvec::SmallVec;
 
 use crate::prelude::*;
@@ -31,6 +31,7 @@ pub enum TabCloseSide {
 
 #[derive(IntoElement, RegisterComponent)]
 pub struct Tab {
+    id: ElementId,
     div: Stateful<Div>,
     selected: bool,
     position: TabPosition,
@@ -44,6 +45,7 @@ impl Tab {
     pub fn new(id: impl Into<ElementId>) -> Self {
         let id = id.into();
         Self {
+            id: id.clone(),
             div: div()
                 .id(id.clone())
                 .debug_selector(|| format!("TAB-{}", id)),
@@ -112,13 +114,15 @@ impl RenderOnce for Tab {
         let (text_color, tab_bg, _tab_hover_bg, _tab_active_bg) = match self.selected {
             false => (
                 cx.theme().colors().text_muted,
-                cx.theme().colors().tab_inactive_background,
+                cx.theme().colors().tab_bar_background.opacity(0.0),
                 cx.theme().colors().ghost_element_hover,
                 cx.theme().colors().ghost_element_active,
             ),
             true => (
                 cx.theme().colors().text,
-                cx.theme().colors().tab_active_background,
+                cx.theme().colors().tab_active_background.blend(
+                    cx.theme().colors().element_selected.opacity(0.18),
+                ),
                 cx.theme().colors().element_hover,
                 cx.theme().colors().element_active,
             ),
@@ -141,6 +145,25 @@ impl RenderOnce for Tab {
             }
         };
 
+        let active_indicator = self.selected.then(|| {
+            div()
+                .id((self.id.clone(), "active-indicator"))
+                .absolute()
+                .left(px(12.))
+                .right(px(12.))
+                .bottom(px(3.))
+                .h(px(2.))
+                .rounded_full()
+                .bg(cx.theme().colors().element_selected)
+                .with_animation(
+                    (self.id.clone(), "active-indicator-pulse"),
+                    Animation::new(Duration::from_millis(1600))
+                        .repeat()
+                        .with_easing(pulsating_between(0.45, 1.0)),
+                    |this, delta| this.opacity(delta),
+                )
+        });
+
         self.div
             .h(Tab::container_height(cx))
             .bg(tab_bg)
@@ -148,35 +171,48 @@ impl RenderOnce for Tab {
             .map(|this| match self.position {
                 TabPosition::First => {
                     if self.selected {
-                        this.pl_px().border_r_1().pb_px()
+                        this.pl_px().pr_px()
                     } else {
-                        this.pl_px().pr_px().border_b_1()
+                        this.pl_px().pr_px()
                     }
                 }
                 TabPosition::Last => {
                     if self.selected {
-                        this.border_l_1().border_r_1().pb_px()
+                        this.pl_px().pr_px()
                     } else {
-                        this.pl_px().border_b_1().border_r_1()
+                        this.pl_px().pr_px()
                     }
                 }
-                TabPosition::Middle(Ordering::Equal) => this.border_l_1().border_r_1().pb_px(),
-                TabPosition::Middle(Ordering::Less) => this.border_l_1().pr_px().border_b_1(),
-                TabPosition::Middle(Ordering::Greater) => this.border_r_1().pl_px().border_b_1(),
+                TabPosition::Middle(Ordering::Equal) => this.pl_px().pr_px(),
+                TabPosition::Middle(Ordering::Less) => this.pl_px().pr_px(),
+                TabPosition::Middle(Ordering::Greater) => this.pl_px().pr_px(),
             })
             .cursor_pointer()
+            .hover(|style| {
+                style
+                    .bg(cx.theme().colors().element_hover.opacity(0.65))
+                    .text_color(cx.theme().colors().text)
+                    .shadow_sm()
+            })
             .child(
                 h_flex()
                     .group("")
                     .relative()
                     .h(Tab::content_height(cx))
+                    .rounded_full()
                     .px(DynamicSpacing::Base04.px(cx))
                     .gap(DynamicSpacing::Base04.rems(cx))
                     .text_color(text_color)
+                    .when(self.selected, |this| {
+                        this.shadow_sm()
+                            .border_1()
+                            .border_color(cx.theme().colors().element_selected.opacity(0.35))
+                    })
                     .child(start_slot)
                     .children(self.children)
                     .child(end_slot),
             )
+            .children(active_indicator)
     }
 }
 

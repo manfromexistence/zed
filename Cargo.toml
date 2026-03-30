@@ -1,4 +1,4 @@
-[workspace]
+﻿[workspace]
 resolver = "2"
 members = [
     "crates/acp_thread",
@@ -11,6 +11,7 @@ members = [
     "crates/agent_ui",
     "crates/ai_onboarding",
     "crates/animation_demo",
+    "crates/rich_file_preview",
     "crates/anthropic",
     "crates/askpass",
     "crates/assets",
@@ -269,6 +270,7 @@ agent_settings = { path = "crates/agent_settings" }
 agent_servers = { path = "crates/agent_servers" }
 ai_onboarding = { path = "crates/ai_onboarding" }
 animation_demo = { path = "crates/animation_demo" }
+rich_file_preview = { path = "crates/rich_file_preview" }
 anthropic = { path = "crates/anthropic" }
 askpass = { path = "crates/askpass" }
 assets = { path = "crates/assets" }
@@ -1015,3 +1017,6 @@ ignored = [
     "documented",
     "sea-orm-macros",
 ]
+
+
+

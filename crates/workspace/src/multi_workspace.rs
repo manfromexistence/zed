@@ -13,6 +13,7 @@ pub use settings::SidebarSide;
 use std::future::Future;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 use ui::prelude::*;
 use util::ResultExt;
 use zed_actions::agents_sidebar::{MoveWorkspaceToNewWindow, ToggleThreadSwitcher};
@@ -22,6 +23,7 @@ use settings::SidebarDockPosition;
 use ui::{ContextMenu, right_click_menu};
 
 const SIDEBAR_RESIZE_HANDLE_SIZE: Pixels = px(6.0);
+const SIDEBAR_TRANSITION_DURATION: Duration = Duration::from_millis(200);
 
 use crate::{
     CloseIntent, CloseWindow, DockPosition, Event as WorkspaceEvent, Item, ModalView, Panel,
@@ -48,6 +50,18 @@ actions!(
 pub struct SidebarRenderState {
     pub open: bool,
     pub side: SidebarSide,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum SidebarTransitionKind {
+    Opening,
+    Closing,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct SidebarTransition {
+    kind: SidebarTransitionKind,
+    started_at: Instant,
 }
 
 pub fn sidebar_side_context_menu(
@@ -195,6 +209,7 @@ pub struct MultiWorkspace {
     active_workspace_index: usize,
     sidebar: Option<Box<dyn SidebarHandle>>,
     sidebar_open: bool,
+    sidebar_transition: Option<SidebarTransition>,
     sidebar_overlay: Option<AnyView>,
     pending_removal_tasks: Vec<Task<()>>,
     _serialize_task: Option<Task<()>>,
@@ -212,7 +227,7 @@ impl MultiWorkspace {
 
     pub fn sidebar_render_state(&self, cx: &App) -> SidebarRenderState {
         SidebarRenderState {
-            open: self.sidebar_open() && self.multi_workspace_enabled(cx),
+            open: self.sidebar_visible() && self.multi_workspace_enabled(cx),
             side: self.sidebar_side(cx),
         }
     }
@@ -244,6 +259,7 @@ impl MultiWorkspace {
             active_workspace_index: 0,
             sidebar: None,
             sidebar_open: false,
+            sidebar_transition: None,
             sidebar_overlay: None,
             pending_removal_tasks: Vec::new(),
             _serialize_task: None,
@@ -274,6 +290,32 @@ impl MultiWorkspace {
 
     pub fn sidebar_open(&self) -> bool {
         self.sidebar_open
+    }
+
+    fn sidebar_visible(&self) -> bool {
+        self.sidebar_open || self.sidebar_transition.is_some()
+    }
+
+    fn sidebar_progress(&mut self, window: &mut Window) -> f32 {
+        let Some(transition) = self.sidebar_transition else {
+            return if self.sidebar_open { 1.0 } else { 0.0 };
+        };
+
+        let elapsed =
+            transition.started_at.elapsed().as_secs_f32() / SIDEBAR_TRANSITION_DURATION.as_secs_f32();
+        let eased = 1.0 - (1.0 - elapsed.clamp(0.0, 1.0)).powi(3);
+
+        if elapsed >= 1.0 {
+            self.sidebar_transition = None;
+            return if self.sidebar_open { 1.0 } else { 0.0 };
+        }
+
+        window.request_animation_frame();
+
+        match transition.kind {
+            SidebarTransitionKind::Opening => eased,
+            SidebarTransitionKind::Closing => 1.0 - eased,
+        }
     }
 
     pub fn sidebar_has_notifications(&self, cx: &App) -> bool {
@@ -348,6 +390,10 @@ impl MultiWorkspace {
 
     pub fn open_sidebar(&mut self, cx: &mut Context<Self>) {
         self.sidebar_open = true;
+        self.sidebar_transition = Some(SidebarTransition {
+            kind: SidebarTransitionKind::Opening,
+            started_at: Instant::now(),
+        });
         let sidebar_focus_handle = self.sidebar.as_ref().map(|s| s.focus_handle(cx));
         for workspace in &self.workspaces {
             workspace.update(cx, |workspace, _cx| {
@@ -360,6 +406,10 @@ impl MultiWorkspace {
 
     pub fn close_sidebar(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         self.sidebar_open = false;
+        self.sidebar_transition = Some(SidebarTransition {
+            kind: SidebarTransitionKind::Closing,
+            started_at: Instant::now(),
+        });
         for workspace in &self.workspaces {
             workspace.update(cx, |workspace, _cx| {
                 workspace.set_sidebar_focus_handle(None);
@@ -847,12 +897,14 @@ impl Render for MultiWorkspace {
         let multi_workspace_enabled = self.multi_workspace_enabled(cx);
         let sidebar_side = self.sidebar_side(cx);
         let sidebar_on_right = sidebar_side == SidebarSide::Right;
+        let sidebar_progress = self.sidebar_progress(window);
 
-        let sidebar: Option<AnyElement> = if multi_workspace_enabled && self.sidebar_open() {
+        let sidebar: Option<AnyElement> =
+            if multi_workspace_enabled && self.sidebar_visible() && sidebar_progress > 0.0 {
             self.sidebar.as_ref().map(|sidebar_handle| {
                 let weak = cx.weak_entity();
 
-                let sidebar_width = sidebar_handle.width(cx);
+                let sidebar_width = sidebar_handle.width(cx) * sidebar_progress.max(0.05);
                 let resize_handle = deferred(
                     div()
                         .id("sidebar-resize-handle")
@@ -888,15 +940,22 @@ impl Render for MultiWorkspace {
                         .occlude(),
                 );
 
-                div()
+                let sidebar_container = div()
                     .id("sidebar-container")
                     .relative()
                     .h_full()
                     .w(sidebar_width)
                     .flex_shrink_0()
+                    .opacity(sidebar_progress)
                     .child(sidebar_handle.to_any())
                     .child(resize_handle)
-                    .into_any_element()
+                    .shadow_md();
+
+                if sidebar_on_right {
+                    sidebar_container.animate_in_from_right(true).into_any_element()
+                } else {
+                    sidebar_container.animate_in_from_left(true).into_any_element()
+                }
             })
         } else {
             None

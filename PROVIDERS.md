@@ -1,0 +1,7 @@
+Now enough of this chit chat prompt. Now zed Codetator already has support for more than 10 providers. Right! Now we have to extend that to support literally all of the providers. zed already has a way to add new OpenAI compatible models and providers. Right! We will enhance that to use lite LLM, JSON API, and other REST traits to add all the subscriptions that we can possibly add right now as of 31st March 2026. Like all of the subscriptions: ChatGPT, OpenAI, codex, anything you can imagine; we have to add it if it has a rating then we have to add it.
+To support literally all of the providers we will:
+- add models.dev JSON directly
+- integrate it with our zedcode editor 4
+- also integrate the light LLMs JSON API providers directly in our code editor
+- then we will use the latest best provider logos from lobechat ai provider logos or svgl logos have all of the providers with their own logos in our zed coder data
+Currently zed coder data already supports more than 10 providers but we have to look at all of the providers available. We will not only support all of the providers here that are OpenAI compatible; we will also have more direct suspension integration into the zed editor. So do today is 31st March 2026 so please do the latest web search and list all of the providers and JSON AI data file that we can integrate to reach the goal of integrating literally all of the providers that we can possibly can in our zed code editor.

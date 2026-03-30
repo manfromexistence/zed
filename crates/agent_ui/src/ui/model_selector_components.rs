@@ -53,7 +53,9 @@ pub struct ModelSelectorListItem {
     is_latest: bool,
     is_favorite: bool,
     on_toggle_favorite: Option<Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>>,
+    context_info: Option<SharedString>,
     cost_info: Option<SharedString>,
+    badges: Vec<SharedString>,
 }
 
 impl ModelSelectorListItem {
@@ -67,7 +69,9 @@ impl ModelSelectorListItem {
             is_latest: false,
             is_favorite: false,
             on_toggle_favorite: None,
+            context_info: None,
             cost_info: None,
+            badges: Vec::new(),
         }
     }
 
@@ -113,6 +117,16 @@ impl ModelSelectorListItem {
         self.cost_info = cost_info;
         self
     }
+
+    pub fn context_info(mut self, context_info: Option<SharedString>) -> Self {
+        self.context_info = context_info;
+        self
+    }
+
+    pub fn badges(mut self, badges: Vec<SharedString>) -> Self {
+        self.badges = badges;
+        self
+    }
 }
 
 impl RenderOnce for ModelSelectorListItem {
@@ -155,7 +169,18 @@ impl RenderOnce for ModelSelectorListItem {
                         };
 
                         this.child(Chip::new(cost_info).tooltip(Tooltip::text(tooltip_text)))
-                    }),
+                    })
+                    .when_some(self.context_info, |this, context_info| {
+                        this.child(
+                            Chip::new(context_info)
+                                .tooltip(Tooltip::text("Model context window")),
+                        )
+                    })
+                    .children(
+                        self.badges
+                            .into_iter()
+                            .map(|badge| Chip::new(badge).into_any_element()),
+                    ),
             )
             .end_slot(div().pr_2().when(self.is_selected, |this| {
                 this.child(Icon::new(IconName::Check).color(Color::Accent))
@@ -184,6 +209,7 @@ impl RenderOnce for ModelSelectorListItem {
 pub struct ModelSelectorFooter {
     action: Box<dyn Action>,
     focus_handle: FocusHandle,
+    status_text: Option<SharedString>,
 }
 
 impl ModelSelectorFooter {
@@ -191,7 +217,13 @@ impl ModelSelectorFooter {
         Self {
             action,
             focus_handle,
+            status_text: None,
         }
+    }
+
+    pub fn status_text(mut self, status_text: Option<SharedString>) -> Self {
+        self.status_text = status_text;
+        self
     }
 }
 
@@ -203,8 +235,16 @@ impl RenderOnce for ModelSelectorFooter {
         h_flex()
             .w_full()
             .p_1p5()
+            .gap_2()
             .border_t_1()
             .border_color(cx.theme().colors().border_variant)
+            .when_some(self.status_text, |this, status_text| {
+                this.child(
+                    Label::new(status_text)
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted),
+                )
+            })
             .child(
                 Button::new("configure", "Configure")
                     .full_width()
