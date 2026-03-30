@@ -8,9 +8,9 @@ default:
 # RECOMMENDED: Run Zed with expert-optimized low-memory settings
 run:
     @echo "Running Zed with EXPERT-OPTIMIZED low-memory settings..."
-    @echo "Building only the zed binary (not all workspace targets)"
+    @echo "Building the zed and cli binaries required for local development"
     @echo "Using: 1 job, 256 codegen units, rust-lld linker, no debug info"
-    cargo run -p zed --bin zed
+    cargo build -p zed --bin zed -p cli --bin cli
     @echo "Build complete! Running Zed..."
     ./target/debug/zed.exe
 

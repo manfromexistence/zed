@@ -9,12 +9,12 @@
 ## Project Phases
 
 ### Phase 1: Project Setup & Infrastructure ⏳ IN PROGRESS
-- [ ] Create `animation_demo` crate structure
-- [ ] Set up project dependencies in `Cargo.toml`
-- [ ] Copy web reference code to `www/` folder
-- [ ] Create demo tab infrastructure (like onboarding tab)
-- [ ] Set up dimension display panel for live testing
-- [ ] Configure video/3D rendering preview in demo tab
+- [x] Create `animation_demo` crate structure
+- [x] Set up project dependencies in `Cargo.toml`
+- [x] Copy web reference code to `www/` folder
+- [x] Create demo tab infrastructure (like onboarding tab)
+- [x] Set up dimension display panel for live testing
+- [x] Configure video/3D rendering preview in demo tab
 - [ ] Verify `just run` command works correctly
 
 **Estimated Time:** 2-3 hours  
@@ -24,12 +24,12 @@
 ---
 
 ### Phase 2: Core Animation Components 🔜 PENDING
-- [ ] Implement spring physics system (`spring.rs`)
-- [ ] Implement easing curves (`easing.rs`)
-- [ ] Create animated value system (`animator.rs`)
-- [ ] Build transition helpers (`transition.rs`)
-- [ ] Create gesture handling system (`gesture.rs`)
-- [ ] Test all animation primitives in demo tab
+- [x] Implement spring physics system (`spring.rs`)
+- [x] Implement easing curves (`easing.rs`)
+- [x] Create animated value system (`animator.rs`)
+- [x] Build transition helpers (`transition.rs`)
+- [x] Create gesture handling system (`gesture.rs`)
+- [x] Test all animation primitives in demo tab
 
 **Estimated Time:** 4-5 hours  
 **Priority:** 🔴 Critical  
@@ -38,14 +38,14 @@
 ---
 
 ### Phase 3: Friday Border Effect ⏸️ NOT STARTED
-- [ ] Create `friday.rs` component
+- [x] Create `friday.rs` component
 - [ ] Implement rainbow gradient shader (Metal/Vulkan)
-- [ ] Add border slide-in animation (750ms)
-- [ ] Implement dual glow layers (8px + 12px blur)
-- [ ] Add scroll bounce effect with spring physics
+- [x] Add border slide-in animation (750ms)
+- [x] Implement dual glow layers (8px + 12px blur)
+- [x] Add scroll bounce effect with spring physics
 - [ ] Test gradient shift animation (0% → 200%)
 - [ ] Verify 120 FPS performance
-- [ ] Add to demo tab with dimensions display
+- [x] Add to demo tab with dimensions display
 
 **Estimated Time:** 3-4 hours  
 **Priority:** 🔴 Critical  
@@ -54,13 +54,13 @@
 ---
 
 ### Phase 4: Hello Glow Effect ⏸️ NOT STARTED
-- [ ] Create `hello_glow.rs` component
+- [x] Create `hello_glow.rs` component
 - [ ] Implement 25-color HSL gradient shader
-- [ ] Add dual-layer blur (6px + 18px)
-- [ ] Implement background-position animation (6s cycle)
-- [ ] Add border radius rendering (12px)
+- [x] Add dual-layer blur (6px + 18px)
+- [x] Implement background-position animation (6s cycle)
+- [x] Add border radius rendering (12px)
 - [ ] Test glow intensity and performance
-- [ ] Add to demo tab with live preview
+- [x] Add to demo tab with live preview
 
 **Estimated Time:** 2-3 hours  
 **Priority:** 🔴 Critical  
@@ -144,8 +144,8 @@
 ---
 
 ### Phase 9: Video & 3D Rendering ⏸️ NOT STARTED
-- [ ] Research and select video player crate (e.g., `gstreamer`, `ffmpeg-next`)
-- [ ] Research and select 3D rendering crate (e.g., `wgpu`, `three-d`)
+- [x] Research and select video player crate (e.g., `gstreamer`, `ffmpeg-next`)
+- [x] Research and select 3D rendering crate (e.g., `wgpu`, `three-d`)
 - [ ] Implement video player component
 - [ ] Implement 3D viewer component
 - [ ] Add video/3D preview to demo tab
@@ -177,11 +177,11 @@
 
 ## Current Sprint
 
-**Active Phase:** Phase 1 - Project Setup & Infrastructure  
+**Active Phase:** Phase 3 - Friday Border Effect  
 **Started:** March 31, 2026  
 **Target Completion:** March 31, 2026
 
-**Next Up:** Phase 2 - Core Animation Components
+**Next Up:** Phase 4 - Hello Glow Effect
 
 ---
 
@@ -234,10 +234,10 @@
 
 ## Completion Metrics
 
-**Total Tasks:** 0 / 100+  
-**Phases Completed:** 0 / 10  
-**Overall Progress:** 0%
+**Total Tasks:** 24 / 100+  
+**Phases Completed:** 2 / 10  
+**Overall Progress:** 24%
 
 **Estimated Total Time:** 45-55 hours  
-**Time Spent:** 0 hours  
-**Time Remaining:** 45-55 hours
+**Time Spent:** 2.75 hours  
+**Time Remaining:** 42.25-52.25 hours

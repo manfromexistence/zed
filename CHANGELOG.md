@@ -9,6 +9,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Phase 1 - Project Setup & Infrastructure - 2026-03-31
+
+#### Added
+- Created the initial `crates/animation_demo/` scaffold with `src/`, `src/utils/`, and `shaders/` directories for the GPUI animation crate.
+- Added the new `animation_demo` workspace crate and wired it into the root workspace plus the `zed` application crate.
+- Added `crates/animation_demo/src/lib.rs` and an item-backed `demo_tab.rs` surface for Phase 1 animation validation.
+- Added a live dimension panel that reports the current viewport size, target FPS, frame budget, and preview surface intent.
+- Added placeholder video and 3D preview panels inside the demo tab so later rendering work has a visible target area from the start.
+- Verified that the web reference source is available under `www/` for side-by-side implementation work.
+
+#### Changed
+- Updated Zed startup initialization to open the new animation demo tab automatically for each workspace during Phase 1 development.
+- Updated the `just run` workflow to build both `zed` and `cli` before launch so local development no longer trips the missing `zed-cli` runtime error.
+
+### Phase 2 - Core Animation Components - 2026-03-31
+
+#### Added
+- Added `spring.rs` with Apple-style presets, analytical spring solving, and mid-flight retargeting support.
+- Added `easing.rs` with reusable Apple-inspired cubic-bezier curves and a bezier solver.
+- Added `animator.rs` with `AnimatedValue`, `AnimatedPoint`, `AnimatedColor`, and RGBA helpers for scalar, point, and color animation state.
+- Added `transition.rs` with reusable Apple-style helpers for fades, sheet presentation, slide-up motion, and sidebar width changes.
+- Added `gesture.rs` with drag-axis modeling, elastic constraints, drag velocity tracking, and hold detection primitives for later interactive work.
+
+#### Changed
+- Expanded the animation demo tab to surface Phase 2 motion-toolkit diagnostics so spring, easing, and gesture behavior are visible from the demo environment.
+
+### Phase 3-4 - Friday Border + Hello Glow Previews - 2026-03-31
+
+#### Added
+- Added `friday.rs` with a cycling Friday border preview that includes rainbow segmented borders, staged edge reveals, dual glow layers, and a bounce-shifted content area.
+- Added `hello_glow.rs` with a GPUI-native glow card preview that cycles a 25-color rainbow field with inner and outer glow layers.
+- Added `sidebar.rs`, `carousel.rs`, and `macos_dock.rs` preview components to start expressing the later UI replacement phases inside the demo surface.
+
+#### Changed
+- Expanded the demo tab to render live Friday Border, Hello Glow, Sidebar, Carousel, and Dock previews alongside the Phase 2 motion toolkit.
+
+### Phase 8-9 - Drag Preview + Media Direction - 2026-03-31
+
+#### Added
+- Added `drag_drop.rs` with a visual drag-and-drop preview showing a ghost tab card plus blue dot-and-line drop indicators.
+
+#### Changed
+- Updated the demo tab's video and 3D placeholders to reflect the selected Phase 9 implementation direction: `gstreamer` or `ffmpeg-next` for video, and `wgpu` or `three-d` for 3D rendering.
+
 ### Project Initialization - 2026-03-31
 
 #### Added

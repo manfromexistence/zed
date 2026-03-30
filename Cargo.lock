@@ -575,6 +575,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4b46cbb362ab8752921c97e041f5e366ee6297bd428a31275b9fcf1e380f7299"
 
 [[package]]
+name = "animation_demo"
+version = "0.1.0"
+dependencies = [
+ "gpui",
+ "smallvec",
+ "ui",
+ "workspace",
+]
+
+[[package]]
 name = "annotate-snippets"
 version = "0.12.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -21994,6 +22004,7 @@ dependencies = [
  "agent_servers",
  "agent_settings",
  "agent_ui",
+ "animation_demo",
  "anyhow",
  "ashpd",
  "askpass",
