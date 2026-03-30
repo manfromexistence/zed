@@ -1,0 +1,36 @@
+cmake_minimum_required(VERSION 3.16)
+
+if(${CMAKE_VERSION} VERSION_LESS 3.12)
+	cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
+endif()
+
+set(CMAKE_CXX_STANDARD 17)
+project(OverEngine
+        VERSION 0.0
+        DESCRIPTION "Opensource game engine under MIT license"
+        LANGUAGES C CXX)
+
+option(OVERENGINE_BUILD_SANDBOX "Build the Sandbox demo" ON)
+
+# vendor
+option(GLFW_BUILD_DOCS OFF)
+add_subdirectory(OverEngine/vendor/GLFW)
+
+add_subdirectory(OverEngine/vendor/glad)
+add_subdirectory(OverEngine/vendor/imgui)
+
+option(YAML_CPP_BUILD_TOOLS OFF)
+add_subdirectory(OverEngine/vendor/yaml-cpp)
+
+option(BOX2D_BUILD_TESTBED "Build the Box2D testbed" OFF)
+option(BOX2D_BUILD_UNIT_TESTS "Build the Box2D unit tests" OFF)
+add_subdirectory(OverEngine/vendor/box2d)
+
+add_subdirectory(OverEngine/vendor/wren)
+
+# OverEngine
+add_subdirectory(OverEngine)
+# add_subdirectory(OverEditor)
+if (OVERENGINE_BUILD_SANDBOX)
+	add_subdirectory(Sandbox)
+endif()

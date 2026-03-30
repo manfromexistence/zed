@@ -1,0 +1,40 @@
+# IDE Caches
+.vs/
+.vscode/
+.atom/
+.idea/
+cmake-build-*/
+*.swp
+CMakeLists.txt.user
+
+# OverEngine Binaries
+/bin/
+/bin-int/
+/build*/
+/OverEngine/build*/
+/OverEditor/build*/
+/Sandbox/build*/
+
+OverEngine/src/Wren/*.wren.inc
+
+# Vendor Binaries
+/OverEngine/vendor/*/bin/
+/OverEngine/vendor/*/bin-int/
+
+# Visual Studio project files
+*.sln*
+*.vcxproj*
+
+# MakeFiles
+MakeFile
+
+# Profiling files
+OverEngineProfile-StartUp.json
+OverEngineProfile-Runtime.json
+OverEngineProfile-Shutdown.json
+
+# Other
+Sandbox/SandboxScene.oes
+OverEngine.log
+imgui.ini
+/build.sh

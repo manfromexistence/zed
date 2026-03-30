@@ -1,0 +1,25 @@
+#pragma once
+
+#include "OverEngine/Renderer/GraphicsContext.h"
+
+struct GLFWwindow;
+
+namespace OverEngine
+{
+	class OpenGLContext : public GraphicsContext
+	{
+	public:
+		OpenGLContext(Window* window);
+
+		virtual void Init() override;
+		virtual void SwapBuffers() override;
+
+		virtual void Current() override;
+
+		virtual const char* GetInfoVersion()  override;
+		virtual const char* GetInfoVendor()   override;
+		virtual const char* GetInfoRenderer() override;
+	private:
+		GLFWwindow* m_WindowHandle;
+	};
+}

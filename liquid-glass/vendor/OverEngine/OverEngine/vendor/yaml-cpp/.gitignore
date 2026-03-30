@@ -1,0 +1,8 @@
+# OverEngine
+bin/
+bin-int/
+yaml-cpp.vcxproj*
+
+build/
+/tags
+/bazel-*
