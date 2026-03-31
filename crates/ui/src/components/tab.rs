@@ -120,9 +120,10 @@ impl RenderOnce for Tab {
             ),
             true => (
                 cx.theme().colors().text,
-                cx.theme().colors().tab_active_background.blend(
-                    cx.theme().colors().element_selected.opacity(0.18),
-                ),
+                cx.theme()
+                    .colors()
+                    .tab_active_background
+                    .blend(cx.theme().colors().element_selected.opacity(0.18)),
                 cx.theme().colors().element_hover,
                 cx.theme().colors().element_active,
             ),
@@ -190,23 +191,22 @@ impl RenderOnce for Tab {
             .cursor_pointer()
             .hover(|style| {
                 style
-                    .bg(cx.theme().colors().element_hover.opacity(0.65))
+                    .bg(cx.theme().colors().element_hover.opacity(0.35))
                     .text_color(cx.theme().colors().text)
-                    .shadow_sm()
             })
             .child(
                 h_flex()
                     .group("")
                     .relative()
                     .h(Tab::content_height(cx))
-                    .rounded_full()
+                    .rounded_md()
                     .px(DynamicSpacing::Base04.px(cx))
                     .gap(DynamicSpacing::Base04.rems(cx))
                     .text_color(text_color)
                     .when(self.selected, |this| {
-                        this.shadow_sm()
+                        this.bg(cx.theme().colors().tab_active_background)
                             .border_1()
-                            .border_color(cx.theme().colors().element_selected.opacity(0.35))
+                            .border_color(cx.theme().colors().border_selected.opacity(0.45))
                     })
                     .child(start_slot)
                     .children(self.children)

@@ -101,18 +101,13 @@ impl RenderOnce for TabBar {
             .bg(cx.theme().colors().tab_bar_background)
             .child(
                 h_flex()
-                    .mx(DynamicSpacing::Base04.px(cx))
-                    .my(px(2.))
+                    .mx(px(0.0))
+                    .my(px(0.0))
                     .w_full()
-                    .h(Tab::content_height(cx))
+                    .h_full()
                     .items_center()
                     .gap(DynamicSpacing::Base04.rems(cx))
-                    .px(DynamicSpacing::Base04.px(cx))
-                    .rounded_full()
-                    .border_1()
-                    .border_color(cx.theme().colors().border.opacity(0.75))
-                    .bg(cx.theme().colors().panel_background.opacity(0.92))
-                    .shadow_sm()
+                    .px(DynamicSpacing::Base02.px(cx))
                     .when(!self.start_children.is_empty(), |this| {
                         this.child(
                             h_flex()

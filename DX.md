@@ -4,6 +4,11 @@
 4. Theme, icon, font
 5. rainbow animated cursor, particles 
 
+Awesome now format, lint, and check for any errors before running the Zedcode editor. After you think there can be any kind of errors, then run the project. Exactly just run the command; don't use any kind of other command because this operating system can't handle other commands because of low storage and low RAM. 
+
+1. Currently, our workspace sidebar, where we added our sidebar animations, just has a huge right side white gap for no reason. Please make sure to remove that white gap and to demonstrate, add some dummy item data to our sidebar so that we can easily test the new animation and effects that we added in the workspace sidebar.
+2. Secondly, clicking on the web browser is throwing a ref call error. Please debug and fix that problem.And in the animation screen, the hello glow and friday glow are showing like a color box shade instead of blending the colors together to create a rainbow animated glow. Fix that hello glow and friday animation so that rainbow animated colors blend with each other. Maybe the last GPUI create inside doesn't have any blending system of color, so if they don't have it, then implement that blending system and then use that system after creating it in our hello glow and friday animations. 
+
 Kindly, in the top file preview, you have a rounded pill border, but please don't change the file bar tab manager tab of current zed code editor as I told you implement the macos like dock in the topbar center not inside the file browser code editor tabs as even the file browsers are a screen of the screen carosel - there's currently no ui element by default the topbar center of the zed code editor so please our macos like screen carosel controller system in the topbar center. On the top of the top bar or center of the top bar, please create a macOS-like dock and create docs for every screen. There is:
 - the whole code editor tabs as a screen
 - a terminal as a new screen

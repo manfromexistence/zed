@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Top Bar Screen Dock and Carousel Refinement - 2026-03-31
+
+#### Changed
+- Moved the macOS-style screen controller out of the editor file-tab strip and into the real title-bar center so it behaves as a separate screen dock instead of a tab skin.
+- Added a live title-bar screen dock wired to the active pane, with per-screen icons, right-click icon switching, direct screen activation, and plus/list popovers for adding or jumping between screens.
+- Restored the shared file tab and tab-bar components to a more standard Zed-style presentation so the new dock owns the macOS-like visual language instead of the editor tab strip.
+- Refined the production carousel edge affordances to use centered highlight pills instead of full-height side rails, while preserving resize behavior and adding edge-swipe screen activation for adjacent screens.
+
 ### Onboarding, Dx Theme, and Editor Effects - 2026-03-31
 
 #### Added

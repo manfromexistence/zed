@@ -414,6 +414,7 @@ pub struct Pane {
     carousel_bounds: Bounds<Pixels>,
     carousel_screens: HashMap<EntityId, CarouselScreenState>,
     carousel_resize: Option<CarouselResizeState>,
+    carousel_edge_swipe: Option<CarouselEdgeSwipeState>,
     carousel_motion: CarouselSpring,
     diagnostics: HashMap<ProjectPath, DiagnosticSeverity>,
     zoom_out_on_close: bool,
@@ -534,6 +535,12 @@ struct CarouselResizeState {
     item_id: EntityId,
     start_position: Point<Pixels>,
     start_width: Pixels,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct CarouselEdgeSwipeState {
+    edge: CarouselResizeEdge,
+    start_position: Point<Pixels>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -711,6 +718,7 @@ impl Pane {
             carousel_bounds: Bounds::default(),
             carousel_screens: HashMap::default(),
             carousel_resize: None,
+            carousel_edge_swipe: None,
             carousel_motion: CarouselSpring::default(),
             diagnostics: Default::default(),
             zoom_out_on_close: true,
@@ -1531,6 +1539,10 @@ impl Pane {
         {
             self.carousel_resize = None;
         }
+
+        if self.carousel_edge_swipe.is_some() && self.items.len() <= 1 {
+            self.carousel_edge_swipe = None;
+        }
     }
 
     fn carousel_screen_state_mut(&mut self, item_id: EntityId) -> &mut CarouselScreenState {
@@ -1579,6 +1591,72 @@ impl Pane {
         index.rem_euclid(len) as usize
     }
 
+    fn carousel_adjacent_index(&self, edge: CarouselResizeEdge) -> Option<usize> {
+        if self.items.len() <= 1 {
+            return None;
+        }
+
+        if self.items.len() == 2 {
+            return match edge {
+                CarouselResizeEdge::Left => self.active_item_index.checked_sub(1),
+                CarouselResizeEdge::Right => {
+                    let next_index = self.active_item_index + 1;
+                    (next_index < self.items.len()).then_some(next_index)
+                }
+            };
+        }
+
+        Some(match edge {
+            CarouselResizeEdge::Left => self.wrap_item_index(self.active_item_index as isize - 1),
+            CarouselResizeEdge::Right => self.wrap_item_index(self.active_item_index as isize + 1),
+        })
+    }
+
+    fn begin_carousel_edge_swipe(
+        &mut self,
+        edge: CarouselResizeEdge,
+        position: Point<Pixels>,
+        cx: &mut Context<Self>,
+    ) {
+        if self.carousel_resize.is_some() || self.carousel_adjacent_index(edge).is_none() {
+            return;
+        }
+
+        self.carousel_edge_swipe = Some(CarouselEdgeSwipeState {
+            edge,
+            start_position: position,
+        });
+        cx.notify();
+    }
+
+    fn update_carousel_edge_swipe(
+        &mut self,
+        position: Point<Pixels>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(swipe) = self.carousel_edge_swipe else {
+            return;
+        };
+
+        let delta = Self::pixels_to_f32(position.x - swipe.start_position.x);
+        let activate_neighbor = match swipe.edge {
+            CarouselResizeEdge::Left => delta >= 42.0,
+            CarouselResizeEdge::Right => delta <= -42.0,
+        };
+
+        if activate_neighbor && let Some(index) = self.carousel_adjacent_index(swipe.edge) {
+            self.carousel_edge_swipe = None;
+            self.activate_item(index, true, true, window, cx);
+        }
+    }
+
+    fn end_carousel_edge_swipe(&mut self, cx: &mut Context<Self>) {
+        if self.carousel_edge_swipe.take().is_some() {
+            cx.notify();
+        }
+    }
+
     fn begin_carousel_resize(
         &mut self,
         item_id: EntityId,
@@ -1591,6 +1669,7 @@ impl Pane {
             return;
         }
 
+        self.carousel_edge_swipe = None;
         let start_width = self.clamped_carousel_width(item_id, container_width);
         self.carousel_resize = Some(CarouselResizeState {
             edge,
@@ -1656,7 +1735,15 @@ impl Pane {
         let pane_for_activate = pane.clone();
         let item_id = item.item_id();
         let content = item.to_any_view();
-        let show_handles = is_active && self.items.len() > 1;
+        let show_left_screen = is_active
+            && self
+                .carousel_adjacent_index(CarouselResizeEdge::Left)
+                .is_some();
+        let show_right_screen = is_active
+            && self
+                .carousel_adjacent_index(CarouselResizeEdge::Right)
+                .is_some();
+        let show_handles = show_left_screen || show_right_screen;
 
         div()
             .id(format!("pane-carousel-wrapper-{ix}"))
@@ -1706,69 +1793,151 @@ impl Pane {
                         )
                     })
                     .when(show_handles, |this| {
+                        let pane_for_left_swipe = pane.clone();
+                        let pane_for_right_swipe = pane.clone();
                         let pane_for_left = pane.clone();
                         let pane_for_right = pane.clone();
 
-                        this.child(
-                            div()
-                                .absolute()
-                                .top(px(12.0))
-                                .left_0()
-                                .bottom(px(12.0))
-                                .w(px(10.0))
-                                .cursor_col_resize()
-                                .child(
-                                    div()
-                                        .absolute()
-                                        .top_0()
-                                        .bottom_0()
-                                        .left(px(3.0))
-                                        .w(px(2.0))
-                                        .rounded_full()
-                                        .bg(cx.theme().colors().border_selected.opacity(0.9)),
-                                )
-                                .on_mouse_down(MouseButton::Left, move |event, _window, cx| {
-                                    pane_for_left.update(cx, |pane, cx| {
-                                        pane.begin_carousel_resize(
-                                            item_id,
-                                            CarouselResizeEdge::Left,
-                                            event.position,
-                                            cx,
-                                        );
-                                    });
-                                    cx.stop_propagation();
-                                }),
-                        )
-                        .child(
-                            div()
-                                .absolute()
-                                .top(px(12.0))
-                                .right_0()
-                                .bottom(px(12.0))
-                                .w(px(10.0))
-                                .cursor_col_resize()
-                                .child(
-                                    div()
-                                        .absolute()
-                                        .top_0()
-                                        .bottom_0()
-                                        .right(px(3.0))
-                                        .w(px(2.0))
-                                        .rounded_full()
-                                        .bg(cx.theme().colors().border_selected.opacity(0.9)),
-                                )
-                                .on_mouse_down(MouseButton::Left, move |event, _window, cx| {
-                                    pane_for_right.update(cx, |pane, cx| {
-                                        pane.begin_carousel_resize(
-                                            item_id,
-                                            CarouselResizeEdge::Right,
-                                            event.position,
-                                            cx,
-                                        );
-                                    });
-                                    cx.stop_propagation();
-                                }),
-                        )
+                        this.when(show_left_screen, |this| {
+                            this.child(
+                                div()
+                                    .absolute()
+                                    .top_0()
+                                    .left_0()
+                                    .bottom_0()
+                                    .w(px(12.0))
+                                    .cursor_pointer()
+                                    .on_mouse_down(MouseButton::Left, move |event, _window, cx| {
+                                        pane_for_left_swipe.update(cx, |pane, cx| {
+                                            pane.begin_carousel_edge_swipe(
+                                                CarouselResizeEdge::Left,
+                                                event.position,
+                                                cx,
+                                            );
+                                        });
+                                        cx.stop_propagation();
+                                    }),
+                            )
+                        })
+                        .when(show_right_screen, |this| {
+                            this.child(
+                                div()
+                                    .absolute()
+                                    .top_0()
+                                    .right_0()
+                                    .bottom_0()
+                                    .w(px(12.0))
+                                    .cursor_pointer()
+                                    .on_mouse_down(MouseButton::Left, move |event, _window, cx| {
+                                        pane_for_right_swipe.update(cx, |pane, cx| {
+                                            pane.begin_carousel_edge_swipe(
+                                                CarouselResizeEdge::Right,
+                                                event.position,
+                                                cx,
+                                            );
+                                        });
+                                        cx.stop_propagation();
+                                    }),
+                            )
+                        })
+                        .when(show_left_screen, |this| {
+                            this.child(
+                                div()
+                                    .absolute()
+                                    .top_0()
+                                    .left_0()
+                                    .bottom_0()
+                                    .w(px(12.0))
+                                    .child(
+                                        h_flex().size_full().justify_center().items_center().child(
+                                            div()
+                                                .h(px(60.0))
+                                                .w(px(12.0))
+                                                .cursor_col_resize()
+                                                .child(
+                                                    h_flex()
+                                                        .size_full()
+                                                        .justify_center()
+                                                        .items_center()
+                                                        .child(
+                                                            div()
+                                                                .h(px(60.0))
+                                                                .w(px(3.0))
+                                                                .rounded_full()
+                                                                .bg(cx
+                                                                    .theme()
+                                                                    .colors()
+                                                                    .border_selected
+                                                                    .opacity(0.85)),
+                                                        ),
+                                                )
+                                                .on_mouse_down(
+                                                    MouseButton::Left,
+                                                    move |event, _window, cx| {
+                                                        pane_for_left.update(cx, |pane, cx| {
+                                                            pane.begin_carousel_resize(
+                                                                item_id,
+                                                                CarouselResizeEdge::Left,
+                                                                event.position,
+                                                                cx,
+                                                            );
+                                                        });
+                                                        cx.stop_propagation();
+                                                    },
+                                                ),
+                                        ),
+                                    ),
+                            )
+                        })
+                        .when(show_right_screen, |this| {
+                            this.child(
+                                div()
+                                    .absolute()
+                                    .top_0()
+                                    .right_0()
+                                    .bottom_0()
+                                    .w(px(12.0))
+                                    .child(
+                                        h_flex().size_full().justify_center().items_center().child(
+                                            div()
+                                                .h(px(60.0))
+                                                .w(px(12.0))
+                                                .cursor_col_resize()
+                                                .child(
+                                                    h_flex()
+                                                        .size_full()
+                                                        .justify_center()
+                                                        .items_center()
+                                                        .child(
+                                                            div()
+                                                                .h(px(60.0))
+                                                                .w(px(3.0))
+                                                                .rounded_full()
+                                                                .bg(cx
+                                                                    .theme()
+                                                                    .colors()
+                                                                    .border_selected
+                                                                    .opacity(0.85)),
+                                                        ),
+                                                )
+                                                .on_mouse_down(
+                                                    MouseButton::Left,
+                                                    move |event, _window, cx| {
+                                                        pane_for_right.update(cx, |pane, cx| {
+                                                            pane.begin_carousel_resize(
+                                                                item_id,
+                                                                CarouselResizeEdge::Right,
+                                                                event.position,
+                                                                cx,
+                                                            );
+                                                        });
+                                                        cx.stop_propagation();
+                                                    },
+                                                ),
+                                        ),
+                                    ),
+                            )
+                        })
                     }),
             )
             .into_any_element()
@@ -1920,29 +2089,44 @@ impl Pane {
                 window,
                 cx,
             ))
-            .when(self.carousel_resize.is_some(), |this| {
-                this.child(
-                    div()
-                        .absolute()
-                        .top_0()
-                        .left_0()
-                        .right_0()
-                        .bottom_0()
-                        .cursor_col_resize()
-                        .on_mouse_move(move |event: &MouseMoveEvent, _window, cx| {
-                            if event.dragging() {
-                                pane_for_overlay_move.update(cx, |pane, cx| {
-                                    pane.update_carousel_resize(event.position, cx);
-                                });
-                            }
-                        })
-                        .on_mouse_up(MouseButton::Left, move |_: &MouseUpEvent, _window, cx| {
-                            pane_for_overlay_up.update(cx, |pane, cx| {
-                                pane.end_carousel_resize(cx);
-                            });
-                        }),
-                )
-            })
+            .when(
+                self.carousel_resize.is_some() || self.carousel_edge_swipe.is_some(),
+                |this| {
+                    this.child(
+                        div()
+                            .absolute()
+                            .top_0()
+                            .left_0()
+                            .right_0()
+                            .bottom_0()
+                            .cursor_pointer()
+                            .on_mouse_move(move |event: &MouseMoveEvent, window, cx| {
+                                if event.dragging() {
+                                    pane_for_overlay_move.update(cx, |pane, cx| {
+                                        if pane.carousel_resize.is_some() {
+                                            pane.update_carousel_resize(event.position, cx);
+                                        } else if pane.carousel_edge_swipe.is_some() {
+                                            pane.update_carousel_edge_swipe(
+                                                event.position,
+                                                window,
+                                                cx,
+                                            );
+                                        }
+                                    });
+                                }
+                            })
+                            .on_mouse_up(
+                                MouseButton::Left,
+                                move |_: &MouseUpEvent, _window, cx| {
+                                    pane_for_overlay_up.update(cx, |pane, cx| {
+                                        pane.end_carousel_resize(cx);
+                                        pane.end_carousel_edge_swipe(cx);
+                                    });
+                                },
+                            ),
+                    )
+                },
+            )
             .into_any_element()
     }
 

@@ -115,7 +115,7 @@
 - [x] Implement drag-to-reorder with visual feedback
 - [x] Add plus button for new screen
 - [ ] Add close button (X) with animation
-- [ ] Connect dock to carousel state
+- [x] Connect dock to carousel state
 - [x] Integrate into workspace top bar
 
 **Estimated Time:** 4-5 hours  
