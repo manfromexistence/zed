@@ -1800,6 +1800,7 @@ impl EditorElement {
         cx: &mut App,
     ) -> Vec<CursorLayout> {
         let mut autoscroll_bounds = None;
+        let mut animate_rainbow_cursor = false;
         let cursor_layouts = self.editor.update(cx, |editor, cx| {
             let mut cursors = Vec::new();
 
@@ -1945,6 +1946,7 @@ impl EditorElement {
                         animate_rainbow: selection.is_local,
                         cursor_name: None,
                     };
+                    animate_rainbow_cursor |= cursor.animate_rainbow;
                     let cursor_name = selection.user_name.clone().map(|name| CursorName {
                         string: name,
                         color: self.style.background,
@@ -1960,6 +1962,10 @@ impl EditorElement {
 
         if let Some(bounds) = autoscroll_bounds {
             window.request_autoscroll(bounds);
+        }
+
+        if animate_rainbow_cursor {
+            window.request_animation_frame();
         }
 
         cursor_layouts
@@ -6843,8 +6849,13 @@ impl EditorElement {
             .iter()
             .any(CursorLayout::animate_rainbow);
 
+        let rainbow_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|duration| duration.as_secs_f32())
+            .unwrap_or_default();
+
         for cursor in &mut layout.visible_cursors {
-            cursor.paint(layout.content_origin, window, cx);
+            cursor.paint(layout.content_origin, rainbow_time, window, cx);
         }
 
         for particle in particle_layouts.iter() {
@@ -12112,8 +12123,8 @@ impl CursorLayout {
     fn bounds(&self, origin: gpui::Point<Pixels>) -> Bounds<Pixels> {
         match self.shape {
             CursorShape::Bar if self.animate_rainbow => Bounds {
-                origin: self.origin + origin - point(px(0.12), Pixels::ZERO),
-                size: size(px(2.05), self.line_height),
+                origin: self.origin + origin + point(px(0.12), Pixels::ZERO),
+                size: size(px(1.75), self.line_height),
             },
             CursorShape::Bar => Bounds {
                 origin: self.origin + origin,
@@ -12172,7 +12183,13 @@ impl CursorLayout {
         }
     }
 
-    pub fn paint(&mut self, origin: gpui::Point<Pixels>, window: &mut Window, cx: &mut App) {
+    pub fn paint(
+        &mut self,
+        origin: gpui::Point<Pixels>,
+        rainbow_time: f32,
+        window: &mut Window,
+        cx: &mut App,
+    ) {
         let bounds = self.bounds(origin);
 
         if let Some(name) = &mut self.cursor_name {
@@ -12180,22 +12197,25 @@ impl CursorLayout {
         }
 
         if self.animate_rainbow && !matches!(self.shape, CursorShape::Hollow) {
-            let elapsed = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .map(|duration| duration.as_secs_f32())
-                .unwrap_or_default();
-            let pulse = ((elapsed * 9.6).sin() * 0.5) + 0.5;
-            let base_hue = (elapsed * 2.35 + (f32::from(self.origin.x) / 240.0)) % 1.0;
-            let stripe_count = match self.shape {
-                CursorShape::Underline => 8,
-                CursorShape::Bar => 14,
-                CursorShape::Block => 14,
+            let pulse = ((rainbow_time * 7.4).sin() * 0.5) + 0.5;
+            let along_vertical = !matches!(self.shape, CursorShape::Underline);
+            let band_count = match self.shape {
+                CursorShape::Underline => 4,
+                CursorShape::Bar => 4,
+                CursorShape::Block => 5,
                 CursorShape::Hollow => 1,
             };
+            let band_span = 1.0 / band_count as f32;
+            let scroll_phase = (rainbow_time * 1.85
+                + (f32::from(self.origin.x) / 640.0)
+                + (f32::from(self.origin.y) / 960.0))
+                .fract();
+            let base_hue =
+                (rainbow_time * 0.92 + (f32::from(self.origin.x) / 240.0)).rem_euclid(1.0);
             let glow_radius = match self.shape {
-                CursorShape::Underline => px(2.0),
-                CursorShape::Bar => px(2.4),
-                CursorShape::Block => px(2.8),
+                CursorShape::Underline => px(1.2),
+                CursorShape::Bar => px(1.0),
+                CursorShape::Block => px(1.6),
                 CursorShape::Hollow => Pixels::ZERO,
             };
             let inner_glow_bounds = Bounds::from_corners(
@@ -12216,60 +12236,120 @@ impl CursorLayout {
             window.paint_quad(
                 fill(
                     outer_glow_bounds,
-                    hsla(base_hue, 0.9, 0.64, 0.08 + pulse * 0.05),
+                    hsla(base_hue, 0.88, 0.58, 0.05 + pulse * 0.02),
                 )
-                .corner_radii(Corners::all(px(1.8))),
+                .corner_radii(Corners::all(px(1.1))),
             );
             window.paint_quad(
                 fill(
                     inner_glow_bounds,
-                    hsla((base_hue + 0.12) % 1.0, 0.95, 0.72, 0.18 + pulse * 0.08),
+                    hsla(
+                        (base_hue + 0.18).rem_euclid(1.0),
+                        0.94,
+                        0.7,
+                        0.12 + pulse * 0.04,
+                    ),
                 )
-                .corner_radii(Corners::all(px(1.4))),
+                .corner_radii(Corners::all(px(0.95))),
             );
 
-            for stripe_ix in 0..stripe_count {
-                let stripe_ratio = stripe_ix as f32 / stripe_count as f32;
-                let stripe_top = bounds.top() + bounds.size.height * stripe_ratio;
-                let stripe_bottom = bounds.top()
-                    + bounds.size.height * ((stripe_ix + 1) as f32 / stripe_count as f32);
-                let stripe_bounds = Bounds::from_corners(
-                    point(bounds.left(), stripe_top),
-                    point(bounds.right(), stripe_bottom),
+            let mut paint_band = |start_ratio: f32, end_ratio: f32, ix: usize| {
+                if end_ratio <= start_ratio {
+                    return;
+                }
+
+                let wave = ((rainbow_time * 3.1 + ix as f32 * 0.9).sin() * 0.5 + 0.5) * 0.1 + 0.58;
+                let hue = (base_hue + ix as f32 * band_span).rem_euclid(1.0);
+                let next_hue = (hue + band_span).rem_euclid(1.0);
+                let band_bounds = if along_vertical {
+                    Bounds::from_corners(
+                        point(
+                            bounds.left(),
+                            bounds.top() + bounds.size.height * start_ratio,
+                        ),
+                        point(
+                            bounds.right(),
+                            bounds.top() + bounds.size.height * end_ratio,
+                        ),
+                    )
+                } else {
+                    Bounds::from_corners(
+                        point(
+                            bounds.left() + bounds.size.width * start_ratio,
+                            bounds.top(),
+                        ),
+                        point(
+                            bounds.left() + bounds.size.width * end_ratio,
+                            bounds.bottom(),
+                        ),
+                    )
+                };
+
+                let gradient_angle = if along_vertical { 0.0 } else { 90.0 };
+                window.paint_quad(
+                    fill(
+                        band_bounds,
+                        linear_gradient(
+                            gradient_angle,
+                            linear_color_stop(hsla(hue, 0.95, wave, 1.0), 0.0),
+                            linear_color_stop(hsla(next_hue, 0.98, wave + 0.03, 1.0), 1.0),
+                        ),
+                    )
+                    .corner_radii(Corners::all(px(0.6))),
                 );
-                let moving_ratio = (stripe_ratio + elapsed * 0.85).fract();
-                let stripe_wave =
-                    ((elapsed * 11.2 + stripe_ratio * std::f32::consts::TAU).sin() * 0.5) + 0.5;
-                let hue = (base_hue + moving_ratio * 1.1 + stripe_wave * 0.18) % 1.0;
-                let lightness = 0.5 + stripe_wave * 0.22;
-                window.paint_quad(fill(stripe_bounds, hsla(hue, 0.92, lightness, 1.0)));
+            };
+
+            for band_ix in 0..band_count {
+                let band_start = (band_ix as f32 * band_span + scroll_phase).fract();
+                let band_end = band_start + band_span + 0.02;
+
+                if band_end <= 1.0 {
+                    paint_band(band_start, band_end, band_ix);
+                } else {
+                    paint_band(band_start, 1.0, band_ix);
+                    paint_band(0.0, band_end.fract(), band_ix);
+                }
             }
 
-            let sweep_progress = (elapsed * 1.75 + (f32::from(self.origin.y) / 260.0)).fract();
-            let sweep_height = (self.line_height * 0.32).max(px(4.0));
-            let sweep_center = bounds.top() + (bounds.size.height * sweep_progress);
-            let sweep_bounds = Bounds::from_corners(
-                point(
-                    bounds.left(),
-                    (sweep_center - sweep_height / 2.0).max(bounds.top()),
-                ),
-                point(
-                    bounds.right(),
-                    (sweep_center + sweep_height / 2.0).min(bounds.bottom()),
-                ),
-            );
+            let accent_progress = (scroll_phase * 1.75 + 0.2).fract();
+            let accent_span = if along_vertical { 0.26 } else { 0.18 };
+            let accent_bounds = if along_vertical {
+                Bounds::from_corners(
+                    point(
+                        bounds.left(),
+                        bounds.top() + bounds.size.height * accent_progress,
+                    ),
+                    point(
+                        bounds.right(),
+                        bounds.top()
+                            + bounds.size.height * (accent_progress + accent_span).min(1.0),
+                    ),
+                )
+            } else {
+                Bounds::from_corners(
+                    point(
+                        bounds.left() + bounds.size.width * accent_progress,
+                        bounds.top(),
+                    ),
+                    point(
+                        bounds.left()
+                            + bounds.size.width * (accent_progress + accent_span).min(1.0),
+                        bounds.bottom(),
+                    ),
+                )
+            };
             window.paint_quad(
                 fill(
-                    sweep_bounds,
-                    hsla((base_hue + 0.08) % 1.0, 0.9, 0.9, 0.24 + pulse * 0.12),
+                    accent_bounds,
+                    hsla(
+                        (base_hue + 0.33).rem_euclid(1.0),
+                        0.92,
+                        0.86,
+                        0.18 + pulse * 0.06,
+                    ),
                 )
-                .corner_radii(Corners::all(px(1.2))),
+                .corner_radii(Corners::all(px(0.7))),
             );
-
-            window.paint_quad(fill(
-                bounds,
-                hsla((base_hue + 0.04) % 1.0, 0.86, 0.92, 0.08 + pulse * 0.06),
-            ));
         } else {
             let cursor = if matches!(self.shape, CursorShape::Hollow) {
                 outline(bounds, self.color, BorderStyle::Solid)

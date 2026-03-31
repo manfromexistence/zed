@@ -11,7 +11,7 @@ use gpui::{
 use itertools::Itertools;
 use language::CursorShape;
 use settings::Settings;
-use std::time::Instant;
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use terminal::{
     IndexedCell, Terminal, TerminalBounds, TerminalContent,
     alacritty_terminal::{
@@ -1241,6 +1241,10 @@ impl Element for TerminalElement {
         cx: &mut App,
     ) {
         let paint_start = Instant::now();
+        let rainbow_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|duration| duration.as_secs_f32())
+            .unwrap_or_default();
         window.with_content_mask(Some(ContentMask { bounds }), |window| {
             let scroll_top = self.terminal_view.read(cx).scroll_top;
 
@@ -1381,7 +1385,7 @@ impl Element for TerminalElement {
                         && marked_text_cloned.is_none()
                         && let Some(mut cursor) = original_cursor
                     {
-                        cursor.paint(origin, window, cx);
+                        cursor.paint(origin, rainbow_time, window, cx);
                     }
 
                     if let Some(mut element) = block_below_cursor_element {

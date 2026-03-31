@@ -16,6 +16,9 @@ const PRESETS: [TypingEffectPreset; 4] = [
     TypingEffectPreset::Magic,
 ];
 
+const MAX_PENDING_BURSTS: usize = 1;
+const MAX_ACTIVE_PARTICLES: usize = 96;
+
 #[derive(Clone, Debug)]
 struct TypingParticle {
     origin: Point<Pixels>,
@@ -48,7 +51,11 @@ pub(crate) struct TypingEffectsState {
 
 impl TypingEffectsState {
     pub fn queue_burst(&mut self) {
-        self.pending_bursts = self.pending_bursts.saturating_add(1);
+        if self.particles.len() >= MAX_ACTIVE_PARTICLES {
+            return;
+        }
+
+        self.pending_bursts = MAX_PENDING_BURSTS;
     }
 
     pub fn has_pending_bursts(&self) -> bool {
@@ -56,12 +63,18 @@ impl TypingEffectsState {
     }
 
     pub fn spawn_pending(&mut self, origin: Point<Pixels>, now: Instant) {
-        while self.pending_bursts > 0 {
+        if self.pending_bursts == 0 {
+            return;
+        }
+
+        let burst_count = self.pending_bursts.min(MAX_PENDING_BURSTS);
+        self.pending_bursts = 0;
+
+        for _ in 0..burst_count {
             let preset = PRESETS[self.next_preset_ix % PRESETS.len()];
             self.next_preset_ix = (self.next_preset_ix + 1) % PRESETS.len();
             self.burst_serial = self.burst_serial.wrapping_add(1);
             self.spawn_burst(origin, preset, now, self.burst_serial);
-            self.pending_bursts -= 1;
         }
     }
 
@@ -83,11 +96,20 @@ impl TypingEffectsState {
         serial: u64,
     ) {
         let particle_count = match preset {
-            TypingEffectPreset::Particles => 14,
-            TypingEffectPreset::Fireworks => 20,
-            TypingEffectPreset::Flames => 16,
-            TypingEffectPreset::Magic => 15,
+            TypingEffectPreset::Particles => 8,
+            TypingEffectPreset::Fireworks => 12,
+            TypingEffectPreset::Flames => 10,
+            TypingEffectPreset::Magic => 9,
         };
+
+        let overflow = self
+            .particles
+            .len()
+            .saturating_add(particle_count)
+            .saturating_sub(MAX_ACTIVE_PARTICLES);
+        if overflow > 0 {
+            self.particles.drain(0..overflow.min(self.particles.len()));
+        }
 
         self.particles.reserve(particle_count);
 
