@@ -12177,12 +12177,49 @@ impl CursorLayout {
                 .duration_since(UNIX_EPOCH)
                 .map(|duration| duration.as_secs_f32())
                 .unwrap_or_default();
+            let pulse = ((elapsed * 5.4).sin() * 0.5) + 0.5;
+            let base_hue = (elapsed * 0.48 + (f32::from(self.origin.x) / 240.0)) % 1.0;
             let stripe_count = match self.shape {
-                CursorShape::Underline => 4,
-                CursorShape::Bar => 5,
-                CursorShape::Block => 6,
+                CursorShape::Underline => 8,
+                CursorShape::Bar => 14,
+                CursorShape::Block => 16,
                 CursorShape::Hollow => 1,
             };
+            let glow_radius = match self.shape {
+                CursorShape::Underline => px(2.5),
+                CursorShape::Bar => px(3.0),
+                CursorShape::Block => px(4.0),
+                CursorShape::Hollow => Pixels::ZERO,
+            };
+            let inner_glow_bounds = Bounds::from_corners(
+                point(
+                    bounds.left() - glow_radius / 2.0,
+                    bounds.top() - glow_radius / 2.0,
+                ),
+                point(
+                    bounds.right() + glow_radius / 2.0,
+                    bounds.bottom() + glow_radius / 2.0,
+                ),
+            );
+            let outer_glow_bounds = Bounds::from_corners(
+                point(bounds.left() - glow_radius, bounds.top() - glow_radius),
+                point(bounds.right() + glow_radius, bounds.bottom() + glow_radius),
+            );
+
+            window.paint_quad(
+                fill(
+                    outer_glow_bounds,
+                    hsla(base_hue, 0.9, 0.68, 0.12 + pulse * 0.08),
+                )
+                .corner_radii(Corners::all(px(3.5))),
+            );
+            window.paint_quad(
+                fill(
+                    inner_glow_bounds,
+                    hsla((base_hue + 0.12) % 1.0, 0.94, 0.72, 0.2 + pulse * 0.1),
+                )
+                .corner_radii(Corners::all(px(2.5))),
+            );
 
             for stripe_ix in 0..stripe_count {
                 let stripe_ratio = stripe_ix as f32 / stripe_count as f32;
@@ -12193,11 +12230,17 @@ impl CursorLayout {
                     point(bounds.left(), stripe_top),
                     point(bounds.right(), stripe_bottom),
                 );
-                let hue =
-                    (elapsed * 0.18 + stripe_ratio * 0.24 + (f32::from(self.origin.x) / 320.0))
-                        % 1.0;
-                window.paint_quad(fill(stripe_bounds, hsla(hue, 0.86, 0.62, 1.0)));
+                let stripe_wave =
+                    ((elapsed * 7.2 + stripe_ratio * std::f32::consts::TAU).sin() * 0.5) + 0.5;
+                let hue = (base_hue + stripe_ratio * 0.9 + stripe_wave * 0.12) % 1.0;
+                let lightness = 0.56 + stripe_wave * 0.2;
+                window.paint_quad(fill(stripe_bounds, hsla(hue, 0.92, lightness, 1.0)));
             }
+
+            window.paint_quad(fill(
+                bounds,
+                hsla((base_hue + 0.04) % 1.0, 0.84, 0.9, 0.16 + pulse * 0.08),
+            ));
         } else {
             let cursor = if matches!(self.shape, CursorShape::Hollow) {
                 outline(bounds, self.color, BorderStyle::Solid)

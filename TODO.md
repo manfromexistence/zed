@@ -201,7 +201,14 @@
 - [x] Redesign the real AI composer with a VS Code Copilot and Codex-inspired shell, top quick actions, and bottom control rail
 - [x] Add a responsive media mode switcher with overflow handling for text, audio, video, 3D, live, AR, VR, PDF, and chart workflows
 - [x] Add a rainbow animated caret to the real Zed editor paint path
+- [x] Intensify the rainbow caret animation with a visible multi-band glow and faster hue motion
 - [x] Add cycle-based typing particle effects inspired by the VS Code power-mode extension
+- [x] Increase typing particle size, count, and persistence for a stronger power-mode effect
+
+### Onboarding and Dx Theme
+- [x] Add bundled `Dx Light` and `Dx Dark` themes and make them the default theme family for fresh setups
+- [x] Surface `Dx` directly in the onboarding theme picker
+- [x] Add an onboarding theme-editor entry point that applies live per-theme overrides instantly
 ## Current Sprint
 
 **Active Phase:** Phase 6 - Screen Carousel  

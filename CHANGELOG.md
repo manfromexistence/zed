@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Onboarding, Dx Theme, and Editor Effects - 2026-03-31
+
+#### Added
+- Added bundled `Dx Light` and `Dx Dark` theme definitions under `assets/themes/dx/` and mirrored the same family into the local `extensions/theme/` pack.
+- Added a new onboarding theme-editor modal that writes real per-theme overrides and updates the active Zed palette immediately.
+
+#### Changed
+- Updated fresh-theme defaults so new installs land on the `Dx` theme family instead of the previous default pair.
+- Updated the onboarding theme picker to include `Dx` alongside the existing built-in theme families and added a theme-editor icon shortcut next to the light/dark/system mode toggle.
+- Strengthened the animated rainbow caret with a brighter multi-band glow and faster hue travel so it reads as a genuinely animated cursor instead of a mostly static color block.
+- Increased typing particle burst count, radius, lifetime, and velocity so edit-time effects feel closer to a pronounced power-mode presentation.
+
 ### AI Composer and Editor Effects - 2026-03-31
 
 #### Added

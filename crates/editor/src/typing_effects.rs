@@ -83,10 +83,10 @@ impl TypingEffectsState {
         serial: u64,
     ) {
         let particle_count = match preset {
-            TypingEffectPreset::Particles => 8,
-            TypingEffectPreset::Fireworks => 12,
-            TypingEffectPreset::Flames => 10,
-            TypingEffectPreset::Magic => 9,
+            TypingEffectPreset::Particles => 14,
+            TypingEffectPreset::Fireworks => 20,
+            TypingEffectPreset::Flames => 16,
+            TypingEffectPreset::Magic => 15,
         };
 
         self.particles.reserve(particle_count);
@@ -102,48 +102,48 @@ impl TypingEffectsState {
                     let angle = angular_seed * std::f32::consts::TAU;
                     TypingParticle {
                         origin,
-                        velocity_x: angle.cos() * (20.0 + velocity_seed * 18.0),
-                        velocity_y: angle.sin() * (18.0 + velocity_seed * 22.0),
-                        gravity: 8.0,
-                        radius: 1.5 + radius_seed * 1.8,
+                        velocity_x: angle.cos() * (28.0 + velocity_seed * 30.0),
+                        velocity_y: angle.sin() * (24.0 + velocity_seed * 34.0),
+                        gravity: 10.0,
+                        radius: 2.8 + radius_seed * 3.1,
                         spawned_at: now,
-                        lifetime: Duration::from_millis(320 + (velocity_seed * 180.0) as u64),
+                        lifetime: Duration::from_millis(420 + (velocity_seed * 240.0) as u64),
                         hue: (angular_seed + normalized_ix * 0.18) % 1.0,
-                        saturation: 0.82,
-                        lightness: 0.64,
-                        alpha: 0.95,
+                        saturation: 0.88,
+                        lightness: 0.68,
+                        alpha: 0.98,
                     }
                 }
                 TypingEffectPreset::Fireworks => {
                     let angle = normalized_ix * std::f32::consts::TAU;
                     TypingParticle {
                         origin,
-                        velocity_x: angle.cos() * (28.0 + velocity_seed * 28.0),
-                        velocity_y: angle.sin() * (28.0 + velocity_seed * 28.0),
-                        gravity: 12.0,
-                        radius: 1.8 + radius_seed * 1.4,
+                        velocity_x: angle.cos() * (36.0 + velocity_seed * 42.0),
+                        velocity_y: angle.sin() * (36.0 + velocity_seed * 42.0),
+                        gravity: 14.0,
+                        radius: 3.0 + radius_seed * 2.8,
                         spawned_at: now,
-                        lifetime: Duration::from_millis(480 + (velocity_seed * 260.0) as u64),
+                        lifetime: Duration::from_millis(560 + (velocity_seed * 300.0) as u64),
                         hue: (0.08 + normalized_ix * 0.75 + angular_seed * 0.1) % 1.0,
-                        saturation: 0.88,
-                        lightness: 0.63,
-                        alpha: 0.92,
+                        saturation: 0.92,
+                        lightness: 0.68,
+                        alpha: 0.96,
                     }
                 }
                 TypingEffectPreset::Flames => {
-                    let sway = (normalized_ix - 0.5) * 22.0;
+                    let sway = (normalized_ix - 0.5) * 30.0;
                     TypingParticle {
                         origin,
                         velocity_x: sway,
-                        velocity_y: -(22.0 + velocity_seed * 24.0),
+                        velocity_y: -(30.0 + velocity_seed * 32.0),
                         gravity: -4.0,
-                        radius: 1.9 + radius_seed * 2.1,
+                        radius: 3.2 + radius_seed * 3.3,
                         spawned_at: now,
-                        lifetime: Duration::from_millis(380 + (velocity_seed * 180.0) as u64),
+                        lifetime: Duration::from_millis(480 + (velocity_seed * 240.0) as u64),
                         hue: 0.03 + radius_seed * 0.09,
-                        saturation: 0.93,
-                        lightness: 0.56 + velocity_seed * 0.08,
-                        alpha: 0.9,
+                        saturation: 0.96,
+                        lightness: 0.60 + velocity_seed * 0.1,
+                        alpha: 0.94,
                     }
                 }
                 TypingEffectPreset::Magic => {
@@ -155,16 +155,16 @@ impl TypingEffectsState {
                     };
                     TypingParticle {
                         origin,
-                        velocity_x: angle.cos() * (12.0 + velocity_seed * 14.0),
-                        velocity_y: angle.sin() * (10.0 + velocity_seed * 18.0) - 10.0,
+                        velocity_x: angle.cos() * (18.0 + velocity_seed * 22.0),
+                        velocity_y: angle.sin() * (16.0 + velocity_seed * 24.0) - 12.0,
                         gravity: 4.0,
-                        radius: 1.4 + radius_seed * 1.6,
+                        radius: 2.6 + radius_seed * 2.6,
                         spawned_at: now,
-                        lifetime: Duration::from_millis(520 + (velocity_seed * 260.0) as u64),
+                        lifetime: Duration::from_millis(620 + (velocity_seed * 320.0) as u64),
                         hue,
-                        saturation: 0.78,
-                        lightness: 0.7,
-                        alpha: 0.88,
+                        saturation: 0.86,
+                        lightness: 0.74,
+                        alpha: 0.93,
                     }
                 }
             };
@@ -183,11 +183,11 @@ impl TypingParticle {
 
         let age_secs = elapsed.as_secs_f32();
         let progress = age_secs / self.lifetime.as_secs_f32();
-        let fade = (1.0 - progress).powf(1.8);
+        let fade = (1.0 - progress).powf(1.45);
         let x = self.origin.x + px(self.velocity_x * age_secs);
         let y = self.origin.y
             + px(self.velocity_y * age_secs + 0.5 * self.gravity * age_secs * age_secs);
-        let size = px(self.radius * (1.0 - progress * 0.35).max(0.5));
+        let size = px(self.radius * (1.08 - progress * 0.22).max(0.78));
 
         Some(TypingParticleLayout {
             origin: point(x - size / 2.0, y - size / 2.0),

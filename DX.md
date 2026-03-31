@@ -2,8 +2,35 @@
 2. Animation
 3. Svg
 4. Theme, icon, font
-5. rainbow animated cursor, particles effect
+5. rainbow animated cursor, particles 
 
+Kindly, in the top file preview, you have a rounded pill border, but please don't change the file bar tab manager tab of current zed code editor as I told you implement the macos like dock in the topbar center not inside the file browser code editor tabs as even the file browsers are a screen of the screen carosel - there's currently no ui element by default the topbar center of the zed code editor so please our macos like screen carosel controller system in the topbar center. On the top of the top bar or center of the top bar, please create a macOS-like dock and create docs for every screen. There is:
+- the whole code editor tabs as a screen
+- a terminal as a new screen
+- and if web browser preview is another screen
+First of all, create a macOS-like dock and create a way so that every new screen is present on the bottom and will represent a dock item. On the right of the dock, create two icons:
+- one is a plus
+- one is a list icon
+When we click on the plus, we will list a pop-over dropdown, and in that dropdown we will add:
+- terminal
+- code editor preview tab
+- file browser
+- other sub that are on one screen
+We will have a list trigger so that when we click on the list we will have a preview of all the screens that are present. In the screens we will have rules like:
+- if we try to drag or resize from the left side, then if there are only two screens, we may not be able to drag anything from the left side, because the first one already has no stream on the left side
+- when we drag and resize the first screen from the right side and there is a second screen, then the second screen will come into view as we resize the first screen
+- when we have many screens, like more than two, then when we resize the left side of the first screen, the last screen, like the third screen, will be on the left side
+- when we resize the right side as usual, the second screen will appear on the right side
+The whole point of this screen system is that we can fast verify that there is any screen that has a snickering about other screens, and when we click on other screens they will come into view.
+Currently, the one of the most crucial parts is that we have a straight border line on the left and right side of the file browser screen, but don't do that. When we are hovering around the edges of the screens, instead of showing any kind of border, we will show a highlighted border in the center. We will not cover the whole border; just a center, minimum highlighted border will be a nice touch.
+Make sure that our screen system follows rules so that this feels a natural way of navigating the screens.
+Kindly, the terminal is a bottom pane or another pane, but make that a stream so that when we add a new screen on the top of the code editor there will be a macOS-like dock. We can just click on them and the current view of the screen will redirect to that screen. Also, when we create a new screen, pick a random icon for that screen, and even on clicking on the right-click button we can change the icon. Make this feature too. And here is another gesture for our screen carousel: if we point to the left or right edges of the screen and do a drag from that point, then instead of resizing the screen, we will literally make the side screen the default screen. The new tabs heavily rely on this screen carousel system, so apply this screen's carousel as elegantly as possible. 
+
+You did a really good job. Now, you have to do only these three tasks:
+First, when we open the zed code editor, if nothing is set up, then please show the onboarding screen. On the onboarding, like the other themes, please include our latest DX theme. Also, create a new theme icon where, when we press it, we will render a new theme editor. When we update, it will update the colors of the zed code editor instantly. 
+1. Plase look at this "extensions/theme" folder and make the theme as the current theme of our zed code editor and put the theme as "Dx" light and dark theme
+2.  Currently, our rainbow cursor is just a single color; it's not an animated cursor. Please make it a rainbow animated cursor.
+3.  When we are updating anything, it's like having a particle effect, but the particles are fairly small and not that effective. Please make the particle effect particles a little bit bigger and more effective.
 
 
 Now please format and lint all files and then do a pre scan by reading the all changed files and check for all errors that happen and fix them right on the spot and after you did all of these and is 100% sure that there are no errors only then run "just run" command

@@ -8,19 +8,22 @@ use settings::{BaseKeymap, Settings, update_settings_file};
 use theme::{Appearance, SystemAppearance, ThemeRegistry};
 use theme_settings::{ThemeAppearanceMode, ThemeName, ThemeSelection, ThemeSettings};
 use ui::{
-    Divider, StatefulInteractiveElement, SwitchField, TintColor, ToggleButtonGroup,
-    ToggleButtonGroupSize, ToggleButtonSimple, ToggleButtonWithIcon, Tooltip, prelude::*,
+    Divider, IconButton, IconButtonShape, IconName, StatefulInteractiveElement, SwitchField,
+    TintColor, ToggleButtonGroup, ToggleButtonGroupSize, ToggleButtonSimple, ToggleButtonWithIcon,
+    Tooltip, prelude::*,
 };
 use vim_mode_setting::VimModeSetting;
 
 use crate::{
     ImportCursorSettings, ImportVsCodeSettings, SettingsImportState,
+    theme_editor::open_dx_theme_editor,
     theme_preview::{ThemePreviewStyle, ThemePreviewTile},
 };
 
-const LIGHT_THEMES: [&str; 3] = ["One Light", "Ayu Light", "Gruvbox Light"];
-const DARK_THEMES: [&str; 3] = ["One Dark", "Ayu Dark", "Gruvbox Dark"];
-const FAMILY_NAMES: [SharedString; 3] = [
+const LIGHT_THEMES: [&str; 4] = ["Dx Light", "One Light", "Ayu Light", "Gruvbox Light"];
+const DARK_THEMES: [&str; 4] = ["Dx Dark", "One Dark", "Ayu Dark", "Gruvbox Dark"];
+const FAMILY_NAMES: [SharedString; 4] = [
+    SharedString::new_static("Dx"),
     SharedString::new_static("One"),
     SharedString::new_static("Ayu"),
     SharedString::new_static("Gruvbox"),
@@ -50,43 +53,56 @@ fn render_theme_section(tab_index: &mut isize, cx: &mut App) -> impl IntoElement
         .gap_2()
         .child(
             h_flex().justify_between().child(Label::new("Theme")).child(
-                ToggleButtonGroup::single_row(
-                    "theme-selector-onboarding-dark-light",
-                    [
-                        ThemeAppearanceMode::Light,
-                        ThemeAppearanceMode::Dark,
-                        ThemeAppearanceMode::System,
-                    ]
-                    .map(|mode| {
-                        const MODE_NAMES: [SharedString; 3] = [
-                            SharedString::new_static("Light"),
-                            SharedString::new_static("Dark"),
-                            SharedString::new_static("System"),
-                        ];
-                        ToggleButtonSimple::new(
-                            MODE_NAMES[mode as usize].clone(),
-                            move |_, _, cx| {
-                                write_mode_change(mode, cx);
+                h_flex()
+                    .gap_2()
+                    .items_center()
+                    .child(
+                        ToggleButtonGroup::single_row(
+                            "theme-selector-onboarding-dark-light",
+                            [
+                                ThemeAppearanceMode::Light,
+                                ThemeAppearanceMode::Dark,
+                                ThemeAppearanceMode::System,
+                            ]
+                            .map(|mode| {
+                                const MODE_NAMES: [SharedString; 3] = [
+                                    SharedString::new_static("Light"),
+                                    SharedString::new_static("Dark"),
+                                    SharedString::new_static("System"),
+                                ];
+                                ToggleButtonSimple::new(
+                                    MODE_NAMES[mode as usize].clone(),
+                                    move |_, _, cx| {
+                                        write_mode_change(mode, cx);
 
-                                telemetry::event!(
-                                    "Welcome Theme mode Changed",
-                                    from = theme_mode,
-                                    to = mode
-                                );
-                            },
+                                        telemetry::event!(
+                                            "Welcome Theme mode Changed",
+                                            from = theme_mode,
+                                            to = mode
+                                        );
+                                    },
+                                )
+                            }),
                         )
-                    }),
-                )
-                .size(ToggleButtonGroupSize::Medium)
-                .tab_index(tab_index)
-                .selected_index(theme_mode as usize)
-                .style(ui::ToggleButtonGroupStyle::Outlined)
-                .width(rems_from_px(3. * 64.)),
+                        .size(ToggleButtonGroupSize::Medium)
+                        .tab_index(tab_index)
+                        .selected_index(theme_mode as usize)
+                        .style(ui::ToggleButtonGroupStyle::Outlined)
+                        .width(rems_from_px(3. * 64.)),
+                    )
+                    .child(
+                        IconButton::new("open-dx-theme-editor", IconName::Settings)
+                            .shape(IconButtonShape::Square)
+                            .tooltip(Tooltip::text("Open theme editor"))
+                            .on_click(|_, window, cx| {
+                                open_dx_theme_editor(window, cx);
+                            }),
+                    ),
             ),
         )
         .child(
             h_flex()
-                .gap_4()
+                .gap_3()
                 .justify_between()
                 .children(render_theme_previews(tab_index, &theme_selection, cx)),
         );
@@ -95,7 +111,7 @@ fn render_theme_section(tab_index: &mut isize, cx: &mut App) -> impl IntoElement
         tab_index: &mut isize,
         theme_selection: &ThemeSelection,
         cx: &mut App,
-    ) -> [impl IntoElement; 3] {
+    ) -> [impl IntoElement; 4] {
         let system_appearance = SystemAppearance::global(cx);
         let theme_registry = ThemeRegistry::global(cx);
 
@@ -117,10 +133,19 @@ fn render_theme_section(tab_index: &mut isize, cx: &mut App) -> impl IntoElement
             Appearance::Light => LIGHT_THEMES,
             Appearance::Dark => DARK_THEMES,
         };
+        let fallback_theme = match appearance {
+            Appearance::Light => "One Light",
+            Appearance::Dark => "One Dark",
+        };
 
-        let themes = theme_names.map(|theme| theme_registry.get(theme).unwrap());
+        let themes = theme_names.map(|theme| {
+            theme_registry
+                .get(theme)
+                .or_else(|_| theme_registry.get(fallback_theme))
+                .unwrap()
+        });
 
-        [0, 1, 2].map(|index| {
+        [0, 1, 2, 3].map(|index| {
             let theme = &themes[index];
             let is_selected = theme.name == current_theme_name;
             let name = theme.name.clone();
@@ -169,8 +194,14 @@ fn render_theme_section(tab_index: &mut isize, cx: &mut App) -> impl IntoElement
                         .map(|this| {
                             if theme_mode == ThemeAppearanceMode::System {
                                 let (light, dark) = (
-                                    theme_registry.get(LIGHT_THEMES[index]).unwrap(),
-                                    theme_registry.get(DARK_THEMES[index]).unwrap(),
+                                    theme_registry
+                                        .get(LIGHT_THEMES[index])
+                                        .or_else(|_| theme_registry.get("One Light"))
+                                        .unwrap(),
+                                    theme_registry
+                                        .get(DARK_THEMES[index])
+                                        .or_else(|_| theme_registry.get("One Dark"))
+                                        .unwrap(),
                                 );
                                 this.child(
                                     ThemePreviewTile::new(light, theme_seed)
