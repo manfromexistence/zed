@@ -1942,7 +1942,7 @@ impl EditorElement {
                         line_height,
                         shape: selection.cursor_shape,
                         block_text,
-                        animate_rainbow: selection.is_local && selection.is_newest,
+                        animate_rainbow: selection.is_local,
                         cursor_name: None,
                     };
                     let cursor_name = selection.user_name.clone().map(|name| CursorName {
@@ -6855,6 +6855,7 @@ impl EditorElement {
         }
 
         if has_rainbow_cursor || !particle_layouts.is_empty() {
+            window.refresh();
             window.request_animation_frame();
         }
     }
@@ -7965,7 +7966,7 @@ pub fn render_breadcrumb_text(
         segments.splice(
             prefix_end_ix..suffix_start_ix,
             Some(HighlightedText {
-                text: "⋯".into(),
+                text: "\u{22ef}".into(),
                 highlights: vec![],
             }),
         );
@@ -7995,7 +7996,9 @@ pub fn render_breadcrumb_text(
     });
 
     let breadcrumbs = Itertools::intersperse_with(highlighted_segments, || {
-        Label::new("›").color(Color::Placeholder).into_any_element()
+        Label::new("\u{203a}")
+            .color(Color::Placeholder)
+            .into_any_element()
     });
 
     let breadcrumbs_stack = h_flex()
@@ -8817,7 +8820,7 @@ impl LineWithInvisibles {
         let font_size = text_style.font_size.to_pixels(window.rem_size());
         let min_contrast = EditorSettings::get_global(cx).minimum_contrast_for_highlights;
 
-        let ellipsis = SharedString::from("⋯");
+        let ellipsis = SharedString::from("\u{22ef}");
 
         for highlighted_chunk in chunks.chain([HighlightedChunk {
             text: "\n",
@@ -11633,7 +11636,7 @@ impl ScrollbarLayout {
         show_thumb: bool,
     ) -> Self {
         // The scrollbar thumb size is calculated as
-        // (visible_content/total_content) × scrollbar_track_length.
+        // (visible_content / total_content) x scrollbar_track_length.
         //
         // For the minimap's thumb layout, we leverage this by setting the
         // scrollbar track length to the entire document size (using minimap line
@@ -12108,6 +12111,10 @@ impl CursorLayout {
 
     fn bounds(&self, origin: gpui::Point<Pixels>) -> Bounds<Pixels> {
         match self.shape {
+            CursorShape::Bar if self.animate_rainbow => Bounds {
+                origin: self.origin + origin - point(px(0.12), Pixels::ZERO),
+                size: size(px(2.05), self.line_height),
+            },
             CursorShape::Bar => Bounds {
                 origin: self.origin + origin,
                 size: size(px(2.0), self.line_height),
@@ -12177,18 +12184,18 @@ impl CursorLayout {
                 .duration_since(UNIX_EPOCH)
                 .map(|duration| duration.as_secs_f32())
                 .unwrap_or_default();
-            let pulse = ((elapsed * 5.4).sin() * 0.5) + 0.5;
-            let base_hue = (elapsed * 0.48 + (f32::from(self.origin.x) / 240.0)) % 1.0;
+            let pulse = ((elapsed * 9.6).sin() * 0.5) + 0.5;
+            let base_hue = (elapsed * 2.35 + (f32::from(self.origin.x) / 240.0)) % 1.0;
             let stripe_count = match self.shape {
                 CursorShape::Underline => 8,
                 CursorShape::Bar => 14,
-                CursorShape::Block => 16,
+                CursorShape::Block => 14,
                 CursorShape::Hollow => 1,
             };
             let glow_radius = match self.shape {
-                CursorShape::Underline => px(2.5),
-                CursorShape::Bar => px(3.0),
-                CursorShape::Block => px(4.0),
+                CursorShape::Underline => px(2.0),
+                CursorShape::Bar => px(2.4),
+                CursorShape::Block => px(2.8),
                 CursorShape::Hollow => Pixels::ZERO,
             };
             let inner_glow_bounds = Bounds::from_corners(
@@ -12209,16 +12216,16 @@ impl CursorLayout {
             window.paint_quad(
                 fill(
                     outer_glow_bounds,
-                    hsla(base_hue, 0.9, 0.68, 0.12 + pulse * 0.08),
+                    hsla(base_hue, 0.9, 0.64, 0.08 + pulse * 0.05),
                 )
-                .corner_radii(Corners::all(px(3.5))),
+                .corner_radii(Corners::all(px(1.8))),
             );
             window.paint_quad(
                 fill(
                     inner_glow_bounds,
-                    hsla((base_hue + 0.12) % 1.0, 0.94, 0.72, 0.2 + pulse * 0.1),
+                    hsla((base_hue + 0.12) % 1.0, 0.95, 0.72, 0.18 + pulse * 0.08),
                 )
-                .corner_radii(Corners::all(px(2.5))),
+                .corner_radii(Corners::all(px(1.4))),
             );
 
             for stripe_ix in 0..stripe_count {
@@ -12230,16 +12237,38 @@ impl CursorLayout {
                     point(bounds.left(), stripe_top),
                     point(bounds.right(), stripe_bottom),
                 );
+                let moving_ratio = (stripe_ratio + elapsed * 0.85).fract();
                 let stripe_wave =
-                    ((elapsed * 7.2 + stripe_ratio * std::f32::consts::TAU).sin() * 0.5) + 0.5;
-                let hue = (base_hue + stripe_ratio * 0.9 + stripe_wave * 0.12) % 1.0;
-                let lightness = 0.56 + stripe_wave * 0.2;
+                    ((elapsed * 11.2 + stripe_ratio * std::f32::consts::TAU).sin() * 0.5) + 0.5;
+                let hue = (base_hue + moving_ratio * 1.1 + stripe_wave * 0.18) % 1.0;
+                let lightness = 0.5 + stripe_wave * 0.22;
                 window.paint_quad(fill(stripe_bounds, hsla(hue, 0.92, lightness, 1.0)));
             }
 
+            let sweep_progress = (elapsed * 1.75 + (f32::from(self.origin.y) / 260.0)).fract();
+            let sweep_height = (self.line_height * 0.32).max(px(4.0));
+            let sweep_center = bounds.top() + (bounds.size.height * sweep_progress);
+            let sweep_bounds = Bounds::from_corners(
+                point(
+                    bounds.left(),
+                    (sweep_center - sweep_height / 2.0).max(bounds.top()),
+                ),
+                point(
+                    bounds.right(),
+                    (sweep_center + sweep_height / 2.0).min(bounds.bottom()),
+                ),
+            );
+            window.paint_quad(
+                fill(
+                    sweep_bounds,
+                    hsla((base_hue + 0.08) % 1.0, 0.9, 0.9, 0.24 + pulse * 0.12),
+                )
+                .corner_radii(Corners::all(px(1.2))),
+            );
+
             window.paint_quad(fill(
                 bounds,
-                hsla((base_hue + 0.04) % 1.0, 0.84, 0.9, 0.16 + pulse * 0.08),
+                hsla((base_hue + 0.04) % 1.0, 0.86, 0.92, 0.08 + pulse * 0.06),
             ));
         } else {
             let cursor = if matches!(self.shape, CursorShape::Hollow) {
@@ -13554,25 +13583,25 @@ mod tests {
 
         // Case C: multi-byte characters
         {
-            // for text: "Hello 🌍 世界!"
+            // for text containing an emoji and CJK characters
             let runs = vec![
                 generate_test_run(5, text_color), // "Hello"
-                generate_test_run(6, text_color), // " 🌍 "
-                generate_test_run(6, text_color), // "世界"
+                generate_test_run(6, text_color), // emoji span
+                generate_test_run(6, text_color), // CJK span
                 generate_test_run(1, text_color), // "!"
             ];
-            // selecting "🌍 世"
+            // selecting across the emoji and first CJK glyph
             let segs = vec![(dx(6, 14), bg_1)];
             let out = LineWithInvisibles::split_runs_by_bg_segments(&runs, &segs, min_contrast, 0);
-            // "Hello" | " " | "🌍 " | "世" | "界" | "!"
+            // expected split: greeting | space | emoji span | first CJK glyph | second CJK glyph | bang
             assert_eq!(
                 out.iter().map(|r| r.len).collect::<Vec<_>>(),
                 vec![5, 1, 5, 3, 3, 1]
             );
             assert_eq!(out[0].color, text_color); // "Hello"
-            assert_eq!(out[2].color, adjusted_bg1); // "🌍 "
-            assert_eq!(out[3].color, adjusted_bg1); // "世"
-            assert_eq!(out[4].color, text_color); // "界"
+            assert_eq!(out[2].color, adjusted_bg1); // emoji span
+            assert_eq!(out[3].color, adjusted_bg1); // first CJK glyph
+            assert_eq!(out[4].color, text_color); // second CJK glyph
             assert_eq!(out[5].color, text_color); // "!"
         }
 

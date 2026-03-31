@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use anyhow::{Context as _, Result};
 use collections::HashMap;
-use gpui::{App, AppContext as _, Context, Entity, Global, SharedString, Task};
+use gpui::{App, AppContext as _, Context, Entity, Global, SharedString, Task, WeakEntity};
 use http_client::HttpClient;
 use language_model::{LanguageModelProviderId, LanguageModelRegistry};
 use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue};
@@ -18,6 +18,7 @@ use crate::provider_hub::{
     ModelManifest, ProviderCategory, ProviderIcon, ProviderManifest, ProviderModelCapabilities,
     ProviderTransport,
 };
+use crate::provider_icons;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct ProviderHubSnapshot {
@@ -118,8 +119,14 @@ pub fn init(http_client: Arc<dyn HttpClient>, cx: &mut App) {
 impl ProviderHubStore {
     pub fn init(http_client: Arc<dyn HttpClient>, cx: &mut App) {
         let store = cx.new(|cx| {
-            cx.observe_global::<SettingsStore>(|this: &mut Self, cx| {
-                this.schedule_refresh(cx);
+            let weak_store: WeakEntity<Self> = cx.entity().downgrade();
+            cx.observe_global::<SettingsStore>(move |_this: &mut Self, cx| {
+                let weak_store = weak_store.clone();
+                cx.defer(move |cx| {
+                    if let Some(store) = weak_store.upgrade() {
+                        let _ = store.update(cx, |this, cx| this.schedule_refresh(cx));
+                    }
+                });
             })
             .detach();
 
@@ -130,7 +137,11 @@ impl ProviderHubStore {
         });
 
         cx.set_global(GlobalProviderHubStore(store.clone()));
-        store.update(cx, |this, cx| this.schedule_refresh(cx));
+        cx.defer(move |cx| {
+            if let Some(store) = ProviderHubStore::try_global(cx) {
+                let _ = store.update(cx, |this, cx| this.schedule_refresh(cx));
+            }
+        });
     }
 
     pub fn global(cx: &App) -> Entity<Self> {
@@ -391,6 +402,9 @@ async fn fetch_models_dev(
                     .and_then(Value::as_str)
                     .map(ToOwned::to_owned)
             })
+            .or_else(|| {
+                provider_icons::get_provider_display_name(&provider_id).map(ToOwned::to_owned)
+            })
             .unwrap_or_else(|| title_case(&provider_id));
         let transport = infer_transport(provider, &api_base, override_);
         let category = override_
@@ -560,7 +574,9 @@ async fn enrich_from_openrouter(
             .entry(provider_id.clone())
             .or_insert_with(|| ProviderManifest {
                 id: provider_id.clone(),
-                display_name: title_case(&provider_id),
+                display_name: provider_icons::get_provider_display_name(&provider_id)
+                    .map(ToOwned::to_owned)
+                    .unwrap_or_else(|| title_case(&provider_id)),
                 api_base: String::new(),
                 category: infer_category(&provider_id, ""),
                 icon: infer_icon(&provider_id),
@@ -750,7 +766,9 @@ async fn enrich_from_litellm(
             .entry(provider_id.clone())
             .or_insert_with(|| ProviderManifest {
                 id: provider_id.clone(),
-                display_name: title_case(&provider_id),
+                display_name: provider_icons::get_provider_display_name(&provider_id)
+                    .map(ToOwned::to_owned)
+                    .unwrap_or_else(|| title_case(&provider_id)),
                 api_base: api_base.to_owned(),
                 category: infer_category(&provider_id, api_base),
                 icon: infer_icon(&provider_id),
@@ -894,7 +912,7 @@ fn no_auth_provider(
         category: Some(category),
         icon: Some(icon),
         featured_in_settings: Some(featured_in_settings),
-        auth: None,
+        auth: Some(AuthStrategy::NoAuth),
         api_base: Some(api_base.to_owned()),
         display_name: Some(display_name.to_owned()),
     }

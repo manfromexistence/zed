@@ -1,6 +1,6 @@
-use std::{cmp::Ordering, time::Duration};
+use std::cmp::Ordering;
 
-use gpui::{Animation, AnimationExt, AnyElement, IntoElement, Stateful, pulsating_between};
+use gpui::{AnyElement, IntoElement, Stateful};
 use smallvec::SmallVec;
 
 use crate::prelude::*;
@@ -31,7 +31,6 @@ pub enum TabCloseSide {
 
 #[derive(IntoElement, RegisterComponent)]
 pub struct Tab {
-    id: ElementId,
     div: Stateful<Div>,
     selected: bool,
     position: TabPosition,
@@ -45,7 +44,6 @@ impl Tab {
     pub fn new(id: impl Into<ElementId>) -> Self {
         let id = id.into();
         Self {
-            id: id.clone(),
             div: div()
                 .id(id.clone())
                 .debug_selector(|| format!("TAB-{}", id)),
@@ -111,21 +109,14 @@ impl ParentElement for Tab {
 impl RenderOnce for Tab {
     #[allow(refining_impl_trait)]
     fn render(self, _: &mut Window, cx: &mut App) -> Stateful<Div> {
-        let (text_color, tab_bg, _tab_hover_bg, _tab_active_bg) = match self.selected {
+        let (text_color, tab_bg) = match self.selected {
             false => (
                 cx.theme().colors().text_muted,
                 cx.theme().colors().tab_bar_background.opacity(0.0),
-                cx.theme().colors().ghost_element_hover,
-                cx.theme().colors().ghost_element_active,
             ),
             true => (
                 cx.theme().colors().text,
-                cx.theme()
-                    .colors()
-                    .tab_active_background
-                    .blend(cx.theme().colors().element_selected.opacity(0.18)),
-                cx.theme().colors().element_hover,
-                cx.theme().colors().element_active,
+                cx.theme().colors().tab_active_background,
             ),
         };
 
@@ -146,29 +137,9 @@ impl RenderOnce for Tab {
             }
         };
 
-        let active_indicator = self.selected.then(|| {
-            div()
-                .id((self.id.clone(), "active-indicator"))
-                .absolute()
-                .left(px(12.))
-                .right(px(12.))
-                .bottom(px(3.))
-                .h(px(2.))
-                .rounded_full()
-                .bg(cx.theme().colors().element_selected)
-                .with_animation(
-                    (self.id.clone(), "active-indicator-pulse"),
-                    Animation::new(Duration::from_millis(1600))
-                        .repeat()
-                        .with_easing(pulsating_between(0.45, 1.0)),
-                    |this, delta| this.opacity(delta),
-                )
-        });
-
         self.div
             .h(Tab::container_height(cx))
             .bg(tab_bg)
-            .border_color(cx.theme().colors().border)
             .map(|this| match self.position {
                 TabPosition::First => {
                     if self.selected {
@@ -191,28 +162,23 @@ impl RenderOnce for Tab {
             .cursor_pointer()
             .hover(|style| {
                 style
-                    .bg(cx.theme().colors().element_hover.opacity(0.35))
+                    .bg(cx.theme().colors().ghost_element_hover)
                     .text_color(cx.theme().colors().text)
             })
             .child(
                 h_flex()
                     .group("")
-                    .relative()
                     .h(Tab::content_height(cx))
-                    .rounded_md()
                     .px(DynamicSpacing::Base04.px(cx))
                     .gap(DynamicSpacing::Base04.rems(cx))
                     .text_color(text_color)
                     .when(self.selected, |this| {
                         this.bg(cx.theme().colors().tab_active_background)
-                            .border_1()
-                            .border_color(cx.theme().colors().border_selected.opacity(0.45))
                     })
                     .child(start_slot)
                     .children(self.children)
                     .child(end_slot),
             )
-            .children(active_indicator)
     }
 }
 

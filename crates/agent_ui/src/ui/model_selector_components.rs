@@ -8,6 +8,7 @@ use zed_actions::agent::ToggleModelSelector;
 
 use crate::CycleFavoriteModels;
 
+#[derive(Clone)]
 enum ModelIcon {
     Name(IconName),
     Path(SharedString),
@@ -48,9 +49,89 @@ impl RenderOnce for ModelSelectorHeader {
 }
 
 #[derive(IntoElement)]
+pub struct ModelSelectorCategoryHeader {
+    index: usize,
+    title: SharedString,
+    item_count: usize,
+    is_expanded: bool,
+    on_toggle: Option<Arc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>>,
+}
+
+impl ModelSelectorCategoryHeader {
+    pub fn new(index: usize, title: impl Into<SharedString>, item_count: usize) -> Self {
+        Self {
+            index,
+            title: title.into(),
+            item_count,
+            is_expanded: true,
+            on_toggle: None,
+        }
+    }
+
+    pub fn is_expanded(mut self, is_expanded: bool) -> Self {
+        self.is_expanded = is_expanded;
+        self
+    }
+
+    pub fn on_toggle(
+        mut self,
+        handler: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.on_toggle = Some(Arc::new(handler));
+        self
+    }
+}
+
+impl RenderOnce for ModelSelectorCategoryHeader {
+    fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
+        let disclosure_toggle = self.on_toggle.clone();
+
+        ListItem::new(("category-group", self.index))
+            .inset(true)
+            .spacing(ListItemSpacing::Sparse)
+            .when_some(self.on_toggle.clone(), |this, on_toggle| {
+                this.on_click(move |event, window, cx| {
+                    on_toggle(event, window, cx);
+                })
+            })
+            .child(
+                h_flex()
+                    .w_full()
+                    .justify_between()
+                    .gap_2()
+                    .child(
+                        div().flex_1().child(
+                            Label::new(self.title)
+                                .size(LabelSize::Small)
+                                .color(Color::Default),
+                        ),
+                    )
+                    .child(
+                        h_flex()
+                            .gap_1()
+                            .items_center()
+                            .child(
+                                Chip::new(self.item_count.to_string()).tooltip(Tooltip::text(
+                                    format!("{} providers in this category", self.item_count),
+                                )),
+                            )
+                            .child(
+                                Disclosure::new(
+                                    ("category-disclosure", self.index),
+                                    self.is_expanded,
+                                )
+                                .on_toggle_expanded(disclosure_toggle),
+                            ),
+                    ),
+            )
+    }
+}
+
+#[derive(IntoElement)]
 pub struct ModelSelectorProviderHeader {
     index: usize,
     title: SharedString,
+    icon: Option<ModelIcon>,
     model_count: usize,
     is_expanded: bool,
     on_toggle: Option<Arc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>>,
@@ -61,10 +142,21 @@ impl ModelSelectorProviderHeader {
         Self {
             index,
             title: title.into(),
+            icon: None,
             model_count,
             is_expanded: true,
             on_toggle: None,
         }
+    }
+
+    pub fn icon(mut self, icon: IconName) -> Self {
+        self.icon = Some(ModelIcon::Name(icon));
+        self
+    }
+
+    pub fn icon_path(mut self, path: SharedString) -> Self {
+        self.icon = Some(ModelIcon::Path(path));
+        self
     }
 
     pub fn is_expanded(mut self, is_expanded: bool) -> Self {
@@ -99,11 +191,27 @@ impl RenderOnce for ModelSelectorProviderHeader {
                     .justify_between()
                     .gap_2()
                     .child(
-                        div().flex_1().child(
-                            Label::new(self.title)
-                                .size(LabelSize::Small)
-                                .color(Color::Muted),
-                        ),
+                        h_flex()
+                            .flex_1()
+                            .gap_1p5()
+                            .items_center()
+                            .when_some(self.icon, |this, icon| {
+                                this.child(
+                                    match icon {
+                                        ModelIcon::Name(icon_name) => Icon::new(icon_name),
+                                        ModelIcon::Path(icon_path) => {
+                                            Icon::from_external_svg(icon_path)
+                                        }
+                                    }
+                                    .color(Color::Muted)
+                                    .size(IconSize::Small),
+                                )
+                            })
+                            .child(
+                                Label::new(self.title)
+                                    .size(LabelSize::Small)
+                                    .color(Color::Muted),
+                            ),
                     )
                     .child(
                         h_flex()

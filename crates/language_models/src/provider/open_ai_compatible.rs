@@ -24,11 +24,14 @@ use util::ResultExt;
 use crate::provider::open_ai::{
     OpenAiEventMapper, OpenAiResponseEventMapper, into_open_ai, into_open_ai_response,
 };
+use crate::provider_hub::ProviderHubStore;
+use crate::provider_icons;
 pub use settings::OpenAiCompatibleAvailableModel as AvailableModel;
 pub use settings::OpenAiCompatibleModelCapabilities as ModelCapabilities;
 
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct OpenAiCompatibleSettings {
+    pub display_name: Option<String>,
     pub api_url: String,
     pub available_models: Vec<AvailableModel>,
 }
@@ -100,10 +103,25 @@ impl OpenAiCompatibleLanguageModelProvider {
                 settings,
             }
         });
+        let resolved_name = ProviderHubStore::try_global(cx)
+            .and_then(|store| {
+                store
+                    .read(cx)
+                    .provider_display_name(&LanguageModelProviderId::from(id.clone()))
+                    .map(ToOwned::to_owned)
+            })
+            .or_else(|| {
+                provider_icons::get_provider_display_name(id.as_ref()).map(ToOwned::to_owned)
+            })
+            .or_else(|| {
+                let display_name = state.read(cx).settings.display_name.clone();
+                display_name.filter(|value| !value.trim().is_empty())
+            })
+            .unwrap_or_else(|| id.as_ref().to_case(Case::Title));
 
         Self {
             id: id.clone().into(),
-            name: id.into(),
+            name: resolved_name.into(),
             http_client,
             state,
         }
@@ -140,7 +158,9 @@ impl LanguageModelProvider for OpenAiCompatibleLanguageModelProvider {
     }
 
     fn icon(&self) -> IconOrSvg {
-        IconOrSvg::Icon(IconName::AiOpenAiCompat)
+        provider_icons::get_provider_icon_path(self.id.0.as_ref())
+            .map(|path| IconOrSvg::Svg(path.into()))
+            .unwrap_or(IconOrSvg::Icon(IconName::AiOpenAiCompat))
     }
 
     fn default_model(&self, cx: &App) -> Option<Arc<dyn LanguageModel>> {
@@ -201,6 +221,32 @@ pub struct OpenAiCompatibleLanguageModel {
 }
 
 impl OpenAiCompatibleLanguageModel {
+    fn fallback_v1_api_url(api_url: &str) -> Option<String> {
+        let trimmed = api_url.trim().trim_end_matches('/');
+        if trimmed.is_empty() {
+            return None;
+        }
+
+        let last_segment = trimmed.rsplit('/').next().unwrap_or_default();
+        if last_segment.starts_with('v')
+            && last_segment
+                .chars()
+                .nth(1)
+                .is_some_and(|character| character.is_ascii_digit())
+        {
+            return None;
+        }
+
+        Some(format!("{trimmed}/v1"))
+    }
+
+    fn should_retry_with_v1(error: &LanguageModelCompletionError, api_url: &str) -> bool {
+        matches!(
+            error,
+            LanguageModelCompletionError::ApiEndpointNotFound { .. }
+        ) && Self::fallback_v1_api_url(api_url).is_some()
+    }
+
     fn stream_completion(
         &self,
         request: open_ai::Request,
@@ -223,19 +269,45 @@ impl OpenAiCompatibleLanguageModel {
         });
 
         let provider = self.provider_name.clone();
+        let provider_for_missing_key = provider.clone();
+        let provider_name = provider.0.to_string();
+        let retry_request = request.clone();
         let future = self.request_limiter.stream(async move {
             let Some(api_key) = api_key else {
-                return Err(LanguageModelCompletionError::NoApiKey { provider });
+                return Err(LanguageModelCompletionError::NoApiKey {
+                    provider: provider_for_missing_key,
+                });
             };
-            let request = stream_completion(
+
+            match stream_completion(
                 http_client.as_ref(),
-                provider.0.as_str(),
+                provider_name.as_str(),
                 &api_url,
                 &api_key,
                 request,
-            );
-            let response = request.await?;
-            Ok(response)
+            )
+            .await
+            {
+                Ok(response) => Ok(response),
+                Err(error) => {
+                    let error = LanguageModelCompletionError::from(error);
+                    if Self::should_retry_with_v1(&error, &api_url) {
+                        let fallback_api_url = Self::fallback_v1_api_url(&api_url)
+                            .expect("checked retryable v1 api url above");
+                        stream_completion(
+                            http_client.as_ref(),
+                            provider_name.as_str(),
+                            &fallback_api_url,
+                            &api_key,
+                            retry_request,
+                        )
+                        .await
+                        .map_err(LanguageModelCompletionError::from)
+                    } else {
+                        Err(error)
+                    }
+                }
+            }
         });
 
         async move { Ok(future.await?.boxed()) }.boxed()
@@ -258,19 +330,45 @@ impl OpenAiCompatibleLanguageModel {
         });
 
         let provider = self.provider_name.clone();
+        let provider_for_missing_key = provider.clone();
+        let provider_name = provider.0.to_string();
+        let retry_request = request.clone();
         let future = self.request_limiter.stream(async move {
             let Some(api_key) = api_key else {
-                return Err(LanguageModelCompletionError::NoApiKey { provider });
+                return Err(LanguageModelCompletionError::NoApiKey {
+                    provider: provider_for_missing_key,
+                });
             };
-            let request = stream_response(
+
+            match stream_response(
                 http_client.as_ref(),
-                provider.0.as_str(),
+                provider_name.as_str(),
                 &api_url,
                 &api_key,
                 request,
-            );
-            let response = request.await?;
-            Ok(response)
+            )
+            .await
+            {
+                Ok(response) => Ok(response),
+                Err(error) => {
+                    let error = LanguageModelCompletionError::from(error);
+                    if Self::should_retry_with_v1(&error, &api_url) {
+                        let fallback_api_url = Self::fallback_v1_api_url(&api_url)
+                            .expect("checked retryable v1 api url above");
+                        stream_response(
+                            http_client.as_ref(),
+                            provider_name.as_str(),
+                            &fallback_api_url,
+                            &api_key,
+                            retry_request,
+                        )
+                        .await
+                        .map_err(LanguageModelCompletionError::from)
+                    } else {
+                        Err(error)
+                    }
+                }
+            }
         });
 
         async move { Ok(future.await?.boxed()) }.boxed()
@@ -328,7 +426,7 @@ impl LanguageModel for OpenAiCompatibleLanguageModel {
     }
 
     fn telemetry_id(&self) -> String {
-        format!("openai/{}", self.model.name)
+        format!("{}/{}", self.provider_id.0, self.model.name)
     }
 
     fn max_token_count(&self) -> u64 {
@@ -557,7 +655,7 @@ impl Render for ConfigurationView {
         };
 
         if self.load_credentials_task.is_some() {
-            div().child(Label::new("Loading credentials…")).into_any()
+            div().child(Label::new("Loading credentials...")).into_any()
         } else {
             v_flex().size_full().child(api_key_section).into_any()
         }

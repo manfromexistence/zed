@@ -106,6 +106,7 @@ impl settings::Settings for AllLanguageModelSettings {
                     (
                         key,
                         OpenAiCompatibleSettings {
+                            display_name: value.display_name,
                             api_url: value.api_url,
                             available_models: value.available_models,
                         },

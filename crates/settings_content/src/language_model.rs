@@ -251,6 +251,7 @@ pub enum OpenAiReasoningEffort {
 #[with_fallible_options]
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, JsonSchema, MergeFrom)]
 pub struct OpenAiCompatibleSettingsContent {
+    pub display_name: Option<String>,
     pub api_url: String,
     pub available_models: Vec<OpenAiCompatibleAvailableModel>,
 }

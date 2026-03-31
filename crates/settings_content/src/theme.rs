@@ -279,7 +279,7 @@ pub const DEFAULT_DARK_THEME: &'static str = "Dx Dark";
 impl Default for ThemeSelection {
     fn default() -> Self {
         Self::Dynamic {
-            mode: ThemeAppearanceMode::default(),
+            mode: ThemeAppearanceMode::Dark,
             light: ThemeName(DEFAULT_LIGHT_THEME.into()),
             dark: ThemeName(DEFAULT_DARK_THEME.into()),
         }

@@ -1,6 +1,6 @@
 use gpui::{
     App, Context, Entity, EventEmitter, FocusHandle, Focusable, Render, SharedString, Task,
-    WeakEntity, Window, actions, px,
+    WeakEntity, Window, actions, prelude::*, px,
 };
 use smallvec::{SmallVec, smallvec};
 use ui::{Divider, prelude::*};
@@ -22,9 +22,19 @@ pub fn init(cx: &mut App) {
             open_animation_demo_tab(workspace, window, cx);
         });
 
-        if let Some(window) = window {
-            open_animation_demo_tab(workspace, window, cx);
-        }
+        let Some(window) = window else {
+            return;
+        };
+
+        let workspace = cx.entity().downgrade();
+        window.defer(cx, move |window, cx| {
+            let Some(workspace) = workspace.upgrade() else {
+                return;
+            };
+            let _ = workspace.update(cx, |workspace, cx| {
+                open_animation_demo_tab(workspace, window, cx);
+            });
+        });
     })
     .detach();
 }
@@ -222,134 +232,140 @@ impl Render for AnimationDemoTab {
                     ),
             )
             .child(
-                v_flex()
+                div()
+                    .id("animation-demo-scroll-area")
                     .flex_1()
-                    .size_full()
-                    .p_6()
-                    .gap_4()
+                    .h_full()
+                    .overflow_y_scroll()
                     .child(
-                        div()
-                            .w_full()
-                            .rounded_md()
-                            .border_1()
-                            .border_color(cx.theme().colors().border)
-                            .bg(cx.theme().colors().surface_background)
-                            .px_4()
-                            .py_3()
-                            .child(
-                                h_flex()
-                                    .justify_between()
-                                    .items_center()
-                                    .child(
-                                        v_flex()
-                                            .gap_1()
-                                            .child(
-                                                Headline::new("Preview Stage")
-                                                    .size(HeadlineSize::XSmall),
-                                            )
-                                            .child(
-                                                Label::new(
-                                                    "Reserved for side-by-side GPUI animation validation.",
+                    v_flex()
+                        .w_full()
+                        .p_6()
+                        .gap_4()
+                        .child(
+                            div()
+                                .w_full()
+                                .rounded_md()
+                                .border_1()
+                                .border_color(cx.theme().colors().border)
+                                .bg(cx.theme().colors().surface_background)
+                                .px_4()
+                                .py_3()
+                                .child(
+                                    h_flex()
+                                        .justify_between()
+                                        .items_center()
+                                        .child(
+                                            v_flex()
+                                                .gap_1()
+                                                .child(
+                                                    Headline::new("Preview Stage")
+                                                        .size(HeadlineSize::XSmall),
                                                 )
-                                                .size(LabelSize::Small)
-                                                .color(Color::Muted),
-                                            ),
-                                    )
-                                    .child(
-                                        Label::new(format!(
-                                            "{:.0}px x {:.0}px",
-                                            f32::from(viewport.width),
-                                            f32::from(viewport.height)
-                                        ))
-                                        .size(LabelSize::Small)
-                                        .color(Color::Muted),
-                                    ),
-                            ),
-                    )
-                    .child(
-                        h_flex()
-                            .gap_4()
-                            .flex_1()
-                            .size_full()
-                            .child(preview_panel(
-                                "Video Preview",
-                                "Planned stack: gstreamer or ffmpeg-next with hardware-accelerated MP4/WebM/MOV playback.",
-                                cx,
-                            ))
-                            .child(preview_panel(
-                                "3D Preview",
-                                "Planned stack: wgpu or three-d with realtime OBJ/GLTF/FBX rendering and camera controls.",
-                                cx,
-                            )),
-                    )
-                    .child(
-                        h_flex()
-                            .gap_4()
-                            .w_full()
-                            .min_h(px(320.0))
-                            .child(self.friday_preview.clone())
-                            .child(self.hello_glow_preview.clone()),
-                    )
-                    .child(
-                        h_flex()
-                            .gap_4()
-                            .w_full()
-                            .min_h(px(320.0))
-                            .child(self.sidebar_preview.clone())
-                            .child(self.carousel_preview.clone()),
-                    )
-                    .child(self.dock_preview.clone())
-                    .child(self.drag_drop_preview.clone())
-                    .child(
-                        div()
-                            .w_full()
-                            .rounded_md()
-                            .border_1()
-                            .border_color(cx.theme().colors().border_variant)
-                            .bg(cx.theme().colors().element_background)
-                            .p_4()
-                            .child(
-                                Label::new(
-                                    "Use this tab as the central verification surface for animation timing, dimensions, and performance as each phase lands.",
-                                )
-                                .size(LabelSize::Small)
-                                .color(Color::Muted),
-                            ),
-                    )
-                    .child(
-                        div()
-                            .w_full()
-                            .rounded_md()
-                            .border_1()
-                            .border_color(cx.theme().colors().border)
-                            .bg(cx.theme().colors().surface_background)
-                            .p_4()
-                            .child(
-                                v_flex()
-                                    .gap_2()
-                                    .child(
-                                        Headline::new("Phase 2 Motion Toolkit")
-                                            .size(HeadlineSize::XSmall),
-                                    )
-                                    .child(
-                                        Label::new(format!(
-                                            "Spring, easing, animator, transition, and gesture primitives are now wired into the crate. Accent seed: #{accent_color:08X}"
-                                        ))
-                                        .size(LabelSize::Small)
-                                        .color(Color::Muted),
-                                    )
-                                    .children(motion_primitives.into_iter().map(|(label, value)| {
-                                        h_flex()
-                                            .justify_between()
-                                            .gap_3()
-                                            .child(
-                                                Label::new(label)
-                                                    .size(LabelSize::XSmall)
+                                                .child(
+                                                    Label::new(
+                                                        "Reserved for side-by-side GPUI animation validation.",
+                                                    )
+                                                    .size(LabelSize::Small)
                                                     .color(Color::Muted),
-                                            )
-                                            .child(Label::new(value).size(LabelSize::Small))
-                                    })),
-                            ),
+                                                ),
+                                        )
+                                        .child(
+                                            Label::new(format!(
+                                                "{:.0}px x {:.0}px",
+                                                f32::from(viewport.width),
+                                                f32::from(viewport.height)
+                                            ))
+                                            .size(LabelSize::Small)
+                                            .color(Color::Muted),
+                                        ),
+                                ),
+                        )
+                        .child(
+                            h_flex()
+                                .gap_4()
+                                .w_full()
+                                .min_h(px(260.0))
+                                .child(preview_panel(
+                                    "Video Preview",
+                                    "Planned stack: gstreamer or ffmpeg-next with hardware-accelerated MP4/WebM/MOV playback.",
+                                    cx,
+                                ))
+                                .child(preview_panel(
+                                    "3D Preview",
+                                    "Planned stack: wgpu or three-d with realtime OBJ/GLTF/FBX rendering and camera controls.",
+                                    cx,
+                                )),
+                        )
+                        .child(
+                            h_flex()
+                                .gap_4()
+                                .w_full()
+                                .min_h(px(320.0))
+                                .child(self.friday_preview.clone())
+                                .child(self.hello_glow_preview.clone()),
+                        )
+                        .child(
+                            h_flex()
+                                .gap_4()
+                                .w_full()
+                                .min_h(px(320.0))
+                                .child(self.sidebar_preview.clone())
+                                .child(self.carousel_preview.clone()),
+                        )
+                        .child(self.dock_preview.clone())
+                        .child(self.drag_drop_preview.clone())
+                        .child(
+                            div()
+                                .w_full()
+                                .rounded_md()
+                                .border_1()
+                                .border_color(cx.theme().colors().border_variant)
+                                .bg(cx.theme().colors().element_background)
+                                .p_4()
+                                .child(
+                                    Label::new(
+                                        "Use this tab as the central verification surface for animation timing, dimensions, and performance as each phase lands.",
+                                    )
+                                    .size(LabelSize::Small)
+                                    .color(Color::Muted),
+                                ),
+                        )
+                        .child(
+                            div()
+                                .w_full()
+                                .rounded_md()
+                                .border_1()
+                                .border_color(cx.theme().colors().border)
+                                .bg(cx.theme().colors().surface_background)
+                                .p_4()
+                                .child(
+                                    v_flex()
+                                        .gap_2()
+                                        .child(
+                                            Headline::new("Phase 2 Motion Toolkit")
+                                                .size(HeadlineSize::XSmall),
+                                        )
+                                        .child(
+                                            Label::new(format!(
+                                                "Spring, easing, animator, transition, and gesture primitives are now wired into the crate. Accent seed: #{accent_color:08X}"
+                                            ))
+                                            .size(LabelSize::Small)
+                                            .color(Color::Muted),
+                                        )
+                                        .children(motion_primitives.into_iter().map(|(label, value)| {
+                                            h_flex()
+                                                .justify_between()
+                                                .gap_3()
+                                                .child(
+                                                    Label::new(label)
+                                                        .size(LabelSize::XSmall)
+                                                        .color(Color::Muted),
+                                                )
+                                                .child(Label::new(value).size(LabelSize::Small))
+                                        })),
+                                ),
+                        ),
                     ),
             )
     }

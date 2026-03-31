@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use collections::HashSet;
+use convert_case::{Case, Casing};
 use fs::Fs;
 use gpui::{
     DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, Render, ScrollHandle, Task,
@@ -91,13 +92,6 @@ impl LlmCompatibleProvider {
             LlmCompatibleProvider::Vllm => "vllm",
             LlmCompatibleProvider::Llamafile => "llamafile",
             LlmCompatibleProvider::TextGenerationWebUi => "text-generation-webui",
-        }
-    }
-
-    fn suggested_provider_id(&self) -> Option<&'static str> {
-        match self {
-            LlmCompatibleProvider::OpenAi => None,
-            _ => Some(self.catalog_id()),
         }
     }
 
@@ -221,7 +215,7 @@ impl AddLlmProviderInput {
         let provider_name = single_line_input(
             "Provider Name",
             provider.name(),
-            provider.suggested_provider_id(),
+            Some(provider.name()),
             1,
             window,
             cx,
@@ -541,27 +535,59 @@ async fn discover_models(
     api_key: Option<String>,
 ) -> Result<Vec<AvailableModel>, SharedString> {
     let client = reqwest::Client::new();
-    let mut request = match provider.discovery_kind() {
-        ModelDiscoveryKind::OpenAiCompatible => {
-            client.get(format!("{}/models", api_url.trim_end_matches('/')))
-        }
-    };
-
-    if let Some(api_key) = api_key.filter(|value| !value.trim().is_empty()) {
-        request = request.bearer_auth(api_key);
+    let mut endpoints = vec![format!("{}/models", api_url.trim_end_matches('/'))];
+    if matches!(provider.discovery_kind(), ModelDiscoveryKind::OpenAiCompatible)
+        && !api_url.contains("/v1")
+    {
+        endpoints.push(format!("{}/v1/models", api_url.trim_end_matches('/')));
     }
 
-    let payload = request
-        .send()
-        .await
-        .map_err(|error| SharedString::from(format!("Failed to contact provider: {error}")))?
-        .error_for_status()
-        .map_err(|error| SharedString::from(format!("Provider returned an error: {error}")))?;
-    let payload =
-        serde_json::from_str::<serde_json::Value>(&payload.text().await.map_err(|error| {
-            SharedString::from(format!("Failed to read provider models response: {error}"))
-        })?)
-        .map_err(|error| SharedString::from(format!("Failed to parse provider models: {error}")))?;
+    let mut last_error = None;
+    let mut payload = None;
+
+    for endpoint in endpoints {
+        let mut request = client.get(&endpoint);
+        if let Some(api_key) = api_key.as_ref().filter(|value| !value.trim().is_empty()) {
+            request = request.bearer_auth(api_key);
+        }
+
+        match request.send().await {
+            Ok(response) => {
+                let status = response.status();
+                if !status.is_success() {
+                    last_error = Some(if status == reqwest::StatusCode::NOT_FOUND {
+                        SharedString::from(format!(
+                            "Provider API endpoint not found at {endpoint}. Try the provider's OpenAI-compatible base URL."
+                        ))
+                    } else {
+                        SharedString::from(format!(
+                            "Provider returned an error from {endpoint}: {status}"
+                        ))
+                    });
+                    continue;
+                }
+
+                let body = response.text().await.map_err(|error| {
+                    SharedString::from(format!("Failed to read provider models response: {error}"))
+                })?;
+                payload = Some(serde_json::from_str::<serde_json::Value>(&body).map_err(
+                    |error| SharedString::from(format!("Failed to parse provider models: {error}")),
+                )?);
+                break;
+            }
+            Err(error) => {
+                last_error = Some(SharedString::from(format!(
+                    "Failed to contact provider endpoint {endpoint}: {error}"
+                )));
+            }
+        }
+    }
+
+    let Some(payload) = payload else {
+        return Err(last_error.unwrap_or_else(|| {
+            SharedString::from("Failed to discover models from the provider endpoint")
+        }));
+    };
 
     let models = parse_openai_compatible_models(payload);
     if models.is_empty() {
@@ -576,17 +602,22 @@ fn save_provider_to_settings(
     input: &AddLlmProviderInput,
     cx: &mut App,
 ) -> Task<Result<(), SharedString>> {
-    let provider_name: Arc<str> = input.provider_name.read(cx).text(cx).into();
-    if provider_name.is_empty() {
+    let provider_display_name = input.provider_name.read(cx).text(cx);
+    if provider_display_name.is_empty() {
         return Task::ready(Err("Provider Name cannot be empty".into()));
+    }
+
+    let provider_id: Arc<str> = normalize_provider_id(&provider_display_name).into();
+    if provider_id.is_empty() {
+        return Task::ready(Err("Provider Name must contain letters or numbers".into()));
     }
 
     if LanguageModelRegistry::read_global(cx)
         .providers()
         .iter()
         .any(|provider| {
-            provider.id().0.as_ref() == provider_name.as_ref()
-                || provider.name().0.as_ref() == provider_name.as_ref()
+            provider.id().0.as_ref() == provider_id.as_ref()
+                || provider.name().0.as_ref() == provider_display_name.as_str()
         })
     {
         return Task::ready(Err(
@@ -637,8 +668,9 @@ fn save_provider_to_settings(
                     .openai_compatible
                     .get_or_insert_default()
                     .insert(
-                        provider_name,
+                        provider_id,
                         OpenAiCompatibleSettingsContent {
+                            display_name: Some(provider_display_name),
                             api_url,
                             available_models: models,
                         },
@@ -647,6 +679,15 @@ fn save_provider_to_settings(
         });
         Ok(())
     })
+}
+
+fn normalize_provider_id(value: &str) -> String {
+    value
+        .trim()
+        .to_case(Case::Snake)
+        .chars()
+        .filter(|ch: &char| ch.is_ascii_alphanumeric() || *ch == '_')
+        .collect()
 }
 
 pub struct AddLlmProviderModal {

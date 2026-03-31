@@ -1,15 +1,14 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::mpsc::{Receiver, Sender, channel};
-use std::time::Duration;
 
 use agent_client_protocol as acp;
 use agent_ui::{AgentPanel, NewTextThread};
 use anyhow::Context as _;
 use editor::Editor;
 use gpui::{
-    Action, App, Context, EventEmitter, FocusHandle, Focusable, Pixels, Render, Task, WeakEntity,
-    Window, actions, canvas, px,
+    Action, App, Context, EventEmitter, FocusHandle, Focusable, Pixels, Render, WeakEntity, Window,
+    actions, canvas, px,
 };
 use ui::{Button, Color, IconButton, IconName, Label, prelude::*};
 use workspace::dock::{DockPosition, PanelEvent};
@@ -209,15 +208,22 @@ pub struct EmbeddedWebPreviewPanel {
     url_editor: gpui::Entity<Editor>,
     css_editor: gpui::Entity<Editor>,
     pending_navigation: bool,
-    _poll_task: Task<()>,
-    _profile_scan_task: Task<()>,
+    pending_state_flush_scheduled: bool,
 }
 
 impl EmbeddedWebPreviewPanel {
     pub fn register(workspace: &mut Workspace) {
         workspace
             .register_action(|workspace, _: &ToggleEmbeddedWebPreview, window, cx| {
-                workspace.toggle_panel_focus::<EmbeddedWebPreviewPanel>(window, cx);
+                if workspace.panel::<EmbeddedWebPreviewPanel>(cx).is_none() {
+                    let panel = cx.new(|cx| {
+                        EmbeddedWebPreviewPanel::new(workspace.weak_handle(), window, cx)
+                    });
+                    workspace.add_panel(panel, window, cx);
+                    workspace.focus_panel::<EmbeddedWebPreviewPanel>(window, cx);
+                } else {
+                    workspace.toggle_panel_focus::<EmbeddedWebPreviewPanel>(window, cx);
+                }
             })
             .register_action(
                 |workspace, _: &OpenEmbeddedWebPreviewDevTools, window, cx| {
@@ -307,19 +313,7 @@ impl EmbeddedWebPreviewPanel {
             editor
         });
 
-        let host = Rc::new(RefCell::new(WebViewHost::default()));
-        let poll_task = cx.spawn_in(window, async move |this, cx| {
-            loop {
-                cx.background_executor()
-                    .timer(Duration::from_millis(80))
-                    .await;
-                if this.update(cx, |this, cx| this.poll_ipc(cx)).is_err() {
-                    break;
-                }
-            }
-        });
-
-        let mut panel = Self {
+        Self {
             workspace,
             focus_handle: cx.focus_handle(),
             position: DockPosition::Right,
@@ -328,13 +322,14 @@ impl EmbeddedWebPreviewPanel {
             current_title: String::new(),
             last_error: None,
             status_message: Some(
-                "Detecting browser profiles and preparing the embedded preview".to_string(),
+                "Open the embedded preview to detect browser profiles and prepare the webview"
+                    .to_string(),
             ),
             webgpu_available: None,
             hovered_capture: None,
             selected_capture: None,
             pending_ai_capture: None,
-            host,
+            host: Rc::new(RefCell::new(WebViewHost::default())),
             ipc_tx,
             ipc_rx,
             browser_profiles: Vec::new(),
@@ -342,12 +337,9 @@ impl EmbeddedWebPreviewPanel {
             session_policy: DevSessionPolicy::default(),
             url_editor,
             css_editor,
-            pending_navigation: true,
-            _poll_task: poll_task,
-            _profile_scan_task: Task::ready(()),
-        };
-        panel.refresh_browser_profiles(cx);
-        panel
+            pending_navigation: false,
+            pending_state_flush_scheduled: false,
+        }
     }
 
     fn selected_browser_profile(&self) -> Option<&BrowserProfile> {
@@ -361,6 +353,10 @@ impl EmbeddedWebPreviewPanel {
     }
 
     fn sync_webview(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if !self.active {
+            return;
+        }
+
         let selected_profile = self.selected_browser_profile().cloned();
         let resolved_session = self.session_policy.resolve_for_url(
             &self.current_url,
@@ -382,9 +378,16 @@ impl EmbeddedWebPreviewPanel {
             self.current_url.as_str()
         };
 
-        let mut host = self.host.borrow_mut();
+        let Ok(mut host) = self.host.try_borrow_mut() else {
+            self.pending_navigation = true;
+            self.status_message =
+                Some("Waiting for the embedded browser host to become available".to_string());
+            cx.notify();
+            return;
+        };
         match host.ensure(window, &launch, initial_url, self.ipc_tx.clone()) {
             Ok(rebuilt) => {
+                self.last_error = None;
                 if resolved_session.should_clear_before_navigation {
                     if let Err(error) = host.clear_all_browsing_data() {
                         self.last_error =
@@ -433,40 +436,38 @@ impl EmbeddedWebPreviewPanel {
     fn refresh_browser_profiles(&mut self, cx: &mut Context<Self>) {
         self.status_message =
             Some("Scanning local browser profiles and installed extensions".to_string());
-        self._profile_scan_task = cx.spawn(async move |this, cx| {
-            let result = cx
-                .background_executor()
-                .spawn(async move { detect_browser_profiles() })
-                .await;
-            let _ = this.update(cx, |this, cx| {
-                match result {
-                    Ok(profiles) => {
-                        let previous_key = this
-                            .selected_browser_profile()
-                            .map(BrowserProfile::profile_key);
-                        let selected_profile_ix = previous_key
-                            .as_ref()
-                            .and_then(|key| {
-                                profiles
-                                    .iter()
-                                    .position(|profile| profile.profile_key() == *key)
-                            })
-                            .or_else(|| preferred_profile_index(&profiles));
-                        this.browser_profiles = profiles;
-                        this.selected_profile_ix = selected_profile_ix;
-                        this.status_message = Some(format!(
-                            "Detected {} browser profile(s) for extension import and visibility",
-                            this.browser_profiles.len()
-                        ));
-                        this.pending_navigation = true;
-                    }
-                    Err(error) => {
-                        this.last_error = Some(format!("browser profile scan failed: {error:#}"));
-                    }
-                }
-                cx.notify();
-            });
-        });
+        match detect_browser_profiles() {
+            Ok(profiles) => {
+                let previous_key = self
+                    .selected_browser_profile()
+                    .map(BrowserProfile::profile_key);
+                let selected_profile_ix = previous_key
+                    .as_ref()
+                    .and_then(|key| {
+                        profiles
+                            .iter()
+                            .position(|profile| profile.profile_key() == *key)
+                    })
+                    .or_else(|| {
+                        if previous_key.is_some() {
+                            preferred_profile_index(&profiles)
+                        } else {
+                            None
+                        }
+                    });
+                self.browser_profiles = profiles;
+                self.selected_profile_ix = selected_profile_ix;
+                self.status_message = Some(format!(
+                    "Detected {} browser profile(s) for extension import and visibility",
+                    self.browser_profiles.len()
+                ));
+                self.pending_navigation = true;
+            }
+            Err(error) => {
+                self.last_error = Some(format!("browser profile scan failed: {error:#}"));
+            }
+        }
+        cx.notify();
     }
 
     fn poll_ipc(&mut self, cx: &mut Context<Self>) {
@@ -546,15 +547,23 @@ impl EmbeddedWebPreviewPanel {
     }
 
     fn open_devtools(&mut self) {
-        self.host.borrow().open_devtools();
+        if let Ok(host) = self.host.try_borrow() {
+            host.open_devtools();
+        } else {
+            self.last_error = Some(
+                "embedded browser host is busy; try opening developer tools again".to_string(),
+            );
+        }
     }
 
     fn arm_inspector(&mut self, copy_to_ai: bool) {
-        if let Err(error) = self
-            .host
-            .borrow()
-            .evaluate_script(&arm_inspector_script(copy_to_ai))
-        {
+        let Ok(host) = self.host.try_borrow() else {
+            self.last_error =
+                Some("embedded browser host is busy; try arming the inspector again".to_string());
+            return;
+        };
+
+        if let Err(error) = host.evaluate_script(&arm_inspector_script(copy_to_ai)) {
             self.last_error = Some(format!("failed to arm inspector: {error:#}"));
         } else {
             self.status_message = Some(if copy_to_ai {
@@ -566,17 +575,27 @@ impl EmbeddedWebPreviewPanel {
     }
 
     fn cancel_inspector(&mut self) {
-        if let Err(error) = self
-            .host
-            .borrow()
-            .evaluate_script(cancel_inspector_script())
-        {
+        let Ok(host) = self.host.try_borrow() else {
+            self.last_error = Some(
+                "embedded browser host is busy; try cancelling the inspector again".to_string(),
+            );
+            return;
+        };
+
+        if let Err(error) = host.evaluate_script(cancel_inspector_script()) {
             self.last_error = Some(format!("failed to cancel inspector: {error:#}"));
         }
     }
 
     fn clear_session(&mut self) {
-        if let Err(error) = self.host.borrow().clear_all_browsing_data() {
+        let Ok(host) = self.host.try_borrow() else {
+            self.last_error = Some(
+                "embedded browser host is busy; try clearing the preview session again".to_string(),
+            );
+            return;
+        };
+
+        if let Err(error) = host.clear_all_browsing_data() {
             self.last_error = Some(format!("failed to clear preview session: {error:#}"));
         } else {
             self.status_message = Some(
@@ -593,7 +612,14 @@ impl EmbeddedWebPreviewPanel {
                 Some("Enter CSS declarations before applying an override.".to_string());
             return;
         }
-        if let Err(error) = self.host.borrow().evaluate_script(&apply_css_script(&css)) {
+        let Ok(host) = self.host.try_borrow() else {
+            self.last_error = Some(
+                "embedded browser host is busy; try applying the CSS override again".to_string(),
+            );
+            return;
+        };
+
+        if let Err(error) = host.evaluate_script(&apply_css_script(&css)) {
             self.last_error = Some(format!("failed to apply CSS override: {error:#}"));
         } else {
             self.status_message =
@@ -602,7 +628,14 @@ impl EmbeddedWebPreviewPanel {
     }
 
     fn clear_css_override(&mut self) {
-        if let Err(error) = self.host.borrow().evaluate_script(clear_css_script()) {
+        let Ok(host) = self.host.try_borrow() else {
+            self.last_error = Some(
+                "embedded browser host is busy; try clearing the CSS override again".to_string(),
+            );
+            return;
+        };
+
+        if let Err(error) = host.evaluate_script(clear_css_script()) {
             self.last_error = Some(format!("failed to clear CSS override: {error:#}"));
         } else {
             self.status_message =
@@ -679,12 +712,34 @@ impl EmbeddedWebPreviewPanel {
             if self.current_url != next_url {
                 self.current_url = next_url;
             }
-            self.sync_webview(window, cx);
+            if self.active {
+                self.sync_webview(window, cx);
+            }
         }
 
         if let Some(capture) = self.pending_ai_capture.take() {
             self.copy_capture_to_ai(capture, window, cx);
         }
+    }
+
+    fn schedule_pending_state_flush(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.pending_state_flush_scheduled
+            || (!self.pending_navigation && self.pending_ai_capture.is_none())
+        {
+            return;
+        }
+
+        self.pending_state_flush_scheduled = true;
+        let panel = cx.entity().downgrade();
+        window.defer(cx, move |window, cx| {
+            let Some(panel) = panel.upgrade() else {
+                return;
+            };
+            let _ = panel.update(cx, |panel, cx| {
+                panel.pending_state_flush_scheduled = false;
+                panel.commit_pending_state(window, cx);
+            });
+        });
     }
 
     fn browser_button_label(&self, index: Option<usize>) -> String {
@@ -753,8 +808,15 @@ impl Panel for EmbeddedWebPreviewPanel {
 
     fn set_active(&mut self, active: bool, _window: &mut Window, cx: &mut Context<Self>) {
         self.active = active;
-        self.host.borrow().set_visible(active);
-        self.pending_navigation = true;
+        if active {
+            if self.browser_profiles.is_empty() {
+                self.refresh_browser_profiles(cx);
+            }
+            self.pending_navigation = true;
+        }
+        if let Ok(host) = self.host.try_borrow() {
+            host.set_visible(active);
+        }
         cx.notify();
     }
 
@@ -767,7 +829,7 @@ impl Render for EmbeddedWebPreviewPanel {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl gpui::IntoElement {
         self.poll_ipc(cx);
         self.sync_url_editor(window, cx);
-        self.commit_pending_state(window, cx);
+        self.schedule_pending_state_flush(window, cx);
 
         let host = self.host.clone();
         let capability = match self.webgpu_available {
@@ -1024,7 +1086,9 @@ impl Render for EmbeddedWebPreviewPanel {
                         canvas(
                             |_, _, _| (),
                             move |bounds, _, window, _| {
-                                host.borrow().set_bounds(bounds);
+                                if let Ok(host) = host.try_borrow() {
+                                    host.set_bounds(bounds);
+                                }
                                 window.paint_quad(gpui::fill(bounds, gpui::rgb(0x0B0F16)));
                             },
                         )

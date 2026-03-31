@@ -1,18 +1,157 @@
 // Auto-generated LLM provider icon integration
 // Generated on: 2026-03-31T11:00:21.983Z
-// 
+//
 // This file provides icon mappings for 164 LLM/AI providers in Zed
 // Icons sourced from: SVGL and generated fallbacks
 
-use gpui::{svg, SharedString, Svg};
+use gpui::{SharedString, Svg, svg};
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
 static ICON_MAP: OnceLock<HashMap<&'static str, &'static str>> = OnceLock::new();
 static DISPLAY_NAME_MAP: OnceLock<HashMap<&'static str, &'static str>> = OnceLock::new();
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ProviderUiCategory {
+    MajorCloudAi,
+    MajorAiCompanies,
+    InferencePlatforms,
+    HardwareAccelerator,
+    ChineseProviders,
+    RegionalSpecialized,
+    DeveloperTools,
+    AudioSpeech,
+    ImageVideo,
+    SearchRag,
+    SpecializedNiche,
+    AdditionalPlatforms,
+}
+
+impl ProviderUiCategory {
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::MajorCloudAi => "Major Cloud AI",
+            Self::MajorAiCompanies => "Major AI Companies",
+            Self::InferencePlatforms => "Inference Platforms",
+            Self::HardwareAccelerator => "Hardware / Accelerator",
+            Self::ChineseProviders => "Chinese Providers",
+            Self::RegionalSpecialized => "Regional / Specialized",
+            Self::DeveloperTools => "Developer Tools",
+            Self::AudioSpeech => "Audio / Speech",
+            Self::ImageVideo => "Image / Video",
+            Self::SearchRag => "Search / RAG",
+            Self::SpecializedNiche => "Specialized / Niche",
+            Self::AdditionalPlatforms => "Additional Platforms",
+        }
+    }
+
+    pub fn sort_key(self) -> usize {
+        match self {
+            Self::MajorCloudAi => 0,
+            Self::MajorAiCompanies => 1,
+            Self::InferencePlatforms => 2,
+            Self::HardwareAccelerator => 3,
+            Self::ChineseProviders => 4,
+            Self::RegionalSpecialized => 5,
+            Self::DeveloperTools => 6,
+            Self::AudioSpeech => 7,
+            Self::ImageVideo => 8,
+            Self::SearchRag => 9,
+            Self::SpecializedNiche => 10,
+            Self::AdditionalPlatforms => 11,
+        }
+    }
+}
+
+fn canonical_provider_id(provider_id: &str) -> &str {
+    match provider_id.trim() {
+        "amazon-bedrock" | "aws_bedrock" => "bedrock",
+        "azure_openai" => "azure",
+        "azure_ai_foundry" => "azure_ai",
+        "cloudflare_ai_gateway" | "cloudflare_workers_ai" => "cloudflare",
+        "copilot_chat" | "github-models" | "github_models" => "github_copilot",
+        "deep_infra" => "deepinfra",
+        "doubao" => "volcengine",
+        "fal" => "fal_ai",
+        "fireworks-ai" => "fireworks_ai",
+        "friendli" => "friendliai",
+        "google_gemini" => "gemini",
+        "google_vertex_ai" | "vertex-ai" => "vertex_ai",
+        "hugging_face" => "huggingface",
+        "lite_llm_proxy" => "litellm",
+        "moonshot_kimi" => "moonshot",
+        "open-router" => "openrouter",
+        "open_router" => "openrouter",
+        "playht" => "play_ht",
+        "qwen" | "qwen_alibaba" => "dashscope",
+        "runway" => "runwayml",
+        "text-generation-webui" => "text_generation_webui",
+        "together" => "together_ai",
+        "vercel" => "vercel_ai",
+        "whisper-1" => "whisper",
+        "x_ai" => "xai",
+        "yi_01ai" => "yi",
+        "zhipu_chatglm" => "zhipu",
+        other => other,
+    }
+}
+
+pub fn get_provider_ui_category(provider_id: &str) -> ProviderUiCategory {
+    match canonical_provider_id(provider_id) {
+        "openai" | "anthropic" | "gemini" | "google" | "palm" | "vertex_ai" | "azure"
+        | "azure_ai" | "bedrock" | "sagemaker" => ProviderUiCategory::MajorCloudAi,
+        "mistral" | "cohere" | "deepseek" | "xai" | "meta_llama" | "stability" | "ai21"
+        | "writer" | "inflection" | "adept" | "character_ai" | "perplexity" | "you" | "poe" => {
+            ProviderUiCategory::MajorAiCompanies
+        }
+        "openrouter" | "together_ai" | "replicate" | "fireworks_ai" | "anyscale" | "groq"
+        | "deepinfra" | "baseten" | "modal" | "runpod" | "banana" | "beam" | "predibase"
+        | "octoai" | "lepton" | "fal_ai" | "novita" | "hyperbolic" | "featherless_ai"
+        | "friendliai" => ProviderUiCategory::InferencePlatforms,
+        "cerebras" | "sambanova" | "graphcore" | "tenstorrent" | "nvidia_nim" | "lambda_ai"
+        | "coreweave" | "vast_ai" | "paperspace" | "jarvis_labs" => {
+            ProviderUiCategory::HardwareAccelerator
+        }
+        "dashscope" | "moonshot" | "minimax" | "baichuan" | "zhipu" | "zai" | "volcengine"
+        | "sensetime" | "baidu" | "tencent" | "iflytek" | "stepfun" | "yi" | "gigachat"
+        | "yandex" => ProviderUiCategory::ChineseProviders,
+        "ai71" | "sarvam" | "naver" | "kakao" | "rinna" | "sakana" | "lightblue"
+        | "aleph_alpha" | "ovhcloud" | "scaleway" | "nebius" | "nscale" | "oci" | "watsonx"
+        | "clarifai" => ProviderUiCategory::RegionalSpecialized,
+        "github_copilot"
+        | "vercel_ai"
+        | "huggingface"
+        | "ollama"
+        | "lmstudio"
+        | "gpt4all"
+        | "llamafile"
+        | "vllm"
+        | "text_generation_webui"
+        | "litellm"
+        | "langchain"
+        | "llamaindex"
+        | "haystack"
+        | "semantic_kernel"
+        | "autogen" => ProviderUiCategory::DeveloperTools,
+        "elevenlabs" | "deepgram" | "assemblyai" | "aws_polly" | "google_tts" | "azure_speech"
+        | "whisper" | "speechify" | "resemble" | "play_ht" => ProviderUiCategory::AudioSpeech,
+        "midjourney" | "dalle" | "stable_diffusion" | "black_forest_labs" | "runwayml" | "pika"
+        | "synthesia" | "heygen" | "leonardo" | "ideogram" | "recraft" | "imagen" | "firefly"
+        | "canva" | "clipdrop" => ProviderUiCategory::ImageVideo,
+        "serper" | "tavily" | "exa_ai" | "brave_search" | "searxng" | "duckduckgo"
+        | "firecrawl" | "jina_ai" | "voyage" | "pinecone" => ProviderUiCategory::SearchRag,
+        "codestral" | "codeium" | "tabnine" | "cursor" | "continue" | "aider" | "phind"
+        | "sourcegraph" | "replit" | "v0" | "bolt" | "lovable" | "gptengineer" | "magic"
+        | "poolside" | "factory" | "augment" | "mutable" | "codegen" | "starcoder" => {
+            ProviderUiCategory::SpecializedNiche
+        }
+        _ => ProviderUiCategory::AdditionalPlatforms,
+    }
+}
+
 /// Get the icon path for a given LLM provider ID
 pub fn get_provider_icon_path(provider_id: &str) -> Option<&'static str> {
+    let provider_id = canonical_provider_id(provider_id);
     let map = ICON_MAP.get_or_init(|| {
         let mut m = HashMap::new();
         m.insert("adept", "icons/llm_providers/adept.svg");
@@ -35,7 +174,10 @@ pub fn get_provider_icon_path(provider_id: &str) -> Option<&'static str> {
         m.insert("baseten", "icons/llm_providers/baseten.svg");
         m.insert("beam", "icons/llm_providers/beam.svg");
         m.insert("bedrock", "icons/llm_providers/bedrock.svg");
-        m.insert("black_forest_labs", "icons/llm_providers/black_forest_labs.svg");
+        m.insert(
+            "black_forest_labs",
+            "icons/llm_providers/black_forest_labs.svg",
+        );
         m.insert("bolt", "icons/llm_providers/bolt.svg");
         m.insert("brave_search", "icons/llm_providers/brave_search.svg");
         m.insert("canva", "icons/llm_providers/canva.svg");
@@ -152,7 +294,10 @@ pub fn get_provider_icon_path(provider_id: &str) -> Option<&'static str> {
         m.insert("sourcegraph", "icons/llm_providers/sourcegraph.svg");
         m.insert("speechify", "icons/llm_providers/speechify.svg");
         m.insert("stability", "icons/llm_providers/stability.svg");
-        m.insert("stable_diffusion", "icons/llm_providers/stable_diffusion.svg");
+        m.insert(
+            "stable_diffusion",
+            "icons/llm_providers/stable_diffusion.svg",
+        );
         m.insert("starcoder", "icons/llm_providers/starcoder.svg");
         m.insert("stepfun", "icons/llm_providers/stepfun.svg");
         m.insert("synthesia", "icons/llm_providers/synthesia.svg");
@@ -160,7 +305,10 @@ pub fn get_provider_icon_path(provider_id: &str) -> Option<&'static str> {
         m.insert("tavily", "icons/llm_providers/tavily.svg");
         m.insert("tencent", "icons/llm_providers/tencent.svg");
         m.insert("tenstorrent", "icons/llm_providers/tenstorrent.svg");
-        m.insert("text_generation_webui", "icons/llm_providers/text_generation_webui.svg");
+        m.insert(
+            "text_generation_webui",
+            "icons/llm_providers/text_generation_webui.svg",
+        );
         m.insert("together_ai", "icons/llm_providers/together_ai.svg");
         m.insert("v0", "icons/llm_providers/v0.svg");
         m.insert("vast_ai", "icons/llm_providers/vast_ai.svg");
@@ -186,6 +334,15 @@ pub fn get_provider_icon_path(provider_id: &str) -> Option<&'static str> {
 
 /// Get the display name for a given LLM provider ID
 pub fn get_provider_display_name(provider_id: &str) -> Option<&'static str> {
+    match provider_id.trim() {
+        "github-models" | "github_models" => return Some("GitHub Models"),
+        "copilot_chat" => return Some("GitHub Copilot"),
+        "cloudflare_ai_gateway" => return Some("Cloudflare AI Gateway"),
+        "cloudflare_workers_ai" => return Some("Cloudflare Workers AI"),
+        "azure_ai_foundry" => return Some("Azure AI Foundry"),
+        _ => {}
+    }
+    let provider_id = canonical_provider_id(provider_id);
     let map = DISPLAY_NAME_MAP.get_or_init(|| {
         let mut m = HashMap::new();
         m.insert("adept", "Adept AI");
@@ -359,9 +516,7 @@ pub fn get_provider_display_name(provider_id: &str) -> Option<&'static str> {
 
 /// Load an SVG icon for a given LLM provider
 pub fn load_provider_icon(provider_id: &str) -> Option<Svg> {
-    get_provider_icon_path(provider_id).map(|path| {
-        svg().path(SharedString::from(path))
-    })
+    get_provider_icon_path(provider_id).map(|path| svg().path(SharedString::from(path)))
 }
 
 /// Get all available provider IDs
@@ -542,10 +697,26 @@ mod tests {
     fn test_all_providers_have_icons() {
         let providers = get_all_provider_ids();
         assert_eq!(providers.len(), 164);
-        
+
         for provider in providers {
             assert!(get_provider_icon_path(provider).is_some());
             assert!(get_provider_display_name(provider).is_some());
         }
+    }
+
+    #[test]
+    fn test_provider_aliases_resolve() {
+        assert_eq!(
+            get_provider_icon_path("github-models"),
+            get_provider_icon_path("github_copilot")
+        );
+        assert_eq!(
+            get_provider_icon_path("together"),
+            get_provider_icon_path("together_ai")
+        );
+        assert_eq!(
+            get_provider_display_name("github-models"),
+            Some("GitHub Models")
+        );
     }
 }

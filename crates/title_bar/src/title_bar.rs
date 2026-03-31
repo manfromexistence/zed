@@ -42,15 +42,15 @@ use std::sync::Arc;
 use theme::ActiveTheme;
 use title_bar_settings::TitleBarSettings;
 use ui::{
-    Avatar, ButtonLike, ButtonStyle, Color, ContextMenu, Icon, IconButton, IconButtonShape,
-    IconWithIndicator, Indicator, PopoverMenu, PopoverMenuHandle, TintColor, Tooltip, prelude::*,
-    right_click_menu, utils::platform_title_bar_height,
+    Avatar, ButtonLike, ButtonStyle, Color, ContextMenu, ContextMenuItem, Icon, IconButton,
+    IconButtonShape, IconWithIndicator, Indicator, PopoverMenu, PopoverMenuHandle, TintColor,
+    Tooltip, prelude::*, right_click_menu, utils::platform_title_bar_height,
 };
 use update_version::UpdateVersion;
 use util::ResultExt;
 use workspace::{
-    MultiWorkspace, NewCenterTerminal, NewFile, Pane, ToggleWorktreeSecurity, Workspace,
-    WorkspaceId, notifications::NotifyResultExt,
+    MultiWorkspace, NewCenterTerminal, Pane, ToggleWorktreeSecurity, Workspace, WorkspaceId,
+    notifications::NotifyResultExt,
 };
 
 use zed_actions::OpenRemote;
@@ -89,6 +89,7 @@ struct ScreenDockEntry {
     index: usize,
     item_id: EntityId,
     title: SharedString,
+    preview_summary: SharedString,
     icon: IconName,
     is_active: bool,
 }
@@ -497,6 +498,29 @@ impl TitleBar {
         }
     }
 
+    fn is_code_workspace_screen(title: &SharedString, icon: IconName) -> bool {
+        let lowered = title.to_string().to_lowercase();
+        if lowered.is_empty() {
+            return true;
+        }
+
+        !(lowered.contains("terminal")
+            || lowered.contains("browser")
+            || lowered.contains("web preview")
+            || lowered.contains("file browser")
+            || lowered.contains("project panel")
+            || lowered.contains("project")
+            || lowered.contains("folder")
+            || lowered.contains("onboarding")
+            || lowered.contains("welcome")
+            || lowered.contains("animation demo")
+            || lowered == "demo"
+            || matches!(
+                icon,
+                IconName::Terminal | IconName::ToolWeb | IconName::Folder | IconName::Sparkle
+            ))
+    }
+
     fn screen_dock_entries(&mut self, cx: &App) -> Vec<ScreenDockEntry> {
         let Some(pane) = self.active_pane(cx) else {
             self.screen_icon_overrides.clear();
@@ -509,31 +533,86 @@ impl TitleBar {
             .retain(|item_id, _| live_ids.contains(item_id));
 
         let active_index = pane.active_item_index();
-        pane.items()
-            .enumerate()
-            .map(|(index, item)| {
-                let item_id = item.item_id();
-                let mut title = item.tab_content_text(0, cx);
-                if title.is_empty() {
-                    title = format!("Screen {}", index + 1).into();
-                }
-                let icon = if let Some(icon) = self.screen_icon_overrides.get(&item_id).copied() {
-                    icon
-                } else {
-                    let icon = self.default_screen_icon(item_id, index, &title);
-                    self.screen_icon_overrides.insert(item_id, icon);
-                    icon
-                };
+        let mut entries: Vec<ScreenDockEntry> = Vec::new();
+        let mut code_workspace_entry_ix = None;
 
-                ScreenDockEntry {
+        for (index, item) in pane.items().enumerate() {
+            let item_id = item.item_id();
+            let mut title = item.tab_content_text(0, cx);
+            if title.is_empty() {
+                title = format!("Screen {}", index + 1).into();
+            }
+            let icon = if let Some(icon) = self.screen_icon_overrides.get(&item_id).copied() {
+                icon
+            } else {
+                let icon = self.default_screen_icon(item_id, index, &title);
+                self.screen_icon_overrides.insert(item_id, icon);
+                icon
+            };
+            let is_active = index == active_index;
+
+            if Self::is_code_workspace_screen(&title, icon) {
+                if let Some(entry_ix) = code_workspace_entry_ix {
+                    let entry: &mut ScreenDockEntry = &mut entries[entry_ix];
+                    if is_active {
+                        entry.index = index;
+                        entry.item_id = item_id;
+                        entry.is_active = true;
+                    }
+                    continue;
+                }
+
+                code_workspace_entry_ix = Some(entries.len());
+                entries.push(ScreenDockEntry {
                     index,
                     item_id,
-                    title,
-                    icon,
-                    is_active: index == active_index,
-                }
-            })
-            .collect()
+                    title: "Code Workspace".into(),
+                    preview_summary: "Editor tabs, files, and active coding workspace".into(),
+                    icon: IconName::FileCode,
+                    is_active,
+                });
+                continue;
+            }
+
+            entries.push(ScreenDockEntry {
+                index,
+                item_id,
+                title: title.clone(),
+                preview_summary: self.screen_preview_summary(&title, icon, index),
+                icon,
+                is_active,
+            });
+        }
+
+        entries
+    }
+
+    fn screen_preview_summary(
+        &self,
+        title: &SharedString,
+        icon: IconName,
+        index: usize,
+    ) -> SharedString {
+        let lowered = title.to_string().to_lowercase();
+        let summary = if lowered.contains("terminal") || icon == IconName::Terminal {
+            "Shell workspace, running commands, and live output"
+        } else if lowered.contains("browser")
+            || lowered.contains("web")
+            || icon == IconName::ToolWeb
+        {
+            "Embedded browser preview with page navigation and inspector tools"
+        } else if lowered.contains("folder") || icon == IconName::Folder {
+            "Project tree, files, and workspace navigation"
+        } else if lowered.contains("welcome")
+            || lowered.contains("onboarding")
+            || icon == IconName::Sparkle
+        {
+            "Onboarding, setup steps, and first-run guidance"
+        } else {
+            "Editor tabs, code buffers, and active workspace content"
+        };
+
+        format!("Screen {} - {}", index + 1, summary).into()
     }
 
     fn icon_choice_label(icon: IconName) -> &'static str {
@@ -559,19 +638,44 @@ impl TitleBar {
         let title_bar = cx.entity();
         let active_pane = self.active_pane(cx);
         let total_screens = entries.len();
+        let code_workspace_index = entries
+            .iter()
+            .find(|entry| entry.title.as_ref() == "Code Workspace")
+            .map(|entry| entry.index);
 
+        let add_code_pane = active_pane.clone();
         let add_menu = PopoverMenu::new("screen-dock-add-menu")
             .trigger(
                 IconButton::new("screen-dock-add", IconName::Plus)
                     .shape(IconButtonShape::Square)
                     .style(ButtonStyle::Transparent)
-                    .tooltip(|window, cx| Tooltip::text("Add a new screen", window, cx)),
+                    .tooltip(Tooltip::text("Add a new screen")),
             )
             .anchor(Corner::TopRight)
             .menu(move |window, cx| {
-                Some(ContextMenu::build(window, cx, |menu, _window, _cx| {
+                let add_code_pane = add_code_pane.clone();
+                let code_workspace_index = code_workspace_index;
+                Some(ContextMenu::build(window, cx, move |menu, _window, _cx| {
                     menu.header("New Screen")
-                        .action("Code Editor", NewFile.boxed_clone())
+                        .entry("Code Workspace", None, {
+                            let add_code_pane = add_code_pane.clone();
+                            let code_workspace_index = code_workspace_index;
+                            move |window, cx| {
+                                if let (Some(pane), Some(code_workspace_index)) =
+                                    (add_code_pane.clone(), code_workspace_index)
+                                {
+                                    pane.update(cx, |pane, cx| {
+                                        pane.activate_item(
+                                            code_workspace_index,
+                                            true,
+                                            true,
+                                            window,
+                                            cx,
+                                        );
+                                    });
+                                }
+                            }
+                        })
                         .action("Terminal", NewCenterTerminal::default().boxed_clone())
                         .action(
                             "File Browser",
@@ -588,39 +692,149 @@ impl TitleBar {
                 IconButton::new("screen-dock-list", IconName::ListTree)
                     .shape(IconButtonShape::Square)
                     .style(ButtonStyle::Transparent)
-                    .tooltip(move |window, cx| {
-                        Tooltip::text(
-                            format!("Show {} available screens", total_screens.max(1)),
-                            window,
-                            cx,
-                        )
-                    }),
+                    .tooltip(Tooltip::text(format!(
+                        "Show {} available screens",
+                        total_screens.max(1)
+                    ))),
             )
             .anchor(Corner::TopRight)
             .menu(move |window, cx| {
                 let pane = list_pane.clone();
+                let list_menu_entries = list_menu_entries.clone();
+                let code_workspace_index = code_workspace_index;
                 Some(ContextMenu::build(window, cx, move |menu, _window, _cx| {
                     let mut menu = menu.header("Screens");
                     for entry in &list_menu_entries {
                         let title = entry.title.clone();
+                        let preview_summary = entry.preview_summary.clone();
+                        let icon = entry.icon;
                         let pane = pane.clone();
                         let index = entry.index;
-                        let label = if entry.is_active {
-                            format!("{} (current)", title)
-                        } else {
-                            title.to_string()
-                        };
-                        menu = menu.entry(label, None, move |window, cx| {
-                            if let Some(pane) = pane.clone() {
-                                pane.update(cx, |pane, cx| {
-                                    pane.activate_item(index, true, true, window, cx);
-                                });
-                            }
+                        let is_active = entry.is_active;
+                        menu.push_item(ContextMenuItem::CustomEntry {
+                            entry_render: Box::new(move |_, cx| {
+                                let border_color = if is_active {
+                                    cx.theme().colors().border_selected
+                                } else {
+                                    cx.theme().colors().border_variant
+                                };
+                                let preview_bg = if is_active {
+                                    cx.theme().colors().element_selected.opacity(0.16)
+                                } else {
+                                    cx.theme().colors().element_background
+                                };
+
+                                v_flex()
+                                    .w(px(240.0))
+                                    .gap_1()
+                                    .child(
+                                        h_flex()
+                                            .justify_between()
+                                            .items_center()
+                                            .child(
+                                                h_flex()
+                                                    .gap_1()
+                                                    .items_center()
+                                                    .child(
+                                                        Icon::new(icon)
+                                                            .size(IconSize::Small)
+                                                            .color(if is_active {
+                                                                Color::Accent
+                                                            } else {
+                                                                Color::Muted
+                                                            }),
+                                                    )
+                                                    .child(Label::new(title.clone()).color(
+                                                        if is_active {
+                                                            Color::Default
+                                                        } else {
+                                                            Color::Muted
+                                                        },
+                                                    )),
+                                            )
+                                            .when(is_active, |this| {
+                                                this.child(
+                                                    Label::new("Current")
+                                                        .size(LabelSize::XSmall)
+                                                        .color(Color::Accent),
+                                                )
+                                            }),
+                                    )
+                                    .child(
+                                        div()
+                                            .w_full()
+                                            .h(px(56.0))
+                                            .rounded_md()
+                                            .border_1()
+                                            .border_color(border_color)
+                                            .bg(preview_bg)
+                                            .p_2()
+                                            .child(
+                                                v_flex()
+                                                    .gap_1()
+                                                    .child(
+                                                        Label::new(preview_summary.clone())
+                                                            .size(LabelSize::Small)
+                                                            .color(Color::Muted),
+                                                    )
+                                                    .child(
+                                                        h_flex()
+                                                            .gap_1()
+                                                            .items_center()
+                                                            .child(
+                                                                div()
+                                                                    .w(px(48.0))
+                                                                    .h(px(4.0))
+                                                                    .rounded_full()
+                                                                    .bg(cx.theme().colors().border),
+                                                            )
+                                                            .child(
+                                                                div()
+                                                                    .w(px(72.0))
+                                                                    .h(px(4.0))
+                                                                    .rounded_full()
+                                                                    .bg(cx
+                                                                        .theme()
+                                                                        .colors()
+                                                                        .border_variant),
+                                                            ),
+                                                    ),
+                                            ),
+                                    )
+                                    .into_any()
+                            }),
+                            selectable: true,
+                            documentation_aside: None,
+                            handler: std::rc::Rc::new(move |_, window, cx| {
+                                if let Some(pane) = pane.clone() {
+                                    pane.update(cx, |pane, cx| {
+                                        pane.activate_item(index, true, true, window, cx);
+                                    });
+                                }
+                            }),
                         });
                     }
 
                     menu.separator()
-                        .action("New Code Screen", NewFile.boxed_clone())
+                        .entry("Focus Code Workspace", None, {
+                            let pane = pane.clone();
+                            let code_workspace_index = code_workspace_index;
+                            move |window, cx| {
+                                if let (Some(pane), Some(code_workspace_index)) =
+                                    (pane.clone(), code_workspace_index)
+                                {
+                                    pane.update(cx, |pane, cx| {
+                                        pane.activate_item(
+                                            code_workspace_index,
+                                            true,
+                                            true,
+                                            window,
+                                            cx,
+                                        );
+                                    });
+                                }
+                            }
+                        })
                         .action(
                             "New Terminal Screen",
                             NewCenterTerminal::default().boxed_clone(),
@@ -660,7 +874,8 @@ impl TitleBar {
                     let pane = menu_pane.clone();
                     let title_bar_for_icons = title_bar.clone();
                     let title_bar_for_reset = title_bar.clone();
-                    Some(ContextMenu::build(window, cx, move |menu, window, cx| {
+                    let menu_title = menu_title.clone();
+                    ContextMenu::build(window, cx, move |menu, _window, _cx| {
                         let mut menu = menu.header(format!("{} Screen", menu_title));
                         for icon in SCREEN_DOCK_ICON_CHOICES {
                             let title_bar = title_bar_for_icons.clone();
@@ -697,9 +912,9 @@ impl TitleBar {
                                     });
                                 }
                             })
-                    }))
+                    })
                 })
-                .trigger(move |is_menu_open, _window, cx| {
+                .trigger(move |is_menu_open, _window, _cx| {
                     let emphasized = is_active || is_menu_open;
                     ButtonLike::new(("screen-dock-item", item_id.as_u64()))
                         .style(if emphasized {
@@ -707,27 +922,17 @@ impl TitleBar {
                         } else {
                             ButtonStyle::Subtle
                         })
-                        .tooltip(move |window, cx| Tooltip::text(tooltip_title.clone(), window, cx))
+                        .tooltip(Tooltip::text(tooltip_title.clone()))
                         .child(
-                            v_flex()
-                                .items_center()
-                                .gap_0p5()
-                                .px_2()
-                                .py_0p5()
-                                .child(Icon::new(item_icon).size(IconSize::Small).color(
-                                    if emphasized {
+                            v_flex().items_center().gap_1().px_2().py_0p5().child(
+                                Icon::new(item_icon)
+                                    .size(IconSize::Small)
+                                    .color(if emphasized {
                                         Color::Default
                                     } else {
                                         Color::Muted
-                                    },
-                                ))
-                                .child(div().h(px(3.0)).w(px(14.0)).rounded_full().bg(
-                                    if is_active {
-                                        cx.theme().colors().element_selected
-                                    } else {
-                                        cx.theme().colors().ghost_element_background
-                                    },
-                                )),
+                                    }),
+                            ),
                         )
                         .on_click(move |_, window, cx| {
                             if let Some(pane) = pane.clone() {
@@ -1566,11 +1771,11 @@ impl TitleBar {
                     .action("Settings", zed_actions::OpenSettings.boxed_clone())
                     .action("Keymap", Box::new(zed_actions::OpenKeymap))
                     .action(
-                        "Themes…",
+                        "Themes...",
                         zed_actions::theme_selector::Toggle::default().boxed_clone(),
                     )
                     .action(
-                        "Icon Themes…",
+                        "Icon Themes...",
                         zed_actions::icon_theme_selector::Toggle::default().boxed_clone(),
                     )
                     .action(

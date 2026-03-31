@@ -1,16 +1,16 @@
 use fs::Fs;
 use gpui::{
     App, Context, DismissEvent, Entity, EventEmitter, FocusHandle, Focusable, Render, SharedString,
-    Window,
+    UpdateGlobal, Window,
 };
 use settings::{SettingsStore, update_settings_file};
 use theme::{ThemeRegistry, try_parse_color};
-use theme_settings::{ThemeColorsContent, ThemeStyleContent};
+use theme_settings::{ThemeColorsContent, ThemeSettings, ThemeStyleContent};
 use ui::{Button, Color, prelude::*};
 use ui_input::InputField;
 use workspace::{ModalView, with_active_or_new_workspace};
 
-pub(crate) fn open_dx_theme_editor(window: &mut Window, cx: &mut App) {
+pub(crate) fn open_dx_theme_editor(_window: &mut Window, cx: &mut App) {
     with_active_or_new_workspace(cx, |workspace, window, cx| {
         workspace.toggle_modal(window, cx, |window, cx| DxThemeEditor::new(window, cx));
     });
@@ -33,7 +33,7 @@ pub(crate) struct DxThemeEditor {
 
 impl DxThemeEditor {
     pub(crate) fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
-        let colors = cx.theme().colors();
+        let colors = cx.theme().colors().clone();
         let background = new_color_field(
             "App Background",
             color_to_hex(colors.background),
@@ -88,14 +88,14 @@ impl DxThemeEditor {
         match self.build_overrides(cx) {
             Ok(style) => {
                 let theme_name = self.target_theme_name.to_string();
-                SettingsStore::update_global(cx, |store, cx| {
-                    store.update_user_settings(cx, |settings| {
-                        settings.theme.experimental_theme_overrides = None;
-                        settings
-                            .theme
-                            .theme_overrides
-                            .insert(theme_name.clone(), style.clone());
-                    });
+                SettingsStore::update_global(cx, |store: &mut SettingsStore, cx| {
+                    let mut theme_settings = store.get::<ThemeSettings>(None).clone();
+                    theme_settings.experimental_theme_overrides = None;
+                    theme_settings
+                        .theme_overrides
+                        .insert(theme_name.clone(), style.clone());
+                    store.override_global(theme_settings);
+                    cx.refresh_windows();
                 });
 
                 let fs = <dyn Fs>::global(cx);
@@ -125,11 +125,12 @@ impl DxThemeEditor {
         cx: &mut Context<Self>,
     ) {
         let theme_name = self.target_theme_name.to_string();
-        SettingsStore::update_global(cx, |store, cx| {
-            store.update_user_settings(cx, |settings| {
-                settings.theme.experimental_theme_overrides = None;
-                settings.theme.theme_overrides.remove(theme_name.as_str());
-            });
+        SettingsStore::update_global(cx, |store: &mut SettingsStore, cx| {
+            let mut theme_settings = store.get::<ThemeSettings>(None).clone();
+            theme_settings.experimental_theme_overrides = None;
+            theme_settings.theme_overrides.remove(theme_name.as_str());
+            store.override_global(theme_settings);
+            cx.refresh_windows();
         });
 
         let fs = <dyn Fs>::global(cx);

@@ -1762,19 +1762,15 @@ impl Pane {
                     .relative()
                     .overflow_hidden()
                     .rounded_md()
-                    .border_1()
                     .bg(cx.theme().colors().editor_background)
                     .map(|this| {
                         if is_active {
-                            this.border_color(cx.theme().colors().border_selected)
-                                .shadow_md()
+                            this.shadow_md()
                         } else {
-                            this.border_color(cx.theme().colors().border.opacity(0.75))
-                                .opacity(0.82)
-                                .shadow_sm()
+                            this.opacity(0.82).shadow_sm()
                         }
                     })
-                    .child(content)
+                    .child(div().size_full().child(content))
                     .when(!is_active, |this| {
                         this.child(
                             div()
@@ -1805,7 +1801,7 @@ impl Pane {
                                     .top_0()
                                     .left_0()
                                     .bottom_0()
-                                    .w(px(12.0))
+                                    .w(px(18.0))
                                     .cursor_pointer()
                                     .on_mouse_down(MouseButton::Left, move |event, _window, cx| {
                                         pane_for_left_swipe.update(cx, |pane, cx| {
@@ -1826,7 +1822,7 @@ impl Pane {
                                     .top_0()
                                     .right_0()
                                     .bottom_0()
-                                    .w(px(12.0))
+                                    .w(px(18.0))
                                     .cursor_pointer()
                                     .on_mouse_down(MouseButton::Left, move |event, _window, cx| {
                                         pane_for_right_swipe.update(cx, |pane, cx| {
@@ -1847,13 +1843,19 @@ impl Pane {
                                     .top_0()
                                     .left_0()
                                     .bottom_0()
-                                    .w(px(12.0))
+                                    .w(px(18.0))
+                                    .cursor_col_resize()
+                                    .hover(|style| {
+                                        style.bg(cx.theme().colors().ghost_element_hover.opacity(0.12))
+                                    })
                                     .child(
                                         h_flex().size_full().justify_center().items_center().child(
                                             div()
                                                 .h(px(60.0))
-                                                .w(px(12.0))
+                                                .w(px(18.0))
+                                                .opacity(0.0)
                                                 .cursor_col_resize()
+                                                .hover(|style| style.opacity(1.0))
                                                 .child(
                                                     h_flex()
                                                         .size_full()
@@ -1896,13 +1898,19 @@ impl Pane {
                                     .top_0()
                                     .right_0()
                                     .bottom_0()
-                                    .w(px(12.0))
+                                    .w(px(18.0))
+                                    .cursor_col_resize()
+                                    .hover(|style| {
+                                        style.bg(cx.theme().colors().ghost_element_hover.opacity(0.12))
+                                    })
                                     .child(
                                         h_flex().size_full().justify_center().items_center().child(
                                             div()
                                                 .h(px(60.0))
-                                                .w(px(12.0))
+                                                .w(px(18.0))
+                                                .opacity(0.0)
                                                 .cursor_col_resize()
+                                                .hover(|style| style.opacity(1.0))
                                                 .child(
                                                     h_flex()
                                                         .size_full()
@@ -2101,19 +2109,13 @@ impl Pane {
                             .bottom_0()
                             .cursor_pointer()
                             .on_mouse_move(move |event: &MouseMoveEvent, window, cx| {
-                                if event.dragging() {
-                                    pane_for_overlay_move.update(cx, |pane, cx| {
-                                        if pane.carousel_resize.is_some() {
-                                            pane.update_carousel_resize(event.position, cx);
-                                        } else if pane.carousel_edge_swipe.is_some() {
-                                            pane.update_carousel_edge_swipe(
-                                                event.position,
-                                                window,
-                                                cx,
-                                            );
-                                        }
-                                    });
-                                }
+                                pane_for_overlay_move.update(cx, |pane, cx| {
+                                    if pane.carousel_resize.is_some() {
+                                        pane.update_carousel_resize(event.position, cx);
+                                    } else if pane.carousel_edge_swipe.is_some() {
+                                        pane.update_carousel_edge_swipe(event.position, window, cx);
+                                    }
+                                });
                             })
                             .on_mouse_up(
                                 MouseButton::Left,

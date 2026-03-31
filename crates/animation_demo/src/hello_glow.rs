@@ -3,7 +3,8 @@ use std::time::Instant;
 use gpui::{BoxShadow, Context, Render, Window, hsla, point, px};
 use ui::prelude::*;
 
-const SPAN_COUNT: usize = 25;
+const PALETTE_SPAN_COUNT: usize = 25;
+const RENDER_SPAN_COUNT: usize = 120;
 const CORNER_RADIUS: f32 = 12.0;
 
 pub struct HelloGlowPreview {
@@ -21,8 +22,8 @@ impl HelloGlowPreview {
 impl Render for HelloGlowPreview {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         window.request_animation_frame();
-        let shift = ((self.started_at.elapsed().as_secs_f32() * 4.0) as usize) % SPAN_COUNT;
-        let accent = rainbow_color((shift + (SPAN_COUNT / 3)) % SPAN_COUNT).opacity(0.45);
+        let shift = (self.started_at.elapsed().as_secs_f32() / 6.0).fract();
+        let accent = rainbow_color((shift + 0.33).fract()).opacity(0.45);
 
         v_flex()
             .flex_1()
@@ -71,11 +72,16 @@ impl Render for HelloGlowPreview {
                             .absolute()
                             .inset_0()
                             .size_full()
-                            .children((0..SPAN_COUNT).map(move |ix| {
+                            .children((0..RENDER_SPAN_COUNT).map(move |ix| {
                                 div()
                                     .flex_1()
                                     .h_full()
-                                    .bg(rainbow_color((ix + shift) % SPAN_COUNT).opacity(0.92))
+                                    .bg(
+                                        rainbow_color(
+                                            (ix as f32 / RENDER_SPAN_COUNT as f32 + shift).fract(),
+                                        )
+                                        .opacity(0.92),
+                                    )
                             })),
                     )
                     .child(
@@ -104,7 +110,7 @@ impl Render for HelloGlowPreview {
                             .child(
                                 Label::new(format!(
                                     "radius {}px • span count {}",
-                                    CORNER_RADIUS as i32, SPAN_COUNT
+                                    CORNER_RADIUS as i32, PALETTE_SPAN_COUNT
                                 ))
                                 .size(LabelSize::XSmall)
                                 .color(Color::Muted),
@@ -114,6 +120,9 @@ impl Render for HelloGlowPreview {
     }
 }
 
-fn rainbow_color(index: usize) -> gpui::Hsla {
-    hsla(index as f32 / SPAN_COUNT as f32, 0.8, 0.6, 1.0)
+fn rainbow_color(hue_offset: f32) -> gpui::Hsla {
+    let quantized =
+        (hue_offset * PALETTE_SPAN_COUNT as f32).round() / PALETTE_SPAN_COUNT as f32;
+    let hue = ((hue_offset * 0.72) + (quantized * 0.28)).fract();
+    hsla(hue, 0.84, 0.62, 1.0)
 }

@@ -295,7 +295,7 @@ impl Model {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct StreamOptions {
     pub include_usage: bool,
 }
@@ -308,7 +308,7 @@ impl Default for StreamOptions {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Request {
     pub model: String,
     pub messages: Vec<RequestMessage>,
@@ -334,7 +334,7 @@ pub struct Request {
     pub reasoning_effort: Option<ReasoningEffort>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ToolChoice {
     Auto,

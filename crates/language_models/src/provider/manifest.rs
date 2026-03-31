@@ -1,9 +1,11 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use futures::{FutureExt, StreamExt, future::BoxFuture};
+use futures::{
+    AsyncBufReadExt, AsyncReadExt, FutureExt, StreamExt, future::BoxFuture, io::BufReader,
+};
 use gpui::{AnyView, App, AsyncApp, Context, Entity, SharedString, Task};
-use http_client::HttpClient;
+use http_client::{AsyncBody, Builder as HttpRequestBuilder, HttpClient, Method, Request as HttpRequest};
 use language_model::{
     ApiKeyState, AuthenticateError, EnvVar, IconOrSvg, LanguageModel, LanguageModelCompletionError,
     LanguageModelCompletionEvent, LanguageModelCostInfo, LanguageModelId, LanguageModelName,
@@ -13,9 +15,8 @@ use language_model::{
 };
 use menu;
 use open_ai::{
-    ResponseStreamEvent,
-    responses::{Request as ResponseRequest, StreamEvent as ResponsesStreamEvent, stream_response},
-    stream_completion,
+    RequestError, ResponseStreamEvent, ResponseStreamResult,
+    responses::{Request as ResponseRequest, StreamEvent as ResponsesStreamEvent},
 };
 use ui::{ElevationIndex, Tooltip, prelude::*};
 use ui_input::InputField;
@@ -24,8 +25,9 @@ use util::ResultExt;
 use crate::provider::open_ai::{
     OpenAiEventMapper, OpenAiResponseEventMapper, into_open_ai, into_open_ai_response,
 };
-use crate::provider_hub::auth_strategy::AuthStrategy;
+use crate::provider_hub::auth_strategy::{ApiKeyHeaderStyle, AuthStrategy};
 use crate::provider_hub::{ProviderIcon, ProviderManifest, ProviderModelCapabilities};
+use crate::provider_icons;
 
 pub struct ManifestLanguageModelProvider {
     manifest: ProviderManifest,
@@ -112,6 +114,39 @@ impl ManifestLanguageModelProvider {
     }
 }
 
+fn apply_auth_headers(
+    request_builder: HttpRequestBuilder,
+    auth: &AuthStrategy,
+    api_key: Option<&Arc<str>>,
+    provider_name: &LanguageModelProviderName,
+) -> Result<HttpRequestBuilder, LanguageModelCompletionError> {
+    match auth {
+        AuthStrategy::NoAuth => Ok(request_builder),
+        AuthStrategy::ApiKey { header_style, .. } => {
+            let Some(api_key) = api_key else {
+                return Err(LanguageModelCompletionError::NoApiKey {
+                    provider: provider_name.clone(),
+                });
+            };
+            let trimmed_key = api_key.trim();
+            let request_builder = match header_style {
+                ApiKeyHeaderStyle::Bearer => {
+                    request_builder.header("Authorization", format!("Bearer {trimmed_key}"))
+                }
+                ApiKeyHeaderStyle::XApiKey => request_builder.header("x-api-key", trimmed_key),
+                ApiKeyHeaderStyle::AuthorizationApiKey => {
+                    request_builder.header("Authorization", format!("Api-Key {trimmed_key}"))
+                }
+            };
+            Ok(request_builder)
+        }
+        unsupported => Err(LanguageModelCompletionError::Other(anyhow::anyhow!(
+            "Unsupported auth strategy for {}: {unsupported:?}",
+            provider_name.0
+        ))),
+    }
+}
+
 impl LanguageModelProviderState for ManifestLanguageModelProvider {
     type ObservableEntity = State;
 
@@ -130,6 +165,10 @@ impl LanguageModelProvider for ManifestLanguageModelProvider {
     }
 
     fn icon(&self) -> IconOrSvg {
+        if let Some(path) = provider_icons::get_provider_icon_path(&self.manifest.id) {
+            return IconOrSvg::Svg(path.into());
+        }
+
         match self.manifest.icon {
             ProviderIcon::OpenAi => IconOrSvg::Icon(IconName::AiOpenAi),
             ProviderIcon::OpenRouter => IconOrSvg::Icon(IconName::AiOpenRouter),
@@ -232,25 +271,80 @@ impl ManifestLanguageModel {
     > {
         let http_client = self.http_client.clone();
         let provider_name = self.provider_name.clone();
-        let api_base = self
-            .state
-            .read_with(cx, |state, _| state.manifest.api_base.clone());
+        let (api_base, auth_strategy) = self.state.read_with(cx, |state, _| {
+            (state.manifest.api_base.clone(), state.manifest.auth.clone())
+        });
         let api_key = self.auth_key(cx);
         let future = self.request_limiter.stream(async move {
-            let Some(api_key) = api_key else {
-                return Err(LanguageModelCompletionError::NoApiKey {
-                    provider: provider_name,
-                });
-            };
+            let uri = format!("{api_base}/chat/completions");
+            let request_builder = HttpRequest::builder()
+                .method(Method::POST)
+                .uri(uri)
+                .header("Content-Type", "application/json");
+            let request_builder =
+                apply_auth_headers(request_builder, &auth_strategy, api_key.as_ref(), &provider_name)?;
 
-            Ok(stream_completion(
-                http_client.as_ref(),
-                provider_name.0.as_ref(),
-                &api_base,
-                &api_key,
-                request,
-            )
-            .await?)
+            let request = request_builder
+                .body(AsyncBody::from(
+                    serde_json::to_string(&request)
+                        .map_err(|error| RequestError::Other(anyhow::Error::from(error)))?,
+                ))
+                .map_err(|error| RequestError::Other(anyhow::Error::from(error)))?;
+
+            let mut response = http_client.send(request).await?;
+            if response.status().is_success() {
+                let reader = BufReader::new(response.into_body());
+                let provider_name_for_log = provider_name.0.to_string();
+                Ok(reader
+                    .lines()
+                    .filter_map(move |line| {
+                        let provider_name_for_log = provider_name_for_log.clone();
+                        async move {
+                        match line {
+                            Ok(line) => {
+                                let line = line
+                                    .strip_prefix("data: ")
+                                    .or_else(|| line.strip_prefix("data:"))?;
+                                if line == "[DONE]" {
+                                    None
+                                } else {
+                                    match serde_json::from_str(line) {
+                                        Ok(ResponseStreamResult::Ok(response)) => Some(Ok(response)),
+                                        Ok(ResponseStreamResult::Err { error }) => {
+                                            Some(Err(anyhow::anyhow!("{error:?}")))
+                                        }
+                                        Err(error) => {
+                                            log::error!(
+                                                "Failed to parse {} stream response: `{}`\nResponse: `{}`",
+                                                provider_name_for_log,
+                                                error,
+                                                line,
+                                            );
+                                            Some(Err(anyhow::anyhow!(error)))
+                                        }
+                                    }
+                                }
+                            }
+                            Err(error) => Some(Err(anyhow::anyhow!(error))),
+                        }
+                    }})
+                    .boxed())
+            } else {
+                let mut body = String::new();
+                response
+                    .body_mut()
+                    .read_to_string(&mut body)
+                    .await
+                    .map_err(|error| RequestError::Other(anyhow::Error::from(error)))?;
+
+                Err(RequestError::HttpResponseError {
+                    provider: provider_name.0.to_string(),
+                    status_code: response.status(),
+                    body,
+                    headers: response.headers().clone(),
+                }
+                .into())
+            }
         });
         async move { Ok(future.await?.boxed()) }.boxed()
     }
@@ -263,25 +357,90 @@ impl ManifestLanguageModel {
     {
         let http_client = self.http_client.clone();
         let provider_name = self.provider_name.clone();
-        let api_base = self
-            .state
-            .read_with(cx, |state, _| state.manifest.api_base.clone());
+        let (api_base, auth_strategy) = self.state.read_with(cx, |state, _| {
+            (state.manifest.api_base.clone(), state.manifest.auth.clone())
+        });
         let api_key = self.auth_key(cx);
         let future = self.request_limiter.stream(async move {
-            let Some(api_key) = api_key else {
-                return Err(LanguageModelCompletionError::NoApiKey {
-                    provider: provider_name,
-                });
-            };
+            let uri = format!("{api_base}/responses");
+            let request_builder = HttpRequest::builder()
+                .method(Method::POST)
+                .uri(uri)
+                .header("Content-Type", "application/json");
+            let request_builder =
+                apply_auth_headers(request_builder, &auth_strategy, api_key.as_ref(), &provider_name)?;
 
-            Ok(stream_response(
-                http_client.as_ref(),
-                provider_name.0.as_ref(),
-                &api_base,
-                &api_key,
-                request,
-            )
-            .await?)
+            let is_streaming = request.stream;
+            let request = request_builder
+                .body(AsyncBody::from(
+                    serde_json::to_string(&request)
+                        .map_err(|error| RequestError::Other(anyhow::Error::from(error)))?,
+                ))
+                .map_err(|error| RequestError::Other(anyhow::Error::from(error)))?;
+
+            let mut response = http_client.send(request).await?;
+            if response.status().is_success() {
+                if is_streaming {
+                    let reader = BufReader::new(response.into_body());
+                    let provider_name_for_log = provider_name.0.to_string();
+                    Ok(reader
+                        .lines()
+                        .filter_map(move |line| {
+                            let provider_name_for_log = provider_name_for_log.clone();
+                            async move {
+                            match line {
+                                Ok(line) => {
+                                    let line = line
+                                        .strip_prefix("data: ")
+                                        .or_else(|| line.strip_prefix("data:"))?;
+                                    if line == "[DONE]" || line.is_empty() {
+                                        None
+                                    } else {
+                                        match serde_json::from_str::<ResponsesStreamEvent>(line) {
+                                            Ok(event) => Some(Ok(event)),
+                                            Err(error) => {
+                                                log::error!(
+                                                    "Failed to parse {} responses stream event: `{}`\nResponse: `{}`",
+                                                    provider_name_for_log,
+                                                    error,
+                                                    line,
+                                                );
+                                                Some(Err(anyhow::anyhow!(error)))
+                                            }
+                                        }
+                                    }
+                                }
+                                Err(error) => Some(Err(anyhow::anyhow!(error))),
+                            }
+                        }})
+                        .boxed())
+                } else {
+                    let mut body = String::new();
+                    response
+                        .body_mut()
+                        .read_to_string(&mut body)
+                        .await
+                        .map_err(|error| RequestError::Other(anyhow::Error::from(error)))?;
+                    let response_event: ResponsesStreamEvent = serde_json::from_str(&body)
+                        .map_err(|error| RequestError::Other(anyhow::Error::from(error)))?;
+                    Ok(futures::stream::iter([Ok(response_event)]).boxed())
+                }
+            } else {
+                let mut body = String::new();
+                response
+                    .body_mut()
+                    .read_to_string(&mut body)
+                    .await
+                    .map_err(|error| RequestError::Other(anyhow::Error::from(error)))?;
+
+                Err(RequestError::HttpResponseError {
+                    provider: provider_name.0.to_string(),
+                    status_code: response.status(),
+                    body,
+                    headers: response.headers().clone(),
+                }
+                .into())
+            }
         });
         async move { Ok(future.await?.boxed()) }.boxed()
     }
@@ -507,13 +666,37 @@ impl Render for ConfigurationView {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let state = self.state.read(cx);
         let model_count = state.manifest.models.len();
+        let requires_api_key = matches!(&state.manifest.auth, AuthStrategy::ApiKey { .. });
         let env_var_name = state
             .manifest
             .auth
             .env_var_name_for_provider(&state.manifest.id)
             .unwrap_or_else(|| "API_KEY".to_owned());
 
-        let content = if state
+        let content = if !requires_api_key {
+            h_flex()
+                .mt_1()
+                .p_1()
+                .justify_between()
+                .rounded_md()
+                .border_1()
+                .border_color(cx.theme().colors().border)
+                .bg(cx.theme().colors().background)
+                .child(
+                    h_flex()
+                        .flex_1()
+                        .min_w_0()
+                        .gap_1()
+                        .child(Icon::new(IconName::Check).color(Color::Success))
+                        .child(div().w_full().overflow_x_hidden().text_ellipsis().child(
+                            Label::new(format!(
+                                "{} exposes {model_count} synced models and does not require an API key.",
+                                state.manifest.display_name
+                            )),
+                        )),
+                )
+                .into_any()
+        } else if state
             .api_key_state
             .as_ref()
             .is_none_or(|api_key_state| !api_key_state.has_key())

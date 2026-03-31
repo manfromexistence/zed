@@ -11,7 +11,7 @@ use language_model::{
     AuthenticateError, ConfiguredModel, IconOrSvg, LanguageModel, LanguageModelId,
     LanguageModelProvider, LanguageModelProviderId, LanguageModelRegistry,
 };
-use language_models::provider_hub::{ProviderCategory, ProviderHubStore};
+use language_models::{provider_hub::ProviderHubStore, provider_icons::ProviderUiCategory};
 use ordered_float::OrderedFloat;
 use picker::{Picker, PickerDelegate};
 use settings::Settings;
@@ -19,7 +19,8 @@ use ui::prelude::*;
 use zed_actions::agent::OpenSettings;
 
 use crate::ui::{
-    ModelSelectorFooter, ModelSelectorHeader, ModelSelectorListItem, ModelSelectorProviderHeader,
+    ModelSelectorCategoryHeader, ModelSelectorFooter, ModelSelectorHeader, ModelSelectorListItem,
+    ModelSelectorProviderHeader,
 };
 
 type OnModelChanged = Arc<dyn Fn(Arc<dyn LanguageModel>, &mut App) + 'static>;
@@ -101,7 +102,7 @@ struct ModelInfo {
     icon: IconOrSvg,
     is_favorite: bool,
     provider_name: SharedString,
-    category: ProviderCategory,
+    picker_category: ProviderUiCategory,
     context_info: Option<SharedString>,
     badges: Vec<SharedString>,
 }
@@ -118,13 +119,12 @@ impl ModelInfo {
             .map_or(false, |set| set.contains(&model.id()));
 
         let provider_hub = ProviderHubStore::try_global(cx);
-        let category = provider_hub
-            .as_ref()
-            .map(|store| store.read(cx).provider_category(&provider.id()))
-            .unwrap_or_default();
-        let manifest = provider_hub
-            .as_ref()
-            .and_then(|store| store.read(cx).model_manifest(&provider.id(), model.id().0.as_ref()).cloned());
+        let manifest = provider_hub.as_ref().and_then(|store| {
+            store
+                .read(cx)
+                .model_manifest(&provider.id(), model.id().0.as_ref())
+                .cloned()
+        });
         let context_info = manifest.as_ref().and_then(|manifest| {
             let context = manifest
                 .metadata
@@ -145,7 +145,9 @@ impl ModelInfo {
             icon: provider.icon(),
             is_favorite,
             provider_name: provider.name().0,
-            category,
+            picker_category: language_models::provider_icons::get_provider_ui_category(
+                provider.id().0.as_ref(),
+            ),
             context_info,
             badges,
         }
@@ -163,6 +165,7 @@ pub struct LanguageModelPickerDelegate {
     _subscriptions: Vec<Subscription>,
     popover_styles: bool,
     focus_handle: FocusHandle,
+    collapsed_category_groups: HashSet<ProviderUiCategory>,
     collapsed_provider_groups: HashSet<LanguageModelProviderId>,
 }
 
@@ -178,8 +181,13 @@ impl LanguageModelPickerDelegate {
     ) -> Self {
         let on_model_changed = Arc::new(on_model_changed);
         let models = all_models(cx);
+        let collapsed_category_groups = HashSet::default();
         let collapsed_provider_groups = HashSet::default();
-        let entries = models.entries(&collapsed_provider_groups, false);
+        let entries = models.entries(
+            &collapsed_category_groups,
+            &collapsed_provider_groups,
+            false,
+        );
 
         let mut subscriptions = vec![cx.subscribe_in(
             &LanguageModelRegistry::global(cx),
@@ -201,11 +209,13 @@ impl LanguageModelPickerDelegate {
         )];
 
         if let Some(provider_hub) = ProviderHubStore::try_global(cx) {
-            subscriptions.push(cx.observe_in(&provider_hub, window, |picker, _, window, cx| {
-                let query = picker.query(cx);
-                picker.delegate.all_models = Arc::new(all_models(cx));
-                picker.update_matches(query, window, cx);
-            }));
+            subscriptions.push(
+                cx.observe_in(&provider_hub, window, |picker, _, window, cx| {
+                    let query = picker.query(cx);
+                    picker.delegate.all_models = Arc::new(all_models(cx));
+                    picker.update_matches(query, window, cx);
+                }),
+            );
         }
 
         Self {
@@ -219,6 +229,7 @@ impl LanguageModelPickerDelegate {
             _subscriptions: subscriptions,
             popover_styles,
             focus_handle,
+            collapsed_category_groups,
             collapsed_provider_groups,
         }
     }
@@ -227,21 +238,19 @@ impl LanguageModelPickerDelegate {
         entries: &[LanguageModelPickerEntry],
         active_model: Option<ConfiguredModel>,
     ) -> Option<usize> {
-        entries
-            .iter()
-            .position(|entry| {
-                if let LanguageModelPickerEntry::Model(model) = entry {
-                    active_model
-                        .as_ref()
-                        .map(|active_model| {
-                            active_model.model.id() == model.model.id()
-                                && active_model.provider.id() == model.model.provider_id()
-                        })
-                        .unwrap_or_default()
-                } else {
-                    false
-                }
-            })
+        entries.iter().position(|entry| {
+            if let LanguageModelPickerEntry::Model(model) = entry {
+                active_model
+                    .as_ref()
+                    .map(|active_model| {
+                        active_model.model.id() == model.model.id()
+                            && active_model.provider.id() == model.model.provider_id()
+                    })
+                    .unwrap_or_default()
+            } else {
+                false
+            }
+        })
     }
 
     fn first_selectable_index(entries: &[LanguageModelPickerEntry]) -> usize {
@@ -257,6 +266,12 @@ impl LanguageModelPickerDelegate {
     ) -> usize {
         Self::get_active_model_index(entries, active_model)
             .unwrap_or_else(|| Self::first_selectable_index(entries))
+    }
+
+    fn toggle_category_group(&mut self, category: ProviderUiCategory) {
+        if !self.collapsed_category_groups.insert(category) {
+            self.collapsed_category_groups.remove(&category);
+        }
     }
 
     fn toggle_provider_group(&mut self, provider_id: &LanguageModelProviderId) {
@@ -392,6 +407,7 @@ impl GroupedModels {
 
     fn entries(
         &self,
+        collapsed_category_groups: &HashSet<ProviderUiCategory>,
         collapsed_provider_groups: &HashSet<LanguageModelProviderId>,
         force_expand: bool,
     ) -> Vec<LanguageModelPickerEntry> {
@@ -418,7 +434,7 @@ impl GroupedModels {
             .collect::<Vec<_>>();
         grouped.sort_by_key(|models| {
             (
-                models[0].category.sort_key(),
+                models[0].picker_category.sort_key(),
                 models[0].provider_name.to_string(),
             )
         });
@@ -428,17 +444,39 @@ impl GroupedModels {
             if models.is_empty() {
                 continue;
             }
-            if current_category != Some(models[0].category) {
-                current_category = Some(models[0].category);
-                entries.push(LanguageModelPickerEntry::Separator(
-                    models[0].category.label().into(),
-                ));
+            if current_category != Some(models[0].picker_category) {
+                current_category = Some(models[0].picker_category);
+                let category = models[0].picker_category;
+                let provider_count = self
+                    .all
+                    .values()
+                    .filter(|provider_models| {
+                        provider_models
+                            .first()
+                            .map(|model| model.picker_category == category)
+                            .unwrap_or(false)
+                    })
+                    .count();
+                let is_expanded = force_expand || !collapsed_category_groups.contains(&category);
+                entries.push(LanguageModelPickerEntry::CategoryGroup {
+                    category,
+                    provider_count,
+                    is_expanded,
+                });
+            }
+
+            let category = models[0].picker_category;
+            let category_is_expanded =
+                force_expand || !collapsed_category_groups.contains(&category);
+            if !category_is_expanded {
+                continue;
             }
             let provider_id = models[0].model.provider_id();
             let is_expanded = force_expand || !collapsed_provider_groups.contains(&provider_id);
             entries.push(LanguageModelPickerEntry::ProviderGroup {
                 provider_id,
                 provider_name: models[0].provider_name.clone(),
+                provider_icon: models[0].icon.clone(),
                 model_count: models.len(),
                 is_expanded,
             });
@@ -456,9 +494,15 @@ impl GroupedModels {
 enum LanguageModelPickerEntry {
     Model(ModelInfo),
     Separator(SharedString),
+    CategoryGroup {
+        category: ProviderUiCategory,
+        provider_count: usize,
+        is_expanded: bool,
+    },
     ProviderGroup {
         provider_id: LanguageModelProviderId,
         provider_name: SharedString,
+        provider_icon: IconOrSvg,
         model_count: usize,
         is_expanded: bool,
     },
@@ -474,7 +518,9 @@ fn format_context_window(value: u64) -> SharedString {
     }
 }
 
-fn badges_for_manifest(manifest: &language_models::provider_hub::ModelManifest) -> Vec<SharedString> {
+fn badges_for_manifest(
+    manifest: &language_models::provider_hub::ModelManifest,
+) -> Vec<SharedString> {
     let mut badges = Vec::new();
     if manifest.metadata.supports_reasoning {
         badges.push("Reasoning".into());
@@ -600,6 +646,7 @@ impl PickerDelegate for LanguageModelPickerDelegate {
         match self.filtered_entries.get(ix) {
             Some(LanguageModelPickerEntry::Model(_)) => true,
             Some(LanguageModelPickerEntry::Separator(_))
+            | Some(LanguageModelPickerEntry::CategoryGroup { .. })
             | Some(LanguageModelPickerEntry::ProviderGroup { .. })
             | None => false,
         }
@@ -619,6 +666,7 @@ impl PickerDelegate for LanguageModelPickerDelegate {
         let active_model = (self.get_active_model)(cx);
         let fg_executor = cx.foreground_executor();
         let bg_executor = cx.background_executor();
+        let collapsed_category_groups = self.collapsed_category_groups.clone();
         let collapsed_provider_groups = self.collapsed_provider_groups.clone();
         let force_expand = !query.is_empty();
 
@@ -662,8 +710,11 @@ impl PickerDelegate for LanguageModelPickerDelegate {
         let filtered_models = GroupedModels::new(all, recommended);
         cx.spawn_in(window, async move |this, cx| {
             this.update_in(cx, |this, window, cx| {
-                this.delegate.filtered_entries =
-                    filtered_models.entries(&collapsed_provider_groups, force_expand);
+                this.delegate.filtered_entries = filtered_models.entries(
+                    &collapsed_category_groups,
+                    &collapsed_provider_groups,
+                    force_expand,
+                );
                 // Finds the currently selected model in the list
                 let new_index =
                     Self::selected_index_for_entries(&this.delegate.filtered_entries, active_model);
@@ -703,9 +754,29 @@ impl PickerDelegate for LanguageModelPickerDelegate {
             LanguageModelPickerEntry::Separator(title) => {
                 Some(ModelSelectorHeader::new(title, ix > 1).into_any_element())
             }
+            LanguageModelPickerEntry::CategoryGroup {
+                category,
+                provider_count,
+                is_expanded,
+            } => {
+                let category = *category;
+                let handle_toggle = cx.listener(move |picker, _, window, cx| {
+                    picker.delegate.toggle_category_group(category);
+                    let query = picker.query(cx);
+                    picker.update_matches(query, window, cx);
+                });
+
+                Some(
+                    ModelSelectorCategoryHeader::new(ix, category.label(), *provider_count)
+                        .is_expanded(*is_expanded)
+                        .on_toggle(handle_toggle)
+                        .into_any_element(),
+                )
+            }
             LanguageModelPickerEntry::ProviderGroup {
                 provider_id,
                 provider_name,
+                provider_icon,
                 model_count,
                 is_expanded,
             } => {
@@ -715,9 +786,19 @@ impl PickerDelegate for LanguageModelPickerDelegate {
                     let query = picker.query(cx);
                     picker.update_matches(query, window, cx);
                 });
+                let header = match provider_icon {
+                    IconOrSvg::Icon(icon_name) => {
+                        ModelSelectorProviderHeader::new(ix, provider_name.clone(), *model_count)
+                            .icon(*icon_name)
+                    }
+                    IconOrSvg::Svg(icon_path) => {
+                        ModelSelectorProviderHeader::new(ix, provider_name.clone(), *model_count)
+                            .icon_path(icon_path.clone())
+                    }
+                };
 
                 Some(
-                    ModelSelectorProviderHeader::new(ix, provider_name.clone(), *model_count)
+                    header
                         .is_expanded(*is_expanded)
                         .on_toggle(handle_toggle)
                         .into_any_element(),
@@ -901,7 +982,9 @@ mod tests {
                     icon: IconOrSvg::Icon(IconName::ZedAgent),
                     is_favorite,
                     provider_name: SharedString::from(provider),
-                    category: ProviderCategory::default(),
+                    picker_category: language_models::provider_icons::get_provider_ui_category(
+                        provider,
+                    ),
                     context_info: None,
                     badges: Vec::new(),
                 }
@@ -1052,7 +1135,7 @@ mod tests {
         );
 
         let grouped_models = GroupedModels::new(all_models, recommended_models);
-        let entries = grouped_models.entries(&HashSet::default(), false);
+        let entries = grouped_models.entries(&HashSet::default(), &HashSet::default(), false);
 
         assert!(matches!(
             entries.first(),
@@ -1068,7 +1151,7 @@ mod tests {
         let all_models = create_models(vec![("zed", "claude"), ("zed", "gemini")]);
 
         let grouped_models = GroupedModels::new(all_models, recommended_models);
-        let entries = grouped_models.entries(&HashSet::default(), false);
+        let entries = grouped_models.entries(&HashSet::default(), &HashSet::default(), false);
 
         assert!(matches!(
             entries.first(),
@@ -1088,7 +1171,7 @@ mod tests {
         );
 
         let grouped_models = GroupedModels::new(all_models, recommended_models);
-        let entries = grouped_models.entries(&HashSet::default(), false);
+        let entries = grouped_models.entries(&HashSet::default(), &HashSet::default(), false);
 
         for entry in &entries {
             if let LanguageModelPickerEntry::Model(info) = entry {
@@ -1135,12 +1218,16 @@ mod tests {
     #[gpui::test]
     fn test_provider_groups_can_collapse(_cx: &mut TestAppContext) {
         let grouped_models = GroupedModels::new(
-            create_models(vec![("zed", "claude"), ("zed", "gemini"), ("openai", "gpt-4")]),
+            create_models(vec![
+                ("zed", "claude"),
+                ("zed", "gemini"),
+                ("openai", "gpt-4"),
+            ]),
             Vec::new(),
         );
         let mut collapsed = HashSet::default();
         collapsed.insert(LanguageModelProviderId::from("zed".to_string()));
-        let entries = grouped_models.entries(&collapsed, false);
+        let entries = grouped_models.entries(&HashSet::default(), &collapsed, false);
 
         assert!(entries.iter().any(|entry| match entry {
             LanguageModelPickerEntry::ProviderGroup {

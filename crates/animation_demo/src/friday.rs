@@ -3,7 +3,8 @@ use std::time::Instant;
 use gpui::{BoxShadow, Context, Render, Window, hsla, point, px};
 use ui::prelude::*;
 
-const SPAN_COUNT: usize = 25;
+const PALETTE_SPAN_COUNT: usize = 25;
+const RENDER_SPAN_COUNT: usize = 120;
 const BORDER_THICKNESS: f32 = 10.0;
 const GLOW_SPREAD: f32 = 8.0;
 const GLOW_INTENSITY: f32 = 12.0;
@@ -50,7 +51,7 @@ impl Render for FridayBorderPreview {
         } else {
             (active_t * std::f32::consts::PI * 5.0).sin() * 14.0 * (1.0 - active_t * 0.65)
         };
-        let shift = ((elapsed * 6.0) as usize) % SPAN_COUNT;
+        let shift = (elapsed * 0.42).fract();
 
         v_flex()
             .flex_1()
@@ -80,10 +81,10 @@ impl Render for FridayBorderPreview {
                     .rounded_lg()
                     .bg(cx.theme().colors().element_background)
                     .overflow_hidden()
-                    .child(border_strip(shift, 0.0, show_top, Edge::Top))
-                    .child(border_strip(shift, 0.0, show_bottom, Edge::Bottom))
-                    .child(border_strip(shift, 90.0, show_left, Edge::Left))
-                    .child(border_strip(shift, 90.0, show_right, Edge::Right))
+                    .child(border_strip(shift, show_top, Edge::Top))
+                    .child(border_strip(shift, show_bottom, Edge::Bottom))
+                    .child(border_strip(shift, show_left, Edge::Left))
+                    .child(border_strip(shift, show_right, Edge::Right))
                     .child(
                         div()
                             .absolute()
@@ -135,9 +136,9 @@ enum Edge {
     Right,
 }
 
-fn border_strip(shift: usize, angle: f32, opacity: f32, edge: Edge) -> impl IntoElement + use<> {
+fn border_strip(shift: f32, opacity: f32, edge: Edge) -> impl IntoElement + use<> {
     let is_horizontal = matches!(edge, Edge::Top | Edge::Bottom);
-    let shadow_color = rainbow_color(shift % SPAN_COUNT, 0.0, 0.85, 0.55).opacity(0.35 * opacity);
+    let shadow_color = rainbow_color(shift, 0.92, 0.60).opacity(0.32 * opacity);
 
     let base = div()
         .absolute()
@@ -174,25 +175,32 @@ fn border_strip(shift: usize, angle: f32, opacity: f32, edge: Edge) -> impl Into
     if is_horizontal {
         base.child(
             h_flex().size_full().children(
-                (0..SPAN_COUNT)
-                    .map(move |ix| div().flex_1().h_full().bg(linear_color(ix + shift, angle))),
+                (0..RENDER_SPAN_COUNT).map(move |ix| {
+                    let hue_offset = (ix as f32 / RENDER_SPAN_COUNT as f32 + shift).fract();
+                    div()
+                        .flex_1()
+                        .h_full()
+                        .bg(rainbow_color(hue_offset, 0.92, 0.60))
+                }),
             ),
         )
     } else {
         base.child(
             v_flex().size_full().children(
-                (0..SPAN_COUNT)
-                    .map(move |ix| div().flex_1().w_full().bg(linear_color(ix + shift, angle))),
+                (0..RENDER_SPAN_COUNT).map(move |ix| {
+                    let hue_offset = (ix as f32 / RENDER_SPAN_COUNT as f32 + shift).fract();
+                    div()
+                        .flex_1()
+                        .w_full()
+                        .bg(rainbow_color(hue_offset, 0.92, 0.60))
+                }),
             ),
         )
     }
 }
 
-fn linear_color(index: usize, _angle: f32) -> gpui::Hsla {
-    rainbow_color(index % SPAN_COUNT, 0.0, 0.85, 0.55)
-}
-
-fn rainbow_color(index: usize, offset: f32, saturation: f32, lightness: f32) -> gpui::Hsla {
-    let hue = (((index as f32 / SPAN_COUNT as f32) + offset).fract() + 1.0).fract();
+fn rainbow_color(hue_offset: f32, saturation: f32, lightness: f32) -> gpui::Hsla {
+    let quantized = (hue_offset * PALETTE_SPAN_COUNT as f32).round() / PALETTE_SPAN_COUNT as f32;
+    let hue = ((hue_offset * 0.7) + (quantized * 0.3)).fract();
     hsla(hue, saturation, lightness, 1.0)
 }

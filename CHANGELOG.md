@@ -1,4 +1,4 @@
-﻿# Zed Animation Project - Changelog
+# Zed Animation Project - Changelog
 
 All notable changes to this project will be documented in this file.
 
@@ -8,6 +8,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+
+### Web Preview, Cursor, and Screen Stability - 2026-03-31
+
+#### Changed
+- Moved embedded web preview navigation and native webview sync work onto deferred window updates instead of performing child-webview creation directly during render, reducing crash risk when opening the web preview panel.
+- Limited embedded webview creation to active panel sessions and preserved pending navigation state until the panel is visible.
+- Tightened the rainbow caret into a real thin bar again and upgraded it with faster hue cycling plus a visible traveling highlight so it reads as animated instead of static.
+- Made Dx Dark the real default theme mode for fresh theme selection instead of inheriting the system appearance by default.
+- Updated the title-bar screen dock so Code Workspace resolves to the actual grouped code-workspace screen instead of re-activating whichever screen happened to be active.
+- Added a /v1 retry path for OpenAI-compatible providers when a custom provider base URL returns ApiEndpointNotFound, which helps providers configured with a root host instead of an explicit /v1 base.
+
+
+### Provider Runtime and Picker Hardening - 2026-03-31
+
+#### Added
+- Added alias-aware provider icon and display-name resolution so manifest-backed and custom-compatible providers can reuse the 164-provider SVG pack even when ids differ by dash/underscore variants.
+- Added a 12-category provider taxonomy for the real AI model picker, including collapsible category headers and right-aligned provider/model-count badges.
+- Added support for explicit `no_auth` manifest providers so local and self-hosted OpenAI-compatible endpoints can be registered without being silently downgraded into API-key providers.
+
+#### Changed
+- Updated manifest-backed providers to render branded external SVG icons when available instead of falling back to the generic OpenAI-compatible glyph.
+- Updated manifest-backed request execution to honor non-bearer API key header styles and no-auth endpoints directly in the runtime request layer.
+- Updated the real model picker popover to show provider icons in provider rows and to collapse providers underneath collapsible category sections.
+- Updated custom OpenAI-compatible provider creation to store a display name separately from a normalized provider id, reducing broken registry ids from free-form names.
+- Updated OpenAI-compatible provider naming so custom providers can surface provider-hub or icon-pack display names instead of raw slugs when available.
 
 ### LLM Provider Icon Integration - 2026-03-31
 

@@ -25,6 +25,7 @@ pub enum AuthCredential {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum AuthStrategy {
+    NoAuth,
     ApiKey {
         header_style: ApiKeyHeaderStyle,
         env_var: Option<String>,

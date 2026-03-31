@@ -1,4 +1,4 @@
-﻿// Disable command line from opening on release mode
+// Disable command line from opening on release mode
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod reliability;
@@ -15,13 +15,14 @@ use collab_ui::channel_view::ChannelView;
 use collections::HashMap;
 use crashes::InitCrashHandler;
 use db::kvp::{GlobalKeyValueStore, KeyValueStore};
-use editor::Editor;
 use extension::ExtensionHostProxy;
 use fs::{Fs, RealFs};
 use futures::{StreamExt, channel::oneshot, future};
 use git::GitHostingProviderRegistry;
 use git_ui::clone::clone_and_open;
-use gpui::{App, AppContext, Application, AsyncApp, Focusable as _, QuitMode, UpdateGlobal as _};
+use gpui::{
+    Action, App, AppContext, Application, AsyncApp, Focusable as _, QuitMode, UpdateGlobal as _,
+};
 use gpui_platform;
 
 use gpui_tokio::Tokio;
@@ -1002,7 +1003,7 @@ fn handle_open_request(request: OpenRequest, app_state: Arc<AppState>, cx: &mut 
                                     panel.open_thread(
                                         session_id,
                                         None,
-                                        Some(format!("ðŸ”— {}", response.title).into()),
+                                        Some(format!("Ã°Å¸â€â€” {}", response.title).into()),
                                         window,
                                         cx,
                                     );
@@ -1464,12 +1465,12 @@ pub(crate) async fn restore_or_create_workspace(
                 Default::default(),
                 app_state,
                 cx,
-                |workspace, window, cx| {
+                |_workspace, window, cx| {
                     let restore_on_startup = WorkspaceSettings::get_global(cx).restore_on_startup;
                     match restore_on_startup {
                         workspace::RestoreOnStartupBehavior::Launchpad => {}
                         _ => {
-                            Editor::new_file(workspace, &Default::default(), window, cx);
+                            window.dispatch_action(zed_actions::OpenOnboarding.boxed_clone(), cx);
                         }
                     }
                 },
@@ -1927,6 +1928,3 @@ fn check_for_conpty_dll() {
         log::warn!("Failed to load conpty.dll. Terminal will work with reduced functionality.");
     }
 }
-
-
-
