@@ -14,7 +14,7 @@ use gpui::{Corner, List};
 use heapless::Vec as ArrayVec;
 use language_model::{LanguageModelEffortLevel, Speed};
 use settings::update_settings_file;
-use ui::{ButtonLike, SplitButton, SplitButtonStyle, Tab};
+use ui::{ButtonLike, ButtonSize, ButtonStyle, IconButtonShape, SplitButton, SplitButtonStyle, Tab};
 use workspace::SERIALIZATION_THROTTLE_TIME;
 
 use super::*;
@@ -221,6 +221,133 @@ impl PermissionSelection {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+enum ComposerMediaMode {
+    Text,
+    Audio,
+    Video,
+    ThreeD,
+    Live,
+    Ar,
+    Vr,
+    Pdf,
+    Chart,
+}
+
+const COMPOSER_MEDIA_MODES: [ComposerMediaMode; 9] = [
+    ComposerMediaMode::Text,
+    ComposerMediaMode::Audio,
+    ComposerMediaMode::Video,
+    ComposerMediaMode::ThreeD,
+    ComposerMediaMode::Live,
+    ComposerMediaMode::Ar,
+    ComposerMediaMode::Vr,
+    ComposerMediaMode::Pdf,
+    ComposerMediaMode::Chart,
+];
+
+impl ComposerMediaMode {
+    fn key(self) -> &'static str {
+        match self {
+            Self::Text => "text",
+            Self::Audio => "audio",
+            Self::Video => "video",
+            Self::ThreeD => "3d",
+            Self::Live => "live",
+            Self::Ar => "ar",
+            Self::Vr => "vr",
+            Self::Pdf => "pdf",
+            Self::Chart => "chart",
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::Text => "Text",
+            Self::Audio => "Audio",
+            Self::Video => "Video",
+            Self::ThreeD => "3D",
+            Self::Live => "Live",
+            Self::Ar => "AR",
+            Self::Vr => "VR",
+            Self::Pdf => "PDF",
+            Self::Chart => "Chart",
+        }
+    }
+
+    fn icon_path(self) -> &'static str {
+        match self {
+            Self::Text => "icons/media_text.svg",
+            Self::Audio => "icons/media_audio.svg",
+            Self::Video => "icons/media_video.svg",
+            Self::ThreeD => "icons/media_3d.svg",
+            Self::Live => "icons/media_live.svg",
+            Self::Ar => "icons/media_ar.svg",
+            Self::Vr => "icons/media_vr.svg",
+            Self::Pdf => "icons/media_pdf.svg",
+            Self::Chart => "icons/media_chart.svg",
+        }
+    }
+
+    fn menu_icon(self) -> IconName {
+        match self {
+            Self::Text => IconName::FileDoc,
+            Self::Audio => IconName::Mic,
+            Self::Video => IconName::PlayOutlined,
+            Self::ThreeD => IconName::Box,
+            Self::Live => IconName::ArrowCircle,
+            Self::Ar => IconName::Sparkle,
+            Self::Vr => IconName::Blocks,
+            Self::Pdf => IconName::FileDoc,
+            Self::Chart => IconName::DiffUnified,
+        }
+    }
+
+    fn placeholder(self) -> &'static str {
+        match self {
+            Self::Text => "Ask anything, @ to mention, / for workflows",
+            Self::Audio => "Ask for audio-ready output, voice scripts, or narrated flows",
+            Self::Video => "Ask for video-ready output, storyboards, or motion sequences",
+            Self::ThreeD => "Ask for 3D-ready output, scenes, materials, or interaction specs",
+            Self::Live => "Ask for live experiences, demos, streams, or real-time guidance",
+            Self::Ar => "Ask for AR-ready output, overlays, anchors, and device behavior",
+            Self::Vr => "Ask for VR-ready output, immersive flows, and spatial interaction",
+            Self::Pdf => "Ask for PDF-ready output, printable structure, and export-safe layout",
+            Self::Chart => "Ask for chart-ready output, metrics, axes, and data storytelling",
+        }
+    }
+
+    fn prompt_prefix(self) -> Option<&'static str> {
+        match self {
+            Self::Text => None,
+            Self::Audio => Some(
+                "Preferred response mode: audio. Structure the answer for spoken delivery, cues, timing, and transcript-ready output.\n\n",
+            ),
+            Self::Video => Some(
+                "Preferred response mode: video. Structure the answer for scenes, timing, motion, captions, and production-ready sequencing.\n\n",
+            ),
+            Self::ThreeD => Some(
+                "Preferred response mode: 3D. Structure the answer for assets, cameras, lighting, materials, spatial layout, and interaction.\n\n",
+            ),
+            Self::Live => Some(
+                "Preferred response mode: live. Structure the answer for real-time operation, operator steps, live state, and continuous feedback.\n\n",
+            ),
+            Self::Ar => Some(
+                "Preferred response mode: AR. Structure the answer for overlays, anchors, surfaces, gestures, and mixed-reality constraints.\n\n",
+            ),
+            Self::Vr => Some(
+                "Preferred response mode: VR. Structure the answer for immersive navigation, comfort, spatial UI, controllers, and presence.\n\n",
+            ),
+            Self::Pdf => Some(
+                "Preferred response mode: PDF. Structure the answer for paginated export, sections, typography, print-safe layout, and references.\n\n",
+            ),
+            Self::Chart => Some(
+                "Preferred response mode: chart. Structure the answer around data model, chart type, axes, labels, and presentation-ready insights.\n\n",
+            ),
+        }
+    }
+}
+
 pub struct ThreadView {
     pub id: acp::SessionId,
     pub parent_id: Option<acp::SessionId>,
@@ -285,6 +412,8 @@ pub struct ThreadView {
     pub message_editor: Entity<MessageEditor>,
     pub add_context_menu_handle: PopoverMenuHandle<ContextMenu>,
     pub thinking_effort_menu_handle: PopoverMenuHandle<ContextMenu>,
+    pub media_mode_menu_handle: PopoverMenuHandle<ContextMenu>,
+    selected_media_mode: ComposerMediaMode,
     pub project: WeakEntity<Project>,
     pub recent_history_entries: Vec<AgentSessionInfo>,
     pub hovered_recent_history_item: Option<usize>,
@@ -525,6 +654,8 @@ impl ThreadView {
             message_editor,
             add_context_menu_handle: PopoverMenuHandle::default(),
             thinking_effort_menu_handle: PopoverMenuHandle::default(),
+            media_mode_menu_handle: PopoverMenuHandle::default(),
+            selected_media_mode: ComposerMediaMode::Text,
             project,
             recent_history_entries,
             hovered_recent_history_item: None,
@@ -537,6 +668,7 @@ impl ThreadView {
 
         this.sync_generating_indicator(cx);
         this.sync_editor_mode_for_empty_state(cx);
+        this.sync_message_editor_placeholder(window, cx);
         let list_state_for_scroll = this.list_state.clone();
         let thread_view = cx.entity().downgrade();
 
@@ -631,6 +763,44 @@ impl ThreadView {
             .thread(acp_thread.session_id(), cx)
     }
 
+    pub(crate) fn sync_message_editor_placeholder(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let placeholder = self.selected_media_mode.placeholder();
+        self.message_editor.update(cx, |editor, cx| {
+            editor.set_placeholder_text(placeholder, window, cx);
+        });
+    }
+
+    fn set_selected_media_mode(
+        &mut self,
+        media_mode: ComposerMediaMode,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.selected_media_mode == media_mode {
+            return;
+        }
+
+        self.selected_media_mode = media_mode;
+        self.sync_message_editor_placeholder(window, cx);
+        cx.notify();
+    }
+
+    fn media_modes_for_layout(
+        window: &Window,
+        editor_expanded: bool,
+    ) -> (&'static [ComposerMediaMode], &'static [ComposerMediaMode]) {
+        let condensed = !editor_expanded && window.viewport_size().width < px(1320.);
+        if condensed {
+            (&COMPOSER_MEDIA_MODES[..3], &COMPOSER_MEDIA_MODES[3..])
+        } else {
+            (&COMPOSER_MEDIA_MODES[..], &[])
+        }
+    }
+
     /// Resolves the message editor's contents into content blocks. For profiles
     /// that do not enable any tools, directory mentions are expanded to inline
     /// file contents since the agent can't read files on its own.
@@ -646,7 +816,17 @@ impl ThreadView {
                 .get(thread.profile())
                 .is_some_and(|profile| profile.tools.is_empty())
         });
-        message_editor.update(cx, |message_editor, cx| message_editor.contents(expand, cx))
+        let media_mode = self.selected_media_mode;
+        message_editor.update(cx, move |message_editor, cx| {
+            let task = message_editor.contents(expand, cx);
+            cx.spawn(async move |_this, _cx| {
+                let (mut contents, tracked_buffers) = task.await?;
+                if let Some(prefix) = media_mode.prompt_prefix() {
+                    contents.insert(0, acp::ContentBlock::Text(acp::TextContent::new(prefix)));
+                }
+                Ok((contents, tracked_buffers))
+            })
+        })
     }
 
     pub fn current_model_id(&self, cx: &App) -> Option<String> {
@@ -3143,80 +3323,294 @@ impl ThreadView {
             .bg(editor_bg_color)
             .when(v2_empty_state, |this| this.flex_1().size_full())
             .when(editor_expanded && !v2_empty_state, |this| {
-                this.h(vh(0.8, window)).size_full().justify_between()
+                this.h(vh(0.8, window)).size_full()
             })
             .child(
                 v_flex()
-                    .relative()
                     .size_full()
                     .when(v2_empty_state, |this| this.flex_1())
-                    .pt_1()
-                    .pr_2p5()
-                    .child(self.message_editor.clone())
-                    .when(!v2_empty_state, |this| {
-                        this.child(
-                            h_flex()
-                                .absolute()
-                                .top_0()
-                                .right_0()
-                                .opacity(0.5)
-                                .hover(|this| this.opacity(1.0))
-                                .child(
-                                    IconButton::new("toggle-height", expand_icon)
-                                        .icon_size(IconSize::Small)
-                                        .icon_color(Color::Muted)
-                                        .tooltip({
-                                            move |_window, cx| {
-                                                Tooltip::for_action_in(
-                                                    expand_tooltip,
+                    .child(
+                        v_flex()
+                            .id("agent-composer-shell")
+                            .w_full()
+                            .bg(editor_bg_color.blend(cx.theme().colors().surface_background.opacity(0.28)))
+                            .border_1()
+                            .border_color(cx.theme().colors().border_variant.opacity(0.9))
+                            .rounded_lg()
+                            .overflow_hidden()
+                            .shadow(vec![gpui::BoxShadow {
+                                color: gpui::black().opacity(0.16),
+                                offset: point(px(0.), px(10.)),
+                                blur_radius: px(26.),
+                                spread_radius: px(-10.),
+                            }])
+                            .when(v2_empty_state || editor_expanded, |this| this.flex_1())
+                            .child(
+                                h_flex()
+                                    .justify_between()
+                                    .items_center()
+                                    .px_2()
+                                    .pt_2()
+                                    .gap_2()
+                                    .child(self.render_composer_quick_actions(window, cx))
+                                    .child(
+                                        IconButton::new("toggle-height", expand_icon)
+                                            .style(ButtonStyle::Transparent)
+                                            .icon_size(IconSize::Small)
+                                            .icon_color(Color::Muted)
+                                            .tooltip({
+                                                move |_window, cx| {
+                                                    Tooltip::for_action_in(
+                                                        expand_tooltip,
+                                                        &ExpandMessageEditor,
+                                                        &focus_handle,
+                                                        cx,
+                                                    )
+                                                }
+                                            })
+                                            .on_click(cx.listener(|this, _, window, cx| {
+                                                this.expand_message_editor(
                                                     &ExpandMessageEditor,
-                                                    &focus_handle,
+                                                    window,
                                                     cx,
-                                                )
-                                            }
-                                        })
-                                        .on_click(cx.listener(|this, _, window, cx| {
-                                            this.expand_message_editor(
-                                                &ExpandMessageEditor,
-                                                window,
-                                                cx,
-                                            );
-                                        })),
-                                ),
-                        )
-                    }),
-            )
-            .child(
-                h_flex()
-                    .flex_none()
-                    .flex_wrap()
-                    .justify_between()
-                    .child(
-                        h_flex()
-                            .gap_0p5()
-                            .child(self.render_add_context_button(cx))
-                            .child(self.render_follow_toggle(cx))
-                            .children(self.render_fast_mode_control(cx))
-                            .children(self.render_thinking_control(cx)),
-                    )
-                    .child(
-                        h_flex()
-                            .gap_1()
-                            .children(self.render_token_usage(cx))
-                            .children(self.profile_selector.clone())
-                            .map(|this| {
-                                // Either config_options_view OR (mode_selector + model_selector)
-                                match self.config_options_view.clone() {
-                                    Some(config_view) => this.child(config_view),
-                                    None => this
-                                        .children(self.mode_selector.clone())
-                                        .children(self.model_selector.clone()),
-                                }
-                            })
-                            .child(self.render_send_button(cx)),
+                                                );
+                                            })),
+                                    ),
+                            )
+                            .child(
+                                div()
+                                    .px_1p5()
+                                    .pt_1()
+                                    .pb_1()
+                                    .when(v2_empty_state || editor_expanded, |this| this.flex_1())
+                                    .child(self.message_editor.clone()),
+                            )
+                            .child(Divider::horizontal().color(DividerColor::Border))
+                            .child(
+                                h_flex()
+                                    .flex_none()
+                                    .flex_wrap()
+                                    .justify_between()
+                                    .items_center()
+                                    .gap_2()
+                                    .px_2()
+                                    .pt_1p5()
+                                    .pb_2()
+                                    .child(
+                                        h_flex()
+                                            .gap_0p5()
+                                            .child(self.render_follow_toggle(cx))
+                                            .children(self.render_fast_mode_control(cx))
+                                            .children(self.render_thinking_control(cx)),
+                                    )
+                                    .child(
+                                        h_flex()
+                                            .gap_1()
+                                            .items_center()
+                                            .children(self.render_token_usage(cx))
+                                            .children(self.profile_selector.clone())
+                                            .map(|this| {
+                                                match self.config_options_view.clone() {
+                                                    Some(config_view) => this.child(config_view),
+                                                    None => this
+                                                        .children(self.mode_selector.clone())
+                                                        .children(self.model_selector.clone()),
+                                                }
+                                            })
+                                            .child(self.render_media_mode_switcher(window, cx))
+                                            .child(self.render_send_button(cx)),
+                                    ),
+                            ),
                     ),
             )
             .into_any()
+    }
+
+    fn render_composer_quick_actions(
+        &mut self,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
+        let message_editor = self.message_editor.clone();
+        let supports_embedded_context = self.session_capabilities.read().supports_embedded_context();
+
+        h_flex()
+            .gap_1()
+            .flex_wrap()
+            .child(
+                Button::new("composer-quick-changes", "Changes")
+                    .style(ButtonStyle::Subtle)
+                    .size(ButtonSize::Compact)
+                    .label_size(LabelSize::Small)
+                    .start_icon(
+                        Icon::new(IconName::FileDiff)
+                            .size(IconSize::XSmall)
+                            .color(Color::Muted),
+                    )
+                    .disabled(!supports_embedded_context)
+                    .tooltip(Tooltip::text("Attach the current branch diff"))
+                    .on_click(cx.listener(move |_, _, window, cx| {
+                        message_editor.focus_handle(cx).focus(window, cx);
+                        message_editor.update(cx, |editor, cx| {
+                            editor.insert_branch_diff_crease(window, cx);
+                        });
+                    })),
+            )
+            .child(
+                Button::new("composer-quick-files", "Files")
+                    .style(ButtonStyle::Subtle)
+                    .size(ButtonSize::Compact)
+                    .label_size(LabelSize::Small)
+                    .start_icon(
+                        Icon::new(IconName::FileTree)
+                            .size(IconSize::XSmall)
+                            .color(Color::Muted),
+                    )
+                    .tooltip(Tooltip::text("Attach files and folders"))
+                    .on_click({
+                        let message_editor = self.message_editor.clone();
+                        cx.listener(move |_, _, window, cx| {
+                            message_editor.focus_handle(cx).focus(window, cx);
+                            message_editor.update(cx, |editor, cx| {
+                                editor.insert_context_type("file", window, cx);
+                            });
+                        })
+                    }),
+            )
+            .child(
+                Button::new("composer-quick-browser", "Browser")
+                    .style(ButtonStyle::Subtle)
+                    .size(ButtonSize::Compact)
+                    .label_size(LabelSize::Small)
+                    .start_icon(
+                        Icon::new(IconName::ToolWeb)
+                            .size(IconSize::XSmall)
+                            .color(Color::Muted),
+                    )
+                    .disabled(!supports_embedded_context)
+                    .tooltip(Tooltip::text("Attach a live webpage or URL context"))
+                    .on_click({
+                        let message_editor = self.message_editor.clone();
+                        cx.listener(move |_, _, window, cx| {
+                            message_editor.focus_handle(cx).focus(window, cx);
+                            message_editor.update(cx, |editor, cx| {
+                                editor.insert_context_type("fetch", window, cx);
+                            });
+                        })
+                    }),
+            )
+            .child(self.render_add_context_button(cx))
+    }
+
+    fn render_media_mode_switcher(
+        &self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
+        let (visible_modes, overflow_modes) =
+            Self::media_modes_for_layout(window, self.editor_expanded);
+        let overflow_modes = overflow_modes.to_vec();
+        let overflow_selected = overflow_modes.contains(&self.selected_media_mode);
+
+        h_flex()
+            .gap_0p5()
+            .items_center()
+            .children(
+                visible_modes
+                    .iter()
+                    .copied()
+                    .map(|mode| self.render_media_mode_button(mode, cx)),
+            )
+            .when(!overflow_modes.is_empty(), |this| {
+                let weak_self = cx.weak_entity();
+                let tooltip_label = if overflow_selected {
+                    format!("More media modes ({})", self.selected_media_mode.label())
+                } else {
+                    "More media modes".to_string()
+                };
+
+                this.child(
+                    PopoverMenu::new("composer-media-overflow")
+                        .trigger_with_tooltip(
+                            IconButton::new("composer-media-overflow-button", IconName::Ellipsis)
+                                .style(ButtonStyle::Subtle)
+                                .shape(IconButtonShape::Square)
+                                .icon_size(IconSize::Small)
+                                .icon_color(if overflow_selected {
+                                    Color::Accent
+                                } else {
+                                    Color::Muted
+                                })
+                                .toggle_state(overflow_selected)
+                                .selected_style(ButtonStyle::Tinted(TintColor::Accent)),
+                            Tooltip::text(tooltip_label),
+                        )
+                        .anchor(Corner::BottomRight)
+                        .with_handle(self.media_mode_menu_handle.clone())
+                        .offset(gpui::Point {
+                            x: px(0.0),
+                            y: px(-2.0),
+                        })
+                        .menu(move |window, cx| {
+                            let overflow_modes = overflow_modes.clone();
+                            Some(ContextMenu::build(window, cx, |menu, _window, _cx| {
+                                overflow_modes.iter().copied().fold(
+                                    menu.header("Media Modes"),
+                                    |menu, mode| {
+                                        menu.item(
+                                            ContextMenuEntry::new(mode.label())
+                                                .icon(mode.menu_icon())
+                                                .icon_color(Color::Muted)
+                                                .icon_size(IconSize::XSmall)
+                                                .handler({
+                                                    let weak_self = weak_self.clone();
+                                                    move |window, cx| {
+                                                        weak_self
+                                                            .update(cx, |this, cx| {
+                                                                this.set_selected_media_mode(
+                                                                    mode, window, cx,
+                                                                );
+                                                            })
+                                                            .ok();
+                                                    }
+                                                }),
+                                        )
+                                    },
+                                )
+                            }))
+                        }),
+                )
+            })
+    }
+
+    fn render_media_mode_button(
+        &self,
+        mode: ComposerMediaMode,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
+        let selected = self.selected_media_mode == mode;
+        let icon_color = if selected {
+            Color::Accent
+        } else {
+            Color::Muted
+        };
+
+        Button::new(("composer-media-mode", mode.key()), mode.label())
+            .style(ButtonStyle::Subtle)
+            .size(ButtonSize::Compact)
+            .label_size(LabelSize::Small)
+            .color(if selected { Color::Selected } else { Color::Muted })
+            .toggle_state(selected)
+            .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+            .start_icon(
+                Icon::from_path(mode.icon_path())
+                    .size(IconSize::XSmall)
+                    .color(icon_color),
+            )
+            .tooltip(Tooltip::text(format!("Switch to {} mode", mode.label())))
+            .on_click(cx.listener(move |this, _, window, cx| {
+                this.set_selected_media_mode(mode, window, cx);
+            }))
     }
 
     fn render_message_queue_entries(
@@ -3917,24 +4311,16 @@ impl ThreadView {
     }
 
     fn render_add_context_button(&mut self, cx: &mut Context<Self>) -> impl IntoElement {
-        let focus_handle = self.message_editor.focus_handle(cx);
         let weak_self = cx.weak_entity();
 
         PopoverMenu::new("add-context-menu")
             .trigger_with_tooltip(
-                IconButton::new("add-context", IconName::Plus)
+                IconButton::new("add-context", IconName::Ellipsis)
+                    .style(ButtonStyle::Subtle)
+                    .shape(IconButtonShape::Square)
                     .icon_size(IconSize::Small)
                     .icon_color(Color::Muted),
-                {
-                    move |_window, cx| {
-                        Tooltip::for_action_in(
-                            "Add Context",
-                            &OpenAddContextMenu,
-                            &focus_handle,
-                            cx,
-                        )
-                    }
-                },
+                Tooltip::text("More composer tools"),
             )
             .anchor(Corner::BottomLeft)
             .with_handle(self.add_context_menu_handle.clone())
@@ -4009,6 +4395,22 @@ impl ThreadView {
                                 message_editor.focus_handle(cx).focus(window, cx);
                                 message_editor.update(cx, |editor, cx| {
                                     editor.insert_context_type("symbol", window, cx);
+                                });
+                            }
+                        }),
+                )
+                .item(
+                    ContextMenuEntry::new("Browser")
+                        .icon(IconName::ToolWeb)
+                        .icon_color(Color::Muted)
+                        .icon_size(IconSize::XSmall)
+                        .disabled(!supports_embedded_context)
+                        .handler({
+                            let message_editor = message_editor.clone();
+                            move |window, cx| {
+                                message_editor.focus_handle(cx).focus(window, cx);
+                                message_editor.update(cx, |editor, cx| {
+                                    editor.insert_context_type("fetch", window, cx);
                                 });
                             }
                         }),

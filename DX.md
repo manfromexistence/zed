@@ -3,6 +3,9 @@
 3. Svg
 4. Theme, icon, font
 5. rainbow animated cursor, particles effect
+
+Now please format and lint all files and then do a pre scan by reading the all changed files and check for all errors that happen and fix them right on the spot and after you did all of these and is 100% sure that there are no errors only then run "just run" command
+
 You can do formatting and linting but just do anything other than that and please update our current AI panel input box so that it can look like this. First image is the way it will look in the chat input box. It will look like the current VS Code Copilot chat input box. Do a website about it as of today, 31st March 2026. You can also do inspiration from your own Codex desktop app and try to make those input boxes like that. And for the second image I gave you, our AI panel input box will have four icons like the Google anti-gravity code editor. You can do websites about that too.
 
 At the top of the input box there will be icons to see changes or to open the file browser, open browser, and other, as in the second image. Learn from the first and second image, the current latest VS Code Copilot chat input box, and the Google anti-gravity chat input box at the top, and implement that in our jet code editor AI panel input box. Don't do any dummy code; learn from this and implement real professional code correctly. And on the right bottom of the chat input box, next to the submit button, we will have a media swisser. There will be:

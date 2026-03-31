@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### AI Composer and Editor Effects - 2026-03-31
+
+#### Added
+- Added a redesigned real Agent composer shell with a top quick-action strip for changes, files, browser context, and additional tools.
+- Added a responsive media-mode switcher with native icon assets for text, audio, video, 3D, live, AR, VR, PDF, and chart workflows, including overflow handling for narrow layouts.
+- Added a new `editor::typing_effects` module that cycles through particles, fireworks, flames, and magic-style bursts as the user types.
+
+#### Changed
+- Updated the real Agent panel input experience to feel closer to the latest Copilot/Codex-style composer surface while keeping Zed's existing mode, model, profile, and send controls functional.
+- Updated prompt resolution so non-text media modes prepend delivery guidance to the actual content blocks sent to the agent, making the switcher behavior functional instead of cosmetic.
+- Updated the real editor cursor renderer to draw an animated rainbow caret for the newest local cursor.
+
 ### AI Provider Hub and Model Picker - 2026-03-31
 
 #### Added

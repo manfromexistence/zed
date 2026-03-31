@@ -52,6 +52,7 @@ mod editor_tests;
 mod signature_help;
 #[cfg(any(test, feature = "test-support"))]
 pub mod test;
+mod typing_effects;
 
 pub(crate) use actions::*;
 pub use display_map::{
@@ -223,6 +224,7 @@ use workspace::{
 };
 pub use zed_actions::editor::RevealInFileManager;
 use zed_actions::editor::{MoveDown, MoveUp};
+use typing_effects::TypingEffectsState;
 
 use crate::{
     code_context_menus::CompletionsMenuSource,
@@ -1253,6 +1255,7 @@ pub struct Editor {
     next_color_inlay_id: usize,
     _subscriptions: Vec<Subscription>,
     pixel_position_of_newest_cursor: Option<gpui::Point<Pixels>>,
+    typing_effects: TypingEffectsState,
     gutter_dimensions: GutterDimensions,
     style: Option<EditorStyle>,
     text_style_refinement: Option<TextStyleRefinement>,
@@ -2482,6 +2485,7 @@ impl Editor {
             inline_value_cache: InlineValueCache::new(inlay_hint_settings.show_value_hints),
             gutter_hovered: false,
             pixel_position_of_newest_cursor: None,
+            typing_effects: TypingEffectsState::default(),
             last_bounds: None,
             last_position_map: None,
             expect_bounds_change: None,
@@ -2654,6 +2658,7 @@ impl Editor {
                     let vim_mode = vim_mode_setting::VimModeSetting::try_get(cx)
                         .map(|vim_mode| vim_mode.0)
                         .unwrap_or(false);
+                    editor.typing_effects.queue_burst();
                     if !vim_mode {
                         let display_map = editor.display_snapshot(cx);
                         let selections = editor.selections.all_adjusted_display(&display_map);

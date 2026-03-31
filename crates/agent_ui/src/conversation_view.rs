@@ -1423,7 +1423,6 @@ impl ConversationView {
                     available_commands.push(acp::AvailableCommand::new("logout", "Authenticate"));
                 }
 
-                let has_commands = !available_commands.is_empty();
                 if let Some(active) = self.active_thread() {
                     active.update(cx, |active, _cx| {
                         active
@@ -1433,19 +1432,9 @@ impl ConversationView {
                     });
                 }
 
-                let agent_display_name = self
-                    .agent_server_store
-                    .read(cx)
-                    .agent_display_name(&self.agent.agent_id())
-                    .unwrap_or_else(|| self.agent.agent_id().0.to_string().into());
-
                 if let Some(active) = self.active_thread() {
-                    let new_placeholder =
-                        placeholder_text(agent_display_name.as_ref(), has_commands);
                     active.update(cx, |active, cx| {
-                        active.message_editor.update(cx, |editor, cx| {
-                            editor.set_placeholder_text(&new_placeholder, window, cx);
-                        });
+                        active.sync_message_editor_placeholder(window, cx);
                     });
                 }
             }

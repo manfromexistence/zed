@@ -196,6 +196,12 @@
 - [x] Add provider category, model-count, context-window, and capability metadata to the real model picker and AI settings panel
 - [x] Add collapsible provider groups with per-provider model-count badges to the real AI model picker popover
 - [ ] Validate the provider hub, presets, and model discovery flow with `just run`
+
+### AI Composer and Editor Effects
+- [x] Redesign the real AI composer with a VS Code Copilot and Codex-inspired shell, top quick actions, and bottom control rail
+- [x] Add a responsive media mode switcher with overflow handling for text, audio, video, 3D, live, AR, VR, PDF, and chart workflows
+- [x] Add a rainbow animated caret to the real Zed editor paint path
+- [x] Add cycle-based typing particle effects inspired by the VS Code power-mode extension
 ## Current Sprint
 
 **Active Phase:** Phase 6 - Screen Carousel  
@@ -255,9 +261,9 @@
 
 ## Completion Metrics
 
-**Total Tasks:** 60 / 106+  
+**Total Tasks:** 64 / 110+  
 **Phases Completed:** 2 / 10  
-**Overall Progress:** 57%
+**Overall Progress:** 58%
 
 **Estimated Total Time:** 45-55 hours  
 **Time Spent:** 2.75 hours  

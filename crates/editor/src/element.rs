@@ -47,8 +47,8 @@ use gpui::{
     MouseMoveEvent, MousePressureEvent, MouseUpEvent, PaintQuad, ParentElement, Pixels,
     PressureStage, ScrollDelta, ScrollHandle, ScrollWheelEvent, ShapedLine, SharedString, Size,
     StatefulInteractiveElement, Style, Styled, StyledText, TextAlign, TextRun, TextStyleRefinement,
-    WeakEntity, Window, anchored, deferred, div, fill, linear_color_stop, linear_gradient, outline,
-    pattern_slash, point, px, quad, relative, size, solid_background, transparent_black,
+    WeakEntity, Window, anchored, deferred, div, fill, hsla, linear_color_stop, linear_gradient,
+    outline, pattern_slash, point, px, quad, relative, size, solid_background, transparent_black,
 };
 use itertools::Itertools;
 use language::{HighlightedText, IndentGuideSettings, language_settings::ShowWhitespaceSetting};
@@ -79,7 +79,7 @@ use std::{
     path::{self, Path},
     rc::Rc,
     sync::Arc,
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 use sum_tree::Bias;
 use text::{BufferId, SelectionGoal};
@@ -1942,6 +1942,7 @@ impl EditorElement {
                         line_height,
                         shape: selection.cursor_shape,
                         block_text,
+                        animate_rainbow: selection.is_local && selection.is_newest,
                         cursor_name: None,
                     };
                     let cursor_name = selection.user_name.clone().map(|name| CursorName {
@@ -6827,8 +6828,34 @@ impl EditorElement {
     }
 
     fn paint_cursors(&mut self, layout: &mut EditorLayout, window: &mut Window, cx: &mut App) {
+        let now = Instant::now();
+        let particle_layouts = self.editor.update(cx, |editor, _cx| {
+            if editor.typing_effects.has_pending_bursts()
+                && let Some(origin) = editor.pixel_position_of_newest_cursor
+            {
+                editor.typing_effects.spawn_pending(origin, now);
+            }
+
+            editor.typing_effects.layout_particles(now)
+        });
+        let has_rainbow_cursor = layout
+            .visible_cursors
+            .iter()
+            .any(CursorLayout::animate_rainbow);
+
         for cursor in &mut layout.visible_cursors {
             cursor.paint(layout.content_origin, window, cx);
+        }
+
+        for particle in particle_layouts.iter() {
+            let bounds = Bounds::new(particle.origin, size(particle.size, particle.size));
+            window.paint_quad(
+                fill(bounds, particle.color).corner_radii(Corners::all(particle.size / 2.0)),
+            );
+        }
+
+        if has_rainbow_cursor || !particle_layouts.is_empty() {
+            window.request_animation_frame();
         }
     }
 
@@ -12040,6 +12067,7 @@ pub struct CursorLayout {
     color: Hsla,
     shape: CursorShape,
     block_text: Option<ShapedLine>,
+    animate_rainbow: bool,
     cursor_name: Option<AnyElement>,
 }
 
@@ -12066,6 +12094,7 @@ impl CursorLayout {
             color,
             shape,
             block_text,
+            animate_rainbow: false,
             cursor_name: None,
         }
     }
@@ -12139,18 +12168,49 @@ impl CursorLayout {
     pub fn paint(&mut self, origin: gpui::Point<Pixels>, window: &mut Window, cx: &mut App) {
         let bounds = self.bounds(origin);
 
-        //Draw background or border quad
-        let cursor = if matches!(self.shape, CursorShape::Hollow) {
-            outline(bounds, self.color, BorderStyle::Solid)
-        } else {
-            fill(bounds, self.color)
-        };
-
         if let Some(name) = &mut self.cursor_name {
             name.paint(window, cx);
         }
 
-        window.paint_quad(cursor);
+        if self.animate_rainbow && !matches!(self.shape, CursorShape::Hollow) {
+            let elapsed = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|duration| duration.as_secs_f32())
+                .unwrap_or_default();
+            let stripe_count = match self.shape {
+                CursorShape::Underline => 4,
+                CursorShape::Bar => 5,
+                CursorShape::Block => 6,
+                CursorShape::Hollow => 1,
+            };
+
+            for stripe_ix in 0..stripe_count {
+                let stripe_ratio = stripe_ix as f32 / stripe_count as f32;
+                let stripe_top = bounds.top() + bounds.size.height * stripe_ratio;
+                let stripe_bottom =
+                    bounds.top() + bounds.size.height * ((stripe_ix + 1) as f32 / stripe_count as f32);
+                let stripe_bounds = Bounds::from_corners(
+                    point(bounds.left(), stripe_top),
+                    point(bounds.right(), stripe_bottom),
+                );
+                let hue = (elapsed * 0.18
+                    + stripe_ratio * 0.24
+                    + (self.origin.x.0 as f32 / 320.0))
+                    % 1.0;
+                window.paint_quad(fill(
+                    stripe_bounds,
+                    hsla(hue, 0.86, 0.62, 1.0),
+                ));
+            }
+        } else {
+            let cursor = if matches!(self.shape, CursorShape::Hollow) {
+                outline(bounds, self.color, BorderStyle::Solid)
+            } else {
+                fill(bounds, self.color)
+            };
+
+            window.paint_quad(cursor);
+        }
 
         if let Some(block_text) = &self.block_text {
             block_text
@@ -12168,6 +12228,10 @@ impl CursorLayout {
 
     pub fn shape(&self) -> CursorShape {
         self.shape
+    }
+
+    pub fn animate_rainbow(&self) -> bool {
+        self.animate_rainbow
     }
 }
 
