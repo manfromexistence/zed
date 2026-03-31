@@ -19254,6 +19254,212 @@ fn test_highlighted_ranges(cx: &mut TestAppContext) {
 }
 
 #[gpui::test]
+async fn test_copy_highlight_json(cx: &mut TestAppContext) {
+    init_test(cx, |_| {});
+
+    let mut cx = EditorTestContext::new(cx).await;
+    cx.set_state(indoc! {"
+        fn main() {
+            let x = 1;ˇ
+        }
+    "});
+    setup_rust_syntax_highlighting(&mut cx);
+
+    cx.update_editor(|editor, window, cx| {
+        editor.copy_highlight_json(&CopyHighlightJson, window, cx);
+    });
+
+    let clipboard_json: serde_json::Value =
+        serde_json::from_str(&cx.read_from_clipboard().unwrap().text().unwrap()).unwrap();
+    assert_eq!(
+        clipboard_json,
+        json!([
+            [
+                {"text": "fn", "highlight": "keyword"},
+                {"text": " ", "highlight": null},
+                {"text": "main", "highlight": "function"},
+                {"text": "()", "highlight": "punctuation.bracket"},
+                {"text": " ", "highlight": null},
+                {"text": "{", "highlight": "punctuation.bracket"},
+            ],
+            [
+                {"text": "    ", "highlight": null},
+                {"text": "let", "highlight": "keyword"},
+                {"text": " ", "highlight": null},
+                {"text": "x", "highlight": "variable"},
+                {"text": " ", "highlight": null},
+                {"text": "=", "highlight": "operator"},
+                {"text": " ", "highlight": null},
+                {"text": "1", "highlight": "number"},
+                {"text": ";", "highlight": "punctuation.delimiter"},
+            ],
+            [
+                {"text": "}", "highlight": "punctuation.bracket"},
+            ],
+        ])
+    );
+}
+
+#[gpui::test]
+async fn test_copy_highlight_json_selected_range(cx: &mut TestAppContext) {
+    init_test(cx, |_| {});
+
+    let mut cx = EditorTestContext::new(cx).await;
+    cx.set_state(indoc! {"
+        fn main() {
+            «let x = 1;
+            let yˇ» = 2;
+        }
+    "});
+    setup_rust_syntax_highlighting(&mut cx);
+
+    cx.update_editor(|editor, window, cx| {
+        editor.copy_highlight_json(&CopyHighlightJson, window, cx);
+    });
+
+    let clipboard_json: serde_json::Value =
+        serde_json::from_str(&cx.read_from_clipboard().unwrap().text().unwrap()).unwrap();
+    assert_eq!(
+        clipboard_json,
+        json!([
+            [
+                {"text": "let", "highlight": "keyword"},
+                {"text": " ", "highlight": null},
+                {"text": "x", "highlight": "variable"},
+                {"text": " ", "highlight": null},
+                {"text": "=", "highlight": "operator"},
+                {"text": " ", "highlight": null},
+                {"text": "1", "highlight": "number"},
+                {"text": ";", "highlight": "punctuation.delimiter"},
+            ],
+            [
+                {"text": "    ", "highlight": null},
+                {"text": "let", "highlight": "keyword"},
+                {"text": " ", "highlight": null},
+                {"text": "y", "highlight": "variable"},
+            ],
+        ])
+    );
+}
+
+#[gpui::test]
+async fn test_copy_highlight_json_selected_line_range(cx: &mut TestAppContext) {
+    init_test(cx, |_| {});
+
+    let mut cx = EditorTestContext::new(cx).await;
+
+    cx.set_state(indoc! {"
+        fn main() {
+            «let x = 1;
+            let yˇ» = 2;
+        }
+    "});
+    setup_rust_syntax_highlighting(&mut cx);
+
+    cx.update_editor(|editor, window, cx| {
+        editor.selections.set_line_mode(true);
+        editor.copy_highlight_json(&CopyHighlightJson, window, cx);
+    });
+
+    let clipboard_json: serde_json::Value =
+        serde_json::from_str(&cx.read_from_clipboard().unwrap().text().unwrap()).unwrap();
+    assert_eq!(
+        clipboard_json,
+        json!([
+            [
+                {"text": "    ", "highlight": null},
+                {"text": "let", "highlight": "keyword"},
+                {"text": " ", "highlight": null},
+                {"text": "x", "highlight": "variable"},
+                {"text": " ", "highlight": null},
+                {"text": "=", "highlight": "operator"},
+                {"text": " ", "highlight": null},
+                {"text": "1", "highlight": "number"},
+                {"text": ";", "highlight": "punctuation.delimiter"},
+            ],
+            [
+                {"text": "    ", "highlight": null},
+                {"text": "let", "highlight": "keyword"},
+                {"text": " ", "highlight": null},
+                {"text": "y", "highlight": "variable"},
+                {"text": " ", "highlight": null},
+                {"text": "=", "highlight": "operator"},
+                {"text": " ", "highlight": null},
+                {"text": "2", "highlight": "number"},
+                {"text": ";", "highlight": "punctuation.delimiter"},
+            ],
+        ])
+    );
+}
+
+#[gpui::test]
+async fn test_copy_highlight_json_single_line(cx: &mut TestAppContext) {
+    init_test(cx, |_| {});
+
+    let mut cx = EditorTestContext::new(cx).await;
+
+    cx.set_state(indoc! {"
+        fn main() {
+            let ˇx = 1;
+            let y = 2;
+        }
+    "});
+    setup_rust_syntax_highlighting(&mut cx);
+
+    cx.update_editor(|editor, window, cx| {
+        editor.selections.set_line_mode(true);
+        editor.copy_highlight_json(&CopyHighlightJson, window, cx);
+    });
+
+    let clipboard_json: serde_json::Value =
+        serde_json::from_str(&cx.read_from_clipboard().unwrap().text().unwrap()).unwrap();
+    assert_eq!(
+        clipboard_json,
+        json!([
+            [
+                {"text": "    ", "highlight": null},
+                {"text": "let", "highlight": "keyword"},
+                {"text": " ", "highlight": null},
+                {"text": "x", "highlight": "variable"},
+                {"text": " ", "highlight": null},
+                {"text": "=", "highlight": "operator"},
+                {"text": " ", "highlight": null},
+                {"text": "1", "highlight": "number"},
+                {"text": ";", "highlight": "punctuation.delimiter"},
+            ]
+        ])
+    );
+}
+
+fn setup_rust_syntax_highlighting(cx: &mut EditorTestContext) {
+    let syntax = SyntaxTheme::new_test(vec![
+        ("keyword", Hsla::red()),
+        ("function", Hsla::blue()),
+        ("variable", Hsla::green()),
+        ("number", Hsla::default()),
+        ("operator", Hsla::default()),
+        ("punctuation.bracket", Hsla::default()),
+        ("punctuation.delimiter", Hsla::default()),
+    ]);
+
+    let language = rust_lang();
+    language.set_theme(&syntax);
+
+    cx.update_buffer(|buffer, cx| buffer.set_language(Some(language), cx));
+    cx.executor().run_until_parked();
+    cx.update_editor(|editor, window, cx| {
+        editor.set_style(
+            EditorStyle {
+                syntax: Arc::new(syntax),
+                ..Default::default()
+            },
+            window,
+            cx,
+        );
+    });
+}
+
+#[gpui::test]
 async fn test_following(cx: &mut TestAppContext) {
     init_test(cx, |_| {});
 
@@ -21861,6 +22067,165 @@ async fn test_document_format_with_prettier_explicit_language(cx: &mut TestAppCo
             + prettier_format_suffix
             + "\ntypescript",
         "Autoformatting (via test prettier) was not applied to the original buffer text",
+    );
+}
+
+#[gpui::test]
+async fn test_range_format_with_prettier(cx: &mut TestAppContext) {
+    init_test(cx, |settings| {
+        settings.defaults.formatter = Some(FormatterList::Single(Formatter::Prettier))
+    });
+
+    let fs = FakeFs::new(cx.executor());
+    fs.insert_file(path!("/file.ts"), Default::default()).await;
+
+    let project = Project::test(fs, [path!("/file.ts").as_ref()], cx).await;
+    let language_registry = project.read_with(cx, |project, _| project.languages().clone());
+
+    language_registry.add(Arc::new(Language::new(
+        LanguageConfig {
+            name: "TypeScript".into(),
+            matcher: LanguageMatcher {
+                path_suffixes: vec!["ts".to_string()],
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        Some(tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into()),
+    )));
+    update_test_language_settings(cx, &|settings| {
+        settings.defaults.prettier.get_or_insert_default().allowed = Some(true);
+    });
+
+    let test_plugin = "test_plugin";
+    let _ = language_registry.register_fake_lsp(
+        "TypeScript",
+        FakeLspAdapter {
+            prettier_plugins: vec![test_plugin],
+            ..Default::default()
+        },
+    );
+
+    let prettier_range_format_suffix = project::TEST_PRETTIER_RANGE_FORMAT_SUFFIX;
+    let buffer = project
+        .update(cx, |project, cx| {
+            project.open_local_buffer(path!("/file.ts"), cx)
+        })
+        .await
+        .unwrap();
+
+    let buffer_text = "one\ntwo\nthree\nfour\nfive\n";
+    let buffer = cx.new(|cx| MultiBuffer::singleton(buffer, cx));
+    let (editor, cx) = cx.add_window_view(|window, cx| {
+        build_editor_with_project(project.clone(), buffer, window, cx)
+    });
+    editor.update_in(cx, |editor, window, cx| {
+        editor.set_text(buffer_text, window, cx)
+    });
+
+    cx.executor().run_until_parked();
+
+    editor.update_in(cx, |editor, window, cx| {
+        editor.change_selections(SelectionEffects::default(), window, cx, |s| {
+            s.select_ranges([Point::new(1, 0)..Point::new(3, 0)])
+        });
+    });
+
+    let format = editor
+        .update_in(cx, |editor, window, cx| {
+            editor.format_selections(&FormatSelections, window, cx)
+        })
+        .unwrap();
+    format.await.unwrap();
+
+    assert_eq!(
+        editor.update(cx, |editor, cx| editor.text(cx)),
+        format!("one\ntwo{prettier_range_format_suffix}\nthree\nfour\nfive\n"),
+        "Range formatting (via test prettier) was not applied to the buffer text",
+    );
+}
+
+#[gpui::test]
+async fn test_range_format_with_prettier_explicit_language(cx: &mut TestAppContext) {
+    init_test(cx, |settings| {
+        settings.defaults.formatter = Some(FormatterList::Single(Formatter::Prettier))
+    });
+
+    let fs = FakeFs::new(cx.executor());
+    fs.insert_file(path!("/file.settings"), Default::default())
+        .await;
+
+    let project = Project::test(fs, [path!("/file.settings").as_ref()], cx).await;
+    let language_registry = project.read_with(cx, |project, _| project.languages().clone());
+
+    let ts_lang = Arc::new(Language::new(
+        LanguageConfig {
+            name: "TypeScript".into(),
+            matcher: LanguageMatcher {
+                path_suffixes: vec!["ts".to_string()],
+                ..LanguageMatcher::default()
+            },
+            prettier_parser_name: Some("typescript".to_string()),
+            ..LanguageConfig::default()
+        },
+        Some(tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into()),
+    ));
+
+    language_registry.add(ts_lang.clone());
+
+    update_test_language_settings(cx, &|settings| {
+        settings.defaults.prettier.get_or_insert_default().allowed = Some(true);
+    });
+
+    let test_plugin = "test_plugin";
+    let _ = language_registry.register_fake_lsp(
+        "TypeScript",
+        FakeLspAdapter {
+            prettier_plugins: vec![test_plugin],
+            ..Default::default()
+        },
+    );
+
+    let prettier_range_format_suffix = project::TEST_PRETTIER_RANGE_FORMAT_SUFFIX;
+    let buffer = project
+        .update(cx, |project, cx| {
+            project.open_local_buffer(path!("/file.settings"), cx)
+        })
+        .await
+        .unwrap();
+
+    project.update(cx, |project, cx| {
+        project.set_language_for_buffer(&buffer, ts_lang, cx)
+    });
+
+    let buffer_text = "one\ntwo\nthree\nfour\nfive\n";
+    let buffer = cx.new(|cx| MultiBuffer::singleton(buffer, cx));
+    let (editor, cx) = cx.add_window_view(|window, cx| {
+        build_editor_with_project(project.clone(), buffer, window, cx)
+    });
+    editor.update_in(cx, |editor, window, cx| {
+        editor.set_text(buffer_text, window, cx)
+    });
+
+    cx.executor().run_until_parked();
+
+    editor.update_in(cx, |editor, window, cx| {
+        editor.change_selections(SelectionEffects::default(), window, cx, |s| {
+            s.select_ranges([Point::new(1, 0)..Point::new(3, 0)])
+        });
+    });
+
+    let format = editor
+        .update_in(cx, |editor, window, cx| {
+            editor.format_selections(&FormatSelections, window, cx)
+        })
+        .unwrap();
+    format.await.unwrap();
+
+    assert_eq!(
+        editor.update(cx, |editor, cx| editor.text(cx)),
+        format!("one\ntwo{prettier_range_format_suffix}\ntypescript\nthree\nfour\nfive\n"),
+        "Range formatting (via test prettier) was not applied with explicit language",
     );
 }
 

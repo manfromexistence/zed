@@ -202,7 +202,8 @@ impl Conversation {
                 | AcpThreadEvent::Refusal
                 | AcpThreadEvent::AvailableCommandsUpdated(_)
                 | AcpThreadEvent::ModeUpdated(_)
-                | AcpThreadEvent::ConfigOptionsUpdated(_) => {}
+                | AcpThreadEvent::ConfigOptionsUpdated(_)
+                | AcpThreadEvent::WorkingDirectoriesUpdated => {}
             }
         });
         self.subscriptions.push(subscription);
@@ -292,6 +293,14 @@ impl Conversation {
             thread.authorize_tool_call(tool_call_id, outcome, cx);
         });
         cx.notify();
+    }
+
+    fn set_work_dirs(&mut self, work_dirs: PathList, cx: &mut Context<Self>) {
+        for thread in self.threads.values() {
+            thread.update(cx, |thread, cx| {
+                thread.set_work_dirs(work_dirs.clone(), cx);
+            });
+        }
     }
 }
 
@@ -401,6 +410,14 @@ impl ConversationView {
         cx.emit(AcpServerViewEvent::ActiveThreadChanged);
         cx.notify();
     }
+
+    pub fn set_work_dirs(&mut self, work_dirs: PathList, cx: &mut Context<Self>) {
+        if let Some(connected) = self.as_connected() {
+            connected.conversation.update(cx, |conversation, cx| {
+                conversation.set_work_dirs(work_dirs.clone(), cx);
+            });
+        }
+    }
 }
 
 enum ServerState {
@@ -417,7 +434,7 @@ enum ServerState {
 pub struct ConnectedServerState {
     auth_state: AuthState,
     active_id: Option<acp::SessionId>,
-    threads: HashMap<acp::SessionId, Entity<ThreadView>>,
+    pub(crate) threads: HashMap<acp::SessionId, Entity<ThreadView>>,
     connection: Rc<dyn AgentConnection>,
     history: Option<Entity<ThreadHistory>>,
     conversation: Entity<Conversation>,
@@ -1457,6 +1474,9 @@ impl ConversationView {
                 // The watch task in ConfigOptionsView handles rebuilding selectors
                 cx.notify();
             }
+            AcpThreadEvent::WorkingDirectoriesUpdated => {
+                cx.notify();
+            }
         }
         cx.notify();
     }
@@ -2413,7 +2433,7 @@ impl ConversationView {
                                     .update(cx, |multi_workspace, window, cx| {
                                         window.activate_window();
                                         if let Some(workspace) = workspace_handle.upgrade() {
-                                            multi_workspace.activate(workspace.clone(), cx);
+                                            multi_workspace.activate(workspace.clone(), window, cx);
                                             workspace.update(cx, |workspace, cx| {
                                                 workspace.focus_panel::<AgentPanel>(window, cx);
                                             });
@@ -2499,22 +2519,6 @@ impl ConversationView {
             active_thread.update(cx, |thread, cx| {
                 thread.active_editor(cx).update(cx, |editor, cx| {
                     editor.insert_selections(window, cx);
-                })
-            });
-        }
-    }
-
-    /// Inserts terminal text as a crease into the message editor.
-    pub(crate) fn insert_terminal_text(
-        &self,
-        text: String,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        if let Some(active_thread) = self.active_thread() {
-            active_thread.update(cx, |thread, cx| {
-                thread.message_editor.update(cx, |editor, cx| {
-                    editor.insert_terminal_crease(text, window, cx);
                 })
             });
         }
@@ -2731,7 +2735,6 @@ pub(crate) mod tests {
     use action_log::ActionLog;
     use agent::{AgentTool, EditFileTool, FetchTool, TerminalTool, ToolPermissionContext};
     use agent_client_protocol::SessionId;
-    use assistant_text_thread::TextThreadStore;
     use editor::MultiBufferOffset;
     use fs::FakeFs;
     use gpui::{EventEmitter, TestAppContext, VisualTestContext};
@@ -3289,10 +3292,7 @@ pub(crate) mod tests {
         let cx = &mut VisualTestContext::from_window(multi_workspace_handle.into(), cx);
 
         workspace1.update_in(cx, |workspace, window, cx| {
-            let text_thread_store =
-                cx.new(|cx| TextThreadStore::fake(workspace.project().clone(), cx));
-            let panel =
-                cx.new(|cx| crate::AgentPanel::new(workspace, text_thread_store, None, window, cx));
+            let panel = cx.new(|cx| crate::AgentPanel::new(workspace, None, window, cx));
             workspace.add_panel(panel, window, cx);
 
             // Open the dock and activate the agent panel so it's visible

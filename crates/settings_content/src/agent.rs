@@ -51,12 +51,10 @@ pub enum NewThreadLocation {
 #[serde(rename_all = "snake_case")]
 pub enum SidebarDockPosition {
     /// Always show the sidebar on the left side.
+    #[default]
     Left,
     /// Always show the sidebar on the right side.
     Right,
-    /// Show the sidebar on the same side as the agent panel.
-    #[default]
-    FollowAgent,
 }
 
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq)]
@@ -115,7 +113,7 @@ pub struct AgentSettingsContent {
     pub flexible: Option<bool>,
     /// Where to position the sidebar.
     ///
-    /// Default: follow_agent
+    /// Default: left
     pub sidebar_side: Option<SidebarDockPosition>,
     /// Default width in pixels when the agent panel is docked to the left or right.
     ///
@@ -148,10 +146,6 @@ pub struct AgentSettingsContent {
     ///
     /// Default: write
     pub default_profile: Option<Arc<str>>,
-    /// Which view type to show by default in the agent panel.
-    ///
-    /// Default: "thread"
-    pub default_view: Option<DefaultAgentView>,
     /// Where new threads should start by default.
     ///
     /// Default: "local_project"
@@ -327,14 +321,6 @@ pub struct AgentProfileContent {
 #[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize, JsonSchema, MergeFrom)]
 pub struct ContextServerPresetContent {
     pub tools: IndexMap<Arc<str>, bool>,
-}
-
-#[derive(Copy, Clone, Default, Debug, PartialEq, Serialize, Deserialize, JsonSchema, MergeFrom)]
-#[serde(rename_all = "snake_case")]
-pub enum DefaultAgentView {
-    #[default]
-    Thread,
-    TextThread,
 }
 
 #[derive(
