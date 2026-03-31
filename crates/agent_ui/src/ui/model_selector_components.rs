@@ -84,40 +84,35 @@ impl ModelSelectorProviderHeader {
 impl RenderOnce for ModelSelectorProviderHeader {
     fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
         let disclosure_toggle = self.on_toggle.clone();
-        let row_toggle = self.on_toggle.clone();
 
         ListItem::new(("provider-group", self.index))
             .inset(true)
             .spacing(ListItemSpacing::Sparse)
+            .when_some(self.on_toggle.clone(), |this, on_toggle| {
+                this.on_click(move |event, window, cx| {
+                    on_toggle(event, window, cx);
+                })
+            })
             .child(
                 h_flex()
                     .w_full()
                     .justify_between()
                     .gap_2()
                     .child(
-                        div()
-                            .flex_1()
-                            .on_click(move |event, window, cx| {
-                                if let Some(on_toggle) = &row_toggle {
-                                    on_toggle(event, window, cx);
-                                }
-                            })
-                            .child(
-                                Label::new(self.title)
-                                    .size(LabelSize::Small)
-                                    .color(Color::Muted),
-                            ),
+                        div().flex_1().child(
+                            Label::new(self.title)
+                                .size(LabelSize::Small)
+                                .color(Color::Muted),
+                        ),
                     )
                     .child(
                         h_flex()
                             .gap_1()
                             .items_center()
                             .child(
-                                Chip::new(self.model_count.to_string())
-                                    .tooltip(Tooltip::text(format!(
-                                        "{} models in this provider",
-                                        self.model_count
-                                    ))),
+                                Chip::new(self.model_count.to_string()).tooltip(Tooltip::text(
+                                    format!("{} models in this provider", self.model_count),
+                                )),
                             )
                             .child(
                                 Disclosure::new(
@@ -260,8 +255,7 @@ impl RenderOnce for ModelSelectorListItem {
                     })
                     .when_some(self.context_info, |this, context_info| {
                         this.child(
-                            Chip::new(context_info)
-                                .tooltip(Tooltip::text("Model context window")),
+                            Chip::new(context_info).tooltip(Tooltip::text("Model context window")),
                         )
                     })
                     .children(

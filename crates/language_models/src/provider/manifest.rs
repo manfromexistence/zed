@@ -77,9 +77,12 @@ impl ManifestLanguageModelProvider {
                 AuthStrategy::ApiKey { env_var, .. } => Some(ApiKeyState::new(
                     SharedString::new(manifest.api_base.as_str()),
                     EnvVar::new(
-                        env_var.clone().unwrap_or_else(|| {
-                            AuthStrategy::default_env_var_for_provider(&manifest.id)
-                        }),
+                        env_var
+                            .clone()
+                            .unwrap_or_else(|| {
+                                AuthStrategy::default_env_var_for_provider(&manifest.id)
+                            })
+                            .into(),
                     ),
                 )),
                 _ => None,
@@ -229,7 +232,9 @@ impl ManifestLanguageModel {
     > {
         let http_client = self.http_client.clone();
         let provider_name = self.provider_name.clone();
-        let api_base = self.state.read_with(cx, |state, _| state.manifest.api_base.clone());
+        let api_base = self
+            .state
+            .read_with(cx, |state, _| state.manifest.api_base.clone());
         let api_key = self.auth_key(cx);
         let future = self.request_limiter.stream(async move {
             let Some(api_key) = api_key else {
@@ -258,7 +263,9 @@ impl ManifestLanguageModel {
     {
         let http_client = self.http_client.clone();
         let provider_name = self.provider_name.clone();
-        let api_base = self.state.read_with(cx, |state, _| state.manifest.api_base.clone());
+        let api_base = self
+            .state
+            .read_with(cx, |state, _| state.manifest.api_base.clone());
         let api_key = self.auth_key(cx);
         let future = self.request_limiter.stream(async move {
             let Some(api_key) = api_key else {
@@ -542,16 +549,12 @@ impl Render for ConfigurationView {
                         .min_w_0()
                         .gap_1()
                         .child(Icon::new(IconName::Check).color(Color::Success))
-                        .child(
-                            div()
-                                .w_full()
-                                .overflow_x_hidden()
-                                .text_ellipsis()
-                                .child(Label::new(format!(
-                                    "API key configured for {} at {}",
-                                    state.manifest.display_name, state.manifest.api_base
-                                ))),
-                        ),
+                        .child(div().w_full().overflow_x_hidden().text_ellipsis().child(
+                            Label::new(format!(
+                                "API key configured for {} at {}",
+                                state.manifest.display_name, state.manifest.api_base
+                            )),
+                        )),
                 )
                 .child(
                     Button::new("reset-api-key", "Reset API Key")
@@ -562,7 +565,9 @@ impl Render for ConfigurationView {
                             "Reset the stored API key for {}",
                             state.manifest.display_name
                         )))
-                        .on_click(cx.listener(|this, _, window, cx| this.reset_api_key(window, cx))),
+                        .on_click(
+                            cx.listener(|this, _, window, cx| this.reset_api_key(window, cx)),
+                        ),
                 )
                 .into_any()
         };

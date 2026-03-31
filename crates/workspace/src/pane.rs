@@ -20,9 +20,8 @@ use gpui::{
     Action, AnyElement, App, AsyncWindowContext, Bounds, ClickEvent, ClipboardItem, Context,
     Corner, Div, DragMoveEvent, Entity, EntityId, EventEmitter, ExternalPaths, FocusHandle,
     FocusOutEvent, Focusable, KeyContext, MouseButton, MouseMoveEvent, MouseUpEvent,
-    NavigationDirection, Pixels, Point, PromptLevel, Render, ScrollHandle,
-    Subscription, Task, WeakEntity, WeakFocusHandle, Window, actions, anchored, canvas, deferred,
-    prelude::*,
+    NavigationDirection, Pixels, Point, PromptLevel, Render, ScrollHandle, Subscription, Task,
+    WeakEntity, WeakFocusHandle, Window, actions, anchored, canvas, deferred, prelude::*,
 };
 use itertools::Itertools;
 use language::{Capability, DiagnosticSeverity};
@@ -1599,8 +1598,8 @@ impl Pane {
             start_position: position,
             start_width,
         });
-        self.carousel_motion
-            .snap(self.carousel_target_offset(item_id, container_width));
+        let target_offset = self.carousel_target_offset(item_id, container_width);
+        self.carousel_motion.snap(target_offset);
         cx.notify();
     }
 
@@ -1628,8 +1627,8 @@ impl Pane {
             CarouselResizeEdge::Right => state.used_right_edge = true,
         }
 
-        self.carousel_motion
-            .snap(self.carousel_target_offset(resize.item_id, container_width));
+        let target_offset = self.carousel_target_offset(resize.item_id, container_width);
+        self.carousel_motion.snap(target_offset);
         cx.notify();
     }
 
@@ -1839,19 +1838,22 @@ impl Pane {
             Self::pixels_to_f32(container_width - active_width) > Self::pixels_to_f32(gap);
         let gravity = self.carousel_gravity(active_item_id);
 
-        let previous_index =
-            (self.items.len() > 1 && reveal_neighbors && matches!(gravity, CarouselGravity::Left | CarouselGravity::Both))
-                .then(|| self.wrap_item_index(self.active_item_index as isize - 1));
-        let mut next_index =
-            (self.items.len() > 1 && reveal_neighbors && matches!(gravity, CarouselGravity::Right | CarouselGravity::Both))
-                .then(|| self.wrap_item_index(self.active_item_index as isize + 1));
+        let previous_index = (self.items.len() > 1
+            && reveal_neighbors
+            && matches!(gravity, CarouselGravity::Left | CarouselGravity::Both))
+        .then(|| self.wrap_item_index(self.active_item_index as isize - 1));
+        let mut next_index = (self.items.len() > 1
+            && reveal_neighbors
+            && matches!(gravity, CarouselGravity::Right | CarouselGravity::Both))
+        .then(|| self.wrap_item_index(self.active_item_index as isize + 1));
 
         if previous_index.is_some() && previous_index == next_index {
             next_index = None;
         }
         let previous_width =
             previous_index.and_then(|ix| self.carousel_width_for_index(ix, container_width));
-        let next_width = next_index.and_then(|ix| self.carousel_width_for_index(ix, container_width));
+        let next_width =
+            next_index.and_then(|ix| self.carousel_width_for_index(ix, container_width));
 
         let previous_left = current_offset - Self::pixels_to_f32(container_width + gap);
         let next_left = current_offset + Self::pixels_to_f32(active_width + gap);
@@ -4124,17 +4126,18 @@ impl Pane {
                     .items_center()
                     .justify_center()
                     .child(
-                        div()
-                            .size(px(8.))
-                            .rounded_full()
-                            .bg(cx.theme().colors().element_selected.opacity(0.22)),
+                        div().size(px(8.)).rounded_full().bg(cx
+                            .theme()
+                            .colors()
+                            .element_selected
+                            .opacity(0.22)),
                     )
                     .child(
-                        div()
-                            .w(px(2.))
-                            .h(px(18.))
-                            .rounded_full()
-                            .bg(cx.theme().colors().element_selected.opacity(0.22)),
+                        div().w(px(2.)).h(px(18.)).rounded_full().bg(cx
+                            .theme()
+                            .colors()
+                            .element_selected
+                            .opacity(0.22)),
                     ),
             )
             .drag_over::<DraggedTab>(|bar, _, _, cx| {
@@ -4193,17 +4196,18 @@ impl Pane {
                     .items_center()
                     .justify_center()
                     .child(
-                        div()
-                            .size(px(8.))
-                            .rounded_full()
-                            .bg(cx.theme().colors().element_selected.opacity(0.22)),
+                        div().size(px(8.)).rounded_full().bg(cx
+                            .theme()
+                            .colors()
+                            .element_selected
+                            .opacity(0.22)),
                     )
                     .child(
-                        div()
-                            .w(px(2.))
-                            .h(px(18.))
-                            .rounded_full()
-                            .bg(cx.theme().colors().element_selected.opacity(0.22)),
+                        div().w(px(2.)).h(px(18.)).rounded_full().bg(cx
+                            .theme()
+                            .colors()
+                            .element_selected
+                            .opacity(0.22)),
                     ),
             )
             .drag_over::<DraggedTab>(|bar, _, _, cx| {

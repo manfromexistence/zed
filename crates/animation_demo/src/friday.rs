@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use gpui::{App, BoxShadow, Context, Render, Window, hsla, point, px};
+use gpui::{BoxShadow, Context, Render, Window, hsla, point, px};
 use ui::prelude::*;
 
 const SPAN_COUNT: usize = 25;
@@ -30,7 +30,6 @@ impl Render for FridayBorderPreview {
 
         let elapsed = self.started_at.elapsed().as_secs_f32();
         let t = elapsed % CYCLE_DURATION;
-        let entering = (t / SLIDE_DURATION).clamp(0.0, 1.0);
         let active_t = ((t - SLIDE_DURATION) / ACTIVE_DURATION).clamp(0.0, 1.0);
         let exiting = ((t - SLIDE_DURATION - ACTIVE_DURATION) / EXIT_DURATION).clamp(0.0, 1.0);
         let fade = if t < SLIDE_DURATION + ACTIVE_DURATION {
@@ -174,21 +173,17 @@ fn border_strip(shift: usize, angle: f32, opacity: f32, edge: Edge) -> impl Into
 
     if is_horizontal {
         base.child(
-            h_flex().size_full().children((0..SPAN_COUNT).map(move |ix| {
-                div()
-                    .flex_1()
-                    .h_full()
-                    .bg(linear_color(ix + shift, angle))
-            })),
+            h_flex().size_full().children(
+                (0..SPAN_COUNT)
+                    .map(move |ix| div().flex_1().h_full().bg(linear_color(ix + shift, angle))),
+            ),
         )
     } else {
         base.child(
-            v_flex().size_full().children((0..SPAN_COUNT).map(move |ix| {
-                div()
-                    .flex_1()
-                    .w_full()
-                    .bg(linear_color(ix + shift, angle))
-            })),
+            v_flex().size_full().children(
+                (0..SPAN_COUNT)
+                    .map(move |ix| div().flex_1().w_full().bg(linear_color(ix + shift, angle))),
+            ),
         )
     }
 }

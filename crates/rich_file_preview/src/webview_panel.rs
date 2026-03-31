@@ -1,4 +1,4 @@
-﻿use std::cell::RefCell;
+use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::time::Duration;
@@ -11,15 +11,13 @@ use gpui::{
     Action, App, Context, EventEmitter, FocusHandle, Focusable, Pixels, Render, Task, WeakEntity,
     Window, actions, canvas, px,
 };
-use raw_window_handle::HasWindowHandle;
 use ui::{Button, Color, IconButton, IconName, Label, prelude::*};
-use workspace::{DockPosition, Panel, PanelEvent, Workspace};
+use workspace::dock::{DockPosition, PanelEvent};
+use workspace::{Panel, Workspace};
 use wry::dpi::{LogicalPosition, LogicalSize};
 use wry::http::Request;
 use wry::{Rect, WebContext, WebView, WebViewBuilder};
 
-#[cfg(target_os = "windows")]
-use wry::WebViewBuilderExtWindows;
 #[cfg(any(
     target_os = "linux",
     target_os = "dragonfly",
@@ -28,10 +26,10 @@ use wry::WebViewBuilderExtWindows;
     target_os = "openbsd"
 ))]
 use wry::WebViewBuilderExtUnix;
+#[cfg(target_os = "windows")]
+use wry::WebViewBuilderExtWindows;
 
-use crate::browser_extensions::{
-    BrowserProfile, detect_browser_profiles, preferred_profile_index,
-};
+use crate::browser_extensions::{BrowserProfile, detect_browser_profiles, preferred_profile_index};
 use crate::web_inspector::{
     CapturedElement, INIT_SCRIPT, WebIpcMessage, apply_css_script, arm_inspector_script,
     cancel_inspector_script, clear_css_script,
@@ -101,7 +99,7 @@ impl WebViewHost {
             .with_devtools(true)
             .with_autoplay(true)
             .with_clipboard(true)
-            .with_url(initial_url)?
+            .with_url(initial_url)
             .with_initialization_script(INIT_SCRIPT)
             .with_ipc_handler(move |request: Request<String>| {
                 let _ = ipc_tx.send(request.body().clone());
@@ -148,11 +146,8 @@ impl WebViewHost {
                     f32::from(bounds.origin.y),
                 )
                 .into(),
-                size: LogicalSize::new(
-                    f32::from(bounds.size.width),
-                    f32::from(bounds.size.height),
-                )
-                .into(),
+                size: LogicalSize::new(f32::from(bounds.size.width), f32::from(bounds.size.height))
+                    .into(),
             };
             let _ = webview.set_bounds(rect);
         }
@@ -224,12 +219,14 @@ impl EmbeddedWebPreviewPanel {
             .register_action(|workspace, _: &ToggleEmbeddedWebPreview, window, cx| {
                 workspace.toggle_panel_focus::<EmbeddedWebPreviewPanel>(window, cx);
             })
-            .register_action(|workspace, _: &OpenEmbeddedWebPreviewDevTools, window, cx| {
-                if let Some(panel) = workspace.panel::<EmbeddedWebPreviewPanel>(cx) {
-                    workspace.focus_panel::<EmbeddedWebPreviewPanel>(window, cx);
-                    panel.update(cx, |panel, _| panel.open_devtools());
-                }
-            })
+            .register_action(
+                |workspace, _: &OpenEmbeddedWebPreviewDevTools, window, cx| {
+                    if let Some(panel) = workspace.panel::<EmbeddedWebPreviewPanel>(cx) {
+                        workspace.focus_panel::<EmbeddedWebPreviewPanel>(window, cx);
+                        panel.update(cx, |panel, _| panel.open_devtools());
+                    }
+                },
+            )
             .register_action(|workspace, _: &PickEmbeddedWebElement, window, cx| {
                 if let Some(panel) = workspace.panel::<EmbeddedWebPreviewPanel>(cx) {
                     workspace.focus_panel::<EmbeddedWebPreviewPanel>(window, cx);
@@ -248,12 +245,14 @@ impl EmbeddedWebPreviewPanel {
                     panel.update(cx, |panel, cx| panel.copy_latest_capture_to_ai(window, cx));
                 }
             })
-            .register_action(|workspace, _: &RefreshEmbeddedWebBrowserProfiles, window, cx| {
-                if let Some(panel) = workspace.panel::<EmbeddedWebPreviewPanel>(cx) {
-                    workspace.focus_panel::<EmbeddedWebPreviewPanel>(window, cx);
-                    panel.update(cx, |panel, cx| panel.refresh_browser_profiles(cx));
-                }
-            })
+            .register_action(
+                |workspace, _: &RefreshEmbeddedWebBrowserProfiles, window, cx| {
+                    if let Some(panel) = workspace.panel::<EmbeddedWebPreviewPanel>(cx) {
+                        workspace.focus_panel::<EmbeddedWebPreviewPanel>(window, cx);
+                        panel.update(cx, |panel, cx| panel.refresh_browser_profiles(cx));
+                    }
+                },
+            )
             .register_action(|workspace, _: &ClearEmbeddedWebSession, window, cx| {
                 if let Some(panel) = workspace.panel::<EmbeddedWebPreviewPanel>(cx) {
                     workspace.focus_panel::<EmbeddedWebPreviewPanel>(window, cx);
@@ -289,21 +288,31 @@ impl EmbeddedWebPreviewPanel {
             });
     }
 
-    pub fn new(workspace: WeakEntity<Workspace>, window: &mut Window, cx: &mut Context<Self>) -> Self {
+    pub fn new(
+        workspace: WeakEntity<Workspace>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Self {
         let (ipc_tx, ipc_rx) = channel();
-        let mut url_editor = Editor::single_line(window, cx);
-        url_editor.set_placeholder_text("Enter a URL or local dev origin", window, cx);
-        url_editor.set_text(DEFAULT_URL, window, cx);
-        let url_editor = cx.new(|_| url_editor);
+        let url_editor = cx.new(|cx| {
+            let mut editor = Editor::single_line(window, cx);
+            editor.set_placeholder_text("Enter a URL or local dev origin", window, cx);
+            editor.set_text(DEFAULT_URL, window, cx);
+            editor
+        });
 
-        let mut css_editor = Editor::single_line(window, cx);
-        css_editor.set_placeholder_text("color: red; display: grid; padding: 12px;", window, cx);
-        let css_editor = cx.new(|_| css_editor);
+        let css_editor = cx.new(|cx| {
+            let mut editor = Editor::single_line(window, cx);
+            editor.set_placeholder_text("color: red; display: grid; padding: 12px;", window, cx);
+            editor
+        });
 
         let host = Rc::new(RefCell::new(WebViewHost::default()));
         let poll_task = cx.spawn_in(window, async move |this, cx| {
             loop {
-                cx.background_executor().timer(Duration::from_millis(80)).await;
+                cx.background_executor()
+                    .timer(Duration::from_millis(80))
+                    .await;
                 if this.update(cx, |this, cx| this.poll_ipc(cx)).is_err() {
                     break;
                 }
@@ -318,7 +327,9 @@ impl EmbeddedWebPreviewPanel {
             current_url: DEFAULT_URL.to_string(),
             current_title: String::new(),
             last_error: None,
-            status_message: Some("Detecting browser profiles and preparing the embedded preview".to_string()),
+            status_message: Some(
+                "Detecting browser profiles and preparing the embedded preview".to_string(),
+            ),
             webgpu_available: None,
             hovered_capture: None,
             selected_capture: None,
@@ -376,14 +387,19 @@ impl EmbeddedWebPreviewPanel {
             Ok(rebuilt) => {
                 if resolved_session.should_clear_before_navigation {
                     if let Err(error) = host.clear_all_browsing_data() {
-                        self.last_error = Some(format!("failed to clear local auth state: {error:#}"));
+                        self.last_error =
+                            Some(format!("failed to clear local auth state: {error:#}"));
                     }
                     if let Err(error) = host.load_url(&self.current_url) {
-                        self.last_error = Some(format!("failed to load {}: {error:#}", self.current_url));
+                        self.last_error =
+                            Some(format!("failed to load {}: {error:#}", self.current_url));
                     }
                 } else if !rebuilt {
                     if let Err(error) = host.load_url(&self.current_url) {
-                        self.last_error = Some(format!("failed to navigate to {}: {error:#}", self.current_url));
+                        self.last_error = Some(format!(
+                            "failed to navigate to {}: {error:#}",
+                            self.current_url
+                        ));
                     }
                 }
 
@@ -397,7 +413,9 @@ impl EmbeddedWebPreviewPanel {
                     if self.importing_extensions() {
                         format!(
                             "{} imported extension(s)",
-                            selected_profile.as_ref().map_or(0, BrowserProfile::extension_count)
+                            selected_profile
+                                .as_ref()
+                                .map_or(0, BrowserProfile::extension_count)
                         )
                     } else {
                         "No imported browser extensions".to_string()
@@ -413,7 +431,8 @@ impl EmbeddedWebPreviewPanel {
     }
 
     fn refresh_browser_profiles(&mut self, cx: &mut Context<Self>) {
-        self.status_message = Some("Scanning local browser profiles and installed extensions".to_string());
+        self.status_message =
+            Some("Scanning local browser profiles and installed extensions".to_string());
         self._profile_scan_task = cx.spawn(async move |this, cx| {
             let result = cx
                 .background_executor()
@@ -547,7 +566,11 @@ impl EmbeddedWebPreviewPanel {
     }
 
     fn cancel_inspector(&mut self) {
-        if let Err(error) = self.host.borrow().evaluate_script(cancel_inspector_script()) {
+        if let Err(error) = self
+            .host
+            .borrow()
+            .evaluate_script(cancel_inspector_script())
+        {
             self.last_error = Some(format!("failed to cancel inspector: {error:#}"));
         }
     }
@@ -566,13 +589,15 @@ impl EmbeddedWebPreviewPanel {
     fn apply_css_from_editor(&mut self, cx: &App) {
         let css = self.read_css_editor_text(cx);
         if css.trim().is_empty() {
-            self.status_message = Some("Enter CSS declarations before applying an override.".to_string());
+            self.status_message =
+                Some("Enter CSS declarations before applying an override.".to_string());
             return;
         }
         if let Err(error) = self.host.borrow().evaluate_script(&apply_css_script(&css)) {
             self.last_error = Some(format!("failed to apply CSS override: {error:#}"));
         } else {
-            self.status_message = Some("Applied CSS override to the currently selected DOM node.".to_string());
+            self.status_message =
+                Some("Applied CSS override to the currently selected DOM node.".to_string());
         }
     }
 
@@ -580,7 +605,8 @@ impl EmbeddedWebPreviewPanel {
         if let Err(error) = self.host.borrow().evaluate_script(clear_css_script()) {
             self.last_error = Some(format!("failed to clear CSS override: {error:#}"));
         } else {
-            self.status_message = Some("Cleared CSS overrides for the selected DOM node.".to_string());
+            self.status_message =
+                Some("Cleared CSS overrides for the selected DOM node.".to_string());
         }
     }
 
@@ -628,7 +654,8 @@ impl EmbeddedWebPreviewPanel {
             }
         });
 
-        self.status_message = Some("Sent inspected DOM and CSS context to the active agent thread.".to_string());
+        self.status_message =
+            Some("Sent inspected DOM and CSS context to the active agent thread.".to_string());
     }
 
     fn copy_latest_capture_to_ai(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -637,7 +664,8 @@ impl EmbeddedWebPreviewPanel {
             .clone()
             .or_else(|| self.hovered_capture.clone());
         let Some(capture) = capture else {
-            self.last_error = Some("Inspect or hover an element before copying it to AI.".to_string());
+            self.last_error =
+                Some("Inspect or hover an element before copying it to AI.".to_string());
             cx.notify();
             return;
         };
@@ -697,7 +725,12 @@ impl Panel for EmbeddedWebPreviewPanel {
         true
     }
 
-    fn set_position(&mut self, position: DockPosition, _window: &mut Window, cx: &mut Context<Self>) {
+    fn set_position(
+        &mut self,
+        position: DockPosition,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
         self.position = position;
         cx.notify();
     }
@@ -763,24 +796,26 @@ impl Render for EmbeddedWebPreviewPanel {
                 .on_click(cx.listener(|this, _, _, _| this.set_selected_profile(None)))
                 .into_any_element(),
         ];
-        browser_buttons.extend(
-            self.browser_profiles
-                .iter()
-                .enumerate()
-                .map(|(index, _profile)| {
-                    Button::new(("browser-profile", index), self.browser_button_label(Some(index)))
-                        .on_click(cx.listener(move |this, _, _, _| this.set_selected_profile(Some(index))))
-                        .into_any_element()
-                }),
-        );
+        browser_buttons.extend(self.browser_profiles.iter().enumerate().map(
+            |(index, _profile)| {
+                Button::new(
+                    ("browser-profile", index),
+                    self.browser_button_label(Some(index)),
+                )
+                .on_click(cx.listener(move |this, _, _, _| this.set_selected_profile(Some(index))))
+                .into_any_element()
+            },
+        ));
 
         let extension_list = self
             .selected_browser_profile()
             .map(|profile| {
                 if profile.extensions.is_empty() {
-                    vec![Label::new("No extensions detected in the selected browser profile.")
-                        .color(Color::Muted)
-                        .into_any_element()]
+                    vec![
+                        Label::new("No extensions detected in the selected browser profile.")
+                            .color(Color::Muted)
+                            .into_any_element(),
+                    ]
                 } else {
                     profile
                         .extensions
@@ -803,9 +838,13 @@ impl Render for EmbeddedWebPreviewPanel {
                 }
             })
             .unwrap_or_else(|| {
-                vec![Label::new("Using a clean embedded browser profile without imported extensions.")
+                vec![
+                    Label::new(
+                        "Using a clean embedded browser profile without imported extensions.",
+                    )
                     .color(Color::Muted)
-                    .into_any_element()]
+                    .into_any_element(),
+                ]
             });
 
         v_flex()
@@ -828,15 +867,25 @@ impl Render for EmbeddedWebPreviewPanel {
                             .bg(cx.theme().colors().editor_background)
                             .child(self.url_editor.clone()),
                     )
-                    .child(Button::new("web-preview-go", "Go").on_click(cx.listener(|this, _, _, _| {
-                        this.pending_navigation = true;
-                    })))
-                    .child(IconButton::new("web-preview-reload", IconName::RotateCw).on_click(cx.listener(|this, _, _, _| {
-                        this.pending_navigation = true;
-                    })))
-                    .child(IconButton::new("web-preview-devtools", IconName::Code).on_click(cx.listener(|this, _, _, _| {
-                        this.open_devtools();
-                    }))),
+                    .child(Button::new("web-preview-go", "Go").on_click(cx.listener(
+                        |this, _, _, _| {
+                            this.pending_navigation = true;
+                        },
+                    )))
+                    .child(
+                        IconButton::new("web-preview-reload", IconName::RotateCw).on_click(
+                            cx.listener(|this, _, _, _| {
+                                this.pending_navigation = true;
+                            }),
+                        ),
+                    )
+                    .child(
+                        IconButton::new("web-preview-devtools", IconName::Code).on_click(
+                            cx.listener(|this, _, _, _| {
+                                this.open_devtools();
+                            }),
+                        ),
+                    ),
             )
             .child(Label::new(format!("{} | {}", capability, session_label)).color(Color::Muted))
             .when_some(self.status_message.clone(), |this, message| {
@@ -849,35 +898,80 @@ impl Render for EmbeddedWebPreviewPanel {
                 h_flex()
                     .gap_2()
                     .flex_wrap()
-                    .child(Button::new("refresh-browsers", "Refresh Browsers").on_click(cx.listener(|this, _, _, cx| {
-                        this.refresh_browser_profiles(cx);
-                    })))
-                    .child(Button::new("cycle-session-mode", format!("Session: {}", self.session_policy.mode.label())).on_click(cx.listener(|this, _, _, _| {
-                        this.session_policy.mode = this.session_policy.mode.next();
-                        this.pending_navigation = true;
-                    })))
-                    .child(Button::new("toggle-local-auth-clear", if self.session_policy.auto_clear_local_auth { "Auto-clear localhost auth: On" } else { "Auto-clear localhost auth: Off" }).on_click(cx.listener(|this, _, _, _| {
-                        this.session_policy.auto_clear_local_auth = !this.session_policy.auto_clear_local_auth;
-                        this.pending_navigation = true;
-                    })))
-                    .child(Button::new("clear-session", "Clear Session").on_click(cx.listener(|this, _, _, _| {
-                        this.clear_session();
-                    })))
-                    .child(Button::new("inspect", "Inspect").on_click(cx.listener(|this, _, _, _| {
-                        this.arm_inspector(false);
-                    })))
-                    .child(Button::new("inspect-to-ai", "Inspect To AI").on_click(cx.listener(|this, _, _, _| {
-                        this.arm_inspector(true);
-                    })))
-                    .child(Button::new("cancel-inspect", "Cancel Inspect").on_click(cx.listener(|this, _, _, _| {
-                        this.cancel_inspector();
-                    })))
-                    .child(Button::new("copy-hover", "Copy Hover To AI").on_click(cx.listener(|this, _, window, cx| {
-                        if let Some(capture) = this.hovered_capture.clone() {
-                            this.copy_capture_to_ai(capture, window, cx);
-                        }
-                    })))
-                    .child(Button::new("copy-selected", "Copy Selected To AI").on_click(cx.listener(|this, _, window, cx| { this.copy_latest_capture_to_ai(window, cx); }))),
+                    .child(
+                        Button::new("refresh-browsers", "Refresh Browsers").on_click(cx.listener(
+                            |this, _, _, cx| {
+                                this.refresh_browser_profiles(cx);
+                            },
+                        )),
+                    )
+                    .child(
+                        Button::new(
+                            "cycle-session-mode",
+                            format!("Session: {}", self.session_policy.mode.label()),
+                        )
+                        .on_click(cx.listener(|this, _, _, _| {
+                            this.session_policy.mode = this.session_policy.mode.next();
+                            this.pending_navigation = true;
+                        })),
+                    )
+                    .child(
+                        Button::new(
+                            "toggle-local-auth-clear",
+                            if self.session_policy.auto_clear_local_auth {
+                                "Auto-clear localhost auth: On"
+                            } else {
+                                "Auto-clear localhost auth: Off"
+                            },
+                        )
+                        .on_click(cx.listener(|this, _, _, _| {
+                            this.session_policy.auto_clear_local_auth =
+                                !this.session_policy.auto_clear_local_auth;
+                            this.pending_navigation = true;
+                        })),
+                    )
+                    .child(
+                        Button::new("clear-session", "Clear Session").on_click(cx.listener(
+                            |this, _, _, _| {
+                                this.clear_session();
+                            },
+                        )),
+                    )
+                    .child(Button::new("inspect", "Inspect").on_click(cx.listener(
+                        |this, _, _, _| {
+                            this.arm_inspector(false);
+                        },
+                    )))
+                    .child(
+                        Button::new("inspect-to-ai", "Inspect To AI").on_click(cx.listener(
+                            |this, _, _, _| {
+                                this.arm_inspector(true);
+                            },
+                        )),
+                    )
+                    .child(
+                        Button::new("cancel-inspect", "Cancel Inspect").on_click(cx.listener(
+                            |this, _, _, _| {
+                                this.cancel_inspector();
+                            },
+                        )),
+                    )
+                    .child(
+                        Button::new("copy-hover", "Copy Hover To AI").on_click(cx.listener(
+                            |this, _, window, cx| {
+                                if let Some(capture) = this.hovered_capture.clone() {
+                                    this.copy_capture_to_ai(capture, window, cx);
+                                }
+                            },
+                        )),
+                    )
+                    .child(
+                        Button::new("copy-selected", "Copy Selected To AI").on_click(cx.listener(
+                            |this, _, window, cx| {
+                                this.copy_latest_capture_to_ai(window, cx);
+                            },
+                        )),
+                    ),
             )
             .child(
                 v_flex()
@@ -906,12 +1000,16 @@ impl Render for EmbeddedWebPreviewPanel {
                             .bg(cx.theme().colors().editor_background)
                             .child(self.css_editor.clone()),
                     )
-                    .child(Button::new("apply-css", "Apply CSS").on_click(cx.listener(|this, _, _, cx| {
-                        this.apply_css_from_editor(cx);
-                    })))
-                    .child(Button::new("clear-css", "Clear CSS").on_click(cx.listener(|this, _, _, _| {
-                        this.clear_css_override();
-                    }))),
+                    .child(Button::new("apply-css", "Apply CSS").on_click(cx.listener(
+                        |this, _, _, cx| {
+                            this.apply_css_from_editor(cx);
+                        },
+                    )))
+                    .child(Button::new("clear-css", "Clear CSS").on_click(cx.listener(
+                        |this, _, _, _| {
+                            this.clear_css_override();
+                        },
+                    ))),
             )
             .child(Label::new(format!("Hover: {}", hovered_summary)).color(Color::Muted))
             .child(Label::new(format!("Selected: {}", selected_summary)).color(Color::Muted))
@@ -935,4 +1033,3 @@ impl Render for EmbeddedWebPreviewPanel {
             )
     }
 }
-

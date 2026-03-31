@@ -1,9 +1,8 @@
-﻿use std::collections::HashMap;
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::Context as _;
-use paths::home_dir;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -96,7 +95,11 @@ pub fn preferred_profile_index(profiles: &[BrowserProfile]) -> Option<usize> {
     profiles
         .iter()
         .position(|profile| profile.is_preview_compatible() && !profile.extensions.is_empty())
-        .or_else(|| profiles.iter().position(BrowserProfile::is_preview_compatible))
+        .or_else(|| {
+            profiles
+                .iter()
+                .position(BrowserProfile::is_preview_compatible)
+        })
         .or_else(|| (!profiles.is_empty()).then_some(0))
 }
 
@@ -286,9 +289,12 @@ fn scan_chromium_browser(candidate: ChromiumCandidate) -> anyhow::Result<Vec<Bro
     }
 
     let mut profiles = Vec::new();
-    for entry in fs::read_dir(&candidate.root)
-        .with_context(|| format!("reading browser data directory {}", candidate.root.display()))?
-    {
+    for entry in fs::read_dir(&candidate.root).with_context(|| {
+        format!(
+            "reading browser data directory {}",
+            candidate.root.display()
+        )
+    })? {
         let entry = match entry {
             Ok(entry) => entry,
             Err(_) => continue,
@@ -312,7 +318,8 @@ fn scan_chromium_browser(candidate: ChromiumCandidate) -> anyhow::Result<Vec<Bro
             continue;
         }
 
-        let profile_name = chromium_profile_name(file_name, &preferences_path).unwrap_or_else(|| file_name.to_string());
+        let profile_name = chromium_profile_name(file_name, &preferences_path)
+            .unwrap_or_else(|| file_name.to_string());
         let extensions = if extensions_path.exists() {
             scan_chromium_extensions(&extensions_path)
         } else {
@@ -321,9 +328,14 @@ fn scan_chromium_browser(candidate: ChromiumCandidate) -> anyhow::Result<Vec<Bro
 
         let mut notes = Vec::new();
         if extensions.is_empty() {
-            notes.push("No unpacked Chromium extensions were found in this browser profile.".to_string());
+            notes.push(
+                "No unpacked Chromium extensions were found in this browser profile.".to_string(),
+            );
         } else {
-            notes.push("Chromium-family extensions can be mounted directly into the embedded preview.".to_string());
+            notes.push(
+                "Chromium-family extensions can be mounted directly into the embedded preview."
+                    .to_string(),
+            );
         }
 
         profiles.push(BrowserProfile {
@@ -440,7 +452,11 @@ fn scan_chromium_extensions(extensions_root: &Path) -> Vec<DetectedExtension> {
         extensions.push(extension);
     }
 
-    extensions.sort_by(|left, right| left.name.cmp(&right.name).then_with(|| left.id.cmp(&right.id)));
+    extensions.sort_by(|left, right| {
+        left.name
+            .cmp(&right.name)
+            .then_with(|| left.id.cmp(&right.id))
+    });
     extensions
 }
 
@@ -468,13 +484,20 @@ struct ChromiumManifest {
     default_locale: Option<String>,
 }
 
-fn read_chromium_extension_manifest(extension_id: &str, version_dir: &Path) -> Option<DetectedExtension> {
+fn read_chromium_extension_manifest(
+    extension_id: &str,
+    version_dir: &Path,
+) -> Option<DetectedExtension> {
     let manifest_path = version_dir.join("manifest.json");
     let raw_manifest = fs::read_to_string(&manifest_path).ok()?;
     let manifest: ChromiumManifest = serde_json::from_str(&raw_manifest).ok()?;
 
-    let name = resolve_localized_manifest_value(&manifest.name, manifest.default_locale.as_deref(), version_dir)
-        .unwrap_or_else(|| extension_id.to_string());
+    let name = resolve_localized_manifest_value(
+        &manifest.name,
+        manifest.default_locale.as_deref(),
+        version_dir,
+    )
+    .unwrap_or_else(|| extension_id.to_string());
     let description = resolve_localized_manifest_value(
         &manifest.description,
         manifest.default_locale.as_deref(),
@@ -499,7 +522,11 @@ fn read_chromium_extension_manifest(extension_id: &str, version_dir: &Path) -> O
     })
 }
 
-fn resolve_localized_manifest_value(raw: &str, default_locale: Option<&str>, version_dir: &Path) -> Option<String> {
+fn resolve_localized_manifest_value(
+    raw: &str,
+    default_locale: Option<&str>,
+    version_dir: &Path,
+) -> Option<String> {
     if raw.is_empty() {
         return None;
     }
@@ -514,14 +541,23 @@ fn resolve_localized_manifest_value(raw: &str, default_locale: Option<&str>, ver
     if let Some(default_locale) = default_locale {
         locales.push(default_locale.to_string());
     }
-    locales.extend(["en", "en_US", "en_GB"].into_iter().map(ToString::to_string));
+    locales.extend(
+        ["en", "en_US", "en_GB"]
+            .into_iter()
+            .map(ToString::to_string),
+    );
 
     for locale in locales {
-        let messages_path = version_dir.join("_locales").join(locale).join("messages.json");
+        let messages_path = version_dir
+            .join("_locales")
+            .join(locale)
+            .join("messages.json");
         let Ok(raw_messages) = fs::read_to_string(messages_path) else {
             continue;
         };
-        let Ok(messages) = serde_json::from_str::<HashMap<String, serde_json::Value>>(&raw_messages) else {
+        let Ok(messages) =
+            serde_json::from_str::<HashMap<String, serde_json::Value>>(&raw_messages)
+        else {
             continue;
         };
         if let Some(message) = messages
@@ -590,13 +626,18 @@ fn scan_firefox_extensions(extensions_json: &Path, profile_path: &Path) -> Vec<D
             } else {
                 addon.version
             },
-            description: (!addon.default_locale.description.is_empty()).then_some(addon.default_locale.description),
+            description: (!addon.default_locale.description.is_empty())
+                .then_some(addon.default_locale.description),
             path: firefox_addon_path(profile_path, &addon.path),
             enabled: addon.active,
         })
         .collect::<Vec<_>>();
 
-    extensions.sort_by(|left, right| left.name.cmp(&right.name).then_with(|| left.id.cmp(&right.id)));
+    extensions.sort_by(|left, right| {
+        left.name
+            .cmp(&right.name)
+            .then_with(|| left.id.cmp(&right.id))
+    });
     extensions
 }
 

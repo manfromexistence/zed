@@ -10,8 +10,8 @@ use workspace::{
 };
 
 use crate::{
-    DragConstraint, EasingCurve, FridayBorderPreview, HelloGlowPreview, MacOsDockPreview, Rgba,
-    ScreenCarouselPreview, SidebarPreview, SpringConfig, DragDropPreview,
+    DragConstraint, DragDropPreview, EasingCurve, FridayBorderPreview, HelloGlowPreview,
+    MacOsDockPreview, Rgba, ScreenCarouselPreview, SidebarPreview, SpringConfig,
 };
 
 actions!(animation_demo, [OpenAnimationDemo]);
@@ -149,7 +149,10 @@ impl Render for AnimationDemoTab {
             ),
             (
                 "Snappy response",
-                format!("{:.2}s @ {:.2} damping", snappy_spring.response, snappy_spring.damping_fraction)
+                format!(
+                    "{:.2}s @ {:.2} damping",
+                    snappy_spring.response, snappy_spring.damping_fraction
+                )
             ),
             (
                 "Bezier midpoint",
@@ -157,7 +160,10 @@ impl Render for AnimationDemoTab {
             ),
             (
                 "Gesture elasticity",
-                format!("{:.2} within {}px", sample_constraint.elasticity, sample_constraint.max_x as i32)
+                format!(
+                    "{:.2} within {}px",
+                    sample_constraint.elasticity, sample_constraint.max_x as i32
+                )
             ),
         ];
         let accent_color = Rgba::from_rgba_u32(0xFF7A3DFF).to_rgba_u32();
@@ -309,7 +315,7 @@ impl Render for AnimationDemoTab {
                                 .size(LabelSize::Small)
                                 .color(Color::Muted),
                             ),
-                    ),
+                    )
                     .child(
                         div()
                             .w_full()
@@ -349,11 +355,7 @@ impl Render for AnimationDemoTab {
     }
 }
 
-fn preview_panel(
-    title: &'static str,
-    body: &'static str,
-    cx: &App,
-) -> impl IntoElement + use<> {
+fn preview_panel(title: &'static str, body: &'static str, cx: &App) -> impl IntoElement + use<> {
     v_flex()
         .flex_1()
         .h_full()
@@ -367,11 +369,7 @@ fn preview_panel(
             v_flex()
                 .gap_1()
                 .child(Headline::new(title).size(HeadlineSize::XSmall))
-                .child(
-                    Label::new(body)
-                        .size(LabelSize::Small)
-                        .color(Color::Muted),
-                ),
+                .child(Label::new(body).size(LabelSize::Small).color(Color::Muted)),
         )
         .child(
             div()

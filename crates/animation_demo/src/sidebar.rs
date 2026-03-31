@@ -46,10 +46,9 @@ impl Render for SidebarPreview {
                             .children((0..4).map(|ix| {
                                 let glow = (((t * 1.7) + ix as f32).sin() * 0.5 + 0.5).clamp(0.0, 1.0);
                                 div()
-                                    .size(px(30.0))
+                                    .size(px(30.0 + glow * 7.5))
                                     .rounded_full()
                                     .bg(hsla(ix as f32 / 5.0, 0.7, 0.6, 1.0))
-                                    .scale(1.0 + glow * 0.25)
                             })),
                     )
                     .child(

@@ -4,13 +4,13 @@ use std::sync::Arc;
 
 use anyhow::{Context as _, Result};
 use collections::HashMap;
-use gpui::{App, Context, Entity, Global, SharedString, Task};
+use gpui::{App, AppContext as _, Context, Entity, Global, SharedString, Task};
 use http_client::HttpClient;
 use language_model::{LanguageModelProviderId, LanguageModelRegistry};
 use reqwest::header::{AUTHORIZATION, HeaderMap, HeaderValue};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use settings::SettingsStore;
+use settings::{Settings as _, SettingsStore};
 
 use crate::provider::manifest::ManifestLanguageModelProvider;
 use crate::provider_hub::auth_strategy::{ApiKeyHeaderStyle, AuthStrategy};
@@ -30,7 +30,10 @@ impl ProviderHubSnapshot {
     }
 
     pub fn model_count(&self) -> usize {
-        self.providers.values().map(|provider| provider.models.len()).sum()
+        self.providers
+            .values()
+            .map(|provider| provider.models.len())
+            .sum()
     }
 
     pub fn provider(&self, provider_id: &str) -> Option<&ProviderManifest> {
@@ -135,7 +138,8 @@ impl ProviderHubStore {
     }
 
     pub fn try_global(cx: &App) -> Option<Entity<Self>> {
-        cx.try_global::<GlobalProviderHubStore>().map(|g| g.0.clone())
+        cx.try_global::<GlobalProviderHubStore>()
+            .map(|g| g.0.clone())
     }
 
     pub fn refresh_global(cx: &mut App) {
@@ -214,7 +218,16 @@ impl ProviderHubStore {
                 .ok();
             }
 
-            let snapshot = load_snapshot(litellm_config).await;
+            let snapshot = cx
+                .background_executor()
+                .spawn(async move {
+                    let runtime = tokio::runtime::Builder::new_current_thread()
+                        .enable_all()
+                        .build()
+                        .context("failed to create provider hub tokio runtime")?;
+                    runtime.block_on(load_snapshot(litellm_config))
+                })
+                .await;
 
             this.update(cx, |this, cx| {
                 this.refresh_task = None;
@@ -312,10 +325,9 @@ fn load_cached_snapshot() -> Result<Option<ProviderHubSnapshot>> {
 
     let snapshot = std::fs::read_to_string(&path)
         .with_context(|| format!("failed to read provider hub cache at {}", path.display()))?;
-    Ok(Some(
-        serde_json::from_str(&snapshot)
-            .with_context(|| format!("failed to parse provider hub cache at {}", path.display()))?,
-    ))
+    Ok(Some(serde_json::from_str(&snapshot).with_context(
+        || format!("failed to parse provider hub cache at {}", path.display()),
+    )?))
 }
 
 fn write_cached_snapshot(snapshot: &ProviderHubSnapshot) -> Result<()> {
@@ -337,13 +349,15 @@ async fn fetch_models_dev(
     reqwest: &reqwest::Client,
     overrides: &HashMap<&'static str, ProviderOverride>,
 ) -> Result<BTreeMap<String, ProviderManifest>> {
-    let payload = reqwest
-        .get("https://models.dev/api.json")
-        .send()
-        .await?
-        .error_for_status()?
-        .json::<Value>()
-        .await?;
+    let payload: Value = serde_json::from_str(
+        &reqwest
+            .get("https://models.dev/api.json")
+            .send()
+            .await?
+            .error_for_status()?
+            .text()
+            .await?,
+    )?;
 
     let Some(providers) = payload.as_object() else {
         anyhow::bail!("models.dev returned an unexpected payload");
@@ -362,11 +376,21 @@ async fn fetch_models_dev(
             .or_else(|| overrides.get(raw_provider_id.as_str()));
         let api_base = override_
             .and_then(|override_| override_.api_base.clone())
-            .or_else(|| provider.get("api").and_then(Value::as_str).map(ToOwned::to_owned))
+            .or_else(|| {
+                provider
+                    .get("api")
+                    .and_then(Value::as_str)
+                    .map(ToOwned::to_owned)
+            })
             .unwrap_or_default();
         let display_name = override_
             .and_then(|override_| override_.display_name.clone())
-            .or_else(|| provider.get("name").and_then(Value::as_str).map(ToOwned::to_owned))
+            .or_else(|| {
+                provider
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .map(ToOwned::to_owned)
+            })
             .unwrap_or_else(|| title_case(&provider_id));
         let transport = infer_transport(provider, &api_base, override_);
         let category = override_
@@ -419,8 +443,10 @@ async fn fetch_models_dev(
                     .and_then(|modalities| modalities.get("output"))
                     .and_then(string_array)
                     .unwrap_or_default();
-                let supports_reasoning =
-                    model.get("reasoning").and_then(Value::as_bool).unwrap_or(false);
+                let supports_reasoning = model
+                    .get("reasoning")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false);
                 let supports_tool_calling = model
                     .get("tool_call")
                     .and_then(Value::as_bool)
@@ -504,13 +530,15 @@ async fn enrich_from_openrouter(
     reqwest: &reqwest::Client,
     providers: &mut BTreeMap<String, ProviderManifest>,
 ) -> Result<()> {
-    let payload = reqwest
-        .get("https://openrouter.ai/api/v1/models")
-        .send()
-        .await?
-        .error_for_status()?
-        .json::<Value>()
-        .await?;
+    let payload: Value = serde_json::from_str(
+        &reqwest
+            .get("https://openrouter.ai/api/v1/models")
+            .send()
+            .await?
+            .error_for_status()?
+            .text()
+            .await?,
+    )?;
 
     let Some(models) = payload.get("data").and_then(Value::as_array) else {
         return Ok(());
@@ -592,10 +620,17 @@ async fn enrich_from_openrouter(
         let supports_reasoning = model
             .get("supported_parameters")
             .and_then(Value::as_array)
-            .map(|params| params.iter().any(|value| value.as_str() == Some("reasoning")))
+            .map(|params| {
+                params
+                    .iter()
+                    .any(|value| value.as_str() == Some("reasoning"))
+            })
             .unwrap_or(false);
 
-        let existing = provider.models.iter_mut().find(|existing| existing.id == model_id);
+        let existing = provider
+            .models
+            .iter_mut()
+            .find(|existing| existing.id == model_id);
         if let Some(existing) = existing {
             if existing.display_name.is_none() {
                 existing.display_name = model_name;
@@ -686,9 +721,8 @@ async fn enrich_from_litellm(
         .headers(headers)
         .send()
         .await?
-        .error_for_status()?
-        .json::<Value>()
-        .await?;
+        .error_for_status()?;
+    let payload: Value = serde_json::from_str(&payload.text().await?)?;
 
     let model_entries = if let Some(entries) = payload.get("data").and_then(Value::as_array) {
         entries.clone()
@@ -741,7 +775,11 @@ async fn enrich_from_litellm(
             .or_else(|| model.get("max_completion_tokens"))
             .and_then(Value::as_u64);
 
-        if provider.models.iter().all(|existing| existing.id != model_id) {
+        if provider
+            .models
+            .iter()
+            .all(|existing| existing.id != model_id)
+        {
             provider.models.push(ModelManifest {
                 id: model_id.to_owned(),
                 display_name: model
@@ -864,68 +902,736 @@ fn no_auth_provider(
 
 fn provider_overrides() -> HashMap<&'static str, ProviderOverride> {
     HashMap::from_iter([
-        ("openai", api_key_provider(ProviderCategory::Frontier, ProviderIcon::OpenAi, true, ApiKeyHeaderStyle::Bearer, "OPENAI_API_KEY", "https://api.openai.com/v1", "OpenAI")),
-        ("anthropic", api_key_provider(ProviderCategory::Frontier, ProviderIcon::Anthropic, true, ApiKeyHeaderStyle::XApiKey, "ANTHROPIC_API_KEY", "https://api.anthropic.com", "Anthropic")),
-        ("google", api_key_provider(ProviderCategory::Frontier, ProviderIcon::Google, true, ApiKeyHeaderStyle::Bearer, "GOOGLE_API_KEY", "https://generativelanguage.googleapis.com", "Google AI")),
-        ("github-models", api_key_provider(ProviderCategory::Frontier, ProviderIcon::Copilot, true, ApiKeyHeaderStyle::Bearer, "GITHUB_TOKEN", "https://models.inference.ai.azure.com", "GitHub Models")),
-        ("github_models", api_key_provider(ProviderCategory::Frontier, ProviderIcon::Copilot, true, ApiKeyHeaderStyle::Bearer, "GITHUB_TOKEN", "https://models.inference.ai.azure.com", "GitHub Models")),
-        ("openrouter", api_key_provider(ProviderCategory::FastInference, ProviderIcon::OpenRouter, true, ApiKeyHeaderStyle::Bearer, "OPENROUTER_API_KEY", "https://openrouter.ai/api/v1", "OpenRouter")),
-        ("groq", api_key_provider(ProviderCategory::FastInference, ProviderIcon::OpenAiCompatible, true, ApiKeyHeaderStyle::Bearer, "GROQ_API_KEY", "https://api.groq.com/openai/v1", "Groq")),
-        ("together", api_key_provider(ProviderCategory::FastInference, ProviderIcon::OpenAiCompatible, true, ApiKeyHeaderStyle::Bearer, "TOGETHER_API_KEY", "https://api.together.xyz/v1", "Together AI")),
-        ("fireworks-ai", api_key_provider(ProviderCategory::FastInference, ProviderIcon::OpenAiCompatible, true, ApiKeyHeaderStyle::Bearer, "FIREWORKS_API_KEY", "https://api.fireworks.ai/inference/v1", "Fireworks AI")),
-        ("perplexity", api_key_provider(ProviderCategory::FastInference, ProviderIcon::OpenAiCompatible, true, ApiKeyHeaderStyle::Bearer, "PERPLEXITY_API_KEY", "https://api.perplexity.ai", "Perplexity")),
-        ("nvidia_nim", api_key_provider(ProviderCategory::FastInference, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "NVIDIA_NIM_API_KEY", "https://integrate.api.nvidia.com/v1", "NVIDIA NIM")),
-        ("cerebras", api_key_provider(ProviderCategory::FastInference, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "CEREBRAS_API_KEY", "https://api.cerebras.ai/v1", "Cerebras")),
-        ("deepinfra", api_key_provider(ProviderCategory::FastInference, ProviderIcon::OpenAiCompatible, true, ApiKeyHeaderStyle::Bearer, "DEEPINFRA_API_KEY", "https://api.deepinfra.com/v1/openai", "DeepInfra")),
-        ("lepton", api_key_provider(ProviderCategory::FastInference, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "LEPTON_API_KEY", "https://api.lepton.ai/api/v1", "Lepton")),
-        ("anyscale", api_key_provider(ProviderCategory::FastInference, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "ANYSCALE_API_KEY", "https://api.endpoints.anyscale.com/v1", "Anyscale")),
-        ("replicate", api_key_provider(ProviderCategory::FastInference, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "REPLICATE_API_KEY", "https://api.replicate.com/v1", "Replicate")),
-        ("baseten", api_key_provider(ProviderCategory::FastInference, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "BASETEN_API_KEY", "https://bridge.baseten.co/v1", "Baseten")),
-        ("bytez", api_key_provider(ProviderCategory::FastInference, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "BYTEZ_API_KEY", "https://api.bytez.com", "Bytez")),
-        ("friendliai", api_key_provider(ProviderCategory::FastInference, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "FRIENDLI_API_KEY", "https://inference.friendli.ai/v1", "FriendliAI")),
-        ("friendli", api_key_provider(ProviderCategory::FastInference, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "FRIENDLI_API_KEY", "https://inference.friendli.ai/v1", "FriendliAI")),
-        ("aiml", api_key_provider(ProviderCategory::FastInference, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "AIML_API_KEY", "https://api.aimlapi.com/v1", "AIML API")),
-        ("302ai", api_key_provider(ProviderCategory::FastInference, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "AI302_API_KEY", "https://api.302.ai/v1", "302.AI")),
-        ("cloudflare_workers_ai", api_key_provider(ProviderCategory::FastInference, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "CLOUDFLARE_API_TOKEN", "https://api.cloudflare.com/client/v4/accounts/{account_id}/ai", "Cloudflare Workers AI")),
-        ("cloudflare_ai_gateway", api_key_provider(ProviderCategory::FastInference, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "CLOUDFLARE_API_TOKEN", "https://gateway.ai.cloudflare.com/v1/{account_id}/{gateway_id}", "Cloudflare AI Gateway")),
-        ("cohere", api_key_provider(ProviderCategory::Specialist, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "COHERE_API_KEY", "https://api.cohere.ai/v2", "Cohere")),
-        ("huggingface", api_key_provider(ProviderCategory::Specialist, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "HUGGINGFACE_API_KEY", "https://api-inference.huggingface.co/v1", "Hugging Face")),
-        ("elevenlabs", api_key_provider(ProviderCategory::Specialist, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "ELEVENLABS_API_KEY", "https://api.elevenlabs.io/v1", "ElevenLabs")),
-        ("deepgram", api_key_provider(ProviderCategory::Specialist, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "DEEPGRAM_API_KEY", "https://api.deepgram.com/v1", "Deepgram")),
-        ("fal", api_key_provider(ProviderCategory::Specialist, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "FAL_KEY", "https://fal.run", "fal")),
-        ("fal_ai", api_key_provider(ProviderCategory::Specialist, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "FAL_KEY", "https://fal.run", "fal")),
-        ("black-forest-labs", api_key_provider(ProviderCategory::Specialist, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "BFL_API_KEY", "https://api.bfl.ml/v1", "Black Forest Labs")),
-        ("stability", api_key_provider(ProviderCategory::Specialist, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "STABILITY_API_KEY", "https://api.stability.ai/v2", "Stability AI")),
-        ("runway", api_key_provider(ProviderCategory::Specialist, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "RUNWAY_API_KEY", "https://api.runwayml.com/v1", "Runway")),
-        ("pika", api_key_provider(ProviderCategory::Specialist, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "PIKA_API_KEY", "https://api.pika.art/v1", "Pika")),
-        ("azure_ai_foundry", api_key_provider(ProviderCategory::Enterprise, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "AZURE_AI_FOUNDRY_API_KEY", "https://{project}.services.ai.azure.com", "Azure AI Foundry")),
-        ("oci_genai", api_key_provider(ProviderCategory::Enterprise, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "OCI_GENAI_API_KEY", "https://inference.generativeai.{region}.oci.oraclecloud.com", "Oracle OCI GenAI")),
-        ("sap_ai_hub", api_key_provider(ProviderCategory::Enterprise, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "SAP_AI_HUB_API_KEY", "https://api.aihub.sap.com/v1", "SAP AI Hub")),
-        ("scaleway", api_key_provider(ProviderCategory::Enterprise, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "SCALEWAY_API_KEY", "https://api.scaleway.ai/v1", "Scaleway")),
-        ("datarobot", api_key_provider(ProviderCategory::Enterprise, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "DATAROBOT_API_KEY", "https://app.datarobot.com/api/v2/genai", "DataRobot")),
-        ("nlp_cloud", api_key_provider(ProviderCategory::Enterprise, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "NLP_CLOUD_API_KEY", "https://api.nlpcloud.io/v1", "NLP Cloud")),
-        ("aleph_alpha", api_key_provider(ProviderCategory::Enterprise, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "ALEPH_ALPHA_API_KEY", "https://api.aleph-alpha.com/v1", "Aleph Alpha")),
-        ("ai21", api_key_provider(ProviderCategory::Enterprise, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "AI21_API_KEY", "https://api.ai21.com/studio/v1", "AI21")),
-        ("clarifai", api_key_provider(ProviderCategory::Enterprise, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "CLARIFAI_PAT", "https://api.clarifai.com/v2", "Clarifai")),
-        ("gitlab_duo", api_key_provider(ProviderCategory::Enterprise, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "GITLAB_TOKEN", "https://gitlab.com/api/v4/ai", "GitLab Duo")),
-        ("amazon_q", api_key_provider(ProviderCategory::Enterprise, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "AMAZON_Q_TOKEN", "https://codewhisperer.us-east-1.amazonaws.com", "Amazon Q")),
-        ("qwen", api_key_provider(ProviderCategory::RegionalChinese, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "DASHSCOPE_API_KEY", "https://dashscope.aliyuncs.com/compatible-mode/v1", "Qwen")),
-        ("qwen_alibaba", api_key_provider(ProviderCategory::RegionalChinese, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "DASHSCOPE_API_KEY", "https://dashscope.aliyuncs.com/compatible-mode/v1", "Qwen")),
-        ("zhipu_chatglm", api_key_provider(ProviderCategory::RegionalChinese, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "ZHIPU_API_KEY", "https://open.bigmodel.cn/api/paas/v4", "Zhipu GLM")),
-        ("moonshot_kimi", api_key_provider(ProviderCategory::RegionalChinese, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "MOONSHOT_API_KEY", "https://api.moonshot.cn/v1", "Moonshot Kimi")),
-        ("minimax", api_key_provider(ProviderCategory::RegionalChinese, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "MINIMAX_API_KEY", "https://api.minimax.chat/v1", "MiniMax")),
-        ("yi_01ai", api_key_provider(ProviderCategory::RegionalChinese, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "YI_API_KEY", "https://api.01.ai/v1", "01.AI Yi")),
-        ("baichuan", api_key_provider(ProviderCategory::RegionalChinese, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "BAICHUAN_API_KEY", "https://api.baichuan-ai.com/v1", "Baichuan")),
-        ("stepfun", api_key_provider(ProviderCategory::RegionalChinese, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "STEPFUN_API_KEY", "https://api.stepfun.com/v1", "StepFun")),
-        ("doubao", api_key_provider(ProviderCategory::RegionalChinese, ProviderIcon::OpenAiCompatible, false, ApiKeyHeaderStyle::Bearer, "VOLCANO_API_KEY", "https://ark.cn-beijing.volces.com/api/v3", "Doubao")),
-        ("ollama", no_auth_provider(ProviderCategory::Local, ProviderIcon::OpenAiCompatible, true, "http://localhost:11434/v1", "Ollama")),
-        ("lmstudio", no_auth_provider(ProviderCategory::Local, ProviderIcon::OpenAiCompatible, true, "http://localhost:1234/v1", "LM Studio")),
-        ("llamafile", no_auth_provider(ProviderCategory::Local, ProviderIcon::OpenAiCompatible, false, "http://localhost:8080/v1", "Llamafile")),
-        ("text-generation-webui", no_auth_provider(ProviderCategory::Local, ProviderIcon::OpenAiCompatible, false, "http://localhost:5000/v1", "Text Generation WebUI")),
-        ("text_generation_webui", no_auth_provider(ProviderCategory::Local, ProviderIcon::OpenAiCompatible, false, "http://localhost:5000/v1", "Text Generation WebUI")),
-        ("vllm", no_auth_provider(ProviderCategory::Local, ProviderIcon::OpenAiCompatible, false, "http://localhost:8000/v1", "vLLM")),
-        ("lemonade", no_auth_provider(ProviderCategory::Local, ProviderIcon::OpenAiCompatible, false, "http://localhost:11434/v1", "Lemonade")),
-        ("litellm_proxy", api_key_provider(ProviderCategory::Local, ProviderIcon::OpenAiCompatible, true, ApiKeyHeaderStyle::Bearer, "LITELLM_PROXY_API_KEY", "http://localhost:4000", "LiteLLM Proxy")),
+        (
+            "openai",
+            api_key_provider(
+                ProviderCategory::Frontier,
+                ProviderIcon::OpenAi,
+                true,
+                ApiKeyHeaderStyle::Bearer,
+                "OPENAI_API_KEY",
+                "https://api.openai.com/v1",
+                "OpenAI",
+            ),
+        ),
+        (
+            "anthropic",
+            api_key_provider(
+                ProviderCategory::Frontier,
+                ProviderIcon::Anthropic,
+                true,
+                ApiKeyHeaderStyle::XApiKey,
+                "ANTHROPIC_API_KEY",
+                "https://api.anthropic.com",
+                "Anthropic",
+            ),
+        ),
+        (
+            "google",
+            api_key_provider(
+                ProviderCategory::Frontier,
+                ProviderIcon::Google,
+                true,
+                ApiKeyHeaderStyle::Bearer,
+                "GOOGLE_API_KEY",
+                "https://generativelanguage.googleapis.com",
+                "Google AI",
+            ),
+        ),
+        (
+            "github-models",
+            api_key_provider(
+                ProviderCategory::Frontier,
+                ProviderIcon::Copilot,
+                true,
+                ApiKeyHeaderStyle::Bearer,
+                "GITHUB_TOKEN",
+                "https://models.inference.ai.azure.com",
+                "GitHub Models",
+            ),
+        ),
+        (
+            "github_models",
+            api_key_provider(
+                ProviderCategory::Frontier,
+                ProviderIcon::Copilot,
+                true,
+                ApiKeyHeaderStyle::Bearer,
+                "GITHUB_TOKEN",
+                "https://models.inference.ai.azure.com",
+                "GitHub Models",
+            ),
+        ),
+        (
+            "openrouter",
+            api_key_provider(
+                ProviderCategory::FastInference,
+                ProviderIcon::OpenRouter,
+                true,
+                ApiKeyHeaderStyle::Bearer,
+                "OPENROUTER_API_KEY",
+                "https://openrouter.ai/api/v1",
+                "OpenRouter",
+            ),
+        ),
+        (
+            "groq",
+            api_key_provider(
+                ProviderCategory::FastInference,
+                ProviderIcon::OpenAiCompatible,
+                true,
+                ApiKeyHeaderStyle::Bearer,
+                "GROQ_API_KEY",
+                "https://api.groq.com/openai/v1",
+                "Groq",
+            ),
+        ),
+        (
+            "together",
+            api_key_provider(
+                ProviderCategory::FastInference,
+                ProviderIcon::OpenAiCompatible,
+                true,
+                ApiKeyHeaderStyle::Bearer,
+                "TOGETHER_API_KEY",
+                "https://api.together.xyz/v1",
+                "Together AI",
+            ),
+        ),
+        (
+            "fireworks-ai",
+            api_key_provider(
+                ProviderCategory::FastInference,
+                ProviderIcon::OpenAiCompatible,
+                true,
+                ApiKeyHeaderStyle::Bearer,
+                "FIREWORKS_API_KEY",
+                "https://api.fireworks.ai/inference/v1",
+                "Fireworks AI",
+            ),
+        ),
+        (
+            "perplexity",
+            api_key_provider(
+                ProviderCategory::FastInference,
+                ProviderIcon::OpenAiCompatible,
+                true,
+                ApiKeyHeaderStyle::Bearer,
+                "PERPLEXITY_API_KEY",
+                "https://api.perplexity.ai",
+                "Perplexity",
+            ),
+        ),
+        (
+            "nvidia_nim",
+            api_key_provider(
+                ProviderCategory::FastInference,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "NVIDIA_NIM_API_KEY",
+                "https://integrate.api.nvidia.com/v1",
+                "NVIDIA NIM",
+            ),
+        ),
+        (
+            "cerebras",
+            api_key_provider(
+                ProviderCategory::FastInference,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "CEREBRAS_API_KEY",
+                "https://api.cerebras.ai/v1",
+                "Cerebras",
+            ),
+        ),
+        (
+            "deepinfra",
+            api_key_provider(
+                ProviderCategory::FastInference,
+                ProviderIcon::OpenAiCompatible,
+                true,
+                ApiKeyHeaderStyle::Bearer,
+                "DEEPINFRA_API_KEY",
+                "https://api.deepinfra.com/v1/openai",
+                "DeepInfra",
+            ),
+        ),
+        (
+            "lepton",
+            api_key_provider(
+                ProviderCategory::FastInference,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "LEPTON_API_KEY",
+                "https://api.lepton.ai/api/v1",
+                "Lepton",
+            ),
+        ),
+        (
+            "anyscale",
+            api_key_provider(
+                ProviderCategory::FastInference,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "ANYSCALE_API_KEY",
+                "https://api.endpoints.anyscale.com/v1",
+                "Anyscale",
+            ),
+        ),
+        (
+            "replicate",
+            api_key_provider(
+                ProviderCategory::FastInference,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "REPLICATE_API_KEY",
+                "https://api.replicate.com/v1",
+                "Replicate",
+            ),
+        ),
+        (
+            "baseten",
+            api_key_provider(
+                ProviderCategory::FastInference,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "BASETEN_API_KEY",
+                "https://bridge.baseten.co/v1",
+                "Baseten",
+            ),
+        ),
+        (
+            "bytez",
+            api_key_provider(
+                ProviderCategory::FastInference,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "BYTEZ_API_KEY",
+                "https://api.bytez.com",
+                "Bytez",
+            ),
+        ),
+        (
+            "friendliai",
+            api_key_provider(
+                ProviderCategory::FastInference,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "FRIENDLI_API_KEY",
+                "https://inference.friendli.ai/v1",
+                "FriendliAI",
+            ),
+        ),
+        (
+            "friendli",
+            api_key_provider(
+                ProviderCategory::FastInference,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "FRIENDLI_API_KEY",
+                "https://inference.friendli.ai/v1",
+                "FriendliAI",
+            ),
+        ),
+        (
+            "aiml",
+            api_key_provider(
+                ProviderCategory::FastInference,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "AIML_API_KEY",
+                "https://api.aimlapi.com/v1",
+                "AIML API",
+            ),
+        ),
+        (
+            "302ai",
+            api_key_provider(
+                ProviderCategory::FastInference,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "AI302_API_KEY",
+                "https://api.302.ai/v1",
+                "302.AI",
+            ),
+        ),
+        (
+            "cloudflare_workers_ai",
+            api_key_provider(
+                ProviderCategory::FastInference,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "CLOUDFLARE_API_TOKEN",
+                "https://api.cloudflare.com/client/v4/accounts/{account_id}/ai",
+                "Cloudflare Workers AI",
+            ),
+        ),
+        (
+            "cloudflare_ai_gateway",
+            api_key_provider(
+                ProviderCategory::FastInference,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "CLOUDFLARE_API_TOKEN",
+                "https://gateway.ai.cloudflare.com/v1/{account_id}/{gateway_id}",
+                "Cloudflare AI Gateway",
+            ),
+        ),
+        (
+            "cohere",
+            api_key_provider(
+                ProviderCategory::Specialist,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "COHERE_API_KEY",
+                "https://api.cohere.ai/v2",
+                "Cohere",
+            ),
+        ),
+        (
+            "huggingface",
+            api_key_provider(
+                ProviderCategory::Specialist,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "HUGGINGFACE_API_KEY",
+                "https://api-inference.huggingface.co/v1",
+                "Hugging Face",
+            ),
+        ),
+        (
+            "elevenlabs",
+            api_key_provider(
+                ProviderCategory::Specialist,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "ELEVENLABS_API_KEY",
+                "https://api.elevenlabs.io/v1",
+                "ElevenLabs",
+            ),
+        ),
+        (
+            "deepgram",
+            api_key_provider(
+                ProviderCategory::Specialist,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "DEEPGRAM_API_KEY",
+                "https://api.deepgram.com/v1",
+                "Deepgram",
+            ),
+        ),
+        (
+            "fal",
+            api_key_provider(
+                ProviderCategory::Specialist,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "FAL_KEY",
+                "https://fal.run",
+                "fal",
+            ),
+        ),
+        (
+            "fal_ai",
+            api_key_provider(
+                ProviderCategory::Specialist,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "FAL_KEY",
+                "https://fal.run",
+                "fal",
+            ),
+        ),
+        (
+            "black-forest-labs",
+            api_key_provider(
+                ProviderCategory::Specialist,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "BFL_API_KEY",
+                "https://api.bfl.ml/v1",
+                "Black Forest Labs",
+            ),
+        ),
+        (
+            "stability",
+            api_key_provider(
+                ProviderCategory::Specialist,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "STABILITY_API_KEY",
+                "https://api.stability.ai/v2",
+                "Stability AI",
+            ),
+        ),
+        (
+            "runway",
+            api_key_provider(
+                ProviderCategory::Specialist,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "RUNWAY_API_KEY",
+                "https://api.runwayml.com/v1",
+                "Runway",
+            ),
+        ),
+        (
+            "pika",
+            api_key_provider(
+                ProviderCategory::Specialist,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "PIKA_API_KEY",
+                "https://api.pika.art/v1",
+                "Pika",
+            ),
+        ),
+        (
+            "azure_ai_foundry",
+            api_key_provider(
+                ProviderCategory::Enterprise,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "AZURE_AI_FOUNDRY_API_KEY",
+                "https://{project}.services.ai.azure.com",
+                "Azure AI Foundry",
+            ),
+        ),
+        (
+            "oci_genai",
+            api_key_provider(
+                ProviderCategory::Enterprise,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "OCI_GENAI_API_KEY",
+                "https://inference.generativeai.{region}.oci.oraclecloud.com",
+                "Oracle OCI GenAI",
+            ),
+        ),
+        (
+            "sap_ai_hub",
+            api_key_provider(
+                ProviderCategory::Enterprise,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "SAP_AI_HUB_API_KEY",
+                "https://api.aihub.sap.com/v1",
+                "SAP AI Hub",
+            ),
+        ),
+        (
+            "scaleway",
+            api_key_provider(
+                ProviderCategory::Enterprise,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "SCALEWAY_API_KEY",
+                "https://api.scaleway.ai/v1",
+                "Scaleway",
+            ),
+        ),
+        (
+            "datarobot",
+            api_key_provider(
+                ProviderCategory::Enterprise,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "DATAROBOT_API_KEY",
+                "https://app.datarobot.com/api/v2/genai",
+                "DataRobot",
+            ),
+        ),
+        (
+            "nlp_cloud",
+            api_key_provider(
+                ProviderCategory::Enterprise,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "NLP_CLOUD_API_KEY",
+                "https://api.nlpcloud.io/v1",
+                "NLP Cloud",
+            ),
+        ),
+        (
+            "aleph_alpha",
+            api_key_provider(
+                ProviderCategory::Enterprise,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "ALEPH_ALPHA_API_KEY",
+                "https://api.aleph-alpha.com/v1",
+                "Aleph Alpha",
+            ),
+        ),
+        (
+            "ai21",
+            api_key_provider(
+                ProviderCategory::Enterprise,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "AI21_API_KEY",
+                "https://api.ai21.com/studio/v1",
+                "AI21",
+            ),
+        ),
+        (
+            "clarifai",
+            api_key_provider(
+                ProviderCategory::Enterprise,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "CLARIFAI_PAT",
+                "https://api.clarifai.com/v2",
+                "Clarifai",
+            ),
+        ),
+        (
+            "gitlab_duo",
+            api_key_provider(
+                ProviderCategory::Enterprise,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "GITLAB_TOKEN",
+                "https://gitlab.com/api/v4/ai",
+                "GitLab Duo",
+            ),
+        ),
+        (
+            "amazon_q",
+            api_key_provider(
+                ProviderCategory::Enterprise,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "AMAZON_Q_TOKEN",
+                "https://codewhisperer.us-east-1.amazonaws.com",
+                "Amazon Q",
+            ),
+        ),
+        (
+            "qwen",
+            api_key_provider(
+                ProviderCategory::RegionalChinese,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "DASHSCOPE_API_KEY",
+                "https://dashscope.aliyuncs.com/compatible-mode/v1",
+                "Qwen",
+            ),
+        ),
+        (
+            "qwen_alibaba",
+            api_key_provider(
+                ProviderCategory::RegionalChinese,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "DASHSCOPE_API_KEY",
+                "https://dashscope.aliyuncs.com/compatible-mode/v1",
+                "Qwen",
+            ),
+        ),
+        (
+            "zhipu_chatglm",
+            api_key_provider(
+                ProviderCategory::RegionalChinese,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "ZHIPU_API_KEY",
+                "https://open.bigmodel.cn/api/paas/v4",
+                "Zhipu GLM",
+            ),
+        ),
+        (
+            "moonshot_kimi",
+            api_key_provider(
+                ProviderCategory::RegionalChinese,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "MOONSHOT_API_KEY",
+                "https://api.moonshot.cn/v1",
+                "Moonshot Kimi",
+            ),
+        ),
+        (
+            "minimax",
+            api_key_provider(
+                ProviderCategory::RegionalChinese,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "MINIMAX_API_KEY",
+                "https://api.minimax.chat/v1",
+                "MiniMax",
+            ),
+        ),
+        (
+            "yi_01ai",
+            api_key_provider(
+                ProviderCategory::RegionalChinese,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "YI_API_KEY",
+                "https://api.01.ai/v1",
+                "01.AI Yi",
+            ),
+        ),
+        (
+            "baichuan",
+            api_key_provider(
+                ProviderCategory::RegionalChinese,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "BAICHUAN_API_KEY",
+                "https://api.baichuan-ai.com/v1",
+                "Baichuan",
+            ),
+        ),
+        (
+            "stepfun",
+            api_key_provider(
+                ProviderCategory::RegionalChinese,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "STEPFUN_API_KEY",
+                "https://api.stepfun.com/v1",
+                "StepFun",
+            ),
+        ),
+        (
+            "doubao",
+            api_key_provider(
+                ProviderCategory::RegionalChinese,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                ApiKeyHeaderStyle::Bearer,
+                "VOLCANO_API_KEY",
+                "https://ark.cn-beijing.volces.com/api/v3",
+                "Doubao",
+            ),
+        ),
+        (
+            "ollama",
+            no_auth_provider(
+                ProviderCategory::Local,
+                ProviderIcon::OpenAiCompatible,
+                true,
+                "http://localhost:11434/v1",
+                "Ollama",
+            ),
+        ),
+        (
+            "lmstudio",
+            no_auth_provider(
+                ProviderCategory::Local,
+                ProviderIcon::OpenAiCompatible,
+                true,
+                "http://localhost:1234/v1",
+                "LM Studio",
+            ),
+        ),
+        (
+            "llamafile",
+            no_auth_provider(
+                ProviderCategory::Local,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                "http://localhost:8080/v1",
+                "Llamafile",
+            ),
+        ),
+        (
+            "text-generation-webui",
+            no_auth_provider(
+                ProviderCategory::Local,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                "http://localhost:5000/v1",
+                "Text Generation WebUI",
+            ),
+        ),
+        (
+            "text_generation_webui",
+            no_auth_provider(
+                ProviderCategory::Local,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                "http://localhost:5000/v1",
+                "Text Generation WebUI",
+            ),
+        ),
+        (
+            "vllm",
+            no_auth_provider(
+                ProviderCategory::Local,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                "http://localhost:8000/v1",
+                "vLLM",
+            ),
+        ),
+        (
+            "lemonade",
+            no_auth_provider(
+                ProviderCategory::Local,
+                ProviderIcon::OpenAiCompatible,
+                false,
+                "http://localhost:11434/v1",
+                "Lemonade",
+            ),
+        ),
+        (
+            "litellm_proxy",
+            api_key_provider(
+                ProviderCategory::Local,
+                ProviderIcon::OpenAiCompatible,
+                true,
+                ApiKeyHeaderStyle::Bearer,
+                "LITELLM_PROXY_API_KEY",
+                "http://localhost:4000",
+                "LiteLLM Proxy",
+            ),
+        ),
     ])
 }
 
@@ -934,20 +1640,38 @@ fn infer_category(provider_id: &str, api_base: &str) -> ProviderCategory {
         "openai" | "anthropic" | "google" | "github-models" | "github_models" => {
             ProviderCategory::Frontier
         }
-        "openrouter" | "groq" | "together" | "fireworks-ai" | "deepinfra" | "perplexity"
-        | "nvidia_nim" | "cerebras" | "replicate" | "anyscale" | "lepton" | "302ai"
-        | "cloudflare_workers_ai" | "cloudflare_ai_gateway" | "friendliai" | "friendli"
-        | "aiml" | "baseten" | "bytez" => ProviderCategory::FastInference,
-        "huggingface" | "cohere" | "fal" | "fal_ai" | "elevenlabs" | "deepgram"
-        | "runway" | "pika" | "stability" | "black-forest-labs" => {
-            ProviderCategory::Specialist
-        }
+        "openrouter"
+        | "groq"
+        | "together"
+        | "fireworks-ai"
+        | "deepinfra"
+        | "perplexity"
+        | "nvidia_nim"
+        | "cerebras"
+        | "replicate"
+        | "anyscale"
+        | "lepton"
+        | "302ai"
+        | "cloudflare_workers_ai"
+        | "cloudflare_ai_gateway"
+        | "friendliai"
+        | "friendli"
+        | "aiml"
+        | "baseten"
+        | "bytez" => ProviderCategory::FastInference,
+        "huggingface" | "cohere" | "fal" | "fal_ai" | "elevenlabs" | "deepgram" | "runway"
+        | "pika" | "stability" | "black-forest-labs" => ProviderCategory::Specialist,
         "azure_ai_foundry" | "oci_genai" | "sap_ai_hub" | "scaleway" | "datarobot"
-        | "nlp_cloud" | "aleph_alpha" | "ai21" | "clarifai" | "gitlab_duo"
-        | "amazon_q" => ProviderCategory::Enterprise,
-        "qwen" | "qwen_alibaba" | "zhipu_chatglm" | "moonshot_kimi" | "minimax"
-        | "yi_01ai" | "baichuan" | "stepfun" | "doubao" => ProviderCategory::RegionalChinese,
-        "ollama" | "lmstudio" | "vllm" | "llamafile" | "text-generation-webui"
+        | "nlp_cloud" | "aleph_alpha" | "ai21" | "clarifai" | "gitlab_duo" | "amazon_q" => {
+            ProviderCategory::Enterprise
+        }
+        "qwen" | "qwen_alibaba" | "zhipu_chatglm" | "moonshot_kimi" | "minimax" | "yi_01ai"
+        | "baichuan" | "stepfun" | "doubao" => ProviderCategory::RegionalChinese,
+        "ollama"
+        | "lmstudio"
+        | "vllm"
+        | "llamafile"
+        | "text-generation-webui"
         | "litellm_proxy" => ProviderCategory::Local,
         _ if api_base.contains("localhost") || api_base.contains("127.0.0.1") => {
             ProviderCategory::Local

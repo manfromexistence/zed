@@ -36,9 +36,11 @@ impl Render for MacOsDockPreview {
                     .gap_1()
                     .child(Headline::new("macOS Dock").size(HeadlineSize::XSmall))
                     .child(
-                        Label::new("Hover magnification, active glow, and tab switching rhythm preview.")
-                            .size(LabelSize::Small)
-                            .color(Color::Muted),
+                        Label::new(
+                            "Hover magnification, active glow, and tab switching rhythm preview.",
+                        )
+                        .size(LabelSize::Small)
+                        .color(Color::Muted),
                     ),
             )
             .child(
@@ -52,11 +54,10 @@ impl Render for MacOsDockPreview {
                         let scale = 1.0 + influence * 0.3;
                         let is_active = ix == active_ix;
                         div()
-                            .w(px(44.0))
-                            .h(px(44.0))
+                            .w(px(44.0 * scale))
+                            .h(px(44.0 * scale))
                             .rounded_lg()
                             .bg(hsla(ix as f32 / 5.0, 0.7, 0.62, 1.0))
-                            .scale(scale)
                             .shadow(if is_active {
                                 vec![BoxShadow {
                                     color: hsla(ix as f32 / 5.0, 0.8, 0.62, 0.45),

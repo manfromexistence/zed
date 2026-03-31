@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use gpui::{App, BoxShadow, Context, Render, Window, hsla, point, px};
+use gpui::{BoxShadow, Context, Render, Window, hsla, point, px};
 use ui::prelude::*;
 
 const SPAN_COUNT: usize = 25;

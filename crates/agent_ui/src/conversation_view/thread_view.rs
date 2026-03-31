@@ -14,7 +14,9 @@ use gpui::{Corner, List};
 use heapless::Vec as ArrayVec;
 use language_model::{LanguageModelEffortLevel, Speed};
 use settings::update_settings_file;
-use ui::{ButtonLike, ButtonSize, ButtonStyle, IconButtonShape, SplitButton, SplitButtonStyle, Tab};
+use ui::{
+    ButtonLike, ButtonSize, ButtonStyle, IconButtonShape, SplitButton, SplitButtonStyle, Tab,
+};
 use workspace::SERIALIZATION_THROTTLE_TIME;
 
 use super::*;
@@ -3333,7 +3335,8 @@ impl ThreadView {
                         v_flex()
                             .id("agent-composer-shell")
                             .w_full()
-                            .bg(editor_bg_color.blend(cx.theme().colors().surface_background.opacity(0.28)))
+                            .bg(editor_bg_color
+                                .blend(cx.theme().colors().surface_background.opacity(0.28)))
                             .border_1()
                             .border_color(cx.theme().colors().border_variant.opacity(0.9))
                             .rounded_lg()
@@ -3409,13 +3412,11 @@ impl ThreadView {
                                             .items_center()
                                             .children(self.render_token_usage(cx))
                                             .children(self.profile_selector.clone())
-                                            .map(|this| {
-                                                match self.config_options_view.clone() {
-                                                    Some(config_view) => this.child(config_view),
-                                                    None => this
-                                                        .children(self.mode_selector.clone())
-                                                        .children(self.model_selector.clone()),
-                                                }
+                                            .map(|this| match self.config_options_view.clone() {
+                                                Some(config_view) => this.child(config_view),
+                                                None => this
+                                                    .children(self.mode_selector.clone())
+                                                    .children(self.model_selector.clone()),
                                             })
                                             .child(self.render_media_mode_switcher(window, cx))
                                             .child(self.render_send_button(cx)),
@@ -3432,7 +3433,8 @@ impl ThreadView {
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
         let message_editor = self.message_editor.clone();
-        let supports_embedded_context = self.session_capabilities.read().supports_embedded_context();
+        let supports_embedded_context =
+            self.session_capabilities.read().supports_embedded_context();
 
         h_flex()
             .gap_1()
@@ -3511,16 +3513,16 @@ impl ThreadView {
             Self::media_modes_for_layout(window, self.editor_expanded);
         let overflow_modes = overflow_modes.to_vec();
         let overflow_selected = overflow_modes.contains(&self.selected_media_mode);
+        let visible_mode_buttons = visible_modes
+            .iter()
+            .copied()
+            .map(|mode| self.render_media_mode_button(mode, cx))
+            .collect::<Vec<_>>();
 
         h_flex()
             .gap_0p5()
             .items_center()
-            .children(
-                visible_modes
-                    .iter()
-                    .copied()
-                    .map(|mode| self.render_media_mode_button(mode, cx)),
-            )
+            .children(visible_mode_buttons)
             .when(!overflow_modes.is_empty(), |this| {
                 let weak_self = cx.weak_entity();
                 let tooltip_label = if overflow_selected {
@@ -3587,7 +3589,7 @@ impl ThreadView {
         &self,
         mode: ComposerMediaMode,
         cx: &mut Context<Self>,
-    ) -> impl IntoElement {
+    ) -> AnyElement {
         let selected = self.selected_media_mode == mode;
         let icon_color = if selected {
             Color::Accent
@@ -3595,11 +3597,15 @@ impl ThreadView {
             Color::Muted
         };
 
-        Button::new(("composer-media-mode", mode.key()), mode.label())
+        Button::new(format!("composer-media-mode-{}", mode.key()), mode.label())
             .style(ButtonStyle::Subtle)
             .size(ButtonSize::Compact)
             .label_size(LabelSize::Small)
-            .color(if selected { Color::Selected } else { Color::Muted })
+            .color(if selected {
+                Color::Selected
+            } else {
+                Color::Muted
+            })
             .toggle_state(selected)
             .selected_style(ButtonStyle::Tinted(TintColor::Accent))
             .start_icon(
@@ -3611,6 +3617,7 @@ impl ThreadView {
             .on_click(cx.listener(move |this, _, window, cx| {
                 this.set_selected_media_mode(mode, window, cx);
             }))
+            .into_any_element()
     }
 
     fn render_message_queue_entries(

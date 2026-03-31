@@ -1,5 +1,5 @@
-﻿use anyhow::Result;
-use gpui::{App, Entity, Task};
+use anyhow::Result;
+use gpui::{App, AppContext as _, Entity, Task};
 use project::{Project, ProjectEntryId, ProjectPath};
 use workspace::ProjectItem as WorkspaceProjectItem;
 
@@ -26,12 +26,15 @@ impl project::ProjectItem for PreviewAssetItem {
         cx: &mut App,
     ) -> Option<Task<Result<Entity<Self>>>> {
         let handler = preview_handler_for_path(path.path.as_std_path())?;
-        let entry_id = project.read(cx).entry_for_path(path, cx).map(|entry| entry.id);
+        let entry_id = project
+            .read(cx)
+            .entry_for_path(path, cx)
+            .map(|entry| entry.id);
         let abs_path = project.read(cx).absolute_path(path, cx);
         let file_name = path
             .path
             .file_name()
-            .map(|name| name.to_string_lossy().to_string())
+            .map(|name| name.to_string())
             .unwrap_or_else(|| path.path.as_std_path().display().to_string());
         let project_path = path.clone();
 
@@ -77,4 +80,3 @@ impl WorkspaceProjectItem for crate::preview_view::UniversalPreviewView {
         Self::new(project, item, window, cx)
     }
 }
-

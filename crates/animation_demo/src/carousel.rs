@@ -62,11 +62,12 @@ fn screen_card(width: f32, scale: f32, label: &'static str, cx: &App) -> impl In
     div()
         .w(px(width))
         .h(px(220.0))
+        .relative()
+        .top(px((1.0 - scale) * 18.0))
         .rounded_lg()
         .border_1()
         .border_color(cx.theme().colors().border_variant)
         .bg(cx.theme().colors().element_background)
-        .scale(scale)
         .opacity(scale)
         .child(
             v_flex()
@@ -74,6 +75,10 @@ fn screen_card(width: f32, scale: f32, label: &'static str, cx: &App) -> impl In
                 .justify_between()
                 .p_4()
                 .child(Headline::new(label).size(HeadlineSize::XSmall))
-                .child(Label::new(format!("{width:.0}px")).size(LabelSize::Small).color(Color::Muted)),
+                .child(
+                    Label::new(format!("{width:.0}px"))
+                        .size(LabelSize::Small)
+                        .color(Color::Muted),
+                ),
         )
 }

@@ -39,6 +39,7 @@ fn single_line_input(
 }
 
 #[derive(Clone, Copy)]
+#[allow(dead_code)]
 pub enum LlmCompatibleProvider {
     OpenAi,
     OpenRouter,
@@ -100,7 +101,7 @@ impl LlmCompatibleProvider {
         }
     }
 
-    fn name(&self) -> &'static str {
+    pub(crate) fn name(&self) -> &'static str {
         match self {
             LlmCompatibleProvider::OpenAi => "OpenAI-Compatible",
             LlmCompatibleProvider::OpenRouter => "OpenRouter",
@@ -225,7 +226,14 @@ impl AddLlmProviderInput {
             window,
             cx,
         );
-        let api_url = single_line_input("API URL", provider.api_url(), Some(provider.api_url()), 2, window, cx);
+        let api_url = single_line_input(
+            "API URL",
+            provider.api_url(),
+            Some(provider.api_url()),
+            2,
+            window,
+            cx,
+        );
         let api_key = cx.new(|cx| {
             InputField::new(
                 window,
@@ -268,12 +276,7 @@ impl AddLlmProviderInput {
         self.models.remove(index);
     }
 
-    fn replace_models(
-        &mut self,
-        models: Vec<AvailableModel>,
-        window: &mut Window,
-        cx: &mut App,
-    ) {
+    fn replace_models(&mut self, models: Vec<AvailableModel>, window: &mut Window, cx: &mut App) {
         self.models = if models.is_empty() {
             vec![ModelInput::new(0, window, cx)]
         } else {
@@ -373,38 +376,31 @@ impl ModelInput {
             field.set_text(&model.name, window, cx);
         });
         input.max_tokens.update(cx, |field, cx| {
-            field.set_text(model.max_tokens.to_string(), window, cx);
+            let value = model.max_tokens.to_string();
+            field.set_text(&value, window, cx);
         });
         input.max_completion_tokens.update(cx, |field, cx| {
-            field.set_text(
-                model
-                    .max_completion_tokens
-                    .or(model.max_output_tokens)
-                    .unwrap_or(model.max_tokens)
-                    .to_string(),
-                window,
-                cx,
-            );
+            let value = model
+                .max_completion_tokens
+                .or(model.max_output_tokens)
+                .unwrap_or(model.max_tokens)
+                .to_string();
+            field.set_text(&value, window, cx);
         });
         input.max_output_tokens.update(cx, |field, cx| {
-            field.set_text(
-                model
-                    .max_output_tokens
-                    .or(model.max_completion_tokens)
-                    .unwrap_or(model.max_tokens)
-                    .to_string(),
-                window,
-                cx,
-            );
+            let value = model
+                .max_output_tokens
+                .or(model.max_completion_tokens)
+                .unwrap_or(model.max_tokens)
+                .to_string();
+            field.set_text(&value, window, cx);
         });
         input.capabilities.supports_tools = model.capabilities.tools.into();
         input.capabilities.supports_images = model.capabilities.images.into();
         input.capabilities.supports_parallel_tool_calls =
             model.capabilities.parallel_tool_calls.into();
-        input.capabilities.supports_prompt_cache_key =
-            model.capabilities.prompt_cache_key.into();
-        input.capabilities.supports_chat_completions =
-            model.capabilities.chat_completions.into();
+        input.capabilities.supports_prompt_cache_key = model.capabilities.prompt_cache_key.into();
+        input.capabilities.supports_chat_completions = model.capabilities.chat_completions.into();
         input
     }
 
@@ -485,7 +481,8 @@ fn parse_openai_compatible_models(payload: serde_json::Value) -> Vec<AvailableMo
             )
             .unwrap_or(128_000);
             let max_output_tokens = parse_u64_value(
-                model.get("max_output_tokens")
+                model
+                    .get("max_output_tokens")
                     .or_else(|| model.get("max_completion_tokens")),
             );
             let input_modalities = model
@@ -559,9 +556,11 @@ async fn discover_models(
         .await
         .map_err(|error| SharedString::from(format!("Failed to contact provider: {error}")))?
         .error_for_status()
-        .map_err(|error| SharedString::from(format!("Provider returned an error: {error}")))?
-        .json::<serde_json::Value>()
-        .await
+        .map_err(|error| SharedString::from(format!("Provider returned an error: {error}")))?;
+    let payload =
+        serde_json::from_str::<serde_json::Value>(&payload.text().await.map_err(|error| {
+            SharedString::from(format!("Failed to read provider models response: {error}"))
+        })?)
         .map_err(|error| SharedString::from(format!("Failed to parse provider models: {error}")))?;
 
     let models = parse_openai_compatible_models(payload);
@@ -675,7 +674,9 @@ impl AddLlmProviderModal {
             input: AddLlmProviderInput::new(provider, window, cx),
             provider,
             last_error: None,
-            discovery_message: Some("Seeded models from the synced provider catalog when available.".into()),
+            discovery_message: Some(
+                "Seeded models from the synced provider catalog when available.".into(),
+            ),
             discover_models_task: None,
             focus_handle: cx.focus_handle(),
             scroll_handle: ScrollHandle::new(),
@@ -715,7 +716,11 @@ impl AddLlmProviderModal {
             let result = discover_models(
                 provider,
                 api_url,
-                if api_key.is_empty() { None } else { Some(api_key) },
+                if api_key.is_empty() {
+                    None
+                } else {
+                    Some(api_key)
+                },
             )
             .await;
 
@@ -725,13 +730,15 @@ impl AddLlmProviderModal {
                     Ok(models) => {
                         let count = models.len();
                         this.input.replace_models(models, window, cx);
-                        this.discovery_message =
-                            Some(format!("Discovered {count} models from the live endpoint.").into());
+                        this.discovery_message = Some(
+                            format!("Discovered {count} models from the live endpoint.").into(),
+                        );
                     }
                     Err(error) => {
                         this.last_error = Some(error);
-                        this.discovery_message =
-                            Some("Model discovery failed. You can still edit models manually.".into());
+                        this.discovery_message = Some(
+                            "Model discovery failed. You can still edit models manually.".into(),
+                        );
                     }
                 }
                 cx.notify();
@@ -788,7 +795,11 @@ impl AddLlmProviderModal {
                     ),
             )
             .when_some(self.discovery_message.clone(), |this, message| {
-                this.child(Label::new(message).size(LabelSize::Small).color(Color::Muted))
+                this.child(
+                    Label::new(message)
+                        .size(LabelSize::Small)
+                        .color(Color::Muted),
+                )
             })
             .children(
                 self.input

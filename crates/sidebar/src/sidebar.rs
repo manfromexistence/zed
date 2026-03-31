@@ -1310,7 +1310,7 @@ impl Sidebar {
                         .w_full()
                         .relative()
                         .top(px((1.0 - group_progress) * -8.0))
-                        .scale(0.96 + (group_progress * 0.04))
+                        .opacity(0.82 + (group_progress * 0.18))
                         .child(rendered),
                 )
                 .into_any_element()
@@ -1428,7 +1428,7 @@ impl Sidebar {
                 }
             })
             .justify_between()
-            .hover(|s| s.bg(hover_color).scale(1.01))
+            .hover(|s| s.bg(hover_color).border_color(color.border.opacity(0.7)))
             .child(
                 h_flex()
                     .relative()
@@ -1560,7 +1560,10 @@ impl Sidebar {
                                 let workspace_for_new_thread = workspace_for_new_thread.clone();
                                 let path_list_for_new_thread = path_list_for_new_thread.clone();
                                 move |this, _, window, cx| {
-                                    this.set_group_collapsed_state(&path_list_for_new_thread, false);
+                                    this.set_group_collapsed_state(
+                                        &path_list_for_new_thread,
+                                        false,
+                                    );
                                     this.selection = None;
                                     this.update_entries(cx);
                                     this.create_new_thread(&workspace_for_new_thread, window, cx);

@@ -22,10 +22,9 @@ pub enum AuthCredential {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum AuthStrategy {
-    #[default]
     ApiKey {
         header_style: ApiKeyHeaderStyle,
         env_var: Option<String>,
@@ -121,6 +120,15 @@ pub enum AuthStrategy {
     BaiduOAuth2,
     GitLabDuoToken,
     AmazonQToken,
+}
+
+impl Default for AuthStrategy {
+    fn default() -> Self {
+        Self::ApiKey {
+            header_style: ApiKeyHeaderStyle::Bearer,
+            env_var: None,
+        }
+    }
 }
 
 impl AuthStrategy {

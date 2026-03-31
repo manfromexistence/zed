@@ -2,6 +2,7 @@ use anyhow::{Result, anyhow};
 use credentials_provider::CredentialsProvider;
 use gpui::{App, AsyncApp};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StoredOAuthToken {
@@ -19,12 +20,17 @@ impl CredentialManager {
     }
 
     pub async fn read_secret(url: &str, cx: &AsyncApp) -> Result<Option<Vec<u8>>> {
-        let provider = cx.update(|cx| <dyn CredentialsProvider>::global(cx)).await?;
-        Ok(provider.read_credentials(url, cx).await?.map(|(_, value)| value))
+        let provider: Arc<dyn CredentialsProvider> =
+            cx.update(|cx| <dyn CredentialsProvider>::global(cx));
+        Ok(provider
+            .read_credentials(url, cx)
+            .await?
+            .map(|(_, value)| value))
     }
 
     pub async fn read_basic(url: &str, cx: &AsyncApp) -> Result<Option<(String, String)>> {
-        let provider = cx.update(|cx| <dyn CredentialsProvider>::global(cx)).await?;
+        let provider: Arc<dyn CredentialsProvider> =
+            cx.update(|cx| <dyn CredentialsProvider>::global(cx));
         let credential = provider.read_credentials(url, cx).await?;
         credential
             .map(|(username, password)| {
@@ -44,7 +50,9 @@ impl CredentialManager {
 
     pub fn read_env(name: &Option<String>) -> Option<String> {
         let name = name.as_ref()?;
-        std::env::var(name).ok().filter(|value| !value.trim().is_empty())
+        std::env::var(name)
+            .ok()
+            .filter(|value| !value.trim().is_empty())
     }
 
     pub fn read_env_required(name: &Option<String>, what: &str) -> Result<String> {

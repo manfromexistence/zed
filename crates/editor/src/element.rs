@@ -12187,20 +12187,16 @@ impl CursorLayout {
             for stripe_ix in 0..stripe_count {
                 let stripe_ratio = stripe_ix as f32 / stripe_count as f32;
                 let stripe_top = bounds.top() + bounds.size.height * stripe_ratio;
-                let stripe_bottom =
-                    bounds.top() + bounds.size.height * ((stripe_ix + 1) as f32 / stripe_count as f32);
+                let stripe_bottom = bounds.top()
+                    + bounds.size.height * ((stripe_ix + 1) as f32 / stripe_count as f32);
                 let stripe_bounds = Bounds::from_corners(
                     point(bounds.left(), stripe_top),
                     point(bounds.right(), stripe_bottom),
                 );
-                let hue = (elapsed * 0.18
-                    + stripe_ratio * 0.24
-                    + (self.origin.x.0 as f32 / 320.0))
-                    % 1.0;
-                window.paint_quad(fill(
-                    stripe_bounds,
-                    hsla(hue, 0.86, 0.62, 1.0),
-                ));
+                let hue =
+                    (elapsed * 0.18 + stripe_ratio * 0.24 + (f32::from(self.origin.x) / 320.0))
+                        % 1.0;
+                window.paint_quad(fill(stripe_bounds, hsla(hue, 0.86, 0.62, 1.0)));
             }
         } else {
             let cursor = if matches!(self.shape, CursorShape::Hollow) {

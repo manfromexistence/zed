@@ -1,4 +1,4 @@
-﻿use std::path::PathBuf;
+use std::path::PathBuf;
 
 use crate::browser_extensions::{BrowserProfile, sanitize_component};
 
@@ -64,7 +64,11 @@ impl DevSessionPolicy {
         let browser_key = browser_profile
             .map(BrowserProfile::profile_key)
             .unwrap_or_else(|| "clean-preview".to_string());
-        let extension_key = if importing_extensions { "with-ext" } else { "no-ext" };
+        let extension_key = if importing_extensions {
+            "with-ext"
+        } else {
+            "no-ext"
+        };
 
         let base = paths::data_dir()
             .join("web_preview")

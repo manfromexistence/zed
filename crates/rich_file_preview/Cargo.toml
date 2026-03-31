@@ -12,6 +12,10 @@ workspace = true
 path = "src/lib.rs"
 doctest = false
 
+[features]
+default = []
+ffmpeg-video = ["dep:video-rs"]
+
 [dependencies]
 agent-client-protocol.workspace = true
 agent_ui.workspace = true
@@ -48,6 +52,6 @@ stl_io = "0.8.3"
 tempfile = "3.20.0"
 tiny-skia = "0.11.4"
 tobj = "4.0.3"
-video-rs = { version = "0.11.0", features = ["ndarray"] }
+video-rs = { version = "0.11.0", features = ["ndarray"], optional = true }
 wry = { version = "0.54.3", features = ["devtools"] }
 zip = { version = "2.4.2", default-features = false, features = ["deflate"] }
