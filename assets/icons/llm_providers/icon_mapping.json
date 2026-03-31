@@ -1,0 +1,1642 @@
+[
+  {
+    "provider": "adept",
+    "displayName": "Adept AI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "adept.svg",
+    "source": "Generated",
+    "domain": "adept.ai",
+    "color": "#6366F1"
+  },
+  {
+    "provider": "ai21",
+    "displayName": "AI21 Labs",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "ai21.svg",
+    "source": "Generated",
+    "domain": "ai21.com",
+    "color": "#FF6B6B"
+  },
+  {
+    "provider": "ai71",
+    "displayName": "AI71 (UAE)",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "ai71.svg",
+    "source": "Generated",
+    "domain": "ai71.ai",
+    "color": "#10B981"
+  },
+  {
+    "provider": "aider",
+    "displayName": "Aider",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "aider.svg",
+    "source": "Generated",
+    "domain": "aider.chat",
+    "color": "#10B981"
+  },
+  {
+    "provider": "aleph_alpha",
+    "displayName": "Aleph Alpha (EU)",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "aleph_alpha.svg",
+    "source": "Generated",
+    "domain": "aleph-alpha.com",
+    "color": "#1F2937"
+  },
+  {
+    "provider": "anthropic",
+    "displayName": "Anthropic",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "anthropic.svg",
+    "source": "Generated",
+    "domain": "anthropic.com",
+    "color": "#D97706"
+  },
+  {
+    "provider": "anyscale",
+    "displayName": "Anyscale",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "anyscale.svg",
+    "source": "Generated",
+    "domain": "anyscale.com",
+    "color": "#3B82F6"
+  },
+  {
+    "provider": "assemblyai",
+    "displayName": "AssemblyAI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "assemblyai.svg",
+    "source": "Generated",
+    "domain": "assemblyai.com",
+    "color": "#10B981"
+  },
+  {
+    "provider": "augment",
+    "displayName": "Augment Code",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "augment.svg",
+    "source": "Generated",
+    "domain": "augmentcode.com",
+    "color": "#10B981"
+  },
+  {
+    "provider": "autogen",
+    "displayName": "AutoGen",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "autogen.svg",
+    "source": "Generated",
+    "domain": "microsoft.com",
+    "color": "#0078D4"
+  },
+  {
+    "provider": "aws_polly",
+    "displayName": "AWS Polly",
+    "iconKey": "aws_dark",
+    "status": "svgl",
+    "file": "aws_polly.svg",
+    "source": "SVGL",
+    "domain": "aws.amazon.com",
+    "color": "#FF9900"
+  },
+  {
+    "provider": "azure",
+    "displayName": "Azure OpenAI",
+    "iconKey": "azure",
+    "status": "svgl",
+    "file": "azure.svg",
+    "source": "SVGL",
+    "domain": "microsoft.com",
+    "color": "#0078D4"
+  },
+  {
+    "provider": "azure_ai",
+    "displayName": "Azure AI",
+    "iconKey": "azure",
+    "status": "svgl",
+    "file": "azure_ai.svg",
+    "source": "SVGL",
+    "domain": "microsoft.com",
+    "color": "#0078D4"
+  },
+  {
+    "provider": "azure_speech",
+    "displayName": "Azure Speech",
+    "iconKey": "azure",
+    "status": "svgl",
+    "file": "azure_speech.svg",
+    "source": "SVGL",
+    "domain": "microsoft.com",
+    "color": "#0078D4"
+  },
+  {
+    "provider": "baichuan",
+    "displayName": "Baichuan AI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "baichuan.svg",
+    "source": "Generated",
+    "domain": "baichuan-ai.com",
+    "color": "#3B82F6"
+  },
+  {
+    "provider": "baidu",
+    "displayName": "Baidu (ERNIE)",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "baidu.svg",
+    "source": "Generated",
+    "domain": "baidu.com",
+    "color": "#2932E1"
+  },
+  {
+    "provider": "banana",
+    "displayName": "Banana",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "banana.svg",
+    "source": "Generated",
+    "domain": "banana.dev",
+    "color": "#FBBF24"
+  },
+  {
+    "provider": "baseten",
+    "displayName": "Baseten",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "baseten.svg",
+    "source": "Generated",
+    "domain": "baseten.co",
+    "color": "#10B981"
+  },
+  {
+    "provider": "beam",
+    "displayName": "Beam",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "beam.svg",
+    "source": "Generated",
+    "domain": "beam.cloud",
+    "color": "#06B6D4"
+  },
+  {
+    "provider": "bedrock",
+    "displayName": "AWS Bedrock",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "bedrock.svg",
+    "source": "Generated",
+    "domain": "aws.amazon.com",
+    "color": "#FF9900"
+  },
+  {
+    "provider": "black_forest_labs",
+    "displayName": "Black Forest Labs (FLUX)",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "black_forest_labs.svg",
+    "source": "Generated",
+    "domain": "blackforestlabs.ai",
+    "color": "#1F2937"
+  },
+  {
+    "provider": "bolt",
+    "displayName": "Bolt.new",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "bolt.svg",
+    "source": "Generated",
+    "domain": "bolt.new",
+    "color": "#3B82F6"
+  },
+  {
+    "provider": "brave_search",
+    "displayName": "Brave Search API",
+    "iconKey": "brave",
+    "status": "svgl",
+    "file": "brave_search.svg",
+    "source": "SVGL",
+    "domain": "brave.com",
+    "color": "#FB542B"
+  },
+  {
+    "provider": "canva",
+    "displayName": "Canva AI",
+    "iconKey": "canva",
+    "status": "svgl",
+    "file": "canva.svg",
+    "source": "SVGL",
+    "domain": "canva.com",
+    "color": "#00C4CC"
+  },
+  {
+    "provider": "cerebras",
+    "displayName": "Cerebras",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "cerebras.svg",
+    "source": "Generated",
+    "domain": "cerebras.net",
+    "color": "#8B5CF6"
+  },
+  {
+    "provider": "character_ai",
+    "displayName": "Character.AI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "character_ai.svg",
+    "source": "Generated",
+    "domain": "character.ai",
+    "color": "#EC4899"
+  },
+  {
+    "provider": "clarifai",
+    "displayName": "Clarifai",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "clarifai.svg",
+    "source": "Generated",
+    "domain": "clarifai.com",
+    "color": "#3B82F6"
+  },
+  {
+    "provider": "clipdrop",
+    "displayName": "ClipDrop",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "clipdrop.svg",
+    "source": "Generated",
+    "domain": "clipdrop.co",
+    "color": "#3B82F6"
+  },
+  {
+    "provider": "cloudflare",
+    "displayName": "Cloudflare AI",
+    "iconKey": "cloudflare",
+    "status": "svgl",
+    "file": "cloudflare.svg",
+    "source": "SVGL",
+    "domain": "cloudflare.com",
+    "color": "#F38020"
+  },
+  {
+    "provider": "codegen",
+    "displayName": "CodeGen",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "codegen.svg",
+    "source": "Generated",
+    "domain": "salesforce.com",
+    "color": "#00A1E0"
+  },
+  {
+    "provider": "codeium",
+    "displayName": "Codeium",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "codeium.svg",
+    "source": "Generated",
+    "domain": "codeium.com",
+    "color": "#09B6A2"
+  },
+  {
+    "provider": "codestral",
+    "displayName": "Codestral",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "codestral.svg",
+    "source": "Generated",
+    "domain": "mistral.ai",
+    "color": "#F97316"
+  },
+  {
+    "provider": "cohere",
+    "displayName": "Cohere",
+    "iconKey": "cohere",
+    "status": "svgl",
+    "file": "cohere.svg",
+    "source": "SVGL",
+    "domain": "cohere.com",
+    "color": "#D18EE2"
+  },
+  {
+    "provider": "comet",
+    "displayName": "Comet ML",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "comet.svg",
+    "source": "Generated",
+    "domain": "comet.com",
+    "color": "#3B82F6"
+  },
+  {
+    "provider": "continue",
+    "displayName": "Continue",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "continue.svg",
+    "source": "Generated",
+    "domain": "continue.dev",
+    "color": "#3B82F6"
+  },
+  {
+    "provider": "coreweave",
+    "displayName": "CoreWeave",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "coreweave.svg",
+    "source": "Generated",
+    "domain": "coreweave.com",
+    "color": "#3B82F6"
+  },
+  {
+    "provider": "cursor",
+    "displayName": "Cursor",
+    "iconKey": "cursor_dark",
+    "status": "svgl",
+    "file": "cursor.svg",
+    "source": "SVGL",
+    "domain": "cursor.sh",
+    "color": "#000000"
+  },
+  {
+    "provider": "dalle",
+    "displayName": "DALL-E",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "dalle.svg",
+    "source": "Generated",
+    "domain": "openai.com",
+    "color": "#10A37F"
+  },
+  {
+    "provider": "dashscope",
+    "displayName": "DashScope (Alibaba)",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "dashscope.svg",
+    "source": "Generated",
+    "domain": "aliyun.com",
+    "color": "#FF6A00"
+  },
+  {
+    "provider": "databricks",
+    "displayName": "Databricks",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "databricks.svg",
+    "source": "Generated",
+    "domain": "databricks.com",
+    "color": "#FF3621"
+  },
+  {
+    "provider": "datarobot",
+    "displayName": "DataRobot",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "datarobot.svg",
+    "source": "Generated",
+    "domain": "datarobot.com",
+    "color": "#00C1D5"
+  },
+  {
+    "provider": "deepgram",
+    "displayName": "Deepgram",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "deepgram.svg",
+    "source": "Generated",
+    "domain": "deepgram.com",
+    "color": "#13EF93"
+  },
+  {
+    "provider": "deepinfra",
+    "displayName": "DeepInfra",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "deepinfra.svg",
+    "source": "Generated",
+    "domain": "deepinfra.com",
+    "color": "#6366F1"
+  },
+  {
+    "provider": "deepseek",
+    "displayName": "DeepSeek",
+    "iconKey": "deepseek",
+    "status": "svgl",
+    "file": "deepseek.svg",
+    "source": "SVGL",
+    "domain": "deepseek.com",
+    "color": "#0FA4EA"
+  },
+  {
+    "provider": "domino",
+    "displayName": "Domino Data Lab",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "domino.svg",
+    "source": "Generated",
+    "domain": "dominodatalab.com",
+    "color": "#3B82F6"
+  },
+  {
+    "provider": "duckduckgo",
+    "displayName": "DuckDuckGo",
+    "iconKey": "duckduckgo",
+    "status": "svgl",
+    "file": "duckduckgo.svg",
+    "source": "SVGL",
+    "domain": "duckduckgo.com",
+    "color": "#DE5833"
+  },
+  {
+    "provider": "elevenlabs",
+    "displayName": "ElevenLabs",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "elevenlabs.svg",
+    "source": "Generated",
+    "domain": "elevenlabs.io",
+    "color": "#A855F7"
+  },
+  {
+    "provider": "exa_ai",
+    "displayName": "Exa AI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "exa_ai.svg",
+    "source": "Generated",
+    "domain": "exa.ai",
+    "color": "#EC4899"
+  },
+  {
+    "provider": "factory",
+    "displayName": "Factory AI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "factory.svg",
+    "source": "Generated",
+    "domain": "factory.ai",
+    "color": "#F59E0B"
+  },
+  {
+    "provider": "fal_ai",
+    "displayName": "Fal AI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "fal_ai.svg",
+    "source": "Generated",
+    "domain": "fal.ai",
+    "color": "#F43F5E"
+  },
+  {
+    "provider": "featherless_ai",
+    "displayName": "Featherless AI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "featherless_ai.svg",
+    "source": "Generated",
+    "domain": "featherless.ai",
+    "color": "#14B8A6"
+  },
+  {
+    "provider": "firecrawl",
+    "displayName": "Firecrawl",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "firecrawl.svg",
+    "source": "Generated",
+    "domain": "firecrawl.dev",
+    "color": "#F97316"
+  },
+  {
+    "provider": "firefly",
+    "displayName": "Adobe Firefly",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "firefly.svg",
+    "source": "Generated",
+    "domain": "adobe.com",
+    "color": "#FF0000"
+  },
+  {
+    "provider": "fireworks_ai",
+    "displayName": "Fireworks AI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "fireworks_ai.svg",
+    "source": "Generated",
+    "domain": "fireworks.ai",
+    "color": "#F59E0B"
+  },
+  {
+    "provider": "friendliai",
+    "displayName": "FriendliAI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "friendliai.svg",
+    "source": "Generated",
+    "domain": "friendli.ai",
+    "color": "#84CC16"
+  },
+  {
+    "provider": "gemini",
+    "displayName": "Google Gemini",
+    "iconKey": "gemini",
+    "status": "svgl",
+    "file": "gemini.svg",
+    "source": "SVGL",
+    "domain": "google.com",
+    "color": "#4285F4"
+  },
+  {
+    "provider": "gigachat",
+    "displayName": "GigaChat (Sber)",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "gigachat.svg",
+    "source": "Generated",
+    "domain": "gigachat.com",
+    "color": "#22C55E"
+  },
+  {
+    "provider": "github_copilot",
+    "displayName": "GitHub Copilot",
+    "iconKey": "github_dark",
+    "status": "svgl",
+    "file": "github_copilot.svg",
+    "source": "SVGL",
+    "domain": "github.com",
+    "color": "#238636"
+  },
+  {
+    "provider": "google",
+    "displayName": "Google AI",
+    "iconKey": "google",
+    "status": "svgl",
+    "file": "google.svg",
+    "source": "SVGL",
+    "domain": "google.com",
+    "color": "#4285F4"
+  },
+  {
+    "provider": "google_tts",
+    "displayName": "Google Text-to-Speech",
+    "iconKey": "google",
+    "status": "svgl",
+    "file": "google_tts.svg",
+    "source": "SVGL",
+    "domain": "cloud.google.com",
+    "color": "#4285F4"
+  },
+  {
+    "provider": "gpt4all",
+    "displayName": "GPT4All",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "gpt4all.svg",
+    "source": "Generated",
+    "domain": "gpt4all.io",
+    "color": "#10B981"
+  },
+  {
+    "provider": "gptengineer",
+    "displayName": "GPT Engineer",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "gptengineer.svg",
+    "source": "Generated",
+    "domain": "gptengineer.app",
+    "color": "#8B5CF6"
+  },
+  {
+    "provider": "gradient_ai",
+    "displayName": "Gradient AI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "gradient_ai.svg",
+    "source": "Generated",
+    "domain": "gradient.ai",
+    "color": "#3B82F6"
+  },
+  {
+    "provider": "graphcore",
+    "displayName": "Graphcore",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "graphcore.svg",
+    "source": "Generated",
+    "domain": "graphcore.ai",
+    "color": "#3B82F6"
+  },
+  {
+    "provider": "groq",
+    "displayName": "Groq",
+    "iconKey": "groq",
+    "status": "svgl",
+    "file": "groq.svg",
+    "source": "SVGL",
+    "domain": "groq.com",
+    "color": "#F55036"
+  },
+  {
+    "provider": "h2o",
+    "displayName": "H2O.ai",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "h2o.svg",
+    "source": "Generated",
+    "domain": "h2o.ai",
+    "color": "#FEC925"
+  },
+  {
+    "provider": "haystack",
+    "displayName": "Haystack",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "haystack.svg",
+    "source": "Generated",
+    "domain": "haystack.deepset.ai",
+    "color": "#3B82F6"
+  },
+  {
+    "provider": "heroku",
+    "displayName": "Heroku AI",
+    "iconKey": "heroku",
+    "status": "svgl",
+    "file": "heroku.svg",
+    "source": "SVGL",
+    "domain": "heroku.com",
+    "color": "#430098"
+  },
+  {
+    "provider": "heygen",
+    "displayName": "HeyGen",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "heygen.svg",
+    "source": "Generated",
+    "domain": "heygen.com",
+    "color": "#8B5CF6"
+  },
+  {
+    "provider": "huggingface",
+    "displayName": "Hugging Face",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "huggingface.svg",
+    "source": "Generated",
+    "domain": "huggingface.co",
+    "color": "#FFD21E"
+  },
+  {
+    "provider": "hyperbolic",
+    "displayName": "Hyperbolic",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "hyperbolic.svg",
+    "source": "Generated",
+    "domain": "hyperbolic.xyz",
+    "color": "#8B5CF6"
+  },
+  {
+    "provider": "ideogram",
+    "displayName": "Ideogram",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "ideogram.svg",
+    "source": "Generated",
+    "domain": "ideogram.ai",
+    "color": "#6366F1"
+  },
+  {
+    "provider": "iflytek",
+    "displayName": "iFlytek (Spark)",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "iflytek.svg",
+    "source": "Generated",
+    "domain": "iflytek.com",
+    "color": "#0EA5E9"
+  },
+  {
+    "provider": "imagen",
+    "displayName": "Google Imagen",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "imagen.svg",
+    "source": "Generated",
+    "domain": "google.com",
+    "color": "#4285F4"
+  },
+  {
+    "provider": "inflection",
+    "displayName": "Inflection AI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "inflection.svg",
+    "source": "Generated",
+    "domain": "inflection.ai",
+    "color": "#8B5CF6"
+  },
+  {
+    "provider": "jarvis_labs",
+    "displayName": "Jarvis Labs",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "jarvis_labs.svg",
+    "source": "Generated",
+    "domain": "jarvislabs.ai",
+    "color": "#06B6D4"
+  },
+  {
+    "provider": "jina_ai",
+    "displayName": "Jina AI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "jina_ai.svg",
+    "source": "Generated",
+    "domain": "jina.ai",
+    "color": "#3B82F6"
+  },
+  {
+    "provider": "kakao",
+    "displayName": "Kakao (KoGPT)",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "kakao.svg",
+    "source": "Generated",
+    "domain": "kakao.com",
+    "color": "#FFE812"
+  },
+  {
+    "provider": "lambda_ai",
+    "displayName": "Lambda Labs",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "lambda_ai.svg",
+    "source": "Generated",
+    "domain": "lambdalabs.com",
+    "color": "#6366F1"
+  },
+  {
+    "provider": "langchain",
+    "displayName": "LangChain",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "langchain.svg",
+    "source": "Generated",
+    "domain": "langchain.com",
+    "color": "#1C3C3C"
+  },
+  {
+    "provider": "leonardo",
+    "displayName": "Leonardo.AI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "leonardo.svg",
+    "source": "Generated",
+    "domain": "leonardo.ai",
+    "color": "#F59E0B"
+  },
+  {
+    "provider": "lepton",
+    "displayName": "Lepton AI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "lepton.svg",
+    "source": "Generated",
+    "domain": "lepton.ai",
+    "color": "#3B82F6"
+  },
+  {
+    "provider": "lightblue",
+    "displayName": "LightBlue (Japan)",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "lightblue.svg",
+    "source": "Generated",
+    "domain": "lightblue.ai",
+    "color": "#3B82F6"
+  },
+  {
+    "provider": "litellm",
+    "displayName": "LiteLLM Proxy",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "litellm.svg",
+    "source": "Generated",
+    "domain": "litellm.ai",
+    "color": "#8B5CF6"
+  },
+  {
+    "provider": "llamafile",
+    "displayName": "Llamafile",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "llamafile.svg",
+    "source": "Generated",
+    "domain": "llamafile.ai",
+    "color": "#F59E0B"
+  },
+  {
+    "provider": "llamaindex",
+    "displayName": "LlamaIndex",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "llamaindex.svg",
+    "source": "Generated",
+    "domain": "llamaindex.ai",
+    "color": "#8B5CF6"
+  },
+  {
+    "provider": "lmstudio",
+    "displayName": "LM Studio",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "lmstudio.svg",
+    "source": "Generated",
+    "domain": "lmstudio.ai",
+    "color": "#4F46E5"
+  },
+  {
+    "provider": "lovable",
+    "displayName": "Lovable",
+    "iconKey": "lovable",
+    "status": "svgl",
+    "file": "lovable.svg",
+    "source": "SVGL",
+    "domain": "lovable.dev",
+    "color": "#FF66F4"
+  },
+  {
+    "provider": "magic",
+    "displayName": "Magic.dev",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "magic.svg",
+    "source": "Generated",
+    "domain": "magic.dev",
+    "color": "#6366F1"
+  },
+  {
+    "provider": "meta_llama",
+    "displayName": "Meta Llama",
+    "iconKey": "meta",
+    "status": "svgl",
+    "file": "meta_llama.svg",
+    "source": "SVGL",
+    "domain": "meta.com",
+    "color": "#0668E1"
+  },
+  {
+    "provider": "midjourney",
+    "displayName": "Midjourney",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "midjourney.svg",
+    "source": "Generated",
+    "domain": "midjourney.com",
+    "color": "#000000"
+  },
+  {
+    "provider": "minimax",
+    "displayName": "MiniMax",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "minimax.svg",
+    "source": "Generated",
+    "domain": "minimax.chat",
+    "color": "#EF4444"
+  },
+  {
+    "provider": "mistral",
+    "displayName": "Mistral AI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "mistral.svg",
+    "source": "Generated",
+    "domain": "mistral.ai",
+    "color": "#F97316"
+  },
+  {
+    "provider": "modal",
+    "displayName": "Modal",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "modal.svg",
+    "source": "Generated",
+    "domain": "modal.com",
+    "color": "#3B82F6"
+  },
+  {
+    "provider": "moonshot",
+    "displayName": "Moonshot AI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "moonshot.svg",
+    "source": "Generated",
+    "domain": "moonshot.cn",
+    "color": "#6366F1"
+  },
+  {
+    "provider": "mutable",
+    "displayName": "Mutable AI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "mutable.svg",
+    "source": "Generated",
+    "domain": "mutable.ai",
+    "color": "#8B5CF6"
+  },
+  {
+    "provider": "naver",
+    "displayName": "Naver (HyperCLOVA)",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "naver.svg",
+    "source": "Generated",
+    "domain": "naver.com",
+    "color": "#03C75A"
+  },
+  {
+    "provider": "nebius",
+    "displayName": "Nebius (EU)",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "nebius.svg",
+    "source": "Generated",
+    "domain": "nebius.com",
+    "color": "#3B82F6"
+  },
+  {
+    "provider": "novita",
+    "displayName": "Novita AI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "novita.svg",
+    "source": "Generated",
+    "domain": "novita.ai",
+    "color": "#10B981"
+  },
+  {
+    "provider": "nscale",
+    "displayName": "nScale (EU)",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "nscale.svg",
+    "source": "Generated",
+    "domain": "nscale.com",
+    "color": "#06B6D4"
+  },
+  {
+    "provider": "nvidia_nim",
+    "displayName": "NVIDIA NIM",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "nvidia_nim.svg",
+    "source": "Generated",
+    "domain": "nvidia.com",
+    "color": "#76B900"
+  },
+  {
+    "provider": "oci",
+    "displayName": "Oracle Cloud",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "oci.svg",
+    "source": "Generated",
+    "domain": "oracle.com",
+    "color": "#F80000"
+  },
+  {
+    "provider": "octoai",
+    "displayName": "OctoAI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "octoai.svg",
+    "source": "Generated",
+    "domain": "octo.ai",
+    "color": "#8B5CF6"
+  },
+  {
+    "provider": "ollama",
+    "displayName": "Ollama",
+    "iconKey": "ollama_dark",
+    "status": "svgl",
+    "file": "ollama.svg",
+    "source": "SVGL",
+    "domain": "ollama.ai",
+    "color": "#000000"
+  },
+  {
+    "provider": "openai",
+    "displayName": "OpenAI",
+    "iconKey": "openai",
+    "status": "svgl",
+    "file": "openai.svg",
+    "source": "SVGL",
+    "domain": "openai.com",
+    "color": "#10A37F"
+  },
+  {
+    "provider": "openrouter",
+    "displayName": "OpenRouter",
+    "iconKey": "openrouter_dark",
+    "status": "svgl",
+    "file": "openrouter.svg",
+    "source": "SVGL",
+    "domain": "openrouter.ai",
+    "color": "#8B5CF6"
+  },
+  {
+    "provider": "ovhcloud",
+    "displayName": "OVHcloud (EU)",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "ovhcloud.svg",
+    "source": "Generated",
+    "domain": "ovhcloud.com",
+    "color": "#123F6D"
+  },
+  {
+    "provider": "palm",
+    "displayName": "Google PaLM",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "palm.svg",
+    "source": "Generated",
+    "domain": "google.com",
+    "color": "#4285F4"
+  },
+  {
+    "provider": "paperspace",
+    "displayName": "Paperspace",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "paperspace.svg",
+    "source": "Generated",
+    "domain": "paperspace.com",
+    "color": "#10B981"
+  },
+  {
+    "provider": "perplexity",
+    "displayName": "Perplexity",
+    "iconKey": "perplexity",
+    "status": "svgl",
+    "file": "perplexity.svg",
+    "source": "SVGL",
+    "domain": "perplexity.ai",
+    "color": "#20808D"
+  },
+  {
+    "provider": "phind",
+    "displayName": "Phind",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "phind.svg",
+    "source": "Generated",
+    "domain": "phind.com",
+    "color": "#3B82F6"
+  },
+  {
+    "provider": "pika",
+    "displayName": "Pika Labs",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "pika.svg",
+    "source": "Generated",
+    "domain": "pika.art",
+    "color": "#EC4899"
+  },
+  {
+    "provider": "pinecone",
+    "displayName": "Pinecone",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "pinecone.svg",
+    "source": "Generated",
+    "domain": "pinecone.io",
+    "color": "#000000"
+  },
+  {
+    "provider": "play_ht",
+    "displayName": "Play.ht",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "play_ht.svg",
+    "source": "Generated",
+    "domain": "play.ht",
+    "color": "#F59E0B"
+  },
+  {
+    "provider": "poe",
+    "displayName": "Poe (Quora)",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "poe.svg",
+    "source": "Generated",
+    "domain": "poe.com",
+    "color": "#A62A21"
+  },
+  {
+    "provider": "poolside",
+    "displayName": "Poolside",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "poolside.svg",
+    "source": "Generated",
+    "domain": "poolside.ai",
+    "color": "#3B82F6"
+  },
+  {
+    "provider": "predibase",
+    "displayName": "Predibase",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "predibase.svg",
+    "source": "Generated",
+    "domain": "predibase.com",
+    "color": "#F59E0B"
+  },
+  {
+    "provider": "recraft",
+    "displayName": "Recraft",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "recraft.svg",
+    "source": "Generated",
+    "domain": "recraft.ai",
+    "color": "#8B5CF6"
+  },
+  {
+    "provider": "replicate",
+    "displayName": "Replicate",
+    "iconKey": "replicate_dark",
+    "status": "svgl",
+    "file": "replicate.svg",
+    "source": "SVGL",
+    "domain": "replicate.com",
+    "color": "#000000"
+  },
+  {
+    "provider": "replit",
+    "displayName": "Replit AI",
+    "iconKey": "replit",
+    "status": "svgl",
+    "file": "replit.svg",
+    "source": "SVGL",
+    "domain": "replit.com",
+    "color": "#F26207"
+  },
+  {
+    "provider": "resemble",
+    "displayName": "Resemble AI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "resemble.svg",
+    "source": "Generated",
+    "domain": "resemble.ai",
+    "color": "#8B5CF6"
+  },
+  {
+    "provider": "rinna",
+    "displayName": "Rinna (Japan)",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "rinna.svg",
+    "source": "Generated",
+    "domain": "rinna.co.jp",
+    "color": "#FF6B6B"
+  },
+  {
+    "provider": "runpod",
+    "displayName": "RunPod",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "runpod.svg",
+    "source": "Generated",
+    "domain": "runpod.io",
+    "color": "#8B5CF6"
+  },
+  {
+    "provider": "runwayml",
+    "displayName": "Runway ML",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "runwayml.svg",
+    "source": "Generated",
+    "domain": "runwayml.com",
+    "color": "#000000"
+  },
+  {
+    "provider": "sagemaker",
+    "displayName": "AWS SageMaker",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "sagemaker.svg",
+    "source": "Generated",
+    "domain": "aws.amazon.com",
+    "color": "#FF9900"
+  },
+  {
+    "provider": "sakana",
+    "displayName": "Sakana AI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "sakana.svg",
+    "source": "Generated",
+    "domain": "sakana.ai",
+    "color": "#EC4899"
+  },
+  {
+    "provider": "sambanova",
+    "displayName": "SambaNova",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "sambanova.svg",
+    "source": "Generated",
+    "domain": "sambanova.ai",
+    "color": "#F59E0B"
+  },
+  {
+    "provider": "sarvam",
+    "displayName": "Sarvam AI (India)",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "sarvam.svg",
+    "source": "Generated",
+    "domain": "sarvam.ai",
+    "color": "#10B981"
+  },
+  {
+    "provider": "scaleway",
+    "displayName": "Scaleway (EU)",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "scaleway.svg",
+    "source": "Generated",
+    "domain": "scaleway.com",
+    "color": "#4F0599"
+  },
+  {
+    "provider": "searxng",
+    "displayName": "SearXNG",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "searxng.svg",
+    "source": "Generated",
+    "domain": "searxng.org",
+    "color": "#3B82F6"
+  },
+  {
+    "provider": "semantic_kernel",
+    "displayName": "Semantic Kernel",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "semantic_kernel.svg",
+    "source": "Generated",
+    "domain": "microsoft.com",
+    "color": "#0078D4"
+  },
+  {
+    "provider": "sensetime",
+    "displayName": "SenseTime",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "sensetime.svg",
+    "source": "Generated",
+    "domain": "sensetime.com",
+    "color": "#8B5CF6"
+  },
+  {
+    "provider": "serper",
+    "displayName": "Serper",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "serper.svg",
+    "source": "Generated",
+    "domain": "serper.dev",
+    "color": "#4285F4"
+  },
+  {
+    "provider": "snowflake",
+    "displayName": "Snowflake Cortex",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "snowflake.svg",
+    "source": "Generated",
+    "domain": "snowflake.com",
+    "color": "#29B5E8"
+  },
+  {
+    "provider": "sourcegraph",
+    "displayName": "Sourcegraph Cody",
+    "iconKey": "sourcegraph",
+    "status": "svgl",
+    "file": "sourcegraph.svg",
+    "source": "SVGL",
+    "domain": "sourcegraph.com",
+    "color": "#FF5543"
+  },
+  {
+    "provider": "speechify",
+    "displayName": "Speechify",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "speechify.svg",
+    "source": "Generated",
+    "domain": "speechify.com",
+    "color": "#3B82F6"
+  },
+  {
+    "provider": "stability",
+    "displayName": "Stability AI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "stability.svg",
+    "source": "Generated",
+    "domain": "stability.ai",
+    "color": "#8B5CF6"
+  },
+  {
+    "provider": "stable_diffusion",
+    "displayName": "Stable Diffusion",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "stable_diffusion.svg",
+    "source": "Generated",
+    "domain": "stability.ai",
+    "color": "#8B5CF6"
+  },
+  {
+    "provider": "starcoder",
+    "displayName": "StarCoder",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "starcoder.svg",
+    "source": "Generated",
+    "domain": "huggingface.co",
+    "color": "#FFD21E"
+  },
+  {
+    "provider": "stepfun",
+    "displayName": "StepFun",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "stepfun.svg",
+    "source": "Generated",
+    "domain": "stepfun.com",
+    "color": "#F59E0B"
+  },
+  {
+    "provider": "synthesia",
+    "displayName": "Synthesia",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "synthesia.svg",
+    "source": "Generated",
+    "domain": "synthesia.io",
+    "color": "#3B82F6"
+  },
+  {
+    "provider": "tabnine",
+    "displayName": "Tabnine",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "tabnine.svg",
+    "source": "Generated",
+    "domain": "tabnine.com",
+    "color": "#3B82F6"
+  },
+  {
+    "provider": "tavily",
+    "displayName": "Tavily",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "tavily.svg",
+    "source": "Generated",
+    "domain": "tavily.com",
+    "color": "#06B6D4"
+  },
+  {
+    "provider": "tencent",
+    "displayName": "Tencent (Hunyuan)",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "tencent.svg",
+    "source": "Generated",
+    "domain": "tencent.com",
+    "color": "#00A4FF"
+  },
+  {
+    "provider": "tenstorrent",
+    "displayName": "Tenstorrent",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "tenstorrent.svg",
+    "source": "Generated",
+    "domain": "tenstorrent.com",
+    "color": "#6366F1"
+  },
+  {
+    "provider": "text_generation_webui",
+    "displayName": "Text Generation WebUI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "text_generation_webui.svg",
+    "source": "Generated",
+    "domain": "github.com",
+    "color": "#6366F1"
+  },
+  {
+    "provider": "together_ai",
+    "displayName": "Together AI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "together_ai.svg",
+    "source": "Generated",
+    "domain": "together.ai",
+    "color": "#8B5CF6"
+  },
+  {
+    "provider": "v0",
+    "displayName": "v0 (Vercel)",
+    "iconKey": "v0_dark",
+    "status": "svgl",
+    "file": "v0.svg",
+    "source": "SVGL",
+    "domain": "v0.dev",
+    "color": "#000000"
+  },
+  {
+    "provider": "vast_ai",
+    "displayName": "Vast.ai",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "vast_ai.svg",
+    "source": "Generated",
+    "domain": "vast.ai",
+    "color": "#8B5CF6"
+  },
+  {
+    "provider": "vercel_ai",
+    "displayName": "Vercel AI",
+    "iconKey": "vercel",
+    "status": "svgl",
+    "file": "vercel_ai.svg",
+    "source": "SVGL",
+    "domain": "vercel.com",
+    "color": "#000000"
+  },
+  {
+    "provider": "vertex_ai",
+    "displayName": "Google Vertex AI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "vertex_ai.svg",
+    "source": "Generated",
+    "domain": "cloud.google.com",
+    "color": "#4285F4"
+  },
+  {
+    "provider": "vllm",
+    "displayName": "vLLM",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "vllm.svg",
+    "source": "Generated",
+    "domain": "vllm.ai",
+    "color": "#3B82F6"
+  },
+  {
+    "provider": "volcengine",
+    "displayName": "VolcEngine (ByteDance)",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "volcengine.svg",
+    "source": "Generated",
+    "domain": "volcengine.com",
+    "color": "#EF4444"
+  },
+  {
+    "provider": "voyage",
+    "displayName": "Voyage AI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "voyage.svg",
+    "source": "Generated",
+    "domain": "voyageai.com",
+    "color": "#3B82F6"
+  },
+  {
+    "provider": "wandb",
+    "displayName": "Weights & Biases",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "wandb.svg",
+    "source": "Generated",
+    "domain": "wandb.ai",
+    "color": "#FFBE00"
+  },
+  {
+    "provider": "watsonx",
+    "displayName": "IBM watsonx",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "watsonx.svg",
+    "source": "Generated",
+    "domain": "ibm.com",
+    "color": "#0F62FE"
+  },
+  {
+    "provider": "whisper",
+    "displayName": "OpenAI Whisper",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "whisper.svg",
+    "source": "Generated",
+    "domain": "openai.com",
+    "color": "#10A37F"
+  },
+  {
+    "provider": "writer",
+    "displayName": "Writer",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "writer.svg",
+    "source": "Generated",
+    "domain": "writer.com",
+    "color": "#3B82F6"
+  },
+  {
+    "provider": "xai",
+    "displayName": "xAI (Grok)",
+    "iconKey": "xai_dark",
+    "status": "svgl",
+    "file": "xai.svg",
+    "source": "SVGL",
+    "domain": "x.ai",
+    "color": "#000000"
+  },
+  {
+    "provider": "yandex",
+    "displayName": "Yandex GPT",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "yandex.svg",
+    "source": "Generated",
+    "domain": "yandex.com",
+    "color": "#FF0000"
+  },
+  {
+    "provider": "yi",
+    "displayName": "Yi (01.AI)",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "yi.svg",
+    "source": "Generated",
+    "domain": "01.ai",
+    "color": "#EC4899"
+  },
+  {
+    "provider": "you",
+    "displayName": "You.com",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "you.svg",
+    "source": "Generated",
+    "domain": "you.com",
+    "color": "#3B82F6"
+  },
+  {
+    "provider": "zai",
+    "displayName": "Z.AI",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "zai.svg",
+    "source": "Generated",
+    "domain": "z.ai",
+    "color": "#6366F1"
+  },
+  {
+    "provider": "zhipu",
+    "displayName": "Zhipu AI (GLM)",
+    "iconKey": "fallback",
+    "status": "fallback",
+    "file": "zhipu.svg",
+    "source": "Generated",
+    "domain": "zhipuai.cn",
+    "color": "#10B981"
+  }
+]

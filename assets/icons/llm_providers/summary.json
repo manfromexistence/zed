@@ -1,0 +1,21 @@
+{
+  "generated_at": "2026-03-31T10:59:45.648Z",
+  "total_providers": 164,
+  "svgl_icons": 29,
+  "generated_icons": 135,
+  "coverage": "100%",
+  "categories": {
+    "Major Cloud AI": 10,
+    "Major AI Companies": 15,
+    "Inference Platforms": 20,
+    "Hardware/Accelerator": 10,
+    "Chinese Providers": 15,
+    "Regional/Specialized": 15,
+    "Developer Tools": 15,
+    "Audio/Speech": 10,
+    "Image/Video": 15,
+    "Search/RAG": 10,
+    "Specialized/Niche": 20,
+    "Additional Platforms": 10
+  }
+}

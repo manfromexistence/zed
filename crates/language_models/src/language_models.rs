@@ -10,6 +10,7 @@ use provider::deepseek::DeepSeekLanguageModelProvider;
 pub mod extension;
 pub mod provider;
 pub mod provider_hub;
+pub mod provider_icons;
 mod settings;
 
 pub use crate::extension::init_proxy as init_extension_proxy;
