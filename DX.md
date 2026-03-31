@@ -3,6 +3,27 @@
 3. Svg
 4. Theme, icon, font
 5. rainbow animated cursor, particles effect
+You can do formatting and linting but just do anything other than that and please update our current AI panel input box so that it can look like this. First image is the way it will look in the chat input box. It will look like the current VS Code Copilot chat input box. Do a website about it as of today, 31st March 2026. You can also do inspiration from your own Codex desktop app and try to make those input boxes like that. And for the second image I gave you, our AI panel input box will have four icons like the Google anti-gravity code editor. You can do websites about that too.
+
+At the top of the input box there will be icons to see changes or to open the file browser, open browser, and other, as in the second image. Learn from the first and second image, the current latest VS Code Copilot chat input box, and the Google anti-gravity chat input box at the top, and implement that in our jet code editor AI panel input box. Don't do any dummy code; learn from this and implement real professional code correctly. And on the right bottom of the chat input box, next to the submit button, we will have a media swisser. There will be:
+- text
+- audio
+- video
+- 3D
+- live
+- AR
+- VR
+- PDF
+chart, this seventh media content swisser.
+Based on the size we will have a functionality so if there is less size then instead of showing all the seven icons we will show only three icons and one more icon. Clicking on the more icon will show the other icons. Implement this media icons logic alongside the chat input box and chat input box top correctly. And about our Zed code editor cursor, when the cursor is just showing, please show "rainbow animated cursor" Instead of the current normal cursor, and when we edit something like the vscode power mode extension please render particle effect - learn from this extension/vscode/powermode folder - move effects to rs files or the project assets folder and show a cycle based partices effects when editing in whole zed code editor - here is the path "F:\zed\extensions\vscode\src\power-mode"
+
+So zed ai panel has the provider right. Update that provider popover picker to be a collapsible so we can collapse a provider so that all the models inside of that provider can be collapsible. Make the AI provider pop over have this feature. Also on the left of the collapsible icon, place a badge with the count of the models by that provider so that we can easily collapse the provider and also know how many provider models are there in that provider and then do this up until now you have done a really nice job. Due to our low-end device we can instantly verify the project status but now we are going to test it. Please do a pre-check of all the changes that you have done so that we can fix all the errors before they happen. We can't be running the project again and again because even if it runs in one go, that one single go will take like hours.
+Please:
+- format+lint all files
+- make all files follow best practices
+- have the best folder structure
+- do a quick error check
+Don't run any command; just check it by files. If you think any code can call some error then please fix the error right away. We really can't be doing `cargo run` again and again and debug everything because it will take ages. Try to pinpoint all the errors before they happen and then only after that please do "just run" command and do any other command
 
 up until now you have done a really nice job. Due to our low-end device we can instantly verify the project status but now we are going to test it. Please do a pre-check of all the changes that you have done so that we can fix all the errors before they happen. We can't be running the project again and again because even if it runs in one go, that one single go will take like hours.
 Please:

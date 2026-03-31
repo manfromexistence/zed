@@ -1,5 +1,9 @@
+use std::sync::Arc;
+
 use gpui::{Action, ClickEvent, FocusHandle, prelude::*};
-use ui::{Chip, ElevationIndex, KeyBinding, ListItem, ListItemSpacing, Tooltip, prelude::*};
+use ui::{
+    Chip, Disclosure, ElevationIndex, KeyBinding, ListItem, ListItemSpacing, Tooltip, prelude::*,
+};
 use zed_actions::agent::ToggleModelSelector;
 
 use crate::CycleFavoriteModels;
@@ -39,6 +43,90 @@ impl RenderOnce for ModelSelectorHeader {
                 Label::new(self.title)
                     .size(LabelSize::XSmall)
                     .color(Color::Muted),
+            )
+    }
+}
+
+#[derive(IntoElement)]
+pub struct ModelSelectorProviderHeader {
+    index: usize,
+    title: SharedString,
+    model_count: usize,
+    is_expanded: bool,
+    on_toggle: Option<Arc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>>,
+}
+
+impl ModelSelectorProviderHeader {
+    pub fn new(index: usize, title: impl Into<SharedString>, model_count: usize) -> Self {
+        Self {
+            index,
+            title: title.into(),
+            model_count,
+            is_expanded: true,
+            on_toggle: None,
+        }
+    }
+
+    pub fn is_expanded(mut self, is_expanded: bool) -> Self {
+        self.is_expanded = is_expanded;
+        self
+    }
+
+    pub fn on_toggle(
+        mut self,
+        handler: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+    ) -> Self {
+        self.on_toggle = Some(Arc::new(handler));
+        self
+    }
+}
+
+impl RenderOnce for ModelSelectorProviderHeader {
+    fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
+        let disclosure_toggle = self.on_toggle.clone();
+        let row_toggle = self.on_toggle.clone();
+
+        ListItem::new(("provider-group", self.index))
+            .inset(true)
+            .spacing(ListItemSpacing::Sparse)
+            .child(
+                h_flex()
+                    .w_full()
+                    .justify_between()
+                    .gap_2()
+                    .child(
+                        div()
+                            .flex_1()
+                            .on_click(move |event, window, cx| {
+                                if let Some(on_toggle) = &row_toggle {
+                                    on_toggle(event, window, cx);
+                                }
+                            })
+                            .child(
+                                Label::new(self.title)
+                                    .size(LabelSize::Small)
+                                    .color(Color::Muted),
+                            ),
+                    )
+                    .child(
+                        h_flex()
+                            .gap_1()
+                            .items_center()
+                            .child(
+                                Chip::new(self.model_count.to_string())
+                                    .tooltip(Tooltip::text(format!(
+                                        "{} models in this provider",
+                                        self.model_count
+                                    ))),
+                            )
+                            .child(
+                                Disclosure::new(
+                                    ("provider-disclosure", self.index),
+                                    self.is_expanded,
+                                )
+                                .on_toggle_expanded(disclosure_toggle),
+                            ),
+                    ),
             )
     }
 }

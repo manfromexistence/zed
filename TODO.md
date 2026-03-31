@@ -194,6 +194,7 @@
 - [x] Register manifest-backed OpenAI-compatible providers dynamically from the synced catalog
 - [x] Upgrade the real AI settings Add Provider modal with curated presets and live model discovery
 - [x] Add provider category, model-count, context-window, and capability metadata to the real model picker and AI settings panel
+- [x] Add collapsible provider groups with per-provider model-count badges to the real AI model picker popover
 - [ ] Validate the provider hub, presets, and model discovery flow with `just run`
 ## Current Sprint
 

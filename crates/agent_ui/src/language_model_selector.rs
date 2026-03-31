@@ -18,7 +18,9 @@ use settings::Settings;
 use ui::prelude::*;
 use zed_actions::agent::OpenSettings;
 
-use crate::ui::{ModelSelectorFooter, ModelSelectorHeader, ModelSelectorListItem};
+use crate::ui::{
+    ModelSelectorFooter, ModelSelectorHeader, ModelSelectorListItem, ModelSelectorProviderHeader,
+};
 
 type OnModelChanged = Arc<dyn Fn(Arc<dyn LanguageModel>, &mut App) + 'static>;
 type GetActiveModel = Arc<dyn Fn(&App) -> Option<ConfiguredModel> + 'static>;
@@ -161,6 +163,7 @@ pub struct LanguageModelPickerDelegate {
     _subscriptions: Vec<Subscription>,
     popover_styles: bool,
     focus_handle: FocusHandle,
+    collapsed_provider_groups: HashSet<LanguageModelProviderId>,
 }
 
 impl LanguageModelPickerDelegate {
@@ -175,7 +178,8 @@ impl LanguageModelPickerDelegate {
     ) -> Self {
         let on_model_changed = Arc::new(on_model_changed);
         let models = all_models(cx);
-        let entries = models.entries();
+        let collapsed_provider_groups = HashSet::default();
+        let entries = models.entries(&collapsed_provider_groups, false);
 
         let mut subscriptions = vec![cx.subscribe_in(
             &LanguageModelRegistry::global(cx),
@@ -207,7 +211,7 @@ impl LanguageModelPickerDelegate {
         Self {
             on_model_changed,
             all_models: Arc::new(models),
-            selected_index: Self::get_active_model_index(&entries, get_active_model(cx)),
+            selected_index: Self::selected_index_for_entries(&entries, get_active_model(cx)),
             filtered_entries: entries,
             get_active_model: Arc::new(get_active_model),
             on_toggle_favorite: Arc::new(on_toggle_favorite),
@@ -215,13 +219,14 @@ impl LanguageModelPickerDelegate {
             _subscriptions: subscriptions,
             popover_styles,
             focus_handle,
+            collapsed_provider_groups,
         }
     }
 
     fn get_active_model_index(
         entries: &[LanguageModelPickerEntry],
         active_model: Option<ConfiguredModel>,
-    ) -> usize {
+    ) -> Option<usize> {
         entries
             .iter()
             .position(|entry| {
@@ -237,7 +242,27 @@ impl LanguageModelPickerDelegate {
                     false
                 }
             })
+    }
+
+    fn first_selectable_index(entries: &[LanguageModelPickerEntry]) -> usize {
+        entries
+            .iter()
+            .position(|entry| matches!(entry, LanguageModelPickerEntry::Model(_)))
             .unwrap_or(0)
+    }
+
+    fn selected_index_for_entries(
+        entries: &[LanguageModelPickerEntry],
+        active_model: Option<ConfiguredModel>,
+    ) -> usize {
+        Self::get_active_model_index(entries, active_model)
+            .unwrap_or_else(|| Self::first_selectable_index(entries))
+    }
+
+    fn toggle_provider_group(&mut self, provider_id: &LanguageModelProviderId) {
+        if !self.collapsed_provider_groups.insert(provider_id.clone()) {
+            self.collapsed_provider_groups.remove(provider_id);
+        }
     }
 
     /// Authenticates all providers in the [`LanguageModelRegistry`].
@@ -329,7 +354,7 @@ impl LanguageModelPickerDelegate {
 
         // Align the picker selection with the newly-active model
         let new_index =
-            Self::get_active_model_index(&self.filtered_entries, (self.get_active_model)(cx));
+            Self::selected_index_for_entries(&self.filtered_entries, (self.get_active_model)(cx));
         self.set_selected_index(new_index, window, cx);
     }
 }
@@ -365,7 +390,11 @@ impl GroupedModels {
         }
     }
 
-    fn entries(&self) -> Vec<LanguageModelPickerEntry> {
+    fn entries(
+        &self,
+        collapsed_provider_groups: &HashSet<LanguageModelProviderId>,
+        force_expand: bool,
+    ) -> Vec<LanguageModelPickerEntry> {
         let mut entries = Vec::new();
 
         if !self.favorites.is_empty() {
@@ -405,9 +434,18 @@ impl GroupedModels {
                     models[0].category.label().into(),
                 ));
             }
-            entries.push(LanguageModelPickerEntry::Separator(models[0].provider_name.clone()));
-            for info in models {
-                entries.push(LanguageModelPickerEntry::Model(info.clone()));
+            let provider_id = models[0].model.provider_id();
+            let is_expanded = force_expand || !collapsed_provider_groups.contains(&provider_id);
+            entries.push(LanguageModelPickerEntry::ProviderGroup {
+                provider_id,
+                provider_name: models[0].provider_name.clone(),
+                model_count: models.len(),
+                is_expanded,
+            });
+            if is_expanded {
+                for info in models {
+                    entries.push(LanguageModelPickerEntry::Model(info.clone()));
+                }
             }
         }
 
@@ -418,6 +456,12 @@ impl GroupedModels {
 enum LanguageModelPickerEntry {
     Model(ModelInfo),
     Separator(SharedString),
+    ProviderGroup {
+        provider_id: LanguageModelProviderId,
+        provider_name: SharedString,
+        model_count: usize,
+        is_expanded: bool,
+    },
 }
 
 fn format_context_window(value: u64) -> SharedString {
@@ -555,7 +599,9 @@ impl PickerDelegate for LanguageModelPickerDelegate {
     fn can_select(&self, ix: usize, _window: &mut Window, _cx: &mut Context<Picker<Self>>) -> bool {
         match self.filtered_entries.get(ix) {
             Some(LanguageModelPickerEntry::Model(_)) => true,
-            Some(LanguageModelPickerEntry::Separator(_)) | None => false,
+            Some(LanguageModelPickerEntry::Separator(_))
+            | Some(LanguageModelPickerEntry::ProviderGroup { .. })
+            | None => false,
         }
     }
 
@@ -573,6 +619,8 @@ impl PickerDelegate for LanguageModelPickerDelegate {
         let active_model = (self.get_active_model)(cx);
         let fg_executor = cx.foreground_executor();
         let bg_executor = cx.background_executor();
+        let collapsed_provider_groups = self.collapsed_provider_groups.clone();
+        let force_expand = !query.is_empty();
 
         let language_model_registry = LanguageModelRegistry::global(cx);
 
@@ -612,13 +660,13 @@ impl PickerDelegate for LanguageModelPickerDelegate {
         let all = matcher_all.fuzzy_search(&query);
 
         let filtered_models = GroupedModels::new(all, recommended);
-
         cx.spawn_in(window, async move |this, cx| {
             this.update_in(cx, |this, window, cx| {
-                this.delegate.filtered_entries = filtered_models.entries();
+                this.delegate.filtered_entries =
+                    filtered_models.entries(&collapsed_provider_groups, force_expand);
                 // Finds the currently selected model in the list
                 let new_index =
-                    Self::get_active_model_index(&this.delegate.filtered_entries, active_model);
+                    Self::selected_index_for_entries(&this.delegate.filtered_entries, active_model);
                 this.set_selected_index(new_index, Some(picker::Direction::Down), true, window, cx);
                 cx.notify();
             })
@@ -654,6 +702,26 @@ impl PickerDelegate for LanguageModelPickerDelegate {
         match self.filtered_entries.get(ix)? {
             LanguageModelPickerEntry::Separator(title) => {
                 Some(ModelSelectorHeader::new(title, ix > 1).into_any_element())
+            }
+            LanguageModelPickerEntry::ProviderGroup {
+                provider_id,
+                provider_name,
+                model_count,
+                is_expanded,
+            } => {
+                let provider_id = provider_id.clone();
+                let handle_toggle = cx.listener(move |picker, _, window, cx| {
+                    picker.delegate.toggle_provider_group(&provider_id);
+                    let query = picker.query(cx);
+                    picker.update_matches(query, window, cx);
+                });
+
+                Some(
+                    ModelSelectorProviderHeader::new(ix, provider_name.clone(), *model_count)
+                        .is_expanded(*is_expanded)
+                        .on_toggle(handle_toggle)
+                        .into_any_element(),
+                )
             }
             LanguageModelPickerEntry::Model(model_info) => {
                 let active_model = (self.get_active_model)(cx);
@@ -832,6 +900,10 @@ mod tests {
                     model: Arc::new(TestLanguageModel::new(name, provider)),
                     icon: IconOrSvg::Icon(IconName::ZedAgent),
                     is_favorite,
+                    provider_name: SharedString::from(provider),
+                    category: ProviderCategory::default(),
+                    context_info: None,
+                    badges: Vec::new(),
                 }
             })
             .collect()
@@ -980,7 +1052,7 @@ mod tests {
         );
 
         let grouped_models = GroupedModels::new(all_models, recommended_models);
-        let entries = grouped_models.entries();
+        let entries = grouped_models.entries(&HashSet::default(), false);
 
         assert!(matches!(
             entries.first(),
@@ -996,7 +1068,7 @@ mod tests {
         let all_models = create_models(vec![("zed", "claude"), ("zed", "gemini")]);
 
         let grouped_models = GroupedModels::new(all_models, recommended_models);
-        let entries = grouped_models.entries();
+        let entries = grouped_models.entries(&HashSet::default(), false);
 
         assert!(matches!(
             entries.first(),
@@ -1016,7 +1088,7 @@ mod tests {
         );
 
         let grouped_models = GroupedModels::new(all_models, recommended_models);
-        let entries = grouped_models.entries();
+        let entries = grouped_models.entries(&HashSet::default(), false);
 
         for entry in &entries {
             if let LanguageModelPickerEntry::Model(info) = entry {
@@ -1058,5 +1130,33 @@ mod tests {
             grouped_models.all.values().flatten().cloned().collect(),
             vec!["zed/claude", "zed/gemini", "openai/gpt-4", "openai/gpt-3.5"],
         );
+    }
+
+    #[gpui::test]
+    fn test_provider_groups_can_collapse(_cx: &mut TestAppContext) {
+        let grouped_models = GroupedModels::new(
+            create_models(vec![("zed", "claude"), ("zed", "gemini"), ("openai", "gpt-4")]),
+            Vec::new(),
+        );
+        let mut collapsed = HashSet::default();
+        collapsed.insert(LanguageModelProviderId::from("zed".to_string()));
+        let entries = grouped_models.entries(&collapsed, false);
+
+        assert!(entries.iter().any(|entry| match entry {
+            LanguageModelPickerEntry::ProviderGroup {
+                provider_name,
+                model_count,
+                is_expanded,
+                ..
+            } => provider_name.as_ref() == "zed" && *model_count == 2 && !*is_expanded,
+            _ => false,
+        }));
+
+        assert!(!entries.iter().any(|entry| {
+            matches!(
+                entry,
+                LanguageModelPickerEntry::Model(info) if info.model.telemetry_id() == "zed/claude"
+            )
+        }));
     }
 }

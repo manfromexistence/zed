@@ -66,16 +66,6 @@ impl LlmCompatibleProvider {
     pub fn featured() -> &'static [Self] {
         &[
             Self::OpenAi,
-            Self::OpenRouter,
-            Self::GitHubModels,
-            Self::Groq,
-            Self::TogetherAi,
-            Self::FireworksAi,
-            Self::Perplexity,
-            Self::DeepInfra,
-            Self::HuggingFace,
-            Self::Baseten,
-            Self::Replicate,
             Self::LiteLlmProxy,
             Self::Vllm,
             Self::Llamafile,

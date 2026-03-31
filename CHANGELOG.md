@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Changed
 - Updated the real AI settings panel to sort providers by synced category, display category/model-count badges per provider, expose provider-catalog sync status, and include a manual Refresh Catalog action.
 - Updated the right-side model picker to react to provider-hub changes and show synced context-window plus capability badges inline for models.
+- Updated the right-side AI model picker popover so provider sections are collapsible and show a per-provider model-count badge next to the disclosure control.
+- Cleaned up the provider settings render path and model-picker test scaffolding during a file-only preflight pass to reduce first-run compile risk before runtime validation.
 
 ### Rich File Preview and Embedded Web Panel - 2026-03-31
 

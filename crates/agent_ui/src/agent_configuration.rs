@@ -232,6 +232,8 @@ impl AgentConfiguration {
                 !workspace.client().status().borrow().is_signed_out()
             })
             .unwrap_or(false);
+        let show_authenticated_check =
+            !is_zed_provider && provider.is_authenticated(cx) && !is_expanded;
         let provider_metadata = ProviderHubStore::try_global(cx).and_then(|store| {
             let store = store.read(cx);
             store.provider_manifest(provider.id().0.as_ref()).map(|manifest| {
@@ -284,33 +286,33 @@ impl AgentConfiguration {
                                         .size(IconSize::Small)
                                         .color(Color::Muted),
                                     )
-                                        .child(
-                                            h_flex()
-                                                .w_full()
-                                                .gap_1()
-                                                .child(Label::new(provider_name.clone()))
-                                                .when_some(provider_metadata, |this, (category, model_count, featured)| {
+                                    .child(
+                                        h_flex()
+                                            .w_full()
+                                            .gap_1()
+                                            .child(Label::new(provider_name.clone()))
+                                            .when_some(
+                                                provider_metadata,
+                                                |this, (category, model_count, featured)| {
                                                     this.child(Chip::new(category.label()))
-                                                        .child(Chip::new(format!("{model_count} models")))
-                                                        .when(featured, |this| this.child(Chip::new("Featured")))
-                                                })
-                                                .map(|this| {
-                                                if is_zed_provider && is_signed_in {
-                                                    this.child(
-                                                        self.render_zed_plan_info(current_plan, cx),
-                                                    )
-                                                } else {
-                                                    this.when(
-                                                        provider.is_authenticated(cx)
-                                                            && !is_expanded,
-                                                        |parent| {
-                                                            parent.child(
-                                                                Icon::new(IconName::Check)
-                                                                    .color(Color::Success),
-                                                            )
-                                                        },
-                                                    )
-                                                }
+                                                        .child(Chip::new(format!(
+                                                            "{model_count} models"
+                                                        )))
+                                                        .when(featured, |this| {
+                                                            this.child(Chip::new("Featured"))
+                                                        })
+                                                },
+                                            )
+                                            .when(is_zed_provider && is_signed_in, |this| {
+                                                this.child(
+                                                    self.render_zed_plan_info(current_plan, cx),
+                                                )
+                                            })
+                                            .when(show_authenticated_check, |this| {
+                                                this.child(
+                                                    Icon::new(IconName::Check)
+                                                        .color(Color::Success),
+                                                )
                                             }),
                                     ),
                             )
@@ -478,25 +480,24 @@ impl AgentConfiguration {
                 let workspace = self.workspace.clone();
                 move |window, cx| {
                     Some(ContextMenu::build(window, cx, |menu, _window, _cx| {
-                        LlmCompatibleProvider::featured().iter().fold(
-                            menu.header("Compatible APIs"),
-                            |menu, provider| {
-                                let provider = *provider;
-                                let workspace = workspace.clone();
-                                menu.entry(provider.name(), None, move |window, cx| {
-                                    workspace
-                                        .update(cx, |workspace, cx| {
-                                            AddLlmProviderModal::toggle(
-                                                provider,
-                                                workspace,
-                                                window,
-                                                cx,
-                                            );
-                                        })
-                                        .log_err();
-                                })
-                            },
-                        )
+                        let mut menu = menu.header("Compatible APIs");
+                        for provider in LlmCompatibleProvider::featured() {
+                            let provider = *provider;
+                            let workspace = workspace.clone();
+                            menu = menu.entry(provider.name(), None, move |window, cx| {
+                                workspace
+                                    .update(cx, |workspace, cx| {
+                                        AddLlmProviderModal::toggle(
+                                            provider,
+                                            workspace,
+                                            window,
+                                            cx,
+                                        );
+                                    })
+                                    .log_err();
+                            });
+                        }
+                        menu
                     }))
                 }
             })
