@@ -1264,13 +1264,8 @@ impl PickerDelegate for RecentProjectsDelegate {
                                     this.tooltip(Tooltip::text(path.to_string_lossy().to_string()))
                                 }),
                         )
-                        .map(|el| {
-                            if self.selected_index == ix {
-                                el.end_slot(secondary_actions)
-                            } else {
-                                el.end_hover_slot(secondary_actions)
-                            }
-                        })
+                        .end_slot(secondary_actions)
+                        .show_end_slot_on_hover()
                         .into_any_element(),
                 )
             }
@@ -1363,13 +1358,8 @@ impl PickerDelegate for RecentProjectsDelegate {
                                 })
                                 .tooltip(Tooltip::text(tooltip_path)),
                         )
-                        .map(|el| {
-                            if self.selected_index == ix {
-                                el.end_slot(secondary_actions)
-                            } else {
-                                el.end_hover_slot(secondary_actions)
-                            }
-                        })
+                        .end_slot(secondary_actions)
+                        .show_end_slot_on_hover()
                         .into_any_element(),
                 )
             }
@@ -1503,13 +1493,8 @@ impl PickerDelegate for RecentProjectsDelegate {
                                 })
                                 .tooltip(Tooltip::text(tooltip_path)),
                         )
-                        .map(|el| {
-                            if self.selected_index == ix {
-                                el.end_slot(secondary_actions)
-                            } else {
-                                el.end_hover_slot(secondary_actions)
-                            }
-                        })
+                        .end_slot(secondary_actions)
+                        .show_end_slot_on_hover()
                         .into_any_element(),
                 )
             }
@@ -2083,9 +2068,16 @@ mod tests {
             )
             .await;
 
+        // Open a file path (not a directory) so that the worktree root is a
+        // file. This means `active_project_directory` returns `None`, which
+        // causes `DevContainerContext::from_workspace` to return `None`,
+        // preventing `open_dev_container` from spawning real I/O (docker
+        // commands, shell environment loading) that is incompatible with the
+        // test scheduler. The modal is still created and the re-entrancy
+        // guard that this test validates is still exercised.
         cx.update(|cx| {
             open_paths(
-                &[PathBuf::from(path!("/project"))],
+                &[PathBuf::from(path!("/project/src/main.rs"))],
                 app_state,
                 workspace::OpenOptions::default(),
                 cx,
