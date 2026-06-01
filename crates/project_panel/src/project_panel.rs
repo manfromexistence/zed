@@ -101,6 +101,9 @@ const MAX_PROJECT_PANEL_SELECTION_RANGE_ENTRIES: usize = 20_000;
 const MAX_PROJECT_PANEL_DRAG_SELECTION_ENTRIES: usize = 4_096;
 const MAX_PROJECT_PANEL_MARQUEE_SELECTION_ENTRIES: usize = 20_000;
 const PROJECT_PANEL_MARQUEE_MIN_DRAG_DISTANCE: Pixels = px(4.);
+const PROJECT_PANEL_MARQUEE_AUTOSCROLL_TICK: Duration = Duration::from_millis(16);
+const PROJECT_PANEL_MARQUEE_AUTOSCROLL_FAST_EDGE: f32 = 0.05;
+const PROJECT_PANEL_MARQUEE_AUTOSCROLL_SLOW_EDGE: f32 = 0.15;
 const MAX_PROJECT_PANEL_EXTERNAL_DROP_PATHS: usize = 4_096;
 const MAX_PROJECT_PANEL_DOWNLOAD_FILES: usize = 10_000;
 const MAX_PROJECT_PANEL_STICKY_PARENTS: usize = 128;
@@ -4113,7 +4116,7 @@ impl ProjectPanel {
     fn update_marquee_selection(
         &mut self,
         event: &MouseMoveEvent,
-        _window: &mut Window,
+        window: &mut Window,
         cx: &mut Context<Self>,
     ) {
         let Some(marquee) = self.marquee_selection.as_mut() else {
@@ -4122,6 +4125,7 @@ impl ProjectPanel {
 
         if !event.dragging() {
             self.marquee_selection = None;
+            self.stop_marquee_autoscroll();
             cx.notify();
             return;
         }
@@ -4138,6 +4142,7 @@ impl ProjectPanel {
         }
 
         marquee.active = true;
+        self.update_marquee_autoscroll(window, cx);
         self.apply_marquee_selection(cx);
         cx.stop_propagation();
     }
@@ -4160,6 +4165,7 @@ impl ProjectPanel {
 
         let was_active = marquee.active;
         self.mouse_down = false;
+        self.stop_marquee_autoscroll();
 
         if was_active {
             cx.notify();
@@ -4227,6 +4233,59 @@ impl ProjectPanel {
         self.selection = latest_selection.or_else(|| selected_entries.last().copied());
         self.marked_entries = selected_entries;
         cx.notify();
+    }
+
+    fn update_marquee_autoscroll(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(marquee) = self
+            .marquee_selection
+            .as_ref()
+            .filter(|marquee| marquee.active)
+        else {
+            self.stop_marquee_autoscroll();
+            return;
+        };
+        let Some(layout) = self.marquee_layout.borrow().clone() else {
+            self.stop_marquee_autoscroll();
+            return;
+        };
+        let Some(adjustment) =
+            project_panel_marquee_autoscroll_adjustment(marquee.current, &layout)
+        else {
+            self.stop_marquee_autoscroll();
+            return;
+        };
+
+        self.hover_scroll_task.take();
+        self.hover_scroll_task = Some(cx.spawn_in(window, async move |this, cx| {
+            loop {
+                let should_continue = this
+                    .update(cx, |this, cx| {
+                        this.hover_scroll_task.as_ref()?;
+                        this.marquee_selection
+                            .as_ref()
+                            .filter(|marquee| marquee.active)?;
+                        let handle = this.scroll_handle.0.borrow_mut();
+                        let offset = handle.base_handle.offset();
+                        handle.base_handle.set_offset(offset + adjustment);
+                        drop(handle);
+                        this.apply_marquee_selection(cx);
+                        Some(())
+                    })
+                    .ok()
+                    .flatten()
+                    .is_some();
+                if !should_continue {
+                    return;
+                }
+                cx.background_executor()
+                    .timer(PROJECT_PANEL_MARQUEE_AUTOSCROLL_TICK)
+                    .await;
+            }
+        }));
+    }
+
+    fn stop_marquee_autoscroll(&mut self) {
+        self.hover_scroll_task.take();
     }
 
     /// Finds the currently selected subentry for a given leaf entry id. If a given entry
@@ -7432,6 +7491,32 @@ fn project_panel_marquee_entry_range(
     let end = last.min(layout.item_count);
 
     (start < end).then_some(start..end)
+}
+
+fn project_panel_marquee_autoscroll_adjustment(
+    position: Point<Pixels>,
+    layout: &ProjectPanelMarqueeLayout,
+) -> Option<Point<Pixels>> {
+    if layout.bounds.size.height <= px(0.) {
+        return None;
+    }
+
+    let event_offset = position.y - layout.bounds.origin.y;
+    let hovered_region_offset = (event_offset / layout.bounds.size.height).clamp(0., 1.);
+    let vertical_scroll_offset =
+        if hovered_region_offset <= PROJECT_PANEL_MARQUEE_AUTOSCROLL_FAST_EDGE {
+            8.
+        } else if hovered_region_offset <= PROJECT_PANEL_MARQUEE_AUTOSCROLL_SLOW_EDGE {
+            5.
+        } else if hovered_region_offset >= 1. - PROJECT_PANEL_MARQUEE_AUTOSCROLL_FAST_EDGE {
+            -8.
+        } else if hovered_region_offset >= 1. - PROJECT_PANEL_MARQUEE_AUTOSCROLL_SLOW_EDGE {
+            -5.
+        } else {
+            return None;
+        };
+
+    Some(point(px(0.), px(vertical_scroll_offset)))
 }
 
 impl UniformListDecoration for ProjectPanelMarqueeDecoration {

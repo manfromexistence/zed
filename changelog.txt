@@ -1,3 +1,16 @@
+[2026-06-02] - Project Panel Marquee Autoscroll
+
+CHANGED:
+- `crates\project_panel\src\project_panel.rs` now autoscrolls the file browser when an active marquee drag reaches the top or bottom edge of the recorded uniform-list bounds.
+- Marquee autoscroll reuses the existing project-panel hover scroll task, updates the real scroll handle off the UI edge timer, and reapplies `marked_entries` as rows move under the selection rectangle.
+- `script\dx-project-panel-source.test.ts` now guards marquee autoscroll constants, lifecycle stop behavior, shared scroll-task usage, and real selection reapplication during edge scrolling.
+
+PASSED:
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-project-panel-source.test.ts`
+
+NOTES:
+- No `just run`, Cargo, build, server, browser automation, or live project-panel UI validation was run for this source-only checkpoint.
+
 [2026-06-02] - Web Preview Loading Spinner Parity
 
 CHANGED:

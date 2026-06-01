@@ -647,12 +647,18 @@ test("project panel marquee drag selection is real and bounded", () => {
   const updateMarqueeSelection = functionBody(source, "update_marquee_selection");
   const finishMarqueeSelection = functionBody(source, "finish_marquee_selection");
   const applyMarqueeSelection = functionBody(source, "apply_marquee_selection");
+  const updateMarqueeAutoscroll = functionBody(source, "update_marquee_autoscroll");
+  const stopMarqueeAutoscroll = functionBody(source, "stop_marquee_autoscroll");
   const marqueeEntryRange = functionBody(source, "project_panel_marquee_entry_range");
+  const marqueeAutoscrollAdjustment = functionBody(source, "project_panel_marquee_autoscroll_adjustment");
   const marqueeDecorationCompute = functionBody(source, "compute");
   const renderProjectPanel = functionBody(source, "render");
 
   assert.match(source, /const MAX_PROJECT_PANEL_MARQUEE_SELECTION_ENTRIES: usize = 20_000;/);
   assert.match(source, /const PROJECT_PANEL_MARQUEE_MIN_DRAG_DISTANCE: Pixels = px\(4\.\);/);
+  assert.match(source, /const PROJECT_PANEL_MARQUEE_AUTOSCROLL_TICK: Duration = Duration::from_millis\(16\);/);
+  assert.match(source, /const PROJECT_PANEL_MARQUEE_AUTOSCROLL_FAST_EDGE: f32 = 0\.05;/);
+  assert.match(source, /const PROJECT_PANEL_MARQUEE_AUTOSCROLL_SLOW_EDGE: f32 = 0\.15;/);
   assert.match(source, /struct ProjectPanelMarqueeSelection/);
   assert.match(source, /struct ProjectPanelMarqueeLayout/);
   assert.match(source, /struct ProjectPanelMarqueeDecoration/);
@@ -677,13 +683,33 @@ test("project panel marquee drag selection is real and bounded", () => {
 
   assert.match(
     updateMarqueeSelection,
-    /event\.dragging\(\)[\s\S]*PROJECT_PANEL_MARQUEE_MIN_DRAG_DISTANCE[\s\S]*marquee\.active = true[\s\S]*self\.apply_marquee_selection\(cx\)/,
+    /event\.dragging\(\)[\s\S]*PROJECT_PANEL_MARQUEE_MIN_DRAG_DISTANCE[\s\S]*marquee\.active = true[\s\S]*self\.update_marquee_autoscroll\(window, cx\)[\s\S]*self\.apply_marquee_selection\(cx\)/,
     "marquee selection must wait for a drag threshold before applying real selection",
   );
   assert.match(
+    updateMarqueeSelection,
+    /!event\.dragging\(\)[\s\S]*self\.marquee_selection = None[\s\S]*self\.stop_marquee_autoscroll\(\)/,
+    "marquee selection must stop edge autoscroll when dragging stops",
+  );
+  assert.match(
     finishMarqueeSelection,
-    /self\.marquee_selection\.take\(\)[\s\S]*let was_active = marquee\.active[\s\S]*self\.mouse_down = false[\s\S]*cx\.notify\(\)[\s\S]*cx\.stop_propagation\(\)/,
+    /self\.marquee_selection\.take\(\)[\s\S]*let was_active = marquee\.active[\s\S]*self\.mouse_down = false[\s\S]*self\.stop_marquee_autoscroll\(\)[\s\S]*cx\.notify\(\)[\s\S]*cx\.stop_propagation\(\)/,
     "finishing an active marquee drag must clear state and suppress the trailing click",
+  );
+  assert.match(
+    updateMarqueeAutoscroll,
+    /self[\s\S]*\.marquee_selection[\s\S]*\.as_ref\(\)[\s\S]*self\.marquee_layout\.borrow\(\)\.clone\(\)[\s\S]*project_panel_marquee_autoscroll_adjustment\(marquee\.current, &layout\)[\s\S]*self\.hover_scroll_task = Some\(cx\.spawn_in\(window/,
+    "marquee edge autoscroll must use the recorded uniform-list layout and existing hover scroll task",
+  );
+  assert.match(
+    updateMarqueeAutoscroll,
+    /handle\.base_handle\.set_offset\(offset \+ adjustment\)[\s\S]*this\.apply_marquee_selection\(cx\)/,
+    "marquee edge autoscroll must update real scroll offset and reapply selection as rows move",
+  );
+  assert.match(
+    stopMarqueeAutoscroll,
+    /self\.hover_scroll_task\.take\(\)/,
+    "marquee edge autoscroll must stop through the shared hover scroll task",
   );
 
   assert.match(
@@ -706,6 +732,11 @@ test("project panel marquee drag selection is real and bounded", () => {
     marqueeEntryRange,
     /debug_assert!\(layout\.visible_range\.end <= layout\.item_count\)[\s\S]*let marquee_bounds = project_panel_marquee_bounds\(selection\);[\s\S]*let clipped_bounds = marquee_bounds\.intersect\(&layout\.bounds\)[\s\S]*let start = first\.min\(layout\.item_count\);[\s\S]*let end = last\.min\(layout\.item_count\);/,
     "marquee row mapping must use full drag height while clipping horizontal overlap to the list bounds",
+  );
+  assert.match(
+    marqueeAutoscrollAdjustment,
+    /layout\.bounds\.size\.height <= px\(0\.\)[\s\S]*position\.y - layout\.bounds\.origin\.y[\s\S]*PROJECT_PANEL_MARQUEE_AUTOSCROLL_FAST_EDGE[\s\S]*PROJECT_PANEL_MARQUEE_AUTOSCROLL_SLOW_EDGE[\s\S]*point\(px\(0\.\), px\(vertical_scroll_offset\)\)/,
+    "marquee edge autoscroll must derive speed from the pointer's top/bottom edge region",
   );
   assert.match(
     marqueeDecorationCompute,
