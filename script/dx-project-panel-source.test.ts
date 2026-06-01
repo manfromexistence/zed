@@ -287,6 +287,7 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   assert.match(media, /pub\(crate\) const MAX_PROJECT_PANEL_MEDIA_CHILD_SCAN: usize = 512;/);
   assert.match(media, /pub\(crate\) const MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS: usize = 12;/);
   assert.match(media, /pub\(crate\) const MAX_PROJECT_PANEL_MEDIA_INLINE_CARDS: usize = 4;/);
+  assert.match(media, /pub\(crate\) const PROJECT_PANEL_MEDIA_GALLERY_COLUMNS: u16 = 3;/);
   assert.match(media, /pub\(crate\) enum MediaPreviewKind/);
   assert.match(media, /Image/);
   assert.match(media, /Video/);
@@ -294,8 +295,12 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   assert.match(media, /fn video_preview_frame_path/);
   assert.match(media, /fn media_stem_key/);
   assert.match(media, /fn media_preview_card_tooltip_meta/);
+  assert.match(media, /fn render_folder_media_gallery/);
+  assert.match(media, /fn render_media_gallery_card/);
+  assert.match(media, /fn audio_gradient_background/);
   assert.match(media, /video_frame_path:\s*Option<PathBuf>/);
   assert.match(media, /audio_duration_label:\s*Option<String>/);
+  assert.match(media, /size:\s*u64/);
   assert.match(
     source,
     /let preview = media_preview::build_folder_media_preview\(parent_abs_path, children\);[\s\S]*insert\(cache_key, preview\.clone\(\)\);[\s\S]*preview/,
@@ -344,8 +349,13 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
 test("project panel media preview renders direct image previews and video frames when available", () => {
   const media = read("crates/project_panel/src/media_preview.rs");
   const renderFolderMediaPreview = functionBody(media, "render_folder_media_preview");
+  const renderFolderMediaGallery = functionBody(media, "render_folder_media_gallery");
   const renderMediaPreviewCard = functionBody(media, "render_media_preview_card");
+  const renderMediaGalleryCard = functionBody(media, "render_media_gallery_card");
+  const mediaPreviewCardTooltipMeta = functionBody(media, "media_preview_card_tooltip_meta");
+  const audioGradientBackground = functionBody(media, "audio_gradient_background");
   const buildFolderMediaPreview = functionBody(media, "build_folder_media_preview");
+  const videoPreviewFramePath = functionBody(media, "video_preview_frame_path");
 
   assertBefore({
     body: buildFolderMediaPreview,
@@ -359,6 +369,11 @@ test("project panel media preview renders direct image previews and video frames
     after: /items\.push/,
     message: "media preview items must be capped before render data collection",
   });
+  assert.match(
+    buildFolderMediaPreview,
+    /size:\s*child\.size/,
+    "media preview items must carry snapshot file sizes for hover details",
+  );
   assertBefore({
     body: renderFolderMediaPreview,
     before: /preview\s*\.items\s*\.iter\(\)/,
@@ -374,6 +389,23 @@ test("project panel media preview renders direct image previews and video frames
   assert.match(renderFolderMediaPreview, /\.h_6\(\)/);
   assert.match(renderFolderMediaPreview, /\.overflow_hidden\(\)/);
   assert.match(renderFolderMediaPreview, /Tooltip::with_meta/);
+  assert.match(renderFolderMediaPreview, /PopoverMenu::new\(gallery_id\)/);
+  assert.match(
+    renderFolderMediaPreview,
+    /IconButton::new\("project-panel-media-gallery-trigger", IconName::Blocks\)/,
+    "folder media preview must expose a real grid affordance from the compact row",
+  );
+  assert.match(
+    renderFolderMediaGallery,
+    /\.grid\(\)[\s\S]*\.grid_cols\(PROJECT_PANEL_MEDIA_GALLERY_COLUMNS\)/,
+    "folder media gallery must use a bounded three-column grid",
+  );
+  assertBefore({
+    body: renderFolderMediaGallery,
+    before: /take\(MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS\)/,
+    after: /render_media_gallery_card/,
+    message: "folder media gallery must render only bounded preview items",
+  });
   assert.match(
     renderMediaPreviewCard,
     /MediaPreviewKind::Image[\s\S]*img\(item\.absolute_path\.clone\(\)\)[\s\S]*object_fit\(ObjectFit::Cover\)/,
@@ -391,8 +423,38 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     renderMediaPreviewCard,
-    /let tooltip_title = item\.name\.clone\(\);[\s\S]*MediaPreviewKind::Audio[\s\S]*Duration unavailable[\s\S]*Tooltip::with_meta\(tooltip_title\.clone\(\), None, tooltip_meta\.clone\(\), cx\)/,
-    "audio media cards must render an honest duration state and keep the filename in the tooltip",
+    /let tooltip_title = item\.name\.clone\(\);[\s\S]*MediaPreviewKind::Audio[\s\S]*audio_gradient_background\(&item\.name\)[\s\S]*Label::new\(item\.name\.clone\(\)\)[\s\S]*Tooltip::with_meta\(tooltip_title\.clone\(\), None, tooltip_meta\.clone\(\), cx\)/,
+    "audio media cards must render stable gradient rectangles with centered truncated filenames",
+  );
+  assert.match(
+    renderMediaGalleryCard,
+    /MediaPreviewKind::Image[\s\S]*img\(item\.absolute_path\.clone\(\)\)[\s\S]*object_fit\(ObjectFit::Cover\)/,
+    "gallery image cards must render direct visual previews",
+  );
+  assert.match(
+    renderMediaGalleryCard,
+    /MediaPreviewKind::Video[\s\S]*item\.video_frame_path\.as_ref\(\)[\s\S]*img\(frame_path\.clone\(\)\)[\s\S]*IconName::PlayOutlined/,
+    "gallery video cards must use available representative frame images and keep a play affordance",
+  );
+  assert.match(
+    renderMediaGalleryCard,
+    /MediaPreviewKind::Audio[\s\S]*audio_gradient_background\(&item\.name\)[\s\S]*Label::new\(item\.name\.clone\(\)\)[\s\S]*buffer_font\(cx\)[\s\S]*truncate\(\)/,
+    "gallery audio cards must use deterministic color rectangles with centered truncated filenames",
+  );
+  assert.match(
+    mediaPreviewCardTooltipMeta,
+    /let size_label = media_size_label\(item\.size\);[\s\S]*Duration unavailable/,
+    "media hover details must include snapshot size and honest duration state",
+  );
+  assert.match(
+    audioGradientBackground,
+    /audio_gradient_colors\(name\)/,
+    "audio card gradients must be deterministic from the audio filename",
+  );
+  assert.match(
+    videoPreviewFramePath,
+    /stem\.starts_with\(&video_stem\)[\s\S]*stem\.contains\("poster"\)[\s\S]*stem\.contains\("frame"\)[\s\S]*stem\.contains\("thumb"\)/,
+    "video preview frame matching should accept common poster/frame/thumb sidecar images",
   );
   assert.doesNotMatch(
     media,

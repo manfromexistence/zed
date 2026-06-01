@@ -1,3 +1,24 @@
+[2026-06-02] - Project Panel Media Folder Grid
+
+ADDED:
+- `crates\project_panel\src\media_preview.rs` now opens a bounded three-column media grid from expanded folders that already have cached media preview data.
+- Image media cards render direct local image previews as rectangles.
+- Video media cards use available same-stem/poster/frame/thumb sidecar images as representative frames and keep a play affordance.
+- Audio media cards render deterministic filename-based gradient rectangles with centered truncated filenames.
+
+CHANGED:
+- Project panel media preview items now carry snapshot file size for hover details without adding UI-path filesystem metadata probes.
+- Inline audio media previews now show the audio filename inside the rectangle instead of a duration placeholder.
+- `script\dx-project-panel-source.test.ts` now guards the bounded gallery, image/video/audio card behavior, sidecar frame matching, size hover metadata, and no filesystem metadata probing.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\project_panel\src\media_preview.rs crates\project_panel\src\project_panel.rs`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-project-panel-source.test.ts`
+
+NOTES:
+- No `just run`, Cargo, build, server, browser automation, or live media thumbnail validation was run for this source-only checkpoint.
+- True middle-frame video decoding and real audio/video duration extraction remain intentionally unclaimed until a dedicated off-UI-path metadata service is implemented.
+
 [2026-06-02] - Title Bar Tool Icon Polish
 
 CHANGED:

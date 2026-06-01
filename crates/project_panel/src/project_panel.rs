@@ -61,10 +61,10 @@ use std::{
 };
 use theme_settings::ThemeSettings;
 use ui::{
-    Color, ContextMenu, ContextMenuEntry, DecoratedIcon, Icon, IconDecoration, IconDecorationKind,
-    IndentGuideColors, IndentGuideLayout, Indicator, KeyBinding, Label, LabelSize, ListItem,
-    ListItemSpacing, ProjectEmptyState, ScrollAxes, ScrollableHandle, Scrollbars, StickyCandidate,
-    Tooltip, WithScrollbar, prelude::*, v_flex,
+    Color, ContextMenu, ContextMenuEntry, DecoratedIcon, Icon, IconButtonShape, IconDecoration,
+    IconDecorationKind, IndentGuideColors, IndentGuideLayout, Indicator, KeyBinding, Label,
+    LabelSize, ListItem, ListItemSpacing, ProjectEmptyState, ScrollAxes, ScrollableHandle,
+    Scrollbars, StickyCandidate, Tooltip, WithScrollbar, prelude::*, v_flex,
 };
 use util::{
     ResultExt, TakeUntilExt, TryFutureExt,
