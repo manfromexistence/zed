@@ -7413,8 +7413,11 @@ fn project_panel_marquee_entry_range(
         return None;
     }
 
-    let marquee_bounds = project_panel_marquee_bounds(selection).intersect(&layout.bounds);
-    if marquee_bounds.size.width <= px(0.) || marquee_bounds.size.height <= px(0.) {
+    debug_assert!(layout.visible_range.end <= layout.item_count);
+
+    let marquee_bounds = project_panel_marquee_bounds(selection);
+    let clipped_bounds = marquee_bounds.intersect(&layout.bounds);
+    if clipped_bounds.size.width <= px(0.) || marquee_bounds.size.height <= px(0.) {
         return None;
     }
 
@@ -7425,8 +7428,8 @@ fn project_panel_marquee_entry_range(
     let last = ((marquee_bounds.bottom() - content_top) / layout.item_height)
         .ceil()
         .max(0.) as usize;
-    let start = first.max(layout.visible_range.start).min(layout.item_count);
-    let end = last.min(layout.visible_range.end).min(layout.item_count);
+    let start = first.min(layout.item_count);
+    let end = last.min(layout.item_count);
 
     (start < end).then_some(start..end)
 }

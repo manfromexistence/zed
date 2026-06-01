@@ -704,8 +704,8 @@ test("project panel marquee drag selection is real and bounded", () => {
 
   assert.match(
     marqueeEntryRange,
-    /project_panel_marquee_bounds\(selection\)\.intersect\(&layout\.bounds\)[\s\S]*visible_range\.start[\s\S]*visible_range\.end/,
-    "marquee row mapping must clip to the actual uniform-list bounds and visible range",
+    /debug_assert!\(layout\.visible_range\.end <= layout\.item_count\)[\s\S]*let marquee_bounds = project_panel_marquee_bounds\(selection\);[\s\S]*let clipped_bounds = marquee_bounds\.intersect\(&layout\.bounds\)[\s\S]*let start = first\.min\(layout\.item_count\);[\s\S]*let end = last\.min\(layout\.item_count\);/,
+    "marquee row mapping must use full drag height while clipping horizontal overlap to the list bounds",
   );
   assert.match(
     marqueeDecorationCompute,
