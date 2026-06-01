@@ -37,6 +37,18 @@ pub(crate) enum MediaPreviewKind {
     Audio,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum VideoFramePreviewKind {
+    Center,
+    Preview,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct VideoFramePreview {
+    pub(crate) path: PathBuf,
+    pub(crate) kind: VideoFramePreviewKind,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct MediaPreviewItem {
     pub(crate) entry_id: ProjectEntryId,
@@ -44,7 +56,7 @@ pub(crate) struct MediaPreviewItem {
     pub(crate) name: String,
     pub(crate) size: u64,
     pub(crate) absolute_path: PathBuf,
-    pub(crate) video_frame_path: Option<PathBuf>,
+    pub(crate) video_frame_preview: Option<VideoFramePreview>,
     pub(crate) duration_label: Option<String>,
 }
 
@@ -112,7 +124,7 @@ pub(crate) fn build_folder_media_preview<'a>(
             size: child.size,
             duration_label: media_metadata.duration_label_for_path(&absolute_path),
             absolute_path,
-            video_frame_path: None,
+            video_frame_preview: None,
         });
     }
 
@@ -129,9 +141,9 @@ pub(crate) fn build_folder_media_preview<'a>(
 
     for item in &mut items {
         if item.kind == MediaPreviewKind::Video {
-            item.video_frame_path = media_metadata
+            item.video_frame_preview = media_metadata
                 .video_frame_for_path(&item.absolute_path)
-                .or_else(|| video_preview_frame_path(&item.absolute_path, &image_frame_candidates));
+                .or_else(|| video_preview_frame(&item.absolute_path, &image_frame_candidates));
         }
     }
 
@@ -222,7 +234,7 @@ pub(crate) fn render_media_preview_card(item: &MediaPreviewItem, cx: &mut App) -
                     .object_fit(ObjectFit::Cover),
             ),
         MediaPreviewKind::Video => {
-            if let Some(frame_path) = item.video_frame_path.as_ref() {
+            if let Some(preview) = item.video_frame_preview.as_ref() {
                 div()
                     .relative()
                     .w(px(PROJECT_PANEL_MEDIA_CARD_WIDTH))
@@ -232,7 +244,7 @@ pub(crate) fn render_media_preview_card(item: &MediaPreviewItem, cx: &mut App) -
                     .border_1()
                     .border_color(colors.border_variant)
                     .child(
-                        img(frame_path.clone())
+                        img(preview.path.clone())
                             .size_full()
                             .object_fit(ObjectFit::Cover),
                     )
@@ -532,9 +544,9 @@ fn media_gallery_card_container(
                 .overflow_hidden()
                 .bg(colors.elevated_surface_background);
 
-            let base = if let Some(frame_path) = item.video_frame_path.as_ref() {
+            let base = if let Some(preview) = item.video_frame_preview.as_ref() {
                 base.child(
-                    img(frame_path.clone())
+                    img(preview.path.clone())
                         .size_full()
                         .object_fit(ObjectFit::Cover),
                 )
@@ -636,23 +648,19 @@ fn media_gallery_card_container(
 fn media_preview_card_tooltip_meta(item: &MediaPreviewItem) -> String {
     let size_label = media_size_label(item.size);
     match item.kind {
-        MediaPreviewKind::Image => format!("Image / {size_label}"),
+        MediaPreviewKind::Image => format!("Size: {size_label}"),
         MediaPreviewKind::Video => {
-            let duration = item
-                .duration_label
-                .as_deref()
-                .unwrap_or("Duration unavailable");
-            if item.video_frame_path.is_some() {
-                format!("Video frame preview / {duration} / {size_label}")
+            let time_label = item.duration_label.as_deref().unwrap_or("Time unavailable");
+            if let Some(preview) = item.video_frame_preview.as_ref() {
+                let frame_label = video_frame_preview_label(preview);
+                format!("{frame_label} / Time: {time_label} / Size: {size_label}")
             } else {
-                format!("Video preview unavailable / {duration} / {size_label}")
+                format!("Frame pending / Time: {time_label} / Size: {size_label}")
             }
         }
         MediaPreviewKind::Audio => format!(
-            "{} / {size_label}",
-            item.duration_label
-                .as_deref()
-                .unwrap_or("Duration unavailable")
+            "Time: {} / Size: {size_label}",
+            item.duration_label.as_deref().unwrap_or("Time unavailable")
         ),
     }
 }
@@ -720,10 +728,10 @@ fn matches_extension(extension: &str, candidates: &[&str]) -> bool {
         .any(|candidate| extension.eq_ignore_ascii_case(candidate))
 }
 
-fn video_preview_frame_path(
+fn video_preview_frame(
     video_path: &Path,
     image_frame_candidates: &[(String, PathBuf)],
-) -> Option<PathBuf> {
+) -> Option<VideoFramePreview> {
     let video_stem = media_stem_key(video_path)?;
     image_frame_candidates
         .iter()
@@ -731,7 +739,25 @@ fn video_preview_frame_path(
             video_frame_candidate_rank(&video_stem, stem).map(|rank| (rank, path))
         })
         .min_by_key(|(rank, _)| *rank)
-        .map(|(_, path)| path.clone())
+        .map(|(rank, path)| VideoFramePreview {
+            path: path.clone(),
+            kind: video_frame_preview_kind_for_rank(rank),
+        })
+}
+
+fn video_frame_preview_kind_for_rank(rank: u8) -> VideoFramePreviewKind {
+    if rank == 0 {
+        VideoFramePreviewKind::Center
+    } else {
+        VideoFramePreviewKind::Preview
+    }
+}
+
+fn video_frame_preview_label(preview: &VideoFramePreview) -> &'static str {
+    match preview.kind {
+        VideoFramePreviewKind::Center => "Center frame",
+        VideoFramePreviewKind::Preview => "Frame preview",
+    }
 }
 
 fn video_frame_candidate_rank(video_stem: &str, candidate_stem: &str) -> Option<u8> {

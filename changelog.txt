@@ -1,3 +1,18 @@
+[2026-06-02] - Project Panel Media Card Hover Polish
+
+CHANGED:
+- `crates\project_panel\src\media_preview.rs` now stores video preview frames as typed `VideoFramePreview` values so center/middle frames can be distinguished from generic poster/thumb previews.
+- Project panel media card hover details now use explicit `Size` and `Time` labels: images show size, videos show frame provenance plus time and size, and audio cards show time plus size.
+- `crates\project_panel\src\media_preview\metadata.rs` now preserves center-vs-preview provenance when reading bounded media metadata manifests.
+- `script\dx-project-panel-source.test.ts` now guards the typed video frame model, center-frame hover labels, and explicit size/time hover metadata.
+
+PASSED:
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-project-panel-source.test.ts`
+
+NOTES:
+- No `just run`, Cargo, build, server, browser automation, ffmpeg, or ffprobe validation was run for this source-only checkpoint.
+- Automatic center-frame extraction and duration probing remain future background metadata-service work; this change keeps the file browser fast by consuming bounded metadata/sidecars off the hot render path.
+
 [2026-06-02] - Project Panel Media Shelf Keyboard Navigation
 
 CHANGED:

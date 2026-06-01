@@ -8,7 +8,10 @@ use std::{
 use project::Entry;
 use serde_json::Value;
 
-use super::{MediaPreviewKind, child_absolute_path, media_preview_kind_for_path, media_stem_key};
+use super::{
+    MediaPreviewKind, VideoFramePreview, VideoFramePreviewKind, child_absolute_path,
+    media_preview_kind_for_path, media_stem_key,
+};
 
 pub(super) const MAX_PROJECT_PANEL_MEDIA_METADATA_MANIFEST_BYTES: u64 = 256 * 1024;
 
@@ -22,7 +25,7 @@ const MEDIA_METADATA_MANIFEST_NAMES: &[&str] = &[
 #[derive(Clone, Debug, Default)]
 pub(super) struct MediaMetadataIndex {
     duration_labels: HashMap<String, String>,
-    video_frame_paths: HashMap<String, PathBuf>,
+    video_frame_previews: HashMap<String, VideoFramePreview>,
 }
 
 impl MediaMetadataIndex {
@@ -30,8 +33,9 @@ impl MediaMetadataIndex {
         media_metadata_lookup_keys(path).find_map(|key| self.duration_labels.get(&key).cloned())
     }
 
-    pub(super) fn video_frame_for_path(&self, path: &Path) -> Option<PathBuf> {
-        media_metadata_lookup_keys(path).find_map(|key| self.video_frame_paths.get(&key).cloned())
+    pub(super) fn video_frame_for_path(&self, path: &Path) -> Option<VideoFramePreview> {
+        media_metadata_lookup_keys(path)
+            .find_map(|key| self.video_frame_previews.get(&key).cloned())
     }
 }
 
@@ -161,30 +165,53 @@ fn collect_media_metadata_record(
         }
     }
 
-    if let Some(frame_path) = first_string_field(
+    let center_frame_fields = ["center_frame", "middle_frame"];
+    let preview_frame_fields = [
+        "frame_path",
+        "thumbnail_path",
+        "poster_path",
+        "preview_path",
+        "frame",
+        "thumbnail",
+        "poster",
+        "preview",
+    ];
+    if let Some(frame_preview) = video_frame_preview_from_record(
+        parent_abs_path,
         object,
-        &[
-            "center_frame",
-            "middle_frame",
-            "frame_path",
-            "thumbnail_path",
-            "poster_path",
-            "preview_path",
-            "frame",
-            "thumbnail",
-            "poster",
-            "preview",
-        ],
-    )
-    .and_then(|path| resolve_metadata_media_path(parent_abs_path, path))
-    {
+        &center_frame_fields,
+        &preview_frame_fields,
+    ) {
         for key in &keys {
             index
-                .video_frame_paths
+                .video_frame_previews
                 .entry(key.clone())
-                .or_insert_with(|| frame_path.clone());
+                .or_insert_with(|| frame_preview.clone());
         }
     }
+}
+
+fn video_frame_preview_from_record(
+    parent_abs_path: &Path,
+    object: &serde_json::Map<String, Value>,
+    center_frame_fields: &[&str],
+    preview_frame_fields: &[&str],
+) -> Option<VideoFramePreview> {
+    first_string_field(object, center_frame_fields)
+        .and_then(|path| {
+            resolve_metadata_media_path(parent_abs_path, path).map(|path| VideoFramePreview {
+                path,
+                kind: VideoFramePreviewKind::Center,
+            })
+        })
+        .or_else(|| {
+            first_string_field(object, preview_frame_fields).and_then(|path| {
+                resolve_metadata_media_path(parent_abs_path, path).map(|path| VideoFramePreview {
+                    path,
+                    kind: VideoFramePreviewKind::Preview,
+                })
+            })
+        })
 }
 
 fn media_duration_label_from_record(object: &serde_json::Map<String, Value>) -> Option<String> {

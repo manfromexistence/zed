@@ -304,7 +304,7 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   assert.match(media, /Image/);
   assert.match(media, /Video/);
   assert.match(media, /Audio/);
-  assert.match(media, /fn video_preview_frame_path/);
+  assert.match(media, /fn video_preview_frame/);
   assert.match(media, /fn media_stem_key/);
   assert.match(media, /fn media_preview_card_tooltip_meta/);
   assert.match(media, /fn render_folder_media_gallery/);
@@ -315,7 +315,9 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   assert.match(media, /pub\(crate\) fn is_media_path/);
   assert.match(media, /fn media_kind_sort_rank/);
   assert.match(media, /entry_id:\s*ProjectEntryId/);
-  assert.match(media, /video_frame_path:\s*Option<PathBuf>/);
+  assert.match(media, /pub\(crate\) enum VideoFramePreviewKind/);
+  assert.match(media, /pub\(crate\) struct VideoFramePreview/);
+  assert.match(media, /video_frame_preview:\s*Option<VideoFramePreview>/);
   assert.match(media, /duration_label:\s*Option<String>/);
   assert.match(media, /size:\s*u64/);
   assert.match(
@@ -479,7 +481,8 @@ test("project panel media preview renders direct image previews and video frames
   );
   const collectMediaMetadataRecord = functionBody(metadata, "collect_media_metadata_record");
   const mediaDurationLabelFromRecord = functionBody(metadata, "media_duration_label_from_record");
-  const videoPreviewFramePath = functionBody(media, "video_preview_frame_path");
+  const videoPreviewFrame = functionBody(media, "video_preview_frame");
+  const videoFramePreviewLabel = functionBody(media, "video_frame_preview_label");
   const videoFrameCandidateRank = functionBody(media, "video_frame_candidate_rank");
 
   assert.match(media, /mod metadata;/);
@@ -526,7 +529,7 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     buildFolderMediaPreview,
-    /media_metadata[\s\S]*\.video_frame_for_path\(&item\.absolute_path\)[\s\S]*\.or_else\(\|\| video_preview_frame_path/,
+    /media_metadata[\s\S]*\.video_frame_for_path\(&item\.absolute_path\)[\s\S]*\.or_else\(\|\| video_preview_frame/,
     "video media cards must prefer manifest-declared center frames before heuristic sidecar frames",
   );
   assertBefore({
@@ -603,7 +606,7 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     renderMediaPreviewCard,
-    /MediaPreviewKind::Video[\s\S]*item\.video_frame_path\.as_ref\(\)[\s\S]*img\(frame_path\.clone\(\)\)[\s\S]*IconName::PlayOutlined/,
+    /MediaPreviewKind::Video[\s\S]*item\.video_frame_preview\.as_ref\(\)[\s\S]*img\(preview\.path\.clone\(\)\)[\s\S]*IconName::PlayOutlined/,
     "video media cards must use representative frame images when available and keep a play affordance",
   );
   assert.match(
@@ -623,7 +626,7 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     mediaGalleryCardContainer,
-    /MediaPreviewKind::Video[\s\S]*item\.video_frame_path\.as_ref\(\)[\s\S]*img\(frame_path\.clone\(\)\)[\s\S]*IconName::PlayOutlined/,
+    /MediaPreviewKind::Video[\s\S]*item\.video_frame_preview\.as_ref\(\)[\s\S]*img\(preview\.path\.clone\(\)\)[\s\S]*IconName::PlayOutlined/,
     "gallery video cards must use available representative frame images and keep a play affordance",
   );
   assert.match(
@@ -633,7 +636,7 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     mediaPreviewCardTooltipMeta,
-    /let size_label = media_size_label\(item\.size\);[\s\S]*item\.duration_label[\s\S]*Duration unavailable/,
+    /let size_label = media_size_label\(item\.size\);[\s\S]*Time unavailable[\s\S]*Size: \{size_label\}/,
     "media hover details must include snapshot size and manifest duration with an honest unavailable state",
   );
   assert.match(
@@ -642,9 +645,14 @@ test("project panel media preview renders direct image previews and video frames
     "audio card gradients must be deterministic from the audio filename",
   );
   assert.match(
-    videoPreviewFramePath,
-    /video_frame_candidate_rank\(&video_stem, stem\)[\s\S]*\.min_by_key/,
+    videoPreviewFrame,
+    /video_frame_candidate_rank\(&video_stem, stem\)[\s\S]*\.min_by_key[\s\S]*VideoFramePreview/,
     "video preview frame matching should rank sidecar images instead of accepting the first candidate",
+  );
+  assert.match(
+    videoFramePreviewLabel,
+    /VideoFramePreviewKind::Center[\s\S]*"Center frame"[\s\S]*VideoFramePreviewKind::Preview[\s\S]*"Frame preview"/,
+    "video hover details must label center/middle frames separately from generic preview frames",
   );
   assert.match(
     videoFrameCandidateRank,
