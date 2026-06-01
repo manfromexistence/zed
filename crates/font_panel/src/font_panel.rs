@@ -254,6 +254,10 @@ impl FontPanel {
 
             let selected_font = Some(Self::current_buffer_font(cx));
             let (fonts, fonts_loaded) = Self::cached_fonts(cx, selected_font.clone());
+            let loading_fonts = !fonts_loaded;
+            if loading_fonts {
+                Self::spawn_system_fonts_loading(cx);
+            }
             let pinned_font_actions = load_pinned_font_actions(cx);
 
             Self {
@@ -263,7 +267,7 @@ impl FontPanel {
                 fonts,
                 font_search_text_cache: RefCell::default(),
                 fonts_loaded,
-                loading_fonts: false,
+                loading_fonts,
                 source_filter: FontSourceFilter::All,
                 source_scroll_handle: ScrollHandle::new(),
                 selected_font,
@@ -282,6 +286,10 @@ impl FontPanel {
         }
 
         self.loading_fonts = true;
+        Self::spawn_system_fonts_loading(cx);
+    }
+
+    fn spawn_system_fonts_loading(cx: &mut Context<Self>) {
         let font_family_cache = FontFamilyCache::global(cx);
         cx.spawn(async move |panel, cx| {
             font_family_cache.prefetch(cx).await;

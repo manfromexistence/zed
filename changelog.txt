@@ -1,3 +1,18 @@
+[2026-06-02] - Font Panel First-open Cache Warmup
+
+CHANGED:
+- `crates\font_panel\src\font_panel.rs` now starts warming the existing global `FontFamilyCache` during panel construction when the cache is cold.
+- The render-time system-font loader remains as a duplicate-safe fallback, sharing the same prefetch helper.
+- `script\dx-font-panel-source.test.ts` now guards construction-time warmup, duplicate-task avoidance, and the render fallback order.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\font_panel\src\font_panel.rs`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-font-panel-source.test.ts`
+
+NOTES:
+- No `just run`, Cargo, build, server, browser automation, or live font enumeration timing proof was run for this source-only checkpoint.
+- Durable DX font metadata/artifact or mesh-format caching remains future work beyond this focused warmup.
+
 [2026-06-02] - Project Panel Media Folder Grid
 
 ADDED:

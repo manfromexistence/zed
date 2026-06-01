@@ -95,6 +95,47 @@ test("preview file stems and element IDs compact oversized font names", () => {
   assert.match(previewStem, /\.take\(MAX_FONT_PREVIEW_FILE_STEM_CHARS\)/);
 });
 
+test("font panel warms the system font cache before first render", () => {
+  const newPanel = functionBody(source, "new");
+  const ensureSystemFontsLoading = functionBody(source, "ensure_system_fonts_loading");
+  const spawnSystemFontsLoading = functionBody(source, "spawn_system_fonts_loading");
+  const render = source.slice(source.indexOf("impl Render for FontPanel"));
+
+  assertBefore(
+    newPanel,
+    /let \(fonts, fonts_loaded\) = Self::cached_fonts\(cx, selected_font\.clone\(\)\);/,
+    /let loading_fonts = !fonts_loaded;/,
+    "font panel construction must derive the loading flag from the global font cache state",
+  );
+  assertBefore(
+    newPanel,
+    /let loading_fonts = !fonts_loaded;/,
+    /Self::spawn_system_fonts_loading\(cx\);/,
+    "font panel construction must start system font cache warmup when the cache is cold",
+  );
+  assertBefore(
+    newPanel,
+    /Self::spawn_system_fonts_loading\(cx\);/,
+    /loading_fonts,/,
+    "the panel state must remember the construction-time warmup task",
+  );
+  assert.match(
+    ensureSystemFontsLoading,
+    /if self\.fonts_loaded \|\| self\.loading_fonts[\s\S]*return;/,
+    "render-time warmup fallback must avoid duplicate font prefetch tasks",
+  );
+  assert.match(ensureSystemFontsLoading, /Self::spawn_system_fonts_loading\(cx\);/);
+  assert.match(spawnSystemFontsLoading, /FontFamilyCache::global\(cx\)/);
+  assert.match(spawnSystemFontsLoading, /font_family_cache\.prefetch\(cx\)\.await;/);
+  assert.match(spawnSystemFontsLoading, /panel\.loading_fonts = false;/);
+  assertBefore(
+    render,
+    /self\.ensure_system_fonts_loading\(cx\);/,
+    /self\.refresh_fonts_if_needed\(cx\);/,
+    "render should keep the fallback warmup before cache refresh",
+  );
+});
+
 test("font panel source guard stays scoped to worker-owned files", () => {
   assert.equal(sourcePath, "crates/font_panel/src/font_panel.rs");
   assert.doesNotMatch(sourcePath, /DX\.md|todo\.txt|changelog\.txt/);
