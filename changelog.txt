@@ -1,3 +1,20 @@
+[2026-06-02] - Font Panel Durable Metadata Artifact
+
+ADDED:
+- `crates\font_panel\src\font_metadata.rs` now owns a bounded durable system-font metadata artifact stored through the existing KVP layer.
+
+CHANGED:
+- `crates\font_panel\src\font_panel.rs` now loads a capped cached system-font list when the live OS font cache is cold, keeps the live cache warmup running, and persists the sorted real font list after warmup or fallback refresh.
+- `script\dx-font-panel-source.test.ts` now guards the durable metadata schema, caps, live-cache preference, KVP load/store path, and source-only scope.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\font_panel\src\font_panel.rs crates\font_panel\src\font_metadata.rs`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-font-panel-source.test.ts`
+
+NOTES:
+- No `just run`, Cargo, build, server, browser automation, or live font-panel timing proof was run for this source-only checkpoint.
+- A richer binary font mesh format remains a future optimization; this checkpoint adds the durable metadata artifact needed to make first render useful while the real OS font cache refreshes.
+
 [2026-06-02] - Project Panel Media Card Hover Polish
 
 CHANGED:

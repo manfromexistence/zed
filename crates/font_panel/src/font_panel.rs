@@ -26,6 +26,7 @@ use workspace::{
     dock::{DockPosition, Panel, PanelEvent},
 };
 
+mod font_metadata;
 mod google_fonts;
 
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
@@ -153,6 +154,20 @@ impl FontSourceCounts {
     }
 }
 
+struct CachedSystemFonts {
+    fonts: Vec<SharedString>,
+    loaded: bool,
+    needs_live_refresh: bool,
+    source: SystemFontListSource,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum SystemFontListSource {
+    LiveCache,
+    DurableMetadata,
+    CurrentSelection,
+}
+
 #[derive(Clone)]
 struct FontEntry {
     name: SharedString,
@@ -253,8 +268,11 @@ impl FontPanel {
             );
 
             let selected_font = Some(Self::current_buffer_font(cx));
-            let (fonts, fonts_loaded) = Self::cached_fonts(cx, selected_font.clone());
-            let loading_fonts = !fonts_loaded;
+            let cached_fonts = Self::cached_fonts(cx, selected_font.clone());
+            let loading_fonts = cached_fonts.needs_live_refresh;
+            if cached_fonts.source == SystemFontListSource::LiveCache {
+                font_metadata::persist_system_font_metadata(&cached_fonts.fonts, cx);
+            }
             if loading_fonts {
                 Self::spawn_system_fonts_loading(cx);
             }
@@ -264,9 +282,9 @@ impl FontPanel {
                 workspace: workspace_handle,
                 fs,
                 filter_editor,
-                fonts,
+                fonts: cached_fonts.fonts,
                 font_search_text_cache: RefCell::default(),
-                fonts_loaded,
+                fonts_loaded: cached_fonts.loaded,
                 loading_fonts,
                 source_filter: FontSourceFilter::All,
                 source_scroll_handle: ScrollHandle::new(),
@@ -296,7 +314,9 @@ impl FontPanel {
             panel
                 .update(cx, |panel, cx| {
                     if let Some(fonts) = FontFamilyCache::global(cx).try_list_font_families() {
-                        panel.fonts = Self::sort_fonts(fonts);
+                        let fonts = Self::sort_fonts(fonts);
+                        font_metadata::persist_system_font_metadata(&fonts, cx);
+                        panel.fonts = fonts;
                         panel.font_search_text_cache.borrow_mut().clear();
                         panel.fonts_loaded = true;
                     }
@@ -312,19 +332,38 @@ impl FontPanel {
         ThemeSettings::get_global(cx).buffer_font.family.clone()
     }
 
-    fn cached_fonts(cx: &App, selected_font: Option<SharedString>) -> (Vec<SharedString>, bool) {
-        match FontFamilyCache::global(cx).try_list_font_families() {
-            Some(fonts) => (Self::sort_fonts(fonts), true),
-            None => {
-                let mut fonts = Vec::with_capacity(usize::from(selected_font.is_some()));
-                fonts.extend(selected_font);
-                (fonts, false)
-            }
+    fn cached_fonts(cx: &App, selected_font: Option<SharedString>) -> CachedSystemFonts {
+        if let Some(fonts) = FontFamilyCache::global(cx).try_list_font_families() {
+            return CachedSystemFonts {
+                fonts: Self::sort_fonts(fonts),
+                loaded: true,
+                needs_live_refresh: false,
+                source: SystemFontListSource::LiveCache,
+            };
+        }
+
+        if let Some(mut fonts) = font_metadata::load_system_font_metadata(cx) {
+            fonts.extend(selected_font);
+            return CachedSystemFonts {
+                fonts: Self::sort_fonts(fonts),
+                loaded: true,
+                needs_live_refresh: true,
+                source: SystemFontListSource::DurableMetadata,
+            };
+        }
+
+        let mut fonts = Vec::with_capacity(usize::from(selected_font.is_some()));
+        fonts.extend(selected_font);
+        CachedSystemFonts {
+            fonts,
+            loaded: false,
+            needs_live_refresh: true,
+            source: SystemFontListSource::CurrentSelection,
         }
     }
 
-    fn refresh_fonts_if_needed(&mut self, cx: &App) {
-        if self.fonts_loaded {
+    fn refresh_fonts_if_needed(&mut self, cx: &mut Context<Self>) {
+        if self.fonts_loaded && !self.loading_fonts {
             return;
         }
 
@@ -332,11 +371,13 @@ impl FontPanel {
             return;
         };
         let fonts = Self::sort_fonts(fonts);
+        font_metadata::persist_system_font_metadata(&fonts, cx);
         if self.fonts != fonts {
             self.fonts = fonts;
             self.font_search_text_cache.borrow_mut().clear();
         }
         self.fonts_loaded = true;
+        self.loading_fonts = false;
     }
 
     fn sort_fonts(mut fonts: Vec<SharedString>) -> Vec<SharedString> {
