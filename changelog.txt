@@ -1,3 +1,19 @@
+[2026-06-02] - Project Panel Active Media Shelf
+
+ADDED:
+- `crates\project_panel\src\media_preview.rs` now renders an active folder media shelf as a bounded three-column grid for image, video, and audio cards.
+- `crates\project_panel\src\project_panel.rs` now resolves the selected expanded folder, or a selected file's parent folder, to show the shelf below the virtualized file tree.
+
+CHANGED:
+- Media preview candidates are now sorted by image, video, then audio before the bounded render set is selected.
+- The bottom shelf reuses the existing cached snapshot-derived media preview and stays outside uniform list rows to avoid scroll-height regressions.
+- `script\dx-project-panel-source.test.ts` now guards the active folder lookup, bottom shelf placement, sorted/capped candidates, and grid rendering.
+
+NOTES:
+- Video cards use available same-stem/poster/frame/thumb image sidecars as representative frames.
+- Audio/video duration probing and true middle-frame video extraction still need a dedicated background metadata service before they can be honestly claimed.
+- No `just run`, Cargo, build, server, browser automation, or live media decode validation was run for this source-only checkpoint.
+
 [2026-06-02] - Font Panel First-open Cache Warmup
 
 CHANGED:

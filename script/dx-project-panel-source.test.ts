@@ -279,10 +279,13 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   const media = read("crates/project_panel/src/media_preview.rs");
   const detailsForEntry = functionBody(source, "details_for_entry");
   const renderEntry = functionBody(source, "render_entry");
+  const renderProjectPanel = functionBody(source, "render");
+  const activeFolderMediaPreview = functionBody(source, "active_folder_media_preview");
 
   assert.match(source, /mod media_preview;/);
   assert.match(source, /folder_media_previews:\s*RefCell<HashMap<\(WorktreeId, ProjectEntryId\), Option<media_preview::FolderMediaPreview>>>/);
   assert.match(source, /media_preview:\s*Option<media_preview::FolderMediaPreview>/);
+  assert.match(source, /fn active_folder_media_preview\(/);
 
   assert.match(media, /pub\(crate\) const MAX_PROJECT_PANEL_MEDIA_CHILD_SCAN: usize = 512;/);
   assert.match(media, /pub\(crate\) const MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS: usize = 12;/);
@@ -296,8 +299,10 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   assert.match(media, /fn media_stem_key/);
   assert.match(media, /fn media_preview_card_tooltip_meta/);
   assert.match(media, /fn render_folder_media_gallery/);
+  assert.match(media, /fn render_folder_media_shelf/);
   assert.match(media, /fn render_media_gallery_card/);
   assert.match(media, /fn audio_gradient_background/);
+  assert.match(media, /fn media_kind_sort_rank/);
   assert.match(media, /video_frame_path:\s*Option<PathBuf>/);
   assert.match(media, /audio_duration_label:\s*Option<String>/);
   assert.match(media, /size:\s*u64/);
@@ -326,6 +331,21 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
     /self\.folder_media_preview\(/,
     "details_for_entry must not probe media outside the expanded-directory branch",
   );
+  assert.match(
+    activeFolderMediaPreview,
+    /entry\.is_file\(\)[\s\S]*entry\.path\.parent\(\)\?[\s\S]*entry = worktree\.entry_for_path\(parent_path\)\?/,
+    "active media shelf must resolve selected files to their parent folder",
+  );
+  assert.match(
+    activeFolderMediaPreview,
+    /expanded_dir_ids[\s\S]*binary_search\(&entry_id\)/,
+    "active media shelf must only render for an expanded real folder",
+  );
+  assert.match(
+    activeFolderMediaPreview,
+    /self\.folder_media_preview\(selection\.worktree_id, entry_id, &absolute_path, children\)/,
+    "active media shelf must reuse the cached snapshot-derived media preview",
+  );
   assertBefore({
     body: renderEntry,
     before: /let media_preview = \(!is_sticky\)\s*\.then\(\|\| details\.media_preview\.clone\(\)\)\s*\.flatten\(\);/,
@@ -344,12 +364,31 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
     "media previews must not add variable-height children under uniform_list rows",
   );
   assert.match(renderEntry, /block_mouse_except_scroll\(\)/);
+  assertBefore({
+    body: renderProjectPanel,
+    before: /let active_media_preview = has_worktree/,
+    after: /let project = self\.project\.read\(cx\);\s*let panel_settings = ProjectPanelSettings::get_global\(cx\);/,
+    message: "active media shelf lookup must finish before the long project render borrow",
+  });
+  assertBefore({
+    body: renderProjectPanel,
+    before: /uniform_list\("entries"/,
+    after: /media_preview::render_folder_media_shelf/,
+    message: "media shelf must render under the virtualized tree rather than inside a row",
+  });
+  assertBefore({
+    body: renderProjectPanel,
+    before: /media_preview::render_folder_media_shelf/,
+    after: /id\("project-panel-blank-area"\)/,
+    message: "media shelf must occupy the project-panel bottom area before the blank drop zone",
+  });
 });
 
 test("project panel media preview renders direct image previews and video frames when available", () => {
   const media = read("crates/project_panel/src/media_preview.rs");
   const renderFolderMediaPreview = functionBody(media, "render_folder_media_preview");
   const renderFolderMediaGallery = functionBody(media, "render_folder_media_gallery");
+  const renderFolderMediaShelf = functionBody(media, "render_folder_media_shelf");
   const renderMediaPreviewCard = functionBody(media, "render_media_preview_card");
   const renderMediaGalleryCard = functionBody(media, "render_media_gallery_card");
   const mediaPreviewCardTooltipMeta = functionBody(media, "media_preview_card_tooltip_meta");
@@ -365,9 +404,15 @@ test("project panel media preview renders direct image previews and video frames
   });
   assertBefore({
     body: buildFolderMediaPreview,
-    before: /items\.len\(\)\s*<\s*MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS/,
-    after: /items\.push/,
-    message: "media preview items must be capped before render data collection",
+    before: /items\.sort_by/,
+    after: /items\.truncate\(MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS\)/,
+    message: "media preview candidates must be ordered before the bounded render set is selected",
+  });
+  assertBefore({
+    body: buildFolderMediaPreview,
+    before: /items\.truncate\(MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS\)/,
+    after: /for item in &mut items/,
+    message: "media preview items must be capped before render data receives video frame paths",
   });
   assert.match(
     buildFolderMediaPreview,
@@ -400,12 +445,32 @@ test("project panel media preview renders direct image previews and video frames
     /\.grid\(\)[\s\S]*\.grid_cols\(PROJECT_PANEL_MEDIA_GALLERY_COLUMNS\)/,
     "folder media gallery must use a bounded three-column grid",
   );
+  assert.match(
+    renderFolderMediaShelf,
+    /\.border_t_1\(\)[\s\S]*\.grid\(\)[\s\S]*\.grid_cols\(PROJECT_PANEL_MEDIA_GALLERY_COLUMNS\)/,
+    "folder media shelf must render as a bottom three-column media grid",
+  );
+  assert.match(
+    renderFolderMediaShelf,
+    /Label::new\("Media"\)[\s\S]*format!\("\{visible_count\} shown \/ \{summary\}"\)/,
+    "folder media shelf must expose a concise real count summary",
+  );
   assertBefore({
     body: renderFolderMediaGallery,
     before: /take\(MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS\)/,
     after: /render_media_gallery_card/,
     message: "folder media gallery must render only bounded preview items",
   });
+  assert.match(
+    renderFolderMediaGallery,
+    /render_media_gallery_card\("project-panel-media-gallery-card", item, cx\)/,
+    "folder media gallery cards must have a distinct element id prefix",
+  );
+  assert.match(
+    renderFolderMediaShelf,
+    /render_media_gallery_card\("project-panel-media-shelf-card", item, cx\)/,
+    "folder media shelf cards must have a distinct element id prefix",
+  );
   assert.match(
     renderMediaPreviewCard,
     /MediaPreviewKind::Image[\s\S]*img\(item\.absolute_path\.clone\(\)\)[\s\S]*object_fit\(ObjectFit::Cover\)/,

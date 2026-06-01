@@ -6630,6 +6630,64 @@ impl ProjectPanel {
         preview
     }
 
+    fn active_folder_media_preview(
+        &self,
+        cx: &mut Context<Self>,
+    ) -> Option<media_preview::FolderMediaPreview> {
+        let selection = self.selection?;
+        let resolved_entry_id = self.resolve_entry(selection.entry_id);
+        let settings = ProjectPanelSettings::get_global(cx);
+        let (entry_id, entry_path, absolute_path) = {
+            let project = self.project.read(cx);
+            let worktree = project.worktree_for_id(selection.worktree_id, cx)?;
+            let worktree = worktree.read(cx);
+            let mut entry = worktree.entry_for_id(resolved_entry_id)?;
+
+            if entry.is_file() {
+                let parent_path = entry.path.parent()?;
+                entry = worktree.entry_for_path(parent_path)?;
+            }
+
+            if !entry.is_dir() {
+                return None;
+            }
+
+            (
+                entry.id,
+                entry.path.clone(),
+                worktree.absolutize(&entry.path),
+            )
+        };
+
+        if !self
+            .state
+            .expanded_dir_ids
+            .get(&selection.worktree_id)
+            .is_some_and(|ids| ids.binary_search(&entry_id).is_ok())
+        {
+            return None;
+        }
+
+        self.project
+            .read(cx)
+            .worktree_for_id(selection.worktree_id, cx)
+            .and_then(|worktree| {
+                let snapshot = worktree.read(cx).snapshot();
+                let children = snapshot
+                    .child_entries_with_options(
+                        &entry_path,
+                        ChildEntriesOptions {
+                            include_files: true,
+                            include_dirs: false,
+                            include_ignored: !settings.hide_gitignore,
+                        },
+                    )
+                    .filter(|child| !settings.hide_hidden || !child.is_hidden)
+                    .filter(|child| child.is_file());
+                self.folder_media_preview(selection.worktree_id, entry_id, &absolute_path, children)
+            })
+    }
+
     fn details_for_entry(
         &self,
         entry: &Entry,
@@ -7131,6 +7189,9 @@ impl Render for ProjectPanel {
         .then(|| {
             Self::render_selected_entries_toolbar(selected_entry_count, is_read_only, is_remote, cx)
         });
+        let active_media_preview = has_worktree
+            .then(|| self.active_folder_media_preview(cx))
+            .flatten();
         let project = self.project.read(cx);
         let panel_settings = ProjectPanelSettings::get_global(cx);
         let indent_size = panel_settings.indent_size;
@@ -7527,6 +7588,9 @@ impl Render for ProjectPanel {
                             })
                             .track_scroll(&self.scroll_handle),
                         )
+                        .when_some(active_media_preview, |this, media_preview| {
+                            this.child(media_preview::render_folder_media_shelf(&media_preview, cx))
+                        })
                         .child(
                             div()
                                 .id("project-panel-blank-area")

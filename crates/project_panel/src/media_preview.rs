@@ -91,23 +91,32 @@ pub(crate) fn build_folder_media_preview<'a>(
             MediaPreviewKind::Audio => audio_count += 1,
         }
 
-        if items.len() < MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS {
-            let name = child
-                .path
-                .file_name()
-                .map(ToOwned::to_owned)
-                .unwrap_or_else(|| absolute_path.display().to_string());
-            items.push(MediaPreviewItem {
-                kind,
-                name,
-                size: child.size,
-                absolute_path,
-                video_frame_path: None,
-                audio_duration_label: (kind == MediaPreviewKind::Audio)
-                    .then(|| "Duration unavailable".to_string()),
-            });
-        }
+        let name = child
+            .path
+            .file_name()
+            .map(ToOwned::to_owned)
+            .unwrap_or_else(|| absolute_path.display().to_string());
+        items.push(MediaPreviewItem {
+            kind,
+            name,
+            size: child.size,
+            absolute_path,
+            video_frame_path: None,
+            audio_duration_label: (kind == MediaPreviewKind::Audio)
+                .then(|| "Duration unavailable".to_string()),
+        });
     }
+
+    items.sort_by(|left, right| {
+        media_kind_sort_rank(left.kind)
+            .cmp(&media_kind_sort_rank(right.kind))
+            .then_with(|| {
+                left.name
+                    .to_ascii_lowercase()
+                    .cmp(&right.name.to_ascii_lowercase())
+            })
+    });
+    items.truncate(MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS);
 
     for item in &mut items {
         if item.kind == MediaPreviewKind::Video {
@@ -296,7 +305,7 @@ pub(crate) fn render_folder_media_gallery(
         .items
         .iter()
         .take(MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS)
-        .map(|item| render_media_gallery_card(item, cx))
+        .map(|item| render_media_gallery_card("project-panel-media-gallery-card", item, cx))
         .collect::<Vec<_>>();
 
     v_flex()
@@ -336,7 +345,71 @@ pub(crate) fn render_folder_media_gallery(
         .into_any_element()
 }
 
-fn render_media_gallery_card(item: &MediaPreviewItem, cx: &mut App) -> AnyElement {
+pub(crate) fn render_folder_media_shelf(preview: &FolderMediaPreview, cx: &mut App) -> AnyElement {
+    let summary = media_preview_summary(preview);
+    let visible_count = preview
+        .items
+        .len()
+        .min(MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS);
+    let gallery_cards = preview
+        .items
+        .iter()
+        .take(MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS)
+        .map(|item| render_media_gallery_card("project-panel-media-shelf-card", item, cx))
+        .collect::<Vec<_>>();
+
+    v_flex()
+        .id(SharedString::from(format!(
+            "project-panel-media-shelf-{:016x}",
+            stable_text_hash(&summary)
+        )))
+        .w_full()
+        .flex_none()
+        .gap_1p5()
+        .px_2()
+        .py_2()
+        .border_t_1()
+        .border_color(cx.theme().colors().border.opacity(0.6))
+        .bg(cx.theme().colors().panel_background)
+        .child(
+            h_flex()
+                .items_center()
+                .justify_between()
+                .gap_2()
+                .child(
+                    h_flex()
+                        .gap_1()
+                        .items_center()
+                        .child(Icon::new(IconName::Blocks).size(IconSize::XSmall))
+                        .child(
+                            Label::new("Media")
+                                .size(LabelSize::Small)
+                                .weight(FontWeight::SEMIBOLD),
+                        ),
+                )
+                .child(
+                    Label::new(format!("{visible_count} shown / {summary}"))
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted)
+                        .single_line()
+                        .truncate(),
+                ),
+        )
+        .child(
+            div()
+                .grid()
+                .grid_cols(PROJECT_PANEL_MEDIA_GALLERY_COLUMNS)
+                .gap_1p5()
+                .children(gallery_cards),
+        )
+        .into_any_element()
+}
+
+fn render_media_gallery_card(
+    id_prefix: &'static str,
+    item: &MediaPreviewItem,
+    cx: &mut App,
+) -> AnyElement {
     let colors = cx.theme().colors();
     let tooltip_title = item.name.clone();
     let tooltip_meta = media_preview_card_tooltip_meta(item);
@@ -427,7 +500,7 @@ fn render_media_gallery_card(item: &MediaPreviewItem, cx: &mut App) -> AnyElemen
 
     div()
         .id(SharedString::from(format!(
-            "project-panel-media-gallery-card-{:?}-{:016x}",
+            "{id_prefix}-{:?}-{:016x}",
             item.kind,
             stable_text_hash(&item.name)
         )))
@@ -518,6 +591,14 @@ fn media_preview_kind_for_path(path: &Path) -> Option<MediaPreviewKind> {
         Some(MediaPreviewKind::Audio)
     } else {
         None
+    }
+}
+
+fn media_kind_sort_rank(kind: MediaPreviewKind) -> u8 {
+    match kind {
+        MediaPreviewKind::Image => 0,
+        MediaPreviewKind::Video => 1,
+        MediaPreviewKind::Audio => 2,
     }
 }
 
