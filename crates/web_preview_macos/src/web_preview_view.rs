@@ -93,6 +93,7 @@ struct DetectedExtension {
 
 #[derive(Clone, Debug)]
 enum PreviewLoadState {
+    Loading,
     Ready,
     Error(SharedString),
 }
@@ -383,7 +384,7 @@ impl WebPreviewView {
             bookmarks: load_bookmarks(&workspace_context.profile_dir).unwrap_or_default(),
             detected_extensions: Vec::new(),
             extensions_scanned: false,
-            load_state: PreviewLoadState::Ready,
+            load_state: PreviewLoadState::Loading,
             host_bounds: Rc::new(RefCell::new(None)),
             #[cfg(target_os = "macos")]
             last_applied_bounds: Rc::new(RefCell::new(None)),
@@ -657,10 +658,9 @@ impl WebPreviewView {
 
         self.active_url = url.to_string().into();
         self.page_title = None;
+        self.load_state = PreviewLoadState::Loading;
         if let Err(error) = self.load_url(url.as_str(), window, cx) {
             self.load_state = PreviewLoadState::Error(error.to_string().into());
-        } else {
-            self.load_state = PreviewLoadState::Ready;
         }
         cx.emit(ItemEvent::UpdateTab);
         cx.notify();
@@ -679,20 +679,20 @@ impl WebPreviewView {
         });
         self.active_url = url.clone().into();
         self.page_title = None;
+        self.load_state = PreviewLoadState::Loading;
         if let Err(error) = self.load_url(url.as_str(), window, cx) {
             self.load_state = PreviewLoadState::Error(error.to_string().into());
-        } else {
-            self.load_state = PreviewLoadState::Ready;
         }
         cx.emit(ItemEvent::UpdateTab);
         cx.notify();
     }
 
     fn reload(&mut self, _: &gpui::ClickEvent, window: &mut Window, cx: &mut Context<Self>) {
+        self.load_state = PreviewLoadState::Loading;
         if let Err(error) = self.reload_webview(window, cx) {
             self.load_state = PreviewLoadState::Error(error.to_string().into());
-            cx.notify();
         }
+        cx.notify();
     }
 
     fn toggle_bookmark(
@@ -848,6 +848,7 @@ impl WebPreviewView {
         for event in events {
             match event {
                 BrowserEvent::UrlChanged(url) => {
+                    self.load_state = PreviewLoadState::Ready;
                     let previous_url = self.active_url.to_string();
                     self.active_url = url.clone().into();
                     let editor_focus = self.url_editor.focus_handle(cx);
@@ -2147,9 +2148,43 @@ impl Render for WebPreviewView {
 
         let body = self.render_webview_body(cx);
         let error_message = match &self.load_state {
+            PreviewLoadState::Loading => None,
             PreviewLoadState::Ready => None,
             PreviewLoadState::Error(error) => Some(error.clone()),
         };
+        let show_loading_placeholder =
+            error_message.is_none() && matches!(&self.load_state, PreviewLoadState::Loading);
+        let loading_placeholder = show_loading_placeholder.then(|| {
+            div()
+                .absolute()
+                .inset_0()
+                .flex()
+                .items_center()
+                .justify_center()
+                .bg(cx.theme().colors().surface_background.alpha(0.94))
+                .child(
+                    h_flex()
+                        .items_center()
+                        .gap_1p5()
+                        .px_3()
+                        .py_2()
+                        .rounded_xl()
+                        .border_1()
+                        .border_color(cx.theme().colors().border_variant)
+                        .bg(cx.theme().colors().surface_background)
+                        .child(
+                            ui::Icon::new(IconName::LoadCircle)
+                                .size(IconSize::Small)
+                                .color(Color::Muted)
+                                .with_rotate_animation(2),
+                        )
+                        .child(
+                            Label::new("Loading Web Preview")
+                                .size(LabelSize::Small)
+                                .color(Color::Muted),
+                        ),
+                )
+        });
         #[cfg(target_os = "windows")]
         let preview_surface_background = gpui::transparent_black().alpha(1.0 / 255.0);
         #[cfg(not(target_os = "windows"))]
@@ -2169,6 +2204,9 @@ impl Render for WebPreviewView {
                     .overflow_hidden()
                     .bg(preview_surface_background)
                     .child(body)
+                    .when_some(loading_placeholder, |this, placeholder| {
+                        this.child(placeholder)
+                    })
                     .when_some(error_message, |this, error| {
                         this.child(
                             div()

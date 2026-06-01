@@ -1,3 +1,15 @@
+[2026-06-02] - Web Preview Loading Spinner Parity
+
+CHANGED:
+- `crates\web_preview_macos\src\web_preview_view.rs` and `crates\web_preview_linux\src\web_preview_view.rs` now use a real `PreviewLoadState::Loading` state during initial load, navigation, and reload.
+- macOS and Linux WebPreview render paths now show the same centered `LoadCircle` spinner and `Loading Web Preview` label used by the shared desktop WebPreview path instead of leaving the preview body visually empty.
+- `script\web-preview-platform-lifecycle.test.ts` now guards the loading placeholder contract across Windows, macOS, and Linux.
+
+NOTES:
+- The latest file-browser media-grid brief is already represented by the current project-panel media shelf source contract: active expanded media folders render image/video/audio cards in the bottom grid, direct media rows are suppressed from the full-width tree list, audio uses deterministic gradient tiles with centered truncated filenames, and hover metadata uses snapshot size plus manifest duration evidence.
+- True automatic video center-frame extraction and audio/video duration probing remain future background metadata-service work; this checkpoint does not add heavy media decoding to the UI path.
+- No `just run`, Cargo, build, server, browser automation, or live WebPreview/media UI validation was run for this source-only checkpoint.
+
 [2026-06-02] - Project Panel Marquee Selection
 
 ADDED:

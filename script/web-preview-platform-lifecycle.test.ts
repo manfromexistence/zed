@@ -222,6 +222,24 @@ for (const [name, path] of platformViews) {
   });
 }
 
+for (const [name, path] of desktopOnboardingPreviewViews) {
+  test(`${name} web preview shows a real loading spinner placeholder`, () => {
+    const source = read(path);
+
+    assert.match(source, /PreviewLoadState::Loading\s*=>\s*None/);
+    assert.match(source, /let show_loading_placeholder =/);
+    assert.match(source, /let loading_placeholder = show_loading_placeholder\.then/);
+    assert.match(source, /IconName::LoadCircle/);
+    assert.match(source, /\.with_rotate_animation\(2\)/);
+    assert.match(source, /Label::new\("Loading Web Preview"\)/);
+    assert.match(
+      source,
+      /\.child\(body\)[\s\S]*\.when_some\(loading_placeholder/,
+      `${name} should overlay the loading placeholder on the preview body`,
+    );
+  });
+}
+
 for (const [name, path] of platformViews) {
   test(`${name} web preview uses pane tab controls instead of an in-body toolbar`, () => {
     const source = read(path);
