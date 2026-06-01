@@ -1,3 +1,24 @@
+[2026-06-02] - Project Panel Marquee Selection
+
+ADDED:
+- `crates\project_panel\src\project_panel.rs` now supports drag-select marquee state for the project/file browser.
+- The project-panel uniform list now installs a marquee decoration that records current visible row geometry and renders a clipped shaded selection rectangle.
+
+CHANGED:
+- Project panel mouse handling now starts a marquee candidate on single left-button press, activates after a small drag threshold, and suppresses the trailing click only when the marquee became active.
+- Marquee selection maps the shaded bounds through the recorded uniform-list geometry, resolves real project entries with `entry_at_index`, updates `marked_entries` and `selection`, and supports secondary-modifier additive selection.
+- Marquee selection is capped by `MAX_PROJECT_PANEL_MARQUEE_SELECTION_ENTRIES` before fanout into existing copy/move/trash actions.
+- `script\dx-project-panel-source.test.ts` now guards marquee state, root mouse lifecycle wiring, decoration geometry, real `marked_entries` updates, and cap enforcement.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\project_panel\src\project_panel.rs`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-project-panel-source.test.ts`
+- `git diff --check -- crates/project_panel/src/project_panel.rs script/dx-project-panel-source.test.ts`
+
+NOTES:
+- This is source-wired for visible rows in the current viewport. Drag-autoscroll selection beyond the visible range and live UI proof remain unclaimed until an authorized runtime validation pass.
+- No `just run`, Cargo, build, server, browser automation, or live editor UI validation was run for this source-only checkpoint.
+
 [2026-06-02] - Project Panel Media Metadata Manifests
 
 ADDED:

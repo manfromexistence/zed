@@ -640,3 +640,86 @@ test("project panel media preview renders direct image previews and video frames
     "media preview classification must stay snapshot-derived and avoid UI-path filesystem metadata probes",
   );
 });
+
+test("project panel marquee drag selection is real and bounded", () => {
+  const source = read("crates/project_panel/src/project_panel.rs");
+  const startMarqueeSelection = functionBody(source, "start_marquee_selection");
+  const updateMarqueeSelection = functionBody(source, "update_marquee_selection");
+  const finishMarqueeSelection = functionBody(source, "finish_marquee_selection");
+  const applyMarqueeSelection = functionBody(source, "apply_marquee_selection");
+  const marqueeEntryRange = functionBody(source, "project_panel_marquee_entry_range");
+  const marqueeDecorationCompute = functionBody(source, "compute");
+  const renderProjectPanel = functionBody(source, "render");
+
+  assert.match(source, /const MAX_PROJECT_PANEL_MARQUEE_SELECTION_ENTRIES: usize = 20_000;/);
+  assert.match(source, /const PROJECT_PANEL_MARQUEE_MIN_DRAG_DISTANCE: Pixels = px\(4\.\);/);
+  assert.match(source, /struct ProjectPanelMarqueeSelection/);
+  assert.match(source, /struct ProjectPanelMarqueeLayout/);
+  assert.match(source, /struct ProjectPanelMarqueeDecoration/);
+  assert.match(source, /marquee_selection:\s*Option<ProjectPanelMarqueeSelection>/);
+  assert.match(
+    source,
+    /marquee_layout:\s*Rc<RefCell<Option<ProjectPanelMarqueeLayout>>>/,
+    "marquee selection must share list geometry without mutating the entity from decoration compute",
+  );
+  assert.match(source, /impl UniformListDecoration for ProjectPanelMarqueeDecoration/);
+
+  assert.match(
+    startMarqueeSelection,
+    /event\.button != MouseButton::Left[\s\S]*event\.click_count != 1[\s\S]*state\.edit_state\.is_some/,
+    "marquee selection must ignore non-left, multi-click, and edit-state starts",
+  );
+  assert.match(
+    startMarqueeSelection,
+    /base_selection: self\.selection[\s\S]*base_marked_entries: self\.marked_entries\.clone\(\)[\s\S]*additive: event\.modifiers\.secondary\(\)/,
+    "marquee selection must preserve base selection for secondary-modifier additive drags",
+  );
+
+  assert.match(
+    updateMarqueeSelection,
+    /event\.dragging\(\)[\s\S]*PROJECT_PANEL_MARQUEE_MIN_DRAG_DISTANCE[\s\S]*marquee\.active = true[\s\S]*self\.apply_marquee_selection\(cx\)/,
+    "marquee selection must wait for a drag threshold before applying real selection",
+  );
+  assert.match(
+    finishMarqueeSelection,
+    /self\.marquee_selection\.take\(\)[\s\S]*let was_active = marquee\.active[\s\S]*self\.mouse_down = false[\s\S]*cx\.notify\(\)[\s\S]*cx\.stop_propagation\(\)/,
+    "finishing an active marquee drag must clear state and suppress the trailing click",
+  );
+
+  assert.match(
+    applyMarqueeSelection,
+    /project_panel_marquee_entry_range\(&marquee, &layout\)/,
+    "marquee selection must use the recorded uniform-list geometry",
+  );
+  assert.match(
+    applyMarqueeSelection,
+    /base_marked_entries[\s\S]*take\(MAX_PROJECT_PANEL_MARQUEE_SELECTION_ENTRIES\)[\s\S]*self\.entry_at_index\(index\)[\s\S]*SelectedEntry[\s\S]*marked_entries = selected_entries/,
+    "marquee selection must update real project-panel marked entries, not only paint an overlay",
+  );
+  assert.match(
+    applyMarqueeSelection,
+    /base_marked_entries[\s\S]*take\(MAX_PROJECT_PANEL_MARQUEE_SELECTION_ENTRIES\)[\s\S]*selected_entries\.len\(\) >= MAX_PROJECT_PANEL_MARQUEE_SELECTION_ENTRIES[\s\S]*project_panel_cap_hit\([\s\S]*"marquee-selection-range"/,
+    "marquee selection must cap row materialization before it can fan out to file actions",
+  );
+
+  assert.match(
+    marqueeEntryRange,
+    /project_panel_marquee_bounds\(selection\)\.intersect\(&layout\.bounds\)[\s\S]*visible_range\.start[\s\S]*visible_range\.end/,
+    "marquee row mapping must clip to the actual uniform-list bounds and visible range",
+  );
+  assert.match(
+    marqueeDecorationCompute,
+    /self\.layout\.replace\(Some\(ProjectPanelMarqueeLayout[\s\S]*project-panel-marquee-selection/,
+    "marquee decoration must record list geometry and render the shaded selection rectangle",
+  );
+  assert.match(
+    renderProjectPanel,
+    /on_mouse_down\(\s*MouseButton::Left,\s*cx\.listener\(Self::start_marquee_selection\)[\s\S]*on_mouse_move\(cx\.listener\(Self::update_marquee_selection\)\)[\s\S]*on_mouse_up\(\s*MouseButton::Left,\s*cx\.listener\(Self::finish_marquee_selection\)[\s\S]*on_mouse_up_out\(\s*MouseButton::Left,\s*cx\.listener\(Self::finish_marquee_selection\)/,
+    "project panel root must wire marquee mouse lifecycle handlers",
+  );
+  assert.match(
+    renderProjectPanel,
+    /with_decoration\(ProjectPanelMarqueeDecoration[\s\S]*layout: self\.marquee_layout\.clone\(\)[\s\S]*selection: self\.marquee_selection\.clone\(\)/,
+    "project panel list must install the marquee decoration after row decorations",
+  );
+});

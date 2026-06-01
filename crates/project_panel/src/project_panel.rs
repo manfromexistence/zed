@@ -25,10 +25,11 @@ use gpui::{
     ClipboardItem, Context, CursorStyle, DismissEvent, Div, DragMoveEvent, Entity, EventEmitter,
     ExternalPaths, FocusHandle, Focusable, FontWeight, Hsla, InteractiveElement, KeyContext,
     ListHorizontalSizingBehavior, ListSizingBehavior, Modifiers, ModifiersChangedEvent,
-    MouseButton, MouseDownEvent, ParentElement, PathPromptOptions, Pixels, Point, PromptLevel,
-    Render, ScrollStrategy, Stateful, Styled, Subscription, Task, UniformListScrollHandle,
-    WeakEntity, Window, actions, anchored, deferred, div, hsla, linear_color_stop, linear_gradient,
-    point, px, size, transparent_white, uniform_list,
+    MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, ParentElement, PathPromptOptions,
+    Pixels, Point, PromptLevel, Render, ScrollStrategy, Stateful, Styled, Subscription, Task,
+    UniformListDecoration, UniformListScrollHandle, WeakEntity, Window, actions, anchored,
+    deferred, div, hsla, linear_color_stop, linear_gradient, point, px, size, transparent_white,
+    uniform_list,
 };
 use language::DiagnosticSeverity;
 use menu::{Confirm, SelectFirst, SelectLast, SelectNext, SelectPrevious};
@@ -53,9 +54,9 @@ use std::{
     cell::{OnceCell, RefCell},
     cmp,
     collections::HashSet,
-    ops::Neg,
-    ops::Range,
+    ops::{Neg, Range},
     path::{Path, PathBuf},
+    rc::Rc,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -98,6 +99,8 @@ const MAX_PROJECT_PANEL_VISIBLE_ENTRIES_PER_WORKTREE: usize = 50_000;
 const MAX_PROJECT_PANEL_EXPANDED_DIRS_PER_WORKTREE: usize = 50_000;
 const MAX_PROJECT_PANEL_SELECTION_RANGE_ENTRIES: usize = 20_000;
 const MAX_PROJECT_PANEL_DRAG_SELECTION_ENTRIES: usize = 4_096;
+const MAX_PROJECT_PANEL_MARQUEE_SELECTION_ENTRIES: usize = 20_000;
+const PROJECT_PANEL_MARQUEE_MIN_DRAG_DISTANCE: Pixels = px(4.);
 const MAX_PROJECT_PANEL_EXTERNAL_DROP_PATHS: usize = 4_096;
 const MAX_PROJECT_PANEL_DOWNLOAD_FILES: usize = 10_000;
 const MAX_PROJECT_PANEL_STICKY_PARENTS: usize = 128;
@@ -198,6 +201,8 @@ pub struct ProjectPanel {
     drag_target_entry: Option<DragTarget>,
     marked_entries: Vec<SelectedEntry>,
     selection: Option<SelectedEntry>,
+    marquee_selection: Option<ProjectPanelMarqueeSelection>,
+    marquee_layout: Rc<RefCell<Option<ProjectPanelMarqueeLayout>>>,
     context_menu: Option<(Entity<ContextMenu>, Point<Pixels>, Subscription)>,
     filename_editor: Entity<Editor>,
     clipboard: Option<ClipboardEntry>,
@@ -261,6 +266,30 @@ struct FoldedDirectoryDragTarget {
     index: usize,
     /// Whether we are dragging over the delimiter rather than the component itself.
     is_delimiter_target: bool,
+}
+
+#[derive(Clone, Debug)]
+struct ProjectPanelMarqueeSelection {
+    anchor: Point<Pixels>,
+    current: Point<Pixels>,
+    base_selection: Option<SelectedEntry>,
+    base_marked_entries: Vec<SelectedEntry>,
+    additive: bool,
+    active: bool,
+}
+
+#[derive(Clone, Debug)]
+struct ProjectPanelMarqueeLayout {
+    visible_range: Range<usize>,
+    bounds: Bounds<Pixels>,
+    item_height: Pixels,
+    item_count: usize,
+}
+
+#[derive(Clone)]
+struct ProjectPanelMarqueeDecoration {
+    layout: Rc<RefCell<Option<ProjectPanelMarqueeLayout>>>,
+    selection: Option<ProjectPanelMarqueeSelection>,
 }
 
 #[derive(Clone, Debug)]
@@ -897,6 +926,8 @@ impl ProjectPanel {
                 drag_target_entry: None,
                 marked_entries: Default::default(),
                 selection: None,
+                marquee_selection: None,
+                marquee_layout: Default::default(),
                 context_menu: None,
                 filename_editor,
                 clipboard: None,
@@ -4051,6 +4082,151 @@ impl ProjectPanel {
                     ),
             )
             .into_any_element()
+    }
+
+    fn start_marquee_selection(
+        &mut self,
+        event: &MouseDownEvent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if event.button != MouseButton::Left
+            || event.click_count != 1
+            || self.state.edit_state.is_some()
+        {
+            cx.propagate();
+            return;
+        }
+
+        window.focus(&self.focus_handle, cx);
+        self.marquee_selection = Some(ProjectPanelMarqueeSelection {
+            anchor: event.position,
+            current: event.position,
+            base_selection: self.selection,
+            base_marked_entries: self.marked_entries.clone(),
+            additive: event.modifiers.secondary(),
+            active: false,
+        });
+        cx.propagate();
+    }
+
+    fn update_marquee_selection(
+        &mut self,
+        event: &MouseMoveEvent,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(marquee) = self.marquee_selection.as_mut() else {
+            return;
+        };
+
+        if !event.dragging() {
+            self.marquee_selection = None;
+            cx.notify();
+            return;
+        }
+
+        marquee.current = event.position;
+        let drag_delta = point(
+            (marquee.current.x - marquee.anchor.x).abs(),
+            (marquee.current.y - marquee.anchor.y).abs(),
+        );
+        if !marquee.active
+            && drag_delta.x.max(drag_delta.y) < PROJECT_PANEL_MARQUEE_MIN_DRAG_DISTANCE
+        {
+            return;
+        }
+
+        marquee.active = true;
+        self.apply_marquee_selection(cx);
+        cx.stop_propagation();
+    }
+
+    fn finish_marquee_selection(
+        &mut self,
+        event: &MouseUpEvent,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if event.button != MouseButton::Left {
+            cx.propagate();
+            return;
+        }
+
+        let Some(marquee) = self.marquee_selection.take() else {
+            cx.propagate();
+            return;
+        };
+
+        let was_active = marquee.active;
+        self.mouse_down = false;
+
+        if was_active {
+            cx.notify();
+            cx.stop_propagation();
+        } else {
+            cx.propagate();
+        }
+    }
+
+    fn apply_marquee_selection(&mut self, cx: &mut Context<Self>) {
+        let Some(marquee) = self
+            .marquee_selection
+            .as_ref()
+            .filter(|marquee| marquee.active)
+            .cloned()
+        else {
+            return;
+        };
+
+        let Some(layout) = self.marquee_layout.borrow().clone() else {
+            return;
+        };
+
+        let Some(selection_range) = project_panel_marquee_entry_range(&marquee, &layout) else {
+            if !marquee.additive {
+                self.marked_entries.clear();
+                self.selection = None;
+                cx.notify();
+            }
+            return;
+        };
+
+        let mut selected_entries = if marquee.additive {
+            marquee
+                .base_marked_entries
+                .into_iter()
+                .take(MAX_PROJECT_PANEL_MARQUEE_SELECTION_ENTRIES)
+                .collect()
+        } else {
+            Vec::new()
+        };
+        let mut latest_selection = marquee.base_selection.filter(|_| marquee.additive);
+
+        for index in selection_range {
+            let Some((worktree_id, entry)) = self.entry_at_index(index) else {
+                continue;
+            };
+            let selected_entry = SelectedEntry {
+                worktree_id,
+                entry_id: entry.id,
+            };
+            latest_selection = Some(selected_entry);
+            if !selected_entries.contains(&selected_entry) {
+                if selected_entries.len() >= MAX_PROJECT_PANEL_MARQUEE_SELECTION_ENTRIES {
+                    project_panel_cap_hit(
+                        "marquee-selection-range",
+                        MAX_PROJECT_PANEL_MARQUEE_SELECTION_ENTRIES,
+                    );
+                    break;
+                }
+                selected_entries.push(selected_entry);
+            }
+        }
+
+        self.selection = latest_selection.or_else(|| selected_entries.last().copied());
+        self.marked_entries = selected_entries;
+        cx.notify();
     }
 
     /// Finds the currently selected subentry for a given leaf entry id. If a given entry
@@ -7223,6 +7399,86 @@ fn format_file_size(bytes: u64) -> String {
     }
 }
 
+fn project_panel_marquee_bounds(selection: &ProjectPanelMarqueeSelection) -> Bounds<Pixels> {
+    let upper_left = selection.anchor.min(&selection.current);
+    let bottom_right = selection.anchor.max(&selection.current);
+    Bounds::from_corners(upper_left, bottom_right)
+}
+
+fn project_panel_marquee_entry_range(
+    selection: &ProjectPanelMarqueeSelection,
+    layout: &ProjectPanelMarqueeLayout,
+) -> Option<Range<usize>> {
+    if layout.item_height <= px(0.) || layout.item_count == 0 {
+        return None;
+    }
+
+    let marquee_bounds = project_panel_marquee_bounds(selection).intersect(&layout.bounds);
+    if marquee_bounds.size.width <= px(0.) || marquee_bounds.size.height <= px(0.) {
+        return None;
+    }
+
+    let content_top = layout.bounds.origin.y;
+    let first = ((marquee_bounds.top() - content_top) / layout.item_height)
+        .floor()
+        .max(0.) as usize;
+    let last = ((marquee_bounds.bottom() - content_top) / layout.item_height)
+        .ceil()
+        .max(0.) as usize;
+    let start = first.max(layout.visible_range.start).min(layout.item_count);
+    let end = last.min(layout.visible_range.end).min(layout.item_count);
+
+    (start < end).then_some(start..end)
+}
+
+impl UniformListDecoration for ProjectPanelMarqueeDecoration {
+    fn compute(
+        &self,
+        visible_range: Range<usize>,
+        bounds: Bounds<Pixels>,
+        _scroll_offset: Point<Pixels>,
+        item_height: Pixels,
+        item_count: usize,
+        _window: &mut Window,
+        cx: &mut App,
+    ) -> AnyElement {
+        self.layout.replace(Some(ProjectPanelMarqueeLayout {
+            visible_range,
+            bounds,
+            item_height,
+            item_count,
+        }));
+
+        let Some(selection) = self.selection.as_ref().filter(|selection| selection.active) else {
+            return div().into_any_element();
+        };
+
+        let marquee_bounds = project_panel_marquee_bounds(selection).intersect(&bounds);
+        if marquee_bounds.size.width <= px(0.) || marquee_bounds.size.height <= px(0.) {
+            return div().into_any_element();
+        }
+
+        let colors = cx.theme().colors();
+        div()
+            .size_full()
+            .relative()
+            .child(
+                div()
+                    .id("project-panel-marquee-selection")
+                    .absolute()
+                    .left(marquee_bounds.left() - bounds.left())
+                    .top(marquee_bounds.top() - bounds.top())
+                    .w(marquee_bounds.size.width)
+                    .h(marquee_bounds.size.height)
+                    .rounded_sm()
+                    .border_1()
+                    .border_color(colors.border_focused.opacity(0.72))
+                    .bg(colors.element_selected.opacity(0.18)),
+            )
+            .into_any_element()
+    }
+}
+
 impl Render for ProjectPanel {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let has_worktree = !self.state.visible_entries.is_empty();
@@ -7339,6 +7595,19 @@ impl Render for ProjectPanel {
                     this.on_drag_move(cx.listener(handle_drag_move::<ExternalPaths>))
                         .on_drag_move(cx.listener(handle_drag_move::<DraggedSelection>))
                 })
+                .on_mouse_down(
+                    MouseButton::Left,
+                    cx.listener(Self::start_marquee_selection),
+                )
+                .on_mouse_move(cx.listener(Self::update_marquee_selection))
+                .on_mouse_up(
+                    MouseButton::Left,
+                    cx.listener(Self::finish_marquee_selection),
+                )
+                .on_mouse_up_out(
+                    MouseButton::Left,
+                    cx.listener(Self::finish_marquee_selection),
+                )
                 .size_full()
                 .relative()
                 .on_modifiers_changed(cx.listener(
@@ -7623,6 +7892,10 @@ impl Render for ProjectPanel {
                                 } else {
                                     sticky_items
                                 })
+                            })
+                            .with_decoration(ProjectPanelMarqueeDecoration {
+                                layout: self.marquee_layout.clone(),
+                                selection: self.marquee_selection.clone(),
                             })
                             .with_sizing_behavior(ListSizingBehavior::Infer)
                             .with_horizontal_sizing_behavior(if horizontal_scroll {
