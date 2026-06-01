@@ -388,6 +388,12 @@ struct ActiveMediaFolder {
     selected_media_entry_id: Option<ProjectEntryId>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum MediaShelfNavigationDirection {
+    Previous,
+    Next,
+}
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 struct StickyDetails {
     sticky_index: usize,
@@ -1710,6 +1716,14 @@ impl ProjectPanel {
             return;
         }
         if let Some(selection) = self.selection {
+            if self.select_media_shelf_entry(
+                MediaShelfNavigationDirection::Previous,
+                window.modifiers().shift,
+                cx,
+            ) {
+                return;
+            }
+
             let (mut worktree_ix, mut entry_ix, _) =
                 self.index_for_selection(selection).unwrap_or_default();
             if entry_ix > 0 {
@@ -2834,6 +2848,14 @@ impl ProjectPanel {
             return;
         }
         if let Some(selection) = self.selection {
+            if self.select_media_shelf_entry(
+                MediaShelfNavigationDirection::Next,
+                window.modifiers().shift,
+                cx,
+            ) {
+                return;
+            }
+
             let (mut worktree_ix, mut entry_ix, _) =
                 self.index_for_selection(selection).unwrap_or_default();
             if let Some(worktree_entries) = self
@@ -6968,6 +6990,78 @@ impl ProjectPanel {
             })?;
 
         Some((active_media_folder, preview))
+    }
+
+    fn select_media_shelf_entry(
+        &mut self,
+        direction: MediaShelfNavigationDirection,
+        extend_selection: bool,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        let Some(selection) = self.selection else {
+            return false;
+        };
+        let Some((active_media_folder, preview)) = self.active_folder_media_preview(cx) else {
+            return false;
+        };
+
+        let selected_media_entry_id = active_media_folder.selected_media_entry_id;
+        let selected_is_media_folder = selection.worktree_id == active_media_folder.worktree_id
+            && selection.entry_id == active_media_folder.entry_id;
+        if selected_media_entry_id.is_none() && !selected_is_media_folder {
+            return false;
+        }
+
+        let target_item_ix = match (direction, selected_media_entry_id) {
+            (MediaShelfNavigationDirection::Next, None) => Some(0),
+            (MediaShelfNavigationDirection::Previous, None) => return false,
+            (MediaShelfNavigationDirection::Next, Some(selected_media_entry_id)) => {
+                match preview
+                    .items
+                    .iter()
+                    .position(|item| item.entry_id == selected_media_entry_id)
+                {
+                    Some(ix) if ix + 1 < preview.items.len() => Some(ix + 1),
+                    Some(_) | None => return true,
+                }
+            }
+            (MediaShelfNavigationDirection::Previous, Some(selected_media_entry_id)) => {
+                match preview
+                    .items
+                    .iter()
+                    .position(|item| item.entry_id == selected_media_entry_id)
+                {
+                    Some(0) => {
+                        let selection = SelectedEntry {
+                            worktree_id: active_media_folder.worktree_id,
+                            entry_id: active_media_folder.entry_id,
+                        };
+                        self.selection = Some(selection);
+                        if extend_selection && !self.marked_entries.contains(&selection) {
+                            self.marked_entries.push(selection);
+                        }
+                        cx.notify();
+                        return true;
+                    }
+                    Some(ix) => Some(ix - 1),
+                    None => return true,
+                }
+            }
+        };
+
+        let Some(item) = target_item_ix.and_then(|ix| preview.items.get(ix)) else {
+            return false;
+        };
+        let selection = SelectedEntry {
+            worktree_id: active_media_folder.worktree_id,
+            entry_id: item.entry_id,
+        };
+        self.selection = Some(selection);
+        if extend_selection && !self.marked_entries.contains(&selection) {
+            self.marked_entries.push(selection);
+        }
+        cx.notify();
+        true
     }
 
     fn details_for_entry(

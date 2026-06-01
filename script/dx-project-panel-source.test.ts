@@ -283,13 +283,18 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   const updateVisibleEntries = functionBody(source, "update_visible_entries");
   const activeMediaFolderForSelection = functionBody(source, "active_media_folder_for_selection");
   const activeFolderMediaPreview = functionBody(source, "active_folder_media_preview");
+  const selectNext = functionBody(source, "select_next");
+  const selectPrevious = functionBody(source, "select_previous");
+  const selectMediaShelfEntry = functionBody(source, "select_media_shelf_entry");
 
   assert.match(source, /mod media_preview;/);
   assert.match(source, /struct ActiveMediaFolder/);
+  assert.match(source, /enum MediaShelfNavigationDirection/);
   assert.match(source, /folder_media_previews:\s*RefCell<HashMap<\(WorktreeId, ProjectEntryId\), Option<media_preview::FolderMediaPreview>>>/);
   assert.match(source, /media_preview:\s*Option<media_preview::FolderMediaPreview>/);
   assert.match(source, /fn active_media_folder_for_selection\(/);
   assert.match(source, /fn active_folder_media_preview\(/);
+  assert.match(source, /fn select_media_shelf_entry\(/);
 
   assert.match(media, /pub\(crate\) const MAX_PROJECT_PANEL_MEDIA_CHILD_SCAN: usize = 512;/);
   assert.match(media, /pub\(crate\) const MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS: usize = 12;/);
@@ -357,6 +362,38 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
     activeFolderMediaPreview,
     /self\.folder_media_preview\([\s\S]*active_media_folder\.worktree_id[\s\S]*active_media_folder\.entry_id[\s\S]*&active_media_folder\.absolute_path[\s\S]*children[\s\S]*\)/,
     "active media shelf must reuse the cached snapshot-derived media preview",
+  );
+  assertBefore({
+    body: selectNext,
+    before: /self\.select_media_shelf_entry\([\s\S]*MediaShelfNavigationDirection::Next,[\s\S]*window\.modifiers\(\)\.shift,[\s\S]*cx,[\s\S]*\)/,
+    after: /self\.index_for_selection\(selection\)/,
+    message: "select-next must give the active media shelf a keyboard navigation chance before visible-row fallback",
+  });
+  assertBefore({
+    body: selectPrevious,
+    before: /self\.select_media_shelf_entry\([\s\S]*MediaShelfNavigationDirection::Previous,[\s\S]*window\.modifiers\(\)\.shift,[\s\S]*cx,[\s\S]*\)/,
+    after: /self\.index_for_selection\(selection\)/,
+    message: "select-previous must give the active media shelf a keyboard navigation chance before visible-row fallback",
+  });
+  assert.match(
+    selectMediaShelfEntry,
+    /self\.active_folder_media_preview\(cx\)[\s\S]*active_media_folder\.selected_media_entry_id[\s\S]*selection\.entry_id == active_media_folder\.entry_id/,
+    "media shelf keyboard navigation must only activate from the folder row or an already selected media card",
+  );
+  assert.match(
+    selectMediaShelfEntry,
+    /MediaShelfNavigationDirection::Next[\s\S]*preview[\s\S]*\.items[\s\S]*\.iter\(\)[\s\S]*\.position\(\|item\| item\.entry_id == selected_media_entry_id\)[\s\S]*MediaShelfNavigationDirection::Previous[\s\S]*preview[\s\S]*\.items[\s\S]*\.iter\(\)[\s\S]*\.position\(\|item\| item\.entry_id == selected_media_entry_id\)/,
+    "media shelf keyboard navigation must move through bounded real media preview items",
+  );
+  assert.match(
+    selectMediaShelfEntry,
+    /SelectedEntry \{[\s\S]*worktree_id: active_media_folder\.worktree_id[\s\S]*entry_id: item\.entry_id[\s\S]*self\.selection = Some\(selection\)/,
+    "media shelf keyboard navigation must select the real underlying project entry",
+  );
+  assert.match(
+    selectMediaShelfEntry,
+    /entry_id: active_media_folder\.entry_id[\s\S]*self\.selection = Some\(selection\)/,
+    "media shelf previous navigation must be able to return to the owning folder row",
   );
   assert.match(
     updateVisibleEntries,

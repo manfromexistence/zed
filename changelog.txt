@@ -1,3 +1,16 @@
+[2026-06-02] - Project Panel Media Shelf Keyboard Navigation
+
+CHANGED:
+- `crates\project_panel\src\project_panel.rs` now gives the active media shelf a keyboard navigation path before falling back to visible tree row indexes.
+- Selecting next from an expanded media folder enters the bounded bottom media shelf, next/previous moves through real media preview item entry ids, and previous from the first media item returns to the owning folder row.
+- `script\dx-project-panel-source.test.ts` now guards shelf-aware select-next/select-previous routing, folder/media-card activation rules, bounded preview-item traversal, and real `SelectedEntry` updates.
+
+PASSED:
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-project-panel-source.test.ts`
+
+NOTES:
+- No `just run`, Cargo, build, server, browser automation, or live project-panel UI validation was run for this source-only checkpoint.
+
 [2026-06-02] - Project Panel Marquee Autoscroll
 
 CHANGED:
