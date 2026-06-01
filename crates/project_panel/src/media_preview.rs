@@ -1,3 +1,5 @@
+mod metadata;
+
 use std::path::{Path, PathBuf};
 
 use gpui::{
@@ -25,6 +27,8 @@ const IMAGE_MEDIA_EXTENSIONS: &[&str] = &[
 ];
 const VIDEO_MEDIA_EXTENSIONS: &[&str] = &["avi", "m4v", "mkv", "mov", "mp4", "mpeg", "mpg", "webm"];
 const AUDIO_MEDIA_EXTENSIONS: &[&str] = &["aac", "flac", "m4a", "mp3", "ogg", "opus", "wav"];
+const CENTER_FRAME_HINTS: &[&str] = &["center", "centre", "middle", "mid"];
+const PREVIEW_FRAME_HINTS: &[&str] = &["poster", "frame", "thumb", "thumbnail", "preview"];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum MediaPreviewKind {
@@ -41,7 +45,7 @@ pub(crate) struct MediaPreviewItem {
     pub(crate) size: u64,
     pub(crate) absolute_path: PathBuf,
     pub(crate) video_frame_path: Option<PathBuf>,
-    pub(crate) audio_duration_label: Option<String>,
+    pub(crate) duration_label: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -58,22 +62,24 @@ pub(crate) fn build_folder_media_preview<'a>(
     parent_abs_path: &Path,
     children: impl Iterator<Item = &'a Entry>,
 ) -> Option<FolderMediaPreview> {
-    let mut image_count = 0;
-    let mut video_count = 0;
-    let mut audio_count = 0;
-    let mut scanned_count = 0;
+    let mut child_entries = Vec::new();
     let mut media_scan_was_capped = false;
-    let mut items = Vec::new();
-    let mut image_frame_candidates = Vec::new();
-
     for child in children.take(MAX_PROJECT_PANEL_MEDIA_CHILD_SCAN + 1) {
-        if scanned_count >= MAX_PROJECT_PANEL_MEDIA_CHILD_SCAN {
+        if child_entries.len() >= MAX_PROJECT_PANEL_MEDIA_CHILD_SCAN {
             media_scan_was_capped = true;
             break;
         }
+        child_entries.push(child);
+    }
 
-        scanned_count += 1;
+    let mut image_count = 0;
+    let mut video_count = 0;
+    let mut audio_count = 0;
+    let mut items = Vec::new();
+    let mut image_frame_candidates = Vec::new();
+    let media_metadata = metadata::build_media_metadata_index(parent_abs_path, &child_entries);
 
+    for child in child_entries {
         if !child.is_file() {
             continue;
         }
@@ -104,10 +110,9 @@ pub(crate) fn build_folder_media_preview<'a>(
             kind,
             name,
             size: child.size,
+            duration_label: media_metadata.duration_label_for_path(&absolute_path),
             absolute_path,
             video_frame_path: None,
-            audio_duration_label: (kind == MediaPreviewKind::Audio)
-                .then(|| "Duration unavailable".to_string()),
         });
     }
 
@@ -124,8 +129,9 @@ pub(crate) fn build_folder_media_preview<'a>(
 
     for item in &mut items {
         if item.kind == MediaPreviewKind::Video {
-            item.video_frame_path =
-                video_preview_frame_path(&item.absolute_path, &image_frame_candidates);
+            item.video_frame_path = media_metadata
+                .video_frame_for_path(&item.absolute_path)
+                .or_else(|| video_preview_frame_path(&item.absolute_path, &image_frame_candidates));
         }
     }
 
@@ -632,7 +638,10 @@ fn media_preview_card_tooltip_meta(item: &MediaPreviewItem) -> String {
     match item.kind {
         MediaPreviewKind::Image => format!("Image / {size_label}"),
         MediaPreviewKind::Video => {
-            let duration = "Duration unavailable";
+            let duration = item
+                .duration_label
+                .as_deref()
+                .unwrap_or("Duration unavailable");
             if item.video_frame_path.is_some() {
                 format!("Video frame preview / {duration} / {size_label}")
             } else {
@@ -641,7 +650,7 @@ fn media_preview_card_tooltip_meta(item: &MediaPreviewItem) -> String {
         }
         MediaPreviewKind::Audio => format!(
             "{} / {size_label}",
-            item.audio_duration_label
+            item.duration_label
                 .as_deref()
                 .unwrap_or("Duration unavailable")
         ),
@@ -716,12 +725,37 @@ fn video_preview_frame_path(
     image_frame_candidates: &[(String, PathBuf)],
 ) -> Option<PathBuf> {
     let video_stem = media_stem_key(video_path)?;
-    image_frame_candidates.iter().find_map(|(stem, path)| {
-        (stem == &video_stem
-            || (stem.starts_with(&video_stem)
-                && (stem.contains("poster") || stem.contains("frame") || stem.contains("thumb"))))
-        .then(|| path.clone())
-    })
+    image_frame_candidates
+        .iter()
+        .filter_map(|(stem, path)| {
+            video_frame_candidate_rank(&video_stem, stem).map(|rank| (rank, path))
+        })
+        .min_by_key(|(rank, _)| *rank)
+        .map(|(_, path)| path.clone())
+}
+
+fn video_frame_candidate_rank(video_stem: &str, candidate_stem: &str) -> Option<u8> {
+    if candidate_stem == video_stem {
+        return Some(2);
+    }
+
+    if !candidate_stem.starts_with(video_stem) {
+        return None;
+    }
+
+    if CENTER_FRAME_HINTS
+        .iter()
+        .any(|hint| candidate_stem.contains(hint))
+    {
+        Some(0)
+    } else if PREVIEW_FRAME_HINTS
+        .iter()
+        .any(|hint| candidate_stem.contains(hint))
+    {
+        Some(1)
+    } else {
+        None
+    }
 }
 
 fn media_stem_key(path: &Path) -> Option<String> {

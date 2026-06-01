@@ -1,3 +1,24 @@
+[2026-06-02] - Project Panel Media Metadata Manifests
+
+ADDED:
+- `crates\project_panel\src\media_preview\metadata.rs` now owns a bounded media metadata manifest reader for `.dx-media.json`, `dx-media.json`, `.zed-media.json`, and `zed-media.json`.
+- Project panel media preview items now carry general duration labels from source-owned media manifests.
+
+CHANGED:
+- `crates\project_panel\src\media_preview.rs` now prefers manifest-declared video center/middle frame paths before falling back to same-folder sidecar image heuristics.
+- Video sidecar frame matching now ranks center/middle frame hints before poster/frame/thumb/preview images.
+- Media hover details now show manifest duration labels for audio/video when present, with the existing honest unavailable state when metadata has not been generated.
+- `script\dx-project-panel-source.test.ts` now guards the metadata manifest module, sentinel-byte bounded manifest reads, center-frame preference, duration-label support, and no filesystem metadata probes.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\project_panel\src\media_preview.rs crates\project_panel\src\media_preview\metadata.rs`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-project-panel-source.test.ts`
+- `git diff --check -- crates/project_panel/src/media_preview.rs crates/project_panel/src/media_preview/metadata.rs script/dx-project-panel-source.test.ts`
+
+NOTES:
+- This checkpoint does not run ffmpeg/ffprobe or generate thumbnails/duration metadata automatically. It keeps the project panel fast by consuming bounded manifest/sidecar data when available.
+- No `just run`, Cargo, build, server, browser automation, or live media UI validation was run for this source-only checkpoint.
+
 [2026-06-02] - Project Panel Media Shelf Entry Actions
 
 CHANGED:

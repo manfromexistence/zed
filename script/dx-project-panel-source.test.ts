@@ -311,7 +311,7 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   assert.match(media, /fn media_kind_sort_rank/);
   assert.match(media, /entry_id:\s*ProjectEntryId/);
   assert.match(media, /video_frame_path:\s*Option<PathBuf>/);
-  assert.match(media, /audio_duration_label:\s*Option<String>/);
+  assert.match(media, /duration_label:\s*Option<String>/);
   assert.match(media, /size:\s*u64/);
   assert.match(
     source,
@@ -424,6 +424,7 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
 
 test("project panel media preview renders direct image previews and video frames when available", () => {
   const media = read("crates/project_panel/src/media_preview.rs");
+  const metadata = read("crates/project_panel/src/media_preview/metadata.rs");
   const renderFolderMediaPreview = functionBody(media, "render_folder_media_preview");
   const renderFolderMediaGallery = functionBody(media, "render_folder_media_gallery");
   const renderFolderMediaShelf = functionBody(media, "render_folder_media_shelf");
@@ -434,7 +435,19 @@ test("project panel media preview renders direct image previews and video frames
   const mediaPreviewCardTooltipMeta = functionBody(media, "media_preview_card_tooltip_meta");
   const audioGradientBackground = functionBody(media, "audio_gradient_background");
   const buildFolderMediaPreview = functionBody(media, "build_folder_media_preview");
+  const buildMediaMetadataIndex = functionBody(metadata, "build_media_metadata_index");
+  const readBoundedMediaMetadataManifest = functionBody(
+    metadata,
+    "read_bounded_media_metadata_manifest",
+  );
+  const collectMediaMetadataRecord = functionBody(metadata, "collect_media_metadata_record");
+  const mediaDurationLabelFromRecord = functionBody(metadata, "media_duration_label_from_record");
   const videoPreviewFramePath = functionBody(media, "video_preview_frame_path");
+  const videoFrameCandidateRank = functionBody(media, "video_frame_candidate_rank");
+
+  assert.match(media, /mod metadata;/);
+  assert.match(metadata, /pub\(super\) struct MediaMetadataIndex/);
+  assert.match(metadata, /pub\(super\) const MAX_PROJECT_PANEL_MEDIA_METADATA_MANIFEST_BYTES/);
 
   assertBefore({
     body: buildFolderMediaPreview,
@@ -463,6 +476,21 @@ test("project panel media preview renders direct image previews and video frames
     buildFolderMediaPreview,
     /entry_id:\s*child\.id/,
     "media preview items must carry project entry ids for card selection/opening",
+  );
+  assert.match(
+    buildFolderMediaPreview,
+    /let media_metadata = metadata::build_media_metadata_index\(parent_abs_path, &child_entries\);/,
+    "media preview items must derive optional duration/frame metadata from the bounded child snapshot",
+  );
+  assert.match(
+    buildFolderMediaPreview,
+    /duration_label:\s*media_metadata\.duration_label_for_path\(&absolute_path\)/,
+    "media preview items must carry manifest duration labels when present",
+  );
+  assert.match(
+    buildFolderMediaPreview,
+    /media_metadata[\s\S]*\.video_frame_for_path\(&item\.absolute_path\)[\s\S]*\.or_else\(\|\| video_preview_frame_path/,
+    "video media cards must prefer manifest-declared center frames before heuristic sidecar frames",
   );
   assertBefore({
     body: renderFolderMediaPreview,
@@ -568,8 +596,8 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     mediaPreviewCardTooltipMeta,
-    /let size_label = media_size_label\(item\.size\);[\s\S]*Duration unavailable/,
-    "media hover details must include snapshot size and honest duration state",
+    /let size_label = media_size_label\(item\.size\);[\s\S]*item\.duration_label[\s\S]*Duration unavailable/,
+    "media hover details must include snapshot size and manifest duration with an honest unavailable state",
   );
   assert.match(
     audioGradientBackground,
@@ -578,12 +606,37 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     videoPreviewFramePath,
-    /stem\.starts_with\(&video_stem\)[\s\S]*stem\.contains\("poster"\)[\s\S]*stem\.contains\("frame"\)[\s\S]*stem\.contains\("thumb"\)/,
-    "video preview frame matching should accept common poster/frame/thumb sidecar images",
+    /video_frame_candidate_rank\(&video_stem, stem\)[\s\S]*\.min_by_key/,
+    "video preview frame matching should rank sidecar images instead of accepting the first candidate",
+  );
+  assert.match(
+    videoFrameCandidateRank,
+    /CENTER_FRAME_HINTS[\s\S]*PREVIEW_FRAME_HINTS/,
+    "video sidecar matching must prefer center or middle frame hints before poster/thumb previews",
+  );
+  assert.match(
+    buildMediaMetadataIndex,
+    /MAX_PROJECT_PANEL_MEDIA_METADATA_MANIFEST_BYTES[\s\S]*MEDIA_METADATA_MANIFEST_NAMES[\s\S]*read_bounded_media_metadata_manifest/,
+    "media metadata manifests must be size-bounded and opt-in by known file name before parsing",
+  );
+  assert.match(
+    readBoundedMediaMetadataManifest,
+    /fs::File::open[\s\S]*take\(MAX_PROJECT_PANEL_MEDIA_METADATA_MANIFEST_BYTES \+ 1\)[\s\S]*String::from_utf8/,
+    "media metadata manifest reads must use a sentinel-byte bound before UTF-8 and JSON parsing",
+  );
+  assert.match(
+    collectMediaMetadataRecord,
+    /media_duration_label_from_record[\s\S]*center_frame[\s\S]*middle_frame/,
+    "media metadata records must support center-frame paths and duration labels",
+  );
+  assert.match(
+    mediaDurationLabelFromRecord,
+    /duration_label[\s\S]*duration_seconds[\s\S]*format_media_duration_seconds/,
+    "duration metadata must accept explicit labels or numeric seconds",
   );
   assert.doesNotMatch(
-    media,
+    `${media}\n${metadata}`,
     /path\.is_file\(\)|std::fs::metadata|fs::metadata/,
-    "media preview classification must stay snapshot-derived and avoid UI-path filesystem probes",
+    "media preview classification must stay snapshot-derived and avoid UI-path filesystem metadata probes",
   );
 });
