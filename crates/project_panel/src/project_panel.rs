@@ -347,6 +347,15 @@ struct EntryDetails {
     canonical_path: Option<Arc<Path>>,
 }
 
+#[derive(Debug, Clone)]
+struct ActiveMediaFolder {
+    worktree_id: WorktreeId,
+    entry_id: ProjectEntryId,
+    path: Arc<RelPath>,
+    absolute_path: PathBuf,
+    selected_media_entry_id: Option<ProjectEntryId>,
+}
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 struct StickyDetails {
     sticky_index: usize,
@@ -4219,6 +4228,9 @@ impl ProjectPanel {
         let hide_gitignore = settings.hide_gitignore;
         let sort_mode = settings.sort_mode;
         let sort_order = settings.sort_order;
+        let active_media_folder_for_visibility = self
+            .active_media_folder_for_selection(cx)
+            .map(|folder| (folder.worktree_id, folder.entry_id));
         let project = self.project.read(cx);
         let repo_snapshots = project.git_store().read(cx).repo_snapshots(cx);
 
@@ -4359,9 +4371,27 @@ impl ProjectPanel {
                                 }
                             }
                             auto_folded_ancestors.clear();
-                            if (!hide_gitignore || !entry.is_ignored)
-                                && (!hide_hidden || !entry.is_hidden)
-                            {
+                            let entry_is_visible = (!hide_gitignore || !entry.is_ignored)
+                                && (!hide_hidden || !entry.is_hidden);
+                            let entry_is_active_media_shelf_child = entry_is_visible
+                                && active_media_folder_for_visibility.is_some_and(
+                                    |(active_worktree_id, active_folder_id)| {
+                                        active_worktree_id == worktree_id
+                                            && entry.is_file()
+                                            && media_preview::is_media_path(
+                                                entry.path.as_std_path(),
+                                            )
+                                            && entry.path.parent().is_some_and(|parent_path| {
+                                                worktree_snapshot
+                                                    .entry_for_path(parent_path)
+                                                    .is_some_and(|parent| {
+                                                        parent.id == active_folder_id
+                                                    })
+                                            })
+                                    },
+                                );
+
+                            if entry_is_visible && !entry_is_active_media_shelf_child {
                                 if visible_worktree_entries.len()
                                     >= MAX_PROJECT_PANEL_VISIBLE_ENTRIES_PER_WORKTREE
                                     || visible_entries_total + visible_worktree_entries.len()
@@ -4385,10 +4415,7 @@ impl ProjectPanel {
                             } else {
                                 false
                             };
-                            if precedes_new_entry
-                                && (!hide_gitignore || !entry.is_ignored)
-                                && (!hide_hidden || !entry.is_hidden)
-                            {
+                            if precedes_new_entry && entry_is_visible {
                                 if visible_worktree_entries.len()
                                     >= MAX_PROJECT_PANEL_VISIBLE_ENTRIES_PER_WORKTREE
                                     || visible_entries_total + visible_worktree_entries.len()
@@ -4405,6 +4432,11 @@ impl ProjectPanel {
                                     entry.git_summary,
                                     new_entry_kind,
                                 ));
+                            }
+
+                            if entry_is_active_media_shelf_child {
+                                entry_iter.advance();
+                                continue;
                             }
 
                             let (depth, chars) = if Some(entry.entry)
@@ -6630,52 +6662,60 @@ impl ProjectPanel {
         preview
     }
 
+    fn active_media_folder_for_selection(&self, cx: &App) -> Option<ActiveMediaFolder> {
+        let selection = self.selection?;
+        let resolved_entry_id = self.resolve_entry(selection.entry_id);
+        let project = self.project.read(cx);
+        let worktree = project.worktree_for_id(selection.worktree_id, cx)?;
+        let worktree = worktree.read(cx);
+        let mut entry = worktree.entry_for_id(resolved_entry_id)?;
+        let selected_media_entry_id = (entry.is_file()
+            && media_preview::is_media_path(entry.path.as_std_path()))
+        .then_some(entry.id);
+
+        if entry.is_file() {
+            let parent_path = entry.path.parent()?;
+            entry = worktree.entry_for_path(parent_path)?;
+        }
+
+        if !entry.is_dir() {
+            return None;
+        }
+
+        Some(ActiveMediaFolder {
+            worktree_id: selection.worktree_id,
+            entry_id: entry.id,
+            path: entry.path.clone(),
+            absolute_path: worktree.absolutize(&entry.path),
+            selected_media_entry_id,
+        })
+    }
+
     fn active_folder_media_preview(
         &self,
         cx: &mut Context<Self>,
-    ) -> Option<media_preview::FolderMediaPreview> {
-        let selection = self.selection?;
-        let resolved_entry_id = self.resolve_entry(selection.entry_id);
+    ) -> Option<(ActiveMediaFolder, media_preview::FolderMediaPreview)> {
+        let active_media_folder = self.active_media_folder_for_selection(cx)?;
         let settings = ProjectPanelSettings::get_global(cx);
-        let (entry_id, entry_path, absolute_path) = {
-            let project = self.project.read(cx);
-            let worktree = project.worktree_for_id(selection.worktree_id, cx)?;
-            let worktree = worktree.read(cx);
-            let mut entry = worktree.entry_for_id(resolved_entry_id)?;
-
-            if entry.is_file() {
-                let parent_path = entry.path.parent()?;
-                entry = worktree.entry_for_path(parent_path)?;
-            }
-
-            if !entry.is_dir() {
-                return None;
-            }
-
-            (
-                entry.id,
-                entry.path.clone(),
-                worktree.absolutize(&entry.path),
-            )
-        };
 
         if !self
             .state
             .expanded_dir_ids
-            .get(&selection.worktree_id)
-            .is_some_and(|ids| ids.binary_search(&entry_id).is_ok())
+            .get(&active_media_folder.worktree_id)
+            .is_some_and(|ids| ids.binary_search(&active_media_folder.entry_id).is_ok())
         {
             return None;
         }
 
-        self.project
+        let preview = self
+            .project
             .read(cx)
-            .worktree_for_id(selection.worktree_id, cx)
+            .worktree_for_id(active_media_folder.worktree_id, cx)
             .and_then(|worktree| {
                 let snapshot = worktree.read(cx).snapshot();
                 let children = snapshot
                     .child_entries_with_options(
-                        &entry_path,
+                        &active_media_folder.path,
                         ChildEntriesOptions {
                             include_files: true,
                             include_dirs: false,
@@ -6684,8 +6724,15 @@ impl ProjectPanel {
                     )
                     .filter(|child| !settings.hide_hidden || !child.is_hidden)
                     .filter(|child| child.is_file());
-                self.folder_media_preview(selection.worktree_id, entry_id, &absolute_path, children)
-            })
+                self.folder_media_preview(
+                    active_media_folder.worktree_id,
+                    active_media_folder.entry_id,
+                    &active_media_folder.absolute_path,
+                    children,
+                )
+            })?;
+
+        Some((active_media_folder, preview))
     }
 
     fn details_for_entry(
@@ -7589,7 +7636,13 @@ impl Render for ProjectPanel {
                             .track_scroll(&self.scroll_handle),
                         )
                         .when_some(active_media_preview, |this, media_preview| {
-                            this.child(media_preview::render_folder_media_shelf(&media_preview, cx))
+                            let (active_media_folder, media_preview) = media_preview;
+                            this.child(media_preview::render_folder_media_shelf(
+                                &media_preview,
+                                active_media_folder.worktree_id,
+                                active_media_folder.selected_media_entry_id,
+                                cx,
+                            ))
                         })
                         .child(
                             div()

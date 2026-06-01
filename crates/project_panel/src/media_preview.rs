@@ -1,11 +1,13 @@
 use std::path::{Path, PathBuf};
 
 use gpui::{
-    FontWeight, Hsla, ObjectFit, SharedString, StatefulInteractiveElement, hsla, img,
-    linear_color_stop, linear_gradient,
+    App, Context, Div, FontWeight, Hsla, MouseButton, MouseDownEvent, ObjectFit, SharedString,
+    Stateful, StatefulInteractiveElement, hsla, img, linear_color_stop, linear_gradient,
 };
-use project::Entry;
+use project::{Entry, ProjectEntryId, WorktreeId};
+use settings::Settings;
 use ui::{ContextMenu, IconButtonShape, PopoverMenu, Tooltip, prelude::*};
+use workspace::{PreviewTabsSettings, SelectedEntry};
 
 pub(crate) const MAX_PROJECT_PANEL_MEDIA_CHILD_SCAN: usize = 512;
 pub(crate) const MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS: usize = 12;
@@ -33,6 +35,7 @@ pub(crate) enum MediaPreviewKind {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct MediaPreviewItem {
+    pub(crate) entry_id: ProjectEntryId,
     pub(crate) kind: MediaPreviewKind,
     pub(crate) name: String,
     pub(crate) size: u64,
@@ -97,6 +100,7 @@ pub(crate) fn build_folder_media_preview<'a>(
             .map(ToOwned::to_owned)
             .unwrap_or_else(|| absolute_path.display().to_string());
         items.push(MediaPreviewItem {
+            entry_id: child.id,
             kind,
             name,
             size: child.size,
@@ -345,7 +349,12 @@ pub(crate) fn render_folder_media_gallery(
         .into_any_element()
 }
 
-pub(crate) fn render_folder_media_shelf(preview: &FolderMediaPreview, cx: &mut App) -> AnyElement {
+pub(crate) fn render_folder_media_shelf(
+    preview: &FolderMediaPreview,
+    worktree_id: WorktreeId,
+    selected_entry_id: Option<ProjectEntryId>,
+    cx: &mut Context<super::ProjectPanel>,
+) -> AnyElement {
     let summary = media_preview_summary(preview);
     let visible_count = preview
         .items
@@ -355,7 +364,14 @@ pub(crate) fn render_folder_media_shelf(preview: &FolderMediaPreview, cx: &mut A
         .items
         .iter()
         .take(MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS)
-        .map(|item| render_media_gallery_card("project-panel-media-shelf-card", item, cx))
+        .map(|item| {
+            render_media_shelf_card(
+                item,
+                worktree_id,
+                selected_entry_id == Some(item.entry_id),
+                cx,
+            )
+        })
         .collect::<Vec<_>>();
 
     v_flex()
@@ -405,11 +421,87 @@ pub(crate) fn render_folder_media_shelf(preview: &FolderMediaPreview, cx: &mut A
         .into_any_element()
 }
 
+fn render_media_shelf_card(
+    item: &MediaPreviewItem,
+    worktree_id: WorktreeId,
+    is_selected: bool,
+    cx: &mut Context<super::ProjectPanel>,
+) -> AnyElement {
+    let entry_id = item.entry_id;
+    media_gallery_card_container("project-panel-media-shelf-card", item, is_selected, cx)
+        .cursor_pointer()
+        .on_click(
+            cx.listener(move |panel, event: &gpui::ClickEvent, window, cx| {
+                cx.stop_propagation();
+                window.focus(&panel.focus_handle, cx);
+                let selection = SelectedEntry {
+                    worktree_id,
+                    entry_id,
+                };
+
+                if event.modifiers().secondary() {
+                    panel.selection = Some(selection);
+                    if let Some(position) = panel
+                        .marked_entries
+                        .iter()
+                        .position(|entry| *entry == selection)
+                    {
+                        panel.marked_entries.remove(position);
+                    } else {
+                        panel.marked_entries.push(selection);
+                    }
+                    cx.notify();
+                    return;
+                }
+
+                panel.marked_entries.clear();
+                panel.selection = Some(selection);
+                let preview_tabs_enabled =
+                    PreviewTabsSettings::get_global(cx).enable_preview_from_project_panel;
+                let click_count = event.click_count();
+                panel.open_entry(
+                    entry_id,
+                    click_count > 1,
+                    preview_tabs_enabled && click_count == 1,
+                    cx,
+                );
+                cx.notify();
+            }),
+        )
+        .on_mouse_down(
+            MouseButton::Right,
+            cx.listener(move |panel, event: &MouseDownEvent, window, cx| {
+                cx.stop_propagation();
+                window.focus(&panel.focus_handle, cx);
+                let selection = SelectedEntry {
+                    worktree_id,
+                    entry_id,
+                };
+                if !panel.marked_entries.contains(&selection) {
+                    panel.marked_entries.clear();
+                }
+                panel.selection = Some(selection);
+                panel.deploy_context_menu(event.position, entry_id, window, cx);
+                cx.notify();
+            }),
+        )
+        .into_any_element()
+}
+
 fn render_media_gallery_card(
     id_prefix: &'static str,
     item: &MediaPreviewItem,
     cx: &mut App,
 ) -> AnyElement {
+    media_gallery_card_container(id_prefix, item, false, cx).into_any_element()
+}
+
+fn media_gallery_card_container(
+    id_prefix: &'static str,
+    item: &MediaPreviewItem,
+    is_selected: bool,
+    cx: &mut App,
+) -> Stateful<Div> {
     let colors = cx.theme().colors();
     let tooltip_title = item.name.clone();
     let tooltip_meta = media_preview_card_tooltip_meta(item);
@@ -511,8 +603,16 @@ fn render_media_gallery_card(
         .p_1()
         .rounded_sm()
         .border_1()
-        .border_color(colors.border_variant)
-        .bg(colors.element_background)
+        .border_color(if is_selected {
+            colors.border_focused
+        } else {
+            colors.border_variant
+        })
+        .bg(if is_selected {
+            colors.element_selected
+        } else {
+            colors.element_background
+        })
         .hover(|style| style.bg(colors.element_hover))
         .tooltip(move |_window, cx| {
             Tooltip::with_meta(tooltip_title.clone(), None, tooltip_meta.clone(), cx)
@@ -525,7 +625,6 @@ fn render_media_gallery_card(
                 .single_line()
                 .truncate(),
         )
-        .into_any_element()
 }
 
 fn media_preview_card_tooltip_meta(item: &MediaPreviewItem) -> String {
@@ -592,6 +691,10 @@ fn media_preview_kind_for_path(path: &Path) -> Option<MediaPreviewKind> {
     } else {
         None
     }
+}
+
+pub(crate) fn is_media_path(path: &Path) -> bool {
+    media_preview_kind_for_path(path).is_some()
 }
 
 fn media_kind_sort_rank(kind: MediaPreviewKind) -> u8 {

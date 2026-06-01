@@ -1,3 +1,17 @@
+[2026-06-02] - Project Panel Media Shelf Entry Actions
+
+CHANGED:
+- `crates\project_panel\src\media_preview.rs` now stores the real `ProjectEntryId` on each media preview item.
+- Active media shelf cards now select and open the underlying project entry through existing ProjectPanel behavior instead of acting as passive previews.
+- Right-clicking an active media shelf card now opens the normal project-panel context menu for that file.
+- `crates\project_panel\src\project_panel.rs` now suppresses direct media children from the normal full-width visible tree rows when the active expanded folder is represented by the bottom media shelf.
+- `script\dx-project-panel-source.test.ts` now guards media item entry identity, shelf card actions, selected card styling, context menu wiring, and active-shelf row suppression.
+
+NOTES:
+- Normal tree behavior is preserved when no active expanded media folder owns the bottom shelf.
+- Middle-frame video extraction, real audio/video duration probing, and keyboard navigation inside shelf cards remain future work.
+- No `just run`, Cargo, build, server, browser automation, or live media UI validation was run for this source-only checkpoint.
+
 [2026-06-02] - Project Panel Active Media Shelf
 
 ADDED:
