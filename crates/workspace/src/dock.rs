@@ -10,8 +10,8 @@ use db::kvp::KeyValueStore;
 use gpui::{
     Action, Anchor, AnyView, App, Axis, Context, DragMoveEvent, Entity, EntityId, EventEmitter,
     FocusHandle, Focusable, IntoElement, KeyContext, MouseButton, MouseDownEvent, MouseUpEvent,
-    ParentElement, Render, SharedString, StyleRefinement, Styled, Subscription, Task,
-    Transformation, WeakEntity, Window, deferred, div, px, radians, relative,
+    ParentElement, Render, SharedString, StyleRefinement, Styled, Subscription, Task, WeakEntity,
+    Window, deferred, div, px, relative,
 };
 use serde::{Deserialize, Serialize};
 use settings::{Settings, SettingsStore, TerminalDockPosition};
@@ -23,9 +23,6 @@ use ui::{
 use util::ResultExt as _;
 
 pub(crate) const RESIZE_HANDLE_SIZE: Pixels = px(6.);
-const SIDE_PANEL_SPLIT_ICON_ROTATION: f32 = std::f32::consts::FRAC_PI_2;
-const SIDE_PANEL_INLINE_CONTROL_MASK_WIDTH: Pixels = px(70.);
-const SIDE_PANEL_INLINE_CONTROL_MASK_HEIGHT: Pixels = px(30.);
 
 pub enum PanelEvent {
     ZoomIn,
@@ -1824,6 +1821,8 @@ impl Render for Dock {
                                         this.border_1()
                                             .border_color(cx.theme().colors().border_focused)
                                     })
+                                    .flex()
+                                    .flex_col()
                                     .on_mouse_down(
                                         MouseButton::Left,
                                         cx.listener(move |dock, _: &MouseDownEvent, window, cx| {
@@ -1835,44 +1834,26 @@ impl Render for Dock {
                                                 .ok();
                                         }),
                                     )
-                                    .child(
-                                        panel.cached(
-                                            StyleRefinement::default().v_flex().size_full(),
-                                        ),
-                                    )
                                     .when(self.supports_panel_stack(), |this| {
                                         this.child(
-                                            div()
-                                                .id(("dock-panel-inline-control-mask", panel_id))
-                                                .absolute()
-                                                .top_0()
-                                                .right_0()
-                                                .w(SIDE_PANEL_INLINE_CONTROL_MASK_WIDTH)
-                                                .h(SIDE_PANEL_INLINE_CONTROL_MASK_HEIGHT)
-                                                .bg(cx.theme().colors().panel_background)
-                                                .occlude(),
-                                        )
-                                        .child(
                                             h_flex()
-                                                .absolute()
-                                                .top_1()
-                                                .right_1()
+                                                .id(("dock-panel-stack-actions", panel_id))
+                                                .h(px(28.))
+                                                .w_full()
+                                                .flex_none()
+                                                .items_center()
+                                                .justify_end()
                                                 .gap_0p5()
-                                                .px_0p5()
-                                                .py_0p5()
-                                                .rounded_sm()
-                                                .border_1()
+                                                .px_1()
+                                                .border_b_1()
                                                 .border_color(cx.theme().colors().border_variant)
                                                 .bg(cx.theme().colors().panel_background)
                                                 .child(
                                                     IconButton::new(
-                                                        ("dock-panel-inline-split", panel_id),
-                                                        IconName::Split,
+                                                        ("dock-panel-stack-split", panel_id),
+                                                        IconName::SplitAlt,
                                                     )
-                                                    .icon_size(IconSize::XSmall)
-                                                    .icon_transformation(Transformation::rotate(
-                                                        radians(SIDE_PANEL_SPLIT_ICON_ROTATION),
-                                                    ))
+                                                    .icon_size(IconSize::Small)
                                                     .disabled(!can_split_panel)
                                                     .tooltip(Tooltip::text("Split Panel"))
                                                     .on_click(move |_, window, cx| {
@@ -1901,10 +1882,10 @@ impl Render for Dock {
                                                 )
                                                 .child(
                                                     IconButton::new(
-                                                        ("dock-panel-inline-close", panel_id),
+                                                        ("dock-panel-stack-close", panel_id),
                                                         IconName::Close,
                                                     )
-                                                    .icon_size(IconSize::XSmall)
+                                                    .icon_size(IconSize::Small)
                                                     .tooltip(Tooltip::text("Close Panel"))
                                                     .on_click(move |_, window, cx| {
                                                         let did_change = dock_for_close.update(
@@ -1933,6 +1914,11 @@ impl Render for Dock {
                                                 .occlude(),
                                         )
                                     })
+                                    .child(div().flex_1().min_h_0().w_full().child(
+                                        panel.cached(
+                                            StyleRefinement::default().v_flex().size_full(),
+                                        ),
+                                    ))
                                     .when(
                                         can_resize_stack && stack_ix + 1 < visible_panel_count,
                                         |this| {
@@ -2041,12 +2027,6 @@ impl Render for PanelButtons {
                 let workspace_for_trigger = workspace.clone();
 
                 let is_active_button = Some(i) == active_index && is_open;
-                let show_stack_button = can_stack_panel || is_panel_stacked;
-                let stack_button_tooltip: SharedString = if is_panel_stacked {
-                    format!("Remove from {} Dock Stack", dock_position.label()).into()
-                } else {
-                    format!("Split into {} Dock Stack", dock_position.label()).into()
-                };
                 let (action, tooltip) = if is_active_button {
                     let action = dock.toggle_action();
 
@@ -2277,53 +2257,15 @@ impl Render for PanelButtons {
                                     })
                                 });
 
-                            h_flex()
-                                .gap_0()
-                                .child(
-                                    div().relative().child(button).when_some(
-                                        icon_label
-                                            .clone()
-                                            .filter(|_| !is_active_button)
-                                            .and_then(|label| label.parse::<usize>().ok()),
-                                        |this, count| this.child(CountBadge::new(count)),
-                                    ),
-                                )
-                                .when(show_stack_button, |this| {
-                                    let dock_for_button = dock_for_trigger.clone();
-                                    let workspace_for_button = workspace_for_trigger.clone();
-                                    let stack_button_tooltip = stack_button_tooltip.clone();
-                                    this.child(
-                                        IconButton::new(
-                                            ("dock-panel-stack", panel_id),
-                                            IconName::Split,
-                                        )
-                                        .icon_size(IconSize::XSmall)
-                                        .icon_transformation(Transformation::rotate(radians(
-                                            SIDE_PANEL_SPLIT_ICON_ROTATION,
-                                        )))
-                                        .tooltip(Tooltip::text(stack_button_tooltip))
-                                        .on_click(
-                                            move |_, window, cx| {
-                                                let did_change =
-                                                    dock_for_button.update(cx, |dock, cx| {
-                                                        if is_panel_stacked {
-                                                            dock.unstack_panel(panel_id, window, cx)
-                                                        } else {
-                                                            dock.stack_panel(panel_id, window, cx)
-                                                        }
-                                                    });
-                                                if did_change
-                                                    && let Some(workspace) =
-                                                        workspace_for_button.upgrade()
-                                                {
-                                                    workspace.update(cx, |workspace, cx| {
-                                                        workspace.serialize_workspace(window, cx);
-                                                    });
-                                                }
-                                            },
-                                        ),
-                                    )
-                                })
+                            h_flex().gap_0().child(
+                                div().relative().child(button).when_some(
+                                    icon_label
+                                        .clone()
+                                        .filter(|_| !is_active_button)
+                                        .and_then(|label| label.parse::<usize>().ok()),
+                                    |this, count| this.child(CountBadge::new(count)),
+                                ),
+                            )
                         }),
                 )
             })

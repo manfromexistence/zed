@@ -35791,7 +35791,7 @@ impl Item for WebPreviewView {
             .project_item
             .as_ref()
             .map(|item| item.read(_cx).kind.icon())
-            .unwrap_or(IconName::Public);
+            .unwrap_or(IconName::ToolWeb);
         Some(ui::Icon::new(icon))
     }
 

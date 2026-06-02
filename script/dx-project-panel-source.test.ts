@@ -722,7 +722,6 @@ test("project panel media preview renders direct image previews and video frames
     "media metadata duration labels must have a named bounded display cap",
   );
   assert.match(media, /const PROJECT_PANEL_MEDIA_SHELF_CARD_MIN_WIDTH: f32 = 96\.;/);
-  assert.match(media, /const PROJECT_PANEL_MEDIA_SHELF_CARD_HEIGHT: f32 = 72\.;/);
   assert.match(media, /const PROJECT_PANEL_MEDIA_SHELF_CARD_TOTAL_HEIGHT: f32 = 96\.;/);
   assert.match(
     media,
@@ -960,8 +959,8 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     renderFolderMediaShelf,
-    /Label::new\("Media"\)[\s\S]*format!\("\{visible_media_count\} shown \/ \{summary\}"\)/,
-    "folder media shelf must expose a concise real count summary",
+    /Label::new\("Media"\)(?![\s\S]*format!\("\{visible_media_count\} shown \/ \{summary\}"\))/,
+    "folder media shelf header must avoid sticky top-right count text",
   );
   assertBefore({
     body: renderFolderMediaGallery,
@@ -996,7 +995,7 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     mediaShelfCardContainer,
-    /\.h\(px\(PROJECT_PANEL_MEDIA_SHELF_CARD_TOTAL_HEIGHT\)\)[\s\S]*\.w_full\(\)[\s\S]*\.v_flex\(\)/,
+    /\.h\(px\(PROJECT_PANEL_MEDIA_SHELF_CARD_TOTAL_HEIGHT\)\)[\s\S]*\.w_full\(\)[\s\S]*\.v_flex\(\)[\s\S]*\.p_0\(\)[\s\S]*\.overflow_hidden\(\)/,
     "media shelf cards must use fixed-height icon-panel-like tiles instead of full-width list rows",
   );
   assert.match(
@@ -1006,13 +1005,13 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     renderMediaShelfCardBody,
-    /MediaPreviewKind::Image[\s\S]*w_full\(\)[\s\S]*h\(px\(PROJECT_PANEL_MEDIA_SHELF_CARD_HEIGHT\)\)[\s\S]*img\(item\.absolute_path\.clone\(\)\)[\s\S]*object_fit\(ObjectFit::Cover\)[\s\S]*with_fallback\(\|\| media_card_image_fallback\(MediaPreviewKind::Image\)\)/,
-    "shelf image cards must use fixed rectangle previews from the real image path with a nonblank fallback",
+    /MediaPreviewKind::Image[\s\S]*w_full\(\)[\s\S]*flex_1\(\)[\s\S]*img\(item\.absolute_path\.clone\(\)\)[\s\S]*object_fit\(ObjectFit::Cover\)[\s\S]*with_fallback\(\|\| media_card_image_fallback\(MediaPreviewKind::Image\)\)[\s\S]*media_shelf_name_overlay\(&item\.name, cx\)/,
+    "shelf image cards must fill the tile from the real image path and overlay a readable filename",
   );
   assert.match(
     renderMediaShelfCardBody,
-    /MediaPreviewKind::Video[\s\S]*w_full\(\)[\s\S]*h\(px\(PROJECT_PANEL_MEDIA_SHELF_CARD_HEIGHT\)\)[\s\S]*item\.video_frame_preview\.as_ref\(\)[\s\S]*img\(preview\.path\.clone\(\)\)[\s\S]*with_fallback\(\|\| media_card_image_fallback\(MediaPreviewKind::Video\)\)[\s\S]*IconName::PlayOutlined/,
-    "shelf video cards must show the available center or representative frame with a play affordance and fallback",
+    /MediaPreviewKind::Video[\s\S]*w_full\(\)[\s\S]*flex_1\(\)[\s\S]*item\.video_frame_preview\.as_ref\(\)[\s\S]*img\(preview\.path\.clone\(\)\)[\s\S]*with_fallback\(\|\| media_card_image_fallback\(MediaPreviewKind::Video\)\)[\s\S]*IconName::PlayOutlined[\s\S]*media_shelf_name_overlay\(&item\.name, cx\)/,
+    "shelf video cards must fill the tile with the center frame, play affordance, fallback, and readable filename overlay",
   );
   assert.match(
     renderMediaShelfCardBody,

@@ -1462,28 +1462,8 @@ impl Render for IconPickerPanel {
         self.ensure_representative_external_previews_warmed(cx);
         let query = self.query(cx);
         self.ensure_icon_data_loaded_for_view(query.as_str(), cx);
-        let (icons, total_matches, total_count) = self.filtered_icons(query.as_str());
+        let (icons, _total_matches, _total_count) = self.filtered_icons(query.as_str());
         self.ensure_visible_external_previews_warmed(&icons, cx);
-        let shown_count = icons.len();
-        let count_label = self.status.clone().unwrap_or_else(|| {
-            if self.loading_external_icons {
-                "loading icons".into()
-            } else if query.is_empty() {
-                icon_fraction_label(shown_count, total_count)
-            } else {
-                icon_fraction_label(total_matches, total_count)
-            }
-        });
-        let working_set_label = icon_working_set_label(
-            self.pinned_icon_actions.len(),
-            self.recent_icon_actions.len(),
-        );
-        let working_set_tooltip = icon_working_set_tooltip(
-            self.pinned_icon_actions.len(),
-            self.recent_icon_actions.len(),
-        );
-        let (readiness_label, readiness_color, readiness_tooltip) =
-            icon_readiness_label(self.loading_external_icons, total_count);
         let mut icon_tiles = Vec::with_capacity(icons.len());
         icon_tiles.extend(
             icons
@@ -1518,50 +1498,12 @@ impl Render for IconPickerPanel {
                     .border_b_1()
                     .border_color(cx.theme().colors().border)
                     .child(
-                        h_flex()
-                            .justify_between()
-                            .items_center()
-                            .child(
-                                h_flex()
-                                    .gap_1()
-                                    .items_center()
-                                    .child(Label::new("Icons").size(LabelSize::Small))
-                                    .child(
-                                        div()
-                                            .id("icon-picker-readiness-status")
-                                            .tooltip(Tooltip::text(readiness_tooltip))
-                                            .child(
-                                                Label::new(readiness_label)
-                                                    .size(LabelSize::XSmall)
-                                                    .color(readiness_color)
-                                                    .truncate(),
-                                            ),
-                                    ),
-                            )
-                            .child(
-                                h_flex()
-                                    .gap_1()
-                                    .items_center()
-                                    .when_some(working_set_label, |this, working_set_label| {
-                                        this.child(
-                                            div()
-                                                .id("icon-picker-working-set-status")
-                                                .tooltip(Tooltip::text(working_set_tooltip))
-                                                .child(
-                                                    Label::new(working_set_label)
-                                                        .size(LabelSize::XSmall)
-                                                        .color(Color::Muted)
-                                                        .truncate(),
-                                                ),
-                                        )
-                                    })
-                                    .child(
-                                        Label::new(count_label)
-                                            .size(LabelSize::XSmall)
-                                            .color(Color::Muted)
-                                            .truncate(),
-                                    ),
-                            ),
+                        h_flex().items_center().child(
+                            h_flex()
+                                .gap_1()
+                                .items_center()
+                                .child(Label::new("Icons").size(LabelSize::Small)),
+                        ),
                     )
                     .child(self.filter_editor.clone()),
             )
@@ -1686,12 +1628,6 @@ fn icon_pack_tooltip(name: &str, prefix: &str) -> SharedString {
     text.into()
 }
 
-fn icon_fraction_label(left: usize, right: usize) -> SharedString {
-    let mut text = String::with_capacity(24);
-    let _ = write!(text, "{left} / {right}");
-    text.into()
-}
-
 fn icon_status_label(prefix: &str, value: &str) -> SharedString {
     let mut text = String::with_capacity(prefix.len() + value.len());
     text.push_str(prefix);
@@ -1752,52 +1688,6 @@ fn icon_history_health_label(count: usize) -> SharedString {
             let _ = write!(text, "{count} ready");
             text.into()
         }
-    }
-}
-
-fn icon_working_set_label(pinned: usize, recent: usize) -> Option<SharedString> {
-    if pinned == 0 && recent == 0 {
-        return None;
-    }
-
-    Some(history_working_set_label(pinned, recent))
-}
-
-fn icon_working_set_tooltip(pinned: usize, recent: usize) -> &'static str {
-    if pinned > 0 && recent > 0 {
-        "Pinned and recent icons are available when search is empty."
-    } else if pinned > 0 {
-        "Pinned icons are saved for quick reuse."
-    } else {
-        "Recent icons appear after insert or copy actions."
-    }
-}
-
-fn history_working_set_label(pinned: usize, recent: usize) -> SharedString {
-    let mut text = String::with_capacity("pins ".len() + 6 + " / recent ".len() + 6);
-    let _ = write!(text, "pins {pinned} / recent {recent}");
-    text.into()
-}
-
-fn icon_readiness_label(loading: bool, total_count: usize) -> (&'static str, Color, &'static str) {
-    if loading {
-        (
-            "loading",
-            Color::Accent,
-            "Loading icon packs and warming previews.",
-        )
-    } else if total_count == 0 {
-        (
-            "empty",
-            Color::Warning,
-            "No icons are available for the current filters.",
-        )
-    } else {
-        (
-            "ready",
-            Color::Success,
-            "Icon catalog is ready for search, copy, insert, and drag.",
-        )
     }
 }
 

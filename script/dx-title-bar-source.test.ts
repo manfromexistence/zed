@@ -40,8 +40,18 @@ test("application menu activation checks stale entry indexes before handle use",
 test("title bar screen and right-tool buttons use domain-specific icons", () => {
   assert.match(
     titleBarSource,
-    /WorkspaceScreenKind::Browser => IconName::Public/,
-    "Browser screen dock button should use a globe/public icon",
+    /WorkspaceScreenKind::Browser => IconName::ToolWeb/,
+    "Browser screen dock button should use the preview/browser tool icon",
+  );
+  assert.match(
+    titleBarSource,
+    /"screen-dock-agent",\s*IconName::ZedAssistant/s,
+    "screen dock should expose a real AI button",
+  );
+  assert.match(
+    titleBarSource,
+    /zed_actions::assistant::FocusAgentFullscreen\.boxed_clone\(\)/,
+    "AI screen dock button should open the real Agent panel fullscreen action",
   );
   assert.match(
     titleBarSource,
@@ -53,11 +63,7 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
     /"titlebar-dx-style-panel",\s*IconName::Sliders,\s*"Style"/s,
     "Style panel titlebar button should use the controls/sliders icon",
   );
-  assert.doesNotMatch(
-    titleBarSource,
-    /WorkspaceScreenKind::Browser => IconName::ToolWeb/,
-    "Browser screen dock button should not use the generic tool-web icon",
-  );
+  assert.doesNotMatch(titleBarSource, /WorkspaceScreenKind::Browser => IconName::Public/);
 });
 
 test("title-bar source guard stays scoped to worker-owned files", () => {

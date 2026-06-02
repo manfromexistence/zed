@@ -113,7 +113,10 @@ test("collapsed workspace activity bar stays icon-only with hover details", () =
     ["sidebar-activity-search", "Search"],
     ["sidebar-activity-agents", "Agents"],
     ["sidebar-activity-sources", "Sources"],
+    ["sidebar-activity-acp-registry", "ACP Registry"],
+    ["sidebar-activity-mcp", "MCP Servers"],
     ["sidebar-activity-plugins", "Plugins"],
+    ["sidebar-activity-extensions", "Extensions"],
     ["sidebar-activity-automations", "Automations"],
     ["sidebar-activity-background-tasks", "Background Tasks"],
     ["sidebar-activity-settings", "Settings"],
@@ -126,6 +129,33 @@ test("collapsed workspace activity bar stays icon-only with hover details", () =
   assert.match(sidebar, /Tooltip::text\("Create Space or Add Project"\)/);
   assert.match(sidebar, /"Expand Sidebar"/);
   assert.match(sidebar, /"Collapse to Activity Bar"/);
+  assert.match(sidebar, /"sidebar-toolbar-acp-registry"[\s\S]*?IconName::Sparkle/);
+  assert.match(sidebar, /"sidebar-toolbar-mcp"[\s\S]*?IconName::Server/);
+  assert.match(sidebar, /"sidebar-toolbar-plugins"[\s\S]*?IconName::Blocks/);
+  assert.match(sidebar, /"sidebar-toolbar-extensions"[\s\S]*?IconName::Box/);
+  assert.match(sidebar, /"sidebar-toolbar-automations"[\s\S]*?IconName::ListTodo/);
+  assert.match(sidebar, /"sidebar-toolbar-settings"[\s\S]*?IconName::Settings/);
+  assert.doesNotMatch(sidebar, /"sidebar-toolbar-acp-registry"[\s\S]*?IconName::AcpRegistry/);
+  assert.doesNotMatch(sidebar, /"sidebar-toolbar-extensions"[\s\S]*?IconName::ZedSrcExtension/);
+  assert.doesNotMatch(sidebar, /"sidebar-toolbar-new-chat"/);
+  assert.doesNotMatch(sidebar, /"sidebar-toolbar-search"/);
+  assert.doesNotMatch(sidebar, /"sidebar-toolbar-refresh"/);
+});
+
+test("thread rows keep timestamps inline instead of creating metadata-only rows", () => {
+  const threadItem = read("crates/ui/src/components/ai/thread_item.rs");
+  const renderBody = functionBody(threadItem, "render");
+
+  assert.match(
+    renderBody,
+    /let has_metadata = has_project_name\s*\|\|\s*has_project_paths\s*\|\|\s*has_worktree\s*\|\|\s*has_diff_stats;/,
+  );
+  assert.match(
+    renderBody,
+    /Label::new\(timestamp\.clone\(\)\)[\s\S]*?\.flex_shrink_0\(\)[\s\S]*?\.when\(self\.is_truncated/,
+    "timestamp should stay on the main thread row before the truncation/hover action layer",
+  );
+  assert.doesNotMatch(renderBody, /has_diff_stats && has_timestamp/);
 });
 
 test("workspace shortcut grid persists user-pinned entries by screen and project", () => {
@@ -133,6 +163,7 @@ test("workspace shortcut grid persists user-pinned entries by screen and project
   const serializedState = functionBody(sidebar, "serialized_state");
   const restoreSerializedState = functionBody(sidebar, "restore_serialized_state");
   const gridEntries = functionBody(sidebar, "grid_entries");
+  const browserGridEntries = functionBody(sidebar, "browser_grid_entries");
   const renderSpaceGrid = functionBody(sidebar, "render_space_grid");
 
   assert.match(sidebar, /const MAX_SIDEBAR_GRID_SHORTCUTS: usize = 24;/);
@@ -165,7 +196,20 @@ test("workspace shortcut grid persists user-pinned entries by screen and project
     /IconName::StarFilled[\s\S]*IconName::Star[\s\S]*IconButton::new[\s\S]*toggle_grid_shortcut/,
     "grid cards must not show star chrome under the search bar",
   );
+  assert.match(
+    browserGridEntries,
+    /const SITES: \[\(&str, &str, IconName\); 12\]/,
+    "browser/web-preview shortcut grid should always seed a full twelve-card screen",
+  );
+  assert.match(browserGridEntries, /"MDN"/);
+  assert.match(browserGridEntries, /"Stack Overflow"/);
+  assert.match(browserGridEntries, /"Rust"/);
+  assert.match(browserGridEntries, /"npm"/);
   assert.doesNotMatch(sidebar, /fn toggle_grid_shortcut/);
+  assert.match(sidebar, /struct DraggedSidebarThread/);
+  assert.match(sidebar, /SerializedSidebarGridAction::OpenThread/);
+  assert.match(renderSpaceGrid, /\.drag_over::<DraggedSidebarThread>/);
+  assert.match(renderSpaceGrid, /\.on_drop\(\s*cx\.listener/);
 });
 
 test("DX launch workspace delegates Launch Receipts rail rendering", () => {

@@ -151,6 +151,7 @@ enum SerializedSidebarGridAction {
     OpenFile { path: PathBuf },
     OpenWebsite { url: String },
     OpenTerminalFolder { path: PathBuf },
+    OpenThread { thread_id: ThreadId },
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -563,11 +564,26 @@ impl Render for DraggedSidebarSpace {
 }
 
 #[derive(Clone)]
+struct DraggedSidebarThread {
+    thread_id: ThreadId,
+    icon: IconName,
+    label: SharedString,
+    subtitle: Option<SharedString>,
+}
+
+impl Render for DraggedSidebarThread {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        gpui::Empty
+    }
+}
+
+#[derive(Clone)]
 enum SidebarGridAction {
     AddFolderToProject,
     OpenFile(PathBuf),
     OpenWebsite(SharedString),
     OpenTerminalFolder(PathBuf),
+    OpenThread(ThreadId),
 }
 
 impl SidebarGridAction {
@@ -581,6 +597,7 @@ impl SidebarGridAction {
             SerializedSidebarGridAction::OpenTerminalFolder { path } => {
                 Self::OpenTerminalFolder(path.clone())
             }
+            SerializedSidebarGridAction::OpenThread { thread_id } => Self::OpenThread(*thread_id),
         }
     }
 
@@ -590,6 +607,7 @@ impl SidebarGridAction {
             Self::OpenFile(path) => format!("file:{}", path.display()),
             Self::OpenWebsite(url) => format!("web:{}", url.as_ref()),
             Self::OpenTerminalFolder(path) => format!("terminal:{}", path.display()),
+            Self::OpenThread(thread_id) => format!("thread:{}", thread_id.to_key_string()),
         }
     }
 }
@@ -1021,12 +1039,6 @@ impl Sidebar {
         cx.emit(workspace::SidebarEvent::SerializeNeeded);
     }
 
-    fn next_generated_space_label(&mut self) -> SharedString {
-        let label = format!("New space {}", self.next_space_number);
-        self.next_space_number += 1;
-        label.into()
-    }
-
     fn default_space_label_for_workspace(workspace: &Entity<Workspace>, cx: &App) -> SharedString {
         let root_paths = workspace.read(cx).root_paths(cx);
         if let Some(root_path) = root_paths.first() {
@@ -1173,42 +1185,6 @@ impl Sidebar {
         }
 
         start.min(max_start)
-    }
-
-    fn create_new_space(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let Some(multi_workspace) = self.multi_workspace.upgrade() else {
-            return;
-        };
-
-        self.show_thread_list(window, cx);
-        let new_space_label = self.next_generated_space_label();
-
-        let task = multi_workspace.update(cx, |multi_workspace, cx| {
-            multi_workspace.create_empty_local_workspace(window, cx)
-        });
-
-        cx.spawn_in(window, async move |this, cx| {
-            let workspace = task.await?;
-            this.update_in(cx, |this, window, cx| {
-                if let Some(multi_workspace) = this.multi_workspace.upgrade() {
-                    multi_workspace.update(cx, |multi_workspace, cx| {
-                        multi_workspace.activate(workspace.clone(), None, window, cx);
-                        multi_workspace.retain_active_workspace(cx);
-                    });
-                }
-                if let Some(workspace_id) = workspace.read(cx).database_id() {
-                    this.space_labels
-                        .insert(workspace_id, new_space_label.clone());
-                    if !this.space_order.contains(&workspace_id) {
-                        this.space_order.push(workspace_id);
-                    }
-                }
-                this.sync_space_state(cx);
-                cx.notify();
-            })?;
-            anyhow::Ok(())
-        })
-        .detach_and_log_err(cx);
     }
 
     fn reorder_space(
@@ -6336,8 +6312,17 @@ impl Sidebar {
         } else {
             (thread.icon, thread.icon_from_external_svg.clone())
         };
+        let dragged_thread = DraggedSidebarThread {
+            thread_id: thread.metadata.thread_id,
+            icon,
+            label: title.clone(),
+            subtitle: worktrees
+                .first()
+                .and_then(|worktree| worktree.worktree_name.clone())
+                .or_else(|| Some("Agent thread".into())),
+        };
 
-        ThreadItem::new(id, title.clone())
+        let thread_item = ThreadItem::new(id, title.clone())
             .base_bg(sidebar_bg)
             .icon(icon)
             .when(is_draft, |this| {
@@ -6510,6 +6495,14 @@ impl Sidebar {
                     }
                 })
             })
+            .into_any_element();
+
+        div()
+            .id(("thread-drag-source", ix))
+            .on_drag(dragged_thread, |dragged, _, _, cx| {
+                cx.new(|_| dragged.clone())
+            })
+            .child(thread_item)
             .into_any_element()
     }
 
@@ -7347,12 +7340,6 @@ impl Sidebar {
     fn render_gen_toolbar(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let is_archive = matches!(self.view, SidebarView::Archive(..));
         let show_import_button = is_archive && !self.should_render_acp_import_onboarding(cx);
-        let can_collapse_to_activity_bar = self.activity_bar_expanded;
-        let collapse_icon = if self.side(cx) == SidebarSide::Left {
-            IconName::ChevronLeft
-        } else {
-            IconName::ChevronRight
-        };
         let button = |id,
                       icon,
                       tooltip,
@@ -7377,46 +7364,30 @@ impl Sidebar {
             .child(
                 h_flex()
                     .gap_1()
-                    .when(can_collapse_to_activity_bar, |this| {
-                        this.child(button(
-                            "sidebar-toolbar-collapse-activity-bar",
-                            collapse_icon,
-                            "Collapse to Activity Bar",
-                            |this, _, _window, cx| {
-                                this.activity_bar_expanded = false;
-                                this.serialize(cx);
-                                cx.notify();
-                            },
-                        ))
-                    })
                     .child(button(
-                        "sidebar-toolbar-new-chat",
-                        IconName::NewThread,
-                        "New Chat",
-                        |this, _, window, cx| {
-                            if let Some(workspace) = this.active_workspace(cx) {
-                                this.create_new_thread(&workspace, window, cx);
-                            }
+                        "sidebar-toolbar-acp-registry",
+                        IconName::Sparkle,
+                        "ACP Registry",
+                        |_this, _, window, cx| {
+                            window.dispatch_action(Box::new(zed_actions::AcpRegistry), cx);
                         },
                     ))
                     .child(button(
-                        "sidebar-toolbar-search",
-                        IconName::MagnifyingGlass,
-                        "Search",
-                        |this, _, window, cx| {
-                            this.focus_sidebar_filter(&FocusSidebarFilter, window, cx)
+                        "sidebar-toolbar-mcp",
+                        IconName::Server,
+                        "MCP Servers",
+                        |_this, _, window, cx| {
+                            window.dispatch_action(
+                                Box::new(zed_actions::Extensions {
+                                    category_filter: Some(
+                                        zed_actions::ExtensionCategoryFilter::ContextServers,
+                                    ),
+                                    id: None,
+                                }),
+                                cx,
+                            );
                         },
                     ))
-                    .child(button(
-                        "sidebar-toolbar-add-folder",
-                        IconName::SquarePlus,
-                        "Add Folder to Project",
-                        |this, _, window, cx| this.add_folder_to_active_workspace(window, cx),
-                    )),
-            )
-            .child(
-                h_flex()
-                    .gap_1()
                     .child(button(
                         "sidebar-toolbar-plugins",
                         IconName::Blocks,
@@ -7426,17 +7397,34 @@ impl Sidebar {
                         },
                     ))
                     .child(button(
+                        "sidebar-toolbar-extensions",
+                        IconName::Box,
+                        "Extensions",
+                        |_this, _, window, cx| {
+                            window
+                                .dispatch_action(Box::new(zed_actions::Extensions::default()), cx);
+                        },
+                    ))
+                    .child(button(
                         "sidebar-toolbar-automations",
                         IconName::ListTodo,
                         "Automations",
-                        |this, _, window, cx| this.draft_dx_automation_action(window, cx),
+                        |this, _, window, cx| {
+                            this.draft_dx_automation_action(window, cx);
+                        },
                     ))
                     .child(button(
-                        "sidebar-toolbar-refresh",
-                        IconName::RefreshTitle,
-                        "Refresh Sidebar",
-                        |this, _, _window, cx| this.update_entries(cx),
-                    ))
+                        "sidebar-toolbar-settings",
+                        IconName::Settings,
+                        "Settings",
+                        |_this, _, window, cx| {
+                            window.dispatch_action(Box::new(zed_actions::OpenSettings), cx);
+                        },
+                    )),
+            )
+            .child(
+                h_flex()
+                    .gap_1()
                     .when(show_import_button, |this| {
                         this.child(
                             IconButton::new("sidebar-toolbar-thread-import", IconName::Download)
@@ -7462,13 +7450,7 @@ impl Sidebar {
                             .on_click(cx.listener(|this, _, window, cx| {
                                 this.toggle_archive(&ToggleThreadHistory, window, cx);
                             })),
-                    )
-                    .child(button(
-                        "sidebar-toolbar-create-space",
-                        IconName::Sparkle,
-                        "Create New Space",
-                        |this, _, window, cx| this.create_new_space(window, cx),
-                    )),
+                    ),
             )
     }
 
@@ -7543,11 +7525,49 @@ impl Sidebar {
             .into_any_element(),
             button(
                 cx,
+                "sidebar-activity-acp-registry",
+                IconName::Sparkle,
+                "ACP Registry",
+                |_this, _, window, cx| {
+                    window.dispatch_action(Box::new(zed_actions::AcpRegistry), cx);
+                },
+            )
+            .into_any_element(),
+            button(
+                cx,
+                "sidebar-activity-mcp",
+                IconName::Server,
+                "MCP Servers",
+                |_this, _, window, cx| {
+                    window.dispatch_action(
+                        Box::new(zed_actions::Extensions {
+                            category_filter: Some(
+                                zed_actions::ExtensionCategoryFilter::ContextServers,
+                            ),
+                            id: None,
+                        }),
+                        cx,
+                    );
+                },
+            )
+            .into_any_element(),
+            button(
+                cx,
                 "sidebar-activity-plugins",
                 IconName::Blocks,
                 "Plugins",
                 |_this, _, window, cx| {
                     window.dispatch_action(Box::new(zed_actions::AcpRegistry), cx);
+                },
+            )
+            .into_any_element(),
+            button(
+                cx,
+                "sidebar-activity-extensions",
+                IconName::Box,
+                "Extensions",
+                |_this, _, window, cx| {
+                    window.dispatch_action(Box::new(zed_actions::Extensions::default()), cx);
                 },
             )
             .into_any_element(),
@@ -7830,7 +7850,7 @@ impl Sidebar {
     }
 
     fn browser_grid_entries(&self) -> Vec<SidebarGridEntry> {
-        const SITES: [(&str, &str, IconName); 8] = [
+        const SITES: [(&str, &str, IconName); 12] = [
             ("Google", "https://www.google.com", IconName::AiGoogle),
             ("GitHub", "https://github.com", IconName::Github),
             ("YouTube", "https://www.youtube.com", IconName::PlayFilled),
@@ -7839,6 +7859,14 @@ impl Sidebar {
             ("Figma", "https://www.figma.com", IconName::Pencil),
             ("ChatGPT", "https://chat.openai.com", IconName::AiOpenAi),
             ("LinkedIn", "https://www.linkedin.com", IconName::Person),
+            ("MDN", "https://developer.mozilla.org", IconName::Book),
+            (
+                "Stack Overflow",
+                "https://stackoverflow.com",
+                IconName::Code,
+            ),
+            ("Rust", "https://doc.rust-lang.org", IconName::Terminal),
+            ("npm", "https://www.npmjs.com", IconName::BoxOpen),
         ];
 
         SITES
@@ -8006,6 +8034,45 @@ impl Sidebar {
         }
     }
 
+    fn open_thread_grid_shortcut(
+        &mut self,
+        thread_id: ThreadId,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let metadata = ThreadMetadataStore::global(cx)
+            .read(cx)
+            .entry(thread_id)
+            .cloned();
+        if let Some(metadata) = metadata {
+            self.open_thread_from_archive(metadata, window, cx);
+        }
+    }
+
+    fn pin_thread_grid_shortcut(&mut self, dragged: &DraggedSidebarThread, cx: &mut Context<Self>) {
+        let (_, _, context) = self.grid_context(cx);
+        let id = format!("thread-{}", dragged.thread_id.to_key_string());
+        let shortcut = SerializedSidebarGridShortcut {
+            screen_kind: context.screen_kind,
+            root_path: context.root_path.clone(),
+            id: id.clone(),
+            icon: dragged.icon,
+            label: dragged.label.to_string(),
+            subtitle: dragged.subtitle.as_ref().map(ToString::to_string),
+            action: SerializedSidebarGridAction::OpenThread {
+                thread_id: dragged.thread_id,
+            },
+        };
+
+        self.grid_shortcuts
+            .retain(|existing| existing.id != id || !existing.matches_context(&context));
+        self.grid_shortcuts.insert(0, shortcut);
+        self.grid_shortcuts.truncate(MAX_SIDEBAR_GRID_SHORTCUTS);
+        self.grid_entry_cache.borrow_mut().clear();
+        self.serialize(cx);
+        cx.notify();
+    }
+
     fn open_grid_entry(
         &mut self,
         action: SidebarGridAction,
@@ -8043,6 +8110,9 @@ impl Sidebar {
             SidebarGridAction::OpenTerminalFolder(path) => {
                 self.open_terminal_grid_folder(path, window, cx);
             }
+            SidebarGridAction::OpenThread(thread_id) => {
+                self.open_thread_grid_shortcut(thread_id, window, cx);
+            }
         }
     }
 
@@ -8061,11 +8131,19 @@ impl Sidebar {
         let hover_bg = cx.theme().colors().element_hover;
         let hover_border = cx.theme().colors().border;
 
-        v_flex().w_full().gap_2().children(
-            entries
-                .chunks(SIDEBAR_SPACE_GRID_COLUMNS)
-                .enumerate()
-                .map(|(row_ix, row)| {
+        v_flex()
+            .w_full()
+            .gap_2()
+            .drag_over::<DraggedSidebarThread>(move |grid, _dragged, _, _cx| {
+                grid.bg(hover_bg).rounded_md()
+            })
+            .on_drop(
+                cx.listener(|this, dragged: &DraggedSidebarThread, _window, cx| {
+                    this.pin_thread_grid_shortcut(dragged, cx);
+                }),
+            )
+            .children(entries.chunks(SIDEBAR_SPACE_GRID_COLUMNS).enumerate().map(
+                |(row_ix, row)| {
                     h_flex()
                         .id(format!("sidebar-space-grid-row-{row_ix}"))
                         .w_full()
@@ -8119,8 +8197,8 @@ impl Sidebar {
                                     )
                                 })
                         }))
-                }),
-        )
+                },
+            ))
     }
 
     fn render_sidebar_header(
@@ -8948,6 +9026,17 @@ impl WorkspaceSidebar for Sidebar {
 
     fn cycle_thread(&mut self, forward: bool, window: &mut Window, cx: &mut Context<Self>) {
         self.cycle_thread_impl(forward, window, cx);
+    }
+
+    fn toggle_expanded_state(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {
+        self.activity_bar_expanded = !self.activity_bar_expanded;
+        if self.activity_bar_expanded {
+            self.prepare_for_focus(window, cx);
+            self.focus_handle.focus(window, cx);
+        }
+        self.serialize(cx);
+        cx.notify();
+        true
     }
 
     fn serialized_state(&self, _cx: &App) -> Option<String> {

@@ -29,8 +29,8 @@ use zed_actions::{
         ResolveConflictsWithAgent, ReviewBranchDiff,
     },
     assistant::{
-        CreateSkillFromUrl, FocusAgent, OpenGlobalAgentsMdRules, OpenProjectAgentsMdRules,
-        OpenRulesLibrary, OpenSkillCreator, Toggle, ToggleFocus,
+        CreateSkillFromUrl, FocusAgent, FocusAgentFullscreen, OpenGlobalAgentsMdRules,
+        OpenProjectAgentsMdRules, OpenRulesLibrary, OpenSkillCreator, Toggle, ToggleFocus,
     },
 };
 
@@ -121,7 +121,8 @@ use ui::{
 use util::ResultExt as _;
 use workspace::{
     CollaboratorId, DraggedSelection, DraggedTab, MultiWorkspace, PathList, SerializedPathList,
-    ToggleWorkspaceSidebar, ToggleZoom, Workspace, WorkspaceId, WorkspaceScreenKind,
+    ToggleLeftDock, ToggleRightDock, ToggleWorkspaceSidebar, ToggleZoom, Workspace, WorkspaceId,
+    WorkspaceScreenKind,
     dock::{DockPosition, Panel, PanelEvent},
     item::ItemEvent,
 };
@@ -1665,6 +1666,21 @@ impl AgentPanel {
             .is_some_and(|panel| panel.read(cx).enabled(cx))
         {
             workspace.focus_panel::<Self>(window, cx);
+        }
+    }
+
+    pub fn focus_fullscreen(
+        workspace: &mut Workspace,
+        _: &FocusAgentFullscreen,
+        window: &mut Window,
+        cx: &mut Context<Workspace>,
+    ) {
+        if let Some(panel) = workspace.focus_panel::<Self>(window, cx) {
+            panel.update(cx, |panel, cx| {
+                if panel.enabled(cx) {
+                    cx.emit(PanelEvent::ZoomIn);
+                }
+            });
         }
     }
 
@@ -5905,19 +5921,40 @@ impl AgentPanel {
             .on_click(cx.listener(move |this, _, window, cx| {
                 this.toggle_zoom(&ToggleZoom, window, cx);
             }));
+        let left_dock_button = IconButton::new(
+            "agent-toolbar-toggle-left-dock",
+            IconName::ThreadsSidebarLeftClosed,
+        )
+        .icon_size(IconSize::Small)
+        .tooltip(move |_, cx| Tooltip::for_action("Toggle Left Panel", &ToggleLeftDock, cx))
+        .on_click(move |_, window, cx| {
+            window.dispatch_action(ToggleLeftDock.boxed_clone(), cx);
+        });
+        let right_dock_button = IconButton::new(
+            "agent-toolbar-toggle-right-dock",
+            IconName::ThreadsSidebarRightClosed,
+        )
+        .icon_size(IconSize::Small)
+        .tooltip(move |_, cx| Tooltip::for_action("Toggle Right Panel", &ToggleRightDock, cx))
+        .on_click(move |_, window, cx| {
+            window.dispatch_action(ToggleRightDock.boxed_clone(), cx);
+        });
 
         let max_content_width = AgentSettings::get_global(cx).max_content_width;
 
         let base_container = h_flex()
             .size_full()
             .when(
-                matches!(mode, ToolbarMode::EmptyThread | ToolbarMode::ActiveThread),
+                !is_full_screen
+                    && matches!(mode, ToolbarMode::EmptyThread | ToolbarMode::ActiveThread),
                 |this| this.when_some(max_content_width, |this, max_w| this.max_w(max_w).mx_auto()),
             )
             .flex_none()
             .justify_between();
 
-        let toolbar_content = if can_create_entries && matches!(mode, ToolbarMode::EmptyThread) {
+        let toolbar_content = if matches!(mode, ToolbarMode::EmptyThread)
+            && (can_create_entries || is_full_screen)
+        {
             let (chevron_icon, icon_color, label_color) =
                 if self.new_thread_menu_handle.is_deployed() {
                     (IconName::ChevronUp, Color::Accent, Color::Accent)
@@ -5980,6 +6017,9 @@ impl AgentPanel {
                         .gap_1()
                         .pl_1()
                         .pr_1()
+                        .when(is_full_screen, |this| {
+                            this.child(left_dock_button).child(right_dock_button)
+                        })
                         .child(full_screen_button)
                         .child(self.render_panel_options_menu(window, cx)),
                 )
@@ -6029,6 +6069,9 @@ impl AgentPanel {
                         .pl_1()
                         .pr_1()
                         .when(can_create_entries, |this| this.child(new_thread_menu))
+                        .when(is_full_screen, |this| {
+                            this.child(left_dock_button).child(right_dock_button)
+                        })
                         .child(full_screen_button)
                         .child(self.render_panel_options_menu(window, cx)),
                 )
@@ -6037,7 +6080,7 @@ impl AgentPanel {
 
         h_flex()
             .id("agent-panel-toolbar")
-            .h(Tab::container_height(cx))
+            .h(Tab::container_height(cx) + px(4.))
             .flex_shrink_0()
             .max_w_full()
             .bg(cx.theme().colors().tab_bar_background)
@@ -6412,6 +6455,9 @@ impl AgentPanel {
         if !self.should_render_dx_launch_chrome(cx) {
             return center;
         }
+        if !self.should_render_dx_launch_workspace_rails(cx) {
+            return center;
+        }
 
         let status = self.dx_launch_workspace_status(cx);
         let sidebar_actions = self.render_dx_launch_sidebar_actions(&status, window, cx);
@@ -6429,6 +6475,10 @@ impl AgentPanel {
             status,
             cx,
         )
+    }
+
+    fn should_render_dx_launch_workspace_rails(&self, _cx: &App) -> bool {
+        false
     }
 
     fn render_dx_launch_sidebar_actions(

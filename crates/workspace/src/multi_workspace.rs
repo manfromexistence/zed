@@ -161,6 +161,12 @@ pub trait Sidebar: Focusable + Render + EventEmitter<SidebarEvent> + Sized {
     /// Activates the next or previous thread in sidebar order.
     fn cycle_thread(&mut self, _forward: bool, _window: &mut Window, _cx: &mut Context<Self>) {}
 
+    /// Toggles any sidebar-specific expanded/collapsed state.
+    /// Returns true when the sidebar handled the action without closing.
+    fn toggle_expanded_state(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> bool {
+        false
+    }
+
     /// Return an opaque JSON blob of sidebar-specific state to persist.
     fn serialized_state(&self, _cx: &App) -> Option<String> {
         None
@@ -188,6 +194,7 @@ pub trait SidebarHandle: 'static + Send + Sync {
     fn toggle_thread_switcher(&self, select_last: bool, window: &mut Window, cx: &mut App);
     fn cycle_project(&self, forward: bool, window: &mut Window, cx: &mut App);
     fn cycle_thread(&self, forward: bool, window: &mut Window, cx: &mut App);
+    fn toggle_expanded_state(&self, window: &mut Window, cx: &mut App) -> bool;
 
     fn is_threads_list_view_active(&self, cx: &App) -> bool;
 
@@ -264,6 +271,10 @@ impl<T: Sidebar> SidebarHandle for Entity<T> {
                 this.cycle_thread(forward, window, cx);
             });
         });
+    }
+
+    fn toggle_expanded_state(&self, window: &mut Window, cx: &mut App) -> bool {
+        self.update(cx, |this, cx| this.toggle_expanded_state(window, cx))
     }
 
     fn is_threads_list_view_active(&self, cx: &App) -> bool {
@@ -489,6 +500,11 @@ impl MultiWorkspace {
         }
 
         if self.sidebar_open() {
+            if let Some(sidebar) = &self.sidebar
+                && sidebar.toggle_expanded_state(window, cx)
+            {
+                return;
+            }
             self.close_sidebar(window, cx);
         } else {
             self.previous_focus_handle = window.focused(cx);

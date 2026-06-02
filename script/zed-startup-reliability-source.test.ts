@@ -104,8 +104,8 @@ test("empty workspace startup defers blank editor creation when agent panel is e
     "fn show_agent_panel_for_empty_workspace",
     "fn should_start_empty_workspace_with_agent",
   );
-  assert.match(emptyAgentSurface, /workspace\.root_paths\(cx\)\.is_empty\(\)/);
   assert.match(emptyAgentSurface, /workspace\.open_item_abs_paths\(cx\)\.is_empty\(\)/);
+  assert.doesNotMatch(emptyAgentSurface, /workspace\.root_paths\(cx\)/);
   assert.doesNotMatch(emptyAgentSurface, /active_item\(cx\)\.is_some\(\)/);
 
   const startSurface = sliceBetween(

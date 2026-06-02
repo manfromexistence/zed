@@ -7892,6 +7892,7 @@ impl Render for ProjectPanel {
                 false
             }
         };
+        let show_active_media_preview = self.scroll_handle.offset().y >= px(0.);
 
         if has_worktree {
             let item_count = self
@@ -8061,38 +8062,40 @@ impl Render for ProjectPanel {
                         .when_some(selected_entries_toolbar, |this, toolbar| {
                             this.child(toolbar)
                         })
-                        .when_some(active_media_preview, |this, media_preview| {
-                            let (active_media_folder, media_preview) = media_preview;
-                            this.child(
-                                div()
-                                    .id("project-panel-media-shelf-scroll-proxy")
-                                    .block_mouse_except_scroll()
-                                    .on_scroll_wheel({
-                                        let scroll_handle = self.scroll_handle.clone();
-                                        let entity_id = cx.entity().entity_id();
-                                        move |event, window, cx| {
-                                            let state = scroll_handle.0.borrow();
-                                            let base_handle = &state.base_handle;
-                                            let current_offset = base_handle.offset();
-                                            let max_offset = base_handle.max_offset();
-                                            let delta =
-                                                event.delta.pixel_delta(window.line_height());
-                                            let new_offset = (current_offset + delta)
-                                                .clamp(&max_offset.neg(), &Point::default());
+                        .when(show_active_media_preview, |this| {
+                            this.when_some(active_media_preview, |this, media_preview| {
+                                let (active_media_folder, media_preview) = media_preview;
+                                this.child(
+                                    div()
+                                        .id("project-panel-media-shelf-scroll-proxy")
+                                        .block_mouse_except_scroll()
+                                        .on_scroll_wheel({
+                                            let scroll_handle = self.scroll_handle.clone();
+                                            let entity_id = cx.entity().entity_id();
+                                            move |event, window, cx| {
+                                                let state = scroll_handle.0.borrow();
+                                                let base_handle = &state.base_handle;
+                                                let current_offset = base_handle.offset();
+                                                let max_offset = base_handle.max_offset();
+                                                let delta =
+                                                    event.delta.pixel_delta(window.line_height());
+                                                let new_offset = (current_offset + delta)
+                                                    .clamp(&max_offset.neg(), &Point::default());
 
-                                            if new_offset != current_offset {
-                                                base_handle.set_offset(new_offset);
-                                                cx.notify(entity_id);
+                                                if new_offset != current_offset {
+                                                    base_handle.set_offset(new_offset);
+                                                    cx.notify(entity_id);
+                                                }
                                             }
-                                        }
-                                    })
-                                    .child(media_preview::render_folder_media_shelf(
-                                        &media_preview,
-                                        active_media_folder.worktree_id,
-                                        active_media_folder.selected_media_entry_id,
-                                        cx,
-                                    )),
-                            )
+                                        })
+                                        .child(media_preview::render_folder_media_shelf(
+                                            &media_preview,
+                                            active_media_folder.worktree_id,
+                                            active_media_folder.selected_media_entry_id,
+                                            cx,
+                                        )),
+                                )
+                            })
                         })
                         .child(
                             uniform_list("entries", item_count, {

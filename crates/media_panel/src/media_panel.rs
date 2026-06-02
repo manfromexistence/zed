@@ -2134,19 +2134,16 @@ impl Render for MediaPanel {
             query_terms_storage.as_slice()
         };
         self.ensure_remote_media_loaded(raw_query.as_str(), cx);
-        let (remote_assets, total_remote_matches) =
+        let (remote_assets, _total_remote_matches) =
             self.matching_remote_assets(query_terms, MAX_MEDIA_RESULTS);
-        let (assets, total_asset_matches) = self.matching_assets(
+        let (assets, _total_asset_matches) = self.matching_assets(
             query_terms,
             MAX_MEDIA_RESULTS.saturating_sub(remote_assets.len()),
         );
         let url_insert = self
             .render_url_insert(cx)
             .map(|element| element.into_any_element());
-        let shown_count =
-            total_asset_matches + total_remote_matches + usize::from(url_insert.is_some());
         let kind_counts = MediaKindCounts::from_panel(self);
-        let total_count = kind_counts.count(self.kind_filter);
         let provider_count = remote_provider_count(self.kind_filter);
         let remote_warning = self.remote_warning.clone();
         let show_remote_loading_row = self.remote_loading && remote_assets.is_empty();
@@ -2220,43 +2217,12 @@ impl Render for MediaPanel {
         } else {
             "No matching media"
         };
-        let count_label = self.status.clone().unwrap_or_else(|| {
-            if self.loading {
-                "indexing".into()
-            } else if self.remote_loading {
-                "fetching".into()
-            } else {
-                media_fraction_label_with_remote_source(
-                    shown_count,
-                    total_count,
-                    self.remote_assets.len(),
-                    self.remote_result_source,
-                )
-            }
-        });
         let stale_history_count = self
             .pinned_media
             .iter()
             .chain(self.recent_media.iter())
             .filter(|entry| media_history_entry_stale(entry))
             .count();
-        let working_set_label = media_working_set_label(
-            self.pinned_media.len(),
-            self.recent_media.len(),
-            stale_history_count,
-        );
-        let working_set_tooltip = media_working_set_tooltip(
-            self.pinned_media.len(),
-            self.recent_media.len(),
-            stale_history_count,
-        );
-        let working_set_color = if stale_history_count > 0 {
-            Color::Warning
-        } else {
-            Color::Muted
-        };
-        let (readiness_label, readiness_color, readiness_tooltip) =
-            media_readiness_label(self.loading, self.remote_loading, stale_history_count);
 
         v_flex()
             .id("media-panel")
@@ -2277,18 +2243,7 @@ impl Render for MediaPanel {
                                 h_flex()
                                     .gap_1()
                                     .items_center()
-                                    .child(Label::new("Media").size(LabelSize::Small))
-                                    .child(
-                                        div()
-                                            .id("media-panel-readiness-status")
-                                            .tooltip(Tooltip::text(readiness_tooltip))
-                                            .child(
-                                                Label::new(readiness_label)
-                                                    .size(LabelSize::XSmall)
-                                                    .color(readiness_color)
-                                                    .truncate(),
-                                            ),
-                                    ),
+                                    .child(Label::new("Media").size(LabelSize::Small)),
                             )
                             .child(
                                 h_flex()
@@ -2308,27 +2263,14 @@ impl Render for MediaPanel {
                                             }),
                                         ),
                                     )
-                                    .when_some(working_set_label, |this, working_set_label| {
-                                        this.child(
-                                            div()
-                                                .id("media-panel-working-set-status")
-                                                .tooltip(Tooltip::text(working_set_tooltip))
-                                                .child(
-                                                    Label::new(working_set_label)
-                                                        .size(LabelSize::XSmall)
-                                                        .color(working_set_color)
-                                                        .truncate(),
-                                                ),
-                                        )
-                                    })
                                     .when(stale_history_count > 0, |this| {
                                         this.child(
-                                            Button::new(
+                                            IconButton::new(
                                                 "media-panel-remove-stale-history",
-                                                "Clean",
+                                                IconName::Trash,
                                             )
-                                            .style(ButtonStyle::Subtle)
-                                            .size(ButtonSize::Compact)
+                                            .shape(ui::IconButtonShape::Square)
+                                            .icon_size(IconSize::Small)
                                             .tooltip(Tooltip::text(CLEAN_STALE_MEDIA_TOOLTIP))
                                             .on_click(
                                                 cx.listener(|panel, _, _, cx| {
@@ -2336,13 +2278,7 @@ impl Render for MediaPanel {
                                                 }),
                                             ),
                                         )
-                                    })
-                                    .child(
-                                        Label::new(count_label)
-                                            .size(LabelSize::XSmall)
-                                            .color(Color::Muted)
-                                            .truncate(),
-                                    ),
+                                    }),
                             ),
                     )
                     .child(self.filter_editor.clone()),
@@ -2712,72 +2648,6 @@ fn media_history_health_label(total: usize, stale: usize) -> SharedString {
         format!("{ready} ready").into()
     } else {
         format!("{ready} ready / {stale} stale").into()
-    }
-}
-
-fn media_working_set_label(pinned: usize, recent: usize, stale: usize) -> Option<SharedString> {
-    if pinned == 0 && recent == 0 {
-        return None;
-    }
-
-    Some(history_working_set_label(pinned, recent, stale))
-}
-
-fn media_working_set_tooltip(pinned: usize, recent: usize, stale: usize) -> &'static str {
-    if stale > 0 {
-        "Pinned or recent media includes missing local files. Use Clean to remove stale rows."
-    } else if pinned > 0 && recent > 0 {
-        "Pinned and recent media are available when search is empty."
-    } else if pinned > 0 {
-        "Pinned media is saved for quick reuse."
-    } else {
-        "Recent media appears after preview, copy, or insert actions."
-    }
-}
-
-fn history_working_set_label(pinned: usize, recent: usize, stale: usize) -> SharedString {
-    if stale == 0 {
-        let mut text = String::with_capacity("pins ".len() + 6 + " / recent ".len() + 6);
-        let _ = write!(text, "pins {pinned} / recent {recent}");
-        text.into()
-    } else {
-        let mut text = String::with_capacity(
-            "pins ".len() + 6 + " / recent ".len() + 6 + " / stale ".len() + 6,
-        );
-        let _ = write!(text, "pins {pinned} / recent {recent} / stale {stale}");
-        text.into()
-    }
-}
-
-fn media_readiness_label(
-    indexing: bool,
-    fetching: bool,
-    stale: usize,
-) -> (&'static str, Color, &'static str) {
-    if indexing {
-        (
-            "indexing",
-            Color::Accent,
-            "Indexing local workspace media sources.",
-        )
-    } else if fetching {
-        (
-            "fetching",
-            Color::Accent,
-            "Fetching remote media provider results.",
-        )
-    } else if stale > 0 {
-        (
-            "cleanup",
-            Color::Warning,
-            "Some restored media entries point to missing files. Use Clean to remove stale rows.",
-        )
-    } else {
-        (
-            "ready",
-            Color::Success,
-            "Media catalog is ready for preview, copy, insert, and remote search.",
-        )
     }
 }
 
@@ -4970,32 +4840,6 @@ fn media_count_label(label: &str, count: usize) -> String {
     text.push_str(label);
     let _ = write!(text, " {count}");
     text
-}
-
-fn media_fraction_label(left: usize, right: usize) -> SharedString {
-    let mut text = String::with_capacity(24);
-    let _ = write!(text, "{left} / {right}");
-    text.into()
-}
-
-fn media_fraction_label_with_remote_source(
-    left: usize,
-    right: usize,
-    remote_count: usize,
-    remote_source: RemoteMediaResultSource,
-) -> SharedString {
-    if remote_count == 0 || remote_source == RemoteMediaResultSource::None {
-        return media_fraction_label(left, right);
-    }
-
-    let source = match remote_source {
-        RemoteMediaResultSource::Live => "live",
-        RemoteMediaResultSource::Cached => "cached",
-        RemoteMediaResultSource::None => unreachable!(),
-    };
-    let mut text = String::with_capacity(40);
-    let _ = write!(text, "{left} / {right} - {source} {remote_count}");
-    text.into()
 }
 
 fn media_indexed_status(count: usize) -> SharedString {

@@ -1,3 +1,65 @@
+[2026-06-02] - Sidebar Agent Fullscreen And Dock Action Correction
+
+CHANGED:
+- `crates\workspace\src\multi_workspace.rs` and `crates\sidebar\src\sidebar.rs` now route `ToggleWorkspaceSidebar` through the sidebar's own expanded/collapsed state before closing the workspace sidebar, so the collapsed activity bar expands again instead of disappearing.
+- `crates\sidebar\src\sidebar.rs` now uses icon-only real actions for ACP, MCP Servers, Plugins, Extensions, Automations, and Settings in the expanded toolbar and collapsed activity rail, avoiding the letter-like ACP/Extension glyphs in the visible chrome.
+- `crates\sidebar\src\sidebar.rs` now lets real Agent chat rows drag into the shortcut grid as persisted `OpenThread` cards keyed by `ThreadId`, then reopens the actual thread through the existing thread activation path.
+- `crates\agent_ui\src\agent_panel.rs`, `crates\zed_actions\src\lib.rs`, and `crates\zed\src\zed.rs` now provide an idempotent fullscreen Agent action, a full-width Agent fullscreen toolbar with real left/right dock toggles, and clean fullscreen Agent content without the internal DX launch rails.
+- `crates\title_bar\src\title_bar.rs` now adds a screen-dock AI button that dispatches the real Agent fullscreen action.
+- `crates\workspace\src\dock.rs` now removes the absolute side-panel split/close overlay path and renders stack split/close actions in a layout-owned side-panel action row with normal small action icons.
+- `script\dx-launch-workspace-source.test.ts`, `script\dx-title-bar-source.test.ts`, and `script\dx-workspace-ui-state-source.test.ts` now guard the new sidebar icons, thread drag-to-grid shortcut path, AI screen-dock action, and non-overlay dock controls.
+
+PASSED:
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-launch-workspace-source.test.ts script\dx-workspace-ui-state-source.test.ts script\dx-title-bar-source.test.ts script\zed-startup-reliability-source.test.ts`
+- `rustfmt --edition 2024 --check crates\workspace\src\multi_workspace.rs crates\sidebar\src\sidebar.rs crates\agent_ui\src\agent_panel.rs crates\title_bar\src\title_bar.rs crates\workspace\src\dock.rs crates\zed_actions\src\lib.rs crates\zed\src\zed.rs`
+- `git diff --check`
+- `$env:CARGO_BUILD_JOBS='6'; just run` completed locked Zed and CLI builds, launched Zed process `26112`, and detected the main window.
+
+NOTES:
+- The first authorized `just run` failed because `ThreadItem` is presentation-only and does not expose `.on_drag`; the drag source now lives in a GPUI wrapper around the row, preserving the shared component boundary.
+- Full arbitrary chat-row reordering and per-row custom icons/colors remain a separate schema-backed task; this pass wires the requested draggable chat behavior to the existing persisted shortcut grid without fake ordering state.
+- Side-panel split/close controls no longer overlay panel content, but a future deeper pass can thread those controls into every individual panel's native header if the product wants zero dock-owned action rows.
+
+[2026-06-02] - Sidebar Thread And Dock Mask Polish
+
+CHANGED:
+- `crates\sidebar\src\sidebar.rs` now replaces duplicate expanded-sidebar top controls with ACP Registry, Extensions, and Settings actions, while keeping creation/search/refresh-style controls in the existing collapsed/bottom activity chrome.
+- `crates\sidebar\src\sidebar.rs` now gives browser/WebPreview shortcut grids a full twelve seeded cards instead of stopping at eight.
+- `crates\ui\src\components\ai\thread_item.rs` now renders thread timestamps on the right side of the main chat row and only creates a metadata row for project, worktree, or diff metadata.
+- `crates\workspace\src\dock.rs` now removes the side-panel split/close control mask/background that covered panel header content, leaving the real split/close actions as small inline controls.
+- `crates\icon_picker\src\icon_picker.rs`, `crates\font_panel\src\font_panel.rs`, and `crates\media_panel\src\media_panel.rs` no longer keep obsolete fraction-label helpers after the header count text cleanup.
+- `script\dx-launch-workspace-source.test.ts` and `script\dx-workspace-ui-state-source.test.ts` now guard the ACP/Extensions sidebar split, twelve-card browser shortcuts, inline thread timestamps, and absence of the dock control mask.
+
+PASSED:
+- `rustfmt --edition 2024 crates\sidebar\src\sidebar.rs crates\workspace\src\dock.rs crates\ui\src\components\ai\thread_item.rs crates\icon_picker\src\icon_picker.rs crates\font_panel\src\font_panel.rs crates\media_panel\src\media_panel.rs`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-launch-workspace-source.test.ts`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-workspace-ui-state-source.test.ts`
+
+NOTES:
+- The larger drag/drop, filter, dx-icon customization, and fullscreen Agent rail architecture from the latest UX brief remain intentionally unclaimed until a dedicated real-wiring pass; no dummy UI was added.
+- `just run` was not run in this pass.
+
+[2026-06-02] - AI Panel And Tool Header Polish
+
+CHANGED:
+- `crates\zed\src\zed.rs` now zooms the Agent panel for empty editor surfaces based on real open file paths rather than blocking on project roots.
+- `crates\agent_ui\src\profile_selector.rs` now hides the unsupported-tools control entirely for models that cannot expose tool profiles, and `crates\agent_ui\src\agent_panel.rs` slightly increases the Agent toolbar height.
+- `crates\workspace\src\dock.rs` now uses `SplitAlt` for side-panel split controls, gives the split/close mask a little more height, and removes the extra bottom-bar split glyph beside panel icons.
+- `crates\title_bar\src\title_bar.rs`, `crates\workspace\src\screen_carousel.rs`, and `crates\web_preview\src\web_preview_view.rs` now use the browser/WebPreview `ToolWeb` icon again.
+- `crates\icon_picker\src\icon_picker.rs`, `crates\font_panel\src\font_panel.rs`, `crates\media_panel\src\media_panel.rs`, and `crates\shadcn_ui_panel\src\shadcn_ui_panel.rs` now keep top panel headers free of ready/count text, preserving icon-only refresh/cleanup actions where they are real controls.
+- `crates\project_panel\src\project_panel.rs` hides the top media shelf once the file tree is scrolled, and `crates\project_panel\src\media_preview.rs` makes shelf image/video cards fill the tile with readable filename overlays.
+- Source guards in `script\dx-project-panel-source.test.ts`, `script\dx-title-bar-source.test.ts`, `script\dx-workspace-ui-state-source.test.ts`, and `script\zed-startup-reliability-source.test.ts` now cover the updated media shelf, browser icon, dock controls, and empty-editor Agent zoom behavior.
+
+PASSED:
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-project-panel-source.test.ts script\dx-workspace-ui-state-source.test.ts script\dx-title-bar-source.test.ts script\zed-startup-reliability-source.test.ts`
+- `rustfmt --edition 2024 --check crates\zed\src\zed.rs crates\agent_ui\src\profile_selector.rs crates\agent_ui\src\agent_panel.rs crates\workspace\src\dock.rs crates\title_bar\src\title_bar.rs crates\workspace\src\screen_carousel.rs crates\web_preview\src\web_preview_view.rs crates\project_panel\src\project_panel.rs crates\project_panel\src\media_preview.rs crates\icon_picker\src\icon_picker.rs crates\font_panel\src\font_panel.rs crates\media_panel\src\media_panel.rs crates\shadcn_ui_panel\src\shadcn_ui_panel.rs`
+- `git diff --check`
+- Source scan confirmed the removed unsupported-tool text, old browser icon mapping, bottom-bar stack button id, panel-header readiness ids, obsolete media shelf count, and obsolete media shelf body-height constant are absent.
+
+NOTES:
+- The user later authorized `just run`; it completed locked Zed and CLI builds and launched Zed process `9680` with a detected main window.
+- That authorized build surfaced dead-code warnings for now-unused header count helpers in `icon_picker`, `font_panel`, and `media_panel`; launch proof is green, but warning cleanup is still needed before a warning-clean checkpoint.
+
 [2026-06-02] - Final Sidebar And Panel Polish
 
 CHANGED:

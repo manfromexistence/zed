@@ -848,7 +848,7 @@ fn show_agent_panel_for_empty_workspace(
     window: &mut Window,
     cx: &mut Context<Workspace>,
 ) {
-    if !workspace.root_paths(cx).is_empty() || !workspace.open_item_abs_paths(cx).is_empty() {
+    if !workspace.open_item_abs_paths(cx).is_empty() {
         return;
     }
 
@@ -910,6 +910,7 @@ async fn initialize_agent_panel(
             workspace
                 .register_action(agent_ui::AgentPanel::toggle_focus)
                 .register_action(agent_ui::AgentPanel::focus)
+                .register_action(agent_ui::AgentPanel::focus_fullscreen)
                 .register_action(agent_ui::AgentPanel::toggle)
                 .register_action(agent_ui::InlineAssistant::inline_assist);
         }

@@ -30,7 +30,6 @@ pub(crate) const PROJECT_PANEL_MEDIA_SHELF_COLUMNS: u16 = 4;
 const PROJECT_PANEL_MEDIA_GALLERY_CARD_WIDTH: f32 = 86.;
 const PROJECT_PANEL_MEDIA_GALLERY_CARD_HEIGHT: f32 = 64.;
 const PROJECT_PANEL_MEDIA_SHELF_CARD_MIN_WIDTH: f32 = 96.;
-const PROJECT_PANEL_MEDIA_SHELF_CARD_HEIGHT: f32 = 72.;
 const PROJECT_PANEL_MEDIA_SHELF_CARD_TOTAL_HEIGHT: f32 = 96.;
 
 const IMAGE_MEDIA_EXTENSIONS: &[&str] = &[
@@ -246,7 +245,6 @@ pub(crate) fn render_folder_media_shelf(
     } else {
         MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS
     };
-    let visible_media_count = preview.items.len().min(media_card_limit);
     let mut shelf_cards = preview
         .items
         .iter()
@@ -283,28 +281,17 @@ pub(crate) fn render_folder_media_shelf(
             })
         })
         .child(
-            h_flex()
-                .items_center()
-                .justify_between()
-                .gap_2()
-                .child(
-                    h_flex()
-                        .gap_1()
-                        .items_center()
-                        .child(Icon::new(IconName::Blocks).size(IconSize::XSmall))
-                        .child(
-                            Label::new("Media")
-                                .size(LabelSize::Small)
-                                .weight(FontWeight::SEMIBOLD),
-                        ),
-                )
-                .child(
-                    Label::new(format!("{visible_media_count} shown / {summary}"))
-                        .size(LabelSize::XSmall)
-                        .color(Color::Muted)
-                        .single_line()
-                        .truncate(),
-                ),
+            h_flex().items_center().gap_2().child(
+                h_flex()
+                    .gap_1()
+                    .items_center()
+                    .child(Icon::new(IconName::Blocks).size(IconSize::XSmall))
+                    .child(
+                        Label::new("Media")
+                            .size(LabelSize::Small)
+                            .weight(FontWeight::SEMIBOLD),
+                    ),
+            ),
         )
         .child(
             div()
@@ -468,10 +455,10 @@ fn media_shelf_card_container(
         .h(px(PROJECT_PANEL_MEDIA_SHELF_CARD_TOTAL_HEIGHT))
         .w_full()
         .v_flex()
-        .gap_1()
-        .p_1()
+        .p_0()
         .rounded_sm()
         .border_1()
+        .overflow_hidden()
         .border_color(if is_selected {
             colors.border_focused
         } else {
@@ -488,17 +475,7 @@ fn media_shelf_card_container(
         })
         .child(render_media_shelf_card_body(item, cx));
 
-    if item.kind == MediaPreviewKind::Audio {
-        card
-    } else {
-        card.child(
-            Label::new(item.name.clone())
-                .size(LabelSize::XSmall)
-                .color(Color::Muted)
-                .single_line()
-                .truncate(),
-        )
-    }
+    card
 }
 
 fn render_media_shelf_card_body(item: &MediaPreviewItem, cx: &mut App) -> Div {
@@ -507,7 +484,7 @@ fn render_media_shelf_card_body(item: &MediaPreviewItem, cx: &mut App) -> Div {
         MediaPreviewKind::Image => div()
             .relative()
             .w_full()
-            .h(px(PROJECT_PANEL_MEDIA_SHELF_CARD_HEIGHT))
+            .flex_1()
             .rounded_sm()
             .overflow_hidden()
             .child(
@@ -515,12 +492,13 @@ fn render_media_shelf_card_body(item: &MediaPreviewItem, cx: &mut App) -> Div {
                     .size_full()
                     .object_fit(ObjectFit::Cover)
                     .with_fallback(|| media_card_image_fallback(MediaPreviewKind::Image)),
-            ),
+            )
+            .child(media_shelf_name_overlay(&item.name, cx)),
         MediaPreviewKind::Video => {
             let base = div()
                 .relative()
                 .w_full()
-                .h(px(PROJECT_PANEL_MEDIA_SHELF_CARD_HEIGHT))
+                .flex_1()
                 .rounded_sm()
                 .overflow_hidden()
                 .bg(colors.elevated_surface_background);
@@ -544,7 +522,7 @@ fn render_media_shelf_card_body(item: &MediaPreviewItem, cx: &mut App) -> Div {
                 div()
                     .absolute()
                     .right_1()
-                    .bottom_1()
+                    .top_1()
                     .rounded_full()
                     .bg(colors.editor_background.opacity(0.72))
                     .p_0p5()
@@ -554,6 +532,7 @@ fn render_media_shelf_card_body(item: &MediaPreviewItem, cx: &mut App) -> Div {
                             .color(Color::Accent),
                     ),
             )
+            .child(media_shelf_name_overlay(&item.name, cx))
         }
         MediaPreviewKind::Audio => div()
             .relative()
@@ -575,6 +554,27 @@ fn render_media_shelf_card_body(item: &MediaPreviewItem, cx: &mut App) -> Div {
                     .truncate(),
             ),
     }
+}
+
+fn media_shelf_name_overlay(name: &str, cx: &mut App) -> Div {
+    let colors = cx.theme().colors();
+    div()
+        .absolute()
+        .left_0()
+        .right_0()
+        .bottom_0()
+        .px_1()
+        .py_0p5()
+        .bg(colors.editor_background.opacity(0.74))
+        .shadow_md()
+        .child(
+            Label::new(name.to_string())
+                .size(LabelSize::XSmall)
+                .color(Color::Default)
+                .buffer_font(cx)
+                .single_line()
+                .truncate(),
+        )
 }
 
 fn media_gallery_card_container(

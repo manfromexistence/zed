@@ -189,9 +189,14 @@ test("side dock stack controls use real panel entries and preserve single-panel 
     /format!\(\s*"Remove from \{\} Dock Stack",\s*dock_position\.label\(\)\s*\)/s,
   );
   assert.match(panelButtonsRender, /"Show Only This Panel"/);
-  assert.match(dockRender, /"dock-panel-inline-split"/);
-  assert.match(dockRender, /"dock-panel-inline-close"/);
-  assert.match(dockRender, /"dock-panel-inline-control-mask"/);
+  assert.match(dockRender, /"dock-panel-stack-actions"/);
+  assert.match(dockRender, /"dock-panel-stack-split"/);
+  assert.match(dockRender, /IconName::SplitAlt/);
+  assert.match(dockRender, /"dock-panel-stack-close"/);
+  assert.doesNotMatch(dockRender, /"dock-panel-inline-split"/);
+  assert.doesNotMatch(dockRender, /"dock-panel-inline-close"/);
+  assert.doesNotMatch(dockRender, /"dock-panel-inline-control-mask"/);
+  assert.doesNotMatch(panelButtonsRender, /"dock-panel-stack"/);
   assert.match(dockRender, /cursor_row_resize/);
   assert.match(restoreStackedPanels, /self\.pin_agent_panel_to_left_stack_bottom\(cx\);/);
   assert.match(panelButtonsRender, /dock\.stack_panel\(panel_id, window, cx\)/);

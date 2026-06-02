@@ -1242,79 +1242,22 @@ impl FontPanel {
 
     fn render_preview(
         &self,
-        total_matches: usize,
+        _total_matches: usize,
         counts: FontSourceCounts,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
-        let count_label = if let Some(status) = self.status.clone() {
-            status
-        } else if self.fonts_loaded || self.source_filter == FontSourceFilter::Web {
-            font_fraction_label(total_matches, counts.count(self.source_filter))
-        } else {
-            "loading".into()
-        };
-        let working_set_label = font_working_set_label(
-            self.pinned_font_actions.len(),
-            self.recent_font_actions.len(),
-        );
-        let working_set_tooltip = font_working_set_tooltip(
-            self.pinned_font_actions.len(),
-            self.recent_font_actions.len(),
-        );
-        let (readiness_label, readiness_color, readiness_tooltip) = font_readiness_label(
-            self.fonts_loaded || self.source_filter == FontSourceFilter::Web,
-            counts.count(self.source_filter),
-        );
         v_flex()
             .gap_2()
             .p_2()
             .border_b_1()
             .border_color(cx.theme().colors().border)
             .child(
-                h_flex()
-                    .justify_between()
-                    .items_center()
-                    .child(
-                        h_flex()
-                            .gap_1()
-                            .items_center()
-                            .child(Label::new("Fonts").size(LabelSize::Small))
-                            .child(
-                                div()
-                                    .id("font-panel-readiness-status")
-                                    .tooltip(Tooltip::text(readiness_tooltip))
-                                    .child(
-                                        Label::new(readiness_label)
-                                            .size(LabelSize::XSmall)
-                                            .color(readiness_color)
-                                            .truncate(),
-                                    ),
-                            ),
-                    )
-                    .child(
-                        h_flex()
-                            .gap_1()
-                            .items_center()
-                            .when_some(working_set_label, |this, working_set_label| {
-                                this.child(
-                                    div()
-                                        .id("font-panel-working-set-status")
-                                        .tooltip(Tooltip::text(working_set_tooltip))
-                                        .child(
-                                            Label::new(working_set_label)
-                                                .size(LabelSize::XSmall)
-                                                .color(Color::Muted)
-                                                .truncate(),
-                                        ),
-                                )
-                            })
-                            .child(
-                                Label::new(count_label)
-                                    .size(LabelSize::XSmall)
-                                    .color(Color::Muted)
-                                    .truncate(),
-                            ),
-                    ),
+                h_flex().items_center().child(
+                    h_flex()
+                        .gap_1()
+                        .items_center()
+                        .child(Label::new("Fonts").size(LabelSize::Small)),
+                ),
             )
             .child(self.filter_editor.clone())
             .child(self.render_source_filters(counts, cx))
@@ -1514,48 +1457,6 @@ fn font_history_health_label(count: usize) -> SharedString {
     }
 }
 
-fn font_working_set_label(pinned: usize, recent: usize) -> Option<SharedString> {
-    if pinned == 0 && recent == 0 {
-        return None;
-    }
-
-    Some(history_working_set_label(pinned, recent))
-}
-
-fn font_working_set_tooltip(pinned: usize, recent: usize) -> &'static str {
-    if pinned > 0 && recent > 0 {
-        "Pinned and recent fonts are available when search is empty."
-    } else if pinned > 0 {
-        "Pinned fonts are saved for quick reuse."
-    } else {
-        "Recent fonts appear after preview, copy, apply, or add actions."
-    }
-}
-
-fn history_working_set_label(pinned: usize, recent: usize) -> SharedString {
-    let mut text = String::with_capacity("pins ".len() + 6 + " / recent ".len() + 6);
-    let _ = write!(text, "pins {pinned} / recent {recent}");
-    text.into()
-}
-
-fn font_readiness_label(loaded: bool, total_count: usize) -> (&'static str, Color, &'static str) {
-    if !loaded {
-        ("loading", Color::Accent, "Loading local system fonts.")
-    } else if total_count == 0 {
-        (
-            "empty",
-            Color::Warning,
-            "No fonts are available for the current source filter.",
-        )
-    } else {
-        (
-            "ready",
-            Color::Success,
-            "Fonts are ready for preview, CSS copy, editor apply, and project insertion.",
-        )
-    }
-}
-
 fn lowercase_text(value: &str) -> String {
     let mut text = String::with_capacity(value.len());
     push_lowercase(&mut text, value);
@@ -1591,12 +1492,6 @@ fn font_count_label(label: &str, count: usize) -> String {
     text.push_str(label);
     let _ = write!(text, " {count}");
     text
-}
-
-fn font_fraction_label(left: usize, right: usize) -> SharedString {
-    let mut text = String::with_capacity(24);
-    let _ = write!(text, "{left} / {right}");
-    text.into()
 }
 
 fn font_status_label(prefix: &str, value: &str) -> SharedString {

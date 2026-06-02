@@ -1538,10 +1538,7 @@ impl Render for ShadcnUiPanel {
         let (items, total_matches) = self.matching_items(query.as_str(), MAX_SHADCN_ROWS);
         let mut preview_images = cached_shadcn_preview_image_urls(&items);
         self.ensure_visible_preview_images_warmed(&items, &preview_images, cx);
-        let visible_preview_warming_count =
-            visible_preview_warming_count(&items, &self.warming_preview_image_keys);
         let filter_counts = self.filter_counts;
-        let total_count = filter_counts.count(self.source_filter);
         let mut item_rows = Vec::with_capacity(items.len());
         item_rows.extend(items.into_iter().map(|item| {
             let image_url = preview_images.remove(item.id.as_ref()).flatten();
@@ -1570,50 +1567,12 @@ impl Render for ShadcnUiPanel {
         }
         content_rows.extend(item_rows);
         let is_empty = content_rows.is_empty() && total_matches == 0;
-        let show_preview_warming_status = visible_preview_warming_count > 0
-            && self
-                .status
-                .as_ref()
-                .map_or(true, |status| status.as_ref().starts_with("Loaded "));
-        let count_label = if self.loading_catalog {
-            "loading".into()
-        } else if show_preview_warming_status {
-            shadcn_preview_warming_status(visible_preview_warming_count)
-        } else {
-            self.status
-                .clone()
-                .unwrap_or_else(|| shadcn_fraction_label(total_matches, total_count))
-        };
-        let catalog_freshness_label =
-            ui_catalog_freshness_label(self.loading_catalog, self.catalog_freshness);
-        let catalog_freshness_color =
-            ui_catalog_freshness_color(self.loading_catalog, self.catalog_freshness);
         let stale_history_count = self
             .pinned_ui_actions
             .iter()
             .chain(self.recent_ui_actions.iter())
             .filter(|entry| self.ui_history_entry_stale(entry))
             .count();
-        let working_set_label = ui_working_set_label(
-            self.pinned_ui_actions.len(),
-            self.recent_ui_actions.len(),
-            stale_history_count,
-        );
-        let working_set_tooltip = ui_working_set_tooltip(
-            self.pinned_ui_actions.len(),
-            self.recent_ui_actions.len(),
-            stale_history_count,
-        );
-        let working_set_color = if stale_history_count > 0 {
-            Color::Warning
-        } else {
-            Color::Muted
-        };
-        let (readiness_label, readiness_color, readiness_tooltip) = ui_readiness_label(
-            self.loading_catalog,
-            self.catalog_freshness,
-            stale_history_count,
-        );
 
         v_flex()
             .id("shadcn-ui-panel")
@@ -1634,18 +1593,7 @@ impl Render for ShadcnUiPanel {
                                 h_flex()
                                     .gap_1()
                                     .items_center()
-                                    .child(Label::new("UI").size(LabelSize::Small))
-                                    .child(
-                                        div()
-                                            .id("shadcn-ui-readiness-status")
-                                            .tooltip(Tooltip::text(readiness_tooltip))
-                                            .child(
-                                                Label::new(readiness_label)
-                                                    .size(LabelSize::XSmall)
-                                                    .color(readiness_color)
-                                                    .truncate(),
-                                            ),
-                                    ),
+                                    .child(Label::new("UI").size(LabelSize::Small)),
                             )
                             .child(
                                 h_flex()
@@ -1666,42 +1614,22 @@ impl Render for ShadcnUiPanel {
                                             }),
                                         ),
                                     )
-                                    .child(
-                                        Label::new(catalog_freshness_label)
-                                            .size(LabelSize::XSmall)
-                                            .color(catalog_freshness_color)
-                                            .truncate(),
-                                    )
-                                    .when_some(working_set_label, |this, working_set_label| {
-                                        this.child(
-                                            div()
-                                                .id("shadcn-ui-working-set-status")
-                                                .tooltip(Tooltip::text(working_set_tooltip))
-                                                .child(
-                                                    Label::new(working_set_label)
-                                                        .size(LabelSize::XSmall)
-                                                        .color(working_set_color)
-                                                        .truncate(),
-                                                ),
-                                        )
-                                    })
                                     .when(stale_history_count > 0, |this| {
                                         this.child(
-                                            Button::new("shadcn-ui-remove-stale-history", "Clean")
-                                                .style(ButtonStyle::Subtle)
-                                                .size(ButtonSize::Compact)
-                                                .tooltip(Tooltip::text(CLEAN_STALE_UI_TOOLTIP))
-                                                .on_click(cx.listener(|panel, _, _, cx| {
+                                            IconButton::new(
+                                                "shadcn-ui-remove-stale-history",
+                                                IconName::Trash,
+                                            )
+                                            .shape(ui::IconButtonShape::Square)
+                                            .icon_size(IconSize::Small)
+                                            .tooltip(Tooltip::text(CLEAN_STALE_UI_TOOLTIP))
+                                            .on_click(
+                                                cx.listener(|panel, _, _, cx| {
                                                     panel.remove_stale_ui_history(cx);
-                                                })),
+                                                }),
+                                            ),
                                         )
-                                    })
-                                    .child(
-                                        Label::new(count_label)
-                                            .size(LabelSize::XSmall)
-                                            .color(Color::Muted)
-                                            .truncate(),
-                                    ),
+                                    }),
                             ),
                     )
                     .child(self.filter_editor.clone()),
@@ -1922,83 +1850,10 @@ fn shadcn_count_label(label: &str, count: usize) -> String {
     text
 }
 
-fn shadcn_fraction_label(left: usize, right: usize) -> SharedString {
-    let mut text = String::with_capacity(24);
-    let _ = write!(text, "{left} / {right}");
-    text.into()
-}
-
 fn shadcn_loaded_status(count: usize) -> SharedString {
     let mut text = String::with_capacity("Loaded ".len() + 6 + " UI entries".len());
     let _ = write!(text, "Loaded {count} UI entries");
     text.into()
-}
-
-fn shadcn_preview_warming_status(count: usize) -> SharedString {
-    let mut text = String::with_capacity("warming ".len() + 3 + " previews".len());
-    let _ = write!(text, "warming {count} previews");
-    text.into()
-}
-
-fn ui_catalog_freshness_label(loading: bool, freshness: UiCatalogFreshness) -> &'static str {
-    if loading {
-        return "hydrating sources";
-    }
-
-    match freshness {
-        UiCatalogFreshness::StaticFallback => "bundled fallback",
-        UiCatalogFreshness::Cached => "cached catalog",
-        UiCatalogFreshness::Hydrated => "source catalog",
-    }
-}
-
-fn ui_catalog_freshness_color(loading: bool, freshness: UiCatalogFreshness) -> Color {
-    if loading {
-        return Color::Accent;
-    }
-
-    match freshness {
-        UiCatalogFreshness::StaticFallback => Color::Warning,
-        UiCatalogFreshness::Cached | UiCatalogFreshness::Hydrated => Color::Muted,
-    }
-}
-
-fn ui_readiness_label(
-    loading: bool,
-    freshness: UiCatalogFreshness,
-    stale: usize,
-) -> (&'static str, Color, &'static str) {
-    if loading {
-        (
-            "loading",
-            Color::Accent,
-            "Hydrating local shadcn, Magic UI, and registry sources.",
-        )
-    } else if stale > 0 {
-        (
-            "cleanup",
-            Color::Warning,
-            "Some restored UI entries are missing source or registry manifests. Use Clean to remove stale rows.",
-        )
-    } else {
-        match freshness {
-            UiCatalogFreshness::StaticFallback => (
-                "fallback",
-                Color::Warning,
-                "Showing the bundled fallback catalog while source catalog hydration runs.",
-            ),
-            UiCatalogFreshness::Cached => (
-                "cached",
-                Color::Muted,
-                "Loaded cached UI catalog. Refresh to rescan local sources.",
-            ),
-            UiCatalogFreshness::Hydrated => (
-                "ready",
-                Color::Success,
-                "Source-backed UI catalog is ready for preview, install, insert, and copy.",
-            ),
-        }
-    }
 }
 
 fn ui_catalog_primary_tooltip(item: &CatalogItem) -> &'static str {
@@ -2062,16 +1917,6 @@ fn shadcn_status_label(prefix: &str, value: &str) -> SharedString {
     text.push_str(prefix);
     text.push_str(value);
     text.into()
-}
-
-fn visible_preview_warming_count(
-    items: &[CatalogItem],
-    warming_keys: &HashSet<SharedString>,
-) -> usize {
-    items
-        .iter()
-        .filter(|item| warming_keys.contains(item.id.as_ref()))
-        .count()
 }
 
 fn shadcn_thumbnail(
@@ -3668,40 +3513,6 @@ fn ui_history_health_label(total: usize, stale: usize) -> SharedString {
         format!("{ready} ready").into()
     } else {
         format!("{ready} ready / {stale} stale").into()
-    }
-}
-
-fn ui_working_set_label(pinned: usize, recent: usize, stale: usize) -> Option<SharedString> {
-    if pinned == 0 && recent == 0 {
-        return None;
-    }
-
-    Some(history_working_set_label(pinned, recent, stale))
-}
-
-fn ui_working_set_tooltip(pinned: usize, recent: usize, stale: usize) -> &'static str {
-    if stale > 0 {
-        "Pinned or recent UI entries include missing source or registry files. Use Clean to remove stale rows."
-    } else if pinned > 0 && recent > 0 {
-        "Pinned and recent UI components are available when search is empty."
-    } else if pinned > 0 {
-        "Pinned UI components are saved for quick reuse."
-    } else {
-        "Recent UI components appear after preview, install, insert, copy, or docs actions."
-    }
-}
-
-fn history_working_set_label(pinned: usize, recent: usize, stale: usize) -> SharedString {
-    if stale == 0 {
-        let mut text = String::with_capacity("pins ".len() + 6 + " / recent ".len() + 6);
-        let _ = write!(text, "pins {pinned} / recent {recent}");
-        text.into()
-    } else {
-        let mut text = String::with_capacity(
-            "pins ".len() + 6 + " / recent ".len() + 6 + " / stale ".len() + 6,
-        );
-        let _ = write!(text, "pins {pinned} / recent {recent} / stale {stale}");
-        text.into()
     }
 }
 

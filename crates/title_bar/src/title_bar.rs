@@ -547,6 +547,7 @@ impl TitleBar {
                         active_screen_kind == WorkspaceScreenKind::Terminal,
                         cx,
                     ))
+                    .child(self.render_agent_screen_button(cx))
                     .children(
                         extra_entries
                             .into_iter()
@@ -726,6 +727,37 @@ impl TitleBar {
                 });
             })
             .into_any_element()
+    }
+
+    fn render_agent_screen_button(&self, cx: &mut Context<Self>) -> AnyElement {
+        IconButton::new("screen-dock-agent", IconName::ZedAssistant)
+            .size(ButtonSize::Default)
+            .icon_size(IconSize::Medium)
+            .toggle_state(self.agent_panel_is_active(cx))
+            .tooltip(Tooltip::text("AI"))
+            .on_click(move |_, window, cx| {
+                window.dispatch_action(
+                    zed_actions::assistant::FocusAgentFullscreen.boxed_clone(),
+                    cx,
+                );
+            })
+            .into_any_element()
+    }
+
+    fn agent_panel_is_active(&self, cx: &App) -> bool {
+        let Some(workspace) = self.workspace.upgrade() else {
+            return false;
+        };
+        let workspace = workspace.read(cx);
+        [DockPosition::Left, DockPosition::Right]
+            .into_iter()
+            .any(|position| {
+                workspace
+                    .dock_at_position(position)
+                    .read(cx)
+                    .visible_panel()
+                    .is_some_and(|panel| panel.is_agent_panel(cx))
+            })
     }
 
     fn render_screen_dock_add_menu(
@@ -923,7 +955,7 @@ impl TitleBar {
     fn screen_kind_icon(kind: WorkspaceScreenKind) -> IconName {
         match kind {
             WorkspaceScreenKind::Editor => IconName::Code,
-            WorkspaceScreenKind::Browser => IconName::Public,
+            WorkspaceScreenKind::Browser => IconName::ToolWeb,
             WorkspaceScreenKind::Terminal => IconName::Terminal,
             WorkspaceScreenKind::LiquidGlass => IconName::Sparkle,
             WorkspaceScreenKind::Other => IconName::Circle,

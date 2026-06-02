@@ -392,11 +392,7 @@ impl RenderOnce for ThreadItem {
 
         let has_worktree = !linked_worktrees.is_empty();
 
-        let has_metadata = has_project_name
-            || has_project_paths
-            || has_worktree
-            || has_diff_stats
-            || has_timestamp;
+        let has_metadata = has_project_name || has_project_paths || has_worktree || has_diff_stats;
 
         v_flex()
             .id(self.id.clone())
@@ -431,6 +427,14 @@ impl RenderOnce for ThreadItem {
                             .child(icon)
                             .child(title_label),
                     )
+                    .when(has_timestamp, |this| {
+                        this.child(
+                            Label::new(timestamp.clone())
+                                .size(LabelSize::Small)
+                                .color(Color::Muted)
+                                .flex_shrink_0(),
+                        )
+                    })
                     .when(self.is_truncated, |this| this.child(gradient_overlay))
                     .when(self.hovered, |this| {
                         this.when_some(self.action_slot, |this, slot| {
@@ -559,21 +563,11 @@ impl RenderOnce for ThreadItem {
                         )
                         .when(
                             (has_project_name || has_project_paths || has_worktree)
-                                && (has_diff_stats || has_timestamp),
+                                && has_diff_stats,
                             |this| this.child(dot_separator()),
                         )
                         .when(has_diff_stats, |this| {
                             this.child(DiffStat::new(diff_stat_id, added_count, removed_count))
-                        })
-                        .when(has_diff_stats && has_timestamp, |this| {
-                            this.child(dot_separator())
-                        })
-                        .when(has_timestamp, |this| {
-                            this.child(
-                                Label::new(timestamp.clone())
-                                    .size(LabelSize::Small)
-                                    .color(Color::Muted),
-                            )
                         }),
                 )
             })
