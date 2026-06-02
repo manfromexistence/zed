@@ -21,6 +21,35 @@ const MEDIA_METADATA_MANIFEST_NAMES: &[&str] = &[
     ".zed-media.json",
     "zed-media.json",
 ];
+const MEDIA_METADATA_LIST_FIELDS: &[&str] = &["items", "media", "entries", "assets", "files"];
+const MEDIA_METADATA_PATH_FIELDS: &[&str] = &[
+    "path",
+    "file",
+    "name",
+    "source",
+    "media_source",
+    "relative_path",
+];
+const MEDIA_METADATA_DURATION_LABEL_FIELDS: &[&str] =
+    &["duration_label", "duration", "time", "length"];
+const MEDIA_METADATA_DURATION_SECONDS_FIELDS: &[&str] = &[
+    "duration_seconds",
+    "duration_secs",
+    "seconds",
+    "length_seconds",
+];
+const MEDIA_METADATA_CENTER_FRAME_FIELDS: &[&str] = &["center_frame", "middle_frame"];
+const MEDIA_METADATA_PREVIEW_FRAME_FIELDS: &[&str] = &[
+    "frame_path",
+    "thumbnail_path",
+    "poster_path",
+    "preview_path",
+    "frame",
+    "thumbnail",
+    "poster",
+    "preview",
+];
+const MAX_MEDIA_METADATA_DURATION_LABEL_CHARS: usize = 32;
 
 #[derive(Clone, Debug, Default)]
 pub(super) struct MediaMetadataIndex {
@@ -102,9 +131,8 @@ fn collect_media_metadata_manifest(
             }
         }
         Value::Object(object) => {
-            let list_keys = ["items", "media", "entries", "assets", "files"];
             let mut used_list = false;
-            for key in list_keys {
+            for key in MEDIA_METADATA_LIST_FIELDS {
                 if let Some(list) = object.get(key).and_then(Value::as_array) {
                     used_list = true;
                     for item in list {
@@ -135,18 +163,7 @@ fn collect_media_metadata_record(
         return;
     };
 
-    let path_text = first_string_field(
-        object,
-        &[
-            "path",
-            "file",
-            "name",
-            "source",
-            "media_source",
-            "relative_path",
-        ],
-    )
-    .or(fallback_path);
+    let path_text = first_string_field(object, MEDIA_METADATA_PATH_FIELDS).or(fallback_path);
     let Some(path_text) = path_text else {
         return;
     };
@@ -165,22 +182,11 @@ fn collect_media_metadata_record(
         }
     }
 
-    let center_frame_fields = ["center_frame", "middle_frame"];
-    let preview_frame_fields = [
-        "frame_path",
-        "thumbnail_path",
-        "poster_path",
-        "preview_path",
-        "frame",
-        "thumbnail",
-        "poster",
-        "preview",
-    ];
     if let Some(frame_preview) = video_frame_preview_from_record(
         parent_abs_path,
         object,
-        &center_frame_fields,
-        &preview_frame_fields,
+        MEDIA_METADATA_CENTER_FRAME_FIELDS,
+        MEDIA_METADATA_PREVIEW_FRAME_FIELDS,
     ) {
         for key in &keys {
             index
@@ -215,19 +221,11 @@ fn video_frame_preview_from_record(
 }
 
 fn media_duration_label_from_record(object: &serde_json::Map<String, Value>) -> Option<String> {
-    first_string_field(object, &["duration_label", "duration", "time", "length"])
+    first_string_field(object, MEDIA_METADATA_DURATION_LABEL_FIELDS)
         .and_then(normalize_duration_label)
         .or_else(|| {
-            first_number_field(
-                object,
-                &[
-                    "duration_seconds",
-                    "duration_secs",
-                    "seconds",
-                    "length_seconds",
-                ],
-            )
-            .map(format_media_duration_seconds)
+            first_number_field(object, MEDIA_METADATA_DURATION_SECONDS_FIELDS)
+                .map(format_media_duration_seconds)
         })
 }
 
@@ -252,7 +250,12 @@ fn normalize_duration_label(label: &str) -> Option<String> {
         return None;
     }
 
-    Some(label.chars().take(32).collect())
+    Some(
+        label
+            .chars()
+            .take(MAX_MEDIA_METADATA_DURATION_LABEL_CHARS)
+            .collect(),
+    )
 }
 
 fn format_media_duration_seconds(seconds: f64) -> String {

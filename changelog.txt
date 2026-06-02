@@ -1,3 +1,18 @@
+[2026-06-02] - Project Panel Media Metadata Contract
+
+CHANGED:
+- `crates\project_panel\src\media_preview\metadata.rs` now names the accepted manifest list, path, duration-label, numeric-duration, center-frame, and preview-frame field contracts.
+- `crates\project_panel\src\media_preview\metadata.rs` now uses those source-owned contracts while preserving center/middle frame precedence over generic poster/thumbnail previews.
+- `crates\project_panel\src\media_preview.rs` now labels missing video frame evidence as `Frame unavailable` instead of implying a background extraction job exists.
+- `script\dx-project-panel-source.test.ts` now guards the manifest field contracts, duration-label cap, and honest missing-frame wording.
+
+PASSED:
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-project-panel-source.test.ts`
+
+NOTES:
+- No `just run`, Cargo, build, server, browser automation, ffmpeg, or ffprobe validation was run for this source-only checkpoint.
+- Automatic video center-frame extraction and audio/video duration probing remain future background metadata-service work; this checkpoint makes the consumed manifest format stable for that follow-up.
+
 [2026-06-02] - Project Panel Media Shelf Card Grid Polish
 
 CHANGED:

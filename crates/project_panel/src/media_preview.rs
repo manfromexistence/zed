@@ -678,7 +678,7 @@ fn media_preview_card_tooltip_meta(item: &MediaPreviewItem) -> String {
                 let frame_label = video_frame_preview_label(preview);
                 format!("{frame_label} / Time: {time_label} / Size: {size_label}")
             } else {
-                format!("Frame pending / Time: {time_label} / Size: {size_label}")
+                format!("Frame unavailable / Time: {time_label} / Size: {size_label}")
             }
         }
         MediaPreviewKind::Audio => format!(

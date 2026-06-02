@@ -478,6 +478,7 @@ test("project panel media preview renders direct image previews and video frames
     metadata,
     "read_bounded_media_metadata_manifest",
   );
+  const collectMediaMetadataManifest = functionBody(metadata, "collect_media_metadata_manifest");
   const collectMediaMetadataRecord = functionBody(metadata, "collect_media_metadata_record");
   const mediaDurationLabelFromRecord = functionBody(metadata, "media_duration_label_from_record");
   const videoPreviewFrame = functionBody(media, "video_preview_frame");
@@ -487,6 +488,41 @@ test("project panel media preview renders direct image previews and video frames
   assert.match(media, /mod metadata;/);
   assert.match(metadata, /pub\(super\) struct MediaMetadataIndex/);
   assert.match(metadata, /pub\(super\) const MAX_PROJECT_PANEL_MEDIA_METADATA_MANIFEST_BYTES/);
+  assert.match(
+    metadata,
+    /const MEDIA_METADATA_LIST_FIELDS: &\[&str\] = &\["items", "media", "entries", "assets", "files"\];/,
+    "media metadata manifest list fields must be a named source-owned contract",
+  );
+  assert.match(
+    metadata,
+    /const MEDIA_METADATA_PATH_FIELDS: &\[&str\] = &\[[\s\S]*"path",[\s\S]*"file",[\s\S]*"name",[\s\S]*"source",[\s\S]*"media_source",[\s\S]*"relative_path",[\s\S]*\];/,
+    "media metadata record path fields must be a named source-owned contract",
+  );
+  assert.match(
+    metadata,
+    /const MEDIA_METADATA_DURATION_LABEL_FIELDS: &\[&str\] =[\s\S]*&\["duration_label", "duration", "time", "length"\];/,
+    "media metadata duration-label fields must be a named source-owned contract",
+  );
+  assert.match(
+    metadata,
+    /const MEDIA_METADATA_DURATION_SECONDS_FIELDS: &\[&str\] = &\[[\s\S]*"duration_seconds",[\s\S]*"duration_secs",[\s\S]*"seconds",[\s\S]*"length_seconds",[\s\S]*\];/,
+    "media metadata numeric duration fields must be a named source-owned contract",
+  );
+  assert.match(
+    metadata,
+    /const MEDIA_METADATA_CENTER_FRAME_FIELDS: &\[&str\] = &\["center_frame", "middle_frame"\];/,
+    "media metadata center-frame fields must be a named source-owned contract",
+  );
+  assert.match(
+    metadata,
+    /const MEDIA_METADATA_PREVIEW_FRAME_FIELDS: &\[&str\] = &\[[\s\S]*"frame_path",[\s\S]*"thumbnail_path",[\s\S]*"poster_path",[\s\S]*"preview_path",[\s\S]*"frame",[\s\S]*"thumbnail",[\s\S]*"poster",[\s\S]*"preview",[\s\S]*\];/,
+    "media metadata preview-frame fields must be a named source-owned contract",
+  );
+  assert.match(
+    metadata,
+    /const MAX_MEDIA_METADATA_DURATION_LABEL_CHARS: usize = 32;/,
+    "media metadata duration labels must have a named bounded display cap",
+  );
   assert.match(media, /const PROJECT_PANEL_MEDIA_SHELF_CARD_MIN_WIDTH: f32 = 96\.;/);
   assert.match(media, /const PROJECT_PANEL_MEDIA_SHELF_CARD_HEIGHT: f32 = 72\.;/);
 
@@ -640,6 +676,16 @@ test("project panel media preview renders direct image previews and video frames
     "media hover details must include snapshot size and manifest duration with an honest unavailable state",
   );
   assert.match(
+    mediaPreviewCardTooltipMeta,
+    /Frame unavailable/,
+    "video hover details must not imply a background frame job exists when no frame preview is available",
+  );
+  assert.doesNotMatch(
+    mediaPreviewCardTooltipMeta,
+    /Frame pending/,
+    "missing video frame previews must use non-promissory unavailable wording",
+  );
+  assert.match(
     audioGradientBackground,
     /audio_gradient_colors\(name\)/,
     "audio card gradients must be deterministic from the audio filename",
@@ -665,18 +711,23 @@ test("project panel media preview renders direct image previews and video frames
     "media metadata manifests must be size-bounded and opt-in by known file name before parsing",
   );
   assert.match(
+    collectMediaMetadataManifest,
+    /for key in MEDIA_METADATA_LIST_FIELDS[\s\S]*collect_media_metadata_record/,
+    "media metadata manifest collection must use the named list-field contract",
+  );
+  assert.match(
     readBoundedMediaMetadataManifest,
     /fs::File::open[\s\S]*take\(MAX_PROJECT_PANEL_MEDIA_METADATA_MANIFEST_BYTES \+ 1\)[\s\S]*String::from_utf8/,
     "media metadata manifest reads must use a sentinel-byte bound before UTF-8 and JSON parsing",
   );
   assert.match(
     collectMediaMetadataRecord,
-    /media_duration_label_from_record[\s\S]*center_frame[\s\S]*middle_frame/,
-    "media metadata records must support center-frame paths and duration labels",
+    /first_string_field\(\s*object,\s*MEDIA_METADATA_PATH_FIELDS\s*\)[\s\S]*media_duration_label_from_record[\s\S]*MEDIA_METADATA_CENTER_FRAME_FIELDS[\s\S]*MEDIA_METADATA_PREVIEW_FRAME_FIELDS/,
+    "media metadata records must route path, duration, and frame aliases through named contracts",
   );
   assert.match(
     mediaDurationLabelFromRecord,
-    /duration_label[\s\S]*duration_seconds[\s\S]*format_media_duration_seconds/,
+    /MEDIA_METADATA_DURATION_LABEL_FIELDS[\s\S]*MEDIA_METADATA_DURATION_SECONDS_FIELDS[\s\S]*format_media_duration_seconds/,
     "duration metadata must accept explicit labels or numeric seconds",
   );
   assert.doesNotMatch(
