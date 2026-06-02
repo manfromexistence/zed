@@ -1,3 +1,20 @@
+[2026-06-03] - Panel Header Layout Polish
+
+CHANGED:
+- `crates\project_panel\src\project_panel.rs`, `crates\git_ui\src\git_panel.rs`, `crates\outline_panel\src\outline_panel.rs`, and `crates\collab_ui\src\collab_panel.rs` now keep side-panel split/close action groups fixed-size while letting titles, tabs, and search fields shrink safely in stacked side-panel layouts.
+- `crates\icon_picker\src\icon_picker.rs`, `crates\font_panel\src\font_panel.rs`, `crates\media_panel\src\media_panel.rs`, `crates\shadcn_ui_panel\src\shadcn_ui_panel.rs`, and `crates\agent_ui\src\dx_style_panel\panel_view.rs` now use flexible/truncated header titles with fixed action clusters so right-dock tools stay readable in compact stacks.
+- `script\dx-workspace-ui-state-source.test.ts` now guards the flexible-title/fixed-action contract across core left panels and top-right tool panels.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\project_panel\src\project_panel.rs crates\git_ui\src\git_panel.rs crates\outline_panel\src\outline_panel.rs crates\collab_ui\src\collab_panel.rs crates\icon_picker\src\icon_picker.rs crates\font_panel\src\font_panel.rs crates\media_panel\src\media_panel.rs crates\shadcn_ui_panel\src\shadcn_ui_panel.rs crates\agent_ui\src\dx_style_panel\panel_view.rs`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-workspace-ui-state-source.test.ts`
+- `git diff --check`
+
+NOTES:
+- Six existing GPT-5.5 xhigh subagents were used for read-only audits of Agent fullscreen UI, core left panel headers, sidebar chat/grid polish, right tool panels, source guards, and commit hygiene.
+- `just run` was not run because the current instruction says not to run it until explicitly requested.
+- `DX.txt` remains an unrelated scratch/editor change and is intentionally left untouched.
+
 [2026-06-03] - Core Left Panel Header Controls
 
 CHANGED:

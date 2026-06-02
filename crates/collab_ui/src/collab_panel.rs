@@ -57,6 +57,7 @@ fn side_panel_header_controls(id_prefix: &'static str) -> impl IntoElement {
     h_flex()
         .id(format!("{id_prefix}-side-panel-controls"))
         .items_center()
+        .flex_none()
         .gap_0p5()
         .child(
             IconButton::new(format!("{id_prefix}-split-side-panel"), IconName::SplitAlt)
@@ -2679,6 +2680,7 @@ impl CollabPanel {
                 h_flex()
                     .gap_1()
                     .items_center()
+                    .flex_1()
                     .min_w_0()
                     .child(
                         Icon::new(IconName::UserGroup)
@@ -2884,7 +2886,12 @@ impl CollabPanel {
                             .size(IconSize::Small)
                             .color(Color::Muted),
                     )
-                    .child(self.render_filter_input(&self.filter_editor, cx))
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .child(self.render_filter_input(&self.filter_editor, cx)),
+                    )
                     .when(has_query, |this| {
                         this.pr_2p5().child(
                             IconButton::new("clear_filter", IconName::Close)

@@ -57,13 +57,20 @@ fn panel_header() -> impl IntoElement {
         .child(
             h_flex()
                 .gap_1()
+                .flex_1()
+                .min_w_0()
                 .child(Icon::new(IconName::Sparkle).size(IconSize::Small))
-                .child(Label::new("Style Generators").size(LabelSize::Small)),
+                .child(
+                    Label::new("Style Generators")
+                        .size(LabelSize::Small)
+                        .truncate(),
+                ),
         )
         .child(
             h_flex()
                 .gap_1()
                 .items_center()
+                .flex_none()
                 .child(
                     IconButton::new("dx-style-panel-split-side-panel", IconName::SplitAlt)
                         .shape(ui::IconButtonShape::Square)

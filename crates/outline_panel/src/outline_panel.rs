@@ -113,6 +113,7 @@ fn side_panel_header_controls(id_prefix: &'static str) -> impl IntoElement {
     h_flex()
         .id(format!("{id_prefix}-side-panel-controls"))
         .items_center()
+        .flex_none()
         .gap_0p5()
         .child(
             IconButton::new(format!("{id_prefix}-split-side-panel"), IconName::SplitAlt)
@@ -4921,6 +4922,8 @@ impl OutlinePanel {
             .border_color(cx.theme().colors().border)
             .child(
                 h_flex()
+                    .flex_1()
+                    .min_w_0()
                     .w_full()
                     .gap_1p5()
                     .child(

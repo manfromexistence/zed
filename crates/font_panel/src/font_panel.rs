@@ -1259,12 +1259,15 @@ impl FontPanel {
                         h_flex()
                             .gap_1()
                             .items_center()
-                            .child(Label::new("Fonts").size(LabelSize::Small)),
+                            .flex_1()
+                            .min_w_0()
+                            .child(Label::new("Fonts").size(LabelSize::Small).truncate()),
                     )
                     .child(
                         h_flex()
                             .gap_1()
                             .items_center()
+                            .flex_none()
                             .child(
                                 IconButton::new("font-panel-split-side-panel", IconName::SplitAlt)
                                     .shape(ui::IconButtonShape::Square)

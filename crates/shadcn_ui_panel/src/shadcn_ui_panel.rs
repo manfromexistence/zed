@@ -1593,12 +1593,15 @@ impl Render for ShadcnUiPanel {
                                 h_flex()
                                     .gap_1()
                                     .items_center()
-                                    .child(Label::new("UI").size(LabelSize::Small)),
+                                    .flex_1()
+                                    .min_w_0()
+                                    .child(Label::new("UI").size(LabelSize::Small).truncate()),
                             )
                             .child(
                                 h_flex()
                                     .gap_1()
                                     .items_center()
+                                    .flex_none()
                                     .child(
                                         IconButton::new(
                                             "shadcn-ui-refresh-catalog",

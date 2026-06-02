@@ -77,6 +77,17 @@ const assertBefore = ({
   assert.ok(beforeIndex < afterIndex, message);
 };
 
+const sourceWindow = (
+  source: string,
+  needle: string,
+  before = 600,
+  after = 600,
+) => {
+  const index = source.indexOf(needle);
+  assert.ok(index >= 0, `missing ${needle}`);
+  return source.slice(Math.max(0, index - before), index + needle.length + after);
+};
+
 test("history entries cap workspace path materialization before collection", () => {
   assert.match(historyManager, /const MAX_HISTORY_ENTRY_PATHS: usize = 32;/);
 
@@ -497,6 +508,51 @@ test("core left panels expose split and close controls in native headers", () =>
   assert.match(collabDisabled, /Self::render_panel_header\(cx\)/);
   assert.match(collabSignedOut, /Self::render_panel_header\(cx\)/);
   assert.match(collabSignedIn, /side_panel_header_controls\("collab-panel"\)/);
+});
+
+test("panel headers keep titles flexible and side actions fixed", () => {
+  for (const [source, name] of [
+    [projectPanel, "project panel"],
+    [gitPanel, "git panel"],
+    [outlinePanel, "outline panel"],
+    [collabPanel, "collab panel"],
+  ] as const) {
+    assert.match(
+      source,
+      /\.id\(format!\("\{id_prefix\}-side-panel-controls"\)\)[\s\S]*?\.flex_none\(\)/,
+      `${name} side-panel actions should not shrink in narrow stacked panels`,
+    );
+  }
+
+  const projectHeader = functionBody(projectPanel, "render_panel_header");
+  const gitTabBar = functionBody(gitPanel, "render_tab_bar");
+  const outlineFooter = functionBody(outlinePanel, "render_filter_footer");
+  const collabHeader = functionBody(collabPanel, "render_panel_header");
+  const collabSignedIn = functionBody(collabPanel, "render_signed_in");
+
+  assert.match(projectHeader, /\.flex_1\(\)[\s\S]*?\.min_w_0\(\)/);
+  assert.match(gitTabBar, /\.h_full\(\)[\s\S]*?\.flex_1\(\)[\s\S]*?\.min_w_0\(\)/);
+  assert.match(outlineFooter, /\.flex_1\(\)[\s\S]*?\.min_w_0\(\)[\s\S]*?\.w_full\(\)/);
+  assert.match(collabHeader, /\.flex_1\(\)[\s\S]*?\.min_w_0\(\)/);
+  assert.match(
+    collabSignedIn,
+    /div\(\)[\s\S]*?\.flex_1\(\)[\s\S]*?\.min_w_0\(\)[\s\S]*?render_filter_input/,
+  );
+
+  for (const [source, actionId, label] of [
+    [iconPicker, "icon-picker-split-side-panel", "Icons"],
+    [fontPanel, "font-panel-split-side-panel", "Fonts"],
+    [mediaPanel, "media-panel-split-side-panel", "Media"],
+    [uiPanel, "shadcn-ui-split-side-panel", "UI"],
+    [stylePanel, "dx-style-panel-split-side-panel", "Style Generators"],
+  ] as const) {
+    assert.match(sourceWindow(source, actionId, 3600, 300), /\.flex_none\(\)/);
+    assert.match(sourceWindow(source, `Label::new("${label}")`), /\.truncate\(\)/);
+    assert.match(
+      sourceWindow(source, `Label::new("${label}")`),
+      /\.flex_1\(\)[\s\S]*?\.min_w_0\(\)/,
+    );
+  }
 });
 
 test("item project-handle collections cap visited items before pushing handles", () => {

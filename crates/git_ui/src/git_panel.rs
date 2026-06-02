@@ -169,6 +169,7 @@ fn side_panel_header_controls(id_prefix: &'static str) -> impl IntoElement {
     h_flex()
         .id(format!("{id_prefix}-side-panel-controls"))
         .items_center()
+        .flex_none()
         .gap_0p5()
         .pr_1()
         .child(
@@ -5122,6 +5123,7 @@ impl GitPanel {
                 h_flex()
                     .h_full()
                     .flex_1()
+                    .min_w_0()
                     .child(tab(
                         ElementId::Name("changes-tab".into()),
                         active_tab == GitPanelTab::Changes,

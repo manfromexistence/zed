@@ -2243,12 +2243,15 @@ impl Render for MediaPanel {
                                 h_flex()
                                     .gap_1()
                                     .items_center()
-                                    .child(Label::new("Media").size(LabelSize::Small)),
+                                    .flex_1()
+                                    .min_w_0()
+                                    .child(Label::new("Media").size(LabelSize::Small).truncate()),
                             )
                             .child(
                                 h_flex()
                                     .gap_1()
                                     .items_center()
+                                    .flex_none()
                                     .child(
                                         IconButton::new(
                                             "media-panel-refresh-remote",
