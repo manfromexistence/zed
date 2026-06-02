@@ -48,10 +48,10 @@ const MAX_RECENT_UI_ACTIONS: usize = 5;
 const MAX_PINNED_UI_ACTIONS: usize = 8;
 const PINNED_UI_ACTIONS_KEY: &str = "asset_panel_pinned_ui_v1";
 const PINNED_UI_ACTIONS_STATE_VERSION: u32 = 1;
-const CLEAN_STALE_UI_TOOLTIP: &str =
+const REMOVE_MISSING_UI_TOOLTIP: &str =
     "Remove UI entries whose source or registry files are missing. Available entries stay.";
 const CLEAR_RECENT_UI_TOOLTIP: &str =
-    "Clear recent UI actions. Pinned UI entries and the catalog stay.";
+    "Clear recent UI entries. Pinned UI entries and the catalog stay.";
 const CLEAR_PINNED_UI_TOOLTIP: &str =
     "Clear pinned UI entries. Recent UI actions and the catalog stay.";
 const PREVIEW_IMAGE_CACHE_INITIAL_CAPACITY: usize = MAX_SHADCN_ROWS * 4;
@@ -683,13 +683,13 @@ impl ShadcnUiPanel {
     fn clear_recent_ui_actions(&mut self, cx: &mut Context<Self>) {
         let cleared = self.recent_ui_actions.len();
         self.recent_ui_actions.clear();
-        self.status = Some(ui_cleared_history_status("recent UI action", cleared));
+        self.status = Some(ui_cleared_history_status("recent UI", cleared));
         cx.notify();
     }
 
-    fn remove_stale_recent_ui_actions(&mut self, cx: &mut Context<Self>) {
+    fn remove_missing_recent_ui_actions(&mut self, cx: &mut Context<Self>) {
         let removed = retain_available_ui_entries(&mut self.recent_ui_actions);
-        self.status = Some(ui_removed_stale_status("recent UI", removed));
+        self.status = Some(ui_removed_missing_status("recent UI", removed));
         cx.notify();
     }
 
@@ -715,25 +715,25 @@ impl ShadcnUiPanel {
     fn clear_pinned_ui_actions(&mut self, cx: &mut Context<Self>) {
         let cleared = self.pinned_ui_actions.len();
         self.pinned_ui_actions.clear();
-        self.status = Some(ui_cleared_history_status("pinned UI action", cleared));
+        self.status = Some(ui_cleared_history_status("pinned UI", cleared));
         self.persist_pinned_ui_actions(cx);
         cx.notify();
     }
 
-    fn remove_stale_pinned_ui_actions(&mut self, cx: &mut Context<Self>) {
+    fn remove_missing_pinned_ui_actions(&mut self, cx: &mut Context<Self>) {
         let removed = retain_available_ui_entries(&mut self.pinned_ui_actions);
-        self.status = Some(ui_removed_stale_status("pinned UI", removed));
+        self.status = Some(ui_removed_missing_status("pinned UI", removed));
         if removed > 0 {
             self.persist_pinned_ui_actions(cx);
         }
         cx.notify();
     }
 
-    fn remove_stale_ui_history(&mut self, cx: &mut Context<Self>) {
+    fn remove_missing_ui_history(&mut self, cx: &mut Context<Self>) {
         let recent_removed = retain_available_ui_entries(&mut self.recent_ui_actions);
         let pinned_removed = retain_available_ui_entries(&mut self.pinned_ui_actions);
         let removed = recent_removed + pinned_removed;
-        self.status = Some(ui_removed_stale_status("UI", removed));
+        self.status = Some(ui_removed_missing_status("UI", removed));
         if pinned_removed > 0 {
             self.persist_pinned_ui_actions(cx);
         }
@@ -1108,14 +1108,14 @@ impl ShadcnUiPanel {
             return None;
         }
 
-        let stale_count = self
+        let missing_count = self
             .recent_ui_actions
             .iter()
-            .filter(|entry| self.ui_history_entry_stale(entry))
+            .filter(|entry| self.ui_history_entry_missing(entry))
             .count();
         let availability_label =
-            ui_history_availability_label(self.recent_ui_actions.len(), stale_count);
-        let health_color = if stale_count > 0 {
+            ui_history_availability_label(self.recent_ui_actions.len(), missing_count);
+        let health_color = if missing_count > 0 {
             Color::Warning
         } else {
             Color::Muted
@@ -1158,14 +1158,14 @@ impl ShadcnUiPanel {
                         .child(
                             h_flex()
                                 .gap_1()
-                                .when(stale_count > 0, |this| {
+                                .when(missing_count > 0, |this| {
                                     this.child(
-                                        Button::new("shadcn-ui-remove-stale-recent", "Remove")
+                                        Button::new("shadcn-ui-remove-missing-recent", "Remove")
                                             .style(ButtonStyle::Subtle)
                                             .size(ButtonSize::Compact)
-                                            .tooltip(Tooltip::text(CLEAN_STALE_UI_TOOLTIP))
+                                            .tooltip(Tooltip::text(REMOVE_MISSING_UI_TOOLTIP))
                                             .on_click(cx.listener(|panel, _, _, cx| {
-                                                panel.remove_stale_recent_ui_actions(cx);
+                                                panel.remove_missing_recent_ui_actions(cx);
                                             })),
                                     )
                                 })
@@ -1190,14 +1190,14 @@ impl ShadcnUiPanel {
             return None;
         }
 
-        let stale_count = self
+        let missing_count = self
             .pinned_ui_actions
             .iter()
-            .filter(|entry| self.ui_history_entry_stale(entry))
+            .filter(|entry| self.ui_history_entry_missing(entry))
             .count();
         let availability_label =
-            ui_history_availability_label(self.pinned_ui_actions.len(), stale_count);
-        let health_color = if stale_count > 0 {
+            ui_history_availability_label(self.pinned_ui_actions.len(), missing_count);
+        let health_color = if missing_count > 0 {
             Color::Warning
         } else {
             Color::Muted
@@ -1240,14 +1240,14 @@ impl ShadcnUiPanel {
                         .child(
                             h_flex()
                                 .gap_1()
-                                .when(stale_count > 0, |this| {
+                                .when(missing_count > 0, |this| {
                                     this.child(
-                                        Button::new("shadcn-ui-remove-stale-pinned", "Remove")
+                                        Button::new("shadcn-ui-remove-missing-pinned", "Remove")
                                             .style(ButtonStyle::Subtle)
                                             .size(ButtonSize::Compact)
-                                            .tooltip(Tooltip::text(CLEAN_STALE_UI_TOOLTIP))
+                                            .tooltip(Tooltip::text(REMOVE_MISSING_UI_TOOLTIP))
                                             .on_click(cx.listener(|panel, _, _, cx| {
-                                                panel.remove_stale_pinned_ui_actions(cx);
+                                                panel.remove_missing_pinned_ui_actions(cx);
                                             })),
                                     )
                                 })
@@ -1291,7 +1291,7 @@ impl ShadcnUiPanel {
         let item = entry.item;
         let pin_item = item.clone();
         let remove_item = item.clone();
-        let source_available = !self.ui_item_stale(&item);
+        let source_available = !self.ui_item_missing(&item);
         let pin_label = if pinned {
             if source_available { "Unpin" } else { "Remove" }
         } else {
@@ -1469,11 +1469,11 @@ impl ShadcnUiPanel {
             .into_any_element()
     }
 
-    fn ui_history_entry_stale(&self, entry: &RecentUiEntry) -> bool {
-        self.ui_item_stale(&entry.item)
+    fn ui_history_entry_missing(&self, entry: &RecentUiEntry) -> bool {
+        self.ui_item_missing(&entry.item)
     }
 
-    fn ui_item_stale(&self, item: &CatalogItem) -> bool {
+    fn ui_item_missing(&self, item: &CatalogItem) -> bool {
         let payload = self.payload_for_item(item);
         !item_source_available(item, &payload)
     }
@@ -1573,11 +1573,11 @@ impl Render for ShadcnUiPanel {
         }
         content_rows.extend(item_rows);
         let is_empty = content_rows.is_empty() && total_matches == 0;
-        let stale_history_count = self
+        let missing_history_count = self
             .pinned_ui_actions
             .iter()
             .chain(self.recent_ui_actions.iter())
-            .filter(|entry| self.ui_history_entry_stale(entry))
+            .filter(|entry| self.ui_history_entry_missing(entry))
             .count();
 
         v_flex()
@@ -1623,18 +1623,18 @@ impl Render for ShadcnUiPanel {
                                             }),
                                         ),
                                     )
-                                    .when(stale_history_count > 0, |this| {
+                                    .when(missing_history_count > 0, |this| {
                                         this.child(
                                             IconButton::new(
-                                                "shadcn-ui-remove-stale-history",
+                                                "shadcn-ui-remove-missing-history",
                                                 IconName::Trash,
                                             )
                                             .shape(ui::IconButtonShape::Square)
                                             .icon_size(IconSize::Small)
-                                            .tooltip(Tooltip::text(CLEAN_STALE_UI_TOOLTIP))
+                                            .tooltip(Tooltip::text(REMOVE_MISSING_UI_TOOLTIP))
                                             .on_click(
                                                 cx.listener(|panel, _, _, cx| {
-                                                    panel.remove_stale_ui_history(cx);
+                                                    panel.remove_missing_ui_history(cx);
                                                 }),
                                             ),
                                         )
@@ -1923,7 +1923,7 @@ fn ui_history_primary_tooltip(
     source_available: bool,
 ) -> &'static str {
     if can_insert && !source_available {
-        "Source or registry manifest is missing. Remove this row or use Remove."
+        "Source file or registry manifest is missing. Remove this entry from history."
     } else if install_only {
         "Install writes missing registry files and keeps existing files"
     } else if can_insert {
@@ -1935,7 +1935,7 @@ fn ui_history_primary_tooltip(
 
 fn ui_history_preview_tooltip(can_insert: bool, source_available: bool) -> &'static str {
     if can_insert && !source_available {
-        "Source or registry manifest is missing. Remove this row or use Remove."
+        "Source file or registry manifest is missing. Remove this entry from history."
     } else {
         "Preview in Web Preview"
     }
@@ -1951,7 +1951,7 @@ fn ui_history_pin_tooltip(pinned: bool, source_available: bool) -> &'static str 
     } else if source_available {
         "Pin to the UI working set"
     } else {
-        "Source or registry manifest is missing. Remove this row or use Remove."
+        "Source file or registry manifest is missing. Remove this entry from history."
     }
 }
 
@@ -3534,7 +3534,7 @@ fn retain_available_ui_entries(entries: &mut VecDeque<RecentUiEntry>) -> usize {
     before.saturating_sub(entries.len())
 }
 
-fn ui_removed_stale_status(section: &str, removed: usize) -> SharedString {
+fn ui_removed_missing_status(section: &str, removed: usize) -> SharedString {
     match removed {
         0 => format!("No missing {section} entries").into(),
         1 => format!("Removed 1 missing {section} entry").into(),
@@ -3550,12 +3550,12 @@ fn ui_cleared_history_status(section: &str, cleared: usize) -> SharedString {
     }
 }
 
-fn ui_history_availability_label(total: usize, stale: usize) -> SharedString {
-    let available = total.saturating_sub(stale);
-    if stale == 0 {
+fn ui_history_availability_label(total: usize, missing: usize) -> SharedString {
+    let available = total.saturating_sub(missing);
+    if missing == 0 {
         format!("{available} available").into()
     } else {
-        format!("{available} available, {stale} missing").into()
+        format!("{available} available, {missing} missing").into()
     }
 }
 

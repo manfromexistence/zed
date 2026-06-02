@@ -562,10 +562,10 @@ test("core left panels expose split and close controls in native headers", () =>
   assert.match(dock, /IconName::SplitAlt/);
   assert.match(dock, /IconName::Close/);
   assert.match(dock, /let can_split = workspace[\s\S]*?\.upgrade\(\)[\s\S]*?\.is_some_and/);
-  assert.match(dock, /\.disabled\(!can_split\)/);
   assert.match(dock, /Open another panel to split/);
-  assert.match(dock, /let can_close = workspace[\s\S]*?\.upgrade\(\)[\s\S]*?\.is_some_and/);
-  assert.match(dock, /\.disabled\(!can_close\)/);
+  assert.match(dock, /let panel_is_registered = workspace[\s\S]*?\.upgrade\(\)[\s\S]*?\.is_some_and/);
+  assert.doesNotMatch(dock, /\.disabled\(!can_split\)|\.disabled\(!panel_is_registered\)/);
+  assert.match(dock, /Panel is not available/);
   assert.match(dock, /workspace\.split_side_panel_by_id\(panel_id, window, cx\)/);
   assert.match(dock, /workspace\.close_side_panel_by_id\(panel_id, window, cx\)/);
   assert.match(dock, /pub fn can_split_panel_by_id/);
@@ -687,24 +687,31 @@ test("recent tool panels use professional visible copy", () => {
 
   assert.match(mediaPanel, /media_history_availability_label/);
   assert.match(mediaPanel, /"Opening preview for "/);
-  assert.match(mediaPanel, /Button::new\("media-panel-remove-stale-recent", "Remove"\)/);
-  assert.match(mediaPanel, /Button::new\("media-panel-remove-stale-pinned", "Remove"\)/);
+  assert.match(mediaPanel, /Button::new\("media-panel-remove-missing-recent", "Remove"\)/);
+  assert.match(mediaPanel, /Button::new\("media-panel-remove-missing-pinned", "Remove"\)/);
+  assert.match(mediaPanel, /"media-panel-remove-missing-history"/);
   assert.match(mediaPanel, /\{available\} available/);
-  assert.match(mediaPanel, /\{available\} available, \{stale\} missing/);
+  assert.match(mediaPanel, /\{available\} available, \{missing\} missing/);
   assert.match(mediaPanel, /No missing \{section\} entries/);
-  assert.doesNotMatch(mediaPanel, /Previewing |"Clean"|use Clean|stale \{section\}|\{ready\} ready|\{stale\} stale|available \//);
+  assert.match(mediaPanel, /open remote sources/);
+  assert.match(mediaPanel, /Clear recent media entries/);
+  assert.match(mediaPanel, /Remove this entry from history/);
+  assert.doesNotMatch(mediaPanel, /Previewing |"Clean"|use Clean|use Remove|CLEAN_STALE|remove-stale|\bstale\b|No-key|No no-key|no-key|recent media actions|\{ready\} ready|available \//);
 
   assert.match(uiPanel, /"Preview in Web Preview"/);
   assert.match(uiPanel, /ui_history_availability_label/);
   assert.match(uiPanel, /"Opening preview for "/);
-  assert.match(uiPanel, /Button::new\("shadcn-ui-remove-stale-recent", "Remove"\)/);
-  assert.match(uiPanel, /Button::new\("shadcn-ui-remove-stale-pinned", "Remove"\)/);
+  assert.match(uiPanel, /Button::new\("shadcn-ui-remove-missing-recent", "Remove"\)/);
+  assert.match(uiPanel, /Button::new\("shadcn-ui-remove-missing-pinned", "Remove"\)/);
+  assert.match(uiPanel, /"shadcn-ui-remove-missing-history"/);
   assert.match(uiPanel, /\{available\} available/);
-  assert.match(uiPanel, /\{available\} available, \{stale\} missing/);
+  assert.match(uiPanel, /\{available\} available, \{missing\} missing/);
   assert.match(uiPanel, /No missing \{section\} entries/);
   assert.match(uiPanel, /Changes queued/);
   assert.match(uiPanel, /UI registry preview/);
-  assert.doesNotMatch(uiPanel, /Previewing |"Clean"|use Clean|stale \{section\}|Saved changes|The UI registry is ready|Preview in WebPreview|\{ready\} ready|\{stale\} stale|available \//);
+  assert.match(uiPanel, /Clear recent UI entries/);
+  assert.match(uiPanel, /Remove this entry from history/);
+  assert.doesNotMatch(uiPanel, /Previewing |"Clean"|use Clean|use Remove|CLEAN_STALE|remove-stale|\bstale\b|recent UI action|pinned UI action|Saved changes|The UI registry is ready|Preview in WebPreview|\{ready\} ready|available \//);
 });
 
 test("item project-handle collections cap visited items before pushing handles", () => {

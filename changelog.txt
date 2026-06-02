@@ -1,3 +1,22 @@
+[2026-06-03] - Media And UI Panel Missing-Source Copy
+
+CHANGED:
+- `crates\media_panel\src\media_panel.rs` now names missing-source cleanup actions, helpers, and status text with `remove_missing` / `missing` terminology instead of stale/Clean wording, and its remote media browser copy uses open-provider language instead of no-key implementation jargon.
+- `crates\shadcn_ui_panel\src\shadcn_ui_panel.rs` now uses the same missing-source terminology for recent, pinned, and all-history UI cleanup actions.
+- `script\dx-workspace-ui-state-source.test.ts` now guards the `remove-missing` action ids and rejects stale/CLEAN/no-key wording in the Media and UI panel source slices.
+- `todo.txt` records the focused Media/UI language polish for handoff.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\media_panel\src\media_panel.rs crates\shadcn_ui_panel\src\shadcn_ui_panel.rs crates\workspace\src\dock.rs`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-workspace-ui-state-source.test.ts` with 18/18 passing.
+- `git diff --check -- crates\media_panel\src\media_panel.rs crates\shadcn_ui_panel\src\shadcn_ui_panel.rs crates\workspace\src\dock.rs script\dx-workspace-ui-state-source.test.ts todo.txt changelog.txt`
+- Focused conflict-marker scan returned no matches across the touched files.
+- Focused copy-drift scan returned no matches for stale/CLEAN/no-key/use-Remove wording in Media and UI panel source.
+
+NOTES:
+- `just run` was not run because the latest instruction explicitly forbids it until the user says so.
+- `DX.txt` remains an unrelated scratch/editor change and is intentionally left untouched.
+
 [2026-06-03] - Core Side Panel Action Visibility
 
 CHANGED:

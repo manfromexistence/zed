@@ -50,10 +50,10 @@ const MAX_RECENT_MEDIA_ACTIONS: usize = 5;
 const MAX_PINNED_MEDIA_ACTIONS: usize = 8;
 const PINNED_MEDIA_ACTIONS_KEY: &str = "asset_panel_pinned_media_v1";
 const PINNED_MEDIA_ACTIONS_STATE_VERSION: u32 = 1;
-const CLEAN_STALE_MEDIA_TOOLTIP: &str =
+const REMOVE_MISSING_MEDIA_TOOLTIP: &str =
     "Remove media entries whose source files are missing. Available entries stay.";
 const CLEAR_RECENT_MEDIA_TOOLTIP: &str =
-    "Clear recent media actions. Pinned media, local index, and remote cache stay.";
+    "Clear recent media entries. Pinned media, local index, and remote cache stay.";
 const CLEAR_PINNED_MEDIA_TOOLTIP: &str =
     "Clear pinned media. Recent media, local index, and remote cache stay.";
 const OPENVERSE_RESULT_LIMIT: usize = 90;
@@ -1136,9 +1136,9 @@ impl MediaPanel {
         cx.notify();
     }
 
-    fn remove_stale_recent_media(&mut self, cx: &mut Context<Self>) {
+    fn remove_missing_recent_media(&mut self, cx: &mut Context<Self>) {
         let removed = retain_available_media_entries(&mut self.recent_media);
-        self.status = Some(media_removed_stale_status("recent media", removed));
+        self.status = Some(media_removed_missing_status("recent media", removed));
         cx.notify();
     }
 
@@ -1169,20 +1169,20 @@ impl MediaPanel {
         cx.notify();
     }
 
-    fn remove_stale_pinned_media(&mut self, cx: &mut Context<Self>) {
+    fn remove_missing_pinned_media(&mut self, cx: &mut Context<Self>) {
         let removed = retain_available_media_entries(&mut self.pinned_media);
-        self.status = Some(media_removed_stale_status("pinned media", removed));
+        self.status = Some(media_removed_missing_status("pinned media", removed));
         if removed > 0 {
             self.persist_pinned_media(cx);
         }
         cx.notify();
     }
 
-    fn remove_stale_media_history(&mut self, cx: &mut Context<Self>) {
+    fn remove_missing_media_history(&mut self, cx: &mut Context<Self>) {
         let recent_removed = retain_available_media_entries(&mut self.recent_media);
         let pinned_removed = retain_available_media_entries(&mut self.pinned_media);
         let removed = recent_removed + pinned_removed;
-        self.status = Some(media_removed_stale_status("media", removed));
+        self.status = Some(media_removed_missing_status("media", removed));
         if pinned_removed > 0 {
             self.persist_pinned_media(cx);
         }
@@ -1693,14 +1693,14 @@ impl MediaPanel {
             return None;
         }
 
-        let stale_count = self
+        let missing_count = self
             .recent_media
             .iter()
-            .filter(|entry| media_history_entry_stale(entry))
+            .filter(|entry| media_history_entry_missing(entry))
             .count();
         let availability_label =
-            media_history_availability_label(self.recent_media.len(), stale_count);
-        let health_color = if stale_count > 0 {
+            media_history_availability_label(self.recent_media.len(), missing_count);
+        let health_color = if missing_count > 0 {
             Color::Warning
         } else {
             Color::Muted
@@ -1742,14 +1742,14 @@ impl MediaPanel {
                         .child(
                             h_flex()
                                 .gap_1()
-                                .when(stale_count > 0, |this| {
+                                .when(missing_count > 0, |this| {
                                     this.child(
-                                        Button::new("media-panel-remove-stale-recent", "Remove")
+                                        Button::new("media-panel-remove-missing-recent", "Remove")
                                             .style(ButtonStyle::Subtle)
                                             .size(ButtonSize::Compact)
-                                            .tooltip(Tooltip::text(CLEAN_STALE_MEDIA_TOOLTIP))
+                                            .tooltip(Tooltip::text(REMOVE_MISSING_MEDIA_TOOLTIP))
                                             .on_click(cx.listener(|panel, _, _, cx| {
-                                                panel.remove_stale_recent_media(cx);
+                                                panel.remove_missing_recent_media(cx);
                                             })),
                                     )
                                 })
@@ -1774,14 +1774,14 @@ impl MediaPanel {
             return None;
         }
 
-        let stale_count = self
+        let missing_count = self
             .pinned_media
             .iter()
-            .filter(|entry| media_history_entry_stale(entry))
+            .filter(|entry| media_history_entry_missing(entry))
             .count();
         let availability_label =
-            media_history_availability_label(self.pinned_media.len(), stale_count);
-        let health_color = if stale_count > 0 {
+            media_history_availability_label(self.pinned_media.len(), missing_count);
+        let health_color = if missing_count > 0 {
             Color::Warning
         } else {
             Color::Muted
@@ -1824,14 +1824,14 @@ impl MediaPanel {
                         .child(
                             h_flex()
                                 .gap_1()
-                                .when(stale_count > 0, |this| {
+                                .when(missing_count > 0, |this| {
                                     this.child(
-                                        Button::new("media-panel-remove-stale-pinned", "Remove")
+                                        Button::new("media-panel-remove-missing-pinned", "Remove")
                                             .style(ButtonStyle::Subtle)
                                             .size(ButtonSize::Compact)
-                                            .tooltip(Tooltip::text(CLEAN_STALE_MEDIA_TOOLTIP))
+                                            .tooltip(Tooltip::text(REMOVE_MISSING_MEDIA_TOOLTIP))
                                             .on_click(cx.listener(|panel, _, _, cx| {
-                                                panel.remove_stale_pinned_media(cx);
+                                                panel.remove_missing_pinned_media(cx);
                                             })),
                                     )
                                 })
@@ -1875,7 +1875,7 @@ impl MediaPanel {
         let source_label = recent_media_source_label(&entry.source);
         let source_kind = recent_media_source_kind(&entry.source);
         let source_health = recent_media_source_health(&entry.source);
-        let source_available = !media_history_entry_stale(&entry);
+        let source_available = !media_history_entry_missing(&entry);
         let pin_label = if pinned {
             if source_available { "Unpin" } else { "Remove" }
         } else {
@@ -2219,11 +2219,11 @@ impl Render for MediaPanel {
         } else {
             "No matching media"
         };
-        let stale_history_count = self
+        let missing_history_count = self
             .pinned_media
             .iter()
             .chain(self.recent_media.iter())
-            .filter(|entry| media_history_entry_stale(entry))
+            .filter(|entry| media_history_entry_missing(entry))
             .count();
 
         v_flex()
@@ -2268,18 +2268,18 @@ impl Render for MediaPanel {
                                             }),
                                         ),
                                     )
-                                    .when(stale_history_count > 0, |this| {
+                                    .when(missing_history_count > 0, |this| {
                                         this.child(
                                             IconButton::new(
-                                                "media-panel-remove-stale-history",
+                                                "media-panel-remove-missing-history",
                                                 IconName::Trash,
                                             )
                                             .shape(ui::IconButtonShape::Square)
                                             .icon_size(IconSize::Small)
-                                            .tooltip(Tooltip::text(CLEAN_STALE_MEDIA_TOOLTIP))
+                                            .tooltip(Tooltip::text(REMOVE_MISSING_MEDIA_TOOLTIP))
                                             .on_click(
                                                 cx.listener(|panel, _, _, cx| {
-                                                    panel.remove_stale_media_history(cx);
+                                                    panel.remove_missing_media_history(cx);
                                                 }),
                                             ),
                                         )
@@ -2526,7 +2526,7 @@ fn matches_ascii_ignore_case(value: &str, candidates: &[&str]) -> bool {
 fn remote_browser_description(provider_count: usize, filter: MediaKindFilter) -> SharedString {
     let kind_label = filter.label();
     let mut text = String::with_capacity(72 + 6 + kind_label.len());
-    let _ = write!(text, "{provider_count} no-key remote sources for ");
+    let _ = write!(text, "{provider_count} open remote sources for ");
     push_lowercase(&mut text, kind_label);
     append_remote_browser_provider_names(&mut text, filter, MAX_REMOTE_BROWSER_PROVIDER_NAMES);
     text.into()
@@ -2537,7 +2537,7 @@ fn remote_browser_tooltip(provider_count: usize, filter: MediaKindFilter) -> Sha
     let mut text = String::with_capacity(128);
     let _ = write!(
         text,
-        "Open provider search pages for {provider_count} no-key "
+        "Open provider search pages for {provider_count} open "
     );
     push_lowercase(&mut text, kind_label);
     text.push_str(" sources");
@@ -2625,13 +2625,13 @@ fn recent_media_source_available(source: &RecentMediaSource) -> bool {
     }
 }
 
-fn media_history_entry_stale(entry: &RecentMediaEntry) -> bool {
+fn media_history_entry_missing(entry: &RecentMediaEntry) -> bool {
     !recent_media_source_available(&entry.source)
 }
 
 fn retain_available_media_entries(entries: &mut VecDeque<RecentMediaEntry>) -> usize {
     let before = entries.len();
-    entries.retain(|entry| !media_history_entry_stale(entry));
+    entries.retain(|entry| !media_history_entry_missing(entry));
     before.saturating_sub(entries.len())
 }
 
@@ -2639,7 +2639,7 @@ fn media_history_preview_tooltip(source_available: bool) -> &'static str {
     if source_available {
         "Preview media"
     } else {
-        "Source file is missing. Remove this row or use Remove."
+        "Source file is missing. Remove this entry from history."
     }
 }
 
@@ -2647,7 +2647,7 @@ fn media_history_insert_tooltip(source_available: bool) -> &'static str {
     if source_available {
         "Insert media into the active editor"
     } else {
-        "Source file is missing. Remove this row or use Remove."
+        "Source file is missing. Remove this entry from history."
     }
 }
 
@@ -2661,11 +2661,11 @@ fn media_history_pin_tooltip(pinned: bool, source_available: bool) -> &'static s
     } else if source_available {
         "Pin to the media working set"
     } else {
-        "Source file is missing. Remove this row or use Remove."
+        "Source file is missing. Remove this entry from history."
     }
 }
 
-fn media_removed_stale_status(section: &str, removed: usize) -> SharedString {
+fn media_removed_missing_status(section: &str, removed: usize) -> SharedString {
     match removed {
         0 => format!("No missing {section} entries").into(),
         1 => format!("Removed 1 missing {section} entry").into(),
@@ -2681,12 +2681,12 @@ fn media_cleared_history_status(section: &str, cleared: usize) -> SharedString {
     }
 }
 
-fn media_history_availability_label(total: usize, stale: usize) -> SharedString {
-    let available = total.saturating_sub(stale);
-    if stale == 0 {
+fn media_history_availability_label(total: usize, missing: usize) -> SharedString {
+    let available = total.saturating_sub(missing);
+    if missing == 0 {
         format!("{available} available").into()
     } else {
-        format!("{available} available, {stale} missing").into()
+        format!("{available} available, {missing} missing").into()
     }
 }
 
@@ -4414,7 +4414,7 @@ fn remote_media_search_html(query: &str, filter: MediaKindFilter) -> String {
     <main>
       <header>
         <h1>Remote media</h1>
-        <p>Search no-key open media APIs first, with every configured provider one click away.</p>
+        <p>Search open media providers first, with every configured source one click away.</p>
       </header>
       <section class="toolbar">
         <input id="query" value="{query_attr}" />
@@ -4702,7 +4702,7 @@ fn remote_media_search_html(query: &str, filter: MediaKindFilter) -> String {
       grid.innerHTML = items.map(card).join("");
       status.textContent = items.length
         ? `Showing ${{items.length}} remote assets. Use provider chips for deeper searches.`
-        : "No no-key API results found. Try the provider chips above.";
+        : "No remote media results found. Try another provider or search term.";
     }}
 
     document.getElementById("search").addEventListener("click", runSearch);
@@ -5350,7 +5350,7 @@ fn free_media_sources() -> &'static [FreeMediaSource] {
         FreeMediaSource {
             id: "openverse",
             name: "Openverse",
-            description: "No-key Creative Commons image and audio search; broadest safe default",
+            description: "Creative Commons image and audio search; no API key required",
             homepage: "https://openverse.org/",
             image_search: "https://openverse.org/search/image?q={query}",
             video_search: None,
@@ -5359,7 +5359,7 @@ fn free_media_sources() -> &'static [FreeMediaSource] {
         FreeMediaSource {
             id: "internet-archive",
             name: "Internet Archive",
-            description: "No-key public-domain and Creative Commons images, videos, and audio",
+            description: "Public-domain and Creative Commons images, videos, and audio",
             homepage: "https://archive.org/",
             image_search: "https://archive.org/search?query={query}%20AND%20mediatype%3Aimage",
             video_search: Some(
@@ -5372,7 +5372,7 @@ fn free_media_sources() -> &'static [FreeMediaSource] {
         FreeMediaSource {
             id: "wikimedia",
             name: "Wikimedia",
-            description: "No-key Wikimedia Commons media search",
+            description: "Wikimedia Commons media search",
             homepage: "https://commons.wikimedia.org/",
             image_search: "https://commons.wikimedia.org/w/index.php?search={query}&title=Special:MediaSearch&type=image",
             video_search: Some(
@@ -5385,7 +5385,7 @@ fn free_media_sources() -> &'static [FreeMediaSource] {
         FreeMediaSource {
             id: "met",
             name: "The Met",
-            description: "No-key public-domain and open-access museum images",
+            description: "Public-domain and open-access museum images",
             homepage: "https://www.metmuseum.org/art/collection",
             image_search: "https://www.metmuseum.org/art/collection/search?q={query}&showOnly=openAccess",
             video_search: None,
@@ -5394,7 +5394,7 @@ fn free_media_sources() -> &'static [FreeMediaSource] {
         FreeMediaSource {
             id: "cleveland-art",
             name: "Cleveland Museum",
-            description: "No-key CC0 artwork images from the Cleveland Museum of Art API",
+            description: "CC0 artwork images from the Cleveland Museum of Art API",
             homepage: "https://www.clevelandart.org/open-access",
             image_search: "https://www.clevelandart.org/art/collection/search?search={query}&open_access=1",
             video_search: None,
@@ -5403,7 +5403,7 @@ fn free_media_sources() -> &'static [FreeMediaSource] {
         FreeMediaSource {
             id: "nasa",
             name: "NASA",
-            description: "No-key NASA image and video archive",
+            description: "NASA image and video archive",
             homepage: "https://images.nasa.gov/",
             image_search: "https://images.nasa.gov/search?q={query}&media=image",
             video_search: Some("https://images.nasa.gov/search?q={query}&media=video"),
@@ -5412,7 +5412,7 @@ fn free_media_sources() -> &'static [FreeMediaSource] {
         FreeMediaSource {
             id: "loc",
             name: "Library of Congress",
-            description: "No-key public-domain historical images and collections",
+            description: "Public-domain historical images and collections",
             homepage: "https://www.loc.gov/pictures/",
             image_search: "https://www.loc.gov/pictures/search/?q={query}",
             video_search: Some(
