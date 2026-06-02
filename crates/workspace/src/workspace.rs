@@ -1372,6 +1372,7 @@ pub struct Workspace {
     weak_self: WeakEntity<Self>,
     workspace_actions: Vec<Box<dyn Fn(Div, &Workspace, &mut Window, &mut Context<Self>) -> Div>>,
     zoomed: Option<AnyWeakView>,
+    zoomed_is_agent_panel: bool,
     previous_dock_drag_coordinates: Option<Point<Pixels>>,
     zoomed_position: Option<DockPosition>,
     center: PaneGroup,
@@ -1815,6 +1816,7 @@ impl Workspace {
         Workspace {
             weak_self: weak_handle.clone(),
             zoomed: None,
+            zoomed_is_agent_panel: false,
             zoomed_position: None,
             previous_dock_drag_coordinates: None,
             center,
@@ -4649,6 +4651,7 @@ impl Workspace {
 
         if self.zoomed_position != dock_to_reveal {
             self.zoomed = None;
+            self.zoomed_is_agent_panel = false;
             self.zoomed_position = None;
             cx.emit(Event::ZoomChanged);
         }
@@ -5597,6 +5600,7 @@ impl Workspace {
         } else {
             self.zoomed = None;
         }
+        self.zoomed_is_agent_panel = false;
         self.zoomed_position = None;
         cx.emit(Event::ZoomChanged);
         self.update_active_view_for_followers(window, cx);
@@ -5732,6 +5736,7 @@ impl Workspace {
                     pane.update(cx, |pane, cx| pane.set_zoomed(true, cx));
                     if pane.read(cx).has_focus(window, cx) {
                         self.zoomed = Some(pane.downgrade().into());
+                        self.zoomed_is_agent_panel = false;
                         self.zoomed_position = None;
                         cx.emit(Event::ZoomChanged);
                     }
@@ -5742,6 +5747,7 @@ impl Workspace {
                 pane.update(cx, |pane, cx| pane.set_zoomed(false, cx));
                 if self.zoomed_position.is_none() {
                     self.zoomed = None;
+                    self.zoomed_is_agent_panel = false;
                     cx.emit(Event::ZoomChanged);
                 }
                 cx.notify();
@@ -8166,6 +8172,10 @@ impl Workspace {
         self.zoomed.as_ref()
     }
 
+    pub(crate) fn zoomed_is_agent_panel(&self) -> bool {
+        self.zoomed_is_agent_panel
+    }
+
     pub fn activate_next_window(&mut self, cx: &mut Context<Self>) {
         let Some(current_window_id) = cx.active_window().map(|a| a.window_id()) else {
             return;
@@ -9194,7 +9204,9 @@ impl Render for Workspace {
                                     .inset_0()
                                     .shadow_lg();
 
-                                if !WorkspaceSettings::get_global(cx).zoomed_padding {
+                                if !WorkspaceSettings::get_global(cx).zoomed_padding
+                                    || self.zoomed_is_agent_panel
+                                {
                                     return Some(div);
                                 }
 
@@ -10862,11 +10874,35 @@ pub fn client_side_decorations(
     cx: &mut App,
     border_radius_tiling: Tiling,
 ) -> Stateful<Div> {
+    client_side_decorations_with_content_flush(
+        element,
+        window,
+        cx,
+        border_radius_tiling,
+        Tiling::default(),
+    )
+}
+
+/// Add client-side decorations while allowing selected content edges to fill
+/// the window decoration gutter.
+pub fn client_side_decorations_with_content_flush(
+    element: impl IntoElement,
+    window: &mut Window,
+    cx: &mut App,
+    border_radius_tiling: Tiling,
+    content_flush_tiling: Tiling,
+) -> Stateful<Div> {
     const BORDER_SIZE: Pixels = px(1.0);
     let decorations = window.window_decorations();
     let tiling = match decorations {
         Decorations::Server => Tiling::default(),
         Decorations::Client { tiling } => tiling,
+    };
+    let content_tiling = Tiling {
+        top: tiling.top || content_flush_tiling.top,
+        left: tiling.left || content_flush_tiling.left,
+        right: tiling.right || content_flush_tiling.right,
+        bottom: tiling.bottom || content_flush_tiling.bottom,
     };
 
     match decorations {
@@ -10911,16 +10947,16 @@ pub fn client_side_decorations(
                         || border_radius_tiling.left),
                     |div| div.rounded_bl(theme::CLIENT_SIDE_DECORATION_ROUNDING),
                 )
-                .when(!tiling.top, |div| {
+                .when(!content_tiling.top, |div| {
                     div.pt(theme::CLIENT_SIDE_DECORATION_SHADOW)
                 })
-                .when(!tiling.bottom, |div| {
+                .when(!content_tiling.bottom, |div| {
                     div.pb(theme::CLIENT_SIDE_DECORATION_SHADOW)
                 })
-                .when(!tiling.left, |div| {
+                .when(!content_tiling.left, |div| {
                     div.pl(theme::CLIENT_SIDE_DECORATION_SHADOW)
                 })
-                .when(!tiling.right, |div| {
+                .when(!content_tiling.right, |div| {
                     div.pr(theme::CLIENT_SIDE_DECORATION_SHADOW)
                 })
                 .on_mouse_move(move |e, window, cx| {
@@ -10993,10 +11029,10 @@ pub fn client_side_decorations(
                                 || border_radius_tiling.left),
                             |div| div.rounded_bl(theme::CLIENT_SIDE_DECORATION_ROUNDING),
                         )
-                        .when(!tiling.top, |div| div.border_t(BORDER_SIZE))
-                        .when(!tiling.bottom, |div| div.border_b(BORDER_SIZE))
-                        .when(!tiling.left, |div| div.border_l(BORDER_SIZE))
-                        .when(!tiling.right, |div| div.border_r(BORDER_SIZE))
+                        .when(!content_tiling.top, |div| div.border_t(BORDER_SIZE))
+                        .when(!content_tiling.bottom, |div| div.border_b(BORDER_SIZE))
+                        .when(!content_tiling.left, |div| div.border_l(BORDER_SIZE))
+                        .when(!content_tiling.right, |div| div.border_r(BORDER_SIZE))
                         .when(!tiling.is_tiled(), |div| {
                             div.shadow(vec![gpui::BoxShadow {
                                 color: Hsla {

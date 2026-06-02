@@ -57,7 +57,8 @@ use crate::dx_launch_receipts::launch_receipt_review_snapshot;
 use crate::dx_launch_source_audit::launch_source_audit_snapshot;
 use crate::dx_launch_status::launch_status_snapshot;
 use crate::dx_launch_workspace::{
-    DxLaunchWorkspaceStatus, DxSourceRowControl, render_workspace_chrome,
+    DxLaunchRailControls, DxLaunchRailSection, DxLaunchRailState, DxLaunchWorkspaceStatus,
+    DxSourceRowControl, render_workspace_chrome,
 };
 use crate::dx_proof_freshness::proof_freshness_snapshot;
 use crate::dx_receipt_history::tool_history_snapshot;
@@ -78,7 +79,9 @@ use crate::{
     OpenAgentDiff, ResetFastModeWarnings, ResetTrialEndUpsell, ResetTrialUpsell,
     ShowAllSidebarThreadMetadata, ShowThreadMetadata, ToggleNewThreadMenu, ToggleOptionsMenu,
     agent_configuration::{AgentConfiguration, AssistantConfigurationEvent},
-    conversation_view::{AcpThreadViewEvent, ThreadView, reset_fast_mode_warnings},
+    conversation_view::{
+        AcpThreadViewEvent, AgentResponseAnchor, ThreadView, reset_fast_mode_warnings,
+    },
     ui::{AgentNotification, AgentNotificationEvent, EndTrialUpsell},
 };
 use crate::{
@@ -1166,6 +1169,7 @@ pub struct AgentPanel {
     is_active: bool,
     fullscreen_sources_rail_open: bool,
     fullscreen_progress_rail_open: bool,
+    collapsed_dx_launch_rail_sections: HashSet<DxLaunchRailSection>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -1639,6 +1643,7 @@ impl AgentPanel {
             is_active: false,
             fullscreen_sources_rail_open: true,
             fullscreen_progress_rail_open: true,
+            collapsed_dx_launch_rail_sections: Self::default_collapsed_dx_launch_rail_sections(),
         };
 
         panel.ensure_native_agent_connection(cx);
@@ -4488,6 +4493,9 @@ impl AgentPanel {
                 &tv,
                 window,
                 |this, _view, event: &AcpThreadViewEvent, _window, cx| match event {
+                    AcpThreadViewEvent::ScrollPositionChanged => {
+                        cx.notify();
+                    }
                     AcpThreadViewEvent::Interacted => {
                         let Some(thread_id) = this.active_thread_id(cx) else {
                             return;
@@ -6097,6 +6105,7 @@ impl AgentPanel {
 
         h_flex()
             .id("agent-panel-toolbar")
+            .relative()
             .h(Tab::container_height(cx) + px(4.))
             .flex_shrink_0()
             .max_w_full()
@@ -6104,6 +6113,80 @@ impl AgentPanel {
             .border_b_1()
             .border_color(cx.theme().colors().border)
             .child(toolbar_content)
+            .when(is_full_screen, |this| {
+                this.child(self.render_toolbar_response_indicator(cx))
+            })
+    }
+
+    fn render_toolbar_response_indicator(&self, cx: &mut Context<Self>) -> AnyElement {
+        let Some(active_thread) = self.active_thread_view(cx) else {
+            return Empty.into_any_element();
+        };
+        let anchors = active_thread.read(cx).response_anchors(cx);
+        if anchors.is_empty() {
+            return Empty.into_any_element();
+        }
+
+        div()
+            .id("agent-toolbar-response-indicator-layer")
+            .absolute()
+            .top_0()
+            .bottom_0()
+            .left_0()
+            .right_0()
+            .flex()
+            .items_center()
+            .justify_center()
+            .child(
+                h_flex()
+                    .id("agent-toolbar-response-indicator")
+                    .h_full()
+                    .items_center()
+                    .gap_1()
+                    .px_1p5()
+                    .children(anchors.into_iter().map(|anchor| {
+                        Self::toolbar_response_indicator_segment(anchor, active_thread.clone(), cx)
+                    })),
+            )
+            .into_any_element()
+    }
+
+    fn toolbar_response_indicator_segment(
+        anchor: AgentResponseAnchor,
+        active_thread: Entity<ThreadView>,
+        cx: &App,
+    ) -> AnyElement {
+        let entry_ix = anchor.entry_ix;
+        let label = anchor.label.clone();
+        let detail = anchor.detail.clone();
+        let height = if anchor.is_current {
+            px(18.0)
+        } else {
+            px(11.0)
+        };
+        let color = if anchor.is_current {
+            cx.theme().colors().text_accent.opacity(0.85)
+        } else {
+            cx.theme().colors().border.opacity(0.85)
+        };
+
+        div()
+            .id(("agent-toolbar-response-indicator-segment", entry_ix))
+            .w(px(2.0))
+            .h(height)
+            .rounded_full()
+            .bg(color)
+            .cursor_pointer()
+            .hover(|style| style.bg(cx.theme().colors().text_accent))
+            .tooltip(move |_window, cx| Tooltip::with_meta(label.clone(), None, detail.clone(), cx))
+            .on_click(move |_event, _window, cx| {
+                active_thread
+                    .update(cx, |thread, cx| {
+                        thread.scroll_to_response_anchor(entry_ix, cx);
+                    })
+                    .ok();
+            })
+            .into_any_element()
     }
 
     fn should_render_trial_end_upsell(&self, cx: &mut Context<Self>) -> bool {
@@ -6481,6 +6564,18 @@ impl AgentPanel {
         let source_actions =
             self.render_dx_launch_source_actions(&status.source_sets, &status.deploy_targets, cx);
         let guided_cards = self.render_dx_launch_guided_cards(&status, window, cx);
+        let panel = cx.weak_entity();
+        let rail_controls = DxLaunchRailControls {
+            state: self.dx_launch_rail_state(),
+            on_toggle: Arc::new(move |section, _event, _window, cx| {
+                panel
+                    .update(cx, |panel, cx| {
+                        panel.toggle_dx_launch_rail_section(section);
+                        cx.notify();
+                    })
+                    .ok();
+            }),
+        };
         render_workspace_chrome(
             center,
             sidebar_actions,
@@ -6489,9 +6584,39 @@ impl AgentPanel {
             guided_cards,
             self.fullscreen_sources_rail_open,
             self.fullscreen_progress_rail_open,
+            rail_controls,
             status,
             cx,
         )
+    }
+
+    fn default_collapsed_dx_launch_rail_sections() -> HashSet<DxLaunchRailSection> {
+        let mut collapsed = HashSet::default();
+        collapsed.insert(DxLaunchRailSection::SourceTools);
+        collapsed.insert(DxLaunchRailSection::WorkspaceState);
+        collapsed.insert(DxLaunchRailSection::Readiness);
+        collapsed
+    }
+
+    fn dx_launch_rail_state(&self) -> DxLaunchRailState {
+        let is_open = |section| !self.collapsed_dx_launch_rail_sections.contains(&section);
+        DxLaunchRailState {
+            source_commands_open: is_open(DxLaunchRailSection::SourceCommands),
+            source_stack_open: is_open(DxLaunchRailSection::SourceStack),
+            source_tools_open: is_open(DxLaunchRailSection::SourceTools),
+            workspace_state_open: is_open(DxLaunchRailSection::WorkspaceState),
+            progress_open: is_open(DxLaunchRailSection::Progress),
+            environment_open: is_open(DxLaunchRailSection::Environment),
+            subagents_open: is_open(DxLaunchRailSection::Subagents),
+            source_summary_open: is_open(DxLaunchRailSection::SourceSummary),
+            readiness_open: is_open(DxLaunchRailSection::Readiness),
+        }
+    }
+
+    fn toggle_dx_launch_rail_section(&mut self, section: DxLaunchRailSection) {
+        if !self.collapsed_dx_launch_rail_sections.insert(section) {
+            self.collapsed_dx_launch_rail_sections.remove(&section);
+        }
     }
 
     fn render_fullscreen_agent_center(

@@ -45,7 +45,7 @@ const COMMON_SPACE_FOLDER_NAMES: [&str; 8] = [
 use crate::open_remote_project_with_existing_connection;
 use crate::{
     CloseIntent, CloseWindow, DockPosition, Event as WorkspaceEvent, Item, ModalView, OpenMode,
-    Panel, Workspace, WorkspaceId, client_side_decorations,
+    Panel, Workspace, WorkspaceId, client_side_decorations_with_content_flush,
     persistence::model::MultiWorkspaceState,
 };
 
@@ -2420,8 +2420,9 @@ impl Render for MultiWorkspace {
         let workspace = self.workspace().clone();
         let workspace_key_context = workspace.update(cx, |workspace, cx| workspace.key_context(cx));
         let root = workspace.update(cx, |workspace, cx| workspace.actions(h_flex(), window, cx));
+        let agent_fullscreen_flush_right = workspace.read(cx).zoomed_is_agent_panel();
 
-        client_side_decorations(
+        client_side_decorations_with_content_flush(
             root.key_context(workspace_key_context)
                 .relative()
                 .size_full()
@@ -2534,7 +2535,12 @@ impl Render for MultiWorkspace {
             cx,
             Tiling {
                 left: !sidebar_on_right && multi_workspace_enabled && self.sidebar_open(),
-                right: sidebar_on_right && multi_workspace_enabled && self.sidebar_open(),
+                right: (sidebar_on_right && multi_workspace_enabled && self.sidebar_open())
+                    || agent_fullscreen_flush_right,
+                ..Tiling::default()
+            },
+            Tiling {
+                right: agent_fullscreen_flush_right,
                 ..Tiling::default()
             },
         )

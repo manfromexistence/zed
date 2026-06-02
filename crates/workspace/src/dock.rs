@@ -504,9 +504,11 @@ impl Dock {
                 };
                 if panel.is_zoomed(window, cx) {
                     workspace.zoomed = Some(panel.to_any().downgrade());
+                    workspace.zoomed_is_agent_panel = panel.is_agent_panel(cx);
                     workspace.zoomed_position = Some(position);
                 } else {
                     workspace.zoomed = None;
+                    workspace.zoomed_is_agent_panel = false;
                     workspace.zoomed_position = None;
                 }
                 cx.emit(Event::ZoomChanged);
@@ -522,12 +524,14 @@ impl Dock {
                 && panel.is_zoomed(window, cx)
             {
                 workspace.zoomed = Some(panel.to_any().downgrade());
+                workspace.zoomed_is_agent_panel = panel.is_agent_panel(cx);
                 workspace.zoomed_position = Some(position);
                 cx.emit(Event::ZoomChanged);
                 return;
             }
             if workspace.zoomed_position == Some(position) {
                 workspace.zoomed = None;
+                workspace.zoomed_is_agent_panel = false;
                 workspace.zoomed_position = None;
                 cx.emit(Event::ZoomChanged);
             }
@@ -1173,6 +1177,7 @@ impl Dock {
                         workspace
                             .update(cx, |workspace, cx| {
                                 workspace.zoomed = Some(panel.downgrade().into());
+                                workspace.zoomed_is_agent_panel = panel.read(cx).is_agent_panel();
                                 workspace.zoomed_position =
                                     Some(panel.read(cx).position(window, cx));
                                 cx.emit(Event::ZoomChanged);
@@ -1185,6 +1190,7 @@ impl Dock {
                             .update(cx, |workspace, cx| {
                                 if workspace.zoomed_position == Some(this.position) {
                                     workspace.zoomed = None;
+                                    workspace.zoomed_is_agent_panel = false;
                                     workspace.zoomed_position = None;
                                     cx.emit(Event::ZoomChanged);
                                 }

@@ -620,22 +620,23 @@ struct DraggedSidebarThread {
 }
 
 impl Render for DraggedSidebarThread {
-    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         h_flex()
             .id("dragged-sidebar-thread")
+            .items_center()
             .gap_2()
-            .min_w(px(180.0))
-            .max_w(px(260.0))
+            .w(px(236.0))
+            .min_h(px(44.0))
             .rounded_sm()
             .border_1()
-            .border_color(_cx.theme().colors().border)
-            .bg(_cx.theme().colors().elevated_surface_background)
+            .border_color(cx.theme().colors().border)
+            .bg(cx.theme().colors().elevated_surface_background)
             .p_2()
             .shadow_sm()
             .child(
                 Icon::new(self.icon)
                     .size(IconSize::Small)
-                    .color(Color::Muted),
+                    .color(Color::Default),
             )
             .child(
                 v_flex()
@@ -644,6 +645,7 @@ impl Render for DraggedSidebarThread {
                     .child(
                         Label::new(self.label.clone())
                             .size(LabelSize::Small)
+                            .color(Color::Default)
                             .truncate(),
                     )
                     .when_some(self.subtitle.clone(), |this, subtitle| {
@@ -679,6 +681,7 @@ impl Render for ThreadIconPickerMenu {
         v_flex()
             .id("thread-icon-picker-grid")
             .track_focus(&self.focus_handle)
+            .relative()
             .w(px(228.0))
             .max_h_64()
             .overflow_y_scroll()
@@ -687,42 +690,25 @@ impl Render for ThreadIconPickerMenu {
             .border_1()
             .border_color(cx.theme().colors().border)
             .bg(cx.theme().colors().elevated_surface_background)
-            .p_2()
+            .p_1p5()
             .child(
-                h_flex()
-                    .gap_1()
-                    .items_center()
-                    .child(Icon::new(IconName::Sparkle).size(IconSize::XSmall))
-                    .child(
-                        Label::new("Choose icon")
-                            .size(LabelSize::XSmall)
-                            .color(Color::Muted),
-                    )
-                    .child(div().flex_1())
-                    .child(
-                        IconButton::new("thread-icon-picker-reset", IconName::Close)
-                            .shape(IconButtonShape::Square)
-                            .icon_size(IconSize::Small)
-                            .tooltip(Tooltip::text("Reset Thread Icon"))
-                            .on_click(cx.listener(|this, _, _window, cx| {
-                                this.sidebar
-                                    .update(cx, |sidebar, cx| {
-                                        sidebar.thread_icon_overrides.remove(&this.thread_id);
-                                        sidebar.grid_entry_cache.borrow_mut().clear();
-                                        sidebar.update_entries(cx);
-                                        sidebar.serialize(cx);
-                                        cx.notify();
-                                    })
-                                    .ok();
-                                cx.emit(DismissEvent);
-                            })),
-                    ),
+                div().absolute().top_1().right_1().child(
+                    IconButton::new("thread-icon-picker-close", IconName::Close)
+                        .shape(IconButtonShape::Square)
+                        .icon_size(IconSize::XSmall)
+                        .icon_color(Color::Muted)
+                        .tooltip(Tooltip::text("Close Icon Picker"))
+                        .on_click(cx.listener(|_this, _, _window, cx| {
+                            cx.emit(DismissEvent);
+                        })),
+                ),
             )
             .child(
                 h_flex()
                     .id("thread-icon-picker-grid-icons")
                     .flex_wrap()
                     .gap_1()
+                    .pr_5()
                     .children(icons.into_iter().map(|icon_name| {
                         IconButton::new(
                             format!("thread-icon-picker-grid-icon-{icon_name:?}"),
@@ -1053,6 +1039,7 @@ pub struct Sidebar {
     grid_shortcuts: Vec<SerializedSidebarGridShortcut>,
     thread_sort_mode: SidebarThreadSortMode,
     thread_icon_overrides: HashMap<ThreadId, IconName>,
+    thread_icon_picker_handles: RefCell<HashMap<ThreadId, PopoverMenuHandle<ThreadIconPickerMenu>>>,
     grid_entry_cache:
         RefCell<HashMap<(WorkspaceScreenKind, Option<PathBuf>), Vec<SidebarGridEntry>>>,
     recent_projects_popover_handle: PopoverMenuHandle<SidebarRecentProjects>,
@@ -1202,6 +1189,7 @@ impl Sidebar {
             grid_shortcuts: Vec::new(),
             thread_sort_mode: SidebarThreadSortMode::default(),
             thread_icon_overrides: HashMap::new(),
+            thread_icon_picker_handles: RefCell::default(),
             grid_entry_cache: RefCell::default(),
             recent_projects_popover_handle: PopoverMenuHandle::default(),
             project_header_menu_handles: HashMap::new(),
@@ -6600,14 +6588,18 @@ impl Sidebar {
         } else {
             (thread.icon, thread.icon_from_external_svg.clone())
         };
+        let icon_picker_handle = self
+            .thread_icon_picker_handles
+            .borrow_mut()
+            .entry(thread.metadata.thread_id)
+            .or_default()
+            .clone();
+        let is_icon_picker_open = icon_picker_handle.is_deployed();
         let dragged_thread = DraggedSidebarThread {
             thread_id: thread.metadata.thread_id,
             icon,
             label: title.clone(),
-            subtitle: worktrees
-                .first()
-                .and_then(|worktree| worktree.worktree_name.clone())
-                .or_else(|| Some("Agent thread".into())),
+            subtitle: Some("Chat thread".into()),
         };
 
         let thread_item = ThreadItem::new(id, title.clone())
@@ -6665,122 +6657,128 @@ impl Sidebar {
                         .child(title_editor),
                 )
             })
-            .when(is_hovered && !is_renaming, |this| {
-                let rename_button = IconButton::new(("rename-thread", ix), IconName::Pencil)
-                    .icon_size(IconSize::Small)
-                    .icon_color(Color::Muted)
-                    .tooltip({
-                        let focus_handle = focus_handle.clone();
-                        move |_window, cx| {
-                            Tooltip::for_action_in(
-                                "Rename Thread",
-                                &RenameSelectedThread,
-                                &focus_handle,
-                                cx,
+            .when(
+                (is_hovered || is_icon_picker_open) && !is_renaming,
+                |this| {
+                    let rename_button = IconButton::new(("rename-thread", ix), IconName::Pencil)
+                        .icon_size(IconSize::Small)
+                        .icon_color(Color::Muted)
+                        .tooltip({
+                            let focus_handle = focus_handle.clone();
+                            move |_window, cx| {
+                                Tooltip::for_action_in(
+                                    "Rename Thread",
+                                    &RenameSelectedThread,
+                                    &focus_handle,
+                                    cx,
+                                )
+                            }
+                        })
+                        .on_click({
+                            let title = title.clone();
+                            cx.listener(move |this, _, window, cx| {
+                                this.start_renaming_thread(
+                                    ix,
+                                    thread_id_for_actions,
+                                    title.clone(),
+                                    window,
+                                    cx,
+                                );
+                            })
+                        });
+                    let icon_picker = {
+                        let sidebar = cx.weak_entity();
+                        let icon_picker_handle = icon_picker_handle.clone();
+                        PopoverMenu::new(format!("thread-icon-picker-menu-{ix}"))
+                            .with_handle(icon_picker_handle)
+                            .anchor(gpui::Anchor::TopRight)
+                            .trigger_with_tooltip(
+                                IconButton::new(("thread-icon-picker", ix), IconName::Sparkle)
+                                    .icon_size(IconSize::Small)
+                                    .icon_color(Color::Muted)
+                                    .selected_style(ButtonStyle::Tinted(TintColor::Accent)),
+                                Tooltip::text("Change Thread Icon"),
                             )
-                        }
-                    })
-                    .on_click({
-                        let title = title.clone();
-                        cx.listener(move |this, _, window, cx| {
-                            this.start_renaming_thread(
-                                ix,
-                                thread_id_for_actions,
-                                title.clone(),
-                                window,
-                                cx,
-                            );
-                        })
-                    });
-                let icon_picker = {
-                    let sidebar = cx.weak_entity();
-                    PopoverMenu::new(format!("thread-icon-picker-menu-{ix}"))
-                        .trigger_with_tooltip(
-                            IconButton::new(("thread-icon-picker", ix), IconName::Sparkle)
-                                .icon_size(IconSize::Small)
-                                .icon_color(Color::Muted)
-                                .selected_style(ButtonStyle::Tinted(TintColor::Accent)),
-                            Tooltip::text("Change Thread Icon"),
-                        )
-                        .menu(move |_window, cx| {
-                            Some(cx.new(|cx| ThreadIconPickerMenu {
-                                sidebar: sidebar.clone(),
-                                thread_id: thread_id_for_actions,
-                                selected_icon: icon,
-                                focus_handle: cx.focus_handle(),
-                            }))
-                        })
-                };
+                            .menu(move |_window, cx| {
+                                Some(cx.new(|cx| ThreadIconPickerMenu {
+                                    sidebar: sidebar.clone(),
+                                    thread_id: thread_id_for_actions,
+                                    selected_icon: icon,
+                                    focus_handle: cx.focus_handle(),
+                                }))
+                            })
+                    };
 
-                let contextual_action: Option<AnyElement> = if is_running {
-                    Some(
-                        IconButton::new("stop-thread", IconName::Stop)
-                            .icon_size(IconSize::Small)
-                            .icon_color(Color::Error)
-                            .style(ButtonStyle::Tinted(TintColor::Error))
-                            .tooltip(Tooltip::text("Stop Generation"))
-                            .on_click(cx.listener(move |this, _, _window, cx| {
-                                this.stop_thread(&thread_id_for_actions, cx);
-                            }))
-                            .into_any_element(),
-                    )
-                } else {
-                    match thread.draft {
-                        Some(DraftKind::Empty) => None,
-                        Some(DraftKind::WithContent) => Some(
-                            IconButton::new("discard_thread", IconName::Close)
+                    let contextual_action: Option<AnyElement> = if is_running {
+                        Some(
+                            IconButton::new("stop-thread", IconName::Stop)
                                 .icon_size(IconSize::Small)
-                                .icon_color(Color::Muted)
-                                .tooltip(Tooltip::text("Discard Draft"))
-                                .on_click({
-                                    let thread_workspace = thread_workspace.clone();
-                                    cx.listener(move |this, _, window, cx| {
-                                        this.remove_draft(
-                                            thread_id_for_actions,
-                                            &thread_workspace,
-                                            window,
-                                            cx,
-                                        );
-                                    })
-                                })
+                                .icon_color(Color::Error)
+                                .style(ButtonStyle::Tinted(TintColor::Error))
+                                .tooltip(Tooltip::text("Stop Generation"))
+                                .on_click(cx.listener(move |this, _, _window, cx| {
+                                    this.stop_thread(&thread_id_for_actions, cx);
+                                }))
                                 .into_any_element(),
-                        ),
-                        None => Some(
-                            IconButton::new("archive-thread", IconName::Archive)
-                                .icon_size(IconSize::Small)
-                                .icon_color(Color::Muted)
-                                .tooltip({
-                                    let focus_handle = focus_handle.clone();
-                                    move |_window, cx| {
-                                        Tooltip::for_action_in(
-                                            "Archive Thread",
-                                            &ArchiveSelectedThread,
-                                            &focus_handle,
-                                            cx,
-                                        )
-                                    }
-                                })
-                                .on_click({
-                                    let session_id = session_id_for_delete.clone();
-                                    cx.listener(move |this, _, window, cx| {
-                                        if let Some(ref session_id) = session_id {
-                                            this.archive_thread(session_id, window, cx);
+                        )
+                    } else {
+                        match thread.draft {
+                            Some(DraftKind::Empty) => None,
+                            Some(DraftKind::WithContent) => Some(
+                                IconButton::new("discard_thread", IconName::Close)
+                                    .icon_size(IconSize::Small)
+                                    .icon_color(Color::Muted)
+                                    .tooltip(Tooltip::text("Discard Draft"))
+                                    .on_click({
+                                        let thread_workspace = thread_workspace.clone();
+                                        cx.listener(move |this, _, window, cx| {
+                                            this.remove_draft(
+                                                thread_id_for_actions,
+                                                &thread_workspace,
+                                                window,
+                                                cx,
+                                            );
+                                        })
+                                    })
+                                    .into_any_element(),
+                            ),
+                            None => Some(
+                                IconButton::new("archive-thread", IconName::Archive)
+                                    .icon_size(IconSize::Small)
+                                    .icon_color(Color::Muted)
+                                    .tooltip({
+                                        let focus_handle = focus_handle.clone();
+                                        move |_window, cx| {
+                                            Tooltip::for_action_in(
+                                                "Archive Thread",
+                                                &ArchiveSelectedThread,
+                                                &focus_handle,
+                                                cx,
+                                            )
                                         }
                                     })
-                                })
-                                .into_any_element(),
-                        ),
-                    }
-                };
+                                    .on_click({
+                                        let session_id = session_id_for_delete.clone();
+                                        cx.listener(move |this, _, window, cx| {
+                                            if let Some(ref session_id) = session_id {
+                                                this.archive_thread(session_id, window, cx);
+                                            }
+                                        })
+                                    })
+                                    .into_any_element(),
+                            ),
+                        }
+                    };
 
-                this.action_slot(
-                    h_flex()
-                        .gap_0p5()
-                        .child(icon_picker)
-                        .child(rename_button)
-                        .when_some(contextual_action, |this, action| this.child(action)),
-                )
-            })
+                    this.action_slot(
+                        h_flex()
+                            .gap_0p5()
+                            .child(icon_picker)
+                            .child(rename_button)
+                            .when_some(contextual_action, |this, action| this.child(action)),
+                    )
+                },
+            )
             .on_click({
                 cx.listener(move |this, _, window, cx| {
                     this.selection = None;

@@ -377,6 +377,11 @@ impl RenderOnce for ThreadItem {
         let has_project_paths = project_paths.is_some();
         let has_timestamp = !self.timestamp.is_empty();
         let timestamp = self.timestamp;
+        let timestamp_color = if self.selected || self.hovered {
+            Color::Default
+        } else {
+            Color::Muted
+        };
 
         let show_tooltip = matches!(
             self.status,
@@ -431,7 +436,7 @@ impl RenderOnce for ThreadItem {
                         this.child(
                             Label::new(timestamp.clone())
                                 .size(LabelSize::Small)
-                                .color(Color::Muted)
+                                .color(timestamp_color)
                                 .flex_shrink_0(),
                         )
                     })

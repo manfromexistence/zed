@@ -1,3 +1,56 @@
+[2026-06-03] - Agent Fullscreen Floating Rail Polish
+
+CHANGED:
+- `crates\agent_ui\src\dx_launch_workspace.rs` now renders the fullscreen Agent left and right rails as concise collapsible sections instead of long text-heavy diagnostic stacks: left rail sections cover Agent, Sources, Tools, and Workspace; right rail sections cover Progress, Environment, Subagents, Sources, and Readiness.
+- `crates\agent_ui\src\dx_launch_workspace.rs` now keeps the right Agent rail as a floating rounded overlay with full border and shadow instead of an edge-attached diagnostic strip.
+- `crates\agent_ui\src\dx_launch_workspace.rs` now gives the Subagents section compact solid pixel-style glyphs with deterministic accent colors and real automation/agent-bridge state, showing an honest empty state when no active subagents are known.
+- `crates\agent_ui\src\agent_panel.rs` now owns the Agent fullscreen rail disclosure state, with noisy secondary sections collapsed by default while the first-view progress/environment/subagent/source sections stay available.
+- `script\dx-workspace-ui-state-source.test.ts` now guards the collapsible rail contract, concise right-rail sections, subagent glyph data path, and default-collapsed secondary sections.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\dx_launch_workspace.rs`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-workspace-ui-state-source.test.ts`
+- `git diff --check`
+
+NOTES:
+- `just run` was not run because the current instruction says not to run it until explicitly requested.
+- `DX.txt` remains an unrelated scratch/editor change and is intentionally left untouched.
+
+[2026-06-03] - Sidebar Icon Picker And Chat Count Polish
+
+CHANGED:
+- `crates\ui\src\components\ai\thread_item.rs` now renders chat-row timestamp/count text with the default readable color when a row is selected or hovered, so the right-side number no longer disappears into the selected background.
+- `crates\sidebar\src\sidebar.rs` now keeps a persistent per-thread icon-picker popover handle, keeps the row action slot mounted while the picker is deployed, and replaces the tall icon-picker header with a compact overlay close button that does not waste vertical icon-grid space.
+- `script\dx-workspace-ui-state-source.test.ts` now guards the stable icon-picker handle, deployed-state row action condition, compact picker close control, and readable selected/hovered timestamp color.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\sidebar\src\sidebar.rs crates\ui\src\components\ai\thread_item.rs`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-workspace-ui-state-source.test.ts`
+- `git diff --check`
+
+NOTES:
+- `just run` was not run because the latest instruction explicitly forbids it until the user says so.
+- `DX.txt` remains an unrelated scratch/editor change and is intentionally left untouched.
+
+[2026-06-03] - Agent Fullscreen Edge And Response Navigation
+
+CHANGED:
+- `crates\workspace\src\workspace.rs`, `crates\workspace\src\dock.rs`, and `crates\workspace\src\multi_workspace.rs` now track whether the zoomed surface is the Agent panel, suppress workspace zoom padding for that Agent fullscreen surface, and request a right-edge client-decoration content flush so the fullscreen Agent canvas can use the true window edge.
+- `crates\agent_ui\src\agent_panel.rs` now renders real vertical prompt anchors in the fullscreen Agent topbar center, with hover metadata and click-to-scroll behavior wired to the active `ThreadView`.
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now exposes source-backed response anchors, emits a lightweight scroll-position event for topbar repainting, scrolls to selected prompt anchors through the existing `ListState`, and keeps the compact Agent composer at two visible lines.
+- `crates\agent_ui\src\dx_launch_workspace.rs` now keeps the fullscreen progress rail on a normal edge-attached `right_0()` layout instead of the previous negative-pixel overdraw workaround.
+- `crates\sidebar\src\sidebar.rs` continues to render chat drag previews with fixed geometry and explicit theme text/icon colors so the dragged card shows thread information while dropped shortcut-grid cards omit the extra workspace subtitle.
+- `script\dx-workspace-ui-state-source.test.ts` now guards the Agent zoom-padding opt-out, MultiWorkspace right-gutter flush, real prompt-anchor indicator wiring, two-line composer, visible drag preview, and edge-attached progress rail contracts.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\workspace\src\workspace.rs crates\workspace\src\dock.rs crates\workspace\src\multi_workspace.rs crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\dx_launch_workspace.rs`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-workspace-ui-state-source.test.ts`
+- `git diff --check`
+
+NOTES:
+- `just run` was not run for this pass; the latest prompt requested code, review, commit, and sync, not runtime launch validation.
+- `DX.txt` remains an unrelated scratch/editor change and is intentionally left untouched.
+
 [2026-06-02] - AI Composer And Agent Screen Checkpoint
 
 ADDED:

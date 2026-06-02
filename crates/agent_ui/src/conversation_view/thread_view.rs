@@ -219,6 +219,7 @@ impl RenderOnce for GeneratingSpinnerElement {
 
 pub enum AcpThreadViewEvent {
     Interacted,
+    ScrollPositionChanged,
 }
 
 impl EventEmitter<AcpThreadViewEvent> for ThreadView {}
@@ -621,6 +622,15 @@ pub struct ThreadView {
     /// re-show.
     dismissed_skill_loading_errors: HashSet<SkillLoadingError>,
 }
+
+#[derive(Clone)]
+pub(crate) struct AgentResponseAnchor {
+    pub(crate) entry_ix: usize,
+    pub(crate) label: SharedString,
+    pub(crate) detail: SharedString,
+    pub(crate) is_current: bool,
+}
+
 impl Focusable for ThreadView {
     fn focus_handle(&self, cx: &App) -> FocusHandle {
         if self.parent_session_id.is_some() {
@@ -706,8 +716,8 @@ impl ThreadView {
                 agent_id.clone(),
                 &placeholder,
                 editor::EditorMode::AutoHeight {
-                    min_lines: 1,
-                    max_lines: Some(1),
+                    min_lines: 2,
+                    max_lines: Some(2),
                 },
                 window,
                 cx,
@@ -947,6 +957,7 @@ impl ThreadView {
                             });
                         }
                         this.schedule_save(cx);
+                        cx.emit(AcpThreadViewEvent::ScrollPositionChanged);
                     });
                 });
             });
@@ -2008,8 +2019,8 @@ impl ThreadView {
             } else {
                 editor.set_mode(
                     EditorMode::AutoHeight {
-                        min_lines: 1,
-                        max_lines: Some(1),
+                        min_lines: 2,
+                        max_lines: Some(2),
                     },
                     cx,
                 )
@@ -5956,6 +5967,64 @@ impl ThreadView {
         }
     }
 
+    pub(crate) fn response_anchors(&self, cx: &App) -> Vec<AgentResponseAnchor> {
+        let entries = self.thread.read(cx).entries();
+        let current_ix = self.list_state.logical_scroll_top().item_ix;
+        let current_prompt_ix = entries
+            .iter()
+            .enumerate()
+            .take(current_ix.saturating_add(1))
+            .rev()
+            .find_map(|(entry_ix, entry)| {
+                matches!(entry, AgentThreadEntry::UserMessage(_)).then_some(entry_ix)
+            });
+
+        let mut prompt_ordinal = 0usize;
+        entries
+            .iter()
+            .enumerate()
+            .filter_map(|(entry_ix, entry)| {
+                let AgentThreadEntry::UserMessage(message) = entry else {
+                    return None;
+                };
+                prompt_ordinal += 1;
+
+                let raw_label = message
+                    .content
+                    .to_markdown(cx)
+                    .lines()
+                    .find(|line| !line.trim().is_empty())
+                    .unwrap_or("User prompt")
+                    .trim();
+                let label = if raw_label.is_empty() {
+                    SharedString::from("User prompt")
+                } else {
+                    SharedString::from(util::truncate_and_trailoff(raw_label, 80))
+                };
+                let detail =
+                    SharedString::from(format!("Prompt {} - click to scroll", prompt_ordinal));
+
+                Some(AgentResponseAnchor {
+                    entry_ix,
+                    label,
+                    detail,
+                    is_current: current_prompt_ix == Some(entry_ix),
+                })
+            })
+            .collect()
+    }
+
+    pub(crate) fn scroll_to_response_anchor(&mut self, entry_ix: usize, cx: &mut Context<Self>) {
+        if entry_ix < self.thread.read(cx).entries().len() {
+            self.list_state.scroll_to(ListOffset {
+                item_ix: entry_ix,
+                offset_in_item: px(0.0),
+            });
+            cx.emit(AcpThreadViewEvent::ScrollPositionChanged);
+            cx.notify();
+        }
+    }
+
     pub fn scroll_to_end(&mut self, cx: &mut Context<Self>) {
         self.list_state.scroll_to_end();
         cx.notify();
@@ -6150,8 +6219,8 @@ impl ThreadView {
             }
         } else {
             EditorMode::AutoHeight {
-                min_lines: 1,
-                max_lines: Some(1),
+                min_lines: 2,
+                max_lines: Some(2),
             }
         };
         self.message_editor.update(cx, |editor, cx| {
