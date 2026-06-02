@@ -48,7 +48,7 @@ pub(crate) fn build_generated_media_metadata_job_batch(
                     && item.size <= MAX_GENERATED_MEDIA_METADATA_FILE_BYTES
             }
             MediaPreviewKind::Video => {
-                item.video_frame_preview.is_none()
+                (item.video_frame_preview.is_none() || item.duration_label.is_none())
                     && item.size <= MAX_GENERATED_MEDIA_METADATA_FILE_BYTES
             }
             MediaPreviewKind::Image => false,

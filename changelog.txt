@@ -1,3 +1,23 @@
+[2026-06-02] - Project Panel Folder Count And Video Hover Hardening
+
+CHANGED:
+- `crates\project_panel\src\project_panel.rs` now warms bounded folder file-count cache misses inside the existing background visible-entry refresh instead of counting child files from `details_for_entry`.
+- `crates\project_panel\src\project_panel.rs` now keeps render-facing directory count lookup cache-only and hides cold folder count badges until background evidence is available, avoiding misleading `0 files` hover badges.
+- `crates\project_panel\src\media_preview\generated_metadata.rs` now schedules bounded video metadata jobs when either the representative frame or duration label is missing, so sidecar frame previews do not block hover-time evidence.
+- `crates\project_panel\src\media_preview\generated_video_frame.rs` now probes bounded duration evidence before returning an already cached generated frame path.
+- `script\dx-project-panel-source.test.ts` now guards the named folder-count warming cap, cache-only `details_for_entry` behavior, background direct-file counting, non-overwriting cache insertion, and the stronger generated video duration path.
+- `todo.txt` now records the source-only folder-count performance hardening and the remaining runtime validation boundary.
+
+PASSED:
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-handoff-source-guard-registry.test.ts script\dx-project-panel-source.test.ts`
+- `rustfmt --edition 2024 --check crates\project_panel\src\project_panel.rs crates\project_panel\src\media_preview\generated_metadata.rs crates\project_panel\src\media_preview\generated_video_frame.rs`
+- `git diff --check -- crates/project_panel/src/project_panel.rs crates/project_panel/src/media_preview/generated_metadata.rs crates/project_panel/src/media_preview/generated_video_frame.rs script/dx-project-panel-source.test.ts todo.txt changelog.txt`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" crates\project_panel\src\project_panel.rs crates\project_panel\src\media_preview\generated_metadata.rs crates\project_panel\src\media_preview\generated_video_frame.rs script\dx-project-panel-source.test.ts todo.txt changelog.txt` returned no conflict markers.
+
+NOTES:
+- No `just run`, Cargo build/check/test/clippy, local server, browser automation, live UI proof, or live ffmpeg/ffprobe extraction was run in this source-only pass.
+- The latest file-browser media-grid request is source-covered by the existing bottom media shelf: active expanded media folders use bounded three-column image/video/audio rectangles, represented media entries are removed from full-width list rows, overflow media stays reachable in the normal tree, and hover metadata carries size/time evidence when available.
+
 [2026-06-02] - Project Panel Render-Path Media Preview Hardening
 
 CHANGED:

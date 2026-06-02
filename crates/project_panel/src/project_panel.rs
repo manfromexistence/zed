@@ -109,6 +109,7 @@ const MAX_PROJECT_PANEL_DOWNLOAD_FILES: usize = 10_000;
 const MAX_PROJECT_PANEL_STICKY_PARENTS: usize = 128;
 const MAX_PROJECT_PANEL_SIBLING_ENTRIES: usize = 20_000;
 const MAX_PROJECT_PANEL_BACKGROUND_MEDIA_PREVIEW_FOLDERS: usize = 256;
+const MAX_PROJECT_PANEL_BACKGROUND_FOLDER_FILE_COUNT_DIRS: usize = 4_096;
 
 fn project_panel_cap_hit(boundary: &'static str, cap: usize) {
     telemetry::event!(
@@ -4528,6 +4529,12 @@ impl ProjectPanel {
             .keys()
             .copied()
             .collect::<HashSet<_>>();
+        let cached_folder_file_count_keys = self
+            .folder_file_counts
+            .borrow()
+            .keys()
+            .copied()
+            .collect::<HashSet<_>>();
         let generated_media_metadata = self.generated_media_metadata.borrow().clone();
         let project = self.project.read(cx);
         let repo_snapshots = project.git_store().read(cx).repo_snapshots(cx);
@@ -4555,12 +4562,14 @@ impl ProjectPanel {
         let hide_hidden = settings.hide_hidden;
 
         let visible_entries_task = cx.spawn_in(window, async move |this, cx| {
-            let (new_state, media_preview_updates) = cx
+            let (new_state, media_preview_updates, folder_file_count_updates) = cx
                 .background_spawn(async move {
                     let mut visible_entries_total = 0usize;
                     let mut active_media_shelf_entry_ids = active_media_shelf_entry_ids;
                     let mut media_preview_updates = Vec::new();
+                    let mut folder_file_count_updates = Vec::new();
                     let mut media_preview_background_cap_reported = false;
+                    let mut folder_file_count_background_cap_reported = false;
                     for worktree_snapshot in visible_worktrees {
                         if visible_entries_total >= MAX_PROJECT_PANEL_VISIBLE_ENTRIES {
                             project_panel_cap_hit(
@@ -4674,6 +4683,34 @@ impl ProjectPanel {
                             auto_folded_ancestors.clear();
                             let entry_is_visible = (!hide_gitignore || !entry.is_ignored)
                                 && (!hide_hidden || !entry.is_hidden);
+                            let cache_key = (worktree_id, entry.id);
+                            if entry_is_visible
+                                && entry.kind.is_dir()
+                                && !cached_folder_file_count_keys.contains(&cache_key)
+                            {
+                                if folder_file_count_updates.len()
+                                    < MAX_PROJECT_PANEL_BACKGROUND_FOLDER_FILE_COUNT_DIRS
+                                {
+                                    let count = worktree_snapshot
+                                        .child_entries_with_options(
+                                            &entry.path,
+                                            ChildEntriesOptions {
+                                                include_files: true,
+                                                include_dirs: false,
+                                                include_ignored: !hide_gitignore,
+                                            },
+                                        )
+                                        .filter(|child| !hide_hidden || !child.is_hidden)
+                                        .count();
+                                    folder_file_count_updates.push((cache_key, count));
+                                } else if !folder_file_count_background_cap_reported {
+                                    folder_file_count_background_cap_reported = true;
+                                    project_panel_cap_hit(
+                                        "background-folder-file-counts",
+                                        MAX_PROJECT_PANEL_BACKGROUND_FOLDER_FILE_COUNT_DIRS,
+                                    );
+                                }
+                            }
                             let entry_is_active_media_shelf_child = entry_is_visible
                                 && active_media_shelf_entry_ids.contains(&entry.id)
                                 && active_media_folder_for_visibility.is_some_and(
@@ -4824,7 +4861,6 @@ impl ProjectPanel {
                                     }
                                 };
 
-                            let cache_key = (worktree_id, entry.id);
                             let is_active_media_folder =
                                 active_media_folder_for_visibility == Some(cache_key);
                             if entry_is_visible
@@ -4925,10 +4961,16 @@ impl ProjectPanel {
                             new_state.max_width_item_index = Some(visited_worktrees_length + index);
                         }
                     }
-                    (new_state, media_preview_updates)
+                    (new_state, media_preview_updates, folder_file_count_updates)
                 })
                 .await;
             this.update_in(cx, |this, window, cx| {
+                if !folder_file_count_updates.is_empty() {
+                    let mut folder_file_counts = this.folder_file_counts.borrow_mut();
+                    for (cache_key, count) in folder_file_count_updates {
+                        folder_file_counts.entry(cache_key).or_insert(count);
+                    }
+                }
                 if !media_preview_updates.is_empty() {
                     let mut folder_media_previews = this.folder_media_previews.borrow_mut();
                     for (cache_key, preview) in media_preview_updates {
@@ -6038,7 +6080,9 @@ impl ProjectPanel {
         cx: &App,
     ) -> AnyElement {
         let label = if kind.is_dir() {
-            let count = folder_file_count.unwrap_or_default();
+            let Some(count) = folder_file_count else {
+                return div().into_any_element();
+            };
             SharedString::from(if count == 1 {
                 "1 file".to_string()
             } else {
@@ -7018,6 +7062,15 @@ impl ProjectPanel {
             .flatten()
     }
 
+    fn cached_folder_file_count(
+        &self,
+        worktree_id: WorktreeId,
+        entry_id: ProjectEntryId,
+    ) -> Option<usize> {
+        let cache_key = (worktree_id, entry_id);
+        self.folder_file_counts.borrow().get(&cache_key).copied()
+    }
+
     fn active_media_folder_for_selection(&self, cx: &App) -> Option<ActiveMediaFolder> {
         let selection = self.selection?;
         let resolved_entry_id = self.resolve_entry(selection.entry_id);
@@ -7301,37 +7354,11 @@ impl ProjectPanel {
                     .map(|worktree| worktree.read(cx).absolutize(&entry.path))
                     .unwrap_or_default()
             });
-        let folder_file_count = entry.kind.is_dir().then(|| {
-            let cache_key = (worktree_id, entry.id);
-            if let Some(count) = self.folder_file_counts.borrow().get(&cache_key).copied() {
-                count
-            } else {
-                let settings = ProjectPanelSettings::get_global(cx);
-                let count = self
-                    .project
-                    .read(cx)
-                    .worktree_for_id(worktree_id, cx)
-                    .map(|worktree| {
-                        let snapshot = worktree.read(cx).snapshot();
-                        snapshot
-                            .child_entries_with_options(
-                                &entry.path,
-                                ChildEntriesOptions {
-                                    include_files: true,
-                                    include_dirs: false,
-                                    include_ignored: !settings.hide_gitignore,
-                                },
-                            )
-                            .filter(|child| !settings.hide_hidden || !child.is_hidden)
-                            .count()
-                    })
-                    .unwrap_or_default();
-                self.folder_file_counts
-                    .borrow_mut()
-                    .insert(cache_key, count);
-                count
-            }
-        });
+        let folder_file_count = entry
+            .kind
+            .is_dir()
+            .then(|| self.cached_folder_file_count(worktree_id, entry.id))
+            .flatten();
         let media_preview = if entry.kind.is_dir() && is_expanded {
             self.cached_folder_media_preview(worktree_id, entry.id)
         } else {

@@ -32,16 +32,17 @@ pub(super) async fn generate_video_center_frame(
     executor: &BackgroundExecutor,
 ) -> Option<GeneratedVideoFrameMetadata> {
     let output_path = managed_video_frame_cache_path(path_text, size);
+    let duration_seconds = probe_video_duration_seconds(source_path, executor).await;
     if output_path.is_file() {
         return Some(GeneratedVideoFrameMetadata {
             center_frame_path: output_path,
-            duration_seconds: None,
+            duration_seconds,
         });
     }
 
     fs::create_dir_all(output_path.parent()?).ok()?;
 
-    let duration_seconds = probe_video_duration_seconds(source_path, executor).await?;
+    let duration_seconds = duration_seconds?;
     let center_seconds = duration_seconds / 2.;
     let temporary_output_path = temporary_video_frame_path(&output_path)?;
     let _ = fs::remove_file(&temporary_output_path);

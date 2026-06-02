@@ -273,6 +273,61 @@ test("project panel display strings, sticky rows, and undo batches are bounded",
   });
 });
 
+test("project panel folder file counts are cache-only on the visible-row path", () => {
+  const source = read("crates/project_panel/src/project_panel.rs");
+  const detailsForEntry = functionBody(source, "details_for_entry");
+  const renderEntryInfoBadge = functionBody(source, "render_entry_info_badge");
+  const updateVisibleEntries = functionBody(source, "update_visible_entries");
+  const cachedFolderFileCount = functionBody(source, "cached_folder_file_count");
+
+  assert.match(
+    source,
+    /const MAX_PROJECT_PANEL_BACKGROUND_FOLDER_FILE_COUNT_DIRS: usize = 4_096;/,
+    "folder file-count warming must have a named background cap",
+  );
+  assert.match(source, /fn cached_folder_file_count\(/);
+  assert.match(
+    cachedFolderFileCount,
+    /folder_file_counts[\s\S]*get\(&cache_key\)[\s\S]*copied\(\)/,
+    "render-facing folder count lookup must be cache-only",
+  );
+  assert.match(
+    detailsForEntry,
+    /let folder_file_count = entry[\s\S]*kind[\s\S]*is_dir\(\)[\s\S]*then\(\|\| self\.cached_folder_file_count\(worktree_id, entry\.id\)\)[\s\S]*flatten\(\);/,
+    "details_for_entry must not warm folder count cache misses on the visible-row path",
+  );
+  assert.doesNotMatch(
+    detailsForEntry,
+    /folder_file_counts[\s\S]*borrow_mut\(\)|child_entries_with_options/,
+    "details_for_entry must not mutate folder count caches or scan child entries",
+  );
+  assert.match(
+    renderEntryInfoBadge,
+    /let Some\(count\) = folder_file_count else \{[\s\S]*return div\(\)\.into_any_element\(\);[\s\S]*\};/,
+    "cold folder count badges must not display a misleading zero count",
+  );
+  assert.match(
+    updateVisibleEntries,
+    /let cached_folder_file_count_keys = self[\s\S]*folder_file_counts[\s\S]*keys\(\)[\s\S]*collect::<HashSet<_>>\(\);/,
+    "visible-entry refresh must snapshot folder count cache state before background warming",
+  );
+  assert.match(
+    updateVisibleEntries,
+    /let mut folder_file_count_updates = Vec::new\(\);/,
+    "folder count warming must collect background results separately from visible rows",
+  );
+  assert.match(
+    updateVisibleEntries,
+    /folder_file_count_updates\.len\(\)[\s\S]*MAX_PROJECT_PANEL_BACKGROUND_FOLDER_FILE_COUNT_DIRS[\s\S]*child_entries_with_options[\s\S]*include_files: true[\s\S]*include_dirs: false[\s\S]*folder_file_count_updates\.push\(\(cache_key, count\)\)/,
+    "background folder count warming must count direct file children under a named cap",
+  );
+  assert.match(
+    updateVisibleEntries,
+    /folder_file_counts\.entry\(cache_key\)\.or_insert\(count\)/,
+    "background folder count results must populate cache misses without overwriting fresher counts",
+  );
+});
+
 test("project panel media preview is lazy, bounded, and preserves normal tree rows", () => {
   const source = read("crates/project_panel/src/project_panel.rs");
   const media = read("crates/project_panel/src/media_preview.rs");
@@ -333,7 +388,7 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   );
   assert.match(
     updateVisibleEntries,
-    /background_spawn\(async move \{[\s\S]*let mut active_media_shelf_entry_ids = active_media_shelf_entry_ids;[\s\S]*let mut media_preview_updates = Vec::new\(\);[\s\S]*let is_active_media_folder =[\s\S]*active_media_folder_for_visibility == Some\(cache_key\);[\s\S]*is_active_media_folder[\s\S]*MAX_PROJECT_PANEL_BACKGROUND_MEDIA_PREVIEW_FOLDERS[\s\S]*media_preview::build_folder_media_preview_with_generated_metadata\([\s\S]*&absolute_path,[\s\S]*children,[\s\S]*generated_media_metadata\.get\(&cache_key\),[\s\S]*\)[\s\S]*active_media_shelf_entry_ids\.extend\([\s\S]*preview\.items\.iter\(\)\.map\(\|item\| item\.entry_id\)[\s\S]*media_preview_updates\.push\(\(cache_key, preview\)\)[\s\S]*\(new_state, media_preview_updates\)/,
+    /background_spawn\(async move \{[\s\S]*let mut active_media_shelf_entry_ids = active_media_shelf_entry_ids;[\s\S]*let mut media_preview_updates = Vec::new\(\);[\s\S]*let is_active_media_folder =[\s\S]*active_media_folder_for_visibility == Some\(cache_key\);[\s\S]*is_active_media_folder[\s\S]*MAX_PROJECT_PANEL_BACKGROUND_MEDIA_PREVIEW_FOLDERS[\s\S]*media_preview::build_folder_media_preview_with_generated_metadata\([\s\S]*&absolute_path,[\s\S]*children,[\s\S]*generated_media_metadata\.get\(&cache_key\),[\s\S]*\)[\s\S]*active_media_shelf_entry_ids\.extend\([\s\S]*preview\.items\.iter\(\)\.map\(\|item\| item\.entry_id\)[\s\S]*media_preview_updates\.push\(\(cache_key, preview\)\)[\s\S]*\(new_state, media_preview_updates, folder_file_count_updates\)/,
     "media preview cache misses must be warmed inside the visible-entry background task",
   );
   assert.match(
@@ -712,8 +767,8 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     buildGeneratedMediaMetadataJobBatch,
-    /MediaPreviewKind::Video[\s\S]*video_frame_preview\.is_none\(\)[\s\S]*item\.size <= MAX_GENERATED_MEDIA_METADATA_FILE_BYTES/,
-    "generated metadata jobs must select missing video frame previews without touching videos that already have manifest or sidecar frames",
+    /MediaPreviewKind::Video[\s\S]*video_frame_preview\.is_none\(\)\s*\|\|\s*item\.duration_label\.is_none\(\)[\s\S]*item\.size <= MAX_GENERATED_MEDIA_METADATA_FILE_BYTES/,
+    "generated metadata jobs must select videos missing either representative frames or duration labels",
   );
   assert.match(
     collectGeneratedMediaMetadata,
@@ -764,6 +819,11 @@ test("project panel media preview renders direct image previews and video frames
     generateVideoCenterFrame,
     /managed_video_frame_cache_path\(path_text, size\)[\s\S]*probe_video_duration_seconds\(source_path, executor\)\.await[\s\S]*extract_video_center_frame\([\s\S]*source_path,[\s\S]*&temporary_output_path,[\s\S]*center_seconds,[\s\S]*executor,[\s\S]*\)[\s\S]*\.await/,
     "video center-frame generation must derive a managed cache path, probe duration, then extract the center timestamp",
+  );
+  assert.match(
+    generateVideoCenterFrame,
+    /let duration_seconds = probe_video_duration_seconds\(source_path, executor\)\.await;[\s\S]*if output_path\.is_file\(\) \{[\s\S]*duration_seconds,[\s\S]*\}[\s\S]*let duration_seconds = duration_seconds\?;/,
+    "cached generated video frames must still try to carry bounded duration evidence for hover metadata",
   );
   assert.match(
     managedVideoFrameCachePath,
