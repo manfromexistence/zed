@@ -119,25 +119,18 @@ fn render_sources_rail(
         .border_r_1()
         .border_color(cx.theme().colors().border)
         .bg(cx.theme().colors().tab_bar_background)
-        .child(section_title("Workspace", IconName::Library))
+        .child(section_title("Agent", IconName::ZedAgent))
         .child(sidebar_actions)
-        .child(section_title("AI Workspace", IconName::ZedAgent))
-        .child(workspace_mode_state(status, cx))
         .child(section_title("Sources", IconName::Book))
         .child(sources::source_set_stack(
             &status.source_sets,
             source_row_controls,
             cx,
         ))
-        .child(section_title("Source Actions", IconName::Paperclip))
+        .child(section_title("Source Tools", IconName::Paperclip))
         .child(source_actions)
-        .child(section_title("Attach", IconName::Link))
-        .child(sources::source_attachment_state(
-            &status.source_sets.attachment_summary(),
-            cx,
-        ))
-        .child(section_title("Receipts", IconName::FileTextOutlined))
-        .child(sources::receipt_source_state(&status.receipt_snapshot, cx))
+        .child(section_title("Workspace State", IconName::Library))
+        .child(workspace_mode_state(status, cx))
         .into_any_element()
 }
 
@@ -250,83 +243,55 @@ fn render_right_rail(
         .border_color(cx.theme().colors().border)
         .bg(cx.theme().colors().tab_bar_background)
         .child(section_title("Progress", IconName::TodoProgress))
-        .child(metric_row("Thread", status.active_status.clone()))
-        .child(metric_row(
-            "Background",
-            format!("{} tasks", status.background_task_count),
-        ))
-        .child(section_title("Launch Status", IconName::Check))
-        .child(launch_status::launch_status_state(
-            &status.launch_status,
-            cx,
-        ))
-        .child(section_title("Launch Handoff", IconName::ListTodo))
-        .child(contracts::launch_contract_state(
-            &status.launch_contracts,
-            cx,
-        ))
-        .child(section_title("Launch Gate", IconName::Check))
-        .child(readiness::launch_readiness_state(
-            &status.launch_readiness,
-            cx,
-        ))
-        .child(section_title("Launch Audit", IconName::ListTodo))
-        .child(audit::launch_audit_state(&status.launch_audit, cx))
-        .child(section_title("Source Audit", IconName::GitBranch))
-        .child(source_audit::launch_source_audit_state(
-            &status.source_audit,
-            cx,
-        ))
-        .child(section_title("WWW Evidence", IconName::Public))
-        .child(www_evidence::www_launch_evidence_state(
-            &status.www_evidence,
-            cx,
-        ))
-        .child(section_title("Launch Receipts", IconName::FileTextOutlined))
-        .child(launch_receipts::launch_receipt_review_state(
-            &status.launch_receipts,
-            cx,
-        ))
-        .child(section_title("Binary Cache", IconName::Sliders))
-        .child(binary_cache::binary_cache_state(&status.binary_cache, cx))
+        .child(progress_summary(status, cx))
+        .child(section_title("Guided Actions", IconName::Sparkle))
+        .child(guided_cards)
+        .child(section_title("Style", IconName::Sliders))
+        .child(style_panel::dx_style_panel_state(&status.style_panel, cx))
+        .child(section_title("Check", IconName::Check))
+        .child(check::check_score_state(&status.check_score, cx))
+        .child(section_title("Deploy", IconName::Public))
+        .child(deploy_target_state(&status.deploy_targets, cx))
         .when(status.agent_bridge.show_in_agent_rail, |this| {
             this.child(section_title("DX Agents", IconName::ZedAgent))
                 .child(agents::dx_agent_bridge_state(&status.agent_bridge, cx))
-                .child(section_title("Social Accounts", IconName::Link))
-                .child(agents::dx_agent_social_state(&status.agent_bridge, cx))
                 .child(section_title("Automations", IconName::ListTodo))
                 .child(agents::dx_agent_automation_state(&status.agent_bridge, cx))
-                .child(section_title("Agent Receipts", IconName::FileTextOutlined))
-                .child(agents::dx_agent_receipt_state(&status.agent_bridge, cx))
-                .child(section_title("Agent Providers", IconName::Sliders))
-                .child(agents::dx_agent_provider_state(&status.agent_bridge, cx))
         })
-        .child(section_title("Check", IconName::Check))
-        .child(check::check_score_state(&status.check_score, cx))
-        .child(section_title("Style", IconName::Sliders))
-        .child(style_panel::dx_style_panel_state(&status.style_panel, cx))
-        .child(section_title("Proof Freshness", IconName::FileTextOutlined))
+        .child(section_title("Proof", IconName::FileTextOutlined))
         .child(proof::proof_freshness_state(&status.proof_freshness, cx))
-        .child(section_title("Runtime Proof", IconName::Check))
         .child(proof::runtime_proof_status_state(
             &status.runtime_proof_status,
             cx,
         ))
-        .child(section_title("Guided Proofs", IconName::Sparkle))
-        .child(guided_cards)
-        .child(section_title("Git", IconName::GitBranch))
+        .into_any_element()
+}
+
+fn progress_summary(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {
+    let source_summary = status.source_sets.attachment_summary();
+    v_flex()
+        .gap_1()
+        .rounded_sm()
+        .border_1()
+        .border_color(cx.theme().colors().border_variant)
+        .p_2()
+        .bg(cx.theme().colors().element_background)
+        .child(metric_row("Thread", status.active_status.clone()))
+        .child(metric_row(
+            "Background",
+            format!("{} task(s)", status.background_task_count),
+        ))
+        .child(metric_row(
+            "Sources",
+            format!(
+                "{} attach-ready / {} receipt(s)",
+                source_summary.attachable_sources, source_summary.managed_receipts
+            ),
+        ))
         .child(metric_row(
             "Worktrees",
             status.visible_worktree_count.to_string(),
         ))
-        .child(section_title("Deploy", IconName::Public))
-        .child(deploy_target_state(&status.deploy_targets, cx))
-        .child(section_title("Tool History", IconName::Archive))
-        .child(tool_history::tool_history_state(&status.tool_history, cx))
-        .child(section_title("Background Tasks", IconName::Clock))
-        .child(background_task_state(status.background_task_count, cx))
-        .child(section_title("Token And Tool Slots", IconName::Sliders))
-        .child(token_meter_slots(&status.receipt_snapshot))
         .into_any_element()
 }
 
@@ -348,56 +313,6 @@ fn signal_row(
                 .truncate(),
         )
         .into_any_element()
-}
-
-fn background_task_state(count: usize, cx: &App) -> AnyElement {
-    if count == 0 {
-        muted_card("No retained background tasks", cx)
-    } else {
-        metric_row("Retained", count.to_string())
-    }
-}
-
-fn token_meter_slots(snapshot: &DxReceiptSnapshot) -> AnyElement {
-    let token_count = snapshot
-        .buckets
-        .iter()
-        .find(|bucket| bucket.label == "Tokens")
-        .map(|bucket| bucket.count)
-        .unwrap_or_default();
-    let rlm_count = snapshot
-        .buckets
-        .iter()
-        .find(|bucket| bucket.label == "RLM")
-        .map(|bucket| bucket.count)
-        .unwrap_or_default();
-    let serializer_count = snapshot
-        .buckets
-        .iter()
-        .find(|bucket| bucket.label == "Serializer")
-        .map(|bucket| bucket.count)
-        .unwrap_or_default();
-    let meter_value = token_meter_value(snapshot.root_exists, token_count);
-
-    v_flex()
-        .gap_1()
-        .child(metric_row("Prompt", meter_value))
-        .child(metric_row("Output", meter_value))
-        .child(metric_row("Tools", meter_value))
-        .child(metric_row("Token receipts", token_count.to_string()))
-        .child(metric_row("RLM receipts", rlm_count.to_string()))
-        .child(metric_row("Serializer", serializer_count.to_string()))
-        .into_any_element()
-}
-
-fn token_meter_value(receipt_root_exists: bool, token_receipt_count: usize) -> &'static str {
-    if !receipt_root_exists {
-        "receipt root missing"
-    } else if token_receipt_count == 0 {
-        "waiting for token receipt"
-    } else {
-        "receipt metadata ready"
-    }
 }
 
 fn section_title(label: &'static str, icon: IconName) -> AnyElement {

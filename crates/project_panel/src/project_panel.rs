@@ -6677,7 +6677,8 @@ impl ProjectPanel {
                             .gap_1()
                             .flex_none()
                             .ml_auto()
-                            .pr_3()
+                            .pr_1()
+                            .justify_end()
                             .when_some(diagnostic_count, |this, count| {
                                 this.when(count.error_count > 0, |this| {
                                     this.child(

@@ -11,7 +11,10 @@ const item = read("crates/workspace/src/item.rs");
 const pane = read("crates/workspace/src/pane.rs");
 const workspace = read("crates/workspace/src/workspace.rs");
 const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
+const threadView = read("crates/agent_ui/src/conversation_view/thread_view.rs");
+const dxLaunchWorkspace = read("crates/agent_ui/src/dx_launch_workspace.rs");
 const sidebar = read("crates/sidebar/src/sidebar.rs");
+const projectPanel = read("crates/project_panel/src/project_panel.rs");
 const iconPicker = read("crates/icon_picker/src/icon_picker.rs");
 const fontPanel = read("crates/font_panel/src/font_panel.rs");
 const mediaPanel = read("crates/media_panel/src/media_panel.rs");
@@ -232,6 +235,12 @@ test("agent fullscreen uses agent rails while sidebar button remains dock-scoped
   assert.match(agentPanel, /"agent-toolbar-toggle-progress-rail"/);
   assert.match(agentPanel, /fullscreen_sources_rail_open/);
   assert.match(agentPanel, /fullscreen_progress_rail_open/);
+  assert.match(agentPanel, /fn render_fullscreen_agent_center\(/);
+  assert.match(agentPanel, /"agent-fullscreen-center"/);
+  assert.match(agentPanel, /\.px_4\(\)/);
+  assert.match(agentPanel, /\.pb_3\(\)/);
+  assert.match(threadView, /\.rounded_md\(\)/);
+  assert.match(threadView, /\.shadow_sm\(\)/);
   assert.match(agentPanel, /PanelEvent::ZoomOut/);
   assert.match(agentPanel, /PanelEvent::ZoomIn/);
   assert.doesNotMatch(agentPanel, /"agent-toolbar-toggle-left-dock"/);
@@ -243,10 +252,33 @@ test("sidebar chat groups expose persistent sort and icon override controls", ()
   assert.match(sidebar, /enum SidebarThreadSortMode/);
   assert.match(sidebar, /thread_sort_mode: SidebarThreadSortMode/);
   assert.match(sidebar, /thread_icon_overrides: HashMap<ThreadId, IconName>/);
+  assert.match(sidebar, /"dragged-sidebar-thread-preview"/);
+  assert.match(sidebar, /struct ThreadIconPickerMenu/);
+  assert.match(sidebar, /"thread-icon-picker-grid"/);
+  assert.match(sidebar, /"thread-icon-picker-grid-icons"/);
   assert.match(sidebar, /"sidebar-chat-sort-\{label\}"/);
   assert.match(sidebar, /"thread-icon-picker"/);
+  assert.match(sidebar, /IconButton::new\(\("thread-icon-picker", ix\), IconName::Sparkle\)/);
   assert.match(sidebar, /IconName::iter\(\)/);
   assert.match(sidebar, /SerializedThreadIconOverride/);
+  assert.doesNotMatch(sidebar, /ContextMenuEntry::new\(format!\("\{icon_name:\?\}"\)\)/);
+});
+
+test("agent rails and project badges keep compact production layout", () => {
+  assert.match(dxLaunchWorkspace, /fn progress_summary\(/);
+  assert.match(dxLaunchWorkspace, /section_title\("Guided Actions", IconName::Sparkle\)/);
+  assert.match(dxLaunchWorkspace, /section_title\("Source Tools", IconName::Paperclip\)/);
+  assert.doesNotMatch(dxLaunchWorkspace, /section_title\("Token And Tool Slots"/);
+  assert.doesNotMatch(dxLaunchWorkspace, /fn token_meter_slots\(/);
+  assert.doesNotMatch(dxLaunchWorkspace, /fn background_task_state\(/);
+
+  const badgeSlot = projectPanel.slice(
+    projectPanel.indexOf(".end_slot::<AnyElement>("),
+    projectPanel.indexOf(".child(if let Some(icon)", projectPanel.indexOf(".end_slot::<AnyElement>(")),
+  );
+  assert.match(badgeSlot, /\.ml_auto\(\)/);
+  assert.match(badgeSlot, /\.pr_1\(\)/);
+  assert.match(badgeSlot, /\.justify_end\(\)/);
 });
 
 test("agent layout preset keeps project, git, outline, and collab on the left", () => {

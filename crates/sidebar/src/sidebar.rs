@@ -28,9 +28,10 @@ use feature_flags::{
     AgentThreadWorktreeLabel, AgentThreadWorktreeLabelFlag, FeatureFlag, FeatureFlagAppExt as _,
 };
 use gpui::{
-    Action as _, AnyElement, App, ClickEvent, Context, DismissEvent, Entity, EntityId, FocusHandle,
-    Focusable, KeyContext, ListState, Modifiers, Pixels, Render, SharedString, Task, TaskExt,
-    WeakEntity, Window, WindowHandle, linear_color_stop, linear_gradient, list, prelude::*, px,
+    Action as _, AnyElement, App, ClickEvent, Context, DismissEvent, Entity, EntityId,
+    EventEmitter, FocusHandle, Focusable, KeyContext, ListState, Modifiers, Pixels, Render,
+    SharedString, Task, TaskExt, WeakEntity, Window, WindowHandle, linear_color_stop,
+    linear_gradient, list, prelude::*, px,
 };
 use menu::{
     Cancel, Confirm, SelectChild, SelectFirst, SelectLast, SelectNext, SelectParent, SelectPrevious,
@@ -619,8 +620,132 @@ struct DraggedSidebarThread {
 }
 
 impl Render for DraggedSidebarThread {
-    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
-        gpui::Empty
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        v_flex()
+            .id("dragged-sidebar-thread-preview")
+            .w(px(220.0))
+            .gap_0p5()
+            .rounded_md()
+            .border_1()
+            .border_color(cx.theme().colors().border)
+            .bg(cx.theme().colors().elevated_surface_background)
+            .shadow_md()
+            .p_2()
+            .child(
+                h_flex()
+                    .gap_2()
+                    .min_w_0()
+                    .items_center()
+                    .child(
+                        Icon::new(self.icon)
+                            .size(IconSize::Small)
+                            .color(Color::Accent),
+                    )
+                    .child(
+                        Label::new(self.label.clone())
+                            .size(LabelSize::Small)
+                            .color(Color::Default)
+                            .truncate(),
+                    ),
+            )
+            .when_some(self.subtitle.clone(), |this, subtitle| {
+                this.child(
+                    Label::new(subtitle)
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted)
+                        .truncate(),
+                )
+            })
+    }
+}
+
+struct ThreadIconPickerMenu {
+    sidebar: WeakEntity<Sidebar>,
+    thread_id: ThreadId,
+    selected_icon: IconName,
+    focus_handle: FocusHandle,
+}
+
+impl Focusable for ThreadIconPickerMenu {
+    fn focus_handle(&self, _cx: &App) -> FocusHandle {
+        self.focus_handle.clone()
+    }
+}
+
+impl EventEmitter<DismissEvent> for ThreadIconPickerMenu {}
+
+impl Render for ThreadIconPickerMenu {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let icons = IconName::iter().collect::<Vec<_>>();
+        v_flex()
+            .id("thread-icon-picker-grid")
+            .track_focus(&self.focus_handle)
+            .w(px(228.0))
+            .max_h_64()
+            .overflow_y_scroll()
+            .gap_1()
+            .rounded_md()
+            .border_1()
+            .border_color(cx.theme().colors().border)
+            .bg(cx.theme().colors().elevated_surface_background)
+            .p_2()
+            .child(
+                h_flex()
+                    .gap_1()
+                    .items_center()
+                    .child(Icon::new(IconName::Sparkle).size(IconSize::XSmall))
+                    .child(
+                        Label::new("Choose icon")
+                            .size(LabelSize::XSmall)
+                            .color(Color::Muted),
+                    )
+                    .child(div().flex_1())
+                    .child(
+                        IconButton::new("thread-icon-picker-reset", IconName::Close)
+                            .shape(IconButtonShape::Square)
+                            .icon_size(IconSize::Small)
+                            .tooltip(Tooltip::text("Reset Thread Icon"))
+                            .on_click(cx.listener(|this, _, _window, cx| {
+                                this.sidebar
+                                    .update(cx, |sidebar, cx| {
+                                        sidebar.thread_icon_overrides.remove(&this.thread_id);
+                                        sidebar.grid_entry_cache.borrow_mut().clear();
+                                        sidebar.update_entries(cx);
+                                        sidebar.serialize(cx);
+                                        cx.notify();
+                                    })
+                                    .ok();
+                                cx.emit(DismissEvent);
+                            })),
+                    ),
+            )
+            .child(
+                h_flex()
+                    .id("thread-icon-picker-grid-icons")
+                    .flex_wrap()
+                    .gap_1()
+                    .children(icons.into_iter().map(|icon_name| {
+                        IconButton::new(("thread-icon-picker-grid-icon", icon_name), icon_name)
+                            .shape(IconButtonShape::Square)
+                            .icon_size(IconSize::Small)
+                            .toggle_state(icon_name == self.selected_icon)
+                            .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+                            .on_click(cx.listener(move |this, _, _window, cx| {
+                                this.sidebar
+                                    .update(cx, |sidebar, cx| {
+                                        sidebar
+                                            .thread_icon_overrides
+                                            .insert(this.thread_id, icon_name);
+                                        sidebar.grid_entry_cache.borrow_mut().clear();
+                                        sidebar.update_entries(cx);
+                                        sidebar.serialize(cx);
+                                        cx.notify();
+                                    })
+                                    .ok();
+                                cx.emit(DismissEvent);
+                            }))
+                    })),
+            )
     }
 }
 
@@ -6567,56 +6692,18 @@ impl Sidebar {
                     let sidebar = cx.weak_entity();
                     PopoverMenu::new(format!("thread-icon-picker-menu-{ix}"))
                         .trigger_with_tooltip(
-                            IconButton::new(("thread-icon-picker", ix), icon)
+                            IconButton::new(("thread-icon-picker", ix), IconName::Sparkle)
                                 .icon_size(IconSize::Small)
                                 .icon_color(Color::Muted)
                                 .selected_style(ButtonStyle::Tinted(TintColor::Accent)),
                             Tooltip::text("Change Thread Icon"),
                         )
                         .menu(move |window, cx| {
-                            let sidebar = sidebar.clone();
-                            Some(ContextMenu::build(window, cx, move |menu, _window, _cx| {
-                                let mut menu = menu.header("Thread Icon");
-                                for icon_name in IconName::iter() {
-                                    let sidebar = sidebar.clone();
-                                    let entry = ContextMenuEntry::new(format!("{icon_name:?}"))
-                                        .icon(icon_name)
-                                        .icon_color(Color::Muted)
-                                        .toggle(ui::IconPosition::Start, icon_name == icon)
-                                        .handler(move |_window, cx| {
-                                            sidebar
-                                                .update(cx, |sidebar, cx| {
-                                                    sidebar
-                                                        .thread_icon_overrides
-                                                        .insert(thread_id_for_actions, icon_name);
-                                                    sidebar.grid_entry_cache.borrow_mut().clear();
-                                                    sidebar.update_entries(cx);
-                                                    sidebar.serialize(cx);
-                                                    cx.notify();
-                                                })
-                                                .ok();
-                                        });
-                                    menu = menu.item(entry);
-                                }
-                                let sidebar = sidebar.clone();
-                                menu.separator().item(
-                                    ContextMenuEntry::new("Reset Icon")
-                                        .icon(IconName::Close)
-                                        .icon_color(Color::Muted)
-                                        .handler(move |_window, cx| {
-                                            sidebar
-                                                .update(cx, |sidebar, cx| {
-                                                    sidebar
-                                                        .thread_icon_overrides
-                                                        .remove(&thread_id_for_actions);
-                                                    sidebar.grid_entry_cache.borrow_mut().clear();
-                                                    sidebar.update_entries(cx);
-                                                    sidebar.serialize(cx);
-                                                    cx.notify();
-                                                })
-                                                .ok();
-                                        }),
-                                )
+                            Some(cx.new(|cx| ThreadIconPickerMenu {
+                                sidebar: sidebar.clone(),
+                                thread_id: thread_id_for_actions,
+                                selected_icon: icon,
+                                focus_handle: cx.focus_handle(),
                             }))
                         })
                 };

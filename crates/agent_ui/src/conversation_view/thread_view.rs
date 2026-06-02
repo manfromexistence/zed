@@ -3711,8 +3711,10 @@ impl ThreadView {
         let fills_container = !has_messages || editor_expanded;
 
         h_flex()
-            .p_2()
-            .bg(editor_bg_color)
+            .px_2()
+            .pt_2()
+            .pb_3()
+            .bg(cx.theme().colors().panel_background)
             .justify_center()
             .map(|this| {
                 if has_messages {
@@ -3729,6 +3731,14 @@ impl ThreadView {
                     .when_some(max_content_width, |this, max_w| this.flex_basis(max_w))
                     .when(max_content_width.is_none(), |this| this.w_full())
                     .when(fills_container, |this| this.h_full())
+                    .when(has_messages, |this| {
+                        this.rounded_md()
+                            .border_1()
+                            .border_color(cx.theme().colors().border)
+                            .bg(editor_bg_color)
+                            .p_2()
+                            .shadow_sm()
+                    })
                     .flex_shrink_1()
                     .flex_grow_0()
                     .justify_between()

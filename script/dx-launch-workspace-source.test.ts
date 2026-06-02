@@ -222,7 +222,7 @@ test("DX launch workspace delegates Launch Receipts rail rendering", () => {
     "crates/agent_ui/src/dx_launch_workspace/launch_receipts/status.rs",
   );
 
-  assert.match(parent, /launch_receipts::launch_receipt_review_state/);
+  assert.match(parent, /^mod launch_receipts;$/m);
   assert.doesNotMatch(parent, /fn launch_receipt_review_state/);
   assert.doesNotMatch(parent, /fn launch_receipt_row/);
   assert.match(launchReceipts, /^mod rows;$/m);
@@ -269,7 +269,7 @@ test("DX launch workspace delegates WWW Evidence rail rendering", () => {
   const wwwEvidenceStatus = read("crates/agent_ui/src/dx_launch_workspace/www_evidence/status.rs");
   const wwwEvidenceWarnings = read("crates/agent_ui/src/dx_launch_workspace/www_evidence/warnings.rs");
 
-  assert.match(parent, /www_evidence::www_launch_evidence_state/);
+  assert.match(parent, /^mod www_evidence;$/m);
   assert.doesNotMatch(parent, /fn www_launch_evidence_state/);
   assert.match(wwwEvidence, /^mod status;$/m);
   assert.match(wwwEvidence, /^mod warnings;$/m);
@@ -299,7 +299,7 @@ test("DX launch workspace delegates Launch Audit rail rendering", () => {
   const auditStatus = read("crates/agent_ui/src/dx_launch_workspace/audit/status.rs");
   const auditWarnings = read("crates/agent_ui/src/dx_launch_workspace/audit/warnings.rs");
 
-  assert.match(parent, /audit::launch_audit_state/);
+  assert.match(parent, /^mod audit;$/m);
   assert.doesNotMatch(parent, /fn launch_audit_state/);
   assert.match(audit, /^mod summary;$/m);
   assert.match(audit, /^mod status;$/m);
@@ -365,7 +365,7 @@ test("DX launch workspace delegates Source Audit rail rendering", () => {
     "crates/agent_ui/src/dx_launch_workspace/source_audit/warnings.rs",
   );
 
-  assert.match(parent, /source_audit::launch_source_audit_state/);
+  assert.match(parent, /^mod source_audit;$/m);
   assert.doesNotMatch(parent, /fn launch_source_audit_state/);
   assert.match(sourceAudit, /^mod summary;$/m);
   assert.match(sourceAudit, /^mod status;$/m);
@@ -425,7 +425,7 @@ test("DX launch workspace delegates Launch Handoff rail rendering", () => {
   const contracts = read("crates/agent_ui/src/dx_launch_workspace/contracts.rs");
   const contractStatus = read("crates/agent_ui/src/dx_launch_workspace/contracts/status.rs");
 
-  assert.match(parent, /contracts::launch_contract_state/);
+  assert.match(parent, /^mod contracts;$/m);
   assert.doesNotMatch(parent, /fn launch_contract_state/);
   assert.match(contracts, /^mod status;$/m);
   assert.match(contracts, /use self::status::launch_contract_status_rows/);
@@ -469,7 +469,7 @@ test("DX launch workspace delegates Launch Status rail rendering", () => {
     "crates/agent_ui/src/dx_launch_workspace/launch_status_labels.rs",
   );
 
-  assert.match(parent, /launch_status::launch_status_state/);
+  assert.match(parent, /^mod launch_status;$/m);
   assert.doesNotMatch(parent, /fn launch_status_state/);
   assert.match(launchStatus, /^mod rows;$/m);
   assert.match(launchStatus, /^mod summary;$/m);
@@ -552,7 +552,7 @@ test("DX launch workspace delegates Launch Gate rail rendering", () => {
   const readinessStatus = read("crates/agent_ui/src/dx_launch_workspace/readiness/status.rs");
   const readinessWarnings = read("crates/agent_ui/src/dx_launch_workspace/readiness/warnings.rs");
 
-  assert.match(parent, /readiness::launch_readiness_state/);
+  assert.match(parent, /^mod readiness;$/m);
   assert.doesNotMatch(parent, /fn launch_readiness_state/);
   assert.match(readiness, /^mod examples;$/m);
   assert.match(readiness, /^mod summary;$/m);
@@ -619,7 +619,7 @@ test("DX launch workspace delegates Binary Cache rail rendering", () => {
     "crates/agent_ui/src/dx_launch_workspace/binary_cache_labels.rs",
   );
 
-  assert.match(parent, /binary_cache::binary_cache_state/);
+  assert.match(parent, /^mod binary_cache;$/m);
   assert.doesNotMatch(parent, /fn binary_cache_state/);
   assert.doesNotMatch(parent, /fn binary_cache_row/);
   assert.match(binaryCache, /use super::binary_cache_labels::\{/);
@@ -741,7 +741,7 @@ test("DX launch workspace delegates agents and source rails", () => {
   const sourceKinds = read("crates/agent_ui/src/dx_launch_workspace/sources/kinds.rs");
 
   assert.match(parent, /agents::dx_agent_bridge_state/);
-  assert.match(parent, /agents::dx_agent_social_state/);
+  assert.match(parent, /^mod agents;$/m);
   assert.match(parent, /agents::dx_agent_automation_state/);
   assert.match(parent, /sources::source_set_stack/);
   assert.doesNotMatch(parent, /fn dx_agent_bridge_state/);
@@ -1330,7 +1330,7 @@ test("DX launch workspace delegates Tool History rail rendering", () => {
     "crates/agent_ui/src/dx_launch_workspace/tool_history/summary_rows.rs",
   );
 
-  assert.match(parent, /tool_history::tool_history_state/);
+  assert.match(parent, /^mod tool_history;$/m);
   assert.doesNotMatch(parent, /fn tool_history_state/);
   assert.doesNotMatch(parent, /fn tool_history_bucket/);
   assert.doesNotMatch(parent, /fn tool_history_summary_row/);

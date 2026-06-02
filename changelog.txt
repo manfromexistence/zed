@@ -1,3 +1,23 @@
+[2026-06-02] - Sidebar Drag And Agent Fullscreen Polish
+
+CHANGED:
+- `crates\sidebar\src\sidebar.rs` now renders a visible floating preview while dragging chat rows and replaces the text-heavy thread icon menu with a compact icon-only popover backed by persisted `IconName` overrides.
+- `crates\agent_ui\src\agent_panel.rs` now wraps fullscreen Agent content in a full-width screen surface while keeping the actual conversation centered to the existing Agent max-content width.
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now renders the Agent composer as a centered rounded control with bottom breathing room instead of a full-width strip.
+- `crates\agent_ui\src\dx_launch_workspace.rs` now keeps fullscreen Agent rails compact and action-oriented, preserving real source/progress data without dumping the full diagnostic wall into the first-view sidebars.
+- `crates\agent_ui\src\dx_style_panel\panel_view.rs` now shows a compact Style cockpit summary focused on target, Web Preview readiness, generators, apply state, and gate reason.
+- `crates\project_panel\src\project_panel.rs` tightens the row end-slot alignment so hover badges sit at the far right with a smaller right gap.
+- `script\dx-workspace-ui-state-source.test.ts`, `script\dx-launch-workspace-source.test.ts`, and `script\dx-style-panel-source.test.ts` now guard the new compact rail, icon-popover, drag-preview, fullscreen-center, and badge-alignment contracts.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\sidebar\src\sidebar.rs crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\dx_launch_workspace.rs crates\agent_ui\src\dx_style_panel\panel_view.rs crates\project_panel\src\project_panel.rs`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-workspace-ui-state-source.test.ts script\dx-project-panel-source.test.ts script\dx-style-panel-source.test.ts script\dx-launch-workspace-source.test.ts`
+- `git diff --check`
+
+NOTES:
+- `just run` was not run in this pass because the latest prompt did not explicitly authorize it.
+- Live visual proof is still needed for exact chat drag feel, icon popover anchoring, fullscreen Agent spacing, and file-row badge position.
+
 [2026-06-02] - Native Panel Header And Agent Rail Correction
 
 CHANGED:

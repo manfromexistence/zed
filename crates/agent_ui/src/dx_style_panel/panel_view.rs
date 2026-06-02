@@ -102,105 +102,38 @@ fn style_summary(
 ) -> impl IntoElement + use<> {
     let gate = &active_context.apply_gate;
     let generator_count = format!("{} planned", snapshot.visual_generator_count);
-    let preflight_source = gate.editor_write_bridge.preflight_source_label.clone();
-    let mismatch = gate
-        .receipt_mismatch
-        .as_ref()
-        .and_then(|summary| summary.reasons.first())
-        .cloned();
+    let active_style_target = active_context
+        .css_property
+        .clone()
+        .or_else(|| active_context.token.clone())
+        .or_else(|| active_context.group_context.summary())
+        .unwrap_or_else(|| active_context.status.clone());
+
     v_flex()
         .gap_1()
         .rounded_sm()
         .p_2()
         .bg(cx.theme().colors().element_background)
         .child(metric("Status", snapshot.status.clone()))
-        .child(metric("Next", snapshot.next_action.clone()))
+        .child(metric("Target", active_style_target))
         .child(metric(
-            "Host",
+            "Web Preview",
             if snapshot.web_preview_bridge_ready {
-                "Web Preview ready".to_string()
+                "ready".to_string()
             } else if snapshot.web_preview_host_present {
-                "Web Preview host present".to_string()
+                "host present".to_string()
             } else {
-                "Web Preview host missing".to_string()
+                "host missing".to_string()
             },
         ))
         .child(metric("Generators", generator_count))
-        .child(metric("Context", active_context.status.clone()))
-        .when_some(active_context.source_state.clone(), |this, state| {
-            this.child(metric("Source", state))
-        })
-        .when_some(active_context.context_kind.clone(), |this, kind| {
-            this.child(metric("Kind", kind))
-        })
-        .when_some(active_context.token.clone(), |this, token| {
-            this.child(metric("Token", token))
-        })
-        .when_some(active_context.css_property.clone(), |this, property| {
-            this.child(metric("CSS", property))
-        })
         .when_some(active_context.css_generator.clone(), |this, generator| {
             this.child(metric("Generator", generator))
         })
-        .when_some(
-            active_context.css_source_edit_safety.clone(),
-            |this, safety| this.child(metric("CSS safety", safety)),
-        )
-        .when_some(active_context.css_hint_ordinal, |this, ordinal| {
-            let match_mode = active_context
-                .css_hint_property_match
-                .clone()
-                .unwrap_or_else(|| "unknown".to_string());
-            this.child(metric("CSS hint", format!("#{ordinal} / {match_mode}")))
-        })
-        .when_some(
-            active_context.css_hint_property_pattern.clone(),
-            |this, pattern| this.child(metric("Hint pattern", pattern)),
-        )
-        .when(!active_context.css_hint_value_contains.is_empty(), |this| {
-            this.child(metric(
-                "Hint value",
-                active_context.css_hint_value_contains.join(", "),
-            ))
-        })
-        .when(active_context.attribute_tokens.len() > 1, |this| {
-            this.child(metric(
-                "Class list",
-                format!("{} token(s)", active_context.attribute_tokens.len()),
-            ))
-        })
-        .when_some(active_context.group_context.summary(), |this, group| {
-            this.child(metric("Group", group))
-        })
-        .when_some(active_context.source_path.clone(), |this, path| {
-            this.child(metric("Path", path))
-        })
-        .when_some(active_context.span.clone(), |this, span| {
-            this.child(metric("Span", span))
-        })
-        .when_some(active_context.span_byte_range(), |this, span| {
-            this.child(metric("Span bytes", span))
-        })
         .child(metric("Apply", gate.state.clone()))
-        .child(metric("Match", gate.receipt_match.clone()))
-        .child(metric("Bridge", gate.editor_write_bridge.summary.clone()))
-        .child(metric("Preflight", preflight_source))
         .child(metric("Gate", gate.reason.clone()))
-        .when_some(mismatch, |this, reason| {
-            this.child(metric("Mismatch", reason))
-        })
-        .when_some(gate.receipt_summary.clone(), |this, receipt| {
-            this.child(metric(
-                "Receipt",
-                format!("{} / {} edit(s)", receipt.intent, receipt.edit_count),
-            ))
-            .child(metric("Review", receipt.message))
-            .when_some(receipt.edits.first().cloned(), |this, edit| {
-                this.child(metric("Patch", edit))
-            })
-        })
         .child(
-            Label::new(active_context.detail.clone())
+            Label::new(snapshot.next_action.clone())
                 .size(LabelSize::XSmall)
                 .color(Color::Muted)
                 .truncate(),
