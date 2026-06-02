@@ -321,7 +321,7 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   assert.match(media, /size:\s*u64/);
   assert.match(
     source,
-    /let preview = media_preview::build_folder_media_preview\(parent_abs_path, children\);[\s\S]*insert\(cache_key, preview\.clone\(\)\);[\s\S]*preview/,
+    /let preview = media_preview::build_folder_media_preview_with_generated_metadata\([\s\S]*parent_abs_path,[\s\S]*children,[\s\S]*generated_metadata,[\s\S]*\);[\s\S]*insert\(cache_key, preview\.clone\(\)\);[\s\S]*preview/,
     "media preview cache must store both populated previews and no-media misses",
   );
 
@@ -464,6 +464,7 @@ test("project panel media preview renders direct image previews and video frames
   const media = read("crates/project_panel/src/media_preview.rs");
   const metadata = read("crates/project_panel/src/media_preview/metadata.rs");
   const metadataProbe = read("crates/project_panel/src/media_preview/metadata_probe.rs");
+  const projectPanel = read("crates/project_panel/src/project_panel.rs");
   const renderFolderMediaPreview = functionBody(media, "render_folder_media_preview");
   const renderFolderMediaGallery = functionBody(media, "render_folder_media_gallery");
   const renderFolderMediaShelf = functionBody(media, "render_folder_media_shelf");
@@ -474,7 +475,15 @@ test("project panel media preview renders direct image previews and video frames
   const mediaPreviewCardTooltipMeta = functionBody(media, "media_preview_card_tooltip_meta");
   const audioGradientBackground = functionBody(media, "audio_gradient_background");
   const buildFolderMediaPreview = functionBody(media, "build_folder_media_preview");
+  const buildFolderMediaPreviewWithGeneratedMetadata = functionBody(
+    media,
+    "build_folder_media_preview_with_generated_metadata",
+  );
   const buildMediaMetadataIndex = functionBody(metadata, "build_media_metadata_index");
+  const mergeGeneratedMediaMetadata = functionBody(
+    metadata,
+    "merge_generated_media_metadata",
+  );
   const readBoundedMediaMetadataManifest = functionBody(
     metadata,
     "read_bounded_media_metadata_manifest",
@@ -492,7 +501,16 @@ test("project panel media preview renders direct image previews and video frames
 
   assert.match(media, /mod metadata;/);
   assert.match(media, /mod metadata_probe;/);
+  assert.match(media, /pub\(crate\) use metadata::GeneratedMediaMetadataIndex;/);
   assert.match(metadata, /pub\(super\) struct MediaMetadataIndex/);
+  assert.match(metadata, /pub\(crate\) struct GeneratedMediaMetadataIndex/);
+  assert.match(metadata, /pub\(crate\) struct GeneratedMediaMetadataRecord/);
+  assert.match(metadata, /const MAX_GENERATED_MEDIA_METADATA_RECORDS: usize = 256;/);
+  assert.match(
+    metadata,
+    /pub\(crate\) const GENERATED_MEDIA_METADATA_CACHE_SCHEMA: &str =\s*"zed\.project_panel\.generated_media_metadata";/,
+    "generated media metadata overlays must have a source-owned cache schema",
+  );
   assert.match(metadata, /pub\(super\) const MAX_PROJECT_PANEL_MEDIA_METADATA_MANIFEST_BYTES/);
   assert.match(
     metadata,
@@ -538,6 +556,26 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     media,
+    /pub\(crate\) fn build_folder_media_preview_with_generated_metadata[\s\S]*generated_metadata:\s*Option<&GeneratedMediaMetadataIndex>/,
+    "folder media preview building must expose a generated-metadata merge seam",
+  );
+  assert.match(
+    buildFolderMediaPreview,
+    /build_folder_media_preview_with_generated_metadata\(parent_abs_path, children, None\)/,
+    "default media preview building must preserve existing behavior when no generated cache exists",
+  );
+  assert.match(
+    buildFolderMediaPreviewWithGeneratedMetadata,
+    /metadata::build_media_metadata_index[\s\S]*merge_generated_media_metadata/,
+    "generated metadata must merge into the same index before preview items are populated",
+  );
+  assert.match(
+    buildFolderMediaPreviewWithGeneratedMetadata,
+    /let metadata_probe_plan =\s*metadata_probe::build_media_metadata_probe_plan\(parent_abs_path, &items\);/,
+    "probe planning must see generated metadata results before deciding what is still missing",
+  );
+  assert.match(
+    media,
     /let metadata_probe_plan =\s*metadata_probe::build_media_metadata_probe_plan\(parent_abs_path, &items\);[\s\S]*FolderMediaPreview[\s\S]*metadata_probe_plan/,
     "metadata probe planning must be built from cached preview items outside per-row rendering",
   );
@@ -578,45 +616,45 @@ test("project panel media preview renders direct image previews and video frames
   );
 
   assertBefore({
-    body: buildFolderMediaPreview,
+    body: buildFolderMediaPreviewWithGeneratedMetadata,
     before: /children\.take\(MAX_PROJECT_PANEL_MEDIA_CHILD_SCAN \+ 1\)/,
     after: /scanned_cap_hit/,
     message: "media child scans must be capped before classification work",
   });
   assertBefore({
-    body: buildFolderMediaPreview,
+    body: buildFolderMediaPreviewWithGeneratedMetadata,
     before: /items\.sort_by/,
     after: /items\.truncate\(MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS\)/,
     message: "media preview candidates must be ordered before the bounded render set is selected",
   });
   assertBefore({
-    body: buildFolderMediaPreview,
+    body: buildFolderMediaPreviewWithGeneratedMetadata,
     before: /items\.truncate\(MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS\)/,
     after: /for item in &mut items/,
     message: "media preview items must be capped before render data receives video frame paths",
   });
   assert.match(
-    buildFolderMediaPreview,
+    buildFolderMediaPreviewWithGeneratedMetadata,
     /size:\s*child\.size/,
     "media preview items must carry snapshot file sizes for hover details",
   );
   assert.match(
-    buildFolderMediaPreview,
+    buildFolderMediaPreviewWithGeneratedMetadata,
     /entry_id:\s*child\.id/,
     "media preview items must carry project entry ids for card selection/opening",
   );
   assert.match(
-    buildFolderMediaPreview,
-    /let media_metadata = metadata::build_media_metadata_index\(parent_abs_path, &child_entries\);/,
+    buildFolderMediaPreviewWithGeneratedMetadata,
+    /let mut media_metadata = metadata::build_media_metadata_index\(parent_abs_path, &child_entries\);/,
     "media preview items must derive optional duration/frame metadata from the bounded child snapshot",
   );
   assert.match(
-    buildFolderMediaPreview,
+    buildFolderMediaPreviewWithGeneratedMetadata,
     /duration_label:\s*media_metadata\.duration_label_for_path\(&absolute_path\)/,
     "media preview items must carry manifest duration labels when present",
   );
   assert.match(
-    buildFolderMediaPreview,
+    buildFolderMediaPreviewWithGeneratedMetadata,
     /media_metadata[\s\S]*\.video_frame_for_path\(&item\.absolute_path\)[\s\S]*\.or_else\(\|\| video_preview_frame/,
     "video media cards must prefer manifest-declared center frames before heuristic sidecar frames",
   );
@@ -760,6 +798,36 @@ test("project panel media preview renders direct image previews and video frames
     buildMediaMetadataIndex,
     /MAX_PROJECT_PANEL_MEDIA_METADATA_MANIFEST_BYTES[\s\S]*MEDIA_METADATA_MANIFEST_NAMES[\s\S]*read_bounded_media_metadata_manifest/,
     "media metadata manifests must be size-bounded and opt-in by known file name before parsing",
+  );
+  assert.match(
+    mergeGeneratedMediaMetadata,
+    /generated[\s\S]*\.records\(\)[\s\S]*\.take\(MAX_GENERATED_MEDIA_METADATA_RECORDS\)[\s\S]*duration_label[\s\S]*duration_seconds[\s\S]*center_frame_path[\s\S]*preview_frame_path/,
+    "generated metadata overlays must be bounded and carry duration plus center/preview frame fields",
+  );
+  assert.doesNotMatch(
+    metadata,
+    /fs::write|File::create|create_dir_all|remove_file|rename\(|copy\(|std::process|Command::new|\.status\(|\.output\(|\.spawn\(/,
+    "generated media metadata merge code must not write files or execute tools",
+  );
+  assert.match(
+    projectPanel,
+    /generated_media_metadata:\s*RefCell<HashMap<\(WorktreeId, ProjectEntryId\), media_preview::GeneratedMediaMetadataIndex>>/,
+    "project panel must own an in-memory generated media metadata cache seam",
+  );
+  assert.match(
+    projectPanel,
+    /generated_media_metadata[\s\S]*retain\(\|\(worktree_id, _\), _\| \*worktree_id != \*id\)/,
+    "generated media metadata cache entries must be retained correctly when a worktree is removed",
+  );
+  assert.match(
+    projectPanel,
+    /generated_media_metadata\.borrow_mut\(\)\.clear\(\);[\s\S]*folder_media_previews\.borrow_mut\(\)\.clear\(\);/,
+    "generated media metadata cache must clear before media previews are rebuilt after worktree/settings changes",
+  );
+  assert.match(
+    projectPanel,
+    /build_folder_media_preview_with_generated_metadata\([\s\S]*generated_metadata/,
+    "project panel folder preview cache must pass generated metadata into the media preview builder",
   );
   assert.match(
     collectMediaMetadataManifest,

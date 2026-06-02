@@ -1,6 +1,8 @@
 mod metadata;
 mod metadata_probe;
 
+pub(crate) use metadata::GeneratedMediaMetadataIndex;
+
 use std::path::{Path, PathBuf};
 
 use gpui::{
@@ -74,6 +76,14 @@ pub(crate) fn build_folder_media_preview<'a>(
     parent_abs_path: &Path,
     children: impl Iterator<Item = &'a Entry>,
 ) -> Option<FolderMediaPreview> {
+    build_folder_media_preview_with_generated_metadata(parent_abs_path, children, None)
+}
+
+pub(crate) fn build_folder_media_preview_with_generated_metadata<'a>(
+    parent_abs_path: &Path,
+    children: impl Iterator<Item = &'a Entry>,
+    generated_metadata: Option<&GeneratedMediaMetadataIndex>,
+) -> Option<FolderMediaPreview> {
     let mut child_entries = Vec::new();
     let mut media_scan_was_capped = false;
     for child in children.take(MAX_PROJECT_PANEL_MEDIA_CHILD_SCAN + 1) {
@@ -89,7 +99,10 @@ pub(crate) fn build_folder_media_preview<'a>(
     let mut audio_count = 0;
     let mut items = Vec::new();
     let mut image_frame_candidates = Vec::new();
-    let media_metadata = metadata::build_media_metadata_index(parent_abs_path, &child_entries);
+    let mut media_metadata = metadata::build_media_metadata_index(parent_abs_path, &child_entries);
+    if let Some(generated_metadata) = generated_metadata {
+        media_metadata.merge_generated_media_metadata(parent_abs_path, generated_metadata);
+    }
 
     for child in child_entries {
         if !child.is_file() {

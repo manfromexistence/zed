@@ -220,6 +220,8 @@ pub struct ProjectPanel {
     hover_expand_task: Option<Task<()>>,
     previous_drag_position: Option<Point<Pixels>>,
     folder_file_counts: RefCell<HashMap<(WorktreeId, ProjectEntryId), usize>>,
+    generated_media_metadata:
+        RefCell<HashMap<(WorktreeId, ProjectEntryId), media_preview::GeneratedMediaMetadataIndex>>,
     folder_media_previews:
         RefCell<HashMap<(WorktreeId, ProjectEntryId), Option<media_preview::FolderMediaPreview>>>,
     sticky_items_count: usize,
@@ -773,6 +775,9 @@ impl ProjectPanel {
                         this.folder_media_previews
                             .borrow_mut()
                             .retain(|(worktree_id, _), _| *worktree_id != *id);
+                        this.generated_media_metadata
+                            .borrow_mut()
+                            .retain(|(worktree_id, _), _| *worktree_id != *id);
                         this.state.expanded_dir_ids.remove(id);
                         this.update_visible_entries(None, false, false, window, cx);
                         cx.notify();
@@ -781,6 +786,7 @@ impl ProjectPanel {
                     | project::Event::WorktreeAdded(_)
                     | project::Event::WorktreeOrderChanged => {
                         this.folder_file_counts.borrow_mut().clear();
+                        this.generated_media_metadata.borrow_mut().clear();
                         this.folder_media_previews.borrow_mut().clear();
                         this.update_visible_entries(None, false, false, window, cx);
                         cx.notify();
@@ -896,6 +902,7 @@ impl ProjectPanel {
                 if project_panel_settings != new_settings {
                     if project_panel_settings.hide_gitignore != new_settings.hide_gitignore {
                         this.folder_file_counts.borrow_mut().clear();
+                        this.generated_media_metadata.borrow_mut().clear();
                         this.folder_media_previews.borrow_mut().clear();
                         this.update_visible_entries(None, false, false, window, cx);
                     }
@@ -904,6 +911,7 @@ impl ProjectPanel {
                     }
                     if project_panel_settings.hide_hidden != new_settings.hide_hidden {
                         this.folder_file_counts.borrow_mut().clear();
+                        this.generated_media_metadata.borrow_mut().clear();
                         this.folder_media_previews.borrow_mut().clear();
                         this.update_visible_entries(None, false, false, window, cx);
                     }
@@ -950,6 +958,7 @@ impl ProjectPanel {
                 hover_expand_task: None,
                 previous_drag_position: None,
                 folder_file_counts: Default::default(),
+                generated_media_metadata: Default::default(),
                 folder_media_previews: Default::default(),
                 sticky_items_count: 0,
                 last_reported_update: Instant::now(),
@@ -6912,7 +6921,13 @@ impl ProjectPanel {
             return preview;
         }
 
-        let preview = media_preview::build_folder_media_preview(parent_abs_path, children);
+        let generated_media_metadata = self.generated_media_metadata.borrow();
+        let generated_metadata = generated_media_metadata.get(&cache_key);
+        let preview = media_preview::build_folder_media_preview_with_generated_metadata(
+            parent_abs_path,
+            children,
+            generated_metadata,
+        );
         self.folder_media_previews
             .borrow_mut()
             .insert(cache_key, preview.clone());

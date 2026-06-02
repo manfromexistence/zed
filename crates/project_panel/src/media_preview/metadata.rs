@@ -14,7 +14,10 @@ use super::{
 };
 
 pub(super) const MAX_PROJECT_PANEL_MEDIA_METADATA_MANIFEST_BYTES: u64 = 256 * 1024;
+pub(crate) const GENERATED_MEDIA_METADATA_CACHE_SCHEMA: &str =
+    "zed.project_panel.generated_media_metadata";
 
+const MAX_GENERATED_MEDIA_METADATA_RECORDS: usize = 256;
 const MEDIA_METADATA_MANIFEST_NAMES: &[&str] = &[
     ".dx-media.json",
     "dx-media.json",
@@ -51,6 +54,37 @@ const MEDIA_METADATA_PREVIEW_FRAME_FIELDS: &[&str] = &[
 ];
 const MAX_MEDIA_METADATA_DURATION_LABEL_CHARS: usize = 32;
 
+#[derive(Clone, Debug, Default, PartialEq)]
+pub(crate) struct GeneratedMediaMetadataIndex {
+    records: Vec<GeneratedMediaMetadataRecord>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct GeneratedMediaMetadataRecord {
+    pub(crate) path_text: String,
+    pub(crate) duration_label: Option<String>,
+    pub(crate) duration_seconds: Option<f64>,
+    pub(crate) center_frame_path: Option<PathBuf>,
+    pub(crate) preview_frame_path: Option<PathBuf>,
+}
+
+impl GeneratedMediaMetadataIndex {
+    pub(crate) fn from_records(
+        records: impl IntoIterator<Item = GeneratedMediaMetadataRecord>,
+    ) -> Self {
+        Self {
+            records: records
+                .into_iter()
+                .take(MAX_GENERATED_MEDIA_METADATA_RECORDS)
+                .collect(),
+        }
+    }
+
+    fn records(&self) -> impl Iterator<Item = &GeneratedMediaMetadataRecord> {
+        self.records.iter()
+    }
+}
+
 #[derive(Clone, Debug, Default)]
 pub(super) struct MediaMetadataIndex {
     duration_labels: HashMap<String, String>,
@@ -65,6 +99,63 @@ impl MediaMetadataIndex {
     pub(super) fn video_frame_for_path(&self, path: &Path) -> Option<VideoFramePreview> {
         media_metadata_lookup_keys(path)
             .find_map(|key| self.video_frame_previews.get(&key).cloned())
+    }
+
+    pub(super) fn merge_generated_media_metadata(
+        &mut self,
+        parent_abs_path: &Path,
+        generated: &GeneratedMediaMetadataIndex,
+    ) {
+        for record in generated
+            .records()
+            .take(MAX_GENERATED_MEDIA_METADATA_RECORDS)
+        {
+            let keys = media_metadata_lookup_keys_from_text(&record.path_text);
+            if keys.is_empty() {
+                continue;
+            }
+
+            if let Some(duration) = record
+                .duration_label
+                .as_deref()
+                .and_then(normalize_duration_label)
+                .or_else(|| record.duration_seconds.map(format_media_duration_seconds))
+            {
+                for key in &keys {
+                    self.duration_labels
+                        .entry(key.clone())
+                        .or_insert_with(|| duration.clone());
+                }
+            }
+
+            let frame_preview = record
+                .center_frame_path
+                .as_ref()
+                .and_then(|path| {
+                    generated_video_frame_preview(
+                        parent_abs_path,
+                        path,
+                        VideoFramePreviewKind::Center,
+                    )
+                })
+                .or_else(|| {
+                    record.preview_frame_path.as_ref().and_then(|path| {
+                        generated_video_frame_preview(
+                            parent_abs_path,
+                            path,
+                            VideoFramePreviewKind::Preview,
+                        )
+                    })
+                });
+
+            if let Some(frame_preview) = frame_preview {
+                for key in &keys {
+                    self.video_frame_previews
+                        .entry(key.clone())
+                        .or_insert_with(|| frame_preview.clone());
+                }
+            }
+        }
     }
 }
 
@@ -286,6 +377,25 @@ fn resolve_metadata_media_path(parent_abs_path: &Path, path: &str) -> Option<Pat
         candidate
     } else {
         parent_abs_path.join(candidate)
+    })
+}
+
+fn generated_video_frame_preview(
+    parent_abs_path: &Path,
+    path: &Path,
+    kind: VideoFramePreviewKind,
+) -> Option<VideoFramePreview> {
+    if media_preview_kind_for_path(path) != Some(MediaPreviewKind::Image) {
+        return None;
+    }
+
+    Some(VideoFramePreview {
+        path: if path.is_absolute() {
+            path.to_path_buf()
+        } else {
+            parent_abs_path.join(path)
+        },
+        kind,
     })
 }
 

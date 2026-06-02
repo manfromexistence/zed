@@ -1,3 +1,24 @@
+[2026-06-02] - Project Panel Generated Media Metadata Overlay
+
+ADDED:
+- `crates\project_panel\src\media_preview\metadata.rs` now defines a bounded app-owned generated media metadata index for future duration labels and managed center/preview frame paths.
+
+CHANGED:
+- `crates\project_panel\src\media_preview.rs` now merges optional generated metadata into the same media metadata index before media cards read duration/frame evidence and before missing-metadata probe planning runs.
+- `crates\project_panel\src\project_panel.rs` now owns an in-memory generated media metadata cache keyed by worktree/folder and invalidates it with the media preview cache on worktree membership and visibility-setting changes.
+- `script\dx-project-panel-source.test.ts` now guards the generated metadata schema, record cap, merge-before-probe order, no write/process APIs, and Project Panel cache seam.
+
+PASSED:
+- `rustfmt --edition 2024 crates\project_panel\src\media_preview.rs crates\project_panel\src\media_preview\metadata.rs crates\project_panel\src\media_preview\metadata_probe.rs crates\project_panel\src\project_panel.rs`
+- `rustfmt --edition 2024 --check crates\project_panel\src\media_preview.rs crates\project_panel\src\media_preview\metadata.rs crates\project_panel\src\media_preview\metadata_probe.rs crates\project_panel\src\project_panel.rs`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-project-panel-source.test.ts`
+- `git diff --check -- crates/project_panel/src/media_preview.rs crates/project_panel/src/media_preview/metadata.rs crates/project_panel/src/media_preview/metadata_probe.rs crates/project_panel/src/project_panel.rs script/dx-project-panel-source.test.ts todo.txt changelog.txt`
+- `rg -n "<<<<<<<|>>>>>>>|=======" crates\project_panel\src\media_preview.rs crates\project_panel\src\media_preview\metadata.rs crates\project_panel\src\media_preview\metadata_probe.rs crates\project_panel\src\project_panel.rs script\dx-project-panel-source.test.ts todo.txt changelog.txt` returned no conflict markers.
+
+NOTES:
+- No `just run`, Cargo, build, server, browser automation, ffmpeg, or ffprobe validation was run for this source-only checkpoint.
+- The bottom file-browser media grid remains source-wired for images, videos, and audio; actual automatic center-frame extraction and duration probing still need a governed background metadata service to populate this cache.
+
 [2026-06-02] - Project Panel Media Metadata Probe Plan
 
 ADDED:
