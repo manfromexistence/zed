@@ -502,15 +502,43 @@ impl LlamaCppRuntime {
                     .as_ref()
                     .map(|props| props.describe())
                     .unwrap_or_else(|| "unknown server settings".to_string());
-                log::warn!(
-                    "reusing already-running llama.cpp server at {} with model(s) [{}] and settings ({}); requested {} ctx and {} parallel slot",
-                    config.api_url,
-                    loaded_model_names,
-                    running_settings,
-                    config.context_window,
-                    LOCAL_LLAMA_SERVER_PARALLEL_SLOTS
-                );
-                return Ok(());
+                if running_props
+                    .as_ref()
+                    .is_some_and(|props| props.matches_config(&config))
+                {
+                    log::warn!(
+                        "reusing already-running llama.cpp server at {} with model(s) [{}] and settings ({}); requested {} ctx and {} parallel slot",
+                        config.api_url,
+                        loaded_model_names,
+                        running_settings,
+                        config.context_window,
+                        LOCAL_LLAMA_SERVER_PARALLEL_SLOTS
+                    );
+                    return Ok(());
+                }
+
+                if stop_existing_local_llama_server_for_switch(&config, &server_path)? {
+                    log::info!(
+                        "stopped existing local llama-server at {} with model(s) [{}] and settings ({}) so {} can restart with {} ctx and {} parallel slot",
+                        config.api_url,
+                        loaded_model_names,
+                        running_settings,
+                        config.model.name,
+                        config.context_window,
+                        LOCAL_LLAMA_SERVER_PARALLEL_SLOTS
+                    );
+                    async_io::Timer::after(Duration::from_millis(500)).await;
+                } else {
+                    anyhow::bail!(
+                        "llama-server is already running at {} with model(s) [{}] and settings ({}), but {} needs {} ctx and {} parallel slot. Stop the existing llama-server or use a different port.",
+                        config.api_url,
+                        loaded_model_names,
+                        running_settings,
+                        config.model.name,
+                        config.context_window,
+                        LOCAL_LLAMA_SERVER_PARALLEL_SLOTS
+                    );
+                }
             } else {
                 if stop_existing_local_llama_server_for_switch(&config, &server_path)? {
                     log::info!(
@@ -1472,27 +1500,42 @@ async fn download_configured_model_file(
 }
 
 fn resolve_local_model_path(config: &LlamaCppLaunchConfig) -> Option<PathBuf> {
+    let mut expected_files = Vec::new();
+
     if let Some(local_path) = config.model.local_path.as_ref().map(PathBuf::from)
         && local_path.exists()
     {
         return Some(local_path);
+    } else if let Some(file_name) = config
+        .model
+        .local_path
+        .as_ref()
+        .and_then(|path| Path::new(path).file_name())
+        .and_then(|file_name| file_name.to_str())
+    {
+        expected_files.push(file_name.to_string());
     }
 
-    let expected_file = config
-        .model
-        .hf_file
-        .as_deref()
-        .map(str::to_owned)
-        .or_else(|| {
-            config
-                .model
-                .hf_quant
-                .as_ref()
-                .map(|quant| format!("{}-{quant}.gguf", config.model.name))
-        });
-    let expected_file = expected_file.as_deref();
+    if let Some(hf_file) = config.model.hf_file.as_ref()
+        && !expected_files.contains(hf_file)
+    {
+        expected_files.push(hf_file.clone());
+    }
+    if let Some(quant) = config.model.hf_quant.as_ref() {
+        let quant_file_name = format!("{}-{quant}.gguf", config.model.name);
+        if !expected_files.contains(&quant_file_name) {
+            expected_files.push(quant_file_name);
+        }
+    }
+
     for dir in candidate_model_dirs(&config.models_dir) {
-        if let Some(path) = find_gguf_in_dir(&dir, expected_file, &config.model.name, 4) {
+        for expected_file in &expected_files {
+            if let Some(path) = find_gguf_in_dir(&dir, Some(expected_file), &config.model.name, 4) {
+                return Some(path);
+            }
+        }
+
+        if let Some(path) = find_gguf_in_dir(&dir, None, &config.model.name, 4) {
             return Some(path);
         }
     }
@@ -2165,7 +2208,7 @@ impl Render for ConfigurationView {
                         config.tools_dir.display()
                     )))
                     .child(ListBulletItem::new(
-                        "Qwen 3.5 0.8B is the fast local default; Gemma 4 and any discovered GGUF models stay available in the model picker.",
+                        "Gemma 4 E4B is the normal local default; Qwen 3.5 0.8B stays available as the low-spec fallback with a larger configured context.",
                     ))
                     .child(ListBulletItem::new(format!(
                         "Drop GGUF files into {} and optionally add a matching .gguf.json sidecar for custom display names or limits.",

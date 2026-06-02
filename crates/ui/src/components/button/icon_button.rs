@@ -1,6 +1,7 @@
-use gpui::{AnyView, DefiniteLength, Hsla};
+use gpui::{AnyView, DefiniteLength, Hsla, Transformation};
 
 use super::button_like::{ButtonCommon, ButtonLike, ButtonSize, ButtonStyle};
+use crate::traits::transformable::Transformable;
 use crate::{
     ElevationIndex, Icon, IconWithIndicator, Indicator, SelectableButton, TintColor, Tooltip,
     prelude::*,
@@ -24,6 +25,7 @@ pub struct IconButton {
     selected_icon: Option<IconName>,
     selected_icon_color: Option<Color>,
     selected_style: Option<ButtonStyle>,
+    icon_transformation: Transformation,
     indicator: Option<Indicator>,
     indicator_border_color: Option<Hsla>,
     alpha: Option<f32>,
@@ -40,6 +42,7 @@ impl IconButton {
             selected_icon: None,
             selected_icon_color: None,
             selected_style: None,
+            icon_transformation: Transformation::default(),
             indicator: None,
             indicator_border_color: None,
             alpha: None,
@@ -60,6 +63,11 @@ impl IconButton {
 
     pub fn icon_color(mut self, icon_color: Color) -> Self {
         self.icon_color = icon_color;
+        self
+    }
+
+    pub fn icon_transformation(mut self, transformation: Transformation) -> Self {
+        self.icon_transformation = transformation;
         self
     }
 
@@ -213,7 +221,10 @@ impl RenderOnce for IconButton {
             Color::Custom(base_color.opacity(self.alpha.unwrap_or(1.0)))
         };
 
-        let icon_element = Icon::new(icon).size(self.icon_size).color(icon_color);
+        let icon_element = Icon::new(icon)
+            .size(self.icon_size)
+            .color(icon_color)
+            .transform(self.icon_transformation);
 
         self.base
             .map(|this| match self.shape {

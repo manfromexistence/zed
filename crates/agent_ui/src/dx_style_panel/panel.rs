@@ -1,6 +1,6 @@
 use gpui::{
     Action, App, AppContext, Context, EventEmitter, FocusHandle, Focusable, IntoElement, Render,
-    WeakEntity,
+    ScrollHandle, WeakEntity,
 };
 use gpui::{Window, px};
 use ui::IconName;
@@ -47,6 +47,7 @@ fn ensure_panel(workspace: &mut Workspace, window: &mut Window, cx: &mut Context
 pub(crate) struct DxStylePanel {
     workspace: WeakEntity<Workspace>,
     focus_handle: FocusHandle,
+    scroll_handle: ScrollHandle,
 }
 
 impl DxStylePanel {
@@ -54,6 +55,7 @@ impl DxStylePanel {
         Self {
             workspace,
             focus_handle: cx.focus_handle(),
+            scroll_handle: ScrollHandle::new(),
         }
     }
 
@@ -123,10 +125,10 @@ impl Panel for DxStylePanel {
 }
 
 impl Render for DxStylePanel {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let snapshot = dx_style_panel_snapshot();
         let active_context = self.active_style_context(cx);
 
-        panel_view::render_panel(&snapshot, &active_context, cx)
+        panel_view::render_panel(&snapshot, &active_context, &self.scroll_handle, window, cx)
     }
 }

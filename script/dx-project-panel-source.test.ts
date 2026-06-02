@@ -356,7 +356,7 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   assert.match(media, /pub\(crate\) const MAX_PROJECT_PANEL_MEDIA_CHILD_SCAN: usize = 512;/);
   assert.match(media, /pub\(crate\) const MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS: usize = 12;/);
   assert.match(media, /pub\(crate\) const PROJECT_PANEL_MEDIA_GALLERY_COLUMNS: u16 = 3;/);
-  assert.match(media, /pub\(crate\) const PROJECT_PANEL_MEDIA_SHELF_COLUMNS: u16 = 3;/);
+  assert.match(media, /pub\(crate\) const PROJECT_PANEL_MEDIA_SHELF_COLUMNS: u16 = 4;/);
   assert.match(media, /pub\(crate\) enum MediaPreviewKind/);
   assert.match(media, /Image/);
   assert.match(media, /Video/);
@@ -510,23 +510,12 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
     after: /let \(depth, chars\)/,
     message: "active shelf media children must leave the row path before width estimation",
   });
-  assertBefore({
-    body: renderEntry,
-    before: /let media_preview = \(!is_sticky\)\s*\.then\(\|\| details\.media_preview\.clone\(\)\)\s*\.flatten\(\);/,
-    after: /media_preview::render_folder_media_preview/,
-    message: "render_entry must use the cached media preview instead of probing from render code",
-  });
-  assertBefore({
-    body: renderEntry,
-    before: /\.end_slot::<AnyElement>/,
-    after: /media_preview::render_folder_media_preview/,
-    message: "media previews must render inside the existing uniform-height row end slot",
-  });
   assert.doesNotMatch(
     renderEntry,
-    /\.when\(!is_sticky && kind\.is_dir\(\) && is_expanded[\s\S]*media_preview::render_folder_media_preview/,
-    "media previews must not add variable-height children under uniform_list rows",
+    /media_preview::render_folder_media_preview/,
+    "media previews must not render as row badges inside uniform_list rows",
   );
+  assert.match(renderEntry, /\.end_slot::<AnyElement>[\s\S]*\.ml_auto\(\)[\s\S]*\.child\(hover_badge\)/);
   assert.match(renderEntry, /block_mouse_except_scroll\(\)/);
   assert.match(
     renderProjectPanel,
@@ -541,10 +530,15 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   });
   assertBefore({
     body: renderProjectPanel,
-    before: /uniform_list\("entries"/,
-    after: /media_preview::render_folder_media_shelf/,
-    message: "media shelf must render under the virtualized tree rather than inside a row",
+    before: /media_preview::render_folder_media_shelf/,
+    after: /uniform_list\("entries"/,
+    message: "media shelf must render above the virtualized tree rather than inside or below a row",
   });
+  assert.match(
+    renderProjectPanel,
+    /id\("project-panel-media-shelf-scroll-proxy"\)[\s\S]*on_scroll_wheel[\s\S]*base_handle\.set_offset\(new_offset\)/,
+    "media shelf must forward wheel scrolling to the file tree scroll handle",
+  );
   assert.match(
     renderProjectPanel,
     /active_media_folder\.worktree_id[\s\S]*active_media_folder\.selected_media_entry_id/,
@@ -554,7 +548,7 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
     body: renderProjectPanel,
     before: /media_preview::render_folder_media_shelf/,
     after: /id\("project-panel-blank-area"\)/,
-    message: "media shelf must occupy the project-panel bottom area before the blank drop zone",
+    message: "media shelf must remain ahead of the blank drop zone",
   });
 });
 
@@ -570,7 +564,6 @@ test("project panel media preview renders direct image previews and video frames
   const metadataProbe = read("crates/project_panel/src/media_preview/metadata_probe.rs");
   const projectPanelCargo = read("crates/project_panel/Cargo.toml");
   const projectPanel = read("crates/project_panel/src/project_panel.rs");
-  const renderFolderMediaPreview = functionBody(media, "render_folder_media_preview");
   const renderFolderMediaGallery = functionBody(media, "render_folder_media_gallery");
   const renderFolderMediaShelf = functionBody(media, "render_folder_media_shelf");
   const renderMediaShelfCard = functionBody(media, "render_media_shelf_card");
@@ -950,25 +943,10 @@ test("project panel media preview renders direct image previews and video frames
     /media_metadata[\s\S]*\.video_frame_for_path\(&item\.absolute_path\)[\s\S]*\.or_else\(\|\| video_preview_frame/,
     "video media cards must prefer manifest-declared center frames before heuristic sidecar frames",
   );
-  assertBefore({
-    body: renderFolderMediaPreview,
-    before: /Label::new\(summary\)/,
-    after: /PopoverMenu::new\(gallery_id\)/,
-    message: "folder row media preview must stay a cheap summary before the optional grid popover",
-  });
   assert.doesNotMatch(
-    renderFolderMediaPreview,
-    /render_media_preview_card|img\(|preview\s*\.items\s*\.iter\(\)/,
-    "folder row media preview must not decode image/video cards in the virtualized tree row",
-  );
-  assert.match(renderFolderMediaPreview, /\.h_6\(\)/);
-  assert.match(renderFolderMediaPreview, /\.overflow_hidden\(\)/);
-  assert.match(renderFolderMediaPreview, /Tooltip::with_meta/);
-  assert.match(renderFolderMediaPreview, /PopoverMenu::new\(gallery_id\)/);
-  assert.match(
-    renderFolderMediaPreview,
-    /IconButton::new\("project-panel-media-gallery-trigger", IconName::Blocks\)/,
-    "folder media preview must expose a real grid affordance from the compact row",
+    media,
+    /fn render_folder_media_preview/,
+    "folder media previews must not render as compact row chips",
   );
   assert.match(
     renderFolderMediaGallery,
@@ -977,12 +955,12 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     renderFolderMediaShelf,
-    /\.border_t_1\(\)[\s\S]*\.grid\(\)[\s\S]*\.grid_cols\(PROJECT_PANEL_MEDIA_SHELF_COLUMNS\)[\s\S]*\.children\(shelf_cards\)/,
-    "folder media shelf must render as a bottom three-column media grid",
+    /\.border_b_1\(\)[\s\S]*\.grid\(\)[\s\S]*\.grid_cols\(PROJECT_PANEL_MEDIA_SHELF_COLUMNS\)[\s\S]*\.children\(shelf_cards\)/,
+    "folder media shelf must render as a top four-column media grid",
   );
   assert.match(
     renderFolderMediaShelf,
-    /Label::new\("Media"\)[\s\S]*format!\("\{visible_count\} shown \/ \{summary\}"\)/,
+    /Label::new\("Media"\)[\s\S]*format!\("\{visible_media_count\} shown \/ \{summary\}"\)/,
     "folder media shelf must expose a concise real count summary",
   );
   assertBefore({
@@ -1188,7 +1166,7 @@ test("project panel media preview renders direct image previews and video frames
     message: "preview cache invalidation must happen after generated metadata is stored",
   });
   assert.doesNotMatch(
-    `${activeFolderMediaPreview}\n${renderFolderMediaPreview}\n${renderFolderMediaShelf}\n${renderMediaShelfCard}\n${renderMediaShelfCardBody}\n${mediaGalleryCardContainer}`,
+    `${activeFolderMediaPreview}\n${renderFolderMediaShelf}\n${renderMediaShelfCard}\n${renderMediaShelfCardBody}\n${mediaGalleryCardContainer}`,
     /File::open|Decoder::new|std::process|Command::new|ffmpeg|ffprobe|fs::write|File::create/,
     "project-panel render paths must not perform generated metadata IO, decoding, tool execution, or writes",
   );

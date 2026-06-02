@@ -5,6 +5,7 @@ import test from "node:test";
 const read = (path: string) => readFileSync(path, "utf8");
 
 const dock = read("crates/workspace/src/dock.rs");
+const agentSettings = read("crates/agent_settings/src/agent_settings.rs");
 const historyManager = read("crates/workspace/src/history_manager.rs");
 const item = read("crates/workspace/src/item.rs");
 const pane = read("crates/workspace/src/pane.rs");
@@ -148,7 +149,7 @@ test("dock panel activation checks target index before active-panel side effects
   });
 });
 
-test("right dock stack controls use real panel entries and preserve single-panel activation", () => {
+test("side dock stack controls use real panel entries and preserve single-panel activation", () => {
   assert.match(dock, /const MAX_STACKED_PANELS: usize = 3;/);
   assert.match(dock, /stacked_panel_ids: Vec<EntityId>/);
   assert.match(dock, /pub fn stack_panel\(/);
@@ -156,6 +157,7 @@ test("right dock stack controls use real panel entries and preserve single-panel
   assert.match(dock, /pub fn show_single_panel\(/);
 
   const activatePanel = functionBody(dock, "activate_panel");
+  const restoreStackedPanels = functionBody(dock, "restore_stacked_panels");
   assertBefore({
     body: activatePanel,
     before: /self\s*\.panel_entries\s*\.get\(\s*panel_ix\s*\)/,
@@ -178,13 +180,20 @@ test("right dock stack controls use real panel entries and preserve single-panel
     dock.slice(dock.indexOf("impl Render for PanelButtons")),
     "render",
   );
-  for (const label of [
-    "Add to Right Dock Stack",
-    "Remove from Right Dock Stack",
-    "Show Only This Panel",
-  ]) {
-    assert.match(panelButtonsRender, new RegExp(label));
-  }
+  assert.match(
+    panelButtonsRender,
+    /format!\(\s*"Add to \{\} Dock Stack",\s*dock_position\.label\(\)\s*\)/s,
+  );
+  assert.match(
+    panelButtonsRender,
+    /format!\(\s*"Remove from \{\} Dock Stack",\s*dock_position\.label\(\)\s*\)/s,
+  );
+  assert.match(panelButtonsRender, /"Show Only This Panel"/);
+  assert.match(dockRender, /"dock-panel-inline-split"/);
+  assert.match(dockRender, /"dock-panel-inline-close"/);
+  assert.match(dockRender, /"dock-panel-inline-control-mask"/);
+  assert.match(dockRender, /cursor_row_resize/);
+  assert.match(restoreStackedPanels, /self\.pin_agent_panel_to_left_stack_bottom\(cx\);/);
   assert.match(panelButtonsRender, /dock\.stack_panel\(panel_id, window, cx\)/);
   assert.match(panelButtonsRender, /dock\.unstack_panel\(panel_id, window, cx\)/);
   assert.match(panelButtonsRender, /dock\.show_single_panel\(panel_id, window, cx\)/);
@@ -192,7 +201,23 @@ test("right dock stack controls use real panel entries and preserve single-panel
   assert.match(workspace, /pub fn persist_dock_stack_state\(/);
   assert.match(workspace, /dock::PANEL_STACK_STATE_KEY/);
   assert.match(workspace, /MAX_PANEL_STACK_STATE_JSON_BYTES/);
+  assert.match(workspace, /stacked_panels: left_stacked_panels/);
   assert.match(workspace, /stacked_panels: right_stacked_panels/);
+});
+
+test("agent layout preset keeps project, git, outline, and collab on the left", () => {
+  const agentLayoutStart = agentSettings.indexOf("const AGENT: Self = Self");
+  assert.ok(agentLayoutStart >= 0, "expected Agent preset layout");
+  const agentLayout = agentSettings.slice(
+    agentLayoutStart,
+    agentSettings.indexOf("const EDITOR: Self = Self", agentLayoutStart),
+  );
+
+  assert.match(agentLayout, /agent_dock:\s*Some\(DockPosition::Left\)/);
+  assert.match(agentLayout, /project_panel_dock:\s*Some\(DockSide::Left\)/);
+  assert.match(agentLayout, /outline_panel_dock:\s*Some\(DockSide::Left\)/);
+  assert.match(agentLayout, /collaboration_panel_dock:\s*Some\(DockPosition::Left\)/);
+  assert.match(agentLayout, /git_panel_dock:\s*Some\(DockPosition::Left\)/);
 });
 
 test("item project-handle collections cap visited items before pushing handles", () => {

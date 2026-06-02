@@ -167,21 +167,6 @@ struct SerializedSidebarGridShortcut {
 }
 
 impl SerializedSidebarGridShortcut {
-    fn from_entry(context: &SidebarGridContext, entry: &SidebarGridEntry) -> Self {
-        Self {
-            screen_kind: context.screen_kind,
-            root_path: context.root_path.clone(),
-            id: entry.id.as_ref().to_string(),
-            icon: entry.icon,
-            label: entry.label.as_ref().to_string(),
-            subtitle: entry
-                .subtitle
-                .as_ref()
-                .map(|subtitle| subtitle.as_ref().to_string()),
-            action: entry.action.to_serialized(),
-        }
-    }
-
     fn matches_context(&self, context: &SidebarGridContext) -> bool {
         self.screen_kind == context.screen_kind && self.root_path == context.root_path
     }
@@ -586,19 +571,6 @@ enum SidebarGridAction {
 }
 
 impl SidebarGridAction {
-    fn to_serialized(&self) -> SerializedSidebarGridAction {
-        match self {
-            Self::AddFolderToProject => SerializedSidebarGridAction::AddFolderToProject,
-            Self::OpenFile(path) => SerializedSidebarGridAction::OpenFile { path: path.clone() },
-            Self::OpenWebsite(url) => SerializedSidebarGridAction::OpenWebsite {
-                url: url.as_ref().to_string(),
-            },
-            Self::OpenTerminalFolder(path) => {
-                SerializedSidebarGridAction::OpenTerminalFolder { path: path.clone() }
-            }
-        }
-    }
-
     fn from_serialized(action: &SerializedSidebarGridAction) -> Self {
         match action {
             SerializedSidebarGridAction::AddFolderToProject => Self::AddFolderToProject,
@@ -619,10 +591,6 @@ impl SidebarGridAction {
             Self::OpenWebsite(url) => format!("web:{}", url.as_ref()),
             Self::OpenTerminalFolder(path) => format!("terminal:{}", path.display()),
         }
-    }
-
-    fn is_pinable(&self) -> bool {
-        !matches!(self, Self::AddFolderToProject)
     }
 }
 
@@ -7397,7 +7365,7 @@ impl Sidebar {
             IconButton::new(id, icon)
                 .shape(IconButtonShape::Square)
                 .style(ButtonStyle::Subtle)
-                .icon_size(IconSize::Small)
+                .icon_size(IconSize::Medium)
                 .tooltip(Tooltip::text(tooltip))
                 .on_click(cx.listener(on_click))
         };
@@ -7519,7 +7487,7 @@ impl Sidebar {
             IconButton::new(id, icon)
                 .shape(IconButtonShape::Square)
                 .style(ButtonStyle::Subtle)
-                .icon_size(IconSize::Small)
+                .icon_size(IconSize::Medium)
                 .tooltip(Tooltip::text(tooltip))
                 .on_click(cx.listener(on_click))
         };
@@ -7603,8 +7571,6 @@ impl Sidebar {
         ];
 
         let secondary_actions = vec![
-            self.render_activity_bar_expand_button(cx)
-                .into_any_element(),
             button(
                 cx,
                 "sidebar-activity-settings",
@@ -7989,20 +7955,6 @@ impl Sidebar {
             .collect()
     }
 
-    fn is_grid_entry_pinned(
-        &self,
-        context: &SidebarGridContext,
-        action: &SidebarGridAction,
-    ) -> bool {
-        let action_key = action.dedupe_key();
-        self.grid_shortcuts
-            .iter()
-            .filter(|shortcut| shortcut.matches_context(context))
-            .any(|shortcut| {
-                SidebarGridAction::from_serialized(&shortcut.action).dedupe_key() == action_key
-            })
-    }
-
     fn grid_entries(&self, cx: &App) -> Vec<SidebarGridEntry> {
         let (kind, root_path, context) = self.grid_context(cx);
         let pinned_entries = self.pinned_grid_entries(&context);
@@ -8015,32 +7967,6 @@ impl Sidebar {
             .filter(|entry| seen_actions.insert(entry.action.dedupe_key()))
             .take(SIDEBAR_SPACE_GRID_COLUMNS * 4)
             .collect()
-    }
-
-    fn toggle_grid_shortcut(
-        &mut self,
-        context: SidebarGridContext,
-        entry: SidebarGridEntry,
-        cx: &mut Context<Self>,
-    ) {
-        if !entry.action.is_pinable() {
-            return;
-        }
-
-        let action_key = entry.action.dedupe_key();
-        if let Some(existing_ix) = self.grid_shortcuts.iter().position(|shortcut| {
-            shortcut.matches_context(&context)
-                && SidebarGridAction::from_serialized(&shortcut.action).dedupe_key() == action_key
-        }) {
-            self.grid_shortcuts.remove(existing_ix);
-        } else {
-            let shortcut = SerializedSidebarGridShortcut::from_entry(&context, &entry);
-            self.grid_shortcuts.insert(0, shortcut);
-            self.grid_shortcuts.truncate(MAX_SIDEBAR_GRID_SHORTCUTS);
-        }
-
-        self.serialize(cx);
-        cx.notify();
     }
 
     fn open_browser_grid_url(&mut self, url: &str, window: &mut Window, cx: &mut Context<Self>) {
@@ -8121,7 +8047,6 @@ impl Sidebar {
     }
 
     fn render_space_grid(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        let (_, _, context) = self.grid_context(cx);
         let entries = self.grid_entries(cx);
         let chrome_width = f32::from(self.width).max(220.0);
         let horizontal_padding = 16.0;
@@ -8147,21 +8072,6 @@ impl Sidebar {
                         .gap_2()
                         .children(row.iter().cloned().map(|entry| {
                             let action = entry.action.clone();
-                            let pinable = entry.action.is_pinable();
-                            let pinned = self.is_grid_entry_pinned(&context, &entry.action);
-                            let pin_icon = if pinned {
-                                IconName::StarFilled
-                            } else {
-                                IconName::Star
-                            };
-                            let pin_tooltip = if pinned {
-                                "Unpin shortcut"
-                            } else {
-                                "Pin shortcut"
-                            };
-                            let pin_id = SharedString::from(format!("{}-pin", entry.id.as_ref()));
-                            let pin_context = context.clone();
-                            let pin_entry = entry.clone();
 
                             div()
                                 .id(entry.id)
@@ -8190,27 +8100,6 @@ impl Sidebar {
                                 .on_click(cx.listener(move |this, _, window, cx| {
                                     this.open_grid_entry(action.clone(), window, cx);
                                 }))
-                                .when(pinable, |this| {
-                                    this.child(
-                                        div().absolute().top_0().right_0().child(
-                                            IconButton::new(pin_id, pin_icon)
-                                                .shape(IconButtonShape::Square)
-                                                .style(ButtonStyle::Transparent)
-                                                .icon_size(IconSize::XSmall)
-                                                .tooltip(Tooltip::text(pin_tooltip))
-                                                .on_click(cx.listener(
-                                                    move |this, _, _window, cx| {
-                                                        cx.stop_propagation();
-                                                        this.toggle_grid_shortcut(
-                                                            pin_context.clone(),
-                                                            pin_entry.clone(),
-                                                            cx,
-                                                        );
-                                                    },
-                                                )),
-                                        ),
-                                    )
-                                })
                                 .child(
                                     Icon::new(entry.icon)
                                         .size(IconSize::Medium)
@@ -8309,6 +8198,8 @@ impl Sidebar {
 
     fn render_sidebar_toggle_button(&self, _cx: &mut Context<Self>) -> impl IntoElement {
         let on_right = AgentSettings::get_global(_cx).sidebar_side() == SidebarSide::Right;
+        let is_activity_bar = !self.activity_bar_expanded;
+        let sidebar = _cx.weak_entity();
 
         sidebar_side_context_menu("sidebar-toggle-menu", _cx)
             .anchor(if on_right {
@@ -8328,7 +8219,11 @@ impl Sidebar {
                     IconName::ThreadsSidebarLeftOpen
                 };
                 IconButton::new("sidebar-close-toggle", icon)
-                    .icon_size(IconSize::Small)
+                    .icon_size(if is_activity_bar {
+                        IconSize::Medium
+                    } else {
+                        IconSize::Small
+                    })
                     .tooltip(Tooltip::element(move |_window, cx| {
                         v_flex()
                             .gap_1()
@@ -8336,7 +8231,11 @@ impl Sidebar {
                                 h_flex()
                                     .gap_2()
                                     .justify_between()
-                                    .child(Label::new("Toggle Sidebar"))
+                                    .child(Label::new(if is_activity_bar {
+                                        "Expand Sidebar"
+                                    } else {
+                                        "Collapse to Activity Bar"
+                                    }))
                                     .child(KeyBinding::for_action(&ToggleWorkspaceSidebar, cx)),
                             )
                             .child(
@@ -8351,34 +8250,24 @@ impl Sidebar {
                             )
                             .into_any_element()
                     }))
-                    .on_click(|_, window, cx| {
-                        if let Some(multi_workspace) = window.root::<MultiWorkspace>().flatten() {
-                            multi_workspace.update(cx, |multi_workspace, cx| {
-                                multi_workspace.close_sidebar(window, cx);
+                    .on_click(move |_, _window, cx| {
+                        if is_activity_bar {
+                            if let Some(sidebar) = sidebar.upgrade() {
+                                sidebar.update(cx, |this, cx| {
+                                    this.activity_bar_expanded = true;
+                                    this.serialize(cx);
+                                    cx.notify();
+                                });
+                            }
+                        } else if let Some(sidebar) = sidebar.upgrade() {
+                            sidebar.update(cx, |this, cx| {
+                                this.activity_bar_expanded = false;
+                                this.serialize(cx);
+                                cx.notify();
                             });
                         }
                     })
             })
-    }
-
-    fn render_activity_bar_expand_button(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        let on_right = self.side(cx) == SidebarSide::Right;
-        let icon = if on_right {
-            IconName::ThreadsSidebarRightOpen
-        } else {
-            IconName::ThreadsSidebarLeftOpen
-        };
-
-        IconButton::new("sidebar-activity-expand", icon)
-            .shape(IconButtonShape::Square)
-            .style(ButtonStyle::Subtle)
-            .icon_size(IconSize::Small)
-            .tooltip(Tooltip::text("Expand Sidebar"))
-            .on_click(cx.listener(|this, _, _window, cx| {
-                this.activity_bar_expanded = true;
-                this.serialize(cx);
-                cx.notify();
-            }))
     }
 
     fn render_space_carousel(&mut self, cx: &mut Context<Self>) -> impl IntoElement {

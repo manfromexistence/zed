@@ -4910,8 +4910,8 @@ impl Panel for AgentPanel {
         }))
     }
 
-    fn is_zoomed(&self, _window: &Window, cx: &App) -> bool {
-        self.should_render_dx_launch_chrome(cx)
+    fn is_zoomed(&self, _window: &Window, _cx: &App) -> bool {
+        self.zoomed
     }
 
     fn set_zoomed(&mut self, zoomed: bool, _window: &mut Window, cx: &mut Context<Self>) {
@@ -5885,7 +5885,7 @@ impl AgentPanel {
             ToolbarMode::EmptyThread
         };
 
-        let is_full_screen = self.is_zoomed(window, cx);
+        let is_full_screen = self.should_render_dx_launch_chrome(cx);
         let (icon_id, icon_name, tooltip_text) = if is_full_screen {
             (
                 "disable-full-screen",

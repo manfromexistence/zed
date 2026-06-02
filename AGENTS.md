@@ -35,6 +35,7 @@ For source-only or release-hygiene passes, keep verification to the lightweight 
 - **MOST OF THE TIME: DON'T RUN IT** - User will run manually
 - **NEVER** when the current user prompt or handoff lane forbids it
 - Running takes significant time - use that time to fix more bugs instead
+- On Windows, do not open extra visible CLI/terminal windows when launching Zed unless the user explicitly asks for an interactive console. Use the repo launcher, start the GUI normally, and wait until the app reports a main window instead of accepting a hidden/background-only process as "running."
 
 ### Your Primary Workflow
 1. **READ and ANALYZE code** - Use 1M context window to understand codebase

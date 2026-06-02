@@ -4083,8 +4083,8 @@ test("DX Style has a real right-dock GPUI shell", () => {
   assert.match(activeContext, /"workspace_root": self\.workspace_root/);
   assert.match(activeContext, /editor\.buffer\(\)\.read\(cx\)\.len\(cx\)\.0/);
   assert.ok(
-    activeContext.indexOf("let source_len = editor.buffer().read(cx).len(cx).0") <
-      activeContext.indexOf("let source = editor.text(cx)"),
+    activeContext.indexOf("let source_len = editor.update") <
+      activeContext.indexOf("editor.text(cx)"),
   );
   assert.match(cursorContext, /is_style_bearing_path/);
   assert.match(activeContext, /newest::<MultiBufferOffset>/);

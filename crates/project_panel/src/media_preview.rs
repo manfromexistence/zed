@@ -19,13 +19,13 @@ use gpui::{
 };
 use project::{Entry, ProjectEntryId, WorktreeId};
 use settings::Settings;
-use ui::{ContextMenu, IconButtonShape, PopoverMenu, Tooltip, prelude::*};
+use ui::{ButtonLike, ContextMenu, PopoverMenu, Tooltip, prelude::*};
 use workspace::{PreviewTabsSettings, SelectedEntry};
 
 pub(crate) const MAX_PROJECT_PANEL_MEDIA_CHILD_SCAN: usize = 512;
 pub(crate) const MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS: usize = 12;
 pub(crate) const PROJECT_PANEL_MEDIA_GALLERY_COLUMNS: u16 = 3;
-pub(crate) const PROJECT_PANEL_MEDIA_SHELF_COLUMNS: u16 = 3;
+pub(crate) const PROJECT_PANEL_MEDIA_SHELF_COLUMNS: u16 = 4;
 
 const PROJECT_PANEL_MEDIA_GALLERY_CARD_WIDTH: f32 = 86.;
 const PROJECT_PANEL_MEDIA_GALLERY_CARD_HEIGHT: f32 = 64.;
@@ -176,62 +176,6 @@ pub(crate) fn build_folder_media_preview_with_generated_metadata<'a>(
     })
 }
 
-pub(crate) fn render_folder_media_preview(
-    preview: &FolderMediaPreview,
-    _cx: &mut App,
-) -> AnyElement {
-    let summary = media_preview_summary(preview);
-    let tooltip_summary = media_preview_folder_tooltip_meta(preview);
-    let tooltip_id = SharedString::from(format!("project-panel-media-preview-{summary}"));
-    let gallery_preview = preview.clone();
-    let gallery_id = format!(
-        "project-panel-media-gallery-{:016x}",
-        stable_text_hash(&summary)
-    );
-
-    h_flex()
-        .id(tooltip_id)
-        .h_6()
-        .max_w(px(184.))
-        .gap_0p5()
-        .overflow_hidden()
-        .block_mouse_except_scroll()
-        .tooltip(move |_window, cx| Tooltip::with_meta(tooltip_summary.clone(), None, "Media", cx))
-        .child(
-            Icon::new(IconName::Blocks)
-                .size(IconSize::XSmall)
-                .color(Color::Muted),
-        )
-        .child(
-            Label::new(summary)
-                .size(LabelSize::XSmall)
-                .color(Color::Muted)
-                .single_line()
-                .truncate(),
-        )
-        .child(
-            PopoverMenu::new(gallery_id)
-                .trigger(
-                    IconButton::new("project-panel-media-gallery-trigger", IconName::Blocks)
-                        .shape(IconButtonShape::Square)
-                        .style(ButtonStyle::Subtle)
-                        .icon_size(IconSize::XSmall)
-                        .tooltip(Tooltip::text("Open media grid")),
-                )
-                .anchor(gpui::Anchor::TopRight)
-                .attach(gpui::Anchor::BottomRight)
-                .menu(move |window, cx| {
-                    let gallery_preview = gallery_preview.clone();
-                    Some(ContextMenu::build(window, cx, move |menu, _window, _cx| {
-                        menu.custom_row(move |_window, cx| {
-                            render_folder_media_gallery(&gallery_preview, cx)
-                        })
-                    }))
-                }),
-        )
-        .into_any_element()
-}
-
 pub(crate) fn render_folder_media_gallery(
     preview: &FolderMediaPreview,
     cx: &mut App,
@@ -292,14 +236,21 @@ pub(crate) fn render_folder_media_shelf(
     cx: &mut Context<super::ProjectPanel>,
 ) -> AnyElement {
     let summary = media_preview_summary(preview);
-    let visible_count = preview
-        .items
-        .len()
-        .min(MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS);
-    let shelf_cards = preview
+    let metadata_probe_tooltip = preview
+        .metadata_probe_plan
+        .as_ref()
+        .map(|plan| plan.summary_label());
+    let has_overflow = preview.total_count > preview.items.len() || preview.scanned_cap_hit;
+    let media_card_limit = if has_overflow {
+        MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS.saturating_sub(1)
+    } else {
+        MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS
+    };
+    let visible_media_count = preview.items.len().min(media_card_limit);
+    let mut shelf_cards = preview
         .items
         .iter()
-        .take(MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS)
+        .take(media_card_limit)
         .map(|item| {
             render_media_shelf_card(
                 item,
@@ -309,6 +260,9 @@ pub(crate) fn render_folder_media_shelf(
             )
         })
         .collect::<Vec<_>>();
+    if has_overflow {
+        shelf_cards.push(render_media_shelf_overflow_card(preview, cx));
+    }
 
     v_flex()
         .id(SharedString::from(format!(
@@ -320,9 +274,14 @@ pub(crate) fn render_folder_media_shelf(
         .gap_1p5()
         .px_2()
         .py_2()
-        .border_t_1()
+        .border_b_1()
         .border_color(cx.theme().colors().border.opacity(0.6))
         .bg(cx.theme().colors().panel_background)
+        .when_some(metadata_probe_tooltip, |this, tooltip| {
+            this.tooltip(move |_window, cx| {
+                Tooltip::with_meta("Media metadata", None, tooltip.clone(), cx)
+            })
+        })
         .child(
             h_flex()
                 .items_center()
@@ -340,7 +299,7 @@ pub(crate) fn render_folder_media_shelf(
                         ),
                 )
                 .child(
-                    Label::new(format!("{visible_count} shown / {summary}"))
+                    Label::new(format!("{visible_media_count} shown / {summary}"))
                         .size(LabelSize::XSmall)
                         .color(Color::Muted)
                         .single_line()
@@ -354,6 +313,65 @@ pub(crate) fn render_folder_media_shelf(
                 .gap_1p5()
                 .children(shelf_cards),
         )
+        .into_any_element()
+}
+
+fn render_media_shelf_overflow_card(preview: &FolderMediaPreview, cx: &mut App) -> AnyElement {
+    let summary = media_preview_summary(preview);
+    let hidden_count = preview
+        .total_count
+        .saturating_sub(MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS.saturating_sub(1));
+    let gallery_preview = preview.clone();
+    let menu_id = format!(
+        "project-panel-media-shelf-overflow-{:016x}",
+        stable_text_hash(&summary)
+    );
+    let trigger_id = SharedString::from(format!(
+        "project-panel-media-shelf-more-{:016x}",
+        stable_text_hash(&summary)
+    ));
+
+    PopoverMenu::new(menu_id)
+        .trigger(
+            ButtonLike::new(trigger_id)
+                .full_width()
+                .height(px(PROJECT_PANEL_MEDIA_SHELF_CARD_TOTAL_HEIGHT).into())
+                .style(ButtonStyle::Subtle)
+                .child(
+                    div()
+                        .min_w(px(PROJECT_PANEL_MEDIA_SHELF_CARD_MIN_WIDTH))
+                        .w_full()
+                        .v_flex()
+                        .items_center()
+                        .justify_center()
+                        .gap_1()
+                        .p_1()
+                        .rounded_sm()
+                        .border_1()
+                        .border_color(cx.theme().colors().border_variant)
+                        .child(Icon::new(IconName::Ellipsis).size(IconSize::Medium))
+                        .child(
+                            Label::new(if hidden_count > 0 {
+                                format!("+{hidden_count} more")
+                            } else {
+                                "More".to_string()
+                            })
+                            .size(LabelSize::XSmall)
+                            .color(Color::Muted)
+                            .single_line(),
+                        ),
+                ),
+        )
+        .anchor(gpui::Anchor::TopRight)
+        .attach(gpui::Anchor::BottomRight)
+        .menu(move |window, cx| {
+            let gallery_preview = gallery_preview.clone();
+            Some(ContextMenu::build(window, cx, move |menu, _window, _cx| {
+                menu.custom_row(move |_window, cx| {
+                    render_folder_media_gallery(&gallery_preview, cx)
+                })
+            }))
+        })
         .into_any_element()
 }
 
@@ -753,15 +771,6 @@ fn media_preview_summary(preview: &FolderMediaPreview) -> String {
     }
 
     parts.join(" / ")
-}
-
-fn media_preview_folder_tooltip_meta(preview: &FolderMediaPreview) -> String {
-    let summary = media_preview_summary(preview);
-    if let Some(probe_plan) = preview.metadata_probe_plan.as_ref() {
-        format!("{summary} / {}", probe_plan.summary_label())
-    } else {
-        summary
-    }
 }
 
 fn push_media_count(parts: &mut Vec<String>, count: usize, singular: &str, plural: &str) {

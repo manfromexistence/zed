@@ -949,7 +949,7 @@ impl TitleBar {
             ),
             self.render_title_right_panel_button(
                 "titlebar-media-panel",
-                IconName::Library,
+                IconName::Image,
                 "Media",
                 media_panel::ToggleFocus.boxed_clone(),
                 active_right_panel == Some("Media"),
@@ -996,12 +996,16 @@ impl TitleBar {
             .tooltip(Tooltip::text(tooltip))
             .on_click(move |_, window, cx| {
                 if selected && let Some(workspace) = workspace.upgrade() {
-                    let action = workspace
+                    let right_dock = workspace
                         .read(cx)
                         .dock_at_position(DockPosition::Right)
-                        .read(cx)
-                        .toggle_action();
-                    window.dispatch_action(action, cx);
+                        .clone();
+                    right_dock.update(cx, |dock, cx| {
+                        let panel_id = dock.active_panel().map(|panel| panel.panel_id());
+                        if let Some(panel_id) = panel_id {
+                            dock.flash_panel_highlight(panel_id, window, cx);
+                        }
+                    });
                 } else {
                     window.dispatch_action(action.boxed_clone(), cx);
                 }

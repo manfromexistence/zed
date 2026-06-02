@@ -11,10 +11,10 @@ const DX_STYLE_GENERATOR_CSS: &str = r##"    :root {
       --warning: #f59e0b;
     }
     * { box-sizing: border-box; }
-    html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+    html, body { margin: 0; height: 100%; min-height: 0; overflow: hidden; background: var(--bg); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
     body { padding: 14px; }
-    main { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 12px; min-height: calc(100vh - 28px); }
-    aside, section { border: 1px solid var(--border); background: var(--panel); border-radius: 8px; min-width: 0; }
+    main { display: grid; grid-template-columns: minmax(220px, 280px) minmax(0, 1fr); gap: 12px; height: calc(100vh - 28px); min-height: 0; overflow: hidden; }
+    aside, section { border: 1px solid var(--border); background: var(--panel); border-radius: 8px; min-width: 0; min-height: 0; }
     aside { overflow: auto; }
     header { padding: 14px; border-bottom: 1px solid var(--border); }
     h1 { margin: 0 0 6px; font-size: 17px; line-height: 1.2; }
@@ -28,13 +28,13 @@ const DX_STYLE_GENERATOR_CSS: &str = r##"    :root {
     .generator strong { display: block; font-size: 12px; }
     .generator span { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
     .catalog-empty { color: var(--muted); font-size: 12px; padding: 8px; }
-    .workspace { display: grid; grid-template-rows: auto minmax(220px, 1fr) auto; overflow: hidden; }
+    .workspace { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-height: 0; overflow: hidden; }
     .toolbar { display: flex; gap: 8px; align-items: center; padding: 12px; border-bottom: 1px solid var(--border); background: #0d1320; }
     .toolbar select { min-width: 180px; background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 7px 9px; }
     .toolbar button { background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; }
     .toolbar button:disabled { color: var(--muted); cursor: not-allowed; opacity: .72; }
     .status { margin-left: auto; color: var(--muted); font-size: 12px; }
-    .canvas { display: grid; grid-template-columns: minmax(240px, 360px) minmax(0, 1fr); gap: 12px; padding: 12px; overflow: auto; }
+    .canvas { display: grid; grid-template-columns: minmax(240px, 360px) minmax(0, 1fr); gap: 12px; padding: 12px; min-height: 0; overflow: auto; }
     .controls { display: grid; align-content: start; gap: 10px; }
     .control { display: grid; gap: 6px; color: var(--muted); font-size: 12px; }
     .control input, .control select { width: 100%; background: #0d1320; color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 7px 8px; }

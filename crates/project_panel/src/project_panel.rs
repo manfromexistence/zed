@@ -6146,9 +6146,6 @@ impl ProjectPanel {
 
         let kind = details.kind;
         let is_sticky = details.sticky.is_some();
-        let media_preview = (!is_sticky)
-            .then(|| details.media_preview.clone())
-            .flatten();
         let sticky_index = details.sticky.as_ref().map(|this| this.sticky_index);
         let settings = ProjectPanelSettings::get_global(cx);
         let file_icons = settings.file_icons;
@@ -6657,13 +6654,8 @@ impl ProjectPanel {
                         h_flex()
                             .gap_1()
                             .flex_none()
+                            .ml_auto()
                             .pr_3()
-                            .when_some(media_preview, |this, media_preview| {
-                                this.child(media_preview::render_folder_media_preview(
-                                    &media_preview,
-                                    cx,
-                                ))
-                            })
                             .when_some(diagnostic_count, |this, count| {
                                 this.when(count.error_count > 0, |this| {
                                     this.child(
@@ -7133,6 +7125,52 @@ impl ProjectPanel {
         );
 
         Some((active_media_folder, preview))
+    }
+
+    fn top_folder_media_preview(
+        &self,
+        cx: &mut Context<Self>,
+    ) -> Option<(ActiveMediaFolder, media_preview::FolderMediaPreview)> {
+        if let Some(active_preview) = self.active_folder_media_preview(cx) {
+            return Some(active_preview);
+        }
+
+        for visible_worktree in &self.state.visible_entries {
+            let Some(expanded_dir_ids) = self
+                .state
+                .expanded_dir_ids
+                .get(&visible_worktree.worktree_id)
+            else {
+                continue;
+            };
+
+            for entry in &visible_worktree.entries {
+                if !entry.kind.is_dir() || expanded_dir_ids.binary_search(&entry.id).is_err() {
+                    continue;
+                }
+
+                let Some(preview) =
+                    self.cached_folder_media_preview(visible_worktree.worktree_id, entry.id)
+                else {
+                    continue;
+                };
+
+                let media_folder = ActiveMediaFolder {
+                    worktree_id: visible_worktree.worktree_id,
+                    entry_id: entry.id,
+                    selected_media_entry_id: None,
+                };
+                self.ensure_generated_media_metadata(
+                    media_folder.worktree_id,
+                    media_folder.entry_id,
+                    &preview,
+                    cx,
+                );
+                return Some((media_folder, preview));
+            }
+        }
+
+        None
     }
 
     fn ensure_generated_media_metadata(
@@ -7838,7 +7876,7 @@ impl Render for ProjectPanel {
             Self::render_selected_entries_toolbar(selected_entry_count, is_read_only, is_remote, cx)
         });
         let active_media_preview = has_worktree
-            .then(|| self.active_folder_media_preview(cx))
+            .then(|| self.top_folder_media_preview(cx))
             .flatten();
         let panel_settings = ProjectPanelSettings::get_global(cx);
         let indent_size = panel_settings.indent_size;
@@ -8022,6 +8060,39 @@ impl Render for ProjectPanel {
                     v_flex()
                         .when_some(selected_entries_toolbar, |this, toolbar| {
                             this.child(toolbar)
+                        })
+                        .when_some(active_media_preview, |this, media_preview| {
+                            let (active_media_folder, media_preview) = media_preview;
+                            this.child(
+                                div()
+                                    .id("project-panel-media-shelf-scroll-proxy")
+                                    .block_mouse_except_scroll()
+                                    .on_scroll_wheel({
+                                        let scroll_handle = self.scroll_handle.clone();
+                                        let entity_id = cx.entity().entity_id();
+                                        move |event, window, cx| {
+                                            let state = scroll_handle.0.borrow();
+                                            let base_handle = &state.base_handle;
+                                            let current_offset = base_handle.offset();
+                                            let max_offset = base_handle.max_offset();
+                                            let delta =
+                                                event.delta.pixel_delta(window.line_height());
+                                            let new_offset = (current_offset + delta)
+                                                .clamp(&max_offset.neg(), &Point::default());
+
+                                            if new_offset != current_offset {
+                                                base_handle.set_offset(new_offset);
+                                                cx.notify(entity_id);
+                                            }
+                                        }
+                                    })
+                                    .child(media_preview::render_folder_media_shelf(
+                                        &media_preview,
+                                        active_media_folder.worktree_id,
+                                        active_media_folder.selected_media_entry_id,
+                                        cx,
+                                    )),
+                            )
                         })
                         .child(
                             uniform_list("entries", item_count, {
@@ -8245,15 +8316,6 @@ impl Render for ProjectPanel {
                             })
                             .track_scroll(&self.scroll_handle),
                         )
-                        .when_some(active_media_preview, |this, media_preview| {
-                            let (active_media_folder, media_preview) = media_preview;
-                            this.child(media_preview::render_folder_media_shelf(
-                                &media_preview,
-                                active_media_folder.worktree_id,
-                                active_media_folder.selected_media_entry_id,
-                                cx,
-                            ))
-                        })
                         .child(
                             div()
                                 .id("project-panel-blank-area")

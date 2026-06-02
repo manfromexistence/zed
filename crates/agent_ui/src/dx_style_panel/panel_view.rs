@@ -1,5 +1,5 @@
-use gpui::{Action, App, IntoElement, SharedString};
-use ui::{IconName, prelude::*};
+use gpui::{Action, App, IntoElement, ScrollHandle, SharedString, Window};
+use ui::{IconName, WithScrollbar, prelude::*};
 use zed_actions::dx_style::OpenGeneratorPreviewForContext;
 
 use super::{
@@ -10,7 +10,9 @@ const STYLE_PANEL_ROW_LIMIT: usize = 13;
 pub(super) fn render_panel(
     snapshot: &DxStylePanelSnapshot,
     active_context: &ActiveStyleContextSnapshot,
-    cx: &App,
+    scroll_handle: &ScrollHandle,
+    window: &mut Window,
+    cx: &mut App,
 ) -> impl IntoElement + use<> {
     let source_context_json = active_context.web_preview_context_json();
     let can_open_generator =
@@ -18,33 +20,45 @@ pub(super) fn render_panel(
     v_flex()
         .id("dx-style-panel")
         .size_full()
+        .min_h_0()
         .min_w_0()
         .gap_2()
         .p_2()
         .bg(cx.theme().colors().panel_background)
         .child(panel_header())
-        .child(style_summary(snapshot, active_context, cx))
         .child(
-            Button::new(
-                "dx-style-panel-open-generator-preview",
-                "Open Style Generators",
-            )
-            .full_width()
-            .label_size(LabelSize::Small)
-            .color(Color::Muted)
-            .start_icon(Icon::new(IconName::Sparkle).size(IconSize::Small))
-            .disabled(!can_open_generator)
-            .on_click(move |_, window, cx| {
-                window.dispatch_action(
-                    OpenGeneratorPreviewForContext {
-                        source_context_json: source_context_json.clone(),
-                    }
-                    .boxed_clone(),
-                    cx,
-                );
-            }),
+            v_flex()
+                .id("dx-style-panel-scroll")
+                .flex_1()
+                .min_h_0()
+                .min_w_0()
+                .gap_2()
+                .overflow_y_scroll()
+                .track_scroll(scroll_handle)
+                .child(style_summary(snapshot, active_context, cx))
+                .child(
+                    Button::new(
+                        "dx-style-panel-open-generator-preview",
+                        "Open Web Preview Generators",
+                    )
+                    .full_width()
+                    .label_size(LabelSize::Small)
+                    .color(Color::Muted)
+                    .start_icon(Icon::new(IconName::Sparkle).size(IconSize::Small))
+                    .disabled(!can_open_generator)
+                    .on_click(move |_, window, cx| {
+                        window.dispatch_action(
+                            OpenGeneratorPreviewForContext {
+                                source_context_json: source_context_json.clone(),
+                            }
+                            .boxed_clone(),
+                            cx,
+                        );
+                    }),
+                )
+                .child(style_rows(snapshot, cx))
+                .vertical_scrollbar_for(scroll_handle, window, cx),
         )
-        .child(style_rows(snapshot, cx))
 }
 fn panel_header() -> impl IntoElement {
     h_flex().justify_between().gap_2().child(

@@ -422,7 +422,7 @@ impl MultiWorkspace {
             project_groups: Vec::new(),
             active_workspace: workspace,
             sidebar: None,
-            sidebar_open: false,
+            sidebar_open: true,
             sidebar_overlay: None,
             pending_removal_tasks: Vec::new(),
             _serialize_task: None,
@@ -447,6 +447,11 @@ impl MultiWorkspace {
                 }
             }));
         self.sidebar = Some(Box::new(sidebar));
+        if self.sidebar_open {
+            let active_workspace = self.active_workspace.clone();
+            self.retain_active_workspace(cx);
+            self.sync_sidebar_to_workspace(&active_workspace, cx);
+        }
     }
 
     pub fn sidebar(&self) -> Option<&dyn SidebarHandle> {

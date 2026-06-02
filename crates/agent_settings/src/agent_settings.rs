@@ -39,10 +39,10 @@ pub struct PanelLayout {
 impl PanelLayout {
     const AGENT: Self = Self {
         agent_dock: Some(DockPosition::Left),
-        project_panel_dock: Some(DockSide::Right),
-        outline_panel_dock: Some(DockSide::Right),
-        collaboration_panel_dock: Some(DockPosition::Right),
-        git_panel_dock: Some(DockPosition::Right),
+        project_panel_dock: Some(DockSide::Left),
+        outline_panel_dock: Some(DockSide::Left),
+        collaboration_panel_dock: Some(DockPosition::Left),
+        git_panel_dock: Some(DockPosition::Left),
     };
 
     const EDITOR: Self = Self {
@@ -1289,13 +1289,13 @@ mod tests {
         assert_eq!(user_layout.git_panel_dock, None);
 
         // User sets a combination that doesn't match either preset:
-        // agent on the left but project panel also on the left.
+        // agent on the left but project panel on the right.
         SettingsStore::update_global(cx, |store, cx| {
             store
                 .set_user_settings(
                     r#"{
                         "agent": { "dock": "left" },
-                        "project_panel": { "dock": "left" }
+                        "project_panel": { "dock": "right" }
                     }"#,
                     cx,
                 )
@@ -1307,7 +1307,7 @@ mod tests {
             panic!("expected Custom, got {:?}", layout);
         };
         assert_eq!(user_layout.agent_dock, Some(DockPosition::Left));
-        assert_eq!(user_layout.project_panel_dock, Some(DockSide::Left));
+        assert_eq!(user_layout.project_panel_dock, Some(DockSide::Right));
     }
 
     #[gpui::test]
@@ -1394,7 +1394,7 @@ mod tests {
             project::DisableAiSettings::register(cx);
             AgentSettings::register(cx);
 
-            // User has agent=left (matches preset) and project_panel=left (does not)
+            // User has agent=left and project_panel=left, both matching the preset.
             SettingsStore::update_global(cx, |store, cx| {
                 store
                     .set_user_settings(
@@ -1408,7 +1408,7 @@ mod tests {
             });
 
             let layout = AgentSettings::get_layout(cx);
-            assert!(matches!(layout, WindowLayout::Custom(_)));
+            assert!(matches!(layout, WindowLayout::Agent(_)));
 
             AgentSettings::set_layout(WindowLayout::agent(), fs.clone(), cx)
         })
@@ -1423,8 +1423,7 @@ mod tests {
                 store.set_user_settings(&written, cx).unwrap();
             });
 
-            // The user settings should still have agent=left (preserved)
-            // and now project_panel=right (changed to match preset).
+            // The user settings should still have agent=left and project_panel=left.
             let store = cx.global::<SettingsStore>();
             let user_layout = store
                 .raw_user_settings()
@@ -1432,7 +1431,7 @@ mod tests {
                 .unwrap_or_default();
 
             assert_eq!(user_layout.agent_dock, Some(DockPosition::Left));
-            assert_eq!(user_layout.project_panel_dock, Some(DockSide::Right));
+            assert_eq!(user_layout.project_panel_dock, Some(DockSide::Left));
             // Other fields weren't in user settings and didn't need changing.
             assert_eq!(user_layout.outline_panel_dock, None);
 

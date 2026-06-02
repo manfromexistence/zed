@@ -1733,7 +1733,6 @@ impl Workspace {
         let right_dock = Dock::new(DockPosition::Right, modal_layer.clone(), window, cx);
         let left_dock_buttons = cx.new(|cx| PanelButtons::new(left_dock.clone(), cx));
         let bottom_dock_buttons = cx.new(|cx| PanelButtons::new(bottom_dock.clone(), cx));
-        let right_dock_buttons = cx.new(|cx| PanelButtons::new(right_dock.clone(), cx));
         let multi_workspace = window
             .root::<MultiWorkspace>()
             .flatten()
@@ -1742,7 +1741,6 @@ impl Workspace {
             let mut status_bar =
                 StatusBar::new(&center_pane.clone(), multi_workspace.clone(), window, cx);
             status_bar.add_left_item(left_dock_buttons, window, cx);
-            status_bar.add_right_item(right_dock_buttons, window, cx);
             status_bar.add_right_item(bottom_dock_buttons, window, cx);
             status_bar
         });
@@ -2108,14 +2106,33 @@ impl Workspace {
                     window
                         .update(cx, |_, window, cx| {
                             workspace.update(cx, |workspace, cx| {
-                                for (dock, serialized_dock) in [
-                                    (&workspace.right_dock, &default_docks.right),
-                                    (&workspace.left_dock, &default_docks.left),
-                                    (&workspace.bottom_dock, &default_docks.bottom),
+                                for (position, dock, serialized_dock) in [
+                                    (
+                                        DockPosition::Right,
+                                        workspace.right_dock.clone(),
+                                        default_docks.right.clone(),
+                                    ),
+                                    (
+                                        DockPosition::Left,
+                                        workspace.left_dock.clone(),
+                                        default_docks.left.clone(),
+                                    ),
+                                    (
+                                        DockPosition::Bottom,
+                                        workspace.bottom_dock.clone(),
+                                        default_docks.bottom.clone(),
+                                    ),
                                 ] {
+                                    let persisted_stack_state =
+                                        Dock::load_persisted_stack_state(workspace, position, cx)
+                                            .unwrap_or_default();
                                     dock.update(cx, |dock, cx| {
-                                        dock.serialized_dock = Some(serialized_dock.clone());
-                                        dock.restore_state(window, cx);
+                                        dock.serialized_dock = Some(serialized_dock);
+                                        dock.restore_state_with_persisted_stack_state(
+                                            Some(persisted_stack_state),
+                                            window,
+                                            cx,
+                                        );
                                     });
                                 }
                                 cx.notify();
@@ -2252,14 +2269,20 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        for (dock, data) in [
-            (&self.left_dock, docks.left),
-            (&self.bottom_dock, docks.bottom),
-            (&self.right_dock, docks.right),
+        for (position, dock, data) in [
+            (DockPosition::Left, self.left_dock.clone(), docks.left),
+            (DockPosition::Bottom, self.bottom_dock.clone(), docks.bottom),
+            (DockPosition::Right, self.right_dock.clone(), docks.right),
         ] {
+            let persisted_stack_state =
+                Dock::load_persisted_stack_state(self, position, cx).unwrap_or_default();
             dock.update(cx, |dock, cx| {
                 dock.serialized_dock = Some(data);
-                dock.restore_state(window, cx);
+                dock.restore_state_with_persisted_stack_state(
+                    Some(persisted_stack_state),
+                    window,
+                    cx,
+                );
             });
         }
     }
@@ -4354,6 +4377,38 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> bool {
+        let side_stack_dock = self.all_docks().into_iter().find_map(|dock| {
+            let should_stack_side_panel = {
+                let dock = dock.read(cx);
+                dock.panel_index_for_type::<T>().is_some_and(|panel_index| {
+                    dock.is_open()
+                        && matches!(dock.position(), DockPosition::Left | DockPosition::Right)
+                        && dock.active_panel_index() != Some(panel_index)
+                })
+            };
+            should_stack_side_panel.then(|| dock.clone())
+        });
+
+        if let Some(dock) = side_stack_dock {
+            let did_stack = dock.update(cx, |dock, cx| {
+                if let Some(panel) = dock.panel::<T>() {
+                    dock.stack_panel(Entity::entity_id(&panel), window, cx)
+                } else {
+                    false
+                }
+            });
+
+            if did_stack {
+                self.serialize_workspace(window, cx);
+                telemetry::event!(
+                    "Panel Button Clicked",
+                    name = T::persistent_name(),
+                    toggle_state = true
+                );
+                return true;
+            }
+        }
+
         let mut did_focus_panel = false;
         self.focus_or_unfocus_panel::<T>(window, cx, &mut |panel, window, cx| {
             did_focus_panel = !panel.panel_focus_handle(cx).contains_focused(window, cx);
@@ -7271,16 +7326,25 @@ impl Workspace {
 
                 let docks = serialized_workspace.docks;
 
-                for (dock, serialized_dock) in [
-                    (&mut workspace.right_dock, docks.right),
-                    (&mut workspace.left_dock, docks.left),
-                    (&mut workspace.bottom_dock, docks.bottom),
-                ]
-                .iter_mut()
-                {
+                for (position, dock, serialized_dock) in [
+                    (DockPosition::Right, workspace.right_dock.clone(), docks.right),
+                    (DockPosition::Left, workspace.left_dock.clone(), docks.left),
+                    (
+                        DockPosition::Bottom,
+                        workspace.bottom_dock.clone(),
+                        docks.bottom,
+                    ),
+                ] {
+                    let persisted_stack_state =
+                        Dock::load_persisted_stack_state(workspace, position, cx)
+                            .unwrap_or_default();
                     dock.update(cx, |dock, cx| {
-                        dock.serialized_dock = Some(serialized_dock.clone());
-                        dock.restore_state(window, cx);
+                        dock.serialized_dock = Some(serialized_dock);
+                        dock.restore_state_with_persisted_stack_state(
+                            Some(persisted_stack_state),
+                            window,
+                            cx,
+                        );
                     });
                 }
 

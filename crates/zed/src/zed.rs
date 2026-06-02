@@ -848,7 +848,7 @@ fn show_agent_panel_for_empty_workspace(
     window: &mut Window,
     cx: &mut Context<Workspace>,
 ) {
-    if !workspace.root_paths(cx).is_empty() || workspace.active_item(cx).is_some() {
+    if !workspace.root_paths(cx).is_empty() || !workspace.open_item_abs_paths(cx).is_empty() {
         return;
     }
 

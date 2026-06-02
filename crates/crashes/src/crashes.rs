@@ -30,7 +30,9 @@ const CRASH_HANDLER_CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 pub fn force_backtrace() {
     let old_hook = panic::take_hook();
     panic::set_hook(Box::new(move |info| {
-        unsafe { env::set_var("RUST_BACKTRACE", "1") };
+        if env::var_os("RUST_BACKTRACE").is_none() {
+            unsafe { env::set_var("RUST_BACKTRACE", "1") };
+        }
         old_hook(info);
         // prevent the macOS crash dialog from popping up
         if cfg!(target_os = "macos") {

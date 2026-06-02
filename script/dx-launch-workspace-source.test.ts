@@ -124,7 +124,8 @@ test("collapsed workspace activity bar stays icon-only with hover details", () =
   }
 
   assert.match(sidebar, /Tooltip::text\("Create Space or Add Project"\)/);
-  assert.match(sidebar, /Label::new\("Toggle Sidebar"\)/);
+  assert.match(sidebar, /"Expand Sidebar"/);
+  assert.match(sidebar, /"Collapse to Activity Bar"/);
 });
 
 test("workspace shortcut grid persists user-pinned entries by screen and project", () => {
@@ -133,7 +134,6 @@ test("workspace shortcut grid persists user-pinned entries by screen and project
   const restoreSerializedState = functionBody(sidebar, "restore_serialized_state");
   const gridEntries = functionBody(sidebar, "grid_entries");
   const renderSpaceGrid = functionBody(sidebar, "render_space_grid");
-  const toggleGridShortcut = functionBody(sidebar, "toggle_grid_shortcut");
 
   assert.match(sidebar, /const MAX_SIDEBAR_GRID_SHORTCUTS: usize = 24;/);
   assert.match(sidebar, /struct SerializedSidebarGridShortcut/);
@@ -160,16 +160,12 @@ test("workspace shortcut grid persists user-pinned entries by screen and project
     /seen_actions\.insert\(entry\.action\.dedupe_key\(\)\)[\s\S]*take\(SIDEBAR_SPACE_GRID_COLUMNS \* 4\)/,
     "grid entries must dedupe and cap the final three-column shortcut grid to twelve cards",
   );
-  assert.match(
+  assert.doesNotMatch(
     renderSpaceGrid,
     /IconName::StarFilled[\s\S]*IconName::Star[\s\S]*IconButton::new[\s\S]*toggle_grid_shortcut/,
-    "grid cards must expose a real star toggle wired to shortcut state",
+    "grid cards must not show star chrome under the search bar",
   );
-  assert.match(
-    toggleGridShortcut,
-    /self\.grid_shortcuts\.remove\(existing_ix\)[\s\S]*self\.grid_shortcuts\.insert\(0, shortcut\)[\s\S]*truncate\(MAX_SIDEBAR_GRID_SHORTCUTS\)[\s\S]*self\.serialize\(cx\)/,
-    "grid shortcut toggling must unpin existing cards or pin new cards, bound the list, and persist",
-  );
+  assert.doesNotMatch(sidebar, /fn toggle_grid_shortcut/);
 });
 
 test("DX launch workspace delegates Launch Receipts rail rendering", () => {

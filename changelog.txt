@@ -1,3 +1,68 @@
+[2026-06-02] - Final Sidebar And Panel Polish
+
+CHANGED:
+- `crates\sidebar\src\sidebar.rs` now removes visible star controls from the workspace shortcut grid while still restoring any persisted shortcut cards, and removes the unused shortcut-toggle path that became dead after the UI change.
+- `crates\agent_settings\src\agent_settings.rs`, `assets\settings\default.json`, and local Zed settings now keep project, git, collab, outline, and Agent docks on the left for the default and Agentic layouts.
+- `crates\workspace\src\dock.rs` now re-pins Agent to the bottom after restored stack state and masks side-panel header text underneath the split/close control strip.
+- `crates\project_panel\src\project_panel.rs` now forwards wheel scrolling from the top media shelf into the file-tree scroll handle.
+- `crates\title_bar\src\title_bar.rs`, `crates\workspace\src\screen_carousel.rs`, and `crates\web_preview\src\web_preview_view.rs` now use the `Public` browser icon; top-right Media and Style buttons use `Image` and `Sliders`.
+- `script\dx-launch-workspace-source.test.ts`, `script\dx-project-panel-source.test.ts`, `script\dx-title-bar-source.test.ts`, `script\dx-workspace-ui-state-source.test.ts`, and `script\zed-startup-reliability-source.test.ts` now guard the final sidebar, media shelf, icon, left-dock, and empty-workspace AI contracts.
+- `todo.txt` records the clean final `just run` proof and narrows remaining work to hands-on UX validation.
+
+PASSED:
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe script\dx-project-panel-source.test.ts`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe script\dx-workspace-ui-state-source.test.ts`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe script\dx-launch-workspace-source.test.ts`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe script\dx-title-bar-source.test.ts`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe script\dx-style-panel-source.test.ts`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe script\zed-startup-reliability-source.test.ts`
+- `rustfmt --edition 2024 --check crates\agent_settings\src\agent_settings.rs crates\project_panel\src\media_preview.rs crates\project_panel\src\project_panel.rs crates\sidebar\src\sidebar.rs crates\title_bar\src\title_bar.rs crates\workspace\src\dock.rs crates\workspace\src\screen_carousel.rs crates\web_preview\src\web_preview_view.rs`
+- `git diff --check`
+- `$env:CARGO_BUILD_JOBS='6'; just run` completed locked Zed and CLI builds, launched Zed process `25728`, and produced no compile warnings.
+
+NOTES:
+- The first clean-build retry failed because the prior dev Zed process still held `G:\Zed\target\debug\zed.exe`; only that dev process was closed, then the final run succeeded.
+- Hands-on visual proof for the exact split/resize/sidebar interactions remains a manual UX validation pass in the launched editor.
+
+[2026-06-02] - Local Llama And Stacked Side Panel Polish
+
+CHANGED:
+- `assets\settings\default.json` now uses the installed `gemma-4-E4B-it-Q4_K_M.gguf` as the normal llama.cpp model and the installed `Qwen3.5-0.8B-Q4_0.gguf` as the low-spec fallback, both capped to a 32K editor context instead of the old 4K local default.
+- `crates\language_models\src\provider\llama_cpp.rs` now restarts an already-running same-model llama-server when its reported context/parallel settings do not match the selected model config, and local model resolution now searches configured filenames in known model directories before fuzzy fallback.
+- `crates\workspace\src\dock.rs` now lets side-dock split controls add a third unique stacked panel, keeps split/close controls visible on each stacked cell, cleans stale stack flex ratios when panels leave, and exposes draggable row resize handles between stacked side panels.
+- `crates\agent_ui\src\dx_style_panel\panel.rs` and `crates\agent_ui\src\dx_style_panel\panel_view.rs` now give the native Style panel a real scroll handle and vertical scrollbar inside squeezed half/third-height side stacks.
+- `crates\web_preview\src\dx_style_generator_surface\style.rs` now uses viewport-bounded layout and internal scroll regions so the Style generator Web Preview remains usable inside stacked side panels.
+- `script\dx-style-panel-source.test.ts` and `script\dx-workspace-ui-state-source.test.ts` now guard the updated Style-panel scroll/Web Preview wording and dynamic left/right dock stack labels.
+
+PASSED:
+- `rustfmt --check crates\language_models\src\provider\llama_cpp.rs crates\workspace\src\dock.rs crates\agent_ui\src\dx_style_panel\panel.rs crates\agent_ui\src\dx_style_panel\panel_view.rs crates\web_preview\src\dx_style_generator_surface\style.rs`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-workspace-ui-state-source.test.ts script\dx-style-panel-source.test.ts script\dx-model-selector-source.test.ts script\dx-language-model-selector-source.test.ts`
+- `git diff --check -- assets/settings/default.json crates/language_models/src/provider/llama_cpp.rs crates/workspace/src/dock.rs crates/agent_ui/src/dx_style_panel/panel.rs crates/agent_ui/src/dx_style_panel/panel_view.rs crates/web_preview/src/dx_style_generator_surface/style.rs`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" ...` returned no conflict markers across the touched source files.
+- `$env:CARGO_BUILD_JOBS='6'; just run` completed the locked Zed and CLI builds and launched Zed process `19608`.
+
+NOTES:
+- Local GGUF metadata inspection found `Qwen3.5-0.8B-Q4_0.gguf` advertises 262144 context tokens and `gemma-4-E4B-it-Q4_K_M.gguf` advertises 131072 context tokens; Zed now caps both to a safer 32768 configured local editor context.
+- The authorized `just run` surfaced and then verified the GPUI scrollbar import/signature fix in `crates\agent_ui\src\dx_style_panel\panel_view.rs`.
+- No local llama-server startup, model download, or manual side-panel interaction proof was run in this pass.
+
+[2026-06-02] - Sidebar And Dock Stack Correction
+
+CHANGED:
+- `crates\workspace\src\multi_workspace.rs` now starts the workspace sidebar open by default and syncs the registered sidebar focus handle into the active workspace.
+- `crates\sidebar\src\sidebar.rs` now treats the collapsed activity-bar sidebar toggle as an expand action, keeps the expanded toggle as the close action, removes the duplicate expand helper, and scales collapsed activity icons to the medium chrome size.
+- `crates\workspace\src\workspace.rs` now keeps bottom-left status panel buttons scoped to the left dock so right-dock tools are not duplicated there.
+- `crates\workspace\src\dock.rs` now renders side-dock panels as true vertical stack cells, adds real split/close controls for stackable side panels, keeps the Agent panel pinned to the bottom of a left stack, highlights duplicate panel clicks, and adds draggable row-resize handles between stacked side panels.
+- `crates\title_bar\src\title_bar.rs` and `crates\web_preview\src\web_preview_view.rs` now use the embedded `ToolWeb` browser icon for Browser screen and WebPreview tab fallbacks.
+
+PASSED:
+- `rustfmt --check crates\workspace\src\dock.rs crates\workspace\src\multi_workspace.rs crates\sidebar\src\sidebar.rs crates\title_bar\src\title_bar.rs`
+- `git diff --check`
+
+NOTES:
+- The requested `icon` CLI was checked, but `icon search ... --pack lucide` could not run because the local DX icon index is missing from the configured cache paths. Existing embedded lucide-style `load_circle.svg` already drives the rotating WebPreview loader, and `tool_web.svg` is now used for browser/WebPreview chrome.
+- No `just run`, Cargo build/check/test/clippy, local server, or live UI proof was run in this source-only pass.
+
 [2026-06-02] - Pasted Editor Shell Validation And Warning Cleanup
 
 CHANGED:

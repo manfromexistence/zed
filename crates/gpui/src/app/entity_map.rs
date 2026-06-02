@@ -479,6 +479,7 @@ impl<T: 'static> Entity<T> {
 
     /// Updates the entity referenced by this handle with the given function.
     #[inline]
+    #[track_caller]
     pub fn update<R, C: AppContext>(
         &self,
         cx: &mut C,
@@ -505,6 +506,7 @@ impl<T: 'static> Entity<T> {
     /// the referenced entity still exists, within a visual context that has a window.
     /// Returns an error if the window has been closed.
     #[inline]
+    #[track_caller]
     pub fn update_in<R, C: VisualContext>(
         &self,
         cx: &mut C,
@@ -780,6 +782,7 @@ impl<T: 'static> WeakEntity<T> {
     /// Updates the entity referenced by this handle with the given function if
     /// the referenced entity still exists. Returns an error if the entity has
     /// been released.
+    #[track_caller]
     pub fn update<C, R>(
         &self,
         cx: &mut C,
@@ -795,6 +798,7 @@ impl<T: 'static> WeakEntity<T> {
     /// Updates the entity referenced by this handle with the given function if
     /// the referenced entity still exists, within a visual context that has a window.
     /// Returns an error if the entity has been released.
+    #[track_caller]
     pub fn update_in<C, R>(
         &self,
         cx: &mut C,
