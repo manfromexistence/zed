@@ -1,4 +1,5 @@
 mod metadata;
+mod metadata_probe;
 
 use std::path::{Path, PathBuf};
 
@@ -65,6 +66,7 @@ pub(crate) struct FolderMediaPreview {
     pub(crate) audio_count: usize,
     pub(crate) total_count: usize,
     pub(crate) scanned_cap_hit: bool,
+    pub(crate) metadata_probe_plan: Option<metadata_probe::MediaMetadataProbePlan>,
     pub(crate) items: Vec<MediaPreviewItem>,
 }
 
@@ -145,6 +147,8 @@ pub(crate) fn build_folder_media_preview<'a>(
         }
     }
 
+    let metadata_probe_plan =
+        metadata_probe::build_media_metadata_probe_plan(parent_abs_path, &items);
     let total_count = image_count + video_count + audio_count;
     (total_count > 0).then_some(FolderMediaPreview {
         image_count,
@@ -152,6 +156,7 @@ pub(crate) fn build_folder_media_preview<'a>(
         audio_count,
         total_count,
         scanned_cap_hit: media_scan_was_capped,
+        metadata_probe_plan,
         items,
     })
 }
@@ -161,7 +166,7 @@ pub(crate) fn render_folder_media_preview(
     cx: &mut App,
 ) -> AnyElement {
     let summary = media_preview_summary(preview);
-    let tooltip_summary = summary.clone();
+    let tooltip_summary = media_preview_folder_tooltip_meta(preview);
     let tooltip_id = SharedString::from(format!("project-panel-media-preview-{summary}"));
     let gallery_preview = preview.clone();
     let gallery_id = format!(
@@ -710,6 +715,15 @@ fn media_preview_summary(preview: &FolderMediaPreview) -> String {
     }
 
     parts.join(" / ")
+}
+
+fn media_preview_folder_tooltip_meta(preview: &FolderMediaPreview) -> String {
+    let summary = media_preview_summary(preview);
+    if let Some(probe_plan) = preview.metadata_probe_plan.as_ref() {
+        format!("{summary} / {}", probe_plan.summary_label())
+    } else {
+        summary
+    }
 }
 
 fn push_media_count(parts: &mut Vec<String>, count: usize, singular: &str, plural: &str) {

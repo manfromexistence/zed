@@ -463,6 +463,7 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
 test("project panel media preview renders direct image previews and video frames when available", () => {
   const media = read("crates/project_panel/src/media_preview.rs");
   const metadata = read("crates/project_panel/src/media_preview/metadata.rs");
+  const metadataProbe = read("crates/project_panel/src/media_preview/metadata_probe.rs");
   const renderFolderMediaPreview = functionBody(media, "render_folder_media_preview");
   const renderFolderMediaGallery = functionBody(media, "render_folder_media_gallery");
   const renderFolderMediaShelf = functionBody(media, "render_folder_media_shelf");
@@ -478,6 +479,10 @@ test("project panel media preview renders direct image previews and video frames
     metadata,
     "read_bounded_media_metadata_manifest",
   );
+  const buildMediaMetadataProbePlan = functionBody(
+    metadataProbe,
+    "build_media_metadata_probe_plan",
+  );
   const collectMediaMetadataManifest = functionBody(metadata, "collect_media_metadata_manifest");
   const collectMediaMetadataRecord = functionBody(metadata, "collect_media_metadata_record");
   const mediaDurationLabelFromRecord = functionBody(metadata, "media_duration_label_from_record");
@@ -486,6 +491,7 @@ test("project panel media preview renders direct image previews and video frames
   const videoFrameCandidateRank = functionBody(media, "video_frame_candidate_rank");
 
   assert.match(media, /mod metadata;/);
+  assert.match(media, /mod metadata_probe;/);
   assert.match(metadata, /pub\(super\) struct MediaMetadataIndex/);
   assert.match(metadata, /pub\(super\) const MAX_PROJECT_PANEL_MEDIA_METADATA_MANIFEST_BYTES/);
   assert.match(
@@ -525,6 +531,51 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(media, /const PROJECT_PANEL_MEDIA_SHELF_CARD_MIN_WIDTH: f32 = 96\.;/);
   assert.match(media, /const PROJECT_PANEL_MEDIA_SHELF_CARD_HEIGHT: f32 = 72\.;/);
+  assert.match(
+    media,
+    /metadata_probe_plan:\s*Option<metadata_probe::MediaMetadataProbePlan>/,
+    "folder media previews must carry a bounded non-executing metadata probe plan",
+  );
+  assert.match(
+    media,
+    /let metadata_probe_plan =\s*metadata_probe::build_media_metadata_probe_plan\(parent_abs_path, &items\);[\s\S]*FolderMediaPreview[\s\S]*metadata_probe_plan/,
+    "metadata probe planning must be built from cached preview items outside per-row rendering",
+  );
+  assert.match(
+    metadataProbe,
+    /pub\(super\) const PROJECT_PANEL_MEDIA_METADATA_PROBE_SCHEMA: &str =\s*"zed\.project_panel\.media_metadata_probe";/,
+    "project-panel media metadata probe plans need a professional source-owned schema name",
+  );
+  assert.match(
+    metadataProbe,
+    /const MAX_PROJECT_PANEL_MEDIA_METADATA_PROBE_ACTIONS: usize = 8;/,
+    "media metadata probe planning must be bounded",
+  );
+  assert.match(
+    metadataProbe,
+    /tool_execution_allowed: false/,
+    "metadata probe plans must not imply project-panel render-path tool execution is allowed",
+  );
+  assert.match(
+    metadataProbe,
+    /writes_user_project_files: false/,
+    "metadata probe plans must keep generated metadata out of user project files by default",
+  );
+  assert.match(
+    buildMediaMetadataProbePlan,
+    /MediaPreviewKind::Video[\s\S]*needs_center_frame[\s\S]*ffmpeg_center_frame_argument_template/,
+    "video probe planning must identify missing center-frame evidence separately from duration",
+  );
+  assert.match(
+    buildMediaMetadataProbePlan,
+    /MediaPreviewKind::Audio[\s\S]*needs_duration[\s\S]*ffprobe_argument_vector/,
+    "audio probe planning must identify missing duration evidence",
+  );
+  assert.doesNotMatch(
+    metadataProbe,
+    /std::process|Command::new|\.status\(|\.output\(|\.spawn\(/,
+    "project-panel metadata probe planning must not execute ffmpeg, ffprobe, shells, or child processes",
+  );
 
   assertBefore({
     body: buildFolderMediaPreview,

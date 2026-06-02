@@ -1,3 +1,20 @@
+[2026-06-02] - Project Panel Media Metadata Probe Plan
+
+ADDED:
+- `crates\project_panel\src\media_preview\metadata_probe.rs` now owns a bounded, non-executing media metadata probe plan for visible video/audio shelf items that still need duration or center-frame evidence.
+
+CHANGED:
+- `crates\project_panel\src\media_preview.rs` now attaches the probe plan to cached folder media previews and exposes an honest metadata-needed note in the compact folder media tooltip.
+- `script\dx-project-panel-source.test.ts` now guards the probe schema, action cap, no-execution/no-project-write safety flags, video center-frame planning, audio duration planning, and absence of process execution APIs.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\project_panel\src\media_preview.rs crates\project_panel\src\media_preview\metadata.rs crates\project_panel\src\media_preview\metadata_probe.rs`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-project-panel-source.test.ts`
+
+NOTES:
+- No `just run`, Cargo, build, server, browser automation, ffmpeg, or ffprobe validation was run for this source-only checkpoint.
+- The file browser still does not execute media probes or generate thumbnails/duration manifests automatically; this checkpoint adds the bounded planning contract that a future governed background metadata service can consume.
+
 [2026-06-02] - Project Panel Media Metadata Contract
 
 CHANGED:
