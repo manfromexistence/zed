@@ -9,7 +9,10 @@ pub(crate) use generated_metadata::{
 };
 pub(crate) use metadata::GeneratedMediaMetadataIndex;
 
-use std::path::{Path, PathBuf};
+use std::{
+    cmp::Ordering,
+    path::{Path, PathBuf},
+};
 
 use gpui::{
     App, Context, Div, FontWeight, Hsla, MouseButton, MouseDownEvent, ObjectFit, SharedString,
@@ -148,16 +151,8 @@ pub(crate) fn build_folder_media_preview_with_generated_metadata<'a>(
         });
     }
 
-    items.sort_by(|left, right| {
-        media_kind_sort_rank(left.kind)
-            .cmp(&media_kind_sort_rank(right.kind))
-            .then_with(|| {
-                left.name
-                    .to_ascii_lowercase()
-                    .cmp(&right.name.to_ascii_lowercase())
-            })
-    });
-    items.truncate(MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS);
+    items.sort_by(media_preview_item_sort_order);
+    items = select_balanced_media_preview_items(items);
 
     for item in &mut items {
         if item.kind == MediaPreviewKind::Video {
@@ -448,9 +443,8 @@ fn media_shelf_card_container(
     let tooltip_meta = media_preview_card_tooltip_meta(item);
     let card = div()
         .id(SharedString::from(format!(
-            "{id_prefix}-{:?}-{:016x}",
-            item.kind,
-            stable_text_hash(&item.name)
+            "{id_prefix}-{:?}-{:?}",
+            item.kind, item.entry_id
         )))
         .min_w(px(PROJECT_PANEL_MEDIA_SHELF_CARD_MIN_WIDTH))
         .h(px(PROJECT_PANEL_MEDIA_SHELF_CARD_TOTAL_HEIGHT))
@@ -663,9 +657,8 @@ fn media_gallery_card_container(
 
     div()
         .id(SharedString::from(format!(
-            "{id_prefix}-{:?}-{:016x}",
-            item.kind,
-            stable_text_hash(&item.name)
+            "{id_prefix}-{:?}-{:?}",
+            item.kind, item.entry_id
         )))
         .min_w(px(0.))
         .w(px(PROJECT_PANEL_MEDIA_GALLERY_CARD_WIDTH))
@@ -801,6 +794,55 @@ fn media_kind_sort_rank(kind: MediaPreviewKind) -> u8 {
         MediaPreviewKind::Image => 0,
         MediaPreviewKind::Video => 1,
         MediaPreviewKind::Audio => 2,
+    }
+}
+
+fn media_preview_item_sort_order(left: &MediaPreviewItem, right: &MediaPreviewItem) -> Ordering {
+    media_kind_sort_rank(left.kind)
+        .cmp(&media_kind_sort_rank(right.kind))
+        .then_with(|| {
+            left.name
+                .to_ascii_lowercase()
+                .cmp(&right.name.to_ascii_lowercase())
+        })
+}
+
+fn select_balanced_media_preview_items(items: Vec<MediaPreviewItem>) -> Vec<MediaPreviewItem> {
+    if items.len() <= MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS {
+        return items;
+    }
+
+    let mut selected = Vec::with_capacity(MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS);
+    for kind in [
+        MediaPreviewKind::Image,
+        MediaPreviewKind::Video,
+        MediaPreviewKind::Audio,
+    ] {
+        if let Some(item) = items.iter().find(|item| item.kind == kind) {
+            push_media_preview_item_if_missing(&mut selected, item);
+        }
+    }
+
+    for item in &items {
+        if selected.len() >= MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS {
+            break;
+        }
+        push_media_preview_item_if_missing(&mut selected, item);
+    }
+
+    selected.sort_by(media_preview_item_sort_order);
+    selected
+}
+
+fn push_media_preview_item_if_missing(
+    selected: &mut Vec<MediaPreviewItem>,
+    item: &MediaPreviewItem,
+) {
+    if !selected
+        .iter()
+        .any(|selected_item| selected_item.entry_id == item.entry_id)
+    {
+        selected.push(item.clone());
     }
 }
 

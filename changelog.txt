@@ -1,3 +1,24 @@
+[2026-06-02] - Project Panel Media Browser Hardening
+
+CHANGED:
+- `crates\project_panel\src\media_preview.rs` now selects bounded media shelf items with image/video/audio representation before filling remaining card slots, keeping videos and audio visible even in image-heavy folders.
+- `crates\project_panel\src\project_panel.rs` now hides only media entries represented by active shelf cards, so media beyond the bounded grid remains reachable through the normal tree instead of disappearing.
+- `crates\project_panel\src\media_preview.rs` now derives shelf/gallery card element IDs from real project entry IDs rather than filename-only hashes.
+- `crates\project_panel\src\media_preview\generated_video_frame.rs` now bounds ffprobe and ffmpeg waits with GPUI `BackgroundExecutor` timers while preserving direct argv, shell rejection, app-owned cache paths, and kill-on-drop semantics.
+- `crates\project_panel\src\media_preview\generated_metadata.rs` now carries generated video duration metadata into the same hover-time path used by audio and manifests.
+- `script\dx-project-panel-source.test.ts` now guards balanced media-card selection, overflow-safe tree visibility, entry-id card identity, executor-timed media tools, and generated video duration metadata.
+- `todo.txt` now records the source-only media-browser hardening and the remaining runtime validation boundary.
+
+PASSED:
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-handoff-source-guard-registry.test.ts script\dx-project-panel-source.test.ts`
+- `rustfmt --edition 2024 --check crates\project_panel\src\media_preview.rs crates\project_panel\src\media_preview\generated_metadata.rs crates\project_panel\src\media_preview\generated_video_frame.rs crates\project_panel\src\project_panel.rs`
+- `git diff --check -- crates/project_panel/src/media_preview.rs crates/project_panel/src/media_preview/generated_metadata.rs crates/project_panel/src/media_preview/generated_video_frame.rs crates/project_panel/src/project_panel.rs script/dx-project-panel-source.test.ts todo.txt changelog.txt`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" crates\project_panel\src\media_preview.rs crates\project_panel\src\media_preview\generated_metadata.rs crates\project_panel\src\media_preview\generated_video_frame.rs crates\project_panel\src\project_panel.rs script\dx-project-panel-source.test.ts todo.txt changelog.txt` returned no conflict markers.
+
+NOTES:
+- No `just run`, Cargo build/check/test/clippy, local server, browser automation, live UI proof, or live ffmpeg/ffprobe extraction was run in this source-only pass.
+- Full media-browser parity still needs authorized runtime validation and real large-folder profiling.
+
 [2026-06-02] - Project Panel Media Grid Tile Polish
 
 CHANGED:

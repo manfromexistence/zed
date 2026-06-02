@@ -4,35 +4,56 @@ use std::{
     fs,
     path::{Path, PathBuf},
     process::{self, Output},
+    time::Duration,
 };
 
+use futures::future::{Either, select};
+use gpui::BackgroundExecutor;
 use util::command::Stdio;
 
 const PROJECT_PANEL_GENERATED_VIDEO_FRAME_DIR: &str = "project-panel-media-frames";
 const DX_FFMPEG_PATH_ENV: &str = "DX_FFMPEG_PATH";
 const DX_FFPROBE_PATH_ENV: &str = "DX_FFPROBE_PATH";
+const GENERATED_VIDEO_DURATION_PROBE_TIMEOUT: Duration = Duration::from_secs(3);
+const GENERATED_VIDEO_FRAME_EXTRACTION_TIMEOUT: Duration = Duration::from_secs(8);
 const MAX_GENERATED_VIDEO_DURATION_STDOUT_BYTES: usize = 256;
 const MAX_GENERATED_VIDEO_DURATION_SECONDS: f64 = 24. * 60. * 60.;
 const MAX_GENERATED_VIDEO_FRAME_BYTES: u64 = 8 * 1024 * 1024;
+
+pub(super) struct GeneratedVideoFrameMetadata {
+    pub(super) center_frame_path: PathBuf,
+    pub(super) duration_seconds: Option<f64>,
+}
 
 pub(super) async fn generate_video_center_frame(
     source_path: &Path,
     path_text: &str,
     size: u64,
-) -> Option<PathBuf> {
+    executor: &BackgroundExecutor,
+) -> Option<GeneratedVideoFrameMetadata> {
     let output_path = managed_video_frame_cache_path(path_text, size);
     if output_path.is_file() {
-        return Some(output_path);
+        return Some(GeneratedVideoFrameMetadata {
+            center_frame_path: output_path,
+            duration_seconds: None,
+        });
     }
 
     fs::create_dir_all(output_path.parent()?).ok()?;
 
-    let duration_seconds = probe_video_duration_seconds(source_path).await?;
+    let duration_seconds = probe_video_duration_seconds(source_path, executor).await?;
     let center_seconds = duration_seconds / 2.;
     let temporary_output_path = temporary_video_frame_path(&output_path)?;
     let _ = fs::remove_file(&temporary_output_path);
 
-    if !extract_video_center_frame(source_path, &temporary_output_path, center_seconds).await {
+    if !extract_video_center_frame(
+        source_path,
+        &temporary_output_path,
+        center_seconds,
+        executor,
+    )
+    .await
+    {
         let _ = fs::remove_file(&temporary_output_path);
         return None;
     }
@@ -45,14 +66,23 @@ pub(super) async fn generate_video_center_frame(
 
     if output_path.is_file() {
         let _ = fs::remove_file(&temporary_output_path);
-        return Some(output_path);
+        return Some(GeneratedVideoFrameMetadata {
+            center_frame_path: output_path,
+            duration_seconds: Some(duration_seconds),
+        });
     }
 
     match fs::rename(&temporary_output_path, &output_path) {
-        Ok(()) => Some(output_path),
+        Ok(()) => Some(GeneratedVideoFrameMetadata {
+            center_frame_path: output_path,
+            duration_seconds: Some(duration_seconds),
+        }),
         Err(_) if output_path.is_file() => {
             let _ = fs::remove_file(&temporary_output_path);
-            Some(output_path)
+            Some(GeneratedVideoFrameMetadata {
+                center_frame_path: output_path,
+                duration_seconds: Some(duration_seconds),
+            })
         }
         Err(_) => {
             let _ = fs::remove_file(&temporary_output_path);
@@ -70,8 +100,12 @@ fn managed_video_frame_cache_path(path_text: &str, size: u64) -> PathBuf {
         ))
 }
 
-async fn probe_video_duration_seconds(source_path: &Path) -> Option<f64> {
+async fn probe_video_duration_seconds(
+    source_path: &Path,
+    executor: &BackgroundExecutor,
+) -> Option<f64> {
     let output = run_media_command_output(
+        executor,
         ffprobe_binary()?,
         &[
             OsString::from("-v"),
@@ -82,6 +116,7 @@ async fn probe_video_duration_seconds(source_path: &Path) -> Option<f64> {
             OsString::from("default=noprint_wrappers=1:nokey=1"),
             source_path.as_os_str().to_os_string(),
         ],
+        GENERATED_VIDEO_DURATION_PROBE_TIMEOUT,
     )
     .await?;
 
@@ -101,8 +136,10 @@ async fn extract_video_center_frame(
     source_path: &Path,
     output_path: &Path,
     center_seconds: f64,
+    executor: &BackgroundExecutor,
 ) -> bool {
     let output = run_media_command_output(
+        executor,
         match ffmpeg_binary() {
             Some(binary) => binary,
             None => return false,
@@ -125,18 +162,33 @@ async fn extract_video_center_frame(
             OsString::from("4"),
             output_path.as_os_str().to_os_string(),
         ],
+        GENERATED_VIDEO_FRAME_EXTRACTION_TIMEOUT,
     )
     .await;
 
     output.is_some_and(|output| output.status.success())
 }
 
-async fn run_media_command_output(program: OsString, args: &[OsString]) -> Option<Output> {
+async fn run_media_command_output(
+    executor: &BackgroundExecutor,
+    program: OsString,
+    args: &[OsString],
+    timeout: Duration,
+) -> Option<Output> {
     let mut command = util::command::new_command(program);
     command.args(args);
     command.stdin(Stdio::null());
     command.kill_on_drop(true);
-    command.output().await.ok()
+
+    let output = command.output();
+    let timeout = executor.timer(timeout);
+    futures::pin_mut!(output);
+    futures::pin_mut!(timeout);
+
+    match select(output, timeout).await {
+        Either::Left((output, _)) => output.ok(),
+        Either::Right((_, _)) => None,
+    }
 }
 
 fn ffmpeg_binary() -> Option<OsString> {

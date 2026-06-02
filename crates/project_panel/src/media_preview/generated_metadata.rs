@@ -4,6 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use gpui::BackgroundExecutor;
 use rodio::{Decoder, Source};
 
 use super::{
@@ -73,6 +74,7 @@ pub(crate) fn build_generated_media_metadata_job_batch(
 
 pub(crate) async fn collect_generated_media_metadata(
     batch: GeneratedMediaMetadataJobBatch,
+    executor: BackgroundExecutor,
 ) -> GeneratedMediaMetadataIndex {
     if batch.schema != GENERATED_MEDIA_METADATA_RUNNER_SCHEMA {
         return GeneratedMediaMetadataIndex::default();
@@ -94,14 +96,15 @@ pub(crate) async fn collect_generated_media_metadata(
                 }
             }
             MediaPreviewKind::Video => {
-                if let Some(center_frame_path) =
-                    generate_video_center_frame(&job.path, &job.path_text, job.size).await
+                if let Some(video_frame_metadata) =
+                    generate_video_center_frame(&job.path, &job.path_text, job.size, &executor)
+                        .await
                 {
                     records.push(GeneratedMediaMetadataRecord {
                         path_text: job.path_text,
                         duration_label: None,
-                        duration_seconds: None,
-                        center_frame_path: Some(center_frame_path),
+                        duration_seconds: video_frame_metadata.duration_seconds,
+                        center_frame_path: Some(video_frame_metadata.center_frame_path),
                         preview_frame_path: None,
                     });
                 }

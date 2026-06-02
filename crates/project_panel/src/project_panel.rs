@@ -4505,6 +4505,24 @@ impl ProjectPanel {
         let active_media_folder_for_visibility = self
             .active_media_folder_for_selection(cx)
             .map(|folder| (folder.worktree_id, folder.entry_id));
+        let active_media_shelf_entry_ids: HashSet<ProjectEntryId> =
+            active_media_folder_for_visibility
+                .as_ref()
+                .and_then(|cache_key| {
+                    self.folder_media_previews
+                        .borrow()
+                        .get(cache_key)
+                        .cloned()
+                        .flatten()
+                })
+                .map(|preview| {
+                    preview
+                        .items
+                        .into_iter()
+                        .map(|item| item.entry_id)
+                        .collect()
+                })
+                .unwrap_or_default();
         let project = self.project.read(cx);
         let repo_snapshots = project.git_store().read(cx).repo_snapshots(cx);
 
@@ -4648,6 +4666,7 @@ impl ProjectPanel {
                             let entry_is_visible = (!hide_gitignore || !entry.is_ignored)
                                 && (!hide_hidden || !entry.is_hidden);
                             let entry_is_active_media_shelf_child = entry_is_visible
+                                && active_media_shelf_entry_ids.contains(&entry.id)
                                 && active_media_folder_for_visibility.is_some_and(
                                     |(active_worktree_id, active_folder_id)| {
                                         active_worktree_id == worktree_id
@@ -7052,9 +7071,10 @@ impl ProjectPanel {
         };
 
         let task = cx.spawn(async move |this, cx| {
+            let executor = cx.background_executor().clone();
             let generated_metadata = cx
                 .background_spawn(async move {
-                    media_preview::collect_generated_media_metadata(batch).await
+                    media_preview::collect_generated_media_metadata(batch, executor).await
                 })
                 .await;
 

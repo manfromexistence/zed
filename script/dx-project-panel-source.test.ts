@@ -55,12 +55,11 @@ test("project panel visible tree materialization has named caps before collectio
   assert.match(source, /const MAX_PROJECT_PANEL_VISIBLE_ENTRIES: usize = 200_000;/);
   assert.match(source, /const MAX_PROJECT_PANEL_VISIBLE_ENTRIES_PER_WORKTREE: usize = 50_000;/);
   assert.match(source, /fn project_panel_cap_hit\(boundary: &'static str, cap: usize\)/);
-  assertBefore({
-    body: updateVisibleEntries,
-    before: ".take(MAX_PROJECT_PANEL_VISIBLE_WORKTREES)",
-    after: ".collect()",
-    message: "visible worktrees must be capped before snapshot vector collection",
-  });
+  assert.match(
+    updateVisibleEntries,
+    /let visible_worktrees: Vec<_> = visible_worktree_iter[\s\S]*\.take\(MAX_PROJECT_PANEL_VISIBLE_WORKTREES\)[\s\S]*\.map\(\|worktree\| worktree\.read\(cx\)\.snapshot\(\)\)[\s\S]*\.collect\(\);/,
+    "visible worktrees must be capped before snapshot vector collection",
+  );
   assertBefore({
     body: updateVisibleEntries,
     before:
@@ -403,7 +402,12 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   );
   assert.match(
     updateVisibleEntries,
-    /entry_is_active_media_shelf_child[\s\S]*media_preview::is_media_path\([\s\S]*entry\.path\.as_std_path\(\)[\s\S]*entry\.path\.parent\(\)[\s\S]*parent\.id == active_folder_id/,
+    /let active_media_shelf_entry_ids: HashSet<ProjectEntryId> =[\s\S]*active_media_folder_for_visibility[\s\S]*folder_media_previews[\s\S]*preview[\s\S]*items[\s\S]*into_iter\(\)[\s\S]*map\(\|item\| item\.entry_id\)[\s\S]*collect\(\)[\s\S]*unwrap_or_default\(\);/,
+    "visible-entry derivation must hide only the bounded media entries actually represented by shelf cards",
+  );
+  assert.match(
+    updateVisibleEntries,
+    /entry_is_active_media_shelf_child[\s\S]*active_media_shelf_entry_ids\.contains\(&entry\.id\)[\s\S]*media_preview::is_media_path\([\s\S]*entry\.path\.as_std_path\(\)[\s\S]*entry\.path\.parent\(\)[\s\S]*parent\.id == active_folder_id/,
     "direct media children represented by the active shelf must be detected from snapshot paths",
   );
   assert.match(
@@ -487,6 +491,14 @@ test("project panel media preview renders direct image previews and video frames
   const buildFolderMediaPreviewWithGeneratedMetadata = functionBody(
     media,
     "build_folder_media_preview_with_generated_metadata",
+  );
+  const selectBalancedMediaPreviewItems = functionBody(
+    media,
+    "select_balanced_media_preview_items",
+  );
+  const pushMediaPreviewItemIfMissing = functionBody(
+    media,
+    "push_media_preview_item_if_missing",
   );
   const buildMediaMetadataIndex = functionBody(metadata, "build_media_metadata_index");
   const buildGeneratedMediaMetadataJobBatch = functionBody(
@@ -677,8 +689,8 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     collectGeneratedMediaMetadata,
-    /generate_video_center_frame\(&job\.path, &job\.path_text, job\.size\)\.await[\s\S]*GeneratedMediaMetadataRecord[\s\S]*center_frame_path: Some\(center_frame_path\)/,
-    "generated metadata collection must turn successful background video extraction into center-frame metadata records",
+    /generate_video_center_frame\(&job\.path, &job\.path_text, job\.size, &executor\)[\s\S]*\.await[\s\S]*GeneratedMediaMetadataRecord[\s\S]*duration_seconds: video_frame_metadata\.duration_seconds[\s\S]*center_frame_path: Some\(video_frame_metadata\.center_frame_path\)/,
+    "generated metadata collection must turn successful background video extraction into center-frame and duration metadata records",
   );
   assert.match(
     generatedMetadata,
@@ -706,8 +718,18 @@ test("project panel media preview renders direct image previews and video frames
     "generated video frame extraction must honor the same configurable ffmpeg/ffprobe environment contract as DX media tooling",
   );
   assert.match(
+    generatedVideoFrame,
+    /pub\(super\) struct GeneratedVideoFrameMetadata[\s\S]*center_frame_path: PathBuf[\s\S]*duration_seconds: Option<f64>/,
+    "generated video frame extraction must return the generated center frame and any duration it already probed",
+  );
+  assert.match(
+    generatedVideoFrame,
+    /const GENERATED_VIDEO_DURATION_PROBE_TIMEOUT: Duration = Duration::from_secs\(3\);[\s\S]*const GENERATED_VIDEO_FRAME_EXTRACTION_TIMEOUT: Duration = Duration::from_secs\(8\);/,
+    "generated video frame extraction must use named wall-clock timeouts for ffprobe and ffmpeg",
+  );
+  assert.match(
     generateVideoCenterFrame,
-    /managed_video_frame_cache_path\(path_text, size\)[\s\S]*probe_video_duration_seconds\(source_path\)\.await[\s\S]*extract_video_center_frame\(source_path, &temporary_output_path, center_seconds\)\.await/,
+    /managed_video_frame_cache_path\(path_text, size\)[\s\S]*probe_video_duration_seconds\(source_path, executor\)\.await[\s\S]*extract_video_center_frame\([\s\S]*source_path,[\s\S]*&temporary_output_path,[\s\S]*center_seconds,[\s\S]*executor,[\s\S]*\)[\s\S]*\.await/,
     "video center-frame generation must derive a managed cache path, probe duration, then extract the center timestamp",
   );
   assert.match(
@@ -717,18 +739,18 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     probeVideoDurationSeconds,
-    /run_media_command_output\([\s\S]*ffprobe_binary\(\)[\s\S]*"-show_entries"[\s\S]*"format=duration"[\s\S]*source_path/,
+    /run_media_command_output\([\s\S]*ffprobe_binary\(\)[\s\S]*"-show_entries"[\s\S]*"format=duration"[\s\S]*source_path[\s\S]*GENERATED_VIDEO_DURATION_PROBE_TIMEOUT/,
     "video duration probing must use direct ffprobe arguments for center-frame timestamps",
   );
   assert.match(
     extractVideoCenterFrame,
-    /run_media_command_output\([\s\S]*ffmpeg_binary\(\)[\s\S]*"-nostdin"[\s\S]*"-ss"[\s\S]*format_video_timestamp\(center_seconds\)[\s\S]*"-frames:v"[\s\S]*"1"[\s\S]*"-vf"[\s\S]*"scale=480:-2"/,
+    /run_media_command_output\([\s\S]*ffmpeg_binary\(\)[\s\S]*"-nostdin"[\s\S]*"-ss"[\s\S]*format_video_timestamp\(center_seconds\)[\s\S]*"-frames:v"[\s\S]*"1"[\s\S]*"-vf"[\s\S]*"scale=480:-2"[\s\S]*GENERATED_VIDEO_FRAME_EXTRACTION_TIMEOUT/,
     "video frame extraction must use direct ffmpeg arguments with no shell and a bounded preview scale",
   );
   assert.match(
     runMediaCommandOutput,
-    /util::command::new_command\(program\)[\s\S]*command\.stdin\(Stdio::null\(\)\)[\s\S]*command\.kill_on_drop\(true\)[\s\S]*command\.output\(\)\.await/,
-    "media commands must use Zed's Windows-safe command wrapper and be killed if their future is dropped",
+    /executor: &BackgroundExecutor[\s\S]*timeout:\s*Duration[\s\S]*util::command::new_command\(program\)[\s\S]*command\.stdin\(Stdio::null\(\)\)[\s\S]*command\.kill_on_drop\(true\)[\s\S]*let output = command\.output\(\);[\s\S]*executor\.timer\(timeout\)[\s\S]*select\(output, timeout\)\.await[\s\S]*Either::Left[\s\S]*output\.ok\(\)[\s\S]*Either::Right[\s\S]*None/,
+    "media commands must use Zed's Windows-safe command wrapper, a wall-clock timeout, and kill-on-drop semantics",
   );
   assert.match(
     mediaBinaryIsShell,
@@ -789,16 +811,26 @@ test("project panel media preview renders direct image previews and video frames
   });
   assertBefore({
     body: buildFolderMediaPreviewWithGeneratedMetadata,
-    before: /items\.sort_by/,
-    after: /items\.truncate\(MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS\)/,
-    message: "media preview candidates must be ordered before the bounded render set is selected",
+    before: /items\.sort_by\(media_preview_item_sort_order\)/,
+    after: /select_balanced_media_preview_items\(items\)/,
+    message: "media preview candidates must be ordered before the balanced bounded render set is selected",
   });
   assertBefore({
     body: buildFolderMediaPreviewWithGeneratedMetadata,
-    before: /items\.truncate\(MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS\)/,
+    before: /select_balanced_media_preview_items\(items\)/,
     after: /for item in &mut items/,
     message: "media preview items must be capped before render data receives video frame paths",
   });
+  assert.match(
+    selectBalancedMediaPreviewItems,
+    /items\.len\(\) <= MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS[\s\S]*MediaPreviewKind::Image[\s\S]*MediaPreviewKind::Video[\s\S]*MediaPreviewKind::Audio[\s\S]*push_media_preview_item_if_missing[\s\S]*selected\.len\(\) >= MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS[\s\S]*selected\.sort_by\(media_preview_item_sort_order\)/,
+    "bounded media selection must preserve image, video, and audio representation before filling remaining card slots",
+  );
+  assert.match(
+    pushMediaPreviewItemIfMissing,
+    /selected_item\.entry_id == item\.entry_id[\s\S]*selected\.push\(item\.clone\(\)\)/,
+    "balanced media card selection must not duplicate the same project entry",
+  );
   assert.match(
     buildFolderMediaPreviewWithGeneratedMetadata,
     /size:\s*child\.size/,
@@ -896,6 +928,11 @@ test("project panel media preview renders direct image previews and video frames
     "media shelf cards must use fixed-height icon-panel-like tiles instead of full-width list rows",
   );
   assert.match(
+    mediaShelfCardContainer,
+    /format!\(\s*"\{id_prefix\}-\{:\?\}-\{:\?\}"[\s\S]*item\.kind, item\.entry_id/,
+    "media shelf cards must derive element ids from real project entry identity rather than filename-only hashes",
+  );
+  assert.match(
     renderMediaShelfCardBody,
     /MediaPreviewKind::Image[\s\S]*w_full\(\)[\s\S]*h\(px\(PROJECT_PANEL_MEDIA_SHELF_CARD_HEIGHT\)\)[\s\S]*img\(item\.absolute_path\.clone\(\)\)[\s\S]*object_fit\(ObjectFit::Cover\)[\s\S]*with_fallback\(\|\| media_card_image_fallback\(MediaPreviewKind::Image\)\)/,
     "shelf image cards must use fixed rectangle previews from the real image path with a nonblank fallback",
@@ -919,6 +956,11 @@ test("project panel media preview renders direct image previews and video frames
     mediaGalleryCardContainer,
     /MediaPreviewKind::Image[\s\S]*img\(item\.absolute_path\.clone\(\)\)[\s\S]*object_fit\(ObjectFit::Cover\)[\s\S]*with_fallback\(\|\| media_card_image_fallback\(MediaPreviewKind::Image\)\)/,
     "gallery image cards must render direct visual previews with a nonblank fallback",
+  );
+  assert.match(
+    mediaGalleryCardContainer,
+    /format!\(\s*"\{id_prefix\}-\{:\?\}-\{:\?\}"[\s\S]*item\.kind, item\.entry_id/,
+    "media gallery cards must derive element ids from real project entry identity rather than filename-only hashes",
   );
   assert.match(
     mediaGalleryCardContainer,
@@ -1026,7 +1068,7 @@ test("project panel media preview renders direct image previews and video frames
   assert.match(ensureGeneratedMediaMetadata, /cx\.spawn\(async move \|this, cx\|/);
   assert.match(
     ensureGeneratedMediaMetadata,
-    /background_spawn\([\s\S]*async move \{[\s\S]*collect_generated_media_metadata\(batch\)\.await/,
+    /let executor = cx\.background_executor\(\)\.clone\(\);[\s\S]*background_spawn\([\s\S]*async move \{[\s\S]*collect_generated_media_metadata\(batch, executor\)\.await/,
     "generated metadata work must run through a background task",
   );
   assert.match(
@@ -1041,7 +1083,7 @@ test("project panel media preview renders direct image previews and video frames
   );
   assertBefore({
     body: ensureGeneratedMediaMetadata,
-    before: /collect_generated_media_metadata\(batch\)/,
+    before: /collect_generated_media_metadata\(batch, executor\)/,
     after: /\.insert\(cache_key, generated_metadata\)/,
     message: "generated metadata must be collected before the cache is updated",
   });
