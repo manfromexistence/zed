@@ -1889,7 +1889,7 @@ test("Zed Style rail keeps GPUI as the shell and Web Preview as the generator ho
   assert.match(snapshot, /Reverse CSS Delta/);
   assert.match(snapshot, /web preview review contract/);
   assert.match(rail, /Web Preview Host/);
-  assert.match(rail, /Web Preview ready/);
+  assert.match(rail, /controls ready/);
   assert.match(snapshot, /Visual CSS generators render in Web Preview, not hand-built GPUI controls/);
   assert.match(readiness, /mod expected_files/);
   assert.match(readinessExpectedFiles, /Grouped class editor read model/);
@@ -4413,7 +4413,7 @@ test("DX Style has a real right-dock GPUI shell", () => {
   assert.match(panelCards, /"dx-style-panel-context-card"/);
   assert.match(panelCards, /"dx-style-panel-readiness-card"/);
   assert.match(panelCards, /Target/);
-  assert.match(panelCards, /Generators/);
+  assert.match(panelCards, /Controls/);
   assert.match(panelCards, /Apply/);
   assert.match(panelCards, /Gate/);
   assert.match(panelCards, /Generator/);
@@ -4512,9 +4512,9 @@ test("Zed Style rail surfaces source-only DX Style readiness", () => {
   assert.match(rail, /bounded_items\(\s*&snapshot\.readiness\.missing_rows/s);
   assert.match(
     rail,
-    /Button::new\(\s*"dx-style-open-generator-preview",\s*"Open Generator Workspace",\s*\)/s,
+    /Button::new\("dx-style-open-generator-preview", "Open Style Controls"\)/,
   );
-  assert.match(panelCards, /"Open Web Preview Generators"/);
+  assert.match(panelCards, /"Open Web Preview Controls"/);
   assert.doesNotMatch(rail, /IconButton::new/);
   assert.ok(lineCount("crates/agent_ui/src/dx_style_panel/readiness.rs") < 380);
   assert.ok(

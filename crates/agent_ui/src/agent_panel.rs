@@ -6700,7 +6700,7 @@ impl AgentPanel {
                 action_button(
                     "dx-launch-demo-recipe",
                     IconName::PlayOutlined,
-                    "Demo Recipe",
+                    "Source Recipe",
                 )
                 .disabled(!can_create_entries)
                 .on_click(cx.listener(|this, _, window, cx| {
@@ -6779,7 +6779,7 @@ impl AgentPanel {
                     .px_2()
                     .py_1()
                     .child(
-                        Label::new("No source action yet")
+                        Label::new("No source actions available")
                             .size(LabelSize::XSmall)
                             .color(Color::Muted)
                             .truncate(),

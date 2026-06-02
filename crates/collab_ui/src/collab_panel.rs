@@ -2670,6 +2670,7 @@ impl CollabPanel {
                 "collab-panel",
                 self.workspace.clone(),
                 cx.entity().entity_id(),
+                cx,
             ))
     }
 
@@ -2883,6 +2884,7 @@ impl CollabPanel {
                         "collab-panel",
                         self.workspace.clone(),
                         cx.entity().entity_id(),
+                        cx,
                     )),
             )
             .child(

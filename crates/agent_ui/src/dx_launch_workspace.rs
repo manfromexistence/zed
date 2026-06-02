@@ -344,7 +344,7 @@ fn workspace_mode_state(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElemen
             IconName::Book,
             format!("{} total", status.source_sets.total_sources),
             format!(
-                "{} attach-ready, {} managed receipt(s)",
+                "{} source-ready, {} receipt-backed",
                 source_summary.attachable_sources, source_summary.managed_receipts
             ),
             cx,
@@ -553,7 +553,7 @@ fn progress_summary(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {
             "dx-progress-sources",
             source_summary.attachable_sources > 0,
             "Sources",
-            format!("{} attach-ready", source_summary.attachable_sources),
+            format!("{} source-ready", source_summary.attachable_sources),
             cx,
         ))
         .child(progress_step_row(
@@ -561,9 +561,9 @@ fn progress_summary(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {
             status.style_panel.web_preview_bridge_ready,
             "Style",
             if status.style_panel.web_preview_bridge_ready {
-                "host ready"
+                "controls available"
             } else {
-                "host pending"
+                "controls unavailable"
             },
             cx,
         ))

@@ -4160,6 +4160,7 @@ impl ProjectPanel {
                 "project-panel",
                 self.workspace.clone(),
                 cx.entity().entity_id(),
+                cx,
             ))
     }
 

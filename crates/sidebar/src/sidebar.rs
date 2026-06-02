@@ -6599,7 +6599,7 @@ impl Sidebar {
             thread_id: thread.metadata.thread_id,
             icon,
             label: title.clone(),
-            subtitle: Some("Chat thread".into()),
+            subtitle: None,
         };
 
         let thread_item = ThreadItem::new(id, title.clone())

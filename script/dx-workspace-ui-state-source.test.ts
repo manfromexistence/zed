@@ -317,6 +317,7 @@ test("sidebar chat groups expose persistent sort and icon override controls", ()
   assert.match(sidebar, /impl Render for DraggedSidebarThread[\s\S]*Label::new\(self\.label\.clone\(\)\)/);
   assert.match(sidebar, /impl Render for DraggedSidebarThread[\s\S]*\.w\(px\(236\.0\)\)/);
   assert.match(sidebar, /impl Render for DraggedSidebarThread[\s\S]*\.color\(Color::Default\)/);
+  assert.match(sidebar, /let dragged_thread = DraggedSidebarThread \{[\s\S]*?subtitle: None,/);
   assert.match(sidebar, /subtitle: None,\s*action: SerializedSidebarGridAction::OpenThread/s);
   assert.match(sidebar, /matches!\(action, SidebarGridAction::OpenThread\(_\)\)/);
   assert.match(sidebar, /struct ThreadIconPickerMenu/);
@@ -494,10 +495,19 @@ test("core left panels expose split and close controls in native headers", () =>
   );
   assert.match(dock, /IconName::SplitAlt/);
   assert.match(dock, /IconName::Close/);
+  assert.match(dock, /let can_split = workspace[\s\S]*?\.upgrade\(\)[\s\S]*?\.is_some_and/);
+  assert.match(dock, /\.disabled\(!can_split\)/);
+  assert.match(dock, /Open another panel to split/);
+  assert.match(dock, /let can_close = workspace[\s\S]*?\.upgrade\(\)[\s\S]*?\.is_some_and/);
+  assert.match(dock, /\.disabled\(!can_close\)/);
   assert.match(dock, /workspace\.split_side_panel_by_id\(panel_id, window, cx\)/);
   assert.match(dock, /workspace\.close_side_panel_by_id\(panel_id, window, cx\)/);
+  assert.match(dock, /pub fn can_split_panel_by_id/);
+  assert.match(dock, /pub fn contains_panel_id/);
   assert.match(workspace, /pub fn split_side_panel_by_id/);
   assert.match(workspace, /pub fn close_side_panel_by_id/);
+  assert.match(workspace, /pub fn can_split_side_panel_by_id/);
+  assert.match(workspace, /pub fn contains_side_panel_by_id/);
 
   for (const [source, name] of [
     [projectPanel, "project panel"],
@@ -507,7 +517,7 @@ test("core left panels expose split and close controls in native headers", () =>
   ] as const) {
     assert.match(
       source,
-      /side_panel_header_controls[\s\S]*?self\.workspace\.clone\(\)[\s\S]*?cx\.entity\(\)\.entity_id\(\)/,
+      /side_panel_header_controls[\s\S]*?self\.workspace\.clone\(\)[\s\S]*?cx\.entity\(\)\.entity_id\(\)[\s\S]*?cx,/,
       `${name} must target its own panel entity for split/close controls`,
     );
     assert.doesNotMatch(
@@ -583,6 +593,7 @@ test("recent tool panels use professional visible copy", () => {
 
   assert.match(dxStylePanelCards, /metric\("Web Preview", web_preview_state\(snapshot\)\)/);
   assert.match(dxStylePanelCards, /metric\(\s*"Controls",/);
+  assert.match(dxStylePanelCards, /\{\} cataloged controls/);
   assert.match(dxStylePanelCards, /"Open Web Preview Controls"/);
   assert.match(dxStylePanelCards, /"controls ready"/);
   assert.match(dxStylePanelCards, /"host connected"/);

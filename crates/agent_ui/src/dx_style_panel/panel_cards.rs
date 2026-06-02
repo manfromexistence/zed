@@ -23,7 +23,7 @@ pub(super) fn generator_host_card(
         .child(metric("Web Preview", web_preview_state(snapshot)))
         .child(metric(
             "Controls",
-            format!("{} visual controls", snapshot.visual_generator_count),
+            format!("{} cataloged controls", snapshot.visual_generator_count),
         ))
         .child(metric("Readiness", snapshot.readiness.status.clone()))
         .child(

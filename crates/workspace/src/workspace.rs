@@ -4343,6 +4343,18 @@ impl Workspace {
         false
     }
 
+    pub fn can_split_side_panel_by_id(&self, panel_id: EntityId, cx: &App) -> bool {
+        [&self.left_dock, &self.right_dock]
+            .into_iter()
+            .any(|dock| dock.read(cx).can_split_panel_by_id(panel_id, cx))
+    }
+
+    pub fn contains_side_panel_by_id(&self, panel_id: EntityId, cx: &App) -> bool {
+        [&self.left_dock, &self.right_dock]
+            .into_iter()
+            .any(|dock| dock.read(cx).contains_panel_id(panel_id))
+    }
+
     fn close_active_side_panel(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {
         let Some(dock) = self.active_side_dock(window, cx) else {
             return false;

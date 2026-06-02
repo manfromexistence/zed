@@ -4937,6 +4937,7 @@ impl OutlinePanel {
                         "outline-panel",
                         self.workspace.clone(),
                         cx.entity().entity_id(),
+                        cx,
                     )),
             )
     }

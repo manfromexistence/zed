@@ -1479,6 +1479,7 @@ COMPLETED:
 - Added source-owned reverse CSS delta replacement payload caps in `G:\Dx\style`, mirrored them into Zed, and made native source-apply review reject oversized or malformed replacement utility arrays before source declaration comparison.
 - Added Web Preview replacement payload diagnostics so oversized reverse CSS delta replacement utilities are visible in the generator cockpit and copied source-review packets before native IPC.
 - Added native source-apply receipt preservation for Web Preview reverse CSS delta replacement payload diagnostics, with review blocked when those diagnostics are non-empty.
+- Added real split/close controls to the project, git, outline, and collab panel headers through the shared dock helper, including panel-id-aware disabled state, compact tooltips, and source guards. Also cleaned recent Agent/Style sidebar wording and stale source-test expectations. Passed focused `rustfmt --check`, 43/43 focused Node source tests, and `git diff --check`. Skipped by policy: Cargo and `just run`.
 
 BLOCKED:
 - None

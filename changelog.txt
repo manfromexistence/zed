@@ -13615,6 +13615,22 @@ PASSED:
 NOTES:
 - This remains source-only. It does not run Cargo, run `just run`, start a server, perform WebView runtime proof, enable Apply, or mutate source.
 
+[2026-06-03] - Core Panel Split Controls Polish
+
+CHANGED:
+- `crates\workspace\src\dock.rs` now exposes shared side-panel split and close controls with real panel-id-aware enabled state instead of assuming the active side panel.
+- Project, Git, Outline, and Collab panel headers now pass their own entity id and workspace context into the shared split/close helper.
+- Recent Agent and Style rail labels now avoid placeholder wording while keeping their existing source-backed behavior.
+- Focused source guards now cover the panel-id split/close route and the current icon-first Style/Launch UI text.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\workspace\src\workspace.rs crates\workspace\src\dock.rs crates\project_panel\src\project_panel.rs crates\git_ui\src\git_panel.rs crates\outline_panel\src\outline_panel.rs crates\collab_ui\src\collab_panel.rs crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\dx_launch_workspace.rs crates\agent_ui\src\dx_style_panel\panel_cards.rs crates\sidebar\src\sidebar.rs`
+- `node --test script\dx-workspace-ui-state-source.test.ts script\dx-launch-workspace-source.test.ts script\dx-style-panel-source.test.ts`
+- `git diff --check`
+
+NOTES:
+- This was source-only. It did not run Cargo or `just run`, per the current instruction.
+
 [2026-05-31] - DX Style Review Receipt Field Coverage
 
 CHANGED:

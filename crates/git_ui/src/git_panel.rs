@@ -5117,6 +5117,7 @@ impl GitPanel {
                 "git-panel",
                 self.workspace.clone(),
                 cx.entity().entity_id(),
+                cx,
             )))
     }
 

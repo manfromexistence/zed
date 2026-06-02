@@ -48,7 +48,15 @@ pub fn side_panel_header_controls(
     id_prefix: &'static str,
     workspace: WeakEntity<Workspace>,
     panel_id: EntityId,
+    cx: &App,
 ) -> impl IntoElement {
+    let can_split = workspace
+        .upgrade()
+        .is_some_and(|workspace| workspace.read(cx).can_split_side_panel_by_id(panel_id, cx));
+    let can_close = workspace
+        .upgrade()
+        .is_some_and(|workspace| workspace.read(cx).contains_side_panel_by_id(panel_id, cx));
+
     h_flex()
         .id(format!("{id_prefix}-side-panel-controls"))
         .items_center()
@@ -59,7 +67,12 @@ pub fn side_panel_header_controls(
                 .shape(IconButtonShape::Square)
                 .style(ButtonStyle::Subtle)
                 .icon_size(IconSize::Small)
-                .tooltip(Tooltip::text("Split Panel"))
+                .disabled(!can_split)
+                .tooltip(if can_split {
+                    Tooltip::text("Split Panel")
+                } else {
+                    Tooltip::text("Open another panel to split")
+                })
                 .on_click({
                     let workspace = workspace.clone();
                     move |_, window, cx| {
@@ -76,6 +89,7 @@ pub fn side_panel_header_controls(
                 .shape(IconButtonShape::Square)
                 .style(ButtonStyle::Subtle)
                 .icon_size(IconSize::Small)
+                .disabled(!can_close)
                 .tooltip(Tooltip::text("Close Panel"))
                 .on_click(move |_, window, cx| {
                     if let Some(workspace) = workspace.upgrade() {
@@ -746,6 +760,14 @@ impl Dock {
 
         let stacked_count = self.stacked_entries().len();
         !self.is_panel_stacked(panel_id) || stacked_count < MAX_STACKED_PANELS
+    }
+
+    pub fn can_split_panel_by_id(&self, panel_id: EntityId, cx: &App) -> bool {
+        self.can_split_panel(panel_id, cx)
+    }
+
+    pub fn contains_panel_id(&self, panel_id: EntityId) -> bool {
+        self.panel_index_for_id(panel_id).is_some()
     }
 
     fn panel_is_agent(&self, panel_id: EntityId, cx: &App) -> bool {
