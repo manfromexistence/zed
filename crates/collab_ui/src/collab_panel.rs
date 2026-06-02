@@ -53,6 +53,33 @@ use workspace::{
 const FILTER_OCCUPIED_CHANNELS_KEY: &str = "filter_occupied_channels";
 const FAVORITE_CHANNELS_KEY: &str = "favorite_channels";
 
+fn side_panel_header_controls(id_prefix: &'static str) -> impl IntoElement {
+    h_flex()
+        .id(format!("{id_prefix}-side-panel-controls"))
+        .items_center()
+        .gap_0p5()
+        .child(
+            IconButton::new(format!("{id_prefix}-split-side-panel"), IconName::SplitAlt)
+                .shape(IconButtonShape::Square)
+                .style(ButtonStyle::Subtle)
+                .icon_size(IconSize::Small)
+                .tooltip(Tooltip::text("Split Panel"))
+                .on_click(|_, window, cx| {
+                    window.dispatch_action(Box::new(workspace::SplitActiveSidePanel), cx);
+                }),
+        )
+        .child(
+            IconButton::new(format!("{id_prefix}-close-side-panel"), IconName::Close)
+                .shape(IconButtonShape::Square)
+                .style(ButtonStyle::Subtle)
+                .icon_size(IconSize::Small)
+                .tooltip(Tooltip::text("Close Panel"))
+                .on_click(|_, window, cx| {
+                    window.dispatch_action(Box::new(workspace::CloseActiveSidePanel), cx);
+                }),
+        )
+}
+
 actions!(
     collab_panel,
     [
@@ -2637,16 +2664,53 @@ impl CollabPanel {
         cx.write_to_clipboard(item)
     }
 
-    fn render_disabled_by_organization(&mut self, _cx: &mut Context<Self>) -> Div {
+    fn render_panel_header(cx: &mut Context<Self>) -> impl IntoElement {
+        h_flex()
+            .id("collab-panel-header")
+            .w_full()
+            .h(Tab::container_height(cx))
+            .items_center()
+            .justify_between()
+            .gap_2()
+            .px_2()
+            .border_b_1()
+            .border_color(cx.theme().colors().border.opacity(0.6))
+            .child(
+                h_flex()
+                    .gap_1()
+                    .items_center()
+                    .min_w_0()
+                    .child(
+                        Icon::new(IconName::UserGroup)
+                            .size(IconSize::Small)
+                            .color(Color::Muted),
+                    )
+                    .child(
+                        Label::new("Collab")
+                            .size(LabelSize::Small)
+                            .color(Color::Muted)
+                            .truncate(),
+                    ),
+            )
+            .child(side_panel_header_controls("collab-panel"))
+    }
+
+    fn render_disabled_by_organization(&mut self, cx: &mut Context<Self>) -> Div {
         v_flex()
-            .p_4()
-            .gap_4()
             .size_full()
-            .text_center()
-            .justify_center()
-            .child(Label::new(
-                "Collaboration is disabled for this organization.",
-            ))
+            .child(Self::render_panel_header(cx))
+            .child(
+                v_flex()
+                    .p_4()
+                    .gap_4()
+                    .w_full()
+                    .flex_1()
+                    .text_center()
+                    .justify_center()
+                    .child(Label::new(
+                        "Collaboration is disabled for this organization.",
+                    )),
+            )
     }
 
     fn render_signed_out(&mut self, cx: &mut Context<Self>) -> Div {
@@ -2677,10 +2741,11 @@ impl CollabPanel {
             )
         };
 
-        v_flex()
+        let signed_out_state = v_flex()
+            .id("collab-panel-signed-out-state")
+            .size_full()
             .p_4()
             .gap_4()
-            .size_full()
             .text_center()
             .justify_center()
             .child(Label::new(collab_blurb))
@@ -2702,7 +2767,12 @@ impl CollabPanel {
                         })
                         .detach()
                     })),
-            )
+            );
+
+        v_flex()
+            .size_full()
+            .child(Self::render_panel_header(cx))
+            .child(signed_out_state)
     }
 
     fn render_list_entry(
@@ -2825,7 +2895,8 @@ impl CollabPanel {
                                     cx.notify();
                                 })),
                         )
-                    }),
+                    })
+                    .child(side_panel_header_controls("collab-panel")),
             )
             .child(
                 list(

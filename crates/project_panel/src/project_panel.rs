@@ -119,6 +119,33 @@ fn project_panel_cap_hit(boundary: &'static str, cap: usize) {
     );
 }
 
+fn side_panel_header_controls(id_prefix: &'static str) -> impl IntoElement {
+    h_flex()
+        .id(format!("{id_prefix}-side-panel-controls"))
+        .items_center()
+        .gap_0p5()
+        .child(
+            IconButton::new(format!("{id_prefix}-split-side-panel"), IconName::SplitAlt)
+                .shape(IconButtonShape::Square)
+                .style(ButtonStyle::Subtle)
+                .icon_size(IconSize::Small)
+                .tooltip(Tooltip::text("Split Panel"))
+                .on_click(|_, window, cx| {
+                    window.dispatch_action(Box::new(workspace::SplitActiveSidePanel), cx);
+                }),
+        )
+        .child(
+            IconButton::new(format!("{id_prefix}-close-side-panel"), IconName::Close)
+                .shape(IconButtonShape::Square)
+                .style(ButtonStyle::Subtle)
+                .icon_size(IconSize::Small)
+                .tooltip(Tooltip::text("Close Panel"))
+                .on_click(|_, window, cx| {
+                    window.dispatch_action(Box::new(workspace::CloseActiveSidePanel), cx);
+                }),
+        )
+}
+
 fn push_project_panel_expanded_dir(
     expanded_dir_ids: &mut Vec<ProjectEntryId>,
     entry_id: ProjectEntryId,
@@ -4121,31 +4148,41 @@ impl ProjectPanel {
                                 this.focus_handle(cx).focus(window, cx);
                                 cx.notify();
                             })),
-                    )
-                    .child(
-                        IconButton::new("project-panel-split-side-panel", IconName::SplitAlt)
-                            .shape(IconButtonShape::Square)
-                            .style(ButtonStyle::Subtle)
-                            .icon_size(IconSize::Small)
-                            .tooltip(Tooltip::text("Split Panel"))
-                            .on_click(|_, window, cx| {
-                                window
-                                    .dispatch_action(Box::new(workspace::SplitActiveSidePanel), cx);
-                            }),
-                    )
-                    .child(
-                        IconButton::new("project-panel-close-side-panel", IconName::Close)
-                            .shape(IconButtonShape::Square)
-                            .style(ButtonStyle::Subtle)
-                            .icon_size(IconSize::Small)
-                            .tooltip(Tooltip::text("Close Panel"))
-                            .on_click(|_, window, cx| {
-                                window
-                                    .dispatch_action(Box::new(workspace::CloseActiveSidePanel), cx);
-                            }),
                     ),
             )
             .into_any_element()
+    }
+
+    fn render_panel_header(cx: &mut Context<Self>) -> impl IntoElement {
+        h_flex()
+            .id("project-panel-header")
+            .w_full()
+            .h(Tab::container_height(cx))
+            .items_center()
+            .justify_between()
+            .gap_2()
+            .px_2()
+            .border_b_1()
+            .border_color(cx.theme().colors().border.opacity(0.6))
+            .bg(cx.theme().colors().panel_background)
+            .child(
+                h_flex()
+                    .gap_1()
+                    .items_center()
+                    .min_w_0()
+                    .child(
+                        Icon::new(IconName::Folder)
+                            .size(IconSize::Small)
+                            .color(Color::Muted),
+                    )
+                    .child(
+                        Label::new("Project")
+                            .size(LabelSize::Small)
+                            .color(Color::Muted)
+                            .truncate(),
+                    ),
+            )
+            .child(side_panel_header_controls("project-panel"))
     }
 
     fn start_marquee_selection(
@@ -8082,6 +8119,7 @@ impl Render for ProjectPanel {
                 .track_focus(&self.focus_handle(cx))
                 .child(
                     v_flex()
+                        .child(Self::render_panel_header(cx))
                         .when_some(selected_entries_toolbar, |this, toolbar| {
                             this.child(toolbar)
                         })
@@ -8532,6 +8570,7 @@ impl Render for ProjectPanel {
             v_flex()
                 .id("empty-project_panel-wrapper")
                 .size_full()
+                .child(Self::render_panel_header(cx))
                 .child(
                     ProjectEmptyState::new(
                         "Project Panel",

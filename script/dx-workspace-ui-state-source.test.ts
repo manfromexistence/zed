@@ -20,6 +20,9 @@ const dxLaunchCheckPanel = read("crates/agent_ui/src/dx_launch_workspace/check.r
 const sidebar = read("crates/sidebar/src/sidebar.rs");
 const threadItem = read("crates/ui/src/components/ai/thread_item.rs");
 const projectPanel = read("crates/project_panel/src/project_panel.rs");
+const gitPanel = read("crates/git_ui/src/git_panel.rs");
+const outlinePanel = read("crates/outline_panel/src/outline_panel.rs");
+const collabPanel = read("crates/collab_ui/src/collab_panel.rs");
 const iconPicker = read("crates/icon_picker/src/icon_picker.rs");
 const fontPanel = read("crates/font_panel/src/font_panel.rs");
 const mediaPanel = read("crates/media_panel/src/media_panel.rs");
@@ -432,6 +435,68 @@ test("agent layout preset keeps project, git, outline, and collab on the left", 
   assert.match(agentLayout, /outline_panel_dock:\s*Some\(DockSide::Left\)/);
   assert.match(agentLayout, /collaboration_panel_dock:\s*Some\(DockPosition::Left\)/);
   assert.match(agentLayout, /git_panel_dock:\s*Some\(DockPosition::Left\)/);
+});
+
+test("core left panels expose split and close controls in native headers", () => {
+  const projectHeader = functionBody(projectPanel, "render_panel_header");
+  const projectSelectionToolbar = functionBody(
+    projectPanel,
+    "render_selected_entries_toolbar",
+  );
+  const emptyProjectWrapperStart = projectPanel.indexOf(
+    '.id("empty-project_panel-wrapper")',
+  );
+  assert.ok(emptyProjectWrapperStart >= 0, "expected Project empty wrapper");
+  const emptyProjectWrapper = projectPanel.slice(
+    emptyProjectWrapperStart,
+    projectPanel.indexOf("ProjectEmptyState::new", emptyProjectWrapperStart) + 240,
+  );
+  const gitTabBar = functionBody(gitPanel, "render_tab_bar");
+  const outlineFooter = functionBody(outlinePanel, "render_filter_footer");
+  const collabHeader = functionBody(collabPanel, "render_panel_header");
+  const collabDisabled = functionBody(
+    collabPanel,
+    "render_disabled_by_organization",
+  );
+  const collabSignedOut = functionBody(collabPanel, "render_signed_out");
+  const collabSignedIn = functionBody(collabPanel, "render_signed_in");
+
+  for (const [source, name] of [
+    [projectPanel, "project panel"],
+    [gitPanel, "git panel"],
+    [outlinePanel, "outline panel"],
+    [collabPanel, "collab panel"],
+  ] as const) {
+    assert.ok(
+      source.includes('format!("{id_prefix}-split-side-panel")'),
+      `${name} must create a stable split-control id`,
+    );
+    assert.ok(
+      source.includes('format!("{id_prefix}-close-side-panel")'),
+      `${name} must create a stable close-control id`,
+    );
+    assert.match(source, /IconName::SplitAlt/);
+    assert.match(source, /IconName::Close/);
+    assert.match(source, /workspace::SplitActiveSidePanel/);
+    assert.match(source, /workspace::CloseActiveSidePanel/);
+  }
+
+  assert.match(projectHeader, /side_panel_header_controls\("project-panel"\)/);
+  assert.match(
+    emptyProjectWrapper,
+    /\.child\(Self::render_panel_header\(cx\)\)[\s\S]*ProjectEmptyState::new/,
+  );
+  assert.doesNotMatch(
+    projectSelectionToolbar,
+    /project-panel-(split|close)-side-panel/,
+    "project selection actions should not duplicate panel dock controls",
+  );
+  assert.match(gitTabBar, /side_panel_header_controls\("git-panel"\)/);
+  assert.match(outlineFooter, /side_panel_header_controls\("outline-panel"\)/);
+  assert.match(collabHeader, /side_panel_header_controls\("collab-panel"\)/);
+  assert.match(collabDisabled, /Self::render_panel_header\(cx\)/);
+  assert.match(collabSignedOut, /Self::render_panel_header\(cx\)/);
+  assert.match(collabSignedIn, /side_panel_header_controls\("collab-panel"\)/);
 });
 
 test("item project-handle collections cap visited items before pushing handles", () => {

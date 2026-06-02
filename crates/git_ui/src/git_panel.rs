@@ -165,6 +165,34 @@ where
     cx.spawn(async move |_| Ok(T::iter().nth(rx.await?).unwrap()))
 }
 
+fn side_panel_header_controls(id_prefix: &'static str) -> impl IntoElement {
+    h_flex()
+        .id(format!("{id_prefix}-side-panel-controls"))
+        .items_center()
+        .gap_0p5()
+        .pr_1()
+        .child(
+            IconButton::new(format!("{id_prefix}-split-side-panel"), IconName::SplitAlt)
+                .shape(IconButtonShape::Square)
+                .style(ButtonStyle::Subtle)
+                .icon_size(IconSize::Small)
+                .tooltip(Tooltip::text("Split Panel"))
+                .on_click(|_, window, cx| {
+                    window.dispatch_action(Box::new(workspace::SplitActiveSidePanel), cx);
+                }),
+        )
+        .child(
+            IconButton::new(format!("{id_prefix}-close-side-panel"), IconName::Close)
+                .shape(IconButtonShape::Square)
+                .style(ButtonStyle::Subtle)
+                .icon_size(IconSize::Small)
+                .tooltip(Tooltip::text("Close Panel"))
+                .on_click(|_, window, cx| {
+                    window.dispatch_action(Box::new(workspace::CloseActiveSidePanel), cx);
+                }),
+        )
+}
+
 #[derive(strum::EnumIter, strum::VariantNames)]
 #[strum(serialize_all = "title_case")]
 enum TrashCancel {
@@ -5088,23 +5116,31 @@ impl GitPanel {
             .relative()
             .h(Tab::container_height(cx))
             .w_full()
-            .child(tab(
-                ElementId::Name("changes-tab".into()),
-                active_tab == GitPanelTab::Changes,
-                true,
-                "Changes".into(),
-                GitPanelTab::Changes,
-                ActivateChangesTab.boxed_clone(),
-            ))
-            .child(Divider::vertical().color(ui::DividerColor::BorderFaded))
-            .child(tab(
-                ElementId::Name("history-tab".into()),
-                active_tab != GitPanelTab::Changes,
-                false,
-                "History".into(),
-                GitPanelTab::History,
-                ActivateHistoryTab.boxed_clone(),
-            ))
+            .border_b_1()
+            .border_color(cx.theme().colors().border.opacity(0.6))
+            .child(
+                h_flex()
+                    .h_full()
+                    .flex_1()
+                    .child(tab(
+                        ElementId::Name("changes-tab".into()),
+                        active_tab == GitPanelTab::Changes,
+                        true,
+                        "Changes".into(),
+                        GitPanelTab::Changes,
+                        ActivateChangesTab.boxed_clone(),
+                    ))
+                    .child(Divider::vertical().color(ui::DividerColor::BorderFaded))
+                    .child(tab(
+                        ElementId::Name("history-tab".into()),
+                        active_tab != GitPanelTab::Changes,
+                        false,
+                        "History".into(),
+                        GitPanelTab::History,
+                        ActivateHistoryTab.boxed_clone(),
+                    )),
+            )
+            .child(side_panel_header_controls("git-panel"))
     }
 
     fn render_history_tab(&self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {

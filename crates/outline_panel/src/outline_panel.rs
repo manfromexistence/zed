@@ -108,6 +108,33 @@ const OUTLINE_PANEL_KEY: &str = "OutlinePanel";
 const UPDATE_DEBOUNCE: Duration = Duration::from_millis(50);
 const MAX_OUTLINE_PANEL_CACHED_ENTRIES: usize = 50_000;
 const MAX_OUTLINE_PANEL_MATCH_CANDIDATES: usize = MAX_OUTLINE_PANEL_CACHED_ENTRIES;
+
+fn side_panel_header_controls(id_prefix: &'static str) -> impl IntoElement {
+    h_flex()
+        .id(format!("{id_prefix}-side-panel-controls"))
+        .items_center()
+        .gap_0p5()
+        .child(
+            IconButton::new(format!("{id_prefix}-split-side-panel"), IconName::SplitAlt)
+                .shape(IconButtonShape::Square)
+                .style(ButtonStyle::Subtle)
+                .icon_size(IconSize::Small)
+                .tooltip(Tooltip::text("Split Panel"))
+                .on_click(|_, window, cx| {
+                    window.dispatch_action(Box::new(workspace::SplitActiveSidePanel), cx);
+                }),
+        )
+        .child(
+            IconButton::new(format!("{id_prefix}-close-side-panel"), IconName::Close)
+                .shape(IconButtonShape::Square)
+                .style(ButtonStyle::Subtle)
+                .icon_size(IconSize::Small)
+                .tooltip(Tooltip::text("Close Panel"))
+                .on_click(|_, window, cx| {
+                    window.dispatch_action(Box::new(workspace::CloseActiveSidePanel), cx);
+                }),
+        )
+}
 const MAX_OUTLINE_PANEL_FILTER_MATCHES: usize = 10_000;
 const MAX_OUTLINE_PANEL_SEARCH_MATCHES: usize = 20_000;
 const MAX_OUTLINE_PANEL_SEARCH_MATCHES_PER_BUFFER: usize = 10_000;
@@ -4929,7 +4956,8 @@ impl OutlinePanel {
                                     cx,
                                 );
                             })),
-                    ),
+                    )
+                    .child(side_panel_header_controls("outline-panel")),
             )
     }
 

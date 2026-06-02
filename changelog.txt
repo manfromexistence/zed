@@ -1,3 +1,22 @@
+[2026-06-03] - Core Left Panel Header Controls
+
+CHANGED:
+- `crates\project_panel\src\project_panel.rs` now renders a native Project header with split/close side-panel controls in both normal file-tree and empty-project states, while keeping selection actions separate.
+- `crates\git_ui\src\git_panel.rs` now keeps Git Changes/History tabs in the native tab bar and adds split/close controls at the far right of that same row.
+- `crates\outline_panel\src\outline_panel.rs` now places split/close controls beside the existing Outline filter/pin controls.
+- `crates\collab_ui\src\collab_panel.rs` now places split/close controls in the signed-in search header and adds a compact Collab header for signed-out and organization-disabled states.
+- `script\dx-workspace-ui-state-source.test.ts` now guards Project, Git, Outline, and Collab native header wiring to the real workspace side-panel actions.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\project_panel\src\project_panel.rs crates\git_ui\src\git_panel.rs crates\outline_panel\src\outline_panel.rs crates\collab_ui\src\collab_panel.rs`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-workspace-ui-state-source.test.ts`
+- `git diff --check`
+
+NOTES:
+- Six existing GPT-5.5 xhigh subagents were used for read-only review of the four panel header surfaces, source guard scope, and commit hygiene.
+- `just run` was not run because the current instruction says not to run it until explicitly requested.
+- `DX.txt` remains an unrelated scratch/editor change and is intentionally left untouched.
+
 [2026-06-03] - Agent Rail Source Row Polish
 
 CHANGED:
