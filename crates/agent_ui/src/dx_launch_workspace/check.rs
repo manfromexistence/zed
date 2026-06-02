@@ -47,7 +47,7 @@ pub(super) fn check_score_state(snapshot: &DxCheckScoreSnapshot, cx: &App) -> An
     stack = stack
         .child(metric_row("Next", panel.next_action.clone()))
         .child(metric_row(
-            "Rail score",
+            "Readiness score",
             format!("{}/100 {}", snapshot.score, snapshot.state),
         ));
 

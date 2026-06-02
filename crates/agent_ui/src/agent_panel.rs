@@ -6810,11 +6810,11 @@ impl AgentPanel {
                 let has_receipt_drilldowns = !source.receipt_drilldowns.is_empty();
                 DxSourceRowControl {
                     source_path: source.path.clone(),
-                    element: v_flex()
+                    element: h_flex()
                         .gap_1()
+                        .min_w_0()
                         .child(
                             Button::new(format!("dx-source-row-action-{ix}"), action_label)
-                                .full_width()
                                 .label_size(LabelSize::XSmall)
                                 .color(Color::Muted)
                                 .start_icon(
@@ -6827,7 +6827,6 @@ impl AgentPanel {
                         )
                         .child(
                             Button::new(format!("dx-source-row-receipt-{ix}"), "Receipt")
-                                .full_width()
                                 .label_size(LabelSize::XSmall)
                                 .color(Color::Muted)
                                 .start_icon(

@@ -44,7 +44,7 @@ mod sources;
 mod style_panel;
 mod tool_history;
 mod www_evidence;
-use self::list_labels::{bounded_items, yes_no};
+use self::list_labels::bounded_items;
 
 #[derive(Clone)]
 pub(crate) struct DxLaunchWorkspaceStatus {
@@ -266,7 +266,7 @@ fn render_sources_rail(
         .left_2()
         .top_2()
         .bottom_2()
-        .w(px(246.0))
+        .w(px(300.0))
         .gap_2()
         .p_2()
         .rounded_lg()
@@ -385,16 +385,12 @@ fn workspace_mode_row(
                     h_flex()
                         .gap_1()
                         .min_w_0()
-                        .child(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted))
-                        .child(
-                            Label::new(label)
-                                .size(LabelSize::XSmall)
-                                .color(Color::Muted),
-                        ),
+                        .child(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
+                        .child(Label::new(label).size(LabelSize::Small).color(Color::Muted)),
                 )
                 .child(
                     Label::new(state.into())
-                        .size(LabelSize::XSmall)
+                        .size(LabelSize::Small)
                         .color(Color::Default)
                         .truncate(),
                 ),
@@ -526,13 +522,12 @@ fn rail_section(
 fn diagnostics_menu(status: DxLaunchWorkspaceStatus) -> AnyElement {
     PopoverMenu::new("dx-launch-diagnostics-trigger")
         .trigger_with_tooltip(
-            Button::new("dx-launch-diagnostics-button", "Diagnostics")
-                .full_width()
-                .label_size(LabelSize::Small)
-                .color(Color::Muted)
-                .start_icon(Icon::new(IconName::Sliders).size(IconSize::Small)),
+            IconButton::new("dx-launch-diagnostics-button", IconName::Sliders)
+                .icon_size(IconSize::Small)
+                .icon_color(Color::Muted),
             Tooltip::text("Open DX diagnostics"),
         )
+        .anchor(gpui::Anchor::TopRight)
         .menu(move |_window, cx| {
             let status = status.clone();
             Some(cx.new(|cx| DxLaunchDiagnosticsMenu {
@@ -575,7 +570,7 @@ fn progress_summary(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {
         .child(progress_step_row(
             "dx-progress-check",
             status.check_score.score >= 80,
-            "Check",
+            "Validation",
             format!(
                 "{}/100 {}",
                 status.check_score.score, status.check_score.state
@@ -598,15 +593,19 @@ fn environment_summary(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement
         .child(compact_status_row(
             "dx-env-workspace",
             IconName::Library,
-            "Workspace",
-            format!("{} root(s)", status.visible_worktree_count),
+            "Worktrees",
+            format!("{} worktree(s)", status.visible_worktree_count),
             cx,
         ))
         .child(compact_status_row(
             "dx-env-local",
             IconName::Terminal,
-            "Local",
-            yes_no(status.receipt_snapshot.root_exists),
+            "Receipts",
+            if status.receipt_snapshot.root_exists {
+                "present"
+            } else {
+                "missing"
+            },
             cx,
         ))
         .child(compact_status_row(
@@ -623,7 +622,7 @@ fn environment_summary(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement
         .child(compact_status_row(
             "dx-env-commit",
             IconName::GitBranch,
-            "Proof",
+            "Fresh proof",
             format!("{} fresh", status.proof_freshness.fresh_receipt_count()),
             cx,
         ))
@@ -641,7 +640,7 @@ fn subagent_summary(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {
 
     if status.agent_bridge.automations.is_empty() {
         return stack
-            .child(muted_card("No active subagents", cx))
+            .child(muted_card("No automation receipt", cx))
             .into_any_element();
     }
 
@@ -664,7 +663,7 @@ fn subagent_summary(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {
     if status.agent_bridge.automation_count > 6 {
         stack = stack.child(
             Label::new(format!(
-                "Show {} more",
+                "+{} more",
                 status.agent_bridge.automation_count.saturating_sub(6)
             ))
             .size(LabelSize::XSmall)
@@ -822,7 +821,7 @@ fn subagent_row(
 ) -> AnyElement {
     let state = state.into();
     let activity = if active {
-        SharedString::from("is working")
+        SharedString::from("active")
     } else if state.as_ref().is_empty() {
         SharedString::from("idle")
     } else {

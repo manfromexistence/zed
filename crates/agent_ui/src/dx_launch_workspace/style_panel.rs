@@ -9,7 +9,7 @@ use super::{bounded_items, metric_row, muted_card, signal_row};
 pub(super) fn dx_style_panel_state(snapshot: &DxStylePanelSnapshot, cx: &App) -> AnyElement {
     let mut stack = v_flex()
         .gap_1()
-        .child(metric_row("Style Cockpit", snapshot.status.clone()))
+        .child(metric_row("Style", snapshot.status.clone()))
         .child(metric_row("Next Action", snapshot.next_action.clone()))
         .child(metric_row(
             "Root",
@@ -73,18 +73,15 @@ pub(super) fn dx_style_panel_state(snapshot: &DxStylePanelSnapshot, cx: &App) ->
             snapshot.readiness.receipt_count.to_string(),
         ))
         .child(
-            Button::new(
-                "dx-style-open-generator-preview",
-                "Open Generator Workspace",
-            )
-            .full_width()
-            .label_size(LabelSize::XSmall)
-            .color(Color::Muted)
-            .start_icon(Icon::new(IconName::Sliders).size(IconSize::XSmall))
-            .disabled(!snapshot.web_preview_bridge_ready)
-            .on_click(|_, window, cx| {
-                window.dispatch_action(OpenGeneratorPreview.boxed_clone(), cx);
-            }),
+            Button::new("dx-style-open-generator-preview", "Open Style Generator")
+                .full_width()
+                .label_size(LabelSize::XSmall)
+                .color(Color::Muted)
+                .start_icon(Icon::new(IconName::Sliders).size(IconSize::XSmall))
+                .disabled(!snapshot.web_preview_bridge_ready)
+                .on_click(|_, window, cx| {
+                    window.dispatch_action(OpenGeneratorPreview.boxed_clone(), cx);
+                }),
         );
 
     if !snapshot.root_exists {

@@ -14,6 +14,9 @@ const multiWorkspace = read("crates/workspace/src/multi_workspace.rs");
 const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
 const threadView = read("crates/agent_ui/src/conversation_view/thread_view.rs");
 const dxLaunchWorkspace = read("crates/agent_ui/src/dx_launch_workspace.rs");
+const dxLaunchSourceRows = read("crates/agent_ui/src/dx_launch_workspace/sources/rows.rs");
+const dxLaunchStylePanel = read("crates/agent_ui/src/dx_launch_workspace/style_panel.rs");
+const dxLaunchCheckPanel = read("crates/agent_ui/src/dx_launch_workspace/check.rs");
 const sidebar = read("crates/sidebar/src/sidebar.rs");
 const threadItem = read("crates/ui/src/components/ai/thread_item.rs");
 const projectPanel = read("crates/project_panel/src/project_panel.rs");
@@ -326,6 +329,9 @@ test("agent rails and project badges keep compact production layout", () => {
   const launchChrome = functionBody(dxLaunchWorkspace, "render_workspace_chrome");
   const sourcesRail = functionBody(dxLaunchWorkspace, "render_sources_rail");
   const progressRail = functionBody(dxLaunchWorkspace, "render_right_rail");
+  const diagnosticsMenu = functionBody(dxLaunchWorkspace, "diagnostics_menu");
+  const sourceRow = functionBody(dxLaunchSourceRows, "source_item_row");
+  const sourceRowControls = functionBody(agentPanel, "render_dx_launch_source_row_controls");
   assert.match(dxLaunchWorkspace, /fn progress_summary\(/);
   assert.doesNotMatch(dxLaunchWorkspace, /fn render_response_controller\(/);
   assert.doesNotMatch(dxLaunchWorkspace, /fn response_indicator_segment\(/);
@@ -343,7 +349,7 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(dxLaunchWorkspace, /fn subagent_pixel_icon/);
   assert.match(dxLaunchWorkspace, /gpui::hsla\(210\.0 \/ 360\.0/);
   assert.match(dxLaunchWorkspace, /status\.agent_bridge\.automations\.iter\(\)\.take\(6\)/);
-  assert.match(dxLaunchWorkspace, /muted_card\("No active subagents", cx\)/);
+  assert.match(dxLaunchWorkspace, /muted_card\("No automation receipt", cx\)/);
   assert.match(agentPanel, /collapsed_dx_launch_rail_sections: HashSet<DxLaunchRailSection>/);
   assert.match(agentPanel, /default_collapsed_dx_launch_rail_sections/);
   assert.match(agentPanel, /DxLaunchRailSection::SourceTools/);
@@ -360,6 +366,7 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.doesNotMatch(launchChrome, /render_response_controller/);
   assert.match(sourcesRail, /\.absolute\(\)/);
   assert.match(sourcesRail, /\.left_2\(\)/);
+  assert.match(sourcesRail, /\.w\(px\(300\.0\)\)/);
   assert.match(sourcesRail, /\.rounded_lg\(\)/);
   assert.match(sourcesRail, /\.shadow_md\(\)/);
   assert.match(sourcesRail, /\.occlude\(\)/);
@@ -372,6 +379,8 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(progressRail, /\.border_1\(\)/);
   assert.match(progressRail, /\.shadow_md\(\)/);
   assert.match(progressRail, /\.occlude\(\)/);
+  assert.match(diagnosticsMenu, /IconButton::new\("dx-launch-diagnostics-button", IconName::Sliders\)/);
+  assert.doesNotMatch(diagnosticsMenu, /Button::new\("dx-launch-diagnostics-button", "Diagnostics"\)|\.full_width\(\)/);
   assert.doesNotMatch(sourcesRail, /\.border_r_1\(\)/);
   assert.doesNotMatch(progressRail, /\.right_0\(\)/);
   assert.doesNotMatch(progressRail, /\.border_l_1\(\)/);
@@ -379,6 +388,24 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.doesNotMatch(dxLaunchWorkspace, /tasks", status\.background_task_count/);
   assert.doesNotMatch(dxLaunchWorkspace, /Current Agent panel conversation state/);
   assert.doesNotMatch(dxLaunchWorkspace, /Background Agent work visible in the right rail/);
+  assert.match(sourceRow, /Tooltip::with_meta\(/);
+  assert.match(sourceRow, /IconSize::Small/);
+  assert.match(sourceRow, /LabelSize::Small/);
+  assert.doesNotMatch(sourceRow, /Label::new\(source\.path\.clone\(\)\)/);
+  assert.match(sourceRowControls, /element: h_flex\(\)/);
+  assert.doesNotMatch(sourceRowControls, /\.full_width\(\)/);
+  assert.match(dxLaunchStylePanel, /metric_row\("Style", snapshot\.status\.clone\(\)\)/);
+  assert.match(
+    dxLaunchStylePanel,
+    /Button::new\("dx-style-open-generator-preview", "Open Style Generator"\)/,
+  );
+  assert.doesNotMatch(dxLaunchStylePanel, /Style Cockpit|Open Generator Workspace|Open Generator"\)/);
+  assert.match(dxLaunchCheckPanel, /"Readiness score"/);
+  assert.doesNotMatch(dxLaunchCheckPanel, /"Rail score"/);
+  assert.match(dxLaunchWorkspace, /"Validation"/);
+  assert.match(dxLaunchWorkspace, /"Worktrees"/);
+  assert.match(dxLaunchWorkspace, /"Fresh proof"/);
+  assert.doesNotMatch(dxLaunchWorkspace, /No active subagents|Show \{\} more|is working/);
   assert.doesNotMatch(dxLaunchWorkspace, /section_title\("Token And Tool Slots"/);
   assert.doesNotMatch(dxLaunchWorkspace, /fn token_meter_slots\(/);
   assert.doesNotMatch(dxLaunchWorkspace, /fn background_task_state\(/);
