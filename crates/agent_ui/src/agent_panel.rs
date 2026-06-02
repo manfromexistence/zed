@@ -120,9 +120,9 @@ use ui::{
 };
 use util::ResultExt as _;
 use workspace::{
-    CollaboratorId, DraggedSelection, DraggedTab, MultiWorkspace, PathList, SerializedPathList,
-    ToggleLeftDock, ToggleRightDock, ToggleWorkspaceSidebar, ToggleZoom, Workspace, WorkspaceId,
-    WorkspaceScreenKind,
+    CloseActiveSidePanel, CollaboratorId, DraggedSelection, DraggedTab, MultiWorkspace, PathList,
+    SerializedPathList, SplitActiveSidePanel, ToggleWorkspaceSidebar, ToggleZoom, Workspace,
+    WorkspaceId, WorkspaceScreenKind,
     dock::{DockPosition, Panel, PanelEvent},
     item::ItemEvent,
 };
@@ -1164,6 +1164,8 @@ pub struct AgentPanel {
     last_context_source: Option<AgentContextSource>,
     show_trust_workspace_message: bool,
     is_active: bool,
+    fullscreen_sources_rail_open: bool,
+    fullscreen_progress_rail_open: bool,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -1635,6 +1637,8 @@ impl AgentPanel {
             last_context_source: None,
             show_trust_workspace_message: false,
             is_active: false,
+            fullscreen_sources_rail_open: false,
+            fullscreen_progress_rail_open: false,
         };
 
         panel.ensure_native_agent_connection(cx);
@@ -1651,6 +1655,14 @@ impl AgentPanel {
             .panel::<Self>(cx)
             .is_some_and(|panel| panel.read(cx).enabled(cx))
         {
+            if let Some(panel) = workspace.panel::<Self>(cx) {
+                panel.update(cx, |panel, cx| {
+                    if panel.zoomed {
+                        panel.manual_zoom_override = Some(false);
+                        cx.emit(PanelEvent::ZoomOut);
+                    }
+                });
+            }
             workspace.toggle_panel_focus::<Self>(window, cx);
         }
     }
@@ -1678,6 +1690,7 @@ impl AgentPanel {
         if let Some(panel) = workspace.focus_panel::<Self>(window, cx) {
             panel.update(cx, |panel, cx| {
                 if panel.enabled(cx) {
+                    panel.manual_zoom_override = Some(true);
                     cx.emit(PanelEvent::ZoomIn);
                 }
             });
@@ -5902,43 +5915,41 @@ impl AgentPanel {
         };
 
         let is_full_screen = self.should_render_dx_launch_chrome(cx);
-        let (icon_id, icon_name, tooltip_text) = if is_full_screen {
-            (
-                "disable-full-screen",
-                IconName::Minimize,
-                "Disable Full Screen",
-            )
-        } else {
-            (
-                "enable-full-screen",
-                IconName::Maximize,
-                "Enable Full Screen",
-            )
-        };
-        let full_screen_button = IconButton::new(icon_id, icon_name)
-            .icon_size(IconSize::Small)
-            .tooltip(move |_, cx| Tooltip::for_action(tooltip_text, &ToggleZoom, cx))
-            .on_click(cx.listener(move |this, _, window, cx| {
-                this.toggle_zoom(&ToggleZoom, window, cx);
-            }));
-        let left_dock_button = IconButton::new(
-            "agent-toolbar-toggle-left-dock",
+        let agent_sources_rail_button = IconButton::new(
+            "agent-toolbar-toggle-sources-rail",
             IconName::ThreadsSidebarLeftClosed,
         )
         .icon_size(IconSize::Small)
-        .tooltip(move |_, cx| Tooltip::for_action("Toggle Left Panel", &ToggleLeftDock, cx))
-        .on_click(move |_, window, cx| {
-            window.dispatch_action(ToggleLeftDock.boxed_clone(), cx);
-        });
-        let right_dock_button = IconButton::new(
-            "agent-toolbar-toggle-right-dock",
+        .toggle_state(self.fullscreen_sources_rail_open)
+        .tooltip(Tooltip::text("Toggle Agent Sources Rail"))
+        .on_click(cx.listener(|this, _, _window, cx| {
+            this.fullscreen_sources_rail_open = !this.fullscreen_sources_rail_open;
+            cx.notify();
+        }));
+        let agent_progress_rail_button = IconButton::new(
+            "agent-toolbar-toggle-progress-rail",
             IconName::ThreadsSidebarRightClosed,
         )
         .icon_size(IconSize::Small)
-        .tooltip(move |_, cx| Tooltip::for_action("Toggle Right Panel", &ToggleRightDock, cx))
-        .on_click(move |_, window, cx| {
-            window.dispatch_action(ToggleRightDock.boxed_clone(), cx);
-        });
+        .toggle_state(self.fullscreen_progress_rail_open)
+        .tooltip(Tooltip::text("Toggle Agent Progress Rail"))
+        .on_click(cx.listener(|this, _, _window, cx| {
+            this.fullscreen_progress_rail_open = !this.fullscreen_progress_rail_open;
+            cx.notify();
+        }));
+        let split_panel_button =
+            IconButton::new("agent-panel-split-side-panel", IconName::SplitAlt)
+                .icon_size(IconSize::Small)
+                .tooltip(Tooltip::text("Split Panel"))
+                .on_click(|_, window, cx| {
+                    window.dispatch_action(Box::new(SplitActiveSidePanel), cx);
+                });
+        let close_panel_button = IconButton::new("agent-panel-close-side-panel", IconName::Close)
+            .icon_size(IconSize::Small)
+            .tooltip(Tooltip::text("Close Panel"))
+            .on_click(|_, window, cx| {
+                window.dispatch_action(Box::new(CloseActiveSidePanel), cx);
+            });
 
         let max_content_width = AgentSettings::get_global(cx).max_content_width;
 
@@ -6018,9 +6029,12 @@ impl AgentPanel {
                         .pl_1()
                         .pr_1()
                         .when(is_full_screen, |this| {
-                            this.child(left_dock_button).child(right_dock_button)
+                            this.child(agent_sources_rail_button)
+                                .child(agent_progress_rail_button)
                         })
-                        .child(full_screen_button)
+                        .when(!is_full_screen, |this| {
+                            this.child(split_panel_button).child(close_panel_button)
+                        })
                         .child(self.render_panel_options_menu(window, cx)),
                 )
                 .into_any_element()
@@ -6070,9 +6084,12 @@ impl AgentPanel {
                         .pr_1()
                         .when(can_create_entries, |this| this.child(new_thread_menu))
                         .when(is_full_screen, |this| {
-                            this.child(left_dock_button).child(right_dock_button)
+                            this.child(agent_sources_rail_button)
+                                .child(agent_progress_rail_button)
                         })
-                        .child(full_screen_button)
+                        .when(!is_full_screen, |this| {
+                            this.child(split_panel_button).child(close_panel_button)
+                        })
                         .child(self.render_panel_options_menu(window, cx)),
                 )
                 .into_any_element()
@@ -6472,13 +6489,15 @@ impl AgentPanel {
             source_row_controls,
             source_actions,
             guided_cards,
+            self.fullscreen_sources_rail_open,
+            self.fullscreen_progress_rail_open,
             status,
             cx,
         )
     }
 
     fn should_render_dx_launch_workspace_rails(&self, _cx: &App) -> bool {
-        false
+        self.fullscreen_sources_rail_open || self.fullscreen_progress_rail_open
     }
 
     fn render_dx_launch_sidebar_actions(

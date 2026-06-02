@@ -1,3 +1,24 @@
+[2026-06-02] - Native Panel Header And Agent Rail Correction
+
+CHANGED:
+- `crates\workspace\src\workspace.rs` now exposes focused side-panel split/close actions that operate on the active left or right dock without requiring a dock-owned overlay toolbar.
+- `crates\workspace\src\dock.rs` no longer renders the extra side-stack action row above panel content; split/close controls are now owned by the visible panel header surfaces.
+- `crates\agent_ui\src\agent_panel.rs` and `crates\agent_ui\src\dx_launch_workspace.rs` now distinguish Agent screen-dock fullscreen from bottom-left dock-panel opening, remove the redundant fullscreen toolbar button, and use Agent-owned source/progress rails in fullscreen mode.
+- `crates\project_panel\src\project_panel.rs`, `crates\icon_picker\src\icon_picker.rs`, `crates\font_panel\src\font_panel.rs`, `crates\media_panel\src\media_panel.rs`, `crates\shadcn_ui_panel\src\shadcn_ui_panel.rs`, and `crates\agent_ui\src\dx_style_panel\panel_view.rs` now place side-panel split/close actions in their native header/action areas.
+- `crates\sidebar\src\sidebar.rs` now persists chat sort mode and per-thread icon overrides, adds right-side sort/filter popovers to chat group labels, and lets each chat row open a Zed icon picker popover for a real `IconName` override.
+- `crates\sidebar\Cargo.toml` and `Cargo.lock` now include the needed `strum` dependency for iterating the icon registry.
+- `script\dx-workspace-ui-state-source.test.ts` now guards native panel-header controls, Agent-owned fullscreen rails, bottom-left Agent dock behavior, and sidebar chat sort/icon customization wiring.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\workspace\src\workspace.rs crates\workspace\src\dock.rs crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\dx_launch_workspace.rs crates\agent_ui\src\dx_style_panel\panel_view.rs crates\media_panel\src\media_panel.rs crates\shadcn_ui_panel\src\shadcn_ui_panel.rs crates\font_panel\src\font_panel.rs crates\icon_picker\src\icon_picker.rs crates\project_panel\src\project_panel.rs crates\sidebar\src\sidebar.rs`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-workspace-ui-state-source.test.ts script\dx-launch-workspace-source.test.ts script\dx-title-bar-source.test.ts script\zed-startup-reliability-source.test.ts`
+- `git diff --check`
+- `$env:CARGO_BUILD_JOBS='6'; just run` completed locked Zed and CLI builds, launched Zed process `15500`, and detected the main window.
+
+NOTES:
+- The first authorized launch attempt after adding sidebar icon iteration required a `Cargo.lock` refresh for the new workspace dependency; the second exposed a missing `Tooltip` import in the Style panel header; both are fixed.
+- Full arbitrary thread reordering between sections and custom icon color selection remain a larger schema-backed UX pass, separate from this real sort/filter/icon-override wiring.
+
 [2026-06-02] - Sidebar Agent Fullscreen And Dock Action Correction
 
 CHANGED:

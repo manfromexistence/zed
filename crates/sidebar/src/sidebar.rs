@@ -32,7 +32,6 @@ use gpui::{
     Focusable, KeyContext, ListState, Modifiers, Pixels, Render, SharedString, Task, TaskExt,
     WeakEntity, Window, WindowHandle, linear_color_stop, linear_gradient, list, prelude::*, px,
 };
-use itertools::Itertools;
 use menu::{
     Cancel, Confirm, SelectChild, SelectFirst, SelectLast, SelectNext, SelectParent, SelectPrevious,
 };
@@ -52,6 +51,7 @@ use std::mem;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
+use strum::IntoEnumIterator as _;
 use terminal_view::terminal_panel::TerminalPanel;
 use theme::ActiveTheme;
 use ui::{
@@ -191,6 +191,49 @@ enum SerializedSidebarView {
     History,
 }
 
+#[derive(Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum SidebarThreadSortMode {
+    #[default]
+    Latest,
+    Oldest,
+    TitleAscending,
+    TitleDescending,
+}
+
+impl SidebarThreadSortMode {
+    const ALL: [Self; 4] = [
+        Self::Latest,
+        Self::Oldest,
+        Self::TitleAscending,
+        Self::TitleDescending,
+    ];
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::Latest => "Latest",
+            Self::Oldest => "Oldest",
+            Self::TitleAscending => "A to Z",
+            Self::TitleDescending => "Z to A",
+        }
+    }
+
+    fn icon(self) -> IconName {
+        match self {
+            Self::Latest => IconName::Clock,
+            Self::Oldest => IconName::HistoryRerun,
+            Self::TitleAscending => IconName::ArrowUp,
+            Self::TitleDescending => IconName::ArrowDown,
+        }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+struct SerializedThreadIconOverride {
+    thread_id: ThreadId,
+    icon: IconName,
+}
+
 // Placeholder for ProjectGroupKey serialization
 // TODO: Implement proper serialization when MultiWorkspace state management is finalized
 #[derive(Default, Clone, Serialize, Deserialize)]
@@ -222,6 +265,10 @@ struct SerializedSidebar {
     activity_bar_expanded: bool,
     #[serde(default)]
     grid_shortcuts: Vec<SerializedSidebarGridShortcut>,
+    #[serde(default)]
+    thread_sort_mode: SidebarThreadSortMode,
+    #[serde(default)]
+    thread_icon_overrides: Vec<SerializedThreadIconOverride>,
 }
 
 fn default_next_space_number() -> usize {
@@ -875,6 +922,8 @@ pub struct Sidebar {
     space_page_start: usize,
     activity_bar_expanded: bool,
     grid_shortcuts: Vec<SerializedSidebarGridShortcut>,
+    thread_sort_mode: SidebarThreadSortMode,
+    thread_icon_overrides: HashMap<ThreadId, IconName>,
     grid_entry_cache:
         RefCell<HashMap<(WorkspaceScreenKind, Option<PathBuf>), Vec<SidebarGridEntry>>>,
     recent_projects_popover_handle: PopoverMenuHandle<SidebarRecentProjects>,
@@ -1022,6 +1071,8 @@ impl Sidebar {
             space_page_start: 0,
             activity_bar_expanded: false,
             grid_shortcuts: Vec::new(),
+            thread_sort_mode: SidebarThreadSortMode::default(),
+            thread_icon_overrides: HashMap::new(),
             grid_entry_cache: RefCell::default(),
             recent_projects_popover_handle: PopoverMenuHandle::default(),
             project_header_menu_handles: HashMap::new(),
@@ -2270,7 +2321,7 @@ impl Sidebar {
                     has_threads,
                 });
 
-                Self::push_entries_by_display_time(
+                self.push_entries_by_display_time(
                     &mut entries,
                     matched_terminals,
                     matched_threads,
@@ -2320,7 +2371,7 @@ impl Sidebar {
                     continue;
                 }
 
-                Self::push_entries_by_display_time(
+                self.push_entries_by_display_time(
                     &mut entries,
                     terminals,
                     threads,
@@ -2598,6 +2649,59 @@ impl Sidebar {
         icon: IconName,
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        let sidebar = cx.weak_entity();
+        let current_sort = self.thread_sort_mode;
+        let sort_menu = PopoverMenu::new(format!("sidebar-chat-sort-{label}"))
+            .trigger_with_tooltip(
+                IconButton::new(
+                    format!("sidebar-chat-sort-trigger-{label}"),
+                    current_sort.icon(),
+                )
+                .icon_size(IconSize::Small)
+                .icon_color(Color::Muted)
+                .selected_style(ButtonStyle::Tinted(TintColor::Accent)),
+                Tooltip::text("Sort and filter chats"),
+            )
+            .menu(move |window, cx| {
+                let sidebar = sidebar.clone();
+                Some(ContextMenu::build(window, cx, move |menu, _window, _cx| {
+                    let mut menu = menu.header("Sort Chats");
+                    for mode in SidebarThreadSortMode::ALL {
+                        let sidebar = sidebar.clone();
+                        let entry = ContextMenuEntry::new(mode.label())
+                            .icon(mode.icon())
+                            .icon_color(Color::Muted)
+                            .toggle(ui::IconPosition::Start, mode == current_sort)
+                            .handler(move |_window, cx| {
+                                sidebar
+                                    .update(cx, |sidebar, cx| {
+                                        sidebar.thread_sort_mode = mode;
+                                        sidebar.update_entries(cx);
+                                        sidebar.serialize(cx);
+                                        cx.notify();
+                                    })
+                                    .ok();
+                            });
+                        menu = menu.item(entry);
+                    }
+                    let sidebar = sidebar.clone();
+                    menu.separator().item(
+                        ContextMenuEntry::new("Filter Threads")
+                            .icon(IconName::MagnifyingGlass)
+                            .icon_color(Color::Muted)
+                            .handler(move |window, cx| {
+                                sidebar
+                                    .update(cx, |sidebar, cx| {
+                                        sidebar.activity_bar_expanded = true;
+                                        cx.notify();
+                                    })
+                                    .ok();
+                                window.dispatch_action(Box::new(FocusSidebarFilter), cx);
+                            }),
+                    )
+                }))
+            });
+
         h_flex()
             .w_full()
             .h(Tab::content_height(cx))
@@ -2616,6 +2720,17 @@ impl Sidebar {
                             .size(LabelSize::XSmall)
                             .color(Color::Muted),
                     ),
+            )
+            .child(
+                h_flex()
+                    .gap_1()
+                    .items_center()
+                    .child(
+                        Label::new(current_sort.label())
+                            .size(LabelSize::XSmall)
+                            .color(Color::Muted),
+                    )
+                    .child(sort_menu),
             )
             .into_any_element()
     }
@@ -5866,6 +5981,7 @@ impl Sidebar {
     }
 
     fn push_entries_by_display_time(
+        &self,
         entries: &mut Vec<ListEntry>,
         terminals: Vec<TerminalEntry>,
         threads: Vec<Arc<ThreadEntry>>,
@@ -5883,11 +5999,48 @@ impl Sidebar {
             }
         }
 
-        let row_entries = terminals
+        fn title(entry: &ListEntry) -> SharedString {
+            match entry {
+                ListEntry::Thread(thread) => thread.metadata.display_title(),
+                ListEntry::Terminal(terminal) => terminal.metadata.display_title(),
+                ListEntry::ProjectHeader { .. } => unreachable!(),
+            }
+        }
+
+        let mut row_entries = terminals
             .into_iter()
             .map(ListEntry::Terminal)
             .chain(threads.into_iter().map(ListEntry::Thread))
-            .sorted_by_key(|right| std::cmp::Reverse(display_time(right)));
+            .collect::<Vec<_>>();
+
+        row_entries.sort_by(|left, right| match self.thread_sort_mode {
+            SidebarThreadSortMode::Latest => {
+                display_time(right).cmp(&display_time(left)).then_with(|| {
+                    title(left)
+                        .as_ref()
+                        .to_lowercase()
+                        .cmp(&title(right).as_ref().to_lowercase())
+                })
+            }
+            SidebarThreadSortMode::Oldest => {
+                display_time(left).cmp(&display_time(right)).then_with(|| {
+                    title(left)
+                        .as_ref()
+                        .to_lowercase()
+                        .cmp(&title(right).as_ref().to_lowercase())
+                })
+            }
+            SidebarThreadSortMode::TitleAscending => title(left)
+                .as_ref()
+                .to_lowercase()
+                .cmp(&title(right).as_ref().to_lowercase())
+                .then_with(|| display_time(right).cmp(&display_time(left))),
+            SidebarThreadSortMode::TitleDescending => title(right)
+                .as_ref()
+                .to_lowercase()
+                .cmp(&title(left).as_ref().to_lowercase())
+                .then_with(|| display_time(right).cmp(&display_time(left))),
+        });
 
         for entry in row_entries {
             if let ListEntry::Thread(thread) = &entry {
@@ -6307,8 +6460,14 @@ impl Sidebar {
             cx.flag_value::<AgentThreadWorktreeLabelFlag>(),
         );
 
+        let overridden_icon = self
+            .thread_icon_overrides
+            .get(&thread.metadata.thread_id)
+            .copied();
         let (icon, icon_svg) = if is_draft {
             (IconName::Circle, None)
+        } else if let Some(icon) = overridden_icon {
+            (icon, None)
         } else {
             (thread.icon, thread.icon_from_external_svg.clone())
         };
@@ -6404,6 +6563,63 @@ impl Sidebar {
                             );
                         })
                     });
+                let icon_picker = {
+                    let sidebar = cx.weak_entity();
+                    PopoverMenu::new(format!("thread-icon-picker-menu-{ix}"))
+                        .trigger_with_tooltip(
+                            IconButton::new(("thread-icon-picker", ix), icon)
+                                .icon_size(IconSize::Small)
+                                .icon_color(Color::Muted)
+                                .selected_style(ButtonStyle::Tinted(TintColor::Accent)),
+                            Tooltip::text("Change Thread Icon"),
+                        )
+                        .menu(move |window, cx| {
+                            let sidebar = sidebar.clone();
+                            Some(ContextMenu::build(window, cx, move |menu, _window, _cx| {
+                                let mut menu = menu.header("Thread Icon");
+                                for icon_name in IconName::iter() {
+                                    let sidebar = sidebar.clone();
+                                    let entry = ContextMenuEntry::new(format!("{icon_name:?}"))
+                                        .icon(icon_name)
+                                        .icon_color(Color::Muted)
+                                        .toggle(ui::IconPosition::Start, icon_name == icon)
+                                        .handler(move |_window, cx| {
+                                            sidebar
+                                                .update(cx, |sidebar, cx| {
+                                                    sidebar
+                                                        .thread_icon_overrides
+                                                        .insert(thread_id_for_actions, icon_name);
+                                                    sidebar.grid_entry_cache.borrow_mut().clear();
+                                                    sidebar.update_entries(cx);
+                                                    sidebar.serialize(cx);
+                                                    cx.notify();
+                                                })
+                                                .ok();
+                                        });
+                                    menu = menu.item(entry);
+                                }
+                                let sidebar = sidebar.clone();
+                                menu.separator().item(
+                                    ContextMenuEntry::new("Reset Icon")
+                                        .icon(IconName::Close)
+                                        .icon_color(Color::Muted)
+                                        .handler(move |_window, cx| {
+                                            sidebar
+                                                .update(cx, |sidebar, cx| {
+                                                    sidebar
+                                                        .thread_icon_overrides
+                                                        .remove(&thread_id_for_actions);
+                                                    sidebar.grid_entry_cache.borrow_mut().clear();
+                                                    sidebar.update_entries(cx);
+                                                    sidebar.serialize(cx);
+                                                    cx.notify();
+                                                })
+                                                .ok();
+                                        }),
+                                )
+                            }))
+                        })
+                };
 
                 let contextual_action: Option<AnyElement> = if is_running {
                     Some(
@@ -6469,6 +6685,7 @@ impl Sidebar {
                 this.action_slot(
                     h_flex()
                         .gap_0p5()
+                        .child(icon_picker)
                         .child(rename_button)
                         .when_some(contextual_action, |this, action| this.child(action)),
                 )
@@ -9079,6 +9296,15 @@ impl WorkspaceSidebar for Sidebar {
             },
             activity_bar_expanded: self.activity_bar_expanded,
             grid_shortcuts: self.grid_shortcuts.clone(),
+            thread_sort_mode: self.thread_sort_mode,
+            thread_icon_overrides: self
+                .thread_icon_overrides
+                .iter()
+                .map(|(thread_id, icon)| SerializedThreadIconOverride {
+                    thread_id: *thread_id,
+                    icon: *icon,
+                })
+                .collect(),
         };
         serde_json::to_string(&serialized).ok()
     }
@@ -9117,6 +9343,12 @@ impl WorkspaceSidebar for Sidebar {
                 .grid_shortcuts
                 .into_iter()
                 .take(MAX_SIDEBAR_GRID_SHORTCUTS)
+                .collect();
+            self.thread_sort_mode = serialized.thread_sort_mode;
+            self.thread_icon_overrides = serialized
+                .thread_icon_overrides
+                .into_iter()
+                .map(|override_entry| (override_entry.thread_id, override_entry.icon))
                 .collect();
             if serialized.active_view == SerializedSidebarView::History {
                 cx.defer_in(window, |this, window, cx| {

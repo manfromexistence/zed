@@ -2278,7 +2278,41 @@ impl Render for MediaPanel {
                                                 }),
                                             ),
                                         )
-                                    }),
+                                    })
+                                    .child(
+                                        IconButton::new(
+                                            "media-panel-split-side-panel",
+                                            IconName::SplitAlt,
+                                        )
+                                        .shape(ui::IconButtonShape::Square)
+                                        .icon_size(IconSize::Small)
+                                        .tooltip(Tooltip::text("Split Panel"))
+                                        .on_click(
+                                            |_, window, cx| {
+                                                window.dispatch_action(
+                                                    Box::new(workspace::SplitActiveSidePanel),
+                                                    cx,
+                                                );
+                                            },
+                                        ),
+                                    )
+                                    .child(
+                                        IconButton::new(
+                                            "media-panel-close-side-panel",
+                                            IconName::Close,
+                                        )
+                                        .shape(ui::IconButtonShape::Square)
+                                        .icon_size(IconSize::Small)
+                                        .tooltip(Tooltip::text("Close Panel"))
+                                        .on_click(
+                                            |_, window, cx| {
+                                                window.dispatch_action(
+                                                    Box::new(workspace::CloseActiveSidePanel),
+                                                    cx,
+                                                );
+                                            },
+                                        ),
+                                    ),
                             ),
                     )
                     .child(self.filter_editor.clone()),

@@ -4121,6 +4121,28 @@ impl ProjectPanel {
                                 this.focus_handle(cx).focus(window, cx);
                                 cx.notify();
                             })),
+                    )
+                    .child(
+                        IconButton::new("project-panel-split-side-panel", IconName::SplitAlt)
+                            .shape(IconButtonShape::Square)
+                            .style(ButtonStyle::Subtle)
+                            .icon_size(IconSize::Small)
+                            .tooltip(Tooltip::text("Split Panel"))
+                            .on_click(|_, window, cx| {
+                                window
+                                    .dispatch_action(Box::new(workspace::SplitActiveSidePanel), cx);
+                            }),
+                    )
+                    .child(
+                        IconButton::new("project-panel-close-side-panel", IconName::Close)
+                            .shape(IconButtonShape::Square)
+                            .style(ButtonStyle::Subtle)
+                            .icon_size(IconSize::Small)
+                            .tooltip(Tooltip::text("Close Panel"))
+                            .on_click(|_, window, cx| {
+                                window
+                                    .dispatch_action(Box::new(workspace::CloseActiveSidePanel), cx);
+                            }),
                     ),
             )
             .into_any_element()

@@ -76,6 +76,8 @@ pub(crate) fn render_workspace_chrome(
     source_row_controls: Vec<DxSourceRowControl>,
     source_actions: AnyElement,
     guided_cards: AnyElement,
+    show_sources_rail: bool,
+    show_progress_rail: bool,
     status: DxLaunchWorkspaceStatus,
     cx: &mut App,
 ) -> AnyElement {
@@ -84,15 +86,19 @@ pub(crate) fn render_workspace_chrome(
         .size_full()
         .min_w_0()
         .bg(cx.theme().colors().panel_background)
-        .child(render_sources_rail(
-            sidebar_actions,
-            source_row_controls,
-            source_actions,
-            &status,
-            cx,
-        ))
+        .when(show_sources_rail, |this| {
+            this.child(render_sources_rail(
+                sidebar_actions,
+                source_row_controls,
+                source_actions,
+                &status,
+                cx,
+            ))
+        })
         .child(div().flex_1().min_w_0().size_full().child(center))
-        .child(render_right_rail(&status, guided_cards, cx))
+        .when(show_progress_rail, |this| {
+            this.child(render_right_rail(&status, guided_cards, cx))
+        })
         .into_any_element()
 }
 

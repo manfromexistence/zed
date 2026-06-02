@@ -342,6 +342,10 @@ actions!(
         ToggleLeftDock,
         /// Toggles the right dock.
         ToggleRightDock,
+        /// Splits the active side dock panel into the side dock stack.
+        SplitActiveSidePanel,
+        /// Closes or unstacks the active side dock panel.
+        CloseActiveSidePanel,
         /// Toggles zoom on the active pane.
         ToggleZoom,
         /// Toggles read-only mode for the active item (if supported by that item).
@@ -4273,6 +4277,70 @@ impl Workspace {
         })
     }
 
+    fn active_side_dock(&self, window: &Window, cx: &Context<Self>) -> Option<Entity<Dock>> {
+        if let Some(dock) = self.active_dock(window, cx)
+            && matches!(
+                dock.read(cx).position(),
+                DockPosition::Left | DockPosition::Right
+            )
+        {
+            return Some(dock.clone());
+        }
+
+        for dock in [&self.left_dock, &self.right_dock] {
+            let dock_read = dock.read(cx);
+            if !dock_read.is_open() {
+                continue;
+            }
+            if dock_read
+                .active_panel()
+                .is_some_and(|panel| panel.panel_focus_handle(cx).contains_focused(window, cx))
+            {
+                return Some(dock.clone());
+            }
+        }
+
+        [&self.left_dock, &self.right_dock]
+            .into_iter()
+            .find(|dock| {
+                let dock_read = dock.read(cx);
+                dock_read.is_open() && dock_read.active_panel().is_some()
+            })
+            .cloned()
+    }
+
+    fn split_active_side_panel(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {
+        let Some(dock) = self.active_side_dock(window, cx) else {
+            return false;
+        };
+        let Some(panel_id) = dock.read(cx).active_panel().map(|panel| panel.panel_id()) else {
+            return false;
+        };
+
+        let did_change = dock.update(cx, |dock, cx| dock.split_panel(panel_id, window, cx));
+        if did_change {
+            self.serialize_workspace(window, cx);
+        }
+        did_change
+    }
+
+    fn close_active_side_panel(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {
+        let Some(dock) = self.active_side_dock(window, cx) else {
+            return false;
+        };
+        let Some(panel_id) = dock.read(cx).active_panel().map(|panel| panel.panel_id()) else {
+            return false;
+        };
+
+        let did_change = dock.update(cx, |dock, cx| {
+            dock.close_or_unstack_panel(panel_id, window, cx)
+        });
+        if did_change {
+            self.serialize_workspace(window, cx);
+        }
+        did_change
+    }
+
     fn close_active_dock(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {
         if let Some(dock) = self.active_dock(window, cx).cloned() {
             self.save_open_dock_positions(cx);
@@ -7327,7 +7395,11 @@ impl Workspace {
                 let docks = serialized_workspace.docks;
 
                 for (position, dock, serialized_dock) in [
-                    (DockPosition::Right, workspace.right_dock.clone(), docks.right),
+                    (
+                        DockPosition::Right,
+                        workspace.right_dock.clone(),
+                        docks.right,
+                    ),
                     (DockPosition::Left, workspace.left_dock.clone(), docks.left),
                     (
                         DockPosition::Bottom,
@@ -7594,6 +7666,20 @@ impl Workspace {
             .on_action(cx.listener(
                 |workspace: &mut Workspace, _: &ToggleRightDock, window, cx| {
                     workspace.toggle_dock(DockPosition::Right, window, cx);
+                },
+            ))
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, _: &SplitActiveSidePanel, window, cx| {
+                    if !workspace.split_active_side_panel(window, cx) {
+                        cx.propagate();
+                    }
+                },
+            ))
+            .on_action(cx.listener(
+                |workspace: &mut Workspace, _: &CloseActiveSidePanel, window, cx| {
+                    if !workspace.close_active_side_panel(window, cx) {
+                        cx.propagate();
+                    }
                 },
             ))
             .on_action(cx.listener(

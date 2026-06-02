@@ -1,5 +1,6 @@
 use gpui::{Action, App, IntoElement, ScrollHandle, SharedString, Window};
-use ui::{IconName, WithScrollbar, prelude::*};
+use ui::{IconName, Tooltip, WithScrollbar, prelude::*};
+use workspace::{CloseActiveSidePanel, SplitActiveSidePanel};
 use zed_actions::dx_style::OpenGeneratorPreviewForContext;
 
 use super::{
@@ -61,12 +62,38 @@ pub(super) fn render_panel(
         )
 }
 fn panel_header() -> impl IntoElement {
-    h_flex().justify_between().gap_2().child(
-        h_flex()
-            .gap_1()
-            .child(Icon::new(IconName::Sparkle).size(IconSize::Small))
-            .child(Label::new("Style").size(LabelSize::Small)),
-    )
+    h_flex()
+        .justify_between()
+        .gap_2()
+        .child(
+            h_flex()
+                .gap_1()
+                .child(Icon::new(IconName::Sparkle).size(IconSize::Small))
+                .child(Label::new("Style").size(LabelSize::Small)),
+        )
+        .child(
+            h_flex()
+                .gap_1()
+                .items_center()
+                .child(
+                    IconButton::new("dx-style-panel-split-side-panel", IconName::SplitAlt)
+                        .shape(ui::IconButtonShape::Square)
+                        .icon_size(IconSize::Small)
+                        .tooltip(Tooltip::text("Split Panel"))
+                        .on_click(|_, window, cx| {
+                            window.dispatch_action(Box::new(SplitActiveSidePanel), cx);
+                        }),
+                )
+                .child(
+                    IconButton::new("dx-style-panel-close-side-panel", IconName::Close)
+                        .shape(ui::IconButtonShape::Square)
+                        .icon_size(IconSize::Small)
+                        .tooltip(Tooltip::text("Close Panel"))
+                        .on_click(|_, window, cx| {
+                            window.dispatch_action(Box::new(CloseActiveSidePanel), cx);
+                        }),
+                ),
+        )
 }
 fn style_summary(
     snapshot: &DxStylePanelSnapshot,

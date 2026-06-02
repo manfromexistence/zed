@@ -1693,8 +1693,6 @@ impl Render for Dock {
             let is_stacked = visible_panels.len() > 1;
             let visible_panel_count = visible_panels.len();
             let can_resize_stack = is_stacked && self.supports_panel_stack() && self.resizable(cx);
-            let dock_entity = cx.entity();
-            let workspace = self.workspace.clone();
             let create_resize_handle = || {
                 let handle = div()
                     .id("resize-handle")
@@ -1798,11 +1796,6 @@ impl Render for Dock {
                             |(stack_ix, (panel_ix, panel_id, panel))| {
                                 let is_highlighted = self.highlighted_panel_id == Some(panel_id);
                                 let stack_flex = self.stack_flex_for_panel(panel_id);
-                                let can_split_panel = self.can_split_panel(panel_id, cx);
-                                let dock_for_split = dock_entity.clone();
-                                let workspace_for_split = workspace.clone();
-                                let dock_for_close = dock_entity.clone();
-                                let workspace_for_close = workspace.clone();
                                 div()
                                     .relative()
                                     .min_h_0()
@@ -1834,86 +1827,6 @@ impl Render for Dock {
                                                 .ok();
                                         }),
                                     )
-                                    .when(self.supports_panel_stack(), |this| {
-                                        this.child(
-                                            h_flex()
-                                                .id(("dock-panel-stack-actions", panel_id))
-                                                .h(px(28.))
-                                                .w_full()
-                                                .flex_none()
-                                                .items_center()
-                                                .justify_end()
-                                                .gap_0p5()
-                                                .px_1()
-                                                .border_b_1()
-                                                .border_color(cx.theme().colors().border_variant)
-                                                .bg(cx.theme().colors().panel_background)
-                                                .child(
-                                                    IconButton::new(
-                                                        ("dock-panel-stack-split", panel_id),
-                                                        IconName::SplitAlt,
-                                                    )
-                                                    .icon_size(IconSize::Small)
-                                                    .disabled(!can_split_panel)
-                                                    .tooltip(Tooltip::text("Split Panel"))
-                                                    .on_click(move |_, window, cx| {
-                                                        let did_change = dock_for_split.update(
-                                                            cx,
-                                                            |dock, cx| {
-                                                                dock.split_panel(
-                                                                    panel_id, window, cx,
-                                                                )
-                                                            },
-                                                        );
-                                                        if did_change
-                                                            && let Some(workspace) =
-                                                                workspace_for_split.upgrade()
-                                                        {
-                                                            workspace.update(
-                                                                cx,
-                                                                |workspace, cx| {
-                                                                    workspace.serialize_workspace(
-                                                                        window, cx,
-                                                                    );
-                                                                },
-                                                            );
-                                                        }
-                                                    }),
-                                                )
-                                                .child(
-                                                    IconButton::new(
-                                                        ("dock-panel-stack-close", panel_id),
-                                                        IconName::Close,
-                                                    )
-                                                    .icon_size(IconSize::Small)
-                                                    .tooltip(Tooltip::text("Close Panel"))
-                                                    .on_click(move |_, window, cx| {
-                                                        let did_change = dock_for_close.update(
-                                                            cx,
-                                                            |dock, cx| {
-                                                                dock.close_or_unstack_panel(
-                                                                    panel_id, window, cx,
-                                                                )
-                                                            },
-                                                        );
-                                                        if did_change
-                                                            && let Some(workspace) =
-                                                                workspace_for_close.upgrade()
-                                                        {
-                                                            workspace.update(
-                                                                cx,
-                                                                |workspace, cx| {
-                                                                    workspace.serialize_workspace(
-                                                                        window, cx,
-                                                                    );
-                                                                },
-                                                            );
-                                                        }
-                                                    }),
-                                                )
-                                                .occlude(),
-                                        )
-                                    })
                                     .child(div().flex_1().min_h_0().w_full().child(
                                         panel.cached(
                                             StyleRefinement::default().v_flex().size_full(),

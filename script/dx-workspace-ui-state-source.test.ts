@@ -10,6 +10,13 @@ const historyManager = read("crates/workspace/src/history_manager.rs");
 const item = read("crates/workspace/src/item.rs");
 const pane = read("crates/workspace/src/pane.rs");
 const workspace = read("crates/workspace/src/workspace.rs");
+const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
+const sidebar = read("crates/sidebar/src/sidebar.rs");
+const iconPicker = read("crates/icon_picker/src/icon_picker.rs");
+const fontPanel = read("crates/font_panel/src/font_panel.rs");
+const mediaPanel = read("crates/media_panel/src/media_panel.rs");
+const uiPanel = read("crates/shadcn_ui_panel/src/shadcn_ui_panel.rs");
+const stylePanel = read("crates/agent_ui/src/dx_style_panel/panel_view.rs");
 
 const functionBody = (source: string, name: string) => {
   const start = source.indexOf(`fn ${name}(`);
@@ -189,10 +196,20 @@ test("side dock stack controls use real panel entries and preserve single-panel 
     /format!\(\s*"Remove from \{\} Dock Stack",\s*dock_position\.label\(\)\s*\)/s,
   );
   assert.match(panelButtonsRender, /"Show Only This Panel"/);
-  assert.match(dockRender, /"dock-panel-stack-actions"/);
-  assert.match(dockRender, /"dock-panel-stack-split"/);
-  assert.match(dockRender, /IconName::SplitAlt/);
-  assert.match(dockRender, /"dock-panel-stack-close"/);
+  assert.doesNotMatch(dockRender, /"dock-panel-stack-actions"/);
+  assert.doesNotMatch(dockRender, /"dock-panel-stack-split"/);
+  assert.doesNotMatch(dockRender, /"dock-panel-stack-close"/);
+  assert.match(workspace, /SplitActiveSidePanel/);
+  assert.match(workspace, /CloseActiveSidePanel/);
+  assert.match(workspace, /fn split_active_side_panel\(/);
+  assert.match(workspace, /fn close_active_side_panel\(/);
+  assert.match(agentPanel, /"agent-panel-split-side-panel"/);
+  assert.match(agentPanel, /"agent-panel-close-side-panel"/);
+  assert.match(iconPicker, /"icon-picker-split-side-panel"/);
+  assert.match(fontPanel, /"font-panel-split-side-panel"/);
+  assert.match(mediaPanel, /"media-panel-split-side-panel"/);
+  assert.match(uiPanel, /"shadcn-ui-split-side-panel"/);
+  assert.match(stylePanel, /"dx-style-panel-split-side-panel"/);
   assert.doesNotMatch(dockRender, /"dock-panel-inline-split"/);
   assert.doesNotMatch(dockRender, /"dock-panel-inline-close"/);
   assert.doesNotMatch(dockRender, /"dock-panel-inline-control-mask"/);
@@ -208,6 +225,28 @@ test("side dock stack controls use real panel entries and preserve single-panel 
   assert.match(workspace, /MAX_PANEL_STACK_STATE_JSON_BYTES/);
   assert.match(workspace, /stacked_panels: left_stacked_panels/);
   assert.match(workspace, /stacked_panels: right_stacked_panels/);
+});
+
+test("agent fullscreen uses agent rails while sidebar button remains dock-scoped", () => {
+  assert.match(agentPanel, /"agent-toolbar-toggle-sources-rail"/);
+  assert.match(agentPanel, /"agent-toolbar-toggle-progress-rail"/);
+  assert.match(agentPanel, /fullscreen_sources_rail_open/);
+  assert.match(agentPanel, /fullscreen_progress_rail_open/);
+  assert.match(agentPanel, /PanelEvent::ZoomOut/);
+  assert.match(agentPanel, /PanelEvent::ZoomIn/);
+  assert.doesNotMatch(agentPanel, /"agent-toolbar-toggle-left-dock"/);
+  assert.doesNotMatch(agentPanel, /"agent-toolbar-toggle-right-dock"/);
+  assert.doesNotMatch(agentPanel, /let full_screen_button =/);
+});
+
+test("sidebar chat groups expose persistent sort and icon override controls", () => {
+  assert.match(sidebar, /enum SidebarThreadSortMode/);
+  assert.match(sidebar, /thread_sort_mode: SidebarThreadSortMode/);
+  assert.match(sidebar, /thread_icon_overrides: HashMap<ThreadId, IconName>/);
+  assert.match(sidebar, /"sidebar-chat-sort-\{label\}"/);
+  assert.match(sidebar, /"thread-icon-picker"/);
+  assert.match(sidebar, /IconName::iter\(\)/);
+  assert.match(sidebar, /SerializedThreadIconOverride/);
 });
 
 test("agent layout preset keeps project, git, outline, and collab on the left", () => {

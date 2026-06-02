@@ -1498,12 +1498,54 @@ impl Render for IconPickerPanel {
                     .border_b_1()
                     .border_color(cx.theme().colors().border)
                     .child(
-                        h_flex().items_center().child(
-                            h_flex()
-                                .gap_1()
-                                .items_center()
-                                .child(Label::new("Icons").size(LabelSize::Small)),
-                        ),
+                        h_flex()
+                            .items_center()
+                            .justify_between()
+                            .child(
+                                h_flex()
+                                    .gap_1()
+                                    .items_center()
+                                    .child(Label::new("Icons").size(LabelSize::Small)),
+                            )
+                            .child(
+                                h_flex()
+                                    .gap_1()
+                                    .items_center()
+                                    .child(
+                                        IconButton::new(
+                                            "icon-picker-split-side-panel",
+                                            IconName::SplitAlt,
+                                        )
+                                        .shape(ui::IconButtonShape::Square)
+                                        .icon_size(IconSize::Small)
+                                        .tooltip(Tooltip::text("Split Panel"))
+                                        .on_click(
+                                            |_, window, cx| {
+                                                window.dispatch_action(
+                                                    Box::new(workspace::SplitActiveSidePanel),
+                                                    cx,
+                                                );
+                                            },
+                                        ),
+                                    )
+                                    .child(
+                                        IconButton::new(
+                                            "icon-picker-close-side-panel",
+                                            IconName::Close,
+                                        )
+                                        .shape(ui::IconButtonShape::Square)
+                                        .icon_size(IconSize::Small)
+                                        .tooltip(Tooltip::text("Close Panel"))
+                                        .on_click(
+                                            |_, window, cx| {
+                                                window.dispatch_action(
+                                                    Box::new(workspace::CloseActiveSidePanel),
+                                                    cx,
+                                                );
+                                            },
+                                        ),
+                                    ),
+                            ),
                     )
                     .child(self.filter_editor.clone()),
             )
