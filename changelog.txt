@@ -1,3 +1,14 @@
+[2026-06-03] - Core Side Panel Action Visibility
+
+CHANGED:
+- `crates\workspace\src\dock.rs` now keeps the shared side-panel split/close header controls visible for Project, Git, Outline, and Collab even when split is temporarily unavailable, while still routing clicks through the real panel-targeted workspace split/close methods.
+- `script\dx-workspace-ui-state-source.test.ts` now guards against reintroducing disabled hidden-looking split/close controls in those core side-panel headers.
+- `todo.txt` records the focused visibility fix for handoff.
+
+NOTES:
+- `just run` was not run because the latest instruction explicitly forbids it until the user says so.
+- `DX.txt` and the existing media-panel working-tree change remain outside this focused panel-control pass.
+
 [2026-06-03] - Core Side Panel Action Coverage
 
 CHANGED:

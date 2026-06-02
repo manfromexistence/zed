@@ -53,7 +53,7 @@ pub fn side_panel_header_controls(
     let can_split = workspace
         .upgrade()
         .is_some_and(|workspace| workspace.read(cx).can_split_side_panel_by_id(panel_id, cx));
-    let can_close = workspace
+    let panel_is_registered = workspace
         .upgrade()
         .is_some_and(|workspace| workspace.read(cx).contains_side_panel_by_id(panel_id, cx));
 
@@ -67,7 +67,6 @@ pub fn side_panel_header_controls(
                 .shape(IconButtonShape::Square)
                 .style(ButtonStyle::Subtle)
                 .icon_size(IconSize::Small)
-                .disabled(!can_split)
                 .tooltip(if can_split {
                     Tooltip::text("Split Panel")
                 } else {
@@ -89,8 +88,11 @@ pub fn side_panel_header_controls(
                 .shape(IconButtonShape::Square)
                 .style(ButtonStyle::Subtle)
                 .icon_size(IconSize::Small)
-                .disabled(!can_close)
-                .tooltip(Tooltip::text("Close Panel"))
+                .tooltip(if panel_is_registered {
+                    Tooltip::text("Close Panel")
+                } else {
+                    Tooltip::text("Panel is not available")
+                })
                 .on_click(move |_, window, cx| {
                     if let Some(workspace) = workspace.upgrade() {
                         workspace.update(cx, |workspace, cx| {

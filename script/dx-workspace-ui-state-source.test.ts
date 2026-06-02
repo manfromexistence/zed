@@ -260,6 +260,7 @@ test("side dock stack controls use real panel entries and preserve single-panel 
 });
 
 test("core side panels expose dock split and close controls in visible headers", () => {
+  const sidePanelHeaderControls = functionBody(dock, "side_panel_header_controls");
   const projectHeader = functionBody(projectPanel, "render_panel_header");
   const projectSelectionToolbar = functionBody(
     projectPanel,
@@ -298,6 +299,17 @@ test("core side panels expose dock split and close controls in visible headers",
   assert.match(
     gitRender,
     /if self\.commit_editor_expanded[\s\S]*render_expanded_commit_header\(cx\)/,
+  );
+
+  assert.doesNotMatch(
+    sidePanelHeaderControls,
+    /\.disabled\(!can_split\)|\.disabled\(!panel_is_registered\)/,
+    "core side-panel split/close buttons must stay visible in narrow headers",
+  );
+  assert.match(
+    sidePanelHeaderControls,
+    /contains_side_panel_by_id\(panel_id, cx\)/,
+    "close tooltip should still use real side-panel registration state",
   );
 });
 
