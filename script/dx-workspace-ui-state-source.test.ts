@@ -231,14 +231,20 @@ test("side dock stack controls use real panel entries and preserve single-panel 
 });
 
 test("agent fullscreen uses agent rails while sidebar button remains dock-scoped", () => {
+  const fullscreenCenter = functionBody(agentPanel, "render_fullscreen_agent_center");
+  const messageEditor = functionBody(threadView, "render_message_editor");
   assert.match(agentPanel, /"agent-toolbar-toggle-sources-rail"/);
   assert.match(agentPanel, /"agent-toolbar-toggle-progress-rail"/);
   assert.match(agentPanel, /fullscreen_sources_rail_open/);
   assert.match(agentPanel, /fullscreen_progress_rail_open/);
   assert.match(agentPanel, /fn render_fullscreen_agent_center\(/);
   assert.match(agentPanel, /"agent-fullscreen-center"/);
-  assert.match(agentPanel, /\.px_4\(\)/);
-  assert.match(agentPanel, /\.pb_3\(\)/);
+  assert.doesNotMatch(fullscreenCenter, /\.px_4\(\)/);
+  assert.doesNotMatch(fullscreenCenter, /\.pb_3\(\)/);
+  assert.doesNotMatch(fullscreenCenter, /max_content_width/);
+  assert.match(messageEditor, /\.pt_1\(\)/);
+  assert.match(messageEditor, /\.pb_1\(\)/);
+  assert.doesNotMatch(messageEditor, /\.border_t_1\(\)/);
   assert.match(threadView, /\.rounded_md\(\)/);
   assert.match(threadView, /\.shadow_sm\(\)/);
   assert.match(agentPanel, /PanelEvent::ZoomOut/);
@@ -252,7 +258,9 @@ test("sidebar chat groups expose persistent sort and icon override controls", ()
   assert.match(sidebar, /enum SidebarThreadSortMode/);
   assert.match(sidebar, /thread_sort_mode: SidebarThreadSortMode/);
   assert.match(sidebar, /thread_icon_overrides: HashMap<ThreadId, IconName>/);
-  assert.match(sidebar, /"dragged-sidebar-thread-preview"/);
+  assert.match(sidebar, /struct DraggedSidebarThread/);
+  assert.match(sidebar, /impl Render for DraggedSidebarThread[\s\S]*gpui::Empty/);
+  assert.doesNotMatch(sidebar, /"dragged-sidebar-thread-preview"/);
   assert.match(sidebar, /struct ThreadIconPickerMenu/);
   assert.match(sidebar, /"thread-icon-picker-grid"/);
   assert.match(sidebar, /"thread-icon-picker-grid-icons"/);
@@ -265,9 +273,26 @@ test("sidebar chat groups expose persistent sort and icon override controls", ()
 });
 
 test("agent rails and project badges keep compact production layout", () => {
+  const launchChrome = functionBody(dxLaunchWorkspace, "render_workspace_chrome");
+  const sourcesRail = functionBody(dxLaunchWorkspace, "render_sources_rail");
+  const progressRail = functionBody(dxLaunchWorkspace, "render_right_rail");
   assert.match(dxLaunchWorkspace, /fn progress_summary\(/);
   assert.match(dxLaunchWorkspace, /section_title\("Guided Actions", IconName::Sparkle\)/);
   assert.match(dxLaunchWorkspace, /section_title\("Source Tools", IconName::Paperclip\)/);
+  assert.match(launchChrome, /\.relative\(\)/);
+  assert.match(launchChrome, /\.child\(div\(\)\.size_full\(\)\.min_w_0\(\)\.child\(center\)\)/);
+  assert.match(sourcesRail, /\.absolute\(\)/);
+  assert.match(sourcesRail, /\.left_2\(\)/);
+  assert.match(sourcesRail, /\.rounded_lg\(\)/);
+  assert.match(sourcesRail, /\.shadow_md\(\)/);
+  assert.match(sourcesRail, /\.occlude\(\)/);
+  assert.match(progressRail, /\.absolute\(\)/);
+  assert.match(progressRail, /\.right_2\(\)/);
+  assert.match(progressRail, /\.rounded_lg\(\)/);
+  assert.match(progressRail, /\.shadow_md\(\)/);
+  assert.match(progressRail, /\.occlude\(\)/);
+  assert.doesNotMatch(sourcesRail, /\.border_r_1\(\)/);
+  assert.doesNotMatch(progressRail, /\.border_l_1\(\)/);
   assert.doesNotMatch(dxLaunchWorkspace, /section_title\("Token And Tool Slots"/);
   assert.doesNotMatch(dxLaunchWorkspace, /fn token_meter_slots\(/);
   assert.doesNotMatch(dxLaunchWorkspace, /fn background_task_state\(/);

@@ -18,6 +18,7 @@ mod group_context_token;
 mod group_registry;
 mod grouping_efficiency;
 pub(crate) mod panel;
+mod panel_cards;
 mod panel_metric;
 mod panel_view;
 mod readiness;

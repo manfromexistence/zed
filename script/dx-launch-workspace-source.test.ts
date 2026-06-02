@@ -75,6 +75,10 @@ test("DX launch workspace UI stays split by rail ownership", () => {
   assert.match(parent, /^mod style_panel;$/m);
   assert.match(parent, /^mod tool_history;$/m);
   assert.match(parent, /^mod www_evidence;$/m);
+  assert.match(parent, /struct DxLaunchDiagnosticsMenu/);
+  assert.match(parent, /fn diagnostics_menu\(status: DxLaunchWorkspaceStatus\)/);
+  assert.match(parent, /PopoverMenu::new\("dx-launch-diagnostics-trigger"\)/);
+  assert.match(parent, /Button::new\("dx-launch-diagnostics-button", "Diagnostics"\)/);
   assert.ok(
     lineCount("crates/agent_ui/src/dx_launch_workspace.rs") < 1000,
     "dx_launch_workspace.rs should stay a coordinator instead of owning every rail",

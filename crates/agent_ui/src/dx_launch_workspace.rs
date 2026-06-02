@@ -1,5 +1,8 @@
-use gpui::{AnyElement, App, SharedString, prelude::*};
-use ui::{IconName, prelude::*};
+use gpui::{
+    AnyElement, App, Context, DismissEvent, EventEmitter, FocusHandle, Focusable, Render,
+    SharedString, Window, prelude::*,
+};
+use ui::{IconName, PopoverMenu, Tooltip, prelude::*};
 
 use crate::dx_agent_bridge::DxAgentBridgeSnapshot;
 use crate::dx_check_score::DxCheckScoreSnapshot;
@@ -70,6 +73,99 @@ pub(crate) struct DxSourceRowControl {
     pub element: AnyElement,
 }
 
+struct DxLaunchDiagnosticsMenu {
+    status: DxLaunchWorkspaceStatus,
+    focus_handle: FocusHandle,
+}
+
+impl Focusable for DxLaunchDiagnosticsMenu {
+    fn focus_handle(&self, _cx: &App) -> FocusHandle {
+        self.focus_handle.clone()
+    }
+}
+
+impl EventEmitter<DismissEvent> for DxLaunchDiagnosticsMenu {}
+
+impl Render for DxLaunchDiagnosticsMenu {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let source_summary = self.status.source_sets.attachment_summary();
+
+        v_flex()
+            .id("dx-launch-diagnostics-menu")
+            .track_focus(&self.focus_handle)
+            .w(px(388.0))
+            .max_h_64()
+            .overflow_y_scroll()
+            .gap_2()
+            .rounded_md()
+            .border_1()
+            .border_color(cx.theme().colors().border)
+            .bg(cx.theme().colors().elevated_surface_background)
+            .p_2()
+            .child(section_title("Launch Status", IconName::Check))
+            .child(launch_status::launch_status_state(
+                &self.status.launch_status,
+                cx,
+            ))
+            .child(section_title("Launch Handoff", IconName::ListTodo))
+            .child(contracts::launch_contract_state(
+                &self.status.launch_contracts,
+                cx,
+            ))
+            .child(section_title("Launch Gate", IconName::TodoProgress))
+            .child(readiness::launch_readiness_state(
+                &self.status.launch_readiness,
+                cx,
+            ))
+            .child(section_title("Launch Audit", IconName::Sparkle))
+            .child(audit::launch_audit_state(&self.status.launch_audit, cx))
+            .child(section_title("Source Audit", IconName::Book))
+            .child(source_audit::launch_source_audit_state(
+                &self.status.source_audit,
+                cx,
+            ))
+            .child(section_title("WWW Evidence", IconName::Public))
+            .child(www_evidence::www_launch_evidence_state(
+                &self.status.www_evidence,
+                cx,
+            ))
+            .child(section_title("Launch Receipts", IconName::FileTextOutlined))
+            .child(launch_receipts::launch_receipt_review_state(
+                &self.status.launch_receipts,
+                cx,
+            ))
+            .child(section_title("Binary Cache", IconName::Sliders))
+            .child(binary_cache::binary_cache_state(
+                &self.status.binary_cache,
+                cx,
+            ))
+            .child(section_title("Agent Social", IconName::Link))
+            .child(agents::dx_agent_social_state(&self.status.agent_bridge, cx))
+            .child(section_title("Agent Receipts", IconName::FileTextOutlined))
+            .child(agents::dx_agent_receipt_state(
+                &self.status.agent_bridge,
+                cx,
+            ))
+            .child(section_title("Agent Providers", IconName::Server))
+            .child(agents::dx_agent_provider_state(
+                &self.status.agent_bridge,
+                cx,
+            ))
+            .child(section_title("Attach", IconName::Paperclip))
+            .child(sources::source_attachment_state(&source_summary, cx))
+            .child(section_title("Receipts", IconName::FileTextOutlined))
+            .child(sources::receipt_source_state(
+                &self.status.receipt_snapshot,
+                cx,
+            ))
+            .child(section_title("Tool History", IconName::Archive))
+            .child(tool_history::tool_history_state(
+                &self.status.tool_history,
+                cx,
+            ))
+    }
+}
+
 pub(crate) fn render_workspace_chrome(
     center: AnyElement,
     sidebar_actions: AnyElement,
@@ -81,11 +177,13 @@ pub(crate) fn render_workspace_chrome(
     status: DxLaunchWorkspaceStatus,
     cx: &mut App,
 ) -> AnyElement {
-    h_flex()
+    div()
         .id("dx-launch-workspace")
+        .relative()
         .size_full()
         .min_w_0()
         .bg(cx.theme().colors().panel_background)
+        .child(div().size_full().min_w_0().child(center))
         .when(show_sources_rail, |this| {
             this.child(render_sources_rail(
                 sidebar_actions,
@@ -95,7 +193,6 @@ pub(crate) fn render_workspace_chrome(
                 cx,
             ))
         })
-        .child(div().flex_1().min_w_0().size_full().child(center))
         .when(show_progress_rail, |this| {
             this.child(render_right_rail(&status, guided_cards, cx))
         })
@@ -111,14 +208,20 @@ fn render_sources_rail(
 ) -> AnyElement {
     v_flex()
         .id("dx-sources-rail")
-        .w(px(218.0))
-        .h_full()
-        .flex_none()
+        .absolute()
+        .left_2()
+        .top_2()
+        .bottom_2()
+        .w(px(246.0))
         .gap_2()
         .p_2()
-        .border_r_1()
+        .rounded_lg()
+        .border_1()
         .border_color(cx.theme().colors().border)
-        .bg(cx.theme().colors().tab_bar_background)
+        .bg(cx.theme().colors().elevated_surface_background)
+        .shadow_md()
+        .overflow_y_scroll()
+        .occlude()
         .child(section_title("Agent", IconName::ZedAgent))
         .child(sidebar_actions)
         .child(section_title("Sources", IconName::Book))
@@ -234,16 +337,23 @@ fn render_right_rail(
 ) -> AnyElement {
     v_flex()
         .id("dx-progress-rail")
-        .w(px(244.0))
-        .h_full()
-        .flex_none()
+        .absolute()
+        .right_2()
+        .top_2()
+        .bottom_2()
+        .w(px(284.0))
         .gap_2()
         .p_2()
-        .border_l_1()
+        .rounded_lg()
+        .border_1()
         .border_color(cx.theme().colors().border)
-        .bg(cx.theme().colors().tab_bar_background)
+        .bg(cx.theme().colors().elevated_surface_background)
+        .shadow_md()
+        .overflow_y_scroll()
+        .occlude()
         .child(section_title("Progress", IconName::TodoProgress))
         .child(progress_summary(status, cx))
+        .child(diagnostics_menu(status.clone()))
         .child(section_title("Guided Actions", IconName::Sparkle))
         .child(guided_cards)
         .child(section_title("Style", IconName::Sliders))
@@ -264,6 +374,26 @@ fn render_right_rail(
             &status.runtime_proof_status,
             cx,
         ))
+        .into_any_element()
+}
+
+fn diagnostics_menu(status: DxLaunchWorkspaceStatus) -> AnyElement {
+    PopoverMenu::new("dx-launch-diagnostics-trigger")
+        .trigger_with_tooltip(
+            Button::new("dx-launch-diagnostics-button", "Diagnostics")
+                .full_width()
+                .label_size(LabelSize::Small)
+                .color(Color::Muted)
+                .start_icon(Icon::new(IconName::Sliders).size(IconSize::Small)),
+            Tooltip::text("Open DX diagnostics"),
+        )
+        .menu(move |_window, cx| {
+            let status = status.clone();
+            Some(cx.new(|cx| DxLaunchDiagnosticsMenu {
+                status,
+                focus_handle: cx.focus_handle(),
+            }))
+        })
         .into_any_element()
 }
 

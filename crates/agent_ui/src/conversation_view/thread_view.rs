@@ -3712,15 +3712,13 @@ impl ThreadView {
 
         h_flex()
             .px_2()
-            .pt_2()
-            .pb_3()
+            .pt_1()
+            .pb_1()
             .bg(cx.theme().colors().panel_background)
             .justify_center()
             .map(|this| {
                 if has_messages {
                     this.on_action(cx.listener(Self::expand_message_editor))
-                        .border_t_1()
-                        .border_color(cx.theme().colors().border)
                         .when(editor_expanded, |this| this.h(vh(0.8, window)))
                 } else {
                     this.flex_1().size_full()

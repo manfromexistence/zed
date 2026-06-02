@@ -4033,6 +4033,7 @@ test("DX Style has a real right-dock GPUI shell", () => {
   const sourceDigest = read("crates/agent_ui/src/dx_style_panel/source_digest.rs");
   const activeContext = read("crates/agent_ui/src/dx_style_panel/active_context.rs");
   const panel = read("crates/agent_ui/src/dx_style_panel/panel.rs");
+  const panelCards = read("crates/agent_ui/src/dx_style_panel/panel_cards.rs");
   const panelMetric = read("crates/agent_ui/src/dx_style_panel/panel_metric.rs");
   const panelView = read("crates/agent_ui/src/dx_style_panel/panel_view.rs");
   const surfaceScript = read("crates/web_preview/src/dx_style_generator_surface/script.rs");
@@ -4050,6 +4051,7 @@ test("DX Style has a real right-dock GPUI shell", () => {
   assert.match(root, /mod grouping_efficiency/);
   assert.match(root, /mod group_registry/);
   assert.match(root, /mod editor_write_bridge/);
+  assert.match(root, /mod panel_cards/);
   assert.match(root, /mod panel_view/);
   assert.match(root, /mod panel_metric/);
   assert.match(root, /mod receipt_roots/);
@@ -4393,28 +4395,37 @@ test("DX Style has a real right-dock GPUI shell", () => {
   assert.match(panel, /panel_view::render_panel/);
   assert.match(panelMetric, /pub\(super\) fn metric/);
   assert.match(panelMetric, /max_w\(px\(190\.0\)\)/);
-  assert.match(panelView, /OpenGeneratorPreviewForContext/);
+  assert.match(panelCards, /OpenGeneratorPreviewForContext/);
   assert.match(panelView, /source_context_json/);
   assert.match(panelView, /STYLE_PANEL_ROW_LIMIT: usize = 13/);
   assert.match(panelView, /take\(STYLE_PANEL_ROW_LIMIT\)/);
   assert.match(panelView, /can_open_generator/);
-  assert.match(panelView, /active_context\.can_open_generator\(\)/);
-  assert.match(panelView, /Target/);
-  assert.match(panelView, /Web Preview/);
-  assert.match(panelView, /Generators/);
-  assert.match(panelView, /Apply/);
-  assert.match(panelView, /Gate/);
-  assert.match(panelView, /Generator/);
-  assert.match(panelView, /css_generator/);
-  assert.match(panelView, /active_style_target/);
+  assert.match(panelView, /snapshot\.web_preview_bridge_ready/);
+  assert.doesNotMatch(panelView, /active_context\.can_open_generator\(\)/);
+  assert.match(panelView, /generator_host_card/);
+  assert.match(panelView, /style_context_card/);
+  assert.match(panelView, /readiness_card/);
+  assert.match(panelView, /filter\(\|row\| row\.label != "Native Sidebar"\)/);
+  assert.match(panelCards, /"dx-style-panel-generator-host"/);
+  assert.match(panelCards, /"dx-style-panel-context-card"/);
+  assert.match(panelCards, /"dx-style-panel-readiness-card"/);
+  assert.match(panelCards, /Target/);
+  assert.match(panelCards, /Generators/);
+  assert.match(panelCards, /Apply/);
+  assert.match(panelCards, /Gate/);
+  assert.match(panelCards, /Generator/);
+  assert.match(panelCards, /Span/);
+  assert.match(panelCards, /active_context\.span_byte_range\(\)/);
+  assert.match(panelCards, /active_style_target/);
   assert.doesNotMatch(panelView, /receipt\.edit_count/);
   assert.doesNotMatch(panelView, /receipt\.edits\.first\(\)/);
   assert.match(surfaceScript, /Structured edit previews/);
   assert.match(surfaceScript, /summary\.edit_previews/);
-  assert.match(panelView, /disabled\(!can_open_generator\)/);
-  assert.doesNotMatch(panelView, /disabled\(!snapshot\.web_preview_bridge_ready\)/);
+  assert.match(panelCards, /disabled\(!can_open_generator\)/);
+  assert.doesNotMatch(panelCards, /disabled\(!snapshot\.web_preview_bridge_ready\)/);
   assert.doesNotMatch(panel, /web_preview::|WebPreviewView/);
   assert.doesNotMatch(panelView, /web_preview::|WebPreviewView/);
+  assert.doesNotMatch(panelCards, /web_preview::|WebPreviewView/);
   assert.ok(
     lineCount("crates/web_preview/src/dx_style_generator_surface/source_apply_session_script.rs") <
       90,
@@ -4438,6 +4449,7 @@ test("DX Style has a real right-dock GPUI shell", () => {
   assert.ok(lineCount("crates/agent_ui/src/dx_style_panel/receipt_review.rs") < 260);
   assert.ok(lineCount("crates/agent_ui/src/dx_style_panel/active_context.rs") < 400);
   assert.ok(lineCount("crates/agent_ui/src/dx_style_panel/panel_metric.rs") < 60);
+  assert.ok(lineCount("crates/agent_ui/src/dx_style_panel/panel_cards.rs") < 180);
   assert.ok(lineCount("crates/agent_ui/src/dx_style_panel/panel_view.rs") < 240);
 });
 
@@ -4448,6 +4460,7 @@ test("Zed Style rail surfaces source-only DX Style readiness", () => {
     "crates/agent_ui/src/dx_style_panel/readiness/expected_files.rs",
   );
   const rail = read("crates/agent_ui/src/dx_launch_workspace/style_panel.rs");
+  const panelCards = read("crates/agent_ui/src/dx_style_panel/panel_cards.rs");
   const panelView = read("crates/agent_ui/src/dx_style_panel/panel_view.rs");
 
   assert.match(panel, /^mod readiness;$/m);
@@ -4498,7 +4511,7 @@ test("Zed Style rail surfaces source-only DX Style readiness", () => {
     rail,
     /Button::new\(\s*"dx-style-open-generator-preview",\s*"Open Web Preview Generators",\s*\)/s,
   );
-  assert.match(panelView, /"Open Web Preview Generators"/);
+  assert.match(panelCards, /"Open Web Preview Generators"/);
   assert.doesNotMatch(rail, /IconButton::new/);
   assert.ok(lineCount("crates/agent_ui/src/dx_style_panel/readiness.rs") < 380);
   assert.ok(

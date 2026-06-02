@@ -6502,22 +6502,12 @@ impl AgentPanel {
         center: AnyElement,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        let max_content_width = AgentSettings::get_global(cx).max_content_width;
         div()
             .id("agent-fullscreen-center")
             .size_full()
             .min_w_0()
             .bg(cx.theme().colors().panel_background)
-            .px_4()
-            .pb_3()
-            .child(
-                div()
-                    .size_full()
-                    .min_w_0()
-                    .mx_auto()
-                    .when_some(max_content_width, |this, max_w| this.max_w(max_w))
-                    .child(center),
-            )
+            .child(div().size_full().min_w_0().child(center))
             .into_any_element()
     }
 

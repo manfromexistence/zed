@@ -620,42 +620,8 @@ struct DraggedSidebarThread {
 }
 
 impl Render for DraggedSidebarThread {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        v_flex()
-            .id("dragged-sidebar-thread-preview")
-            .w(px(220.0))
-            .gap_0p5()
-            .rounded_md()
-            .border_1()
-            .border_color(cx.theme().colors().border)
-            .bg(cx.theme().colors().elevated_surface_background)
-            .shadow_md()
-            .p_2()
-            .child(
-                h_flex()
-                    .gap_2()
-                    .min_w_0()
-                    .items_center()
-                    .child(
-                        Icon::new(self.icon)
-                            .size(IconSize::Small)
-                            .color(Color::Accent),
-                    )
-                    .child(
-                        Label::new(self.label.clone())
-                            .size(LabelSize::Small)
-                            .color(Color::Default)
-                            .truncate(),
-                    ),
-            )
-            .when_some(self.subtitle.clone(), |this, subtitle| {
-                this.child(
-                    Label::new(subtitle)
-                        .size(LabelSize::XSmall)
-                        .color(Color::Muted)
-                        .truncate(),
-                )
-            })
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        gpui::Empty
     }
 }
 
@@ -725,12 +691,16 @@ impl Render for ThreadIconPickerMenu {
                     .flex_wrap()
                     .gap_1()
                     .children(icons.into_iter().map(|icon_name| {
-                        IconButton::new(("thread-icon-picker-grid-icon", icon_name), icon_name)
-                            .shape(IconButtonShape::Square)
-                            .icon_size(IconSize::Small)
-                            .toggle_state(icon_name == self.selected_icon)
-                            .selected_style(ButtonStyle::Tinted(TintColor::Accent))
-                            .on_click(cx.listener(move |this, _, _window, cx| {
+                        IconButton::new(
+                            format!("thread-icon-picker-grid-icon-{icon_name:?}"),
+                            icon_name,
+                        )
+                        .shape(IconButtonShape::Square)
+                        .icon_size(IconSize::Small)
+                        .toggle_state(icon_name == self.selected_icon)
+                        .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+                        .on_click(cx.listener(
+                            move |this, _, _window, cx| {
                                 this.sidebar
                                     .update(cx, |sidebar, cx| {
                                         sidebar
@@ -743,7 +713,8 @@ impl Render for ThreadIconPickerMenu {
                                     })
                                     .ok();
                                 cx.emit(DismissEvent);
-                            }))
+                            },
+                        ))
                     })),
             )
     }
@@ -6698,7 +6669,7 @@ impl Sidebar {
                                 .selected_style(ButtonStyle::Tinted(TintColor::Accent)),
                             Tooltip::text("Change Thread Icon"),
                         )
-                        .menu(move |window, cx| {
+                        .menu(move |_window, cx| {
                             Some(cx.new(|cx| ThreadIconPickerMenu {
                                 sidebar: sidebar.clone(),
                                 thread_id: thread_id_for_actions,
