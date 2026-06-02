@@ -1,4 +1,5 @@
 mod generated_metadata;
+mod generated_video_frame;
 mod metadata;
 mod metadata_probe;
 

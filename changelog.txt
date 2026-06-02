@@ -1,3 +1,25 @@
+[2026-06-02] - Project Panel Managed Video Frame Metadata
+
+ADDED:
+- `crates\project_panel\src\media_preview\generated_video_frame.rs` now owns managed video center-frame generation for the project-panel media shelf, using direct ffprobe/ffmpeg argument vectors and Zed's app-owned temp cache.
+
+CHANGED:
+- `crates\project_panel\src\media_preview\generated_metadata.rs` now selects missing video frame previews as bounded generated metadata jobs alongside missing audio durations, filters before applying the job cap, and keeps automatic generated media work limited to 64 MB files.
+- `crates\project_panel\src\project_panel.rs` now skips automatic generated media metadata for remote projects and awaits async collection inside the existing background task.
+- `crates\project_panel\Cargo.toml` now depends on the workspace `paths` crate so generated video frames live under Zed-managed cache paths instead of user project folders.
+- `script\dx-project-panel-source.test.ts` now guards managed video frame extraction, direct argv/no-shell execution, remote-project skipping, low file-size bounds, cache-path ownership, and no render-path media tool execution.
+- `todo.txt` now records that video frame extraction is source-wired while runtime ffmpeg/ffprobe proof and live UI validation remain unclaimed.
+
+PASSED:
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-handoff-source-guard-registry.test.ts script\dx-project-panel-source.test.ts`
+- `rustfmt --check crates\project_panel\src\media_preview.rs crates\project_panel\src\media_preview\generated_metadata.rs crates\project_panel\src\media_preview\generated_video_frame.rs crates\project_panel\src\project_panel.rs`
+- `git diff --check -- crates/project_panel/Cargo.toml crates/project_panel/src/media_preview.rs crates/project_panel/src/media_preview/generated_metadata.rs crates/project_panel/src/media_preview/generated_video_frame.rs crates/project_panel/src/project_panel.rs script/dx-project-panel-source.test.ts todo.txt changelog.txt`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" crates\project_panel\Cargo.toml crates\project_panel\src\media_preview.rs crates\project_panel\src\media_preview\generated_metadata.rs crates\project_panel\src\media_preview\generated_video_frame.rs crates\project_panel\src\project_panel.rs script\dx-project-panel-source.test.ts todo.txt changelog.txt` returned no conflict markers.
+
+NOTES:
+- No `just run`, Cargo, build, server, browser automation, or actual ffmpeg/ffprobe runtime extraction was run for this source-only checkpoint.
+- Image cards still render directly from file paths, video cards now have a managed generated center-frame path when runtime tools are available, and audio cards keep deterministic gradient rectangles with generated duration metadata when available.
+
 [2026-06-02] - Project Panel Background Audio Metadata
 
 ADDED:

@@ -466,6 +466,9 @@ test("project panel media preview renders direct image previews and video frames
   const generatedMetadata = read(
     "crates/project_panel/src/media_preview/generated_metadata.rs",
   );
+  const generatedVideoFrame = read(
+    "crates/project_panel/src/media_preview/generated_video_frame.rs",
+  );
   const metadataProbe = read("crates/project_panel/src/media_preview/metadata_probe.rs");
   const projectPanelCargo = read("crates/project_panel/Cargo.toml");
   const projectPanel = read("crates/project_panel/src/project_panel.rs");
@@ -491,6 +494,30 @@ test("project panel media preview renders direct image previews and video frames
   const collectGeneratedMediaMetadata = functionBody(
     generatedMetadata,
     "collect_generated_media_metadata",
+  );
+  const generateVideoCenterFrame = functionBody(
+    generatedVideoFrame,
+    "generate_video_center_frame",
+  );
+  const managedVideoFrameCachePath = functionBody(
+    generatedVideoFrame,
+    "managed_video_frame_cache_path",
+  );
+  const probeVideoDurationSeconds = functionBody(
+    generatedVideoFrame,
+    "probe_video_duration_seconds",
+  );
+  const extractVideoCenterFrame = functionBody(
+    generatedVideoFrame,
+    "extract_video_center_frame",
+  );
+  const runMediaCommandOutput = functionBody(
+    generatedVideoFrame,
+    "run_media_command_output",
+  );
+  const mediaBinaryIsShell = functionBody(
+    generatedVideoFrame,
+    "media_binary_is_shell",
   );
   const audioDurationSecondsForPath = functionBody(
     generatedMetadata,
@@ -522,6 +549,7 @@ test("project panel media preview renders direct image previews and video frames
 
   assert.match(media, /mod metadata;/);
   assert.match(media, /mod generated_metadata;/);
+  assert.match(media, /mod generated_video_frame;/);
   assert.match(media, /mod metadata_probe;/);
   assert.match(media, /pub\(crate\) use metadata::GeneratedMediaMetadataIndex;/);
   assert.match(
@@ -544,13 +572,22 @@ test("project panel media preview renders direct image previews and video frames
     "generated metadata background work must have a source-owned runner schema",
   );
   assert.match(generatedMetadata, /const MAX_GENERATED_MEDIA_METADATA_JOBS: usize = 8;/);
-  assert.match(generatedMetadata, /const MAX_GENERATED_MEDIA_METADATA_FILE_BYTES: u64 = /);
+  assert.match(
+    generatedMetadata,
+    /const MAX_GENERATED_MEDIA_METADATA_FILE_BYTES: u64 = 64 \* 1024 \* 1024;/,
+    "automatic generated media metadata must stay bounded for busy low-end machines",
+  );
   assert.match(generatedMetadata, /pub\(crate\) struct GeneratedMediaMetadataJobBatch/);
   assert.match(generatedMetadata, /struct GeneratedMediaMetadataJob/);
   assert.match(
     projectPanelCargo,
     /rodio\.workspace = true/,
     "project panel generated audio duration extraction must use the existing workspace rodio dependency",
+  );
+  assert.match(
+    projectPanelCargo,
+    /paths\.workspace = true/,
+    "project panel generated video frames must write only under Zed's managed cache/data paths",
   );
   assert.match(metadata, /pub\(super\) const MAX_PROJECT_PANEL_MEDIA_METADATA_MANIFEST_BYTES/);
   assert.match(
@@ -617,13 +654,33 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     buildGeneratedMediaMetadataJobBatch,
-    /items\.iter\(\)[\s\S]*take\(MAX_GENERATED_MEDIA_METADATA_JOBS \+ 1\)[\s\S]*MediaPreviewKind::Audio[\s\S]*duration_label\.is_none\(\)[\s\S]*item\.size <= MAX_GENERATED_MEDIA_METADATA_FILE_BYTES/,
-    "generated metadata jobs must be bounded and currently select only missing audio durations that are small enough to inspect",
+    /items\s*\{[\s\S]*jobs\.len\(\) >= MAX_GENERATED_MEDIA_METADATA_JOBS[\s\S]*MediaPreviewKind::Audio[\s\S]*duration_label\.is_none\(\)[\s\S]*item\.size <= MAX_GENERATED_MEDIA_METADATA_FILE_BYTES/,
+    "generated metadata jobs must be bounded and select missing audio durations that are small enough to inspect",
+  );
+  assert.doesNotMatch(
+    buildGeneratedMediaMetadataJobBatch,
+    /items\.iter\(\)\.take\(MAX_GENERATED_MEDIA_METADATA_JOBS \+ 1\)/,
+    "generated metadata job selection must filter all already-bounded preview items before applying the job cap",
+  );
+  assert.match(
+    buildGeneratedMediaMetadataJobBatch,
+    /MediaPreviewKind::Video[\s\S]*video_frame_preview\.is_none\(\)[\s\S]*item\.size <= MAX_GENERATED_MEDIA_METADATA_FILE_BYTES/,
+    "generated metadata jobs must select missing video frame previews without touching videos that already have manifest or sidecar frames",
   );
   assert.match(
     collectGeneratedMediaMetadata,
     /batch\.jobs[\s\S]*audio_duration_seconds_for_path[\s\S]*GeneratedMediaMetadataRecord[\s\S]*duration_seconds: Some\(duration_seconds\)[\s\S]*GeneratedMediaMetadataIndex::from_records/,
     "generated metadata collection must turn successful background audio duration reads into generated metadata records",
+  );
+  assert.match(
+    collectGeneratedMediaMetadata,
+    /generate_video_center_frame\(&job\.path, &job\.path_text, job\.size\)\.await[\s\S]*GeneratedMediaMetadataRecord[\s\S]*center_frame_path: Some\(center_frame_path\)/,
+    "generated metadata collection must turn successful background video extraction into center-frame metadata records",
+  );
+  assert.match(
+    generatedMetadata,
+    /pub\(crate\) async fn collect_generated_media_metadata/,
+    "generated metadata collection must be async so external video tooling never blocks the ProjectPanel entity task",
   );
   assert.match(
     audioDurationSecondsForPath,
@@ -633,7 +690,52 @@ test("project panel media preview renders direct image previews and video frames
   assert.doesNotMatch(
     generatedMetadata,
     /std::process|Command::new|\.status\(|\.output\(|\.spawn\(|ffmpeg|ffprobe|fs::write|File::create|create_dir_all|remove_file|rename\(|copy\(/,
-    "generated metadata background slice must not execute external tools or write files",
+    "generated metadata job coordinator must delegate managed video extraction instead of embedding process or write logic",
+  );
+  assert.match(
+    generatedVideoFrame,
+    /const PROJECT_PANEL_GENERATED_VIDEO_FRAME_DIR: &str = "project-panel-media-frames";/,
+    "generated video frames must live under a named app-owned cache directory",
+  );
+  assert.match(
+    generatedVideoFrame,
+    /const DX_FFMPEG_PATH_ENV: &str = "DX_FFMPEG_PATH";[\s\S]*const DX_FFPROBE_PATH_ENV: &str = "DX_FFPROBE_PATH";/,
+    "generated video frame extraction must honor the same configurable ffmpeg/ffprobe environment contract as DX media tooling",
+  );
+  assert.match(
+    generateVideoCenterFrame,
+    /managed_video_frame_cache_path\(path_text, size\)[\s\S]*probe_video_duration_seconds\(source_path\)\.await[\s\S]*extract_video_center_frame\(source_path, &temporary_output_path, center_seconds\)\.await/,
+    "video center-frame generation must derive a managed cache path, probe duration, then extract the center timestamp",
+  );
+  assert.match(
+    managedVideoFrameCachePath,
+    /paths::temp_dir\(\)[\s\S]*PROJECT_PANEL_GENERATED_VIDEO_FRAME_DIR[\s\S]*stable_video_frame_cache_key\(path_text, size\)/,
+    "video frame cache paths must be app-owned and stable from source identity rather than written beside user files",
+  );
+  assert.match(
+    probeVideoDurationSeconds,
+    /run_media_command_output\([\s\S]*ffprobe_binary\(\)[\s\S]*"-show_entries"[\s\S]*"format=duration"[\s\S]*source_path/,
+    "video duration probing must use direct ffprobe arguments for center-frame timestamps",
+  );
+  assert.match(
+    extractVideoCenterFrame,
+    /run_media_command_output\([\s\S]*ffmpeg_binary\(\)[\s\S]*"-nostdin"[\s\S]*"-ss"[\s\S]*format_video_timestamp\(center_seconds\)[\s\S]*"-frames:v"[\s\S]*"1"[\s\S]*"-vf"[\s\S]*"scale=480:-2"/,
+    "video frame extraction must use direct ffmpeg arguments with no shell and a bounded preview scale",
+  );
+  assert.match(
+    runMediaCommandOutput,
+    /util::command::new_command\(program\)[\s\S]*command\.stdin\(Stdio::null\(\)\)[\s\S]*command\.kill_on_drop\(true\)[\s\S]*command\.output\(\)\.await/,
+    "media commands must use Zed's Windows-safe command wrapper and be killed if their future is dropped",
+  );
+  assert.match(
+    mediaBinaryIsShell,
+    /"cmd"[\s\S]*"powershell"[\s\S]*"pwsh"[\s\S]*"sh"[\s\S]*"bash"[\s\S]*"zsh"/,
+    "configured media tool binaries must reject shell executables before command execution",
+  );
+  assert.doesNotMatch(
+    generatedVideoFrame,
+    /std::process|Command::new|new_std_command|\.status\(|\.spawn\(|fs::write|File::create|copy\(/,
+    "generated video frame extraction must avoid shells, std process spawning, and user-project writes",
   );
   assert.match(
     media,
@@ -901,11 +1003,17 @@ test("project panel media preview renders direct image previews and video frames
     "active media shelf rendering must schedule missing generated metadata without doing that work in the render body",
   );
   assert.match(ensureGeneratedMediaMetadata, /build_generated_media_metadata_job_batch\(&preview\.items\)/);
+  assertBefore({
+    body: ensureGeneratedMediaMetadata,
+    before: /self\.project\.read\(cx\)\.is_remote\(\)/,
+    after: /build_generated_media_metadata_job_batch\(&preview\.items\)/,
+    message: "automatic generated media metadata must skip remote projects before local path decoding/tooling",
+  });
   assert.match(ensureGeneratedMediaMetadata, /media_metadata_generation_tasks[\s\S]*contains_key\(&cache_key\)/);
   assert.match(ensureGeneratedMediaMetadata, /cx\.spawn\(async move \|this, cx\|/);
   assert.match(
     ensureGeneratedMediaMetadata,
-    /background_spawn\([\s\S]*async move \{[\s\S]*collect_generated_media_metadata\(batch\)/,
+    /background_spawn\([\s\S]*async move \{[\s\S]*collect_generated_media_metadata\(batch\)\.await/,
     "generated metadata work must run through a background task",
   );
   assert.match(

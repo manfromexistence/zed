@@ -7042,6 +7042,10 @@ impl ProjectPanel {
             return;
         }
 
+        if self.project.read(cx).is_remote() {
+            return;
+        }
+
         let Some(batch) = media_preview::build_generated_media_metadata_job_batch(&preview.items)
         else {
             return;
@@ -7049,9 +7053,9 @@ impl ProjectPanel {
 
         let task = cx.spawn(async move |this, cx| {
             let generated_metadata = cx
-                .background_spawn(
-                    async move { media_preview::collect_generated_media_metadata(batch) },
-                )
+                .background_spawn(async move {
+                    media_preview::collect_generated_media_metadata(batch).await
+                })
                 .await;
 
             this.update(cx, |this, cx| {
