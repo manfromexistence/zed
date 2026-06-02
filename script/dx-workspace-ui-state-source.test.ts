@@ -188,6 +188,7 @@ test("side dock stack controls use real panel entries and preserve single-panel 
   assert.match(dock, /pub fn show_single_panel\(/);
 
   const activatePanel = functionBody(dock, "activate_panel");
+  const canSplitPanel = functionBody(dock, "can_split_panel");
   const restoreStackedPanels = functionBody(dock, "restore_stacked_panels");
   assertBefore({
     body: activatePanel,
@@ -206,6 +207,13 @@ test("side dock stack controls use real panel entries and preserve single-panel 
   assert.match(dockRender, /\.flex_1\(\)/);
   assert.match(dockRender, /\.border_t_1\(\)/);
   assert.match(dockRender, /dock\.activate_panel\(panel_ix, window, cx\);/);
+  assertBefore({
+    body: canSplitPanel,
+    before: /self\.panel_index_for_id\(panel_id\)\.is_none\(\)/,
+    after: /self\.first_stack_candidate_for\(panel_id, cx\)\.is_none\(\)/,
+    message:
+      "split controls must only enable for panels contained in the current dock",
+  });
 
   const panelButtonsRender = functionBody(
     dock.slice(dock.indexOf("impl Render for PanelButtons")),
@@ -249,6 +257,48 @@ test("side dock stack controls use real panel entries and preserve single-panel 
   assert.match(workspace, /MAX_PANEL_STACK_STATE_JSON_BYTES/);
   assert.match(workspace, /stacked_panels: left_stacked_panels/);
   assert.match(workspace, /stacked_panels: right_stacked_panels/);
+});
+
+test("core side panels expose dock split and close controls in visible headers", () => {
+  const projectHeader = functionBody(projectPanel, "render_panel_header");
+  const projectSelectionToolbar = functionBody(
+    projectPanel,
+    "render_selected_entries_toolbar",
+  );
+  const outlineFilterFooter = functionBody(outlinePanel, "render_filter_footer");
+  const collabHeader = functionBody(collabPanel, "render_panel_header");
+  const collabSignedIn = functionBody(collabPanel, "render_signed_in");
+  const gitTabBar = functionBody(gitPanel, "render_tab_bar");
+  const gitExpandedCommitHeader = functionBody(
+    gitPanel,
+    "render_expanded_commit_header",
+  );
+  const gitRender = functionBody(
+    gitPanel.slice(gitPanel.indexOf("impl Render for GitPanel")),
+    "render",
+  );
+
+  for (const source of [projectPanel, outlinePanel, collabPanel, gitPanel]) {
+    assert.match(source, /side_panel_header_controls/);
+  }
+
+  assert.match(projectHeader, /side_panel_header_controls\(\s*"project-panel"/);
+  assert.match(
+    projectSelectionToolbar,
+    /side_panel_header_controls\(\s*"project-panel-selection"/,
+  );
+  assert.match(outlineFilterFooter, /side_panel_header_controls\(\s*"outline-panel"/);
+  assert.match(collabHeader, /side_panel_header_controls\(\s*"collab-panel"/);
+  assert.match(collabSignedIn, /self\.render_panel_header\(cx\)/);
+  assert.match(gitTabBar, /render_side_panel_header_controls\(cx\)/);
+  assert.match(
+    gitExpandedCommitHeader,
+    /render_side_panel_header_controls\(cx\)/,
+  );
+  assert.match(
+    gitRender,
+    /if self\.commit_editor_expanded[\s\S]*render_expanded_commit_header\(cx\)/,
+  );
 });
 
 test("agent fullscreen uses agent rails while sidebar button remains dock-scoped", () => {
@@ -476,6 +526,10 @@ test("core left panels expose split and close controls in native headers", () =>
     projectPanel.indexOf("ProjectEmptyState::new", emptyProjectWrapperStart) + 240,
   );
   const gitTabBar = functionBody(gitPanel, "render_tab_bar");
+  const gitExpandedCommitHeader = functionBody(
+    gitPanel,
+    "render_expanded_commit_header",
+  );
   const outlineFooter = functionBody(outlinePanel, "render_filter_footer");
   const collabHeader = functionBody(collabPanel, "render_panel_header");
   const collabDisabled = functionBody(
@@ -532,17 +586,20 @@ test("core left panels expose split and close controls in native headers", () =>
     emptyProjectWrapper,
     /\.child\(self\.render_panel_header\(cx\)\)[\s\S]*ProjectEmptyState::new/,
   );
-  assert.doesNotMatch(
+  assert.match(
     projectSelectionToolbar,
-    /project-panel-(split|close)-side-panel/,
-    "project selection actions should not duplicate panel dock controls",
+    /side_panel_header_controls\(\s*"project-panel-selection",/,
   );
-  assert.match(gitTabBar, /side_panel_header_controls\(\s*"git-panel",/);
+  assert.match(gitTabBar, /render_side_panel_header_controls\(cx\)/);
+  assert.match(
+    gitExpandedCommitHeader,
+    /render_side_panel_header_controls\(cx\)/,
+  );
   assert.match(outlineFooter, /side_panel_header_controls\(\s*"outline-panel",/);
   assert.match(collabHeader, /side_panel_header_controls\(\s*"collab-panel",/);
   assert.match(collabDisabled, /self\.render_panel_header\(cx\)/);
   assert.match(collabSignedOut, /self\.render_panel_header\(cx\)/);
-  assert.match(collabSignedIn, /side_panel_header_controls\(\s*"collab-panel",/);
+  assert.match(collabSignedIn, /self\.render_panel_header\(cx\)/);
 });
 
 test("panel headers keep titles flexible and side actions fixed", () => {
@@ -560,7 +617,8 @@ test("panel headers keep titles flexible and side actions fixed", () => {
 
   assert.match(projectHeader, /\.flex_1\(\)[\s\S]*?\.min_w_0\(\)/);
   assert.match(gitTabBar, /\.h_full\(\)[\s\S]*?\.flex_1\(\)[\s\S]*?\.min_w_0\(\)/);
-  assert.match(outlineFooter, /\.flex_1\(\)[\s\S]*?\.min_w_0\(\)[\s\S]*?\.w_full\(\)/);
+  assert.match(outlineFooter, /\.flex_1\(\)[\s\S]*?\.min_w_0\(\)/);
+  assert.match(outlineFooter, /\.items_center\(\)[\s\S]*?\.gap_0p5\(\)[\s\S]*?\.flex_none\(\)/);
   assert.match(collabHeader, /\.flex_1\(\)[\s\S]*?\.min_w_0\(\)/);
   assert.match(
     collabSignedIn,

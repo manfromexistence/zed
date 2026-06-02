@@ -754,7 +754,10 @@ impl Dock {
     }
 
     fn can_split_panel(&self, panel_id: EntityId, cx: &App) -> bool {
-        if !self.supports_panel_stack() || self.first_stack_candidate_for(panel_id, cx).is_none() {
+        if !self.supports_panel_stack()
+            || self.panel_index_for_id(panel_id).is_none()
+            || self.first_stack_candidate_for(panel_id, cx).is_none()
+        {
             return false;
         }
 

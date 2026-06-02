@@ -4890,14 +4890,14 @@ impl OutlinePanel {
         h_flex()
             .p_2()
             .h(Tab::container_height(cx))
-            .justify_between()
+            .items_center()
+            .gap_1()
             .border_b_1()
             .border_color(cx.theme().colors().border)
             .child(
                 h_flex()
                     .flex_1()
                     .min_w_0()
-                    .w_full()
                     .gap_1p5()
                     .child(
                         Icon::new(IconName::MagnifyingGlass)
@@ -4908,6 +4908,9 @@ impl OutlinePanel {
             )
             .child(
                 h_flex()
+                    .items_center()
+                    .gap_0p5()
+                    .flex_none()
                     .when(has_query, |this| {
                         this.child(
                             IconButton::new("clear_filter", IconName::Close)

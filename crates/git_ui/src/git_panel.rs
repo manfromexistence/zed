@@ -5113,12 +5113,47 @@ impl GitPanel {
                         ActivateHistoryTab.boxed_clone(),
                     )),
             )
-            .child(div().pr_1().child(side_panel_header_controls(
-                "git-panel",
-                self.workspace.clone(),
-                cx.entity().entity_id(),
-                cx,
-            )))
+            .child(self.render_side_panel_header_controls(cx))
+    }
+
+    fn render_expanded_commit_header(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        h_flex()
+            .id("git-panel-expanded-commit-header")
+            .h(Tab::container_height(cx))
+            .w_full()
+            .items_center()
+            .justify_between()
+            .gap_2()
+            .px_2()
+            .border_b_1()
+            .border_color(cx.theme().colors().border.opacity(0.6))
+            .child(
+                h_flex()
+                    .items_center()
+                    .gap_1()
+                    .min_w_0()
+                    .child(
+                        Icon::new(IconName::GitBranch)
+                            .size(IconSize::Small)
+                            .color(Color::Muted),
+                    )
+                    .child(
+                        Label::new("Git")
+                            .size(LabelSize::Small)
+                            .color(Color::Muted)
+                            .truncate(),
+                    ),
+            )
+            .child(self.render_side_panel_header_controls(cx))
+    }
+
+    fn render_side_panel_header_controls(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        div().pr_1().child(side_panel_header_controls(
+            "git-panel",
+            self.workspace.clone(),
+            cx.entity().entity_id(),
+            cx,
+        ))
     }
 
     fn render_history_tab(&self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
@@ -6739,8 +6774,12 @@ impl Render for GitPanel {
             .child(
                 v_flex()
                     .size_full()
-                    .when(!self.commit_editor_expanded, |this| {
-                        this.child(self.render_tab_bar(cx))
+                    .map(|this| {
+                        if self.commit_editor_expanded {
+                            this.child(self.render_expanded_commit_header(cx))
+                        } else {
+                            this.child(self.render_tab_bar(cx))
+                        }
                     })
                     .map(|this| match self.active_tab {
                         GitPanelTab::Changes => this

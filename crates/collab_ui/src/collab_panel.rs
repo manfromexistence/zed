@@ -2851,10 +2851,12 @@ impl CollabPanel {
         v_flex()
             .size_full()
             .gap_1()
+            .child(self.render_panel_header(cx))
             .child(
                 h_flex()
                     .p_2()
                     .h(Tab::container_height(cx))
+                    .items_center()
                     .gap_1p5()
                     .border_b_1()
                     .border_color(cx.theme().colors().border)
@@ -2879,13 +2881,7 @@ impl CollabPanel {
                                     cx.notify();
                                 })),
                         )
-                    })
-                    .child(side_panel_header_controls(
-                        "collab-panel",
-                        self.workspace.clone(),
-                        cx.entity().entity_id(),
-                        cx,
-                    )),
+                    }),
             )
             .child(
                 list(

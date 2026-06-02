@@ -1,3 +1,23 @@
+[2026-06-03] - Core Side Panel Action Coverage
+
+CHANGED:
+- `crates\workspace\src\dock.rs` now only enables a side-panel split button when the requested panel belongs to that dock, so the opposite dock cannot make a header split button look actionable.
+- `crates\project_panel\src\project_panel.rs` now uses the selected-files toolbar as the Project header while selections are active, keeping shared split/close controls in the right action cluster without duplicating the normal Project header.
+- `crates\git_ui\src\git_panel.rs` now renders a compact expanded-commit header with the same split/close controls when the Git commit editor hides the normal Changes/History tab bar.
+- `crates\outline_panel\src\outline_panel.rs` now keeps the Outline filter row flexible with a fixed-size pin/split/close action cluster, making the controls reliable in narrow stacked panels.
+- `crates\collab_ui\src\collab_panel.rs` now gives signed-in Collab the same native title header with split/close controls as signed-out and disabled states, while keeping search-specific controls in the search row.
+- `script\dx-workspace-ui-state-source.test.ts` now guards visible header/control coverage for Project, Outline, Collab, and Git, including Project selection mode and Git expanded commit mode.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\workspace\src\dock.rs crates\project_panel\src\project_panel.rs crates\git_ui\src\git_panel.rs crates\outline_panel\src\outline_panel.rs crates\collab_ui\src\collab_panel.rs`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-workspace-ui-state-source.test.ts`
+- `git diff --check`
+- Focused conflict-marker scan for touched files.
+
+NOTES:
+- `just run` was not run because the current instruction says not to run it until explicitly requested.
+- `DX.txt` remains an unrelated scratch/editor change and is intentionally left untouched.
+
 [2026-06-03] - Panel-Targeted Core Header Controls
 
 CHANGED:

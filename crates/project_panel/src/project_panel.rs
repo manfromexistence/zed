@@ -4029,6 +4029,7 @@ impl ProjectPanel {
     }
 
     fn render_selected_entries_toolbar(
+        &self,
         selected_count: usize,
         is_read_only: bool,
         is_remote: bool,
@@ -4121,7 +4122,13 @@ impl ProjectPanel {
                                 this.focus_handle(cx).focus(window, cx);
                                 cx.notify();
                             })),
-                    ),
+                    )
+                    .child(side_panel_header_controls(
+                        "project-panel-selection",
+                        self.workspace.clone(),
+                        cx.entity().entity_id(),
+                        cx,
+                    )),
             )
             .into_any_element()
     }
@@ -7912,7 +7919,7 @@ impl Render for ProjectPanel {
         let selected_entries_toolbar = (selected_entry_count > 0
             && self.state.edit_state.is_none())
         .then(|| {
-            Self::render_selected_entries_toolbar(selected_entry_count, is_read_only, is_remote, cx)
+            self.render_selected_entries_toolbar(selected_entry_count, is_read_only, is_remote, cx)
         });
         let active_media_preview = has_worktree
             .then(|| self.top_folder_media_preview(cx))
@@ -8098,9 +8105,12 @@ impl Render for ProjectPanel {
                 .track_focus(&self.focus_handle(cx))
                 .child(
                     v_flex()
-                        .child(self.render_panel_header(cx))
-                        .when_some(selected_entries_toolbar, |this, toolbar| {
-                            this.child(toolbar)
+                        .map(|this| {
+                            if let Some(toolbar) = selected_entries_toolbar {
+                                this.child(toolbar)
+                            } else {
+                                this.child(self.render_panel_header(cx))
+                            }
                         })
                         .when(show_active_media_preview, |this| {
                             this.when_some(active_media_preview, |this, media_preview| {
