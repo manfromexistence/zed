@@ -119,7 +119,7 @@ test("grouped model buckets and render entries are capped before materialization
   const groupedNew = sliceBetween(
     source,
     "pub fn new(all: Vec<ModelInfo>, recommended: Vec<ModelInfo>) -> Self {",
-    "fn entries(&self) -> Vec<LanguageModelPickerEntry> {",
+    "fn entries(",
   );
   const boundedAll = sliceBetween(
     groupedNew,
@@ -133,7 +133,7 @@ test("grouped model buckets and render entries are capped before materialization
   );
   const entries = sliceBetween(
     source,
-    "fn entries(&self) -> Vec<LanguageModelPickerEntry> {",
+    "fn entries(",
     "enum LanguageModelPickerEntry",
   );
   const pushHelper = sliceBetween(
@@ -169,6 +169,12 @@ test("grouped model buckets and render entries are capped before materialization
   );
   assert.match(entries, /self\.all\.values\(\)\.take\(MAX_SELECTOR_VISIBLE_PROVIDERS\)/);
   assert.match(entries, /models\.iter\(\)\.take\(MAX_SELECTOR_MODELS_PER_PROVIDER\)/);
+  assert.match(entries, /collapsed_provider_groups:\s*&HashSet<LanguageModelProviderId>/);
+  assert.match(entries, /force_provider_groups_expanded:\s*bool/);
+  assert.match(
+    entries,
+    /!force_provider_groups_expanded && collapsed_provider_groups\.contains\(&provider_id\)/,
+  );
   assertBefore(
     pushHelper,
     "entries.len() >= MAX_SELECTOR_RENDER_ENTRIES",

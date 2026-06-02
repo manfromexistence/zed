@@ -3,11 +3,13 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const sourcePath = "crates/icon_picker/src/icon_picker.rs";
+const editorSourcePath = "crates/editor/src/items.rs";
 
 const productionSource = (source: string) =>
   source.split(/\r?\n#\[cfg\(test\)\]\r?\nmod tests\s*\{/)[0] ?? source;
 
 const source = productionSource(readFileSync(sourcePath, "utf8"));
+const editorSource = productionSource(readFileSync(editorSourcePath, "utf8"));
 
 function functionBody(source: string, name: string): string {
   const start = source.search(new RegExp(`fn\\s+${name}(?:\\s*<[^>]+>)?\\s*\\(`));
@@ -89,12 +91,127 @@ test("icon picker representative loops share the sample-column cap", () => {
   );
 });
 
-test("icon picker source guard is focused on production icon picker code", () => {
+test("icon picker tile selection is explicit and non-mutating", () => {
+  const selectIcon = functionBody(source, "select_icon");
+  const renderIconTile = functionBody(source, "render_icon_tile");
+  const renderSelectedIconActions = functionBody(source, "render_selected_icon_actions");
+  const insertSelectedIcon = functionBody(source, "insert_selected_icon");
+  const insertIcon = functionBody(source, "insert_icon");
+  const copySelectedIconName = functionBody(source, "copy_selected_icon_name");
+
+  assert.match(selectIcon, /self\.selected_icon = Some\(icon\);/);
+  assert.match(selectIcon, /icon_status_label\("Selected "/);
+  assert.doesNotMatch(
+    selectIcon,
+    /insert_icon|insert_selected_icon|copy_icon_name|record_recent_icon_action|active_item_as::<Editor>|insert_icon_asset/,
+    "selecting a tile must not insert, copy, or mutate editor contents",
+  );
+
+  assert.match(renderIconTile, /\.h\(px\(66\.\)\)/);
+  assert.match(
+    renderIconTile,
+    /\.on_click\([\s\S]*panel\.select_icon\(icon\.clone\(\), cx\);[\s\S]*\)/,
+    "tile clicks must select only; insertion lives in the selected action strip",
+  );
+  assert.doesNotMatch(
+    renderIconTile,
+    /panel\.(insert_icon|insert_selected_icon|copy_icon_name|copy_selected_icon_name)/,
+    "tile click handlers must not perform selected-icon actions implicitly",
+  );
+
+  assert.match(source, /selected_icon:\s*Option<PickerIcon>/);
+  assert.match(renderSelectedIconActions, /\.id\("icon-picker-selected-icon-actions"\)/);
+  assert.match(
+    renderSelectedIconActions,
+    /IconButton::new\("icon-picker-copy-selected"[\s\S]*copy_selected_icon_name/,
+  );
+  assert.match(
+    renderSelectedIconActions,
+    /IconButton::new\("icon-picker-insert-selected"[\s\S]*insert_selected_icon/,
+  );
+  assert.match(
+    renderSelectedIconActions,
+    /IconButton::new\("icon-picker-pin-selected"[\s\S]*pin_selected_icon/,
+  );
+  assert.match(insertSelectedIcon, /self\.insert_icon\(icon, window, cx\)/);
+  assert.match(insertIcon, /active_item_as::<Editor>[\s\S]*editor\.insert_icon_asset/);
+  assert.match(copySelectedIconName, /self\.copy_icon_name\(icon, cx\)/);
+});
+
+test("icon insertion guards supported editors and safe React asset names", () => {
+  const insertIconAsset = functionBody(editorSource, "insert_icon_asset");
+  const insertReactIconAsset = functionBody(editorSource, "insert_react_icon_asset");
+  const insertIconAssetOnDrop = functionBody(editorSource, "insert_icon_asset_on_drop");
+  const insertReactIconAssetOnDrop = functionBody(editorSource, "insert_react_icon_asset_on_drop");
+  const isReactEditorPath = functionBody(editorSource, "is_react_editor_path");
+  const isBasicIconEditorPath = functionBody(editorSource, "is_basic_icon_editor_path");
+  const iconAssetFileName = functionBody(editorSource, "icon_asset_file_name");
+  const reactIconComponentName = functionBody(editorSource, "react_icon_component_name");
+
+  assert.match(insertIconAsset, /target_file_abs_path_for_app\(self, cx\)/);
+  assertBefore(
+    insertIconAsset,
+    /is_react_editor_path\(&active_path\)/,
+    /insert_react_icon_asset\(/,
+    "React icon insertion must be gated by TSX or JSX paths",
+  );
+  assertBefore(
+    insertIconAsset,
+    /!is_basic_icon_editor_path\(&active_path\)/,
+    /self\.insert\(&svg, window, cx\)/,
+    "unsupported file paths must error before raw SVG insertion",
+  );
+  assert.match(
+    insertIconAsset,
+    /TSX, JSX, HTML, SVG, Markdown, MDX, and untitled editors/,
+  );
+  assertBefore(
+    insertIconAssetOnDrop,
+    /!is_basic_icon_editor_path\(&active_path\)/,
+    /self\.insert_text_on_drop\(svg, cx\)/,
+    "unsupported drag/drop paths must error before raw SVG insertion",
+  );
+
+  assert.match(isReactEditorPath, /Some\("tsx" \| "jsx"\)/);
+  assert.match(isBasicIconEditorPath, /Some\("html" \| "htm" \| "svg" \| "md" \| "mdx"\)/);
+  assert.match(
+    insertReactIconAsset,
+    /asset_dir\.join\(icon_asset_file_name\(icon\.stem\.as_ref\(\)\)\)/,
+  );
+  assert.match(
+    insertReactIconAssetOnDrop,
+    /asset_dir\.join\(icon_asset_file_name\(icon\.stem\.as_ref\(\)\)\)/,
+  );
+  assert.doesNotMatch(
+    `${insertReactIconAsset}\n${insertReactIconAssetOnDrop}`,
+    /asset_dir\.join\(format!\("\{\}\.svg"/,
+    "React icon asset paths must not be built from raw stem filenames",
+  );
+
+  assert.match(iconAssetFileName, /ch\.is_ascii_alphanumeric\(\)/);
+  assert.match(iconAssetFileName, /file_name\.push\('-'\)/);
+  assert.match(iconAssetFileName, /while file_name\.ends_with\('-'\)/);
+  assert.match(iconAssetFileName, /file_name\.push_str\("icon"\)/);
+  assert.match(iconAssetFileName, /file_name\.push_str\("\.svg"\)/);
+
+  assert.match(reactIconComponentName, /push_react_component_name_segment/);
+  assert.match(reactIconComponentName, /name\.insert_str\(0, "Svg"\)/);
+  assert.match(reactIconComponentName, /name\.push_str\("Icon"\)/);
+});
+
+test("icon picker source guard is focused on production editor code", () => {
   assert.equal(sourcePath, "crates/icon_picker/src/icon_picker.rs");
+  assert.equal(editorSourcePath, "crates/editor/src/items.rs");
   assert.doesNotMatch(sourcePath, /test/i);
+  assert.doesNotMatch(editorSourcePath, /test/i);
   assert.doesNotMatch(
     source,
     /#\[cfg\(test\)\]/,
     "source guard should only inspect production icon picker code",
+  );
+  assert.doesNotMatch(
+    editorSource,
+    /#\[cfg\(test\)\]/,
+    "source guard should only inspect production editor insertion code",
   );
 });

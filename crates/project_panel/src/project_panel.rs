@@ -4887,12 +4887,19 @@ impl ProjectPanel {
                                         )
                                         .filter(|child| !hide_hidden || !child.is_hidden)
                                         .filter(|child| child.is_file());
-                                    let preview =
-                                        media_preview::build_folder_media_preview_with_generated_metadata(
+                                    let preview = match generated_media_metadata.get(&cache_key) {
+                                        Some(generated_metadata) => {
+                                            media_preview::build_folder_media_preview_with_generated_metadata(
+                                                &absolute_path,
+                                                children,
+                                                Some(generated_metadata),
+                                            )
+                                        }
+                                        None => media_preview::build_folder_media_preview(
                                             &absolute_path,
                                             children,
-                                            generated_media_metadata.get(&cache_key),
-                                        );
+                                        ),
+                                    };
                                     if is_active_media_folder
                                         && let Some(preview) = preview.as_ref()
                                     {
@@ -7815,9 +7822,15 @@ impl Render for ProjectPanel {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let has_worktree = !self.state.visible_entries.is_empty();
         let selected_entry_count = self.selected_entries_count(cx);
-        let (is_read_only, is_remote) = {
+        let (is_read_only, is_remote, is_local, is_local_or_wsl, is_via_remote_server) = {
             let project = self.project.read(cx);
-            (project.is_read_only(cx), project.is_remote())
+            (
+                project.is_read_only(cx),
+                project.is_remote(),
+                project.is_local(),
+                project.is_local() || project.is_via_wsl_with_host_interop(cx),
+                project.is_via_remote_server(),
+            )
         };
         let selected_entries_toolbar = (selected_entry_count > 0
             && self.state.edit_state.is_none())
@@ -7827,7 +7840,6 @@ impl Render for ProjectPanel {
         let active_media_preview = has_worktree
             .then(|| self.active_folder_media_preview(cx))
             .flatten();
-        let project = self.project.read(cx);
         let panel_settings = ProjectPanelSettings::get_global(cx);
         let indent_size = panel_settings.indent_size;
         let show_indent_guides = panel_settings.indent_guides.show == ShowIndentGuides::Always;
@@ -7842,8 +7854,6 @@ impl Render for ProjectPanel {
                 false
             }
         };
-
-        let is_local = project.is_local();
 
         if has_worktree {
             let item_count = self
@@ -7985,7 +7995,7 @@ impl Render for ProjectPanel {
                     el.on_action(cx.listener(Self::undo))
                         .on_action(cx.listener(Self::redo))
                 })
-                .when(!project.is_read_only(cx), |el| {
+                .when(!is_read_only, |el| {
                     el.on_action(cx.listener(Self::new_file))
                         .on_action(cx.listener(Self::new_directory))
                         .on_action(cx.listener(Self::rename))
@@ -7996,19 +8006,14 @@ impl Render for ProjectPanel {
                         .on_action(cx.listener(Self::duplicate))
                         .on_action(cx.listener(Self::restore_file))
                         .on_action(cx.listener(Self::add_to_gitignore))
-                        .when(!project.is_remote(), |el| {
-                            el.on_action(cx.listener(Self::trash))
-                        })
+                        .when(!is_remote, |el| el.on_action(cx.listener(Self::trash)))
                 })
-                .when(
-                    project.is_local() || project.is_via_wsl_with_host_interop(cx),
-                    |el| {
-                        el.on_action(cx.listener(Self::reveal_in_finder))
-                            .on_action(cx.listener(Self::open_system))
-                            .on_action(cx.listener(Self::open_in_terminal))
-                    },
-                )
-                .when(project.is_via_remote_server(), |el| {
+                .when(is_local_or_wsl, |el| {
+                    el.on_action(cx.listener(Self::reveal_in_finder))
+                        .on_action(cx.listener(Self::open_system))
+                        .on_action(cx.listener(Self::open_in_terminal))
+                })
+                .when(is_via_remote_server, |el| {
                     el.on_action(cx.listener(Self::open_in_terminal))
                         .on_action(cx.listener(Self::download_from_remote))
                 })
@@ -8376,7 +8381,7 @@ impl Render for ProjectPanel {
                                         }
                                     }),
                                 )
-                                .when(!project.is_read_only(cx), |el| {
+                                .when(!is_read_only, |el| {
                                     el.on_click(cx.listener(
                                         |this, event: &gpui::ClickEvent, window, cx| {
                                             if event.click_count() > 1

@@ -4,8 +4,7 @@ mod metadata;
 mod metadata_probe;
 
 pub(crate) use generated_metadata::{
-    GeneratedMediaMetadataJobBatch, build_generated_media_metadata_job_batch,
-    collect_generated_media_metadata,
+    build_generated_media_metadata_job_batch, collect_generated_media_metadata,
 };
 pub(crate) use metadata::GeneratedMediaMetadataIndex;
 
@@ -26,6 +25,7 @@ use workspace::{PreviewTabsSettings, SelectedEntry};
 pub(crate) const MAX_PROJECT_PANEL_MEDIA_CHILD_SCAN: usize = 512;
 pub(crate) const MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS: usize = 12;
 pub(crate) const PROJECT_PANEL_MEDIA_GALLERY_COLUMNS: u16 = 3;
+pub(crate) const PROJECT_PANEL_MEDIA_SHELF_COLUMNS: u16 = 3;
 
 const PROJECT_PANEL_MEDIA_GALLERY_CARD_WIDTH: f32 = 86.;
 const PROJECT_PANEL_MEDIA_GALLERY_CARD_HEIGHT: f32 = 64.;
@@ -178,7 +178,7 @@ pub(crate) fn build_folder_media_preview_with_generated_metadata<'a>(
 
 pub(crate) fn render_folder_media_preview(
     preview: &FolderMediaPreview,
-    cx: &mut App,
+    _cx: &mut App,
 ) -> AnyElement {
     let summary = media_preview_summary(preview);
     let tooltip_summary = media_preview_folder_tooltip_meta(preview);
@@ -350,7 +350,7 @@ pub(crate) fn render_folder_media_shelf(
         .child(
             div()
                 .grid()
-                .grid_cols(PROJECT_PANEL_MEDIA_GALLERY_COLUMNS)
+                .grid_cols(PROJECT_PANEL_MEDIA_SHELF_COLUMNS)
                 .gap_1p5()
                 .children(shelf_cards),
         )
@@ -517,7 +517,7 @@ fn render_media_shelf_card_body(item: &MediaPreviewItem, cx: &mut App) -> Div {
             } else {
                 base.flex().items_center().justify_center().child(
                     Icon::new(IconName::PlayOutlined)
-                        .size(IconSize::Large)
+                        .size(IconSize::XLarge)
                         .color(Color::Muted),
                 )
             };
@@ -600,7 +600,7 @@ fn media_gallery_card_container(
             } else {
                 base.flex().items_center().justify_center().child(
                     Icon::new(IconName::PlayOutlined)
-                        .size(IconSize::Large)
+                        .size(IconSize::XLarge)
                         .color(Color::Muted),
                 )
             };
@@ -725,7 +725,7 @@ fn media_card_image_fallback(kind: MediaPreviewKind) -> AnyElement {
         .justify_center()
         .child(
             Icon::new(icon_name)
-                .size(IconSize::Large)
+                .size(IconSize::XLarge)
                 .color(Color::Muted),
         )
         .into_any_element()

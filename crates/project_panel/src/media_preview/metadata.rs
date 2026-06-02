@@ -14,8 +14,6 @@ use super::{
 };
 
 pub(super) const MAX_PROJECT_PANEL_MEDIA_METADATA_MANIFEST_BYTES: u64 = 256 * 1024;
-pub(crate) const GENERATED_MEDIA_METADATA_CACHE_SCHEMA: &str =
-    "zed.project_panel.generated_media_metadata";
 
 const MAX_GENERATED_MEDIA_METADATA_RECORDS: usize = 256;
 const MEDIA_METADATA_MANIFEST_NAMES: &[&str] = &[
@@ -228,7 +226,7 @@ fn collect_media_metadata_manifest(
         Value::Object(object) => {
             let mut used_list = false;
             for key in MEDIA_METADATA_LIST_FIELDS {
-                if let Some(list) = object.get(key).and_then(Value::as_array) {
+                if let Some(list) = object.get(*key).and_then(Value::as_array) {
                     used_list = true;
                     for item in list {
                         collect_media_metadata_record(parent_abs_path, item, index, None);

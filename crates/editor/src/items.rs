@@ -122,7 +122,7 @@ impl Editor {
         std_fs::create_dir_all(&asset_dir)
             .with_context(|| format!("creating {}", asset_dir.display()))?;
 
-        let svg_path = asset_dir.join(format!("{}.svg", icon.stem.as_ref()));
+        let svg_path = asset_dir.join(icon_asset_file_name(icon.stem.as_ref()));
         if !svg_path.exists() {
             std_fs::write(&svg_path, format!("{svg}\n"))
                 .with_context(|| format!("writing {}", svg_path.display()))?;
@@ -204,7 +204,7 @@ impl Editor {
         std_fs::create_dir_all(&asset_dir)
             .with_context(|| format!("creating {}", asset_dir.display()))?;
 
-        let svg_path = asset_dir.join(format!("{}.svg", icon.stem.as_ref()));
+        let svg_path = asset_dir.join(icon_asset_file_name(icon.stem.as_ref()));
         if !svg_path.exists() {
             std_fs::write(&svg_path, format!("{svg}\n"))
                 .with_context(|| format!("writing {}", svg_path.display()))?;
@@ -695,6 +695,34 @@ fn icon_asset_dir(project_root: &Path) -> PathBuf {
     } else {
         project_root.join("assets").join("icons")
     }
+}
+
+fn icon_asset_file_name(stem: &str) -> String {
+    let mut file_name = String::with_capacity(stem.len() + ".svg".len());
+    let mut wrote_file_name_char = false;
+    let mut last_was_separator = false;
+
+    for ch in stem.chars() {
+        if ch.is_ascii_alphanumeric() {
+            file_name.push(ch);
+            wrote_file_name_char = true;
+            last_was_separator = false;
+        } else if wrote_file_name_char && !last_was_separator {
+            file_name.push('-');
+            last_was_separator = true;
+        }
+    }
+
+    while file_name.ends_with('-') {
+        file_name.pop();
+    }
+
+    if file_name.is_empty() {
+        file_name.push_str("icon");
+    }
+
+    file_name.push_str(".svg");
+    file_name
 }
 
 fn copy_media_asset_into_project(

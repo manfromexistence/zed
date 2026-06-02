@@ -1,3 +1,26 @@
+[2026-06-02] - Pasted Editor Shell Validation And Warning Cleanup
+
+CHANGED:
+- `Cargo.lock` is synced with the project-panel dependency graph required by locked builds.
+- `crates\editor\src\items.rs` now sanitizes React icon asset filenames before generated imports and drag/drop paths use them.
+- `crates\project_panel\src\project_panel.rs` now snapshots project flags before media-shelf render closures and uses the default folder media preview builder when no generated metadata cache exists.
+- `crates\project_panel\src\media_preview.rs` keeps the bottom media shelf column count named and removes the unused generated-metadata batch re-export.
+- `crates\project_panel\src\media_preview\metadata.rs` now reads manifest list fields with the correct `&str` key shape and no longer carries an unused cache-schema marker.
+- `script\dx-icon-picker-source.test.ts`, `script\dx-language-model-selector-source.test.ts`, and `script\dx-project-panel-source.test.ts` now guard the final icon insertion, provider-collapse, media shelf, and compile-safe render contracts.
+- `todo.txt` now records the authorized build/runtime proof and narrows remaining media/font work to dedicated profiling or manual UX validation.
+
+PASSED:
+- `cargo metadata --locked --format-version=1`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-project-panel-source.test.ts script\dx-icon-picker-source.test.ts script\dx-language-model-selector-source.test.ts script\dx-model-selector-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check crates\editor\src\items.rs crates\project_panel\src\project_panel.rs crates\project_panel\src\media_preview.rs crates\project_panel\src\media_preview\metadata.rs`
+- `git diff --check -- Cargo.lock crates/editor/src/items.rs crates/project_panel/src/project_panel.rs crates/project_panel/src/media_preview.rs crates/project_panel/src/media_preview/metadata.rs script/dx-icon-picker-source.test.ts script/dx-language-model-selector-source.test.ts script/dx-project-panel-source.test.ts`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" Cargo.lock crates\editor\src\items.rs crates\project_panel\src\project_panel.rs crates\project_panel\src\media_preview.rs crates\project_panel\src\media_preview\metadata.rs script\dx-icon-picker-source.test.ts script\dx-language-model-selector-source.test.ts script\dx-project-panel-source.test.ts` returned no conflict markers.
+- `$env:CARGO_BUILD_JOBS='6'; just run` completed locked Zed and CLI builds, launched Zed, and the final run produced no project-panel warnings.
+
+NOTES:
+- Zed launched as process `19972` in the final validation pass.
+- Detailed live large-folder profiling, ffmpeg/ffprobe availability checks, and manual drag/hover UX sweeps remain separate validation work; the source and build/run path for the pasted task set is now clean.
+
 [2026-06-02] - Project Panel Folder Count And Video Hover Hardening
 
 CHANGED:

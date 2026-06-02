@@ -356,6 +356,7 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   assert.match(media, /pub\(crate\) const MAX_PROJECT_PANEL_MEDIA_CHILD_SCAN: usize = 512;/);
   assert.match(media, /pub\(crate\) const MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS: usize = 12;/);
   assert.match(media, /pub\(crate\) const PROJECT_PANEL_MEDIA_GALLERY_COLUMNS: u16 = 3;/);
+  assert.match(media, /pub\(crate\) const PROJECT_PANEL_MEDIA_SHELF_COLUMNS: u16 = 3;/);
   assert.match(media, /pub\(crate\) enum MediaPreviewKind/);
   assert.match(media, /Image/);
   assert.match(media, /Video/);
@@ -388,7 +389,7 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   );
   assert.match(
     updateVisibleEntries,
-    /background_spawn\(async move \{[\s\S]*let mut active_media_shelf_entry_ids = active_media_shelf_entry_ids;[\s\S]*let mut media_preview_updates = Vec::new\(\);[\s\S]*let is_active_media_folder =[\s\S]*active_media_folder_for_visibility == Some\(cache_key\);[\s\S]*is_active_media_folder[\s\S]*MAX_PROJECT_PANEL_BACKGROUND_MEDIA_PREVIEW_FOLDERS[\s\S]*media_preview::build_folder_media_preview_with_generated_metadata\([\s\S]*&absolute_path,[\s\S]*children,[\s\S]*generated_media_metadata\.get\(&cache_key\),[\s\S]*\)[\s\S]*active_media_shelf_entry_ids\.extend\([\s\S]*preview\.items\.iter\(\)\.map\(\|item\| item\.entry_id\)[\s\S]*media_preview_updates\.push\(\(cache_key, preview\)\)[\s\S]*\(new_state, media_preview_updates, folder_file_count_updates\)/,
+    /background_spawn\(async move \{[\s\S]*let mut active_media_shelf_entry_ids = active_media_shelf_entry_ids;[\s\S]*let mut media_preview_updates = Vec::new\(\);[\s\S]*let is_active_media_folder =[\s\S]*active_media_folder_for_visibility == Some\(cache_key\);[\s\S]*is_active_media_folder[\s\S]*MAX_PROJECT_PANEL_BACKGROUND_MEDIA_PREVIEW_FOLDERS[\s\S]*match generated_media_metadata\.get\(&cache_key\)[\s\S]*build_folder_media_preview_with_generated_metadata\([\s\S]*&absolute_path,[\s\S]*children,[\s\S]*Some\(generated_metadata\)[\s\S]*\)[\s\S]*build_folder_media_preview\([\s\S]*&absolute_path,[\s\S]*children,[\s\S]*\)[\s\S]*active_media_shelf_entry_ids\.extend\([\s\S]*preview\.items\.iter\(\)\.map\(\|item\| item\.entry_id\)[\s\S]*media_preview_updates\.push\(\(cache_key, preview\)\)[\s\S]*\(new_state, media_preview_updates, folder_file_count_updates\)/,
     "media preview cache misses must be warmed inside the visible-entry background task",
   );
   assert.match(
@@ -527,11 +528,16 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
     "media previews must not add variable-height children under uniform_list rows",
   );
   assert.match(renderEntry, /block_mouse_except_scroll\(\)/);
+  assert.match(
+    renderProjectPanel,
+    /let \(is_read_only, is_remote, is_local, is_local_or_wsl, is_via_remote_server\) = \{[\s\S]*let project = self\.project\.read\(cx\);[\s\S]*project\.is_read_only\(cx\)[\s\S]*project\.is_remote\(\)[\s\S]*project\.is_local\(\)[\s\S]*project\.is_local\(\) \|\| project\.is_via_wsl_with_host_interop\(cx\)[\s\S]*project\.is_via_remote_server\(\)[\s\S]*\};/,
+    "render must snapshot project flags before media shelf lookup so no long project borrow crosses cx-using closures",
+  );
   assertBefore({
     body: renderProjectPanel,
     before: /let active_media_preview = has_worktree/,
-    after: /let project = self\.project\.read\(cx\);\s*let panel_settings = ProjectPanelSettings::get_global\(cx\);/,
-    message: "active media shelf lookup must finish before the long project render borrow",
+    after: /let panel_settings = ProjectPanelSettings::get_global\(cx\);/,
+    message: "active media shelf lookup must finish before panel rendering settings are applied",
   });
   assertBefore({
     body: renderProjectPanel,
@@ -656,18 +662,13 @@ test("project panel media preview renders direct image previews and video frames
   assert.match(media, /pub\(crate\) use metadata::GeneratedMediaMetadataIndex;/);
   assert.match(
     media,
-    /pub\(crate\) use generated_metadata::\{[\s\S]*GeneratedMediaMetadataJobBatch[\s\S]*build_generated_media_metadata_job_batch[\s\S]*collect_generated_media_metadata[\s\S]*\};/,
-    "media preview must expose the bounded generated-metadata job surface to ProjectPanel",
+    /pub\(crate\) use generated_metadata::\{[\s\S]*build_generated_media_metadata_job_batch[\s\S]*collect_generated_media_metadata[\s\S]*\};/,
+    "media preview must expose the bounded generated-metadata builder and collector to ProjectPanel",
   );
   assert.match(metadata, /pub\(super\) struct MediaMetadataIndex/);
   assert.match(metadata, /pub\(crate\) struct GeneratedMediaMetadataIndex/);
   assert.match(metadata, /pub\(crate\) struct GeneratedMediaMetadataRecord/);
   assert.match(metadata, /const MAX_GENERATED_MEDIA_METADATA_RECORDS: usize = 256;/);
-  assert.match(
-    metadata,
-    /pub\(crate\) const GENERATED_MEDIA_METADATA_CACHE_SCHEMA: &str =\s*"zed\.project_panel\.generated_media_metadata";/,
-    "generated media metadata overlays must have a source-owned cache schema",
-  );
   assert.match(
     generatedMetadata,
     /pub\(crate\) const GENERATED_MEDIA_METADATA_RUNNER_SCHEMA: &str =\s*"zed\.project_panel\.generated_media_metadata_runner";/,
@@ -976,7 +977,7 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     renderFolderMediaShelf,
-    /\.border_t_1\(\)[\s\S]*\.grid\(\)[\s\S]*\.grid_cols\(PROJECT_PANEL_MEDIA_GALLERY_COLUMNS\)[\s\S]*\.children\(shelf_cards\)/,
+    /\.border_t_1\(\)[\s\S]*\.grid\(\)[\s\S]*\.grid_cols\(PROJECT_PANEL_MEDIA_SHELF_COLUMNS\)[\s\S]*\.children\(shelf_cards\)/,
     "folder media shelf must render as a bottom three-column media grid",
   );
   assert.match(
