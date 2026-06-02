@@ -28,6 +28,7 @@ const PROJECT_PANEL_MEDIA_GALLERY_CARD_WIDTH: f32 = 86.;
 const PROJECT_PANEL_MEDIA_GALLERY_CARD_HEIGHT: f32 = 64.;
 const PROJECT_PANEL_MEDIA_SHELF_CARD_MIN_WIDTH: f32 = 96.;
 const PROJECT_PANEL_MEDIA_SHELF_CARD_HEIGHT: f32 = 72.;
+const PROJECT_PANEL_MEDIA_SHELF_CARD_TOTAL_HEIGHT: f32 = 96.;
 
 const IMAGE_MEDIA_EXTENSIONS: &[&str] = &[
     "avif", "bmp", "gif", "ico", "jpeg", "jpg", "png", "svg", "tif", "tiff", "webp",
@@ -452,6 +453,7 @@ fn media_shelf_card_container(
             stable_text_hash(&item.name)
         )))
         .min_w(px(PROJECT_PANEL_MEDIA_SHELF_CARD_MIN_WIDTH))
+        .h(px(PROJECT_PANEL_MEDIA_SHELF_CARD_TOTAL_HEIGHT))
         .w_full()
         .v_flex()
         .gap_1()
@@ -499,7 +501,8 @@ fn render_media_shelf_card_body(item: &MediaPreviewItem, cx: &mut App) -> Div {
             .child(
                 img(item.absolute_path.clone())
                     .size_full()
-                    .object_fit(ObjectFit::Cover),
+                    .object_fit(ObjectFit::Cover)
+                    .with_fallback(|| media_card_image_fallback(MediaPreviewKind::Image)),
             ),
         MediaPreviewKind::Video => {
             let base = div()
@@ -514,7 +517,8 @@ fn render_media_shelf_card_body(item: &MediaPreviewItem, cx: &mut App) -> Div {
                 base.child(
                     img(preview.path.clone())
                         .size_full()
-                        .object_fit(ObjectFit::Cover),
+                        .object_fit(ObjectFit::Cover)
+                        .with_fallback(|| media_card_image_fallback(MediaPreviewKind::Video)),
                 )
             } else {
                 base.flex().items_center().justify_center().child(
@@ -542,7 +546,7 @@ fn render_media_shelf_card_body(item: &MediaPreviewItem, cx: &mut App) -> Div {
         MediaPreviewKind::Audio => div()
             .relative()
             .w_full()
-            .h(px(PROJECT_PANEL_MEDIA_SHELF_CARD_HEIGHT))
+            .flex_1()
             .rounded_sm()
             .overflow_hidden()
             .bg(audio_gradient_background(&item.name))
@@ -580,7 +584,8 @@ fn media_gallery_card_container(
             .child(
                 img(item.absolute_path.clone())
                     .size_full()
-                    .object_fit(ObjectFit::Cover),
+                    .object_fit(ObjectFit::Cover)
+                    .with_fallback(|| media_card_image_fallback(MediaPreviewKind::Image)),
             ),
         MediaPreviewKind::Video => {
             let base = div()
@@ -595,7 +600,8 @@ fn media_gallery_card_container(
                 base.child(
                     img(preview.path.clone())
                         .size_full()
-                        .object_fit(ObjectFit::Cover),
+                        .object_fit(ObjectFit::Cover)
+                        .with_fallback(|| media_card_image_fallback(MediaPreviewKind::Video)),
                 )
             } else {
                 base.flex().items_center().justify_center().child(
@@ -710,6 +716,26 @@ fn media_preview_card_tooltip_meta(item: &MediaPreviewItem) -> String {
             item.duration_label.as_deref().unwrap_or("Time unavailable")
         ),
     }
+}
+
+fn media_card_image_fallback(kind: MediaPreviewKind) -> AnyElement {
+    let icon_name = match kind {
+        MediaPreviewKind::Image => IconName::Image,
+        MediaPreviewKind::Video => IconName::PlayOutlined,
+        MediaPreviewKind::Audio => IconName::AudioOn,
+    };
+
+    div()
+        .size_full()
+        .flex()
+        .items_center()
+        .justify_center()
+        .child(
+            Icon::new(icon_name)
+                .size(IconSize::Large)
+                .color(Color::Muted),
+        )
+        .into_any_element()
 }
 
 fn child_absolute_path(parent_abs_path: &Path, child: &Entry) -> PathBuf {

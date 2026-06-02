@@ -477,8 +477,10 @@ test("project panel media preview renders direct image previews and video frames
   const renderFolderMediaShelf = functionBody(media, "render_folder_media_shelf");
   const renderMediaShelfCard = functionBody(media, "render_media_shelf_card");
   const renderMediaGalleryCard = functionBody(media, "render_media_gallery_card");
+  const mediaShelfCardContainer = functionBody(media, "media_shelf_card_container");
   const mediaGalleryCardContainer = functionBody(media, "media_gallery_card_container");
   const renderMediaShelfCardBody = functionBody(media, "render_media_shelf_card_body");
+  const mediaCardImageFallback = functionBody(media, "media_card_image_fallback");
   const mediaPreviewCardTooltipMeta = functionBody(media, "media_preview_card_tooltip_meta");
   const audioGradientBackground = functionBody(media, "audio_gradient_background");
   const buildFolderMediaPreview = functionBody(media, "build_folder_media_preview");
@@ -627,6 +629,7 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(media, /const PROJECT_PANEL_MEDIA_SHELF_CARD_MIN_WIDTH: f32 = 96\.;/);
   assert.match(media, /const PROJECT_PANEL_MEDIA_SHELF_CARD_HEIGHT: f32 = 72\.;/);
+  assert.match(media, /const PROJECT_PANEL_MEDIA_SHELF_CARD_TOTAL_HEIGHT: f32 = 96\.;/);
   assert.match(
     media,
     /metadata_probe_plan:\s*Option<metadata_probe::MediaMetadataProbePlan>/,
@@ -883,24 +886,29 @@ test("project panel media preview renders direct image previews and video frames
     "media shelf cards must use the real project-panel context menu on right click",
   );
   assert.match(
-    mediaGalleryCardContainer,
+    mediaShelfCardContainer,
     /is_selected[\s\S]*colors\.border_focused[\s\S]*colors\.element_selected/,
-    "media shelf cards must show selected state through the shared card container",
+    "media shelf cards must show selected state through the shelf card container",
+  );
+  assert.match(
+    mediaShelfCardContainer,
+    /\.h\(px\(PROJECT_PANEL_MEDIA_SHELF_CARD_TOTAL_HEIGHT\)\)[\s\S]*\.w_full\(\)[\s\S]*\.v_flex\(\)/,
+    "media shelf cards must use fixed-height icon-panel-like tiles instead of full-width list rows",
   );
   assert.match(
     renderMediaShelfCardBody,
-    /MediaPreviewKind::Image[\s\S]*w_full\(\)[\s\S]*h\(px\(PROJECT_PANEL_MEDIA_SHELF_CARD_HEIGHT\)\)[\s\S]*img\(item\.absolute_path\.clone\(\)\)[\s\S]*object_fit\(ObjectFit::Cover\)/,
-    "shelf image cards must use fixed rectangle previews from the real image path",
+    /MediaPreviewKind::Image[\s\S]*w_full\(\)[\s\S]*h\(px\(PROJECT_PANEL_MEDIA_SHELF_CARD_HEIGHT\)\)[\s\S]*img\(item\.absolute_path\.clone\(\)\)[\s\S]*object_fit\(ObjectFit::Cover\)[\s\S]*with_fallback\(\|\| media_card_image_fallback\(MediaPreviewKind::Image\)\)/,
+    "shelf image cards must use fixed rectangle previews from the real image path with a nonblank fallback",
   );
   assert.match(
     renderMediaShelfCardBody,
-    /MediaPreviewKind::Video[\s\S]*w_full\(\)[\s\S]*h\(px\(PROJECT_PANEL_MEDIA_SHELF_CARD_HEIGHT\)\)[\s\S]*item\.video_frame_preview\.as_ref\(\)[\s\S]*img\(preview\.path\.clone\(\)\)[\s\S]*IconName::PlayOutlined/,
-    "shelf video cards must show the available center or representative frame with a play affordance",
+    /MediaPreviewKind::Video[\s\S]*w_full\(\)[\s\S]*h\(px\(PROJECT_PANEL_MEDIA_SHELF_CARD_HEIGHT\)\)[\s\S]*item\.video_frame_preview\.as_ref\(\)[\s\S]*img\(preview\.path\.clone\(\)\)[\s\S]*with_fallback\(\|\| media_card_image_fallback\(MediaPreviewKind::Video\)\)[\s\S]*IconName::PlayOutlined/,
+    "shelf video cards must show the available center or representative frame with a play affordance and fallback",
   );
   assert.match(
     renderMediaShelfCardBody,
-    /MediaPreviewKind::Audio[\s\S]*w_full\(\)[\s\S]*h\(px\(PROJECT_PANEL_MEDIA_SHELF_CARD_HEIGHT\)\)[\s\S]*audio_gradient_background\(&item\.name\)[\s\S]*Label::new\(item\.name\.clone\(\)\)[\s\S]*truncate\(\)/,
-    "shelf audio cards must use deterministic gradient rectangles with centered truncated filenames",
+    /MediaPreviewKind::Audio[\s\S]*w_full\(\)[\s\S]*flex_1\(\)[\s\S]*audio_gradient_background\(&item\.name\)[\s\S]*items_center\(\)[\s\S]*justify_center\(\)[\s\S]*Label::new\(item\.name\.clone\(\)\)[\s\S]*truncate\(\)/,
+    "shelf audio cards must use full-height deterministic gradient rectangles with centered truncated filenames",
   );
   assert.doesNotMatch(
     media,
@@ -909,13 +917,13 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     mediaGalleryCardContainer,
-    /MediaPreviewKind::Image[\s\S]*img\(item\.absolute_path\.clone\(\)\)[\s\S]*object_fit\(ObjectFit::Cover\)/,
-    "gallery image cards must render direct visual previews",
+    /MediaPreviewKind::Image[\s\S]*img\(item\.absolute_path\.clone\(\)\)[\s\S]*object_fit\(ObjectFit::Cover\)[\s\S]*with_fallback\(\|\| media_card_image_fallback\(MediaPreviewKind::Image\)\)/,
+    "gallery image cards must render direct visual previews with a nonblank fallback",
   );
   assert.match(
     mediaGalleryCardContainer,
-    /MediaPreviewKind::Video[\s\S]*item\.video_frame_preview\.as_ref\(\)[\s\S]*img\(preview\.path\.clone\(\)\)[\s\S]*IconName::PlayOutlined/,
-    "gallery video cards must use available representative frame images and keep a play affordance",
+    /MediaPreviewKind::Video[\s\S]*item\.video_frame_preview\.as_ref\(\)[\s\S]*img\(preview\.path\.clone\(\)\)[\s\S]*with_fallback\(\|\| media_card_image_fallback\(MediaPreviewKind::Video\)\)[\s\S]*IconName::PlayOutlined/,
+    "gallery video cards must use available representative frame images and keep a play affordance plus fallback",
   );
   assert.match(
     mediaGalleryCardContainer,
@@ -941,6 +949,11 @@ test("project panel media preview renders direct image previews and video frames
     audioGradientBackground,
     /audio_gradient_colors\(name\)/,
     "audio card gradients must be deterministic from the audio filename",
+  );
+  assert.match(
+    mediaCardImageFallback,
+    /MediaPreviewKind::Image => IconName::Image[\s\S]*MediaPreviewKind::Video => IconName::PlayOutlined[\s\S]*size_full\(\)[\s\S]*items_center\(\)[\s\S]*justify_center\(\)/,
+    "media image/frame fallbacks must render nonblank centered media icons",
   );
   assert.match(
     videoPreviewFrame,

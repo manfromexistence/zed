@@ -1,3 +1,20 @@
+[2026-06-02] - Project Panel Media Grid Tile Polish
+
+CHANGED:
+- `crates\project_panel\src\media_preview.rs` now gives bottom media shelf cards a fixed total tile height, keeping image/video/audio cards aligned as a grid instead of drifting toward list-like row heights.
+- `crates\project_panel\src\media_preview.rs` now lets shelf audio cards fill their tile with the deterministic gradient/name treatment and gives image/video preview loads a centered media-icon fallback when the image or generated frame cannot be rendered.
+- `script\dx-project-panel-source.test.ts` now guards the fixed-height shelf tile contract and nonblank image/video fallback behavior for both the bottom shelf and popover gallery.
+- `todo.txt` now records the file-browser media-grid polish and its source-only validation boundary.
+
+PASSED:
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-handoff-source-guard-registry.test.ts script\dx-project-panel-source.test.ts`
+- `rustfmt --edition 2024 --check crates\project_panel\src\media_preview.rs`
+- `git diff --check -- crates/project_panel/src/media_preview.rs script/dx-project-panel-source.test.ts todo.txt changelog.txt`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" crates\project_panel\src\media_preview.rs script\dx-project-panel-source.test.ts todo.txt changelog.txt` returned no conflict markers.
+
+NOTES:
+- No `just run`, Cargo build/check/test/clippy, local server, browser automation, or live media extraction proof was run in this source-only pass.
+
 [2026-06-02] - Project Panel Managed Video Frame Metadata
 
 ADDED:
