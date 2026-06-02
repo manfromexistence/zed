@@ -13631,6 +13631,26 @@ PASSED:
 NOTES:
 - This was source-only. It did not run Cargo or `just run`, per the current instruction.
 
+[2026-06-03] - Recent Tool Panel Copy Polish
+
+CHANGED:
+- Icons and Fonts now label recent history as actions and pinned history as pinned entries instead of calling transient rows saved.
+- Fonts, Media, and UI now report preview requests as opening a preview instead of claiming a preview has completed.
+- Media and UI stale-entry cleanup now uses Remove/missing copy while preserving the existing source-backed cleanup behavior and stable action ids.
+- DX Style panel and launch rail copy now uses source-backed generator/status language and avoids runtime-ready overclaims.
+- Agent fullscreen rail controls now use concise user-facing tooltips, and the source action label is `Source Workflow`.
+- Focused source guards were updated to reject the older `saved`, `Clean`, stale-entry, and runtime-ready wording in the touched surfaces.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\icon_picker\src\icon_picker.rs crates\font_panel\src\font_panel.rs crates\media_panel\src\media_panel.rs crates\shadcn_ui_panel\src\shadcn_ui_panel.rs crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\dx_launch_workspace.rs crates\agent_ui\src\dx_launch_workspace\style_panel.rs crates\agent_ui\src\dx_style_panel.rs crates\agent_ui\src\dx_style_panel\readiness.rs crates\agent_ui\src\dx_style_panel\panel_view.rs crates\agent_ui\src\dx_style_panel\panel_cards.rs`
+- `node --test script\dx-workspace-ui-state-source.test.ts script\dx-style-panel-source.test.ts`
+- `node --test script\dx-workspace-ui-state-source.test.ts script\dx-style-panel-source.test.ts script\dx-launch-workspace-source.test.ts`
+- `git diff --check`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" ...` across touched source, guard, todo, and changelog files returned no real conflict markers.
+
+NOTES:
+- This was source-only. It did not run Cargo or `just run`, per the current instruction.
+
 [2026-05-31] - DX Style Review Receipt Field Coverage
 
 CHANGED:

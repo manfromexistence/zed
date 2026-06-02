@@ -366,7 +366,7 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(dxLaunchWorkspace, /fn subagent_pixel_icon/);
   assert.match(dxLaunchWorkspace, /gpui::hsla\(210\.0 \/ 360\.0/);
   assert.match(dxLaunchWorkspace, /status\.agent_bridge\.automations\.iter\(\)\.take\(6\)/);
-  assert.match(dxLaunchWorkspace, /muted_card\("No automation receipt", cx\)/);
+  assert.match(dxLaunchWorkspace, /muted_card\("No automation receipts", cx\)/);
   assert.match(agentPanel, /collapsed_dx_launch_rail_sections: HashSet<DxLaunchRailSection>/);
   assert.match(agentPanel, /default_collapsed_dx_launch_rail_sections/);
   assert.match(agentPanel, /DxLaunchRailSection::SourceTools/);
@@ -412,12 +412,12 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(sourceRowControls, /element: h_flex\(\)/);
   assert.doesNotMatch(sourceRowControls, /\.full_width\(\)/);
   assert.match(dxLaunchStylePanel, /metric_row\("Style", snapshot\.status\.clone\(\)\)/);
-  assert.match(dxLaunchStylePanel, /metric_row\(\s*"Controls",/);
-  assert.match(dxLaunchStylePanel, /format!\("\{\} cataloged", snapshot\.visual_generator_count\)/);
+  assert.match(dxLaunchStylePanel, /metric_row\(\s*"Generators",/);
+  assert.match(dxLaunchStylePanel, /format!\("\{\} declared", snapshot\.visual_generator_count\)/);
   assert.match(dxLaunchStylePanel, /metric_row\(\s*"Web Preview",/);
-  assert.match(dxLaunchStylePanel, /"controls ready"/);
-  assert.match(dxLaunchStylePanel, /"host connected"/);
-  assert.match(dxLaunchStylePanel, /"host unavailable"/);
+  assert.match(dxLaunchStylePanel, /"source bridge wired"/);
+  assert.match(dxLaunchStylePanel, /"host source present"/);
+  assert.match(dxLaunchStylePanel, /"host source missing"/);
   assert.match(
     dxLaunchStylePanel,
     /Button::new\("dx-style-open-generator-preview", "Open Style Controls"\)/,
@@ -425,7 +425,7 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(dxLaunchStylePanel, /style_contract_row\(\s*"Control Catalog",/);
   assert.doesNotMatch(
     dxLaunchStylePanel,
-    /Style Cockpit|Open Generator Workspace|Open Generator"|Open Style Generator|"Generators"|Generator Host|Generator Contract|Web Preview ready|Web Preview host present|Web Preview host missing|Readiness Contracts|Readiness Fixtures/,
+    /Style Cockpit|Open Generator Workspace|Open Generator"|Open Style Generator|Generator Host|Generator Contract|Web Preview ready|Web Preview host present|Web Preview host missing|Readiness Contracts|Readiness Fixtures|controls ready|host connected|host unavailable|cataloged/,
   );
   assert.match(dxLaunchCheckPanel, /"Readiness score"/);
   assert.doesNotMatch(dxLaunchCheckPanel, /"Rail score"/);
@@ -572,7 +572,7 @@ test("panel headers keep titles flexible and side actions fixed", () => {
     [fontPanel, "font-panel-split-side-panel", "Fonts"],
     [mediaPanel, "media-panel-split-side-panel", "Media"],
     [uiPanel, "shadcn-ui-split-side-panel", "UI"],
-    [stylePanel, "dx-style-panel-split-side-panel", "Style Control"],
+    [stylePanel, "dx-style-panel-split-side-panel", "Style"],
   ] as const) {
     assert.match(sourceWindow(source, actionId, 3600, 300), /\.flex_none\(\)/);
     assert.match(sourceWindow(source, `Label::new("${label}")`), /\.truncate\(\)/);
@@ -587,39 +587,54 @@ test("recent tool panels use professional visible copy", () => {
   assert.match(titleBar, /Tooltip::text\("More Tools"\)/);
   assert.doesNotMatch(titleBar, /More Hidden Features/);
 
-  assert.match(stylePanel, /Label::new\("Style Control"\)/);
+  assert.match(stylePanel, /Label::new\("Style"\)/);
   assert.match(stylePanel, /section_label\("Contracts"\)/);
   assert.doesNotMatch(stylePanel, /Style Generators|Readiness Contracts/);
 
   assert.match(dxStylePanelCards, /metric\("Web Preview", web_preview_state\(snapshot\)\)/);
-  assert.match(dxStylePanelCards, /metric\(\s*"Controls",/);
-  assert.match(dxStylePanelCards, /\{\} cataloged controls/);
-  assert.match(dxStylePanelCards, /"Open Web Preview Controls"/);
-  assert.match(dxStylePanelCards, /"controls ready"/);
-  assert.match(dxStylePanelCards, /"host connected"/);
-  assert.match(dxStylePanelCards, /"host unavailable"/);
+  assert.match(dxStylePanelCards, /metric\(\s*"Generators",/);
+  assert.match(dxStylePanelCards, /\{\} declared/);
+  assert.match(dxStylePanelCards, /"Open Style Controls"/);
+  assert.match(dxStylePanelCards, /"source bridge wired"/);
+  assert.match(dxStylePanelCards, /"host source present"/);
+  assert.match(dxStylePanelCards, /"host source missing"/);
   assert.doesNotMatch(
     dxStylePanelCards,
-    /"Host"|"Generators"|"Open Web Preview Generators"|generator bridge ready|host present|host missing/,
+    /"Host"|"Open Web Preview Controls"|"Open Web Preview Generators"|generator bridge ready|host present|host missing|controls ready|host connected|host unavailable|cataloged controls/,
   );
 
-  assert.match(iconPicker, /"1 saved"/);
-  assert.match(iconPicker, /\{count\} saved/);
-  assert.doesNotMatch(iconPicker, /\{count\} ready|"1 ready"/);
+  assert.match(iconPicker, /icon_history_count_label\(self\.recent_icon_actions\.len\(\), "action", "actions"\)/);
+  assert.match(iconPicker, /icon_history_count_label\(self\.pinned_icon_actions\.len\(\), "pinned", "pinned"\)/);
+  assert.match(iconPicker, /\{count\} \{plural\}/);
+  assert.doesNotMatch(iconPicker, /saved|\{count\} ready|"1 ready"/);
 
   assert.match(fontPanel, /" in Web Preview"/);
-  assert.match(fontPanel, /"1 saved"/);
-  assert.match(fontPanel, /\{count\} saved/);
-  assert.doesNotMatch(fontPanel, / in WebPreview|\{count\} ready|"1 ready"/);
+  assert.match(fontPanel, /"Selected "/);
+  assert.match(fontPanel, /"Opening preview for "/);
+  assert.match(fontPanel, /font_history_count_label\(self\.recent_font_actions\.len\(\), "action", "actions"\)/);
+  assert.match(fontPanel, /font_history_count_label\(self\.pinned_font_actions\.len\(\), "pinned", "pinned"\)/);
+  assert.doesNotMatch(fontPanel, /Previewing |saved| in WebPreview|\{count\} ready|"1 ready"/);
 
+  assert.match(mediaPanel, /media_history_availability_label/);
+  assert.match(mediaPanel, /"Opening preview for "/);
+  assert.match(mediaPanel, /Button::new\("media-panel-remove-stale-recent", "Remove"\)/);
+  assert.match(mediaPanel, /Button::new\("media-panel-remove-stale-pinned", "Remove"\)/);
   assert.match(mediaPanel, /\{available\} available/);
-  assert.match(mediaPanel, /\{stale\} missing/);
-  assert.doesNotMatch(mediaPanel, /\{ready\} ready|\{stale\} stale/);
+  assert.match(mediaPanel, /\{available\} available, \{stale\} missing/);
+  assert.match(mediaPanel, /No missing \{section\} entries/);
+  assert.doesNotMatch(mediaPanel, /Previewing |"Clean"|use Clean|stale \{section\}|\{ready\} ready|\{stale\} stale|available \//);
 
   assert.match(uiPanel, /"Preview in Web Preview"/);
+  assert.match(uiPanel, /ui_history_availability_label/);
+  assert.match(uiPanel, /"Opening preview for "/);
+  assert.match(uiPanel, /Button::new\("shadcn-ui-remove-stale-recent", "Remove"\)/);
+  assert.match(uiPanel, /Button::new\("shadcn-ui-remove-stale-pinned", "Remove"\)/);
   assert.match(uiPanel, /\{available\} available/);
-  assert.match(uiPanel, /\{stale\} missing/);
-  assert.doesNotMatch(uiPanel, /Preview in WebPreview|\{ready\} ready|\{stale\} stale/);
+  assert.match(uiPanel, /\{available\} available, \{stale\} missing/);
+  assert.match(uiPanel, /No missing \{section\} entries/);
+  assert.match(uiPanel, /Changes queued/);
+  assert.match(uiPanel, /UI registry preview/);
+  assert.doesNotMatch(uiPanel, /Previewing |"Clean"|use Clean|stale \{section\}|Saved changes|The UI registry is ready|Preview in WebPreview|\{ready\} ready|\{stale\} stale|available \//);
 });
 
 test("item project-handle collections cap visited items before pushing handles", () => {

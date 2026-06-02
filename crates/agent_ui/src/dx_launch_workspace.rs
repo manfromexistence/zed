@@ -344,7 +344,7 @@ fn workspace_mode_state(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElemen
             IconName::Book,
             format!("{} total", status.source_sets.total_sources),
             format!(
-                "{} source-ready, {} receipt-backed",
+                "{} available, {} receipt-backed",
                 source_summary.attachable_sources, source_summary.managed_receipts
             ),
             cx,
@@ -525,7 +525,7 @@ fn diagnostics_menu(status: DxLaunchWorkspaceStatus) -> AnyElement {
             IconButton::new("dx-launch-diagnostics-button", IconName::Sliders)
                 .icon_size(IconSize::Small)
                 .icon_color(Color::Muted),
-            Tooltip::text("Open DX diagnostics"),
+            Tooltip::text("Open diagnostics"),
         )
         .anchor(gpui::Anchor::TopRight)
         .menu(move |_window, cx| {
@@ -553,7 +553,7 @@ fn progress_summary(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {
             "dx-progress-sources",
             source_summary.attachable_sources > 0,
             "Sources",
-            format!("{} source-ready", source_summary.attachable_sources),
+            format!("{} available", source_summary.attachable_sources),
             cx,
         ))
         .child(progress_step_row(
@@ -561,9 +561,9 @@ fn progress_summary(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {
             status.style_panel.web_preview_bridge_ready,
             "Style",
             if status.style_panel.web_preview_bridge_ready {
-                "controls available"
+                "source bridge wired"
             } else {
-                "controls unavailable"
+                "source bridge missing"
             },
             cx,
         ))
@@ -640,7 +640,7 @@ fn subagent_summary(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {
 
     if status.agent_bridge.automations.is_empty() {
         return stack
-            .child(muted_card("No automation receipt", cx))
+            .child(muted_card("No automation receipts", cx))
             .into_any_element();
     }
 

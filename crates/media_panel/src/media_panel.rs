@@ -51,7 +51,7 @@ const MAX_PINNED_MEDIA_ACTIONS: usize = 8;
 const PINNED_MEDIA_ACTIONS_KEY: &str = "asset_panel_pinned_media_v1";
 const PINNED_MEDIA_ACTIONS_STATE_VERSION: u32 = 1;
 const CLEAN_STALE_MEDIA_TOOLTIP: &str =
-    "Remove only stale media rows whose local files are missing. Valid pins and recent rows stay.";
+    "Remove media entries whose source files are missing. Available entries stay.";
 const CLEAR_RECENT_MEDIA_TOOLTIP: &str =
     "Clear recent media actions. Pinned media, local index, and remote cache stay.";
 const CLEAR_PINNED_MEDIA_TOOLTIP: &str =
@@ -1057,7 +1057,7 @@ impl MediaPanel {
             cx.open_url(&preview_url);
         }
 
-        self.status = Some(media_status_label("Previewing ", &label));
+        self.status = Some(media_status_label("Opening preview for ", &label));
         cx.notify();
     }
 
@@ -1698,7 +1698,8 @@ impl MediaPanel {
             .iter()
             .filter(|entry| media_history_entry_stale(entry))
             .count();
-        let health_label = media_history_health_label(self.recent_media.len(), stale_count);
+        let availability_label =
+            media_history_availability_label(self.recent_media.len(), stale_count);
         let health_color = if stale_count > 0 {
             Color::Warning
         } else {
@@ -1733,7 +1734,7 @@ impl MediaPanel {
                                         .color(Color::Muted),
                                 )
                                 .child(
-                                    Label::new(health_label)
+                                    Label::new(availability_label)
                                         .size(LabelSize::XSmall)
                                         .color(health_color),
                                 ),
@@ -1743,7 +1744,7 @@ impl MediaPanel {
                                 .gap_1()
                                 .when(stale_count > 0, |this| {
                                     this.child(
-                                        Button::new("media-panel-remove-stale-recent", "Clean")
+                                        Button::new("media-panel-remove-stale-recent", "Remove")
                                             .style(ButtonStyle::Subtle)
                                             .size(ButtonSize::Compact)
                                             .tooltip(Tooltip::text(CLEAN_STALE_MEDIA_TOOLTIP))
@@ -1778,7 +1779,8 @@ impl MediaPanel {
             .iter()
             .filter(|entry| media_history_entry_stale(entry))
             .count();
-        let health_label = media_history_health_label(self.pinned_media.len(), stale_count);
+        let availability_label =
+            media_history_availability_label(self.pinned_media.len(), stale_count);
         let health_color = if stale_count > 0 {
             Color::Warning
         } else {
@@ -1814,7 +1816,7 @@ impl MediaPanel {
                                         .color(Color::Muted),
                                 )
                                 .child(
-                                    Label::new(health_label)
+                                    Label::new(availability_label)
                                         .size(LabelSize::XSmall)
                                         .color(health_color),
                                 ),
@@ -1824,7 +1826,7 @@ impl MediaPanel {
                                 .gap_1()
                                 .when(stale_count > 0, |this| {
                                     this.child(
-                                        Button::new("media-panel-remove-stale-pinned", "Clean")
+                                        Button::new("media-panel-remove-stale-pinned", "Remove")
                                             .style(ButtonStyle::Subtle)
                                             .size(ButtonSize::Compact)
                                             .tooltip(Tooltip::text(CLEAN_STALE_MEDIA_TOOLTIP))
@@ -2637,7 +2639,7 @@ fn media_history_preview_tooltip(source_available: bool) -> &'static str {
     if source_available {
         "Preview media"
     } else {
-        "Source file is missing. Remove this row or use Clean."
+        "Source file is missing. Remove this row or use Remove."
     }
 }
 
@@ -2645,7 +2647,7 @@ fn media_history_insert_tooltip(source_available: bool) -> &'static str {
     if source_available {
         "Insert media into the active editor"
     } else {
-        "Source file is missing. Remove this row or use Clean."
+        "Source file is missing. Remove this row or use Remove."
     }
 }
 
@@ -2659,15 +2661,15 @@ fn media_history_pin_tooltip(pinned: bool, source_available: bool) -> &'static s
     } else if source_available {
         "Pin to the media working set"
     } else {
-        "Source file is missing. Remove this row or use Clean."
+        "Source file is missing. Remove this row or use Remove."
     }
 }
 
 fn media_removed_stale_status(section: &str, removed: usize) -> SharedString {
     match removed {
-        0 => format!("No stale {section} entries").into(),
-        1 => format!("Removed 1 stale {section} entry").into(),
-        _ => format!("Removed {removed} stale {section} entries").into(),
+        0 => format!("No missing {section} entries").into(),
+        1 => format!("Removed 1 missing {section} entry").into(),
+        _ => format!("Removed {removed} missing {section} entries").into(),
     }
 }
 
@@ -2679,12 +2681,12 @@ fn media_cleared_history_status(section: &str, cleared: usize) -> SharedString {
     }
 }
 
-fn media_history_health_label(total: usize, stale: usize) -> SharedString {
+fn media_history_availability_label(total: usize, stale: usize) -> SharedString {
     let available = total.saturating_sub(stale);
     if stale == 0 {
         format!("{available} available").into()
     } else {
-        format!("{available} available / {stale} missing").into()
+        format!("{available} available, {stale} missing").into()
     }
 }
 

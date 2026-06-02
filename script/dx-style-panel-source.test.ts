@@ -1856,7 +1856,7 @@ test("Zed Style rail keeps GPUI as the shell and Web Preview as the generator ho
   assert.match(snapshot, /grouped_class_reverse_css_delta\.rs/);
   assert.match(snapshot, /mod active_context/);
   assert.match(snapshot, /mod group_context/);
-  assert.match(snapshot, /Generator host: Web Preview owns visual controls/);
+  assert.match(snapshot, /Web Preview controls: source-owned generators render in Web Preview/);
   assert.match(snapshot, /trusted dry-run receipts, source identity, and the editor write bridge/);
   assert.match(snapshot, /web_preview_bridge_ready/);
   assert.match(snapshot, /MAX_WEB_PREVIEW_HOST_BYTES/);
@@ -1881,7 +1881,7 @@ test("Zed Style rail keeps GPUI as the shell and Web Preview as the generator ho
   assert.match(snapshot, /generatorForContext/);
   assert.match(snapshot, /orderedCatalog/);
   assert.match(snapshot, /suggested_generator/);
-  assert.match(snapshot, /Open context-aware Web Preview generators/);
+  assert.match(snapshot, /Open Style controls; source writes stay receipt-gated/);
   assert.match(snapshot, /source_apply_review_receipt/);
   assert.match(snapshot, /source_apply_contract_ready/);
   assert.match(snapshot, /Source Apply/);
@@ -1889,8 +1889,8 @@ test("Zed Style rail keeps GPUI as the shell and Web Preview as the generator ho
   assert.match(snapshot, /Reverse CSS Delta/);
   assert.match(snapshot, /web preview review contract/);
   assert.match(rail, /Web Preview Host/);
-  assert.match(rail, /controls ready/);
-  assert.match(snapshot, /Visual CSS generators render in Web Preview, not hand-built GPUI controls/);
+  assert.match(rail, /source bridge wired/);
+  assert.match(snapshot, /Style generators render in Web Preview, not hand-built GPUI controls/);
   assert.match(readiness, /mod expected_files/);
   assert.match(readinessExpectedFiles, /Grouped class editor read model/);
   assert.match(readinessExpectedFiles, /Grouped class cursor context/);
@@ -4508,13 +4508,13 @@ test("Zed Style rail surfaces source-only DX Style readiness", () => {
   assert.doesNotMatch(readinessExpectedFiles, /std::process|Command::new|spawn|powershell|cmd \/c/);
 
   assert.match(rail, /metric_row\("Readiness", snapshot\.readiness\.status\.clone\(\)\)/);
-  assert.match(rail, /No dx style build\/check receipt has been read by Zed/);
+  assert.match(rail, /No DX Style build\/check receipt has been read by Zed/);
   assert.match(rail, /bounded_items\(\s*&snapshot\.readiness\.missing_rows/s);
   assert.match(
     rail,
     /Button::new\("dx-style-open-generator-preview", "Open Style Controls"\)/,
   );
-  assert.match(panelCards, /"Open Web Preview Controls"/);
+  assert.match(panelCards, /"Open Style Controls"/);
   assert.doesNotMatch(rail, /IconButton::new/);
   assert.ok(lineCount("crates/agent_ui/src/dx_style_panel/readiness.rs") < 380);
   assert.ok(

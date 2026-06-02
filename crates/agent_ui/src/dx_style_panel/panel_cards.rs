@@ -22,8 +22,8 @@ pub(super) fn generator_host_card(
         .bg(cx.theme().colors().element_background)
         .child(metric("Web Preview", web_preview_state(snapshot)))
         .child(metric(
-            "Controls",
-            format!("{} cataloged controls", snapshot.visual_generator_count),
+            "Generators",
+            format!("{} declared", snapshot.visual_generator_count),
         ))
         .child(metric("Readiness", snapshot.readiness.status.clone()))
         .child(
@@ -35,7 +35,7 @@ pub(super) fn generator_host_card(
         .child(
             Button::new(
                 "dx-style-panel-open-generator-preview",
-                "Open Web Preview Controls",
+                "Open Style Controls",
             )
             .full_width()
             .label_size(LabelSize::Small)
@@ -130,10 +130,10 @@ pub(super) fn readiness_card(snapshot: &DxStylePanelSnapshot, cx: &App) -> AnyEl
 
 fn web_preview_state(snapshot: &DxStylePanelSnapshot) -> String {
     if snapshot.web_preview_bridge_ready {
-        "controls ready".to_string()
+        "source bridge wired".to_string()
     } else if snapshot.web_preview_host_present {
-        "host connected".to_string()
+        "host source present".to_string()
     } else {
-        "host unavailable".to_string()
+        "host source missing".to_string()
     }
 }

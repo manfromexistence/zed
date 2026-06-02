@@ -1153,7 +1153,8 @@ impl IconPickerPanel {
             return None;
         }
 
-        let health_label = icon_history_health_label(self.recent_icon_actions.len());
+        let count_label =
+            icon_history_count_label(self.recent_icon_actions.len(), "action", "actions");
         let mut rows =
             Vec::with_capacity(self.recent_icon_actions.len().min(MAX_RECENT_ICON_ACTIONS));
         for (index, entry) in self
@@ -1185,7 +1186,7 @@ impl IconPickerPanel {
                                         .color(Color::Muted),
                                 )
                                 .child(
-                                    Label::new(health_label)
+                                    Label::new(count_label)
                                         .size(LabelSize::XSmall)
                                         .color(Color::Muted),
                                 ),
@@ -1210,7 +1211,8 @@ impl IconPickerPanel {
             return None;
         }
 
-        let health_label = icon_history_health_label(self.pinned_icon_actions.len());
+        let count_label =
+            icon_history_count_label(self.pinned_icon_actions.len(), "pinned", "pinned");
         let mut rows =
             Vec::with_capacity(self.pinned_icon_actions.len().min(MAX_PINNED_ICON_ACTIONS));
         for (index, entry) in self
@@ -1242,7 +1244,7 @@ impl IconPickerPanel {
                                         .color(Color::Muted),
                                 )
                                 .child(
-                                    Label::new(health_label)
+                                    Label::new(count_label)
                                         .size(LabelSize::XSmall)
                                         .color(Color::Muted),
                                 ),
@@ -1725,12 +1727,12 @@ fn recent_icon_action_label(action: RecentIconAction) -> &'static str {
     }
 }
 
-fn icon_history_health_label(count: usize) -> SharedString {
+fn icon_history_count_label(count: usize, singular: &str, plural: &str) -> SharedString {
     match count {
-        1 => "1 saved".into(),
+        1 => format!("1 {singular}").into(),
         _ => {
-            let mut text = String::with_capacity(12);
-            let _ = write!(text, "{count} saved");
+            let mut text = String::with_capacity(16);
+            let _ = write!(text, "{count} {plural}");
             text.into()
         }
     }

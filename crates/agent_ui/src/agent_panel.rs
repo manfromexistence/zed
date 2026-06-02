@@ -5929,7 +5929,7 @@ impl AgentPanel {
         )
         .icon_size(IconSize::Small)
         .toggle_state(self.fullscreen_sources_rail_open)
-        .tooltip(Tooltip::text("Toggle Agent Sources Rail"))
+        .tooltip(Tooltip::text("Show or hide sources"))
         .on_click(cx.listener(|this, _, _window, cx| {
             this.fullscreen_sources_rail_open = !this.fullscreen_sources_rail_open;
             cx.notify();
@@ -5940,7 +5940,7 @@ impl AgentPanel {
         )
         .icon_size(IconSize::Small)
         .toggle_state(self.fullscreen_progress_rail_open)
-        .tooltip(Tooltip::text("Toggle Agent Progress Rail"))
+        .tooltip(Tooltip::text("Show or hide progress"))
         .on_click(cx.listener(|this, _, _window, cx| {
             this.fullscreen_progress_rail_open = !this.fullscreen_progress_rail_open;
             cx.notify();
@@ -6700,7 +6700,7 @@ impl AgentPanel {
                 action_button(
                     "dx-launch-demo-recipe",
                     IconName::PlayOutlined,
-                    "Source Recipe",
+                    "Source Workflow",
                 )
                 .disabled(!can_create_entries)
                 .on_click(cx.listener(|this, _, window, cx| {

@@ -364,8 +364,7 @@ fn scan_dx_style_panel() -> DxStylePanelSnapshot {
                 .to_string(),
         );
         warnings.push(
-            "Generator host: Web Preview owns visual controls while GPUI keeps the native shell."
-                .to_string(),
+            "Web Preview controls: source-owned generators render in Web Preview while GPUI keeps the native shell.".to_string(),
         );
         warnings.push(
             "Apply requires trusted dry-run receipts, source identity, and the editor write bridge."
@@ -386,27 +385,26 @@ fn scan_dx_style_panel() -> DxStylePanelSnapshot {
         )
     } else if !generator_catalog_present {
         (
-            "Read model ready".to_string(),
+            "Needs generator catalog".to_string(),
             "Add the visual generator catalog read model for the Web Preview Style cockpit"
                 .to_string(),
         )
     } else if !editor_contract_present || !cursor_context_present || !dry_run_receipt_present {
         (
-            "Catalog ready".to_string(),
+            "Needs editor context".to_string(),
             "Add cursor token context and trusted dry-run receipts before enabling apply actions"
                 .to_string(),
         )
     } else if !web_preview_bridge_ready {
         (
-            "Read-only contracts ready".to_string(),
-            "Wire the Style sidebar to a Web Preview generator surface before adding visual controls"
+            "Needs preview bridge".to_string(),
+            "Wire the Style sidebar to a Web Preview generator surface before enabling controls"
                 .to_string(),
         )
     } else {
         (
-            "Style Web Preview source-ready".to_string(),
-            "Open context-aware Web Preview generators; source writes stay receipt-gated"
-                .to_string(),
+            "Style source wired".to_string(),
+            "Open Style controls; source writes stay receipt-gated".to_string(),
         )
     };
 
@@ -526,9 +524,9 @@ fn scan_dx_style_panel() -> DxStylePanelSnapshot {
         DxStylePanelRow {
             label: "Web Preview Host".to_string(),
             state: if web_preview_bridge_ready {
-                "generator host ready"
+                "source bridge wired"
             } else if web_preview_host_present {
-                "host present"
+                "host source present"
             } else {
                 "missing"
             }
@@ -542,7 +540,7 @@ fn scan_dx_style_panel() -> DxStylePanelSnapshot {
         DxStylePanelRow {
             label: "Native Sidebar".to_string(),
             state: "host shell only".to_string(),
-            detail: "Visual CSS generators render in Web Preview, not hand-built GPUI controls"
+            detail: "Style generators render in Web Preview, not hand-built GPUI controls"
                 .to_string(),
         },
     ];

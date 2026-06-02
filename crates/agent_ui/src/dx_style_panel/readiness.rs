@@ -155,13 +155,13 @@ fn readiness_status(snapshot: &DxStyleReadinessSnapshot) -> String {
     } else if snapshot.receipt_count == 0 {
         "not-run".to_string()
     } else {
-        "source-ready".to_string()
+        "source-backed".to_string()
     }
 }
 
 fn readiness_summary(snapshot: &DxStyleReadinessSnapshot) -> String {
     match snapshot.status.as_str() {
-        "source-ready" => format!(
+        "source-backed" => format!(
             "DX Style docs, contracts, fixtures, artifacts, and {} receipt(s) are discoverable.",
             snapshot.receipt_count
         ),

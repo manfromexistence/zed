@@ -20,17 +20,17 @@ pub(super) fn dx_style_panel_state(snapshot: &DxStylePanelSnapshot, cx: &App) ->
             },
         ))
         .child(metric_row(
-            "Controls",
-            format!("{} cataloged", snapshot.visual_generator_count),
+            "Generators",
+            format!("{} declared", snapshot.visual_generator_count),
         ))
         .child(metric_row(
             "Web Preview",
             if snapshot.web_preview_bridge_ready {
-                "controls ready"
+                "source bridge wired"
             } else if snapshot.web_preview_host_present {
-                "host connected"
+                "host source present"
             } else {
-                "host unavailable"
+                "host source missing"
             },
         ))
         .child(metric_row("Readiness", snapshot.readiness.status.clone()))
@@ -94,7 +94,7 @@ pub(super) fn dx_style_panel_state(snapshot: &DxStylePanelSnapshot, cx: &App) ->
             "dx-style-contract-warning".into(),
             IconName::Warning,
             Color::Warning,
-            "Grouped-class contract is not ready for editor writes",
+            "Grouped-class contract is not available for editor writes",
         ));
     }
 
@@ -165,7 +165,7 @@ pub(super) fn dx_style_panel_state(snapshot: &DxStylePanelSnapshot, cx: &App) ->
 
     if snapshot.readiness.receipt_count == 0 {
         stack = stack.child(muted_card(
-            "No dx style build/check receipt has been read by Zed.",
+            "No DX Style build/check receipt has been read by Zed.",
             cx,
         ));
     }

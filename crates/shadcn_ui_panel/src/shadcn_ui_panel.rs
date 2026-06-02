@@ -48,7 +48,8 @@ const MAX_RECENT_UI_ACTIONS: usize = 5;
 const MAX_PINNED_UI_ACTIONS: usize = 8;
 const PINNED_UI_ACTIONS_KEY: &str = "asset_panel_pinned_ui_v1";
 const PINNED_UI_ACTIONS_STATE_VERSION: u32 = 1;
-const CLEAN_STALE_UI_TOOLTIP: &str = "Remove only stale UI rows whose source or registry files are missing. Valid pins and recent rows stay.";
+const CLEAN_STALE_UI_TOOLTIP: &str =
+    "Remove UI entries whose source or registry files are missing. Available entries stay.";
 const CLEAR_RECENT_UI_TOOLTIP: &str =
     "Clear recent UI actions. Pinned UI entries and the catalog stay.";
 const CLEAR_PINNED_UI_TOOLTIP: &str =
@@ -688,7 +689,7 @@ impl ShadcnUiPanel {
 
     fn remove_stale_recent_ui_actions(&mut self, cx: &mut Context<Self>) {
         let removed = retain_available_ui_entries(&mut self.recent_ui_actions);
-        self.status = Some(ui_removed_stale_status("recent UI action", removed));
+        self.status = Some(ui_removed_stale_status("recent UI", removed));
         cx.notify();
     }
 
@@ -721,7 +722,7 @@ impl ShadcnUiPanel {
 
     fn remove_stale_pinned_ui_actions(&mut self, cx: &mut Context<Self>) {
         let removed = retain_available_ui_entries(&mut self.pinned_ui_actions);
-        self.status = Some(ui_removed_stale_status("pinned UI action", removed));
+        self.status = Some(ui_removed_stale_status("pinned UI", removed));
         if removed > 0 {
             self.persist_pinned_ui_actions(cx);
         }
@@ -732,7 +733,7 @@ impl ShadcnUiPanel {
         let recent_removed = retain_available_ui_entries(&mut self.recent_ui_actions);
         let pinned_removed = retain_available_ui_entries(&mut self.pinned_ui_actions);
         let removed = recent_removed + pinned_removed;
-        self.status = Some(ui_removed_stale_status("UI action", removed));
+        self.status = Some(ui_removed_stale_status("UI", removed));
         if pinned_removed > 0 {
             self.persist_pinned_ui_actions(cx);
         }
@@ -850,7 +851,10 @@ impl ShadcnUiPanel {
             cx.open_url(&preview_url);
         }
 
-        self.status = Some(shadcn_status_label("Previewing ", item.title.as_ref()));
+        self.status = Some(shadcn_status_label(
+            "Opening preview for ",
+            item.title.as_ref(),
+        ));
         self.record_recent_ui_action(&item, RecentUiAction::Previewed);
         cx.notify();
     }
@@ -1109,7 +1113,8 @@ impl ShadcnUiPanel {
             .iter()
             .filter(|entry| self.ui_history_entry_stale(entry))
             .count();
-        let health_label = ui_history_health_label(self.recent_ui_actions.len(), stale_count);
+        let availability_label =
+            ui_history_availability_label(self.recent_ui_actions.len(), stale_count);
         let health_color = if stale_count > 0 {
             Color::Warning
         } else {
@@ -1145,7 +1150,7 @@ impl ShadcnUiPanel {
                                         .color(Color::Muted),
                                 )
                                 .child(
-                                    Label::new(health_label)
+                                    Label::new(availability_label)
                                         .size(LabelSize::XSmall)
                                         .color(health_color),
                                 ),
@@ -1155,7 +1160,7 @@ impl ShadcnUiPanel {
                                 .gap_1()
                                 .when(stale_count > 0, |this| {
                                     this.child(
-                                        Button::new("shadcn-ui-remove-stale-recent", "Clean")
+                                        Button::new("shadcn-ui-remove-stale-recent", "Remove")
                                             .style(ButtonStyle::Subtle)
                                             .size(ButtonSize::Compact)
                                             .tooltip(Tooltip::text(CLEAN_STALE_UI_TOOLTIP))
@@ -1190,7 +1195,8 @@ impl ShadcnUiPanel {
             .iter()
             .filter(|entry| self.ui_history_entry_stale(entry))
             .count();
-        let health_label = ui_history_health_label(self.pinned_ui_actions.len(), stale_count);
+        let availability_label =
+            ui_history_availability_label(self.pinned_ui_actions.len(), stale_count);
         let health_color = if stale_count > 0 {
             Color::Warning
         } else {
@@ -1226,7 +1232,7 @@ impl ShadcnUiPanel {
                                         .color(Color::Muted),
                                 )
                                 .child(
-                                    Label::new(health_label)
+                                    Label::new(availability_label)
                                         .size(LabelSize::XSmall)
                                         .color(health_color),
                                 ),
@@ -1236,7 +1242,7 @@ impl ShadcnUiPanel {
                                 .gap_1()
                                 .when(stale_count > 0, |this| {
                                     this.child(
-                                        Button::new("shadcn-ui-remove-stale-pinned", "Clean")
+                                        Button::new("shadcn-ui-remove-stale-pinned", "Remove")
                                             .style(ButtonStyle::Subtle)
                                             .size(ButtonSize::Compact)
                                             .tooltip(Tooltip::text(CLEAN_STALE_UI_TOOLTIP))
@@ -1917,7 +1923,7 @@ fn ui_history_primary_tooltip(
     source_available: bool,
 ) -> &'static str {
     if can_insert && !source_available {
-        "Source or registry manifest is missing. Remove this row or use Clean."
+        "Source or registry manifest is missing. Remove this row or use Remove."
     } else if install_only {
         "Install writes missing registry files and keeps existing files"
     } else if can_insert {
@@ -1929,7 +1935,7 @@ fn ui_history_primary_tooltip(
 
 fn ui_history_preview_tooltip(can_insert: bool, source_available: bool) -> &'static str {
     if can_insert && !source_available {
-        "Source or registry manifest is missing. Remove this row or use Clean."
+        "Source or registry manifest is missing. Remove this row or use Remove."
     } else {
         "Preview in Web Preview"
     }
@@ -1945,7 +1951,7 @@ fn ui_history_pin_tooltip(pinned: bool, source_available: bool) -> &'static str 
     } else if source_available {
         "Pin to the UI working set"
     } else {
-        "Source or registry manifest is missing. Remove this row or use Clean."
+        "Source or registry manifest is missing. Remove this row or use Remove."
     }
 }
 
@@ -3530,9 +3536,9 @@ fn retain_available_ui_entries(entries: &mut VecDeque<RecentUiEntry>) -> usize {
 
 fn ui_removed_stale_status(section: &str, removed: usize) -> SharedString {
     match removed {
-        0 => format!("No stale {section} entries").into(),
-        1 => format!("Removed 1 stale {section} entry").into(),
-        _ => format!("Removed {removed} stale {section} entries").into(),
+        0 => format!("No missing {section} entries").into(),
+        1 => format!("Removed 1 missing {section} entry").into(),
+        _ => format!("Removed {removed} missing {section} entries").into(),
     }
 }
 
@@ -3544,12 +3550,12 @@ fn ui_cleared_history_status(section: &str, cleared: usize) -> SharedString {
     }
 }
 
-fn ui_history_health_label(total: usize, stale: usize) -> SharedString {
+fn ui_history_availability_label(total: usize, stale: usize) -> SharedString {
     let available = total.saturating_sub(stale);
     if stale == 0 {
         format!("{available} available").into()
     } else {
-        format!("{available} available / {stale} missing").into()
+        format!("{available} available, {stale} missing").into()
     }
 }
 
@@ -4009,10 +4015,10 @@ fn component_demo_html(item: &CatalogItem) -> String {
         "card" => r#"<div class="demo-surface demo-stack"><strong>Card title</strong><p class="demo-muted">Cards frame focused product content.</p><button class="demo-button">Continue</button></div>"#.to_string(),
         "input" => r#"<div class="demo-surface demo-stack"><label class="demo-muted">Email</label><input class="demo-input" value="hello@zed.dev"></div>"#.to_string(),
         "textarea" | "form" => r#"<div class="demo-surface demo-stack"><label class="demo-muted">Message</label><textarea class="demo-input" style="height:86px; padding-top:8px">Build with shadcn/ui inside Zed.</textarea><button class="demo-button">Submit</button></div>"#.to_string(),
-        "badge" => r#"<div class="demo-row"><span class="demo-badge">Ready</span><span class="demo-badge">UI</span></div>"#.to_string(),
+        "badge" => r#"<div class="demo-row"><span class="demo-badge">Active</span><span class="demo-badge">UI</span></div>"#.to_string(),
         "avatar" => r#"<div class="demo-row"><div class="demo-avatar">ZE</div><div><strong>Zed User</strong><div class="demo-muted">Design engineer</div></div></div>"#.to_string(),
         "tabs" => r#"<div class="demo-surface demo-stack"><div class="demo-row"><span class="demo-badge">Preview</span><span class="demo-muted">Code</span><span class="demo-muted">Install</span></div><p>Tabbed content keeps related workflows compact.</p></div>"#.to_string(),
-        "table" => r#"<div class="demo-surface"><table class="demo-table"><tr><th>Name</th><th>Status</th></tr><tr><td>Button</td><td>Ready</td></tr><tr><td>Card</td><td>Installed</td></tr></table></div>"#.to_string(),
+        "table" => r#"<div class="demo-surface"><table class="demo-table"><tr><th>Name</th><th>State</th></tr><tr><td>Button</td><td>Available</td></tr><tr><td>Card</td><td>Added</td></tr></table></div>"#.to_string(),
         "checkbox" => r#"<div class="demo-row"><span class="demo-button" style="width:24px; min-height:24px; padding:0">&#10003;</span><span>Enable component install</span></div>"#.to_string(),
         "select" => r#"<div class="demo-surface demo-stack"><label class="demo-muted">Theme</label><div class="demo-input">Dx Dark</div></div>"#.to_string(),
         "switch" | "toggle" | "toggle-group" => r#"<div class="demo-row"><span class="demo-muted">Preview mode</span><span class="demo-button" style="border-radius:999px; min-width:52px; padding:0 6px; justify-content:flex-end"><span style="width:18px;height:18px;border-radius:999px;background:#04130a;display:inline-block"></span></span></div>"#.to_string(),
@@ -4024,7 +4030,7 @@ fn component_demo_html(item: &CatalogItem) -> String {
         "context-menu" | "menubar" | "navigation-menu" => r#"<div class="demo-surface demo-stack"><div class="demo-row"><span class="demo-badge">File</span><span class="demo-muted">Edit</span><span class="demo-muted">View</span></div><div class="demo-surface" style="box-shadow:none"><div>New component</div><div>Copy import</div><div>Open docs</div></div></div>"#.to_string(),
         "accordion" => r#"<div class="demo-surface demo-stack"><strong>What is included?</strong><p class="demo-muted">Components, blocks, CSS variables, and dependencies.</p></div>"#.to_string(),
         "popover" | "tooltip" | "hover-card" => r#"<div class="demo-surface demo-stack"><button class="demo-button secondary">Hover target</button><div class="demo-surface" style="box-shadow:none"><strong>Preview detail</strong><p class="demo-muted">Context appears close to the focused control.</p></div></div>"#.to_string(),
-        "toast" | "sonner" => r#"<div class="demo-surface demo-stack"><strong>Saved changes</strong><p class="demo-muted">The UI registry is ready.</p></div>"#.to_string(),
+        "toast" | "sonner" => r#"<div class="demo-surface demo-stack"><strong>Changes queued</strong><p class="demo-muted">UI registry preview.</p></div>"#.to_string(),
         "skeleton" => r#"<div class="demo-surface demo-stack"><div style="height:14px;width:70%;border-radius:999px;background:var(--border)"></div><div style="height:14px;width:90%;border-radius:999px;background:var(--border)"></div><div style="height:14px;width:48%;border-radius:999px;background:var(--border)"></div></div>"#.to_string(),
         "scroll-area" => r#"<div class="demo-surface demo-stack" style="max-height:150px;overflow:auto;scrollbar-color:var(--border) transparent"><p>ScrollArea keeps long component source readable.</p><p class="demo-muted">Install files, preview source, copy snippets, and review tokens without leaving Zed.</p><p class="demo-muted">The native panel uses compact rows and predictable tabs.</p></div>"#.to_string(),
         "chart" => r#"<div class="demo-surface demo-stack"><strong>Usage</strong><div class="demo-chart"><div class="demo-bar" style="height:60%"></div><div class="demo-bar" style="height:88%"></div><div class="demo-bar" style="height:48%"></div><div class="demo-bar" style="height:78%"></div></div></div>"#.to_string(),

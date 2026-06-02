@@ -1480,6 +1480,7 @@ COMPLETED:
 - Added Web Preview replacement payload diagnostics so oversized reverse CSS delta replacement utilities are visible in the generator cockpit and copied source-review packets before native IPC.
 - Added native source-apply receipt preservation for Web Preview reverse CSS delta replacement payload diagnostics, with review blocked when those diagnostics are non-empty.
 - Added real split/close controls to the project, git, outline, and collab panel headers through the shared dock helper, including panel-id-aware disabled state, compact tooltips, and source guards. Also cleaned recent Agent/Style sidebar wording and stale source-test expectations. Passed focused `rustfmt --check`, 43/43 focused Node source tests, and `git diff --check`. Skipped by policy: Cargo and `just run`.
+- Polished recent tool-panel and Agent/Style rail copy so transient recents show action counts instead of saved counts, missing-entry cleanup uses Remove/missing language instead of Clean/stale, preview requests say they are opening, and DX Style source states avoid runtime-ready overclaims. Six subagents audited the slice; 25/25 focused source guards and targeted `rustfmt --check` passed. Skipped by policy: Cargo and `just run`.
 
 BLOCKED:
 - None

@@ -529,7 +529,7 @@ impl FontPanel {
 
     fn select_font(&mut self, font: FontEntry, cx: &mut Context<Self>) {
         self.set_selected_font(&font);
-        self.status = Some(font_status_label("Previewing ", font.name.as_ref()));
+        self.status = Some(font_status_label("Selected ", font.name.as_ref()));
         cx.notify();
     }
 
@@ -730,7 +730,7 @@ impl FontPanel {
         }
 
         self.status = Some(font_status_label_with_suffix(
-            "Previewing ",
+            "Opening preview for ",
             font.as_ref(),
             " in Web Preview",
         ));
@@ -913,7 +913,8 @@ impl FontPanel {
             return None;
         }
 
-        let health_label = font_history_health_label(self.recent_font_actions.len());
+        let count_label =
+            font_history_count_label(self.recent_font_actions.len(), "action", "actions");
         let mut rows =
             Vec::with_capacity(self.recent_font_actions.len().min(MAX_RECENT_FONT_ACTIONS));
         for (index, entry) in self
@@ -945,7 +946,7 @@ impl FontPanel {
                                         .color(Color::Muted),
                                 )
                                 .child(
-                                    Label::new(health_label)
+                                    Label::new(count_label)
                                         .size(LabelSize::XSmall)
                                         .color(Color::Muted),
                                 ),
@@ -970,7 +971,8 @@ impl FontPanel {
             return None;
         }
 
-        let health_label = font_history_health_label(self.pinned_font_actions.len());
+        let count_label =
+            font_history_count_label(self.pinned_font_actions.len(), "pinned", "pinned");
         let mut rows =
             Vec::with_capacity(self.pinned_font_actions.len().min(MAX_PINNED_FONT_ACTIONS));
         for (index, entry) in self
@@ -1002,7 +1004,7 @@ impl FontPanel {
                                         .color(Color::Muted),
                                 )
                                 .child(
-                                    Label::new(health_label)
+                                    Label::new(count_label)
                                         .size(LabelSize::XSmall)
                                         .color(Color::Muted),
                                 ),
@@ -1481,12 +1483,12 @@ fn recent_font_action_label(action: RecentFontAction) -> &'static str {
     }
 }
 
-fn font_history_health_label(count: usize) -> SharedString {
+fn font_history_count_label(count: usize, singular: &str, plural: &str) -> SharedString {
     match count {
-        1 => "1 saved".into(),
+        1 => format!("1 {singular}").into(),
         _ => {
-            let mut text = String::with_capacity(12);
-            let _ = write!(text, "{count} saved");
+            let mut text = String::with_capacity(16);
+            let _ = write!(text, "{count} {plural}");
             text.into()
         }
     }

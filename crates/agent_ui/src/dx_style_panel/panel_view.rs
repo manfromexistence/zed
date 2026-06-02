@@ -60,11 +60,7 @@ fn panel_header() -> impl IntoElement {
                 .flex_1()
                 .min_w_0()
                 .child(Icon::new(IconName::Sparkle).size(IconSize::Small))
-                .child(
-                    Label::new("Style Control")
-                        .size(LabelSize::Small)
-                        .truncate(),
-                ),
+                .child(Label::new("Style").size(LabelSize::Small).truncate()),
         )
         .child(
             h_flex()
