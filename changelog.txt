@@ -1,3 +1,20 @@
+[2026-06-02] - Workspace Sidebar Shortcut Grid Persistence
+
+ADDED:
+- `crates\sidebar\src\sidebar.rs` now persists user-pinned workspace shortcut grid cards by screen kind and project root path.
+- Sidebar grid cards now expose a real star toggle for pinning/unpinning editor files, browser sites, and terminal folders.
+
+CHANGED:
+- The expanded workspace sidebar grid now renders pinned shortcuts before generated suggestions, dedupes by real action target, and keeps the existing three-column/twelve-card cap.
+- `script\dx-launch-workspace-source.test.ts` now guards shortcut persistence, restore bounds, star-toggle wiring, and the current scoped source-rail visibility.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\sidebar\src\sidebar.rs crates\sidebar\src\sidebar_tests.rs`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-launch-workspace-source.test.ts`
+
+NOTES:
+- No `just run`, Cargo, build, server, browser automation, or live sidebar UI validation was run for this source-only checkpoint.
+
 [2026-06-02] - Font Panel Durable Metadata Artifact
 
 ADDED:

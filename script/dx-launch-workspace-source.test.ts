@@ -5,6 +5,29 @@ import test from "node:test";
 const read = (path: string) => readFileSync(path, "utf8");
 const lineCount = (path: string) => read(path).split(/\r?\n/).length;
 
+const functionBody = (source: string, name: string) => {
+  const start = source.search(new RegExp(`fn\\s+${name}\\b`));
+  assert.ok(start >= 0, `expected ${name}`);
+
+  const bodyStart = source.indexOf("{", start);
+  assert.ok(bodyStart > start, `expected ${name} body`);
+
+  let depth = 0;
+  for (let index = bodyStart; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === "{") {
+      depth += 1;
+    } else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return source.slice(start, index + 1);
+      }
+    }
+  }
+
+  assert.fail(`expected ${name} body to close`);
+};
+
 test("DX launch workspace UI stays split by rail ownership", () => {
   const parent = read("crates/agent_ui/src/dx_launch_workspace.rs");
   const expectedModules = [
@@ -102,6 +125,51 @@ test("collapsed workspace activity bar stays icon-only with hover details", () =
 
   assert.match(sidebar, /Tooltip::text\("Create Space or Add Project"\)/);
   assert.match(sidebar, /Label::new\("Toggle Sidebar"\)/);
+});
+
+test("workspace shortcut grid persists user-pinned entries by screen and project", () => {
+  const sidebar = read("crates/sidebar/src/sidebar.rs");
+  const serializedState = functionBody(sidebar, "serialized_state");
+  const restoreSerializedState = functionBody(sidebar, "restore_serialized_state");
+  const gridEntries = functionBody(sidebar, "grid_entries");
+  const renderSpaceGrid = functionBody(sidebar, "render_space_grid");
+  const toggleGridShortcut = functionBody(sidebar, "toggle_grid_shortcut");
+
+  assert.match(sidebar, /const MAX_SIDEBAR_GRID_SHORTCUTS: usize = 24;/);
+  assert.match(sidebar, /struct SerializedSidebarGridShortcut/);
+  assert.match(sidebar, /enum SerializedSidebarGridScreenKind/);
+  assert.match(sidebar, /grid_shortcuts:\s*Vec<SerializedSidebarGridShortcut>/);
+  assert.match(sidebar, /grid_shortcuts:\s*Vec::new\(\)/);
+  assert.match(
+    serializedState,
+    /grid_shortcuts:\s*self\.grid_shortcuts\.clone\(\)/,
+    "sidebar serialization must persist user-pinned shortcut cards",
+  );
+  assert.match(
+    restoreSerializedState,
+    /self\.grid_shortcuts = serialized[\s\S]*\.grid_shortcuts[\s\S]*\.take\(MAX_SIDEBAR_GRID_SHORTCUTS\)[\s\S]*\.collect\(\);/,
+    "sidebar restore must bound restored shortcut cards before keeping them",
+  );
+  assert.match(
+    gridEntries,
+    /let pinned_entries = self\.pinned_grid_entries\(&context\);[\s\S]*let generated_entries = self\.generated_grid_entries\(kind, root_path, cx\);/,
+    "grid entries must place persisted user-pinned shortcuts before generated suggestions",
+  );
+  assert.match(
+    gridEntries,
+    /seen_actions\.insert\(entry\.action\.dedupe_key\(\)\)[\s\S]*take\(SIDEBAR_SPACE_GRID_COLUMNS \* 4\)/,
+    "grid entries must dedupe and cap the final three-column shortcut grid to twelve cards",
+  );
+  assert.match(
+    renderSpaceGrid,
+    /IconName::StarFilled[\s\S]*IconName::Star[\s\S]*IconButton::new[\s\S]*toggle_grid_shortcut/,
+    "grid cards must expose a real star toggle wired to shortcut state",
+  );
+  assert.match(
+    toggleGridShortcut,
+    /self\.grid_shortcuts\.remove\(existing_ix\)[\s\S]*self\.grid_shortcuts\.insert\(0, shortcut\)[\s\S]*truncate\(MAX_SIDEBAR_GRID_SHORTCUTS\)[\s\S]*self\.serialize\(cx\)/,
+    "grid shortcut toggling must unpin existing cards or pin new cards, bound the list, and persist",
+  );
 });
 
 test("DX launch workspace delegates Launch Receipts rail rendering", () => {
@@ -987,7 +1055,10 @@ test("DX launch workspace delegates agents and source rails", () => {
   assert.doesNotMatch(sources, /pub\(super\) fn source_attachment_state/);
   assert.doesNotMatch(sources, /DxSourceAttachmentSummary/);
   assert.doesNotMatch(sources, /Attach-ready/);
-  assert.match(sourceAttachments, /pub\(super\) fn source_attachment_state/);
+  assert.match(
+    sourceAttachments,
+    /pub\(in crate::dx_launch_workspace\) fn source_attachment_state/,
+  );
   assert.match(sourceAttachments, /DxSourceAttachmentSummary/);
   assert.match(sourceAttachments, /Attach-ready/);
   assert.match(sourceAttachments, /Produced media/);
@@ -1001,7 +1072,7 @@ test("DX launch workspace delegates agents and source rails", () => {
   assert.doesNotMatch(sources, /fn source_item_row/);
   assert.doesNotMatch(sources, /fn source_receipt_drilldown_row/);
   assert.doesNotMatch(sources, /fn source_kind_icon/);
-  assert.match(sourceReceipts, /pub\(super\) fn receipt_source_state/);
+  assert.match(sourceReceipts, /pub\(in crate::dx_launch_workspace\) fn receipt_source_state/);
   assert.match(sourceReceipts, /DxReceiptSnapshot/);
   assert.match(sourceReceipts, /latest-receipt-\{ix\}/);
   assert.match(sourceReceipts, /IconName::FileTextOutlined/);

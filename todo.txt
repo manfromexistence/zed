@@ -1,4 +1,5 @@
 COMPLETED:
+- Workspace sidebar shortcut grid now has real persisted user-pinned cards: editor/browser/terminal grid entries can be starred, restored by screen kind plus project root, deduped ahead of generated suggestions, and capped to the existing three-column/twelve-card layout.
 - Font panel first-open performance now has a bounded durable system-font metadata artifact: the panel reads a capped KVP-backed font list while the live OS font cache warms, then persists the sorted real font list after live cache refresh so future opens can render useful rows sooner.
 - Project panel media shelf hover details now match the requested browser-card language: image cards show `Size`, video/audio cards show `Time` plus size, and video frame previews are typed as `Center frame` or generic `Frame preview` instead of an ambiguous bare thumbnail path.
 - Project panel media shelf now participates in keyboard navigation: selecting down from an expanded media folder enters the bottom shelf, next/previous moves across bounded real media cards, and previous from the first media card returns to the owning folder row.

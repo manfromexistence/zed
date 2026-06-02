@@ -808,8 +808,11 @@ async fn test_restore_serialized_archive_view_does_not_panic(cx: &mut TestAppCon
         collapsed_groups: Vec::new(),
         expanded_groups: Vec::new(),
         space_labels: Vec::new(),
+        space_order: Vec::new(),
         next_space_number: 1,
         active_view: SerializedSidebarView::Archive,
+        activity_bar_expanded: true,
+        grid_shortcuts: Vec::new(),
     })
     .expect("serialization should succeed");
 

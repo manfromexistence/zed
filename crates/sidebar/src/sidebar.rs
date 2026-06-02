@@ -111,13 +111,90 @@ const MIN_WIDTH: Pixels = px(200.0);
 const MAX_WIDTH: Pixels = px(800.0);
 const CODING_ACTIVITY_BAR_WIDTH: Pixels = px(48.0);
 const SIDEBAR_SPACE_GRID_COLUMNS: usize = 3;
+const SIDEBAR_SPACE_GRID_ITEMS: usize = SIDEBAR_SPACE_GRID_COLUMNS * 4;
 const MAX_VISIBLE_SPACE_DOTS: usize = 7;
+const MAX_SIDEBAR_GRID_SHORTCUTS: usize = 24;
 
 #[derive(Clone, Serialize, Deserialize)]
 struct SerializedSpaceLabel {
     #[serde(default)]
     workspace_id: Option<i64>,
     name: String,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum SerializedSidebarGridScreenKind {
+    Editor,
+    Browser,
+    Terminal,
+    LiquidGlass,
+    Other,
+}
+
+impl From<WorkspaceScreenKind> for SerializedSidebarGridScreenKind {
+    fn from(kind: WorkspaceScreenKind) -> Self {
+        match kind {
+            WorkspaceScreenKind::Editor => Self::Editor,
+            WorkspaceScreenKind::Browser => Self::Browser,
+            WorkspaceScreenKind::Terminal => Self::Terminal,
+            WorkspaceScreenKind::LiquidGlass => Self::LiquidGlass,
+            WorkspaceScreenKind::Other => Self::Other,
+        }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+enum SerializedSidebarGridAction {
+    AddFolderToProject,
+    OpenFile { path: PathBuf },
+    OpenWebsite { url: String },
+    OpenTerminalFolder { path: PathBuf },
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+struct SerializedSidebarGridShortcut {
+    screen_kind: SerializedSidebarGridScreenKind,
+    #[serde(default)]
+    root_path: Option<PathBuf>,
+    id: String,
+    icon: IconName,
+    label: String,
+    #[serde(default)]
+    subtitle: Option<String>,
+    action: SerializedSidebarGridAction,
+}
+
+impl SerializedSidebarGridShortcut {
+    fn from_entry(context: &SidebarGridContext, entry: &SidebarGridEntry) -> Self {
+        Self {
+            screen_kind: context.screen_kind,
+            root_path: context.root_path.clone(),
+            id: entry.id.as_ref().to_string(),
+            icon: entry.icon,
+            label: entry.label.as_ref().to_string(),
+            subtitle: entry
+                .subtitle
+                .as_ref()
+                .map(|subtitle| subtitle.as_ref().to_string()),
+            action: entry.action.to_serialized(),
+        }
+    }
+
+    fn matches_context(&self, context: &SidebarGridContext) -> bool {
+        self.screen_kind == context.screen_kind && self.root_path == context.root_path
+    }
+
+    fn to_grid_entry(&self) -> SidebarGridEntry {
+        SidebarGridEntry {
+            id: SharedString::from(format!("sidebar-grid-pinned-{}", self.id)),
+            icon: self.icon,
+            label: self.label.clone().into(),
+            subtitle: self.subtitle.clone().map(Into::into),
+            action: SidebarGridAction::from_serialized(&self.action),
+        }
+    }
 }
 
 #[derive(Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -157,6 +234,8 @@ struct SerializedSidebar {
     active_view: SerializedSidebarView,
     #[serde(default)]
     activity_bar_expanded: bool,
+    #[serde(default)]
+    grid_shortcuts: Vec<SerializedSidebarGridShortcut>,
 }
 
 fn default_next_space_number() -> usize {
@@ -502,8 +581,55 @@ impl Render for DraggedSidebarSpace {
 enum SidebarGridAction {
     AddFolderToProject,
     OpenFile(PathBuf),
-    OpenWebsite(&'static str),
+    OpenWebsite(SharedString),
     OpenTerminalFolder(PathBuf),
+}
+
+impl SidebarGridAction {
+    fn to_serialized(&self) -> SerializedSidebarGridAction {
+        match self {
+            Self::AddFolderToProject => SerializedSidebarGridAction::AddFolderToProject,
+            Self::OpenFile(path) => SerializedSidebarGridAction::OpenFile { path: path.clone() },
+            Self::OpenWebsite(url) => SerializedSidebarGridAction::OpenWebsite {
+                url: url.as_ref().to_string(),
+            },
+            Self::OpenTerminalFolder(path) => {
+                SerializedSidebarGridAction::OpenTerminalFolder { path: path.clone() }
+            }
+        }
+    }
+
+    fn from_serialized(action: &SerializedSidebarGridAction) -> Self {
+        match action {
+            SerializedSidebarGridAction::AddFolderToProject => Self::AddFolderToProject,
+            SerializedSidebarGridAction::OpenFile { path } => Self::OpenFile(path.clone()),
+            SerializedSidebarGridAction::OpenWebsite { url } => {
+                Self::OpenWebsite(url.clone().into())
+            }
+            SerializedSidebarGridAction::OpenTerminalFolder { path } => {
+                Self::OpenTerminalFolder(path.clone())
+            }
+        }
+    }
+
+    fn dedupe_key(&self) -> String {
+        match self {
+            Self::AddFolderToProject => "add-folder".to_string(),
+            Self::OpenFile(path) => format!("file:{}", path.display()),
+            Self::OpenWebsite(url) => format!("web:{}", url.as_ref()),
+            Self::OpenTerminalFolder(path) => format!("terminal:{}", path.display()),
+        }
+    }
+
+    fn is_pinable(&self) -> bool {
+        !matches!(self, Self::AddFolderToProject)
+    }
+}
+
+#[derive(Clone, PartialEq, Eq)]
+struct SidebarGridContext {
+    screen_kind: SerializedSidebarGridScreenKind,
+    root_path: Option<PathBuf>,
 }
 
 #[derive(Clone)]
@@ -762,6 +888,7 @@ pub struct Sidebar {
     next_space_number: usize,
     space_page_start: usize,
     activity_bar_expanded: bool,
+    grid_shortcuts: Vec<SerializedSidebarGridShortcut>,
     grid_entry_cache:
         RefCell<HashMap<(WorkspaceScreenKind, Option<PathBuf>), Vec<SidebarGridEntry>>>,
     recent_projects_popover_handle: PopoverMenuHandle<SidebarRecentProjects>,
@@ -908,6 +1035,7 @@ impl Sidebar {
             next_space_number: default_next_space_number(),
             space_page_start: 0,
             activity_bar_expanded: false,
+            grid_shortcuts: Vec::new(),
             grid_entry_cache: RefCell::default(),
             recent_projects_popover_handle: PopoverMenuHandle::default(),
             project_header_menu_handles: HashMap::new(),
@@ -7754,7 +7882,7 @@ impl Sidebar {
                 icon,
                 label: label.into(),
                 subtitle: None,
-                action: SidebarGridAction::OpenWebsite(url),
+                action: SidebarGridAction::OpenWebsite(url.into()),
             })
             .collect()
     }
@@ -7808,7 +7936,7 @@ impl Sidebar {
         }
     }
 
-    fn grid_entries(&self, cx: &App) -> Vec<SidebarGridEntry> {
+    fn grid_context(&self, cx: &App) -> (WorkspaceScreenKind, Option<PathBuf>, SidebarGridContext) {
         let kind = self.active_screen_kind(cx);
         let root_path = match kind {
             WorkspaceScreenKind::Browser => None,
@@ -7819,6 +7947,19 @@ impl Sidebar {
             | WorkspaceScreenKind::LiquidGlass
             | WorkspaceScreenKind::Other => self.project_root_path(cx),
         };
+        let context = SidebarGridContext {
+            screen_kind: kind.into(),
+            root_path: root_path.clone(),
+        };
+        (kind, root_path, context)
+    }
+
+    fn generated_grid_entries(
+        &self,
+        kind: WorkspaceScreenKind,
+        root_path: Option<PathBuf>,
+        cx: &App,
+    ) -> Vec<SidebarGridEntry> {
         let cache_key = (kind, root_path);
         if let Some(entries) = self.grid_entry_cache.borrow().get(&cache_key).cloned() {
             return entries;
@@ -7839,12 +7980,70 @@ impl Sidebar {
         entries
     }
 
-    fn open_browser_grid_url(
+    fn pinned_grid_entries(&self, context: &SidebarGridContext) -> Vec<SidebarGridEntry> {
+        self.grid_shortcuts
+            .iter()
+            .filter(|shortcut| shortcut.matches_context(context))
+            .take(SIDEBAR_SPACE_GRID_ITEMS)
+            .map(SerializedSidebarGridShortcut::to_grid_entry)
+            .collect()
+    }
+
+    fn is_grid_entry_pinned(
+        &self,
+        context: &SidebarGridContext,
+        action: &SidebarGridAction,
+    ) -> bool {
+        let action_key = action.dedupe_key();
+        self.grid_shortcuts
+            .iter()
+            .filter(|shortcut| shortcut.matches_context(context))
+            .any(|shortcut| {
+                SidebarGridAction::from_serialized(&shortcut.action).dedupe_key() == action_key
+            })
+    }
+
+    fn grid_entries(&self, cx: &App) -> Vec<SidebarGridEntry> {
+        let (kind, root_path, context) = self.grid_context(cx);
+        let pinned_entries = self.pinned_grid_entries(&context);
+        let generated_entries = self.generated_grid_entries(kind, root_path, cx);
+        let mut seen_actions = HashSet::new();
+
+        pinned_entries
+            .into_iter()
+            .chain(generated_entries)
+            .filter(|entry| seen_actions.insert(entry.action.dedupe_key()))
+            .take(SIDEBAR_SPACE_GRID_COLUMNS * 4)
+            .collect()
+    }
+
+    fn toggle_grid_shortcut(
         &mut self,
-        url: &'static str,
-        window: &mut Window,
+        context: SidebarGridContext,
+        entry: SidebarGridEntry,
         cx: &mut Context<Self>,
     ) {
+        if !entry.action.is_pinable() {
+            return;
+        }
+
+        let action_key = entry.action.dedupe_key();
+        if let Some(existing_ix) = self.grid_shortcuts.iter().position(|shortcut| {
+            shortcut.matches_context(&context)
+                && SidebarGridAction::from_serialized(&shortcut.action).dedupe_key() == action_key
+        }) {
+            self.grid_shortcuts.remove(existing_ix);
+        } else {
+            let shortcut = SerializedSidebarGridShortcut::from_entry(&context, &entry);
+            self.grid_shortcuts.insert(0, shortcut);
+            self.grid_shortcuts.truncate(MAX_SIDEBAR_GRID_SHORTCUTS);
+        }
+
+        self.serialize(cx);
+        cx.notify();
+    }
+
+    fn open_browser_grid_url(&mut self, url: &str, window: &mut Window, cx: &mut Context<Self>) {
         #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
         {
             if let Some(workspace) = self.active_workspace(cx) {
@@ -7912,7 +8111,9 @@ impl Sidebar {
                     });
                 }
             }
-            SidebarGridAction::OpenWebsite(url) => self.open_browser_grid_url(url, window, cx),
+            SidebarGridAction::OpenWebsite(url) => {
+                self.open_browser_grid_url(url.as_ref(), window, cx)
+            }
             SidebarGridAction::OpenTerminalFolder(path) => {
                 self.open_terminal_grid_folder(path, window, cx);
             }
@@ -7920,6 +8121,7 @@ impl Sidebar {
     }
 
     fn render_space_grid(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let (_, _, context) = self.grid_context(cx);
         let entries = self.grid_entries(cx);
         let chrome_width = f32::from(self.width).max(220.0);
         let horizontal_padding = 16.0;
@@ -7945,9 +8147,25 @@ impl Sidebar {
                         .gap_2()
                         .children(row.iter().cloned().map(|entry| {
                             let action = entry.action.clone();
+                            let pinable = entry.action.is_pinable();
+                            let pinned = self.is_grid_entry_pinned(&context, &entry.action);
+                            let pin_icon = if pinned {
+                                IconName::StarFilled
+                            } else {
+                                IconName::Star
+                            };
+                            let pin_tooltip = if pinned {
+                                "Unpin shortcut"
+                            } else {
+                                "Pin shortcut"
+                            };
+                            let pin_id = SharedString::from(format!("{}-pin", entry.id.as_ref()));
+                            let pin_context = context.clone();
+                            let pin_entry = entry.clone();
 
                             div()
                                 .id(entry.id)
+                                .relative()
                                 .w(px(item_width))
                                 .h(px(52.0))
                                 .flex_shrink_0()
@@ -7972,6 +8190,27 @@ impl Sidebar {
                                 .on_click(cx.listener(move |this, _, window, cx| {
                                     this.open_grid_entry(action.clone(), window, cx);
                                 }))
+                                .when(pinable, |this| {
+                                    this.child(
+                                        div().absolute().top_0().right_0().child(
+                                            IconButton::new(pin_id, pin_icon)
+                                                .shape(IconButtonShape::Square)
+                                                .style(ButtonStyle::Transparent)
+                                                .icon_size(IconSize::XSmall)
+                                                .tooltip(Tooltip::text(pin_tooltip))
+                                                .on_click(cx.listener(
+                                                    move |this, _, _window, cx| {
+                                                        cx.stop_propagation();
+                                                        this.toggle_grid_shortcut(
+                                                            pin_context.clone(),
+                                                            pin_entry.clone(),
+                                                            cx,
+                                                        );
+                                                    },
+                                                )),
+                                        ),
+                                    )
+                                })
                                 .child(
                                     Icon::new(entry.icon)
                                         .size(IconSize::Medium)
@@ -8861,6 +9100,7 @@ impl WorkspaceSidebar for Sidebar {
                 SidebarView::Archive(_) => SerializedSidebarView::History,
             },
             activity_bar_expanded: self.activity_bar_expanded,
+            grid_shortcuts: self.grid_shortcuts.clone(),
         };
         serde_json::to_string(&serialized).ok()
     }
@@ -8895,6 +9135,11 @@ impl WorkspaceSidebar for Sidebar {
                 .collect();
             self.next_space_number = serialized.next_space_number.max(1);
             self.activity_bar_expanded = serialized.activity_bar_expanded;
+            self.grid_shortcuts = serialized
+                .grid_shortcuts
+                .into_iter()
+                .take(MAX_SIDEBAR_GRID_SHORTCUTS)
+                .collect();
             if serialized.active_view == SerializedSidebarView::History {
                 cx.defer_in(window, |this, window, cx| {
                     this.show_archive(window, cx);
