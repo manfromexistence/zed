@@ -77,7 +77,7 @@ use util::{
 use workspace::{
     DraggedSelection, OpenInTerminal, OpenMode, OpenOptions, OpenVisible, PreviewTabsSettings,
     SelectedEntry, SplitDirection, Workspace,
-    dock::{DockPosition, Panel, PanelEvent},
+    dock::{DockPosition, Panel, PanelEvent, side_panel_header_controls},
     notifications::{DetachAndPromptErr, NotifyResultExt, NotifyTaskExt},
 };
 use worktree::{ChildEntriesOptions, CreatedEntry};
@@ -117,34 +117,6 @@ fn project_panel_cap_hit(boundary: &'static str, cap: usize) {
         boundary = boundary,
         cap = cap as u64
     );
-}
-
-fn side_panel_header_controls(id_prefix: &'static str) -> impl IntoElement {
-    h_flex()
-        .id(format!("{id_prefix}-side-panel-controls"))
-        .items_center()
-        .flex_none()
-        .gap_0p5()
-        .child(
-            IconButton::new(format!("{id_prefix}-split-side-panel"), IconName::SplitAlt)
-                .shape(IconButtonShape::Square)
-                .style(ButtonStyle::Subtle)
-                .icon_size(IconSize::Small)
-                .tooltip(Tooltip::text("Split Panel"))
-                .on_click(|_, window, cx| {
-                    window.dispatch_action(Box::new(workspace::SplitActiveSidePanel), cx);
-                }),
-        )
-        .child(
-            IconButton::new(format!("{id_prefix}-close-side-panel"), IconName::Close)
-                .shape(IconButtonShape::Square)
-                .style(ButtonStyle::Subtle)
-                .icon_size(IconSize::Small)
-                .tooltip(Tooltip::text("Close Panel"))
-                .on_click(|_, window, cx| {
-                    window.dispatch_action(Box::new(workspace::CloseActiveSidePanel), cx);
-                }),
-        )
 }
 
 fn push_project_panel_expanded_dir(
@@ -4154,7 +4126,7 @@ impl ProjectPanel {
             .into_any_element()
     }
 
-    fn render_panel_header(cx: &mut Context<Self>) -> impl IntoElement {
+    fn render_panel_header(&self, cx: &mut Context<Self>) -> impl IntoElement {
         h_flex()
             .id("project-panel-header")
             .w_full()
@@ -4184,7 +4156,11 @@ impl ProjectPanel {
                             .truncate(),
                     ),
             )
-            .child(side_panel_header_controls("project-panel"))
+            .child(side_panel_header_controls(
+                "project-panel",
+                self.workspace.clone(),
+                cx.entity().entity_id(),
+            ))
     }
 
     fn start_marquee_selection(
@@ -8121,7 +8097,7 @@ impl Render for ProjectPanel {
                 .track_focus(&self.focus_handle(cx))
                 .child(
                     v_flex()
-                        .child(Self::render_panel_header(cx))
+                        .child(self.render_panel_header(cx))
                         .when_some(selected_entries_toolbar, |this, toolbar| {
                             this.child(toolbar)
                         })
@@ -8572,7 +8548,7 @@ impl Render for ProjectPanel {
             v_flex()
                 .id("empty-project_panel-wrapper")
                 .size_full()
-                .child(Self::render_panel_header(cx))
+                .child(self.render_panel_header(cx))
                 .child(
                     ProjectEmptyState::new(
                         "Project Panel",

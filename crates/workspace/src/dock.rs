@@ -17,8 +17,8 @@ use serde::{Deserialize, Serialize};
 use settings::{Settings, SettingsStore, TerminalDockPosition};
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use ui::{
-    ContextMenu, CountBadge, Divider, DividerColor, IconButton, Tooltip, prelude::*,
-    right_click_menu,
+    ButtonStyle, ContextMenu, CountBadge, Divider, DividerColor, IconButton, IconButtonShape,
+    IconName, IconSize, Tooltip, prelude::*, right_click_menu,
 };
 use util::ResultExt as _;
 
@@ -43,6 +43,49 @@ impl Render for DraggedStackResize {
 }
 
 pub use proto::PanelId;
+
+pub fn side_panel_header_controls(
+    id_prefix: &'static str,
+    workspace: WeakEntity<Workspace>,
+    panel_id: EntityId,
+) -> impl IntoElement {
+    h_flex()
+        .id(format!("{id_prefix}-side-panel-controls"))
+        .items_center()
+        .flex_none()
+        .gap_0p5()
+        .child(
+            IconButton::new(format!("{id_prefix}-split-side-panel"), IconName::SplitAlt)
+                .shape(IconButtonShape::Square)
+                .style(ButtonStyle::Subtle)
+                .icon_size(IconSize::Small)
+                .tooltip(Tooltip::text("Split Panel"))
+                .on_click({
+                    let workspace = workspace.clone();
+                    move |_, window, cx| {
+                        if let Some(workspace) = workspace.upgrade() {
+                            workspace.update(cx, |workspace, cx| {
+                                workspace.split_side_panel_by_id(panel_id, window, cx);
+                            });
+                        }
+                    }
+                }),
+        )
+        .child(
+            IconButton::new(format!("{id_prefix}-close-side-panel"), IconName::Close)
+                .shape(IconButtonShape::Square)
+                .style(ButtonStyle::Subtle)
+                .icon_size(IconSize::Small)
+                .tooltip(Tooltip::text("Close Panel"))
+                .on_click(move |_, window, cx| {
+                    if let Some(workspace) = workspace.upgrade() {
+                        workspace.update(cx, |workspace, cx| {
+                            workspace.close_side_panel_by_id(panel_id, window, cx);
+                        });
+                    }
+                }),
+        )
+}
 
 pub trait Panel: Focusable + EventEmitter<PanelEvent> + Render + Sized {
     fn persistent_name() -> &'static str;

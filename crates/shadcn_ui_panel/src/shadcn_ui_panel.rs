@@ -1060,7 +1060,7 @@ impl ShadcnUiPanel {
                         Button::new(preview_id, "Preview")
                             .style(ButtonStyle::Subtle)
                             .size(ButtonSize::Compact)
-                            .tooltip(Tooltip::text("Preview in WebPreview"))
+                            .tooltip(Tooltip::text("Preview in Web Preview"))
                             .on_click(cx.listener({
                                 let item = item.clone();
                                 move |panel, _, window, cx| {
@@ -1931,7 +1931,7 @@ fn ui_history_preview_tooltip(can_insert: bool, source_available: bool) -> &'sta
     if can_insert && !source_available {
         "Source or registry manifest is missing. Remove this row or use Clean."
     } else {
-        "Preview in WebPreview"
+        "Preview in Web Preview"
     }
 }
 
@@ -3545,11 +3545,11 @@ fn ui_cleared_history_status(section: &str, cleared: usize) -> SharedString {
 }
 
 fn ui_history_health_label(total: usize, stale: usize) -> SharedString {
-    let ready = total.saturating_sub(stale);
+    let available = total.saturating_sub(stale);
     if stale == 0 {
-        format!("{ready} ready").into()
+        format!("{available} available").into()
     } else {
-        format!("{ready} ready / {stale} stale").into()
+        format!("{available} available / {stale} missing").into()
     }
 }
 

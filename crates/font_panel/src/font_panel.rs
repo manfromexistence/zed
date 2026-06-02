@@ -732,7 +732,7 @@ impl FontPanel {
         self.status = Some(font_status_label_with_suffix(
             "Previewing ",
             font.as_ref(),
-            " in WebPreview",
+            " in Web Preview",
         ));
         if let Some(font) = self.selected_font_entry() {
             self.record_recent_font_action(&font, RecentFontAction::Previewed);
@@ -1483,10 +1483,10 @@ fn recent_font_action_label(action: RecentFontAction) -> &'static str {
 
 fn font_history_health_label(count: usize) -> SharedString {
     match count {
-        1 => "1 ready".into(),
+        1 => "1 saved".into(),
         _ => {
             let mut text = String::with_capacity(12);
-            let _ = write!(text, "{count} ready");
+            let _ = write!(text, "{count} saved");
             text.into()
         }
     }

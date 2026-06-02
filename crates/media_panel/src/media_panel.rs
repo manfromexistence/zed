@@ -2680,11 +2680,11 @@ fn media_cleared_history_status(section: &str, cleared: usize) -> SharedString {
 }
 
 fn media_history_health_label(total: usize, stale: usize) -> SharedString {
-    let ready = total.saturating_sub(stale);
+    let available = total.saturating_sub(stale);
     if stale == 0 {
-        format!("{ready} ready").into()
+        format!("{available} available").into()
     } else {
-        format!("{ready} ready / {stale} stale").into()
+        format!("{available} available / {stale} missing").into()
     }
 }
 

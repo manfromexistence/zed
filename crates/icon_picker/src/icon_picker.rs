@@ -1727,10 +1727,10 @@ fn recent_icon_action_label(action: RecentIconAction) -> &'static str {
 
 fn icon_history_health_label(count: usize) -> SharedString {
     match count {
-        1 => "1 ready".into(),
+        1 => "1 saved".into(),
         _ => {
             let mut text = String::with_capacity(12);
-            let _ = write!(text, "{count} ready");
+            let _ = write!(text, "{count} saved");
             text.into()
         }
     }

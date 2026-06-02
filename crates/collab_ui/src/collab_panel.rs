@@ -43,7 +43,7 @@ use util::{ResultExt, TryFutureExt, maybe};
 use workspace::{
     AutoWatch, CopyRoomId, Deafen, LeaveCall, MultiWorkspace, Mute, OpenChannelNotes,
     OpenChannelNotesById, ScreenShare, ShareProject, Workspace,
-    dock::{DockPosition, Panel, PanelEvent},
+    dock::{DockPosition, Panel, PanelEvent, side_panel_header_controls},
     notifications::{
         DetachAndPromptErr, Notification as WorkspaceNotification, NotificationId, NotifyResultExt,
         SuppressEvent,
@@ -52,34 +52,6 @@ use workspace::{
 
 const FILTER_OCCUPIED_CHANNELS_KEY: &str = "filter_occupied_channels";
 const FAVORITE_CHANNELS_KEY: &str = "favorite_channels";
-
-fn side_panel_header_controls(id_prefix: &'static str) -> impl IntoElement {
-    h_flex()
-        .id(format!("{id_prefix}-side-panel-controls"))
-        .items_center()
-        .flex_none()
-        .gap_0p5()
-        .child(
-            IconButton::new(format!("{id_prefix}-split-side-panel"), IconName::SplitAlt)
-                .shape(IconButtonShape::Square)
-                .style(ButtonStyle::Subtle)
-                .icon_size(IconSize::Small)
-                .tooltip(Tooltip::text("Split Panel"))
-                .on_click(|_, window, cx| {
-                    window.dispatch_action(Box::new(workspace::SplitActiveSidePanel), cx);
-                }),
-        )
-        .child(
-            IconButton::new(format!("{id_prefix}-close-side-panel"), IconName::Close)
-                .shape(IconButtonShape::Square)
-                .style(ButtonStyle::Subtle)
-                .icon_size(IconSize::Small)
-                .tooltip(Tooltip::text("Close Panel"))
-                .on_click(|_, window, cx| {
-                    window.dispatch_action(Box::new(workspace::CloseActiveSidePanel), cx);
-                }),
-        )
-}
 
 actions!(
     collab_panel,
@@ -2665,7 +2637,7 @@ impl CollabPanel {
         cx.write_to_clipboard(item)
     }
 
-    fn render_panel_header(cx: &mut Context<Self>) -> impl IntoElement {
+    fn render_panel_header(&self, cx: &mut Context<Self>) -> impl IntoElement {
         h_flex()
             .id("collab-panel-header")
             .w_full()
@@ -2694,13 +2666,17 @@ impl CollabPanel {
                             .truncate(),
                     ),
             )
-            .child(side_panel_header_controls("collab-panel"))
+            .child(side_panel_header_controls(
+                "collab-panel",
+                self.workspace.clone(),
+                cx.entity().entity_id(),
+            ))
     }
 
     fn render_disabled_by_organization(&mut self, cx: &mut Context<Self>) -> Div {
         v_flex()
             .size_full()
-            .child(Self::render_panel_header(cx))
+            .child(self.render_panel_header(cx))
             .child(
                 v_flex()
                     .p_4()
@@ -2773,7 +2749,7 @@ impl CollabPanel {
 
         v_flex()
             .size_full()
-            .child(Self::render_panel_header(cx))
+            .child(self.render_panel_header(cx))
             .child(signed_out_state)
     }
 
@@ -2903,7 +2879,11 @@ impl CollabPanel {
                                 })),
                         )
                     })
-                    .child(side_panel_header_controls("collab-panel")),
+                    .child(side_panel_header_controls(
+                        "collab-panel",
+                        self.workspace.clone(),
+                        cx.entity().entity_id(),
+                    )),
             )
             .child(
                 list(

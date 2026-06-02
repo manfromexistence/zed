@@ -1053,7 +1053,7 @@ impl TitleBar {
                 IconButton::new("titlebar-hidden-feature-trigger", IconName::Ellipsis)
                     .icon_size(IconSize::Small)
                     .style(ButtonStyle::Subtle),
-                Tooltip::text("More Hidden Features"),
+                Tooltip::text("More Tools"),
             )
             .menu(move |window, cx| {
                 Some(ContextMenu::build(window, cx, move |menu, _, _| {

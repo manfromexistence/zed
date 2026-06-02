@@ -84,7 +84,7 @@ use util::{
 use workspace::SERIALIZATION_THROTTLE_TIME;
 use workspace::{
     Item, Workspace,
-    dock::{DockPosition, Panel, PanelEvent},
+    dock::{DockPosition, Panel, PanelEvent, side_panel_header_controls},
     notifications::{DetachAndPromptErr, ErrorMessagePrompt, NotificationId, NotifyTaskExt},
 };
 use zed_actions::{DecreaseBufferFontSize, IncreaseBufferFontSize, ResetBufferFontSize};
@@ -163,35 +163,6 @@ where
 {
     let rx = window.prompt(PromptLevel::Info, msg, detail, T::VARIANTS, cx);
     cx.spawn(async move |_| Ok(T::iter().nth(rx.await?).unwrap()))
-}
-
-fn side_panel_header_controls(id_prefix: &'static str) -> impl IntoElement {
-    h_flex()
-        .id(format!("{id_prefix}-side-panel-controls"))
-        .items_center()
-        .flex_none()
-        .gap_0p5()
-        .pr_1()
-        .child(
-            IconButton::new(format!("{id_prefix}-split-side-panel"), IconName::SplitAlt)
-                .shape(IconButtonShape::Square)
-                .style(ButtonStyle::Subtle)
-                .icon_size(IconSize::Small)
-                .tooltip(Tooltip::text("Split Panel"))
-                .on_click(|_, window, cx| {
-                    window.dispatch_action(Box::new(workspace::SplitActiveSidePanel), cx);
-                }),
-        )
-        .child(
-            IconButton::new(format!("{id_prefix}-close-side-panel"), IconName::Close)
-                .shape(IconButtonShape::Square)
-                .style(ButtonStyle::Subtle)
-                .icon_size(IconSize::Small)
-                .tooltip(Tooltip::text("Close Panel"))
-                .on_click(|_, window, cx| {
-                    window.dispatch_action(Box::new(workspace::CloseActiveSidePanel), cx);
-                }),
-        )
 }
 
 #[derive(strum::EnumIter, strum::VariantNames)]
@@ -5142,7 +5113,11 @@ impl GitPanel {
                         ActivateHistoryTab.boxed_clone(),
                     )),
             )
-            .child(side_panel_header_controls("git-panel"))
+            .child(div().pr_1().child(side_panel_header_controls(
+                "git-panel",
+                self.workspace.clone(),
+                cx.entity().entity_id(),
+            )))
     }
 
     fn render_history_tab(&self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {

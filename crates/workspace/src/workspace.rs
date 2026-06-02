@@ -4326,6 +4326,23 @@ impl Workspace {
         did_change
     }
 
+    pub fn split_side_panel_by_id(
+        &mut self,
+        panel_id: EntityId,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        for dock in [self.left_dock.clone(), self.right_dock.clone()] {
+            let did_change = dock.update(cx, |dock, cx| dock.split_panel(panel_id, window, cx));
+            if did_change {
+                self.serialize_workspace(window, cx);
+                return true;
+            }
+        }
+
+        false
+    }
+
     fn close_active_side_panel(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {
         let Some(dock) = self.active_side_dock(window, cx) else {
             return false;
@@ -4341,6 +4358,25 @@ impl Workspace {
             self.serialize_workspace(window, cx);
         }
         did_change
+    }
+
+    pub fn close_side_panel_by_id(
+        &mut self,
+        panel_id: EntityId,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        for dock in [self.left_dock.clone(), self.right_dock.clone()] {
+            let did_change = dock.update(cx, |dock, cx| {
+                dock.close_or_unstack_panel(panel_id, window, cx)
+            });
+            if did_change {
+                self.serialize_workspace(window, cx);
+                return true;
+            }
+        }
+
+        false
     }
 
     fn close_active_dock(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {

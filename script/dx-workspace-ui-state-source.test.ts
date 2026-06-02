@@ -11,12 +11,14 @@ const item = read("crates/workspace/src/item.rs");
 const pane = read("crates/workspace/src/pane.rs");
 const workspace = read("crates/workspace/src/workspace.rs");
 const multiWorkspace = read("crates/workspace/src/multi_workspace.rs");
+const titleBar = read("crates/title_bar/src/title_bar.rs");
 const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
 const threadView = read("crates/agent_ui/src/conversation_view/thread_view.rs");
 const dxLaunchWorkspace = read("crates/agent_ui/src/dx_launch_workspace.rs");
 const dxLaunchSourceRows = read("crates/agent_ui/src/dx_launch_workspace/sources/rows.rs");
 const dxLaunchStylePanel = read("crates/agent_ui/src/dx_launch_workspace/style_panel.rs");
 const dxLaunchCheckPanel = read("crates/agent_ui/src/dx_launch_workspace/check.rs");
+const dxStylePanelCards = read("crates/agent_ui/src/dx_style_panel/panel_cards.rs");
 const sidebar = read("crates/sidebar/src/sidebar.rs");
 const threadItem = read("crates/ui/src/components/ai/thread_item.rs");
 const projectPanel = read("crates/project_panel/src/project_panel.rs");
@@ -409,11 +411,21 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(sourceRowControls, /element: h_flex\(\)/);
   assert.doesNotMatch(sourceRowControls, /\.full_width\(\)/);
   assert.match(dxLaunchStylePanel, /metric_row\("Style", snapshot\.status\.clone\(\)\)/);
+  assert.match(dxLaunchStylePanel, /metric_row\(\s*"Controls",/);
+  assert.match(dxLaunchStylePanel, /format!\("\{\} cataloged", snapshot\.visual_generator_count\)/);
+  assert.match(dxLaunchStylePanel, /metric_row\(\s*"Web Preview",/);
+  assert.match(dxLaunchStylePanel, /"controls ready"/);
+  assert.match(dxLaunchStylePanel, /"host connected"/);
+  assert.match(dxLaunchStylePanel, /"host unavailable"/);
   assert.match(
     dxLaunchStylePanel,
-    /Button::new\("dx-style-open-generator-preview", "Open Style Generator"\)/,
+    /Button::new\("dx-style-open-generator-preview", "Open Style Controls"\)/,
   );
-  assert.doesNotMatch(dxLaunchStylePanel, /Style Cockpit|Open Generator Workspace|Open Generator"\)/);
+  assert.match(dxLaunchStylePanel, /style_contract_row\(\s*"Control Catalog",/);
+  assert.doesNotMatch(
+    dxLaunchStylePanel,
+    /Style Cockpit|Open Generator Workspace|Open Generator"|Open Style Generator|"Generators"|Generator Host|Generator Contract|Web Preview ready|Web Preview host present|Web Preview host missing|Readiness Contracts|Readiness Fixtures/,
+  );
   assert.match(dxLaunchCheckPanel, /"Readiness score"/);
   assert.doesNotMatch(dxLaunchCheckPanel, /"Rail score"/);
   assert.match(dxLaunchWorkspace, /"Validation"/);
@@ -472,45 +484,21 @@ test("core left panels expose split and close controls in native headers", () =>
   const collabSignedOut = functionBody(collabPanel, "render_signed_out");
   const collabSignedIn = functionBody(collabPanel, "render_signed_in");
 
-  for (const [source, name] of [
-    [projectPanel, "project panel"],
-    [gitPanel, "git panel"],
-    [outlinePanel, "outline panel"],
-    [collabPanel, "collab panel"],
-  ] as const) {
-    assert.ok(
-      source.includes('format!("{id_prefix}-split-side-panel")'),
-      `${name} must create a stable split-control id`,
-    );
-    assert.ok(
-      source.includes('format!("{id_prefix}-close-side-panel")'),
-      `${name} must create a stable close-control id`,
-    );
-    assert.match(source, /IconName::SplitAlt/);
-    assert.match(source, /IconName::Close/);
-    assert.match(source, /workspace::SplitActiveSidePanel/);
-    assert.match(source, /workspace::CloseActiveSidePanel/);
-  }
-
-  assert.match(projectHeader, /side_panel_header_controls\("project-panel"\)/);
-  assert.match(
-    emptyProjectWrapper,
-    /\.child\(Self::render_panel_header\(cx\)\)[\s\S]*ProjectEmptyState::new/,
+  assert.ok(
+    dock.includes('format!("{id_prefix}-split-side-panel")'),
+    "shared dock helper must create a stable split-control id",
   );
-  assert.doesNotMatch(
-    projectSelectionToolbar,
-    /project-panel-(split|close)-side-panel/,
-    "project selection actions should not duplicate panel dock controls",
+  assert.ok(
+    dock.includes('format!("{id_prefix}-close-side-panel")'),
+    "shared dock helper must create a stable close-control id",
   );
-  assert.match(gitTabBar, /side_panel_header_controls\("git-panel"\)/);
-  assert.match(outlineFooter, /side_panel_header_controls\("outline-panel"\)/);
-  assert.match(collabHeader, /side_panel_header_controls\("collab-panel"\)/);
-  assert.match(collabDisabled, /Self::render_panel_header\(cx\)/);
-  assert.match(collabSignedOut, /Self::render_panel_header\(cx\)/);
-  assert.match(collabSignedIn, /side_panel_header_controls\("collab-panel"\)/);
-});
+  assert.match(dock, /IconName::SplitAlt/);
+  assert.match(dock, /IconName::Close/);
+  assert.match(dock, /workspace\.split_side_panel_by_id\(panel_id, window, cx\)/);
+  assert.match(dock, /workspace\.close_side_panel_by_id\(panel_id, window, cx\)/);
+  assert.match(workspace, /pub fn split_side_panel_by_id/);
+  assert.match(workspace, /pub fn close_side_panel_by_id/);
 
-test("panel headers keep titles flexible and side actions fixed", () => {
   for (const [source, name] of [
     [projectPanel, "project panel"],
     [gitPanel, "git panel"],
@@ -519,10 +507,40 @@ test("panel headers keep titles flexible and side actions fixed", () => {
   ] as const) {
     assert.match(
       source,
-      /\.id\(format!\("\{id_prefix\}-side-panel-controls"\)\)[\s\S]*?\.flex_none\(\)/,
-      `${name} side-panel actions should not shrink in narrow stacked panels`,
+      /side_panel_header_controls[\s\S]*?self\.workspace\.clone\(\)[\s\S]*?cx\.entity\(\)\.entity_id\(\)/,
+      `${name} must target its own panel entity for split/close controls`,
+    );
+    assert.doesNotMatch(
+      source,
+      /workspace::SplitActiveSidePanel|workspace::CloseActiveSidePanel/,
+      `${name} header controls must not depend on active side-panel focus`,
     );
   }
+
+  assert.match(projectHeader, /side_panel_header_controls\(\s*"project-panel",/);
+  assert.match(
+    emptyProjectWrapper,
+    /\.child\(self\.render_panel_header\(cx\)\)[\s\S]*ProjectEmptyState::new/,
+  );
+  assert.doesNotMatch(
+    projectSelectionToolbar,
+    /project-panel-(split|close)-side-panel/,
+    "project selection actions should not duplicate panel dock controls",
+  );
+  assert.match(gitTabBar, /side_panel_header_controls\(\s*"git-panel",/);
+  assert.match(outlineFooter, /side_panel_header_controls\(\s*"outline-panel",/);
+  assert.match(collabHeader, /side_panel_header_controls\(\s*"collab-panel",/);
+  assert.match(collabDisabled, /self\.render_panel_header\(cx\)/);
+  assert.match(collabSignedOut, /self\.render_panel_header\(cx\)/);
+  assert.match(collabSignedIn, /side_panel_header_controls\(\s*"collab-panel",/);
+});
+
+test("panel headers keep titles flexible and side actions fixed", () => {
+  assert.match(
+    dock,
+    /\.id\(format!\("\{id_prefix\}-side-panel-controls"\)\)[\s\S]*?\.flex_none\(\)/,
+    "shared side-panel actions should not shrink in narrow stacked panels",
+  );
 
   const projectHeader = functionBody(projectPanel, "render_panel_header");
   const gitTabBar = functionBody(gitPanel, "render_tab_bar");
@@ -544,7 +562,7 @@ test("panel headers keep titles flexible and side actions fixed", () => {
     [fontPanel, "font-panel-split-side-panel", "Fonts"],
     [mediaPanel, "media-panel-split-side-panel", "Media"],
     [uiPanel, "shadcn-ui-split-side-panel", "UI"],
-    [stylePanel, "dx-style-panel-split-side-panel", "Style Generators"],
+    [stylePanel, "dx-style-panel-split-side-panel", "Style Control"],
   ] as const) {
     assert.match(sourceWindow(source, actionId, 3600, 300), /\.flex_none\(\)/);
     assert.match(sourceWindow(source, `Label::new("${label}")`), /\.truncate\(\)/);
@@ -553,6 +571,44 @@ test("panel headers keep titles flexible and side actions fixed", () => {
       /\.flex_1\(\)[\s\S]*?\.min_w_0\(\)/,
     );
   }
+});
+
+test("recent tool panels use professional visible copy", () => {
+  assert.match(titleBar, /Tooltip::text\("More Tools"\)/);
+  assert.doesNotMatch(titleBar, /More Hidden Features/);
+
+  assert.match(stylePanel, /Label::new\("Style Control"\)/);
+  assert.match(stylePanel, /section_label\("Contracts"\)/);
+  assert.doesNotMatch(stylePanel, /Style Generators|Readiness Contracts/);
+
+  assert.match(dxStylePanelCards, /metric\("Web Preview", web_preview_state\(snapshot\)\)/);
+  assert.match(dxStylePanelCards, /metric\(\s*"Controls",/);
+  assert.match(dxStylePanelCards, /"Open Web Preview Controls"/);
+  assert.match(dxStylePanelCards, /"controls ready"/);
+  assert.match(dxStylePanelCards, /"host connected"/);
+  assert.match(dxStylePanelCards, /"host unavailable"/);
+  assert.doesNotMatch(
+    dxStylePanelCards,
+    /"Host"|"Generators"|"Open Web Preview Generators"|generator bridge ready|host present|host missing/,
+  );
+
+  assert.match(iconPicker, /"1 saved"/);
+  assert.match(iconPicker, /\{count\} saved/);
+  assert.doesNotMatch(iconPicker, /\{count\} ready|"1 ready"/);
+
+  assert.match(fontPanel, /" in Web Preview"/);
+  assert.match(fontPanel, /"1 saved"/);
+  assert.match(fontPanel, /\{count\} saved/);
+  assert.doesNotMatch(fontPanel, / in WebPreview|\{count\} ready|"1 ready"/);
+
+  assert.match(mediaPanel, /\{available\} available/);
+  assert.match(mediaPanel, /\{stale\} missing/);
+  assert.doesNotMatch(mediaPanel, /\{ready\} ready|\{stale\} stale/);
+
+  assert.match(uiPanel, /"Preview in Web Preview"/);
+  assert.match(uiPanel, /\{available\} available/);
+  assert.match(uiPanel, /\{stale\} missing/);
+  assert.doesNotMatch(uiPanel, /Preview in WebPreview|\{ready\} ready|\{stale\} stale/);
 });
 
 test("item project-handle collections cap visited items before pushing handles", () => {

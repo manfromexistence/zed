@@ -61,7 +61,7 @@ fn panel_header() -> impl IntoElement {
                 .min_w_0()
                 .child(Icon::new(IconName::Sparkle).size(IconSize::Small))
                 .child(
-                    Label::new("Style Generators")
+                    Label::new("Style Control")
                         .size(LabelSize::Small)
                         .truncate(),
                 ),
@@ -96,7 +96,7 @@ fn style_rows(snapshot: &DxStylePanelSnapshot, cx: &App) -> impl IntoElement + u
         .id("dx-style-panel-contracts")
         .gap_1()
         .min_w_0()
-        .child(section_label("Readiness Contracts"));
+        .child(section_label("Contracts"));
     for (ix, row) in snapshot
         .rows
         .iter()

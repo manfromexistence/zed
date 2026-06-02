@@ -20,17 +20,17 @@ pub(super) fn dx_style_panel_state(snapshot: &DxStylePanelSnapshot, cx: &App) ->
             },
         ))
         .child(metric_row(
-            "Generators",
-            format!("{} planned", snapshot.visual_generator_count),
+            "Controls",
+            format!("{} cataloged", snapshot.visual_generator_count),
         ))
         .child(metric_row(
-            "Generator Host",
+            "Web Preview",
             if snapshot.web_preview_bridge_ready {
-                "Web Preview ready"
+                "controls ready"
             } else if snapshot.web_preview_host_present {
-                "Web Preview host present"
+                "host connected"
             } else {
-                "Web Preview host missing"
+                "host unavailable"
             },
         ))
         .child(metric_row("Readiness", snapshot.readiness.status.clone()))
@@ -73,7 +73,7 @@ pub(super) fn dx_style_panel_state(snapshot: &DxStylePanelSnapshot, cx: &App) ->
             snapshot.readiness.receipt_count.to_string(),
         ))
         .child(
-            Button::new("dx-style-open-generator-preview", "Open Style Generator")
+            Button::new("dx-style-open-generator-preview", "Open Style Controls")
                 .full_width()
                 .label_size(LabelSize::XSmall)
                 .color(Color::Muted)
@@ -110,7 +110,7 @@ pub(super) fn dx_style_panel_state(snapshot: &DxStylePanelSnapshot, cx: &App) ->
             &snapshot.grouped_contract_path,
         ))
         .child(style_contract_row(
-            "Generator Contract",
+            "Control Catalog",
             snapshot.generator_catalog_present,
             &snapshot.generator_catalog_path,
         ))
@@ -135,7 +135,7 @@ pub(super) fn dx_style_panel_state(snapshot: &DxStylePanelSnapshot, cx: &App) ->
 
     stack = stack
         .child(metric_row(
-            "Readiness Contracts",
+            "Contracts",
             bounded_items(
                 &snapshot.readiness.contract_rows,
                 3,
@@ -143,7 +143,7 @@ pub(super) fn dx_style_panel_state(snapshot: &DxStylePanelSnapshot, cx: &App) ->
             ),
         ))
         .child(metric_row(
-            "Readiness Fixtures",
+            "Fixtures",
             bounded_items(
                 &snapshot.readiness.fixture_rows,
                 3,

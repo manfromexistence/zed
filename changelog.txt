@@ -1,3 +1,18 @@
+[2026-06-03] - Panel-Targeted Core Header Controls
+
+CHANGED:
+- `crates\workspace\src\dock.rs` now owns a shared side-panel header control helper that renders stable split/close icons and targets a specific panel entity.
+- `crates\workspace\src\workspace.rs` now exposes focused side-panel split/close methods by panel id, so header buttons no longer depend on whichever dock currently has focus.
+- `crates\project_panel\src\project_panel.rs`, `crates\git_ui\src\git_panel.rs`, `crates\outline_panel\src\outline_panel.rs`, and `crates\collab_ui\src\collab_panel.rs` now use the shared helper with their own workspace handle and panel entity id.
+- `script\dx-workspace-ui-state-source.test.ts` now guards the shared helper, panel-id targeting, and the absence of focus-dependent `SplitActiveSidePanel` / `CloseActiveSidePanel` calls in those four panel headers.
+
+PASSED:
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-workspace-ui-state-source.test.ts`
+
+NOTES:
+- `just run` was not run because the current instruction says not to run it until explicitly requested.
+- `DX.txt` remains an unrelated scratch/editor change and is intentionally left untouched.
+
 [2026-06-03] - Panel Header Layout Polish
 
 CHANGED:
