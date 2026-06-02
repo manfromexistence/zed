@@ -282,15 +282,18 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   const updateVisibleEntries = functionBody(source, "update_visible_entries");
   const activeMediaFolderForSelection = functionBody(source, "active_media_folder_for_selection");
   const activeFolderMediaPreview = functionBody(source, "active_folder_media_preview");
+  const cachedFolderMediaPreview = functionBody(source, "cached_folder_media_preview");
   const selectNext = functionBody(source, "select_next");
   const selectPrevious = functionBody(source, "select_previous");
   const selectMediaShelfEntry = functionBody(source, "select_media_shelf_entry");
 
   assert.match(source, /mod media_preview;/);
+  assert.match(source, /const MAX_PROJECT_PANEL_BACKGROUND_MEDIA_PREVIEW_FOLDERS: usize = 256;/);
   assert.match(source, /struct ActiveMediaFolder/);
   assert.match(source, /enum MediaShelfNavigationDirection/);
   assert.match(source, /folder_media_previews:\s*RefCell<HashMap<\(WorktreeId, ProjectEntryId\), Option<media_preview::FolderMediaPreview>>>/);
   assert.match(source, /media_preview:\s*Option<media_preview::FolderMediaPreview>/);
+  assert.match(source, /fn cached_folder_media_preview\(/);
   assert.match(source, /fn active_media_folder_for_selection\(/);
   assert.match(source, /fn active_folder_media_preview\(/);
   assert.match(source, /fn select_media_shelf_entry\(/);
@@ -319,29 +322,54 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   assert.match(media, /duration_label:\s*Option<String>/);
   assert.match(media, /size:\s*u64/);
   assert.match(
-    source,
-    /let preview = media_preview::build_folder_media_preview_with_generated_metadata\([\s\S]*parent_abs_path,[\s\S]*children,[\s\S]*generated_metadata,[\s\S]*\);[\s\S]*insert\(cache_key, preview\.clone\(\)\);[\s\S]*preview/,
-    "media preview cache must store both populated previews and no-media misses",
+    cachedFolderMediaPreview,
+    /folder_media_previews[\s\S]*get\(&cache_key\)[\s\S]*cloned\(\)[\s\S]*flatten\(\)/,
+    "render-facing media preview lookup must be cache-only",
+  );
+  assert.match(
+    updateVisibleEntries,
+    /let cached_media_preview_keys = self[\s\S]*folder_media_previews[\s\S]*keys\(\)[\s\S]*collect::<HashSet<_>>\(\);[\s\S]*let generated_media_metadata = self\.generated_media_metadata\.borrow\(\)\.clone\(\);/,
+    "visible-entry refresh must snapshot media cache state before background media preview warming",
+  );
+  assert.match(
+    updateVisibleEntries,
+    /background_spawn\(async move \{[\s\S]*let mut active_media_shelf_entry_ids = active_media_shelf_entry_ids;[\s\S]*let mut media_preview_updates = Vec::new\(\);[\s\S]*let is_active_media_folder =[\s\S]*active_media_folder_for_visibility == Some\(cache_key\);[\s\S]*is_active_media_folder[\s\S]*MAX_PROJECT_PANEL_BACKGROUND_MEDIA_PREVIEW_FOLDERS[\s\S]*media_preview::build_folder_media_preview_with_generated_metadata\([\s\S]*&absolute_path,[\s\S]*children,[\s\S]*generated_media_metadata\.get\(&cache_key\),[\s\S]*\)[\s\S]*active_media_shelf_entry_ids\.extend\([\s\S]*preview\.items\.iter\(\)\.map\(\|item\| item\.entry_id\)[\s\S]*media_preview_updates\.push\(\(cache_key, preview\)\)[\s\S]*\(new_state, media_preview_updates\)/,
+    "media preview cache misses must be warmed inside the visible-entry background task",
+  );
+  assert.match(
+    updateVisibleEntries,
+    /folder_media_previews\.entry\(cache_key\)\.or_insert\(preview\)/,
+    "background media preview results must populate cache misses without overwriting fresher cache entries",
   );
 
   assertBefore({
     body: detailsForEntry,
     before: /entry\.kind\.is_dir\(\)\s*&&\s*is_expanded/,
-    after: /self\.folder_media_preview\(/,
-    message: "media previews must be built only after confirming an expanded directory",
+    after: /self\.cached_folder_media_preview\(/,
+    message: "media previews must be read only after confirming an expanded directory",
   });
   const mediaPreviewBranch = detailsForEntry.match(
     /let media_preview = if entry\.kind\.is_dir\(\) && is_expanded \{[\s\S]*?\n        \} else \{\n            None\n        \};/,
   );
   assert.ok(
     mediaPreviewBranch,
-    "details_for_entry must isolate media probing inside the expanded-directory branch",
+    "details_for_entry must isolate media preview lookup inside the expanded-directory branch",
   );
-  assert.match(mediaPreviewBranch[0], /self\.folder_media_preview\(/);
+  assert.match(mediaPreviewBranch[0], /self\.cached_folder_media_preview\(/);
   assert.doesNotMatch(
     detailsForEntry.replace(mediaPreviewBranch[0], ""),
-    /self\.folder_media_preview\(/,
-    "details_for_entry must not probe media outside the expanded-directory branch",
+    /self\.cached_folder_media_preview\(/,
+    "details_for_entry must not look up media previews outside the expanded-directory branch",
+  );
+  assert.doesNotMatch(
+    detailsForEntry,
+    /build_folder_media_preview_with_generated_metadata|read_bounded_media_metadata_manifest|File::open|fs::File::open/,
+    "details_for_entry must not build media previews or read media manifests on the visible-row path",
+  );
+  assert.doesNotMatch(
+    mediaPreviewBranch[0],
+    /child_entries_with_options/,
+    "details_for_entry media preview branch must not scan children on the visible-row path",
   );
   assert.match(
     activeMediaFolderForSelection,
@@ -360,8 +388,13 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   );
   assert.match(
     activeFolderMediaPreview,
-    /self\.folder_media_preview\([\s\S]*active_media_folder\.worktree_id[\s\S]*active_media_folder\.entry_id[\s\S]*&active_media_folder\.absolute_path[\s\S]*children[\s\S]*\)/,
-    "active media shelf must reuse the cached snapshot-derived media preview",
+    /self\.cached_folder_media_preview\([\s\S]*active_media_folder\.worktree_id[\s\S]*active_media_folder\.entry_id[\s\S]*\)/,
+    "active media shelf must use an already warmed cached media preview",
+  );
+  assert.doesNotMatch(
+    activeFolderMediaPreview,
+    /build_folder_media_preview_with_generated_metadata|child_entries_with_options|read_bounded_media_metadata_manifest|File::open|fs::File::open/,
+    "active media shelf lookup must not build previews, scan children, or read manifests from render",
   );
   assertBefore({
     body: selectNext,

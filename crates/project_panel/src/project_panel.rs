@@ -108,6 +108,7 @@ const MAX_PROJECT_PANEL_EXTERNAL_DROP_PATHS: usize = 4_096;
 const MAX_PROJECT_PANEL_DOWNLOAD_FILES: usize = 10_000;
 const MAX_PROJECT_PANEL_STICKY_PARENTS: usize = 128;
 const MAX_PROJECT_PANEL_SIBLING_ENTRIES: usize = 20_000;
+const MAX_PROJECT_PANEL_BACKGROUND_MEDIA_PREVIEW_FOLDERS: usize = 256;
 
 fn project_panel_cap_hit(boundary: &'static str, cap: usize) {
     telemetry::event!(
@@ -386,8 +387,6 @@ struct EntryDetails {
 struct ActiveMediaFolder {
     worktree_id: WorktreeId,
     entry_id: ProjectEntryId,
-    path: Arc<RelPath>,
-    absolute_path: PathBuf,
     selected_media_entry_id: Option<ProjectEntryId>,
 }
 
@@ -4523,6 +4522,13 @@ impl ProjectPanel {
                         .collect()
                 })
                 .unwrap_or_default();
+        let cached_media_preview_keys = self
+            .folder_media_previews
+            .borrow()
+            .keys()
+            .copied()
+            .collect::<HashSet<_>>();
+        let generated_media_metadata = self.generated_media_metadata.borrow().clone();
         let project = self.project.read(cx);
         let repo_snapshots = project.git_store().read(cx).repo_snapshots(cx);
 
@@ -4549,9 +4555,12 @@ impl ProjectPanel {
         let hide_hidden = settings.hide_hidden;
 
         let visible_entries_task = cx.spawn_in(window, async move |this, cx| {
-            let new_state = cx
+            let (new_state, media_preview_updates) = cx
                 .background_spawn(async move {
                     let mut visible_entries_total = 0usize;
+                    let mut active_media_shelf_entry_ids = active_media_shelf_entry_ids;
+                    let mut media_preview_updates = Vec::new();
+                    let mut media_preview_background_cap_reported = false;
                     for worktree_snapshot in visible_worktrees {
                         if visible_entries_total >= MAX_PROJECT_PANEL_VISIBLE_ENTRIES {
                             project_panel_cap_hit(
@@ -4815,6 +4824,60 @@ impl ProjectPanel {
                                     }
                                 };
 
+                            let cache_key = (worktree_id, entry.id);
+                            let is_active_media_folder =
+                                active_media_folder_for_visibility == Some(cache_key);
+                            if entry_is_visible
+                                && entry.kind.is_dir()
+                                && expanded_dir_ids.binary_search(&entry.id).is_ok()
+                                && (is_active_media_folder
+                                    || media_preview_updates.len()
+                                        < MAX_PROJECT_PANEL_BACKGROUND_MEDIA_PREVIEW_FOLDERS)
+                            {
+                                if !cached_media_preview_keys.contains(&cache_key) {
+                                    let absolute_path = entry
+                                        .canonical_path
+                                        .as_ref()
+                                        .map(|path| path.to_path_buf())
+                                        .unwrap_or_else(|| worktree_snapshot.absolutize(&entry.path));
+                                    let children = worktree_snapshot
+                                        .child_entries_with_options(
+                                            &entry.path,
+                                            ChildEntriesOptions {
+                                                include_files: true,
+                                                include_dirs: false,
+                                                include_ignored: !hide_gitignore,
+                                            },
+                                        )
+                                        .filter(|child| !hide_hidden || !child.is_hidden)
+                                        .filter(|child| child.is_file());
+                                    let preview =
+                                        media_preview::build_folder_media_preview_with_generated_metadata(
+                                            &absolute_path,
+                                            children,
+                                            generated_media_metadata.get(&cache_key),
+                                        );
+                                    if is_active_media_folder
+                                        && let Some(preview) = preview.as_ref()
+                                    {
+                                        active_media_shelf_entry_ids.extend(
+                                            preview.items.iter().map(|item| item.entry_id),
+                                        );
+                                    }
+                                    media_preview_updates.push((cache_key, preview));
+                                }
+                            } else if !is_active_media_folder
+                                && media_preview_updates.len()
+                                >= MAX_PROJECT_PANEL_BACKGROUND_MEDIA_PREVIEW_FOLDERS
+                                && !media_preview_background_cap_reported
+                            {
+                                media_preview_background_cap_reported = true;
+                                project_panel_cap_hit(
+                                    "background-media-preview-folders",
+                                    MAX_PROJECT_PANEL_BACKGROUND_MEDIA_PREVIEW_FOLDERS,
+                                );
+                            }
+
                             if expanded_dir_ids.binary_search(&entry.id).is_err()
                                 && entry_iter.advance_to_sibling()
                             {
@@ -4862,10 +4925,16 @@ impl ProjectPanel {
                             new_state.max_width_item_index = Some(visited_worktrees_length + index);
                         }
                     }
-                    new_state
+                    (new_state, media_preview_updates)
                 })
                 .await;
             this.update_in(cx, |this, window, cx| {
+                if !media_preview_updates.is_empty() {
+                    let mut folder_media_previews = this.folder_media_previews.borrow_mut();
+                    for (cache_key, preview) in media_preview_updates {
+                        folder_media_previews.entry(cache_key).or_insert(preview);
+                    }
+                }
                 this.state = new_state;
                 if let Some((worktree_id, entry_id)) = new_selected_entry {
                     this.selection = Some(SelectedEntry {
@@ -6936,29 +7005,17 @@ impl ProjectPanel {
             )
     }
 
-    fn folder_media_preview<'a>(
+    fn cached_folder_media_preview(
         &self,
         worktree_id: WorktreeId,
         entry_id: ProjectEntryId,
-        parent_abs_path: &Path,
-        children: impl Iterator<Item = &'a Entry>,
     ) -> Option<media_preview::FolderMediaPreview> {
         let cache_key = (worktree_id, entry_id);
-        if let Some(preview) = self.folder_media_previews.borrow().get(&cache_key).cloned() {
-            return preview;
-        }
-
-        let generated_media_metadata = self.generated_media_metadata.borrow();
-        let generated_metadata = generated_media_metadata.get(&cache_key);
-        let preview = media_preview::build_folder_media_preview_with_generated_metadata(
-            parent_abs_path,
-            children,
-            generated_metadata,
-        );
         self.folder_media_previews
-            .borrow_mut()
-            .insert(cache_key, preview.clone());
-        preview
+            .borrow()
+            .get(&cache_key)
+            .cloned()
+            .flatten()
     }
 
     fn active_media_folder_for_selection(&self, cx: &App) -> Option<ActiveMediaFolder> {
@@ -6984,8 +7041,6 @@ impl ProjectPanel {
         Some(ActiveMediaFolder {
             worktree_id: selection.worktree_id,
             entry_id: entry.id,
-            path: entry.path.clone(),
-            absolute_path: worktree.absolutize(&entry.path),
             selected_media_entry_id,
         })
     }
@@ -6995,7 +7050,6 @@ impl ProjectPanel {
         cx: &mut Context<Self>,
     ) -> Option<(ActiveMediaFolder, media_preview::FolderMediaPreview)> {
         let active_media_folder = self.active_media_folder_for_selection(cx)?;
-        let settings = ProjectPanelSettings::get_global(cx);
 
         if !self
             .state
@@ -7006,30 +7060,10 @@ impl ProjectPanel {
             return None;
         }
 
-        let preview = self
-            .project
-            .read(cx)
-            .worktree_for_id(active_media_folder.worktree_id, cx)
-            .and_then(|worktree| {
-                let snapshot = worktree.read(cx).snapshot();
-                let children = snapshot
-                    .child_entries_with_options(
-                        &active_media_folder.path,
-                        ChildEntriesOptions {
-                            include_files: true,
-                            include_dirs: false,
-                            include_ignored: !settings.hide_gitignore,
-                        },
-                    )
-                    .filter(|child| !settings.hide_hidden || !child.is_hidden)
-                    .filter(|child| child.is_file());
-                self.folder_media_preview(
-                    active_media_folder.worktree_id,
-                    active_media_folder.entry_id,
-                    &active_media_folder.absolute_path,
-                    children,
-                )
-            })?;
+        let preview = self.cached_folder_media_preview(
+            active_media_folder.worktree_id,
+            active_media_folder.entry_id,
+        )?;
 
         self.ensure_generated_media_metadata(
             active_media_folder.worktree_id,
@@ -7299,25 +7333,7 @@ impl ProjectPanel {
             }
         });
         let media_preview = if entry.kind.is_dir() && is_expanded {
-            let settings = ProjectPanelSettings::get_global(cx);
-            self.project
-                .read(cx)
-                .worktree_for_id(worktree_id, cx)
-                .and_then(|worktree| {
-                    let snapshot = worktree.read(cx).snapshot();
-                    let children = snapshot
-                        .child_entries_with_options(
-                            &entry.path,
-                            ChildEntriesOptions {
-                                include_files: true,
-                                include_dirs: false,
-                                include_ignored: !settings.hide_gitignore,
-                            },
-                        )
-                        .filter(|child| !settings.hide_hidden || !child.is_hidden)
-                        .filter(|child| child.is_file());
-                    self.folder_media_preview(worktree_id, entry.id, &absolute_path, children)
-                })
+            self.cached_folder_media_preview(worktree_id, entry.id)
         } else {
             None
         };

@@ -1,3 +1,22 @@
+[2026-06-02] - Project Panel Render-Path Media Preview Hardening
+
+CHANGED:
+- `crates\project_panel\src\project_panel.rs` now warms bounded folder media preview cache misses inside the existing background visible-entry refresh instead of building media previews from `details_for_entry` or active shelf render lookup.
+- `crates\project_panel\src\project_panel.rs` now prioritizes the active media folder during background preview warming and immediately uses newly warmed active shelf entry IDs during the same visibility pass.
+- `crates\project_panel\src\project_panel.rs` now keeps active media shelf lookup and row media preview lookup cache-only, preserving existing shelf rendering, keyboard navigation, and overflow media tree access without render-path media manifest parsing.
+- `script\dx-project-panel-source.test.ts` now guards cache-only render-facing media preview lookup, background preview warming, same-pass active shelf visibility updates, and absence of media preview construction/manifest reads from `details_for_entry` and active shelf lookup.
+- `todo.txt` now records the source-only render-path media preview hardening and the remaining runtime validation boundary.
+
+PASSED:
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-handoff-source-guard-registry.test.ts script\dx-project-panel-source.test.ts`
+- `rustfmt --edition 2024 --check crates\project_panel\src\project_panel.rs`
+- `git diff --check -- crates/project_panel/src/project_panel.rs script/dx-project-panel-source.test.ts todo.txt changelog.txt`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" crates\project_panel\src\project_panel.rs script\dx-project-panel-source.test.ts todo.txt changelog.txt` returned no conflict markers.
+
+NOTES:
+- No `just run`, Cargo build/check/test/clippy, local server, browser automation, live UI proof, or live ffmpeg/ffprobe extraction was run in this source-only pass.
+- Runtime media-browser performance, live thumbnail behavior, and large-folder behavior remain unclaimed until authorized UI/runtime validation.
+
 [2026-06-02] - Project Panel Media Browser Hardening
 
 CHANGED:
