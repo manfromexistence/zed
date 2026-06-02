@@ -80,6 +80,10 @@ impl GeneratedMediaMetadataIndex {
         }
     }
 
+    pub(crate) fn is_empty(&self) -> bool {
+        self.records.is_empty()
+    }
+
     fn records(&self) -> impl Iterator<Item = &GeneratedMediaMetadataRecord> {
         self.records.iter()
     }

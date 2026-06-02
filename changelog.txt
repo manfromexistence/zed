@@ -1,3 +1,26 @@
+[2026-06-02] - Project Panel Background Audio Metadata
+
+ADDED:
+- `crates\project_panel\src\media_preview\generated_metadata.rs` now owns a bounded generated metadata job batch for active media shelf audio files that are missing duration labels.
+
+CHANGED:
+- `crates\project_panel\src\project_panel.rs` now schedules one background generated-metadata task per active expanded media folder, stores the resulting generated metadata index, and invalidates the stale folder media preview cache when duration records arrive.
+- `crates\project_panel\src\media_preview.rs` now exposes the generated metadata job builder and collector to Project Panel while keeping the render path free of file IO and media decoding.
+- `crates\project_panel\src\media_preview\metadata.rs` now lets Project Panel distinguish empty generated metadata attempts from successful records.
+- `crates\project_panel\Cargo.toml` now uses the existing workspace `rodio` dependency for audio duration metadata extraction.
+- `script\dx-project-panel-source.test.ts` now guards the generated metadata runner schema, job cap, audio-only duration extraction, Project Panel background scheduling, stale-preview invalidation, and absence of render-path IO/tool execution.
+
+PASSED:
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-project-panel-source.test.ts`
+- `rustfmt --edition 2024 crates\project_panel\src\media_preview.rs crates\project_panel\src\media_preview\generated_metadata.rs crates\project_panel\src\media_preview\metadata.rs crates\project_panel\src\media_preview\metadata_probe.rs crates\project_panel\src\project_panel.rs`
+- `rustfmt --edition 2024 --check crates\project_panel\src\media_preview.rs crates\project_panel\src\media_preview\generated_metadata.rs crates\project_panel\src\media_preview\metadata.rs crates\project_panel\src\media_preview\metadata_probe.rs crates\project_panel\src\project_panel.rs`
+- `git diff --check -- crates/project_panel/Cargo.toml crates/project_panel/src/media_preview.rs crates/project_panel/src/media_preview/generated_metadata.rs crates/project_panel/src/media_preview/metadata.rs crates/project_panel/src/media_preview/metadata_probe.rs crates/project_panel/src/project_panel.rs script/dx-project-panel-source.test.ts todo.txt changelog.txt`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" crates\project_panel\Cargo.toml crates\project_panel\src\media_preview.rs crates\project_panel\src\media_preview\generated_metadata.rs crates\project_panel\src\media_preview\metadata.rs crates\project_panel\src\media_preview\metadata_probe.rs crates\project_panel\src\project_panel.rs script\dx-project-panel-source.test.ts todo.txt changelog.txt` returned no conflict markers.
+
+NOTES:
+- No `just run`, Cargo, build, server, browser automation, ffmpeg, or ffprobe validation was run for this source-only checkpoint.
+- This checkpoint makes audio duration generation real for bounded active-shelf files. Automatic video center-frame extraction remains future work and should use a managed app cache plus a safe background runner before claiming full media-browser parity.
+
 [2026-06-02] - Project Panel Generated Media Metadata Overlay
 
 ADDED:

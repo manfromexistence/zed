@@ -1,6 +1,11 @@
+mod generated_metadata;
 mod metadata;
 mod metadata_probe;
 
+pub(crate) use generated_metadata::{
+    GeneratedMediaMetadataJobBatch, build_generated_media_metadata_job_batch,
+    collect_generated_media_metadata,
+};
 pub(crate) use metadata::GeneratedMediaMetadataIndex;
 
 use std::path::{Path, PathBuf};

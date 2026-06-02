@@ -222,6 +222,7 @@ pub struct ProjectPanel {
     folder_file_counts: RefCell<HashMap<(WorktreeId, ProjectEntryId), usize>>,
     generated_media_metadata:
         RefCell<HashMap<(WorktreeId, ProjectEntryId), media_preview::GeneratedMediaMetadataIndex>>,
+    media_metadata_generation_tasks: RefCell<HashMap<(WorktreeId, ProjectEntryId), Task<()>>>,
     folder_media_previews:
         RefCell<HashMap<(WorktreeId, ProjectEntryId), Option<media_preview::FolderMediaPreview>>>,
     sticky_items_count: usize,
@@ -778,6 +779,9 @@ impl ProjectPanel {
                         this.generated_media_metadata
                             .borrow_mut()
                             .retain(|(worktree_id, _), _| *worktree_id != *id);
+                        this.media_metadata_generation_tasks
+                            .borrow_mut()
+                            .retain(|(worktree_id, _), _| *worktree_id != *id);
                         this.state.expanded_dir_ids.remove(id);
                         this.update_visible_entries(None, false, false, window, cx);
                         cx.notify();
@@ -787,6 +791,7 @@ impl ProjectPanel {
                     | project::Event::WorktreeOrderChanged => {
                         this.folder_file_counts.borrow_mut().clear();
                         this.generated_media_metadata.borrow_mut().clear();
+                        this.media_metadata_generation_tasks.borrow_mut().clear();
                         this.folder_media_previews.borrow_mut().clear();
                         this.update_visible_entries(None, false, false, window, cx);
                         cx.notify();
@@ -903,6 +908,7 @@ impl ProjectPanel {
                     if project_panel_settings.hide_gitignore != new_settings.hide_gitignore {
                         this.folder_file_counts.borrow_mut().clear();
                         this.generated_media_metadata.borrow_mut().clear();
+                        this.media_metadata_generation_tasks.borrow_mut().clear();
                         this.folder_media_previews.borrow_mut().clear();
                         this.update_visible_entries(None, false, false, window, cx);
                     }
@@ -912,6 +918,7 @@ impl ProjectPanel {
                     if project_panel_settings.hide_hidden != new_settings.hide_hidden {
                         this.folder_file_counts.borrow_mut().clear();
                         this.generated_media_metadata.borrow_mut().clear();
+                        this.media_metadata_generation_tasks.borrow_mut().clear();
                         this.folder_media_previews.borrow_mut().clear();
                         this.update_visible_entries(None, false, false, window, cx);
                     }
@@ -959,6 +966,7 @@ impl ProjectPanel {
                 previous_drag_position: None,
                 folder_file_counts: Default::default(),
                 generated_media_metadata: Default::default(),
+                media_metadata_generation_tasks: Default::default(),
                 folder_media_previews: Default::default(),
                 sticky_items_count: 0,
                 last_reported_update: Instant::now(),
@@ -7004,7 +7012,67 @@ impl ProjectPanel {
                 )
             })?;
 
+        self.ensure_generated_media_metadata(
+            active_media_folder.worktree_id,
+            active_media_folder.entry_id,
+            &preview,
+            cx,
+        );
+
         Some((active_media_folder, preview))
+    }
+
+    fn ensure_generated_media_metadata(
+        &self,
+        worktree_id: WorktreeId,
+        entry_id: ProjectEntryId,
+        preview: &media_preview::FolderMediaPreview,
+        cx: &mut Context<Self>,
+    ) {
+        let cache_key = (worktree_id, entry_id);
+        if self
+            .generated_media_metadata
+            .borrow()
+            .contains_key(&cache_key)
+            || self
+                .media_metadata_generation_tasks
+                .borrow()
+                .contains_key(&cache_key)
+        {
+            return;
+        }
+
+        let Some(batch) = media_preview::build_generated_media_metadata_job_batch(&preview.items)
+        else {
+            return;
+        };
+
+        let task = cx.spawn(async move |this, cx| {
+            let generated_metadata = cx
+                .background_spawn(
+                    async move { media_preview::collect_generated_media_metadata(batch) },
+                )
+                .await;
+
+            this.update(cx, |this, cx| {
+                this.media_metadata_generation_tasks
+                    .borrow_mut()
+                    .remove(&cache_key);
+                let generated_metadata_has_records = !generated_metadata.is_empty();
+                this.generated_media_metadata
+                    .borrow_mut()
+                    .insert(cache_key, generated_metadata);
+                if generated_metadata_has_records {
+                    this.folder_media_previews.borrow_mut().remove(&cache_key);
+                    cx.notify();
+                }
+            })
+            .ok();
+        });
+
+        self.media_metadata_generation_tasks
+            .borrow_mut()
+            .insert(cache_key, task);
     }
 
     fn select_media_shelf_entry(

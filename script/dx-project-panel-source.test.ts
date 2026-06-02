@@ -463,7 +463,11 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
 test("project panel media preview renders direct image previews and video frames when available", () => {
   const media = read("crates/project_panel/src/media_preview.rs");
   const metadata = read("crates/project_panel/src/media_preview/metadata.rs");
+  const generatedMetadata = read(
+    "crates/project_panel/src/media_preview/generated_metadata.rs",
+  );
   const metadataProbe = read("crates/project_panel/src/media_preview/metadata_probe.rs");
+  const projectPanelCargo = read("crates/project_panel/Cargo.toml");
   const projectPanel = read("crates/project_panel/src/project_panel.rs");
   const renderFolderMediaPreview = functionBody(media, "render_folder_media_preview");
   const renderFolderMediaGallery = functionBody(media, "render_folder_media_gallery");
@@ -480,9 +484,26 @@ test("project panel media preview renders direct image previews and video frames
     "build_folder_media_preview_with_generated_metadata",
   );
   const buildMediaMetadataIndex = functionBody(metadata, "build_media_metadata_index");
+  const buildGeneratedMediaMetadataJobBatch = functionBody(
+    generatedMetadata,
+    "build_generated_media_metadata_job_batch",
+  );
+  const collectGeneratedMediaMetadata = functionBody(
+    generatedMetadata,
+    "collect_generated_media_metadata",
+  );
+  const audioDurationSecondsForPath = functionBody(
+    generatedMetadata,
+    "audio_duration_seconds_for_path",
+  );
   const mergeGeneratedMediaMetadata = functionBody(
     metadata,
     "merge_generated_media_metadata",
+  );
+  const activeFolderMediaPreview = functionBody(projectPanel, "active_folder_media_preview");
+  const ensureGeneratedMediaMetadata = functionBody(
+    projectPanel,
+    "ensure_generated_media_metadata",
   );
   const readBoundedMediaMetadataManifest = functionBody(
     metadata,
@@ -500,8 +521,14 @@ test("project panel media preview renders direct image previews and video frames
   const videoFrameCandidateRank = functionBody(media, "video_frame_candidate_rank");
 
   assert.match(media, /mod metadata;/);
+  assert.match(media, /mod generated_metadata;/);
   assert.match(media, /mod metadata_probe;/);
   assert.match(media, /pub\(crate\) use metadata::GeneratedMediaMetadataIndex;/);
+  assert.match(
+    media,
+    /pub\(crate\) use generated_metadata::\{[\s\S]*GeneratedMediaMetadataJobBatch[\s\S]*build_generated_media_metadata_job_batch[\s\S]*collect_generated_media_metadata[\s\S]*\};/,
+    "media preview must expose the bounded generated-metadata job surface to ProjectPanel",
+  );
   assert.match(metadata, /pub\(super\) struct MediaMetadataIndex/);
   assert.match(metadata, /pub\(crate\) struct GeneratedMediaMetadataIndex/);
   assert.match(metadata, /pub\(crate\) struct GeneratedMediaMetadataRecord/);
@@ -510,6 +537,20 @@ test("project panel media preview renders direct image previews and video frames
     metadata,
     /pub\(crate\) const GENERATED_MEDIA_METADATA_CACHE_SCHEMA: &str =\s*"zed\.project_panel\.generated_media_metadata";/,
     "generated media metadata overlays must have a source-owned cache schema",
+  );
+  assert.match(
+    generatedMetadata,
+    /pub\(crate\) const GENERATED_MEDIA_METADATA_RUNNER_SCHEMA: &str =\s*"zed\.project_panel\.generated_media_metadata_runner";/,
+    "generated metadata background work must have a source-owned runner schema",
+  );
+  assert.match(generatedMetadata, /const MAX_GENERATED_MEDIA_METADATA_JOBS: usize = 8;/);
+  assert.match(generatedMetadata, /const MAX_GENERATED_MEDIA_METADATA_FILE_BYTES: u64 = /);
+  assert.match(generatedMetadata, /pub\(crate\) struct GeneratedMediaMetadataJobBatch/);
+  assert.match(generatedMetadata, /struct GeneratedMediaMetadataJob/);
+  assert.match(
+    projectPanelCargo,
+    /rodio\.workspace = true/,
+    "project panel generated audio duration extraction must use the existing workspace rodio dependency",
   );
   assert.match(metadata, /pub\(super\) const MAX_PROJECT_PANEL_MEDIA_METADATA_MANIFEST_BYTES/);
   assert.match(
@@ -573,6 +614,26 @@ test("project panel media preview renders direct image previews and video frames
     buildFolderMediaPreviewWithGeneratedMetadata,
     /let metadata_probe_plan =\s*metadata_probe::build_media_metadata_probe_plan\(parent_abs_path, &items\);/,
     "probe planning must see generated metadata results before deciding what is still missing",
+  );
+  assert.match(
+    buildGeneratedMediaMetadataJobBatch,
+    /items\.iter\(\)[\s\S]*take\(MAX_GENERATED_MEDIA_METADATA_JOBS \+ 1\)[\s\S]*MediaPreviewKind::Audio[\s\S]*duration_label\.is_none\(\)[\s\S]*item\.size <= MAX_GENERATED_MEDIA_METADATA_FILE_BYTES/,
+    "generated metadata jobs must be bounded and currently select only missing audio durations that are small enough to inspect",
+  );
+  assert.match(
+    collectGeneratedMediaMetadata,
+    /batch\.jobs[\s\S]*audio_duration_seconds_for_path[\s\S]*GeneratedMediaMetadataRecord[\s\S]*duration_seconds: Some\(duration_seconds\)[\s\S]*GeneratedMediaMetadataIndex::from_records/,
+    "generated metadata collection must turn successful background audio duration reads into generated metadata records",
+  );
+  assert.match(
+    audioDurationSecondsForPath,
+    /File::open\(path\)[\s\S]*BufReader::new\(file\)[\s\S]*Decoder::new\(reader\)[\s\S]*total_duration\(\)[\s\S]*as_secs_f64\(\)/,
+    "audio duration extraction must use bounded Rust decoder metadata off the render path",
+  );
+  assert.doesNotMatch(
+    generatedMetadata,
+    /std::process|Command::new|\.status\(|\.output\(|\.spawn\(|ffmpeg|ffprobe|fs::write|File::create|create_dir_all|remove_file|rename\(|copy\(/,
+    "generated metadata background slice must not execute external tools or write files",
   );
   assert.match(
     media,
@@ -816,6 +877,11 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     projectPanel,
+    /media_metadata_generation_tasks:\s*RefCell<HashMap<\(WorktreeId, ProjectEntryId\), Task<\(\)>>/,
+    "project panel must track in-flight generated metadata work per folder",
+  );
+  assert.match(
+    projectPanel,
     /generated_media_metadata[\s\S]*retain\(\|\(worktree_id, _\), _\| \*worktree_id != \*id\)/,
     "generated media metadata cache entries must be retained correctly when a worktree is removed",
   );
@@ -828,6 +894,46 @@ test("project panel media preview renders direct image previews and video frames
     projectPanel,
     /build_folder_media_preview_with_generated_metadata\([\s\S]*generated_metadata/,
     "project panel folder preview cache must pass generated metadata into the media preview builder",
+  );
+  assert.match(
+    activeFolderMediaPreview,
+    /self\.ensure_generated_media_metadata\([\s\S]*active_media_folder\.worktree_id[\s\S]*active_media_folder\.entry_id[\s\S]*&preview[\s\S]*cx[\s\S]*\)/,
+    "active media shelf rendering must schedule missing generated metadata without doing that work in the render body",
+  );
+  assert.match(ensureGeneratedMediaMetadata, /build_generated_media_metadata_job_batch\(&preview\.items\)/);
+  assert.match(ensureGeneratedMediaMetadata, /media_metadata_generation_tasks[\s\S]*contains_key\(&cache_key\)/);
+  assert.match(ensureGeneratedMediaMetadata, /cx\.spawn\(async move \|this, cx\|/);
+  assert.match(
+    ensureGeneratedMediaMetadata,
+    /background_spawn\([\s\S]*async move \{[\s\S]*collect_generated_media_metadata\(batch\)/,
+    "generated metadata work must run through a background task",
+  );
+  assert.match(
+    ensureGeneratedMediaMetadata,
+    /generated_media_metadata[\s\S]*borrow_mut\(\)[\s\S]*\.insert\(cache_key, generated_metadata\)/,
+    "generated metadata results must update the ProjectPanel generated metadata cache",
+  );
+  assert.match(
+    ensureGeneratedMediaMetadata,
+    /folder_media_previews[\s\S]*borrow_mut\(\)[\s\S]*\.remove\(&cache_key\)/,
+    "generated metadata results must invalidate the stale rendered preview cache",
+  );
+  assertBefore({
+    body: ensureGeneratedMediaMetadata,
+    before: /collect_generated_media_metadata\(batch\)/,
+    after: /\.insert\(cache_key, generated_metadata\)/,
+    message: "generated metadata must be collected before the cache is updated",
+  });
+  assertBefore({
+    body: ensureGeneratedMediaMetadata,
+    before: /\.insert\(cache_key, generated_metadata\)/,
+    after: /folder_media_previews[\s\S]*\.remove\(&cache_key\)/,
+    message: "preview cache invalidation must happen after generated metadata is stored",
+  });
+  assert.doesNotMatch(
+    `${activeFolderMediaPreview}\n${renderFolderMediaPreview}\n${renderFolderMediaShelf}\n${renderMediaShelfCard}\n${renderMediaShelfCardBody}\n${mediaGalleryCardContainer}`,
+    /File::open|Decoder::new|std::process|Command::new|ffmpeg|ffprobe|fs::write|File::create/,
+    "project-panel render paths must not perform generated metadata IO, decoding, tool execution, or writes",
   );
   assert.match(
     collectMediaMetadataManifest,
