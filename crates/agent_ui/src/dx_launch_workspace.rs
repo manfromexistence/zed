@@ -182,8 +182,9 @@ pub(crate) fn render_workspace_chrome(
         .relative()
         .size_full()
         .min_w_0()
+        .overflow_hidden()
         .bg(cx.theme().colors().panel_background)
-        .child(div().size_full().min_w_0().child(center))
+        .child(div().size_full().min_w_0().overflow_hidden().child(center))
         .when(show_sources_rail, |this| {
             this.child(render_sources_rail(
                 sidebar_actions,
@@ -196,6 +197,79 @@ pub(crate) fn render_workspace_chrome(
         .when(show_progress_rail, |this| {
             this.child(render_right_rail(&status, guided_cards, cx))
         })
+        .child(render_response_controller(&status, cx))
+        .into_any_element()
+}
+
+fn render_response_controller(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {
+    let source_summary = status.source_sets.attachment_summary();
+    div()
+        .id("dx-response-controller-layer")
+        .absolute()
+        .top_1()
+        .left_0()
+        .right_0()
+        .flex()
+        .justify_center()
+        .child(
+            h_flex()
+                .id("dx-response-controller")
+                .gap_1()
+                .px_2()
+                .py_1()
+                .rounded_lg()
+                .border_1()
+                .border_color(cx.theme().colors().border)
+                .bg(cx.theme().colors().elevated_surface_background)
+                .shadow_sm()
+                .occlude()
+                .child(response_controller_pill(
+                    IconName::Chat,
+                    status.active_status.clone(),
+                ))
+                .child(response_controller_tick(cx))
+                .child(response_controller_pill(
+                    IconName::Book,
+                    format!("{} sources", status.source_sets.total_sources),
+                ))
+                .child(response_controller_tick(cx))
+                .child(response_controller_pill(
+                    IconName::Paperclip,
+                    format!("{} ready", source_summary.attachable_sources),
+                ))
+                .child(response_controller_tick(cx))
+                .child(response_controller_pill(
+                    IconName::Clock,
+                    format!("{} tasks", status.background_task_count),
+                ))
+                .child(response_controller_tick(cx))
+                .child(response_controller_pill(
+                    IconName::Sliders,
+                    status.style_panel.readiness.status.clone(),
+                )),
+        )
+        .into_any_element()
+}
+
+fn response_controller_pill(icon: IconName, label: impl Into<SharedString>) -> AnyElement {
+    h_flex()
+        .min_w_0()
+        .gap_1()
+        .child(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted))
+        .child(
+            Label::new(label.into())
+                .size(LabelSize::XSmall)
+                .color(Color::Muted)
+                .truncate(),
+        )
+        .into_any_element()
+}
+
+fn response_controller_tick(cx: &App) -> AnyElement {
+    div()
+        .w_px()
+        .h_3()
+        .bg(cx.theme().colors().border_variant)
         .into_any_element()
 }
 
@@ -338,7 +412,7 @@ fn render_right_rail(
     v_flex()
         .id("dx-progress-rail")
         .absolute()
-        .right_2()
+        .right_0()
         .top_2()
         .bottom_2()
         .w(px(284.0))

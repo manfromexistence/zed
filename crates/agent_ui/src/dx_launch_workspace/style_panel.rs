@@ -9,8 +9,8 @@ use super::{bounded_items, metric_row, muted_card, signal_row};
 pub(super) fn dx_style_panel_state(snapshot: &DxStylePanelSnapshot, cx: &App) -> AnyElement {
     let mut stack = v_flex()
         .gap_1()
-        .child(metric_row("Status", snapshot.status.clone()))
-        .child(metric_row("Next", snapshot.next_action.clone()))
+        .child(metric_row("Style Cockpit", snapshot.status.clone()))
+        .child(metric_row("Next Action", snapshot.next_action.clone()))
         .child(metric_row(
             "Root",
             if snapshot.root_exists {
@@ -24,7 +24,7 @@ pub(super) fn dx_style_panel_state(snapshot: &DxStylePanelSnapshot, cx: &App) ->
             format!("{} planned", snapshot.visual_generator_count),
         ))
         .child(metric_row(
-            "Host",
+            "Generator Host",
             if snapshot.web_preview_bridge_ready {
                 "Web Preview ready"
             } else if snapshot.web_preview_host_present {
@@ -75,7 +75,7 @@ pub(super) fn dx_style_panel_state(snapshot: &DxStylePanelSnapshot, cx: &App) ->
         .child(
             Button::new(
                 "dx-style-open-generator-preview",
-                "Open Web Preview Generators",
+                "Open Generator Workspace",
             )
             .full_width()
             .label_size(LabelSize::XSmall)
@@ -103,17 +103,17 @@ pub(super) fn dx_style_panel_state(snapshot: &DxStylePanelSnapshot, cx: &App) ->
 
     stack = stack
         .child(style_contract_row(
-            "Plan",
+            "Plan Contract",
             snapshot.plan_present,
             &snapshot.plan_path,
         ))
         .child(style_contract_row(
-            "Group Contract",
+            "Grouping Contract",
             snapshot.grouped_contract_present,
             &snapshot.grouped_contract_path,
         ))
         .child(style_contract_row(
-            "Generator Catalog",
+            "Generator Contract",
             snapshot.generator_catalog_present,
             &snapshot.generator_catalog_path,
         ))

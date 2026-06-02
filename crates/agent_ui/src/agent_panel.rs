@@ -1637,8 +1637,8 @@ impl AgentPanel {
             last_context_source: None,
             show_trust_workspace_message: false,
             is_active: false,
-            fullscreen_sources_rail_open: false,
-            fullscreen_progress_rail_open: false,
+            fullscreen_sources_rail_open: true,
+            fullscreen_progress_rail_open: true,
         };
 
         panel.ensure_native_agent_connection(cx);
@@ -6473,9 +6473,6 @@ impl AgentPanel {
             return center;
         }
         let center = self.render_fullscreen_agent_center(center, cx);
-        if !self.should_render_dx_launch_workspace_rails(cx) {
-            return center;
-        }
 
         let status = self.dx_launch_workspace_status(cx);
         let sidebar_actions = self.render_dx_launch_sidebar_actions(&status, window, cx);
@@ -6506,13 +6503,10 @@ impl AgentPanel {
             .id("agent-fullscreen-center")
             .size_full()
             .min_w_0()
+            .overflow_hidden()
             .bg(cx.theme().colors().panel_background)
-            .child(div().size_full().min_w_0().child(center))
+            .child(div().size_full().min_w_0().overflow_hidden().child(center))
             .into_any_element()
-    }
-
-    fn should_render_dx_launch_workspace_rails(&self, _cx: &App) -> bool {
-        self.fullscreen_sources_rail_open || self.fullscreen_progress_rail_open
     }
 
     fn render_dx_launch_sidebar_actions(

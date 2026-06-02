@@ -9,6 +9,7 @@ use super::{
     panel_metric::metric,
 };
 const STYLE_PANEL_ROW_LIMIT: usize = 13;
+
 pub(super) fn render_panel(
     snapshot: &DxStylePanelSnapshot,
     active_context: &ActiveStyleContextSnapshot,
@@ -17,7 +18,8 @@ pub(super) fn render_panel(
     cx: &mut App,
 ) -> impl IntoElement + use<> {
     let source_context_json = active_context.web_preview_context_json();
-    let can_open_generator = snapshot.web_preview_bridge_ready;
+    let can_open_generator =
+        snapshot.web_preview_bridge_ready && active_context.can_open_generator();
     v_flex()
         .id("dx-style-panel")
         .size_full()
@@ -56,7 +58,7 @@ fn panel_header() -> impl IntoElement {
             h_flex()
                 .gap_1()
                 .child(Icon::new(IconName::Sparkle).size(IconSize::Small))
-                .child(Label::new("Style").size(LabelSize::Small)),
+                .child(Label::new("Style Generators").size(LabelSize::Small)),
         )
         .child(
             h_flex()
@@ -87,7 +89,7 @@ fn style_rows(snapshot: &DxStylePanelSnapshot, cx: &App) -> impl IntoElement + u
         .id("dx-style-panel-contracts")
         .gap_1()
         .min_w_0()
-        .child(section_label("Source Contracts"));
+        .child(section_label("Readiness Contracts"));
     for (ix, row) in snapshot
         .rows
         .iter()

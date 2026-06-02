@@ -621,7 +621,40 @@ struct DraggedSidebarThread {
 
 impl Render for DraggedSidebarThread {
     fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
-        gpui::Empty
+        h_flex()
+            .id("dragged-sidebar-thread")
+            .gap_2()
+            .min_w(px(180.0))
+            .max_w(px(260.0))
+            .rounded_sm()
+            .border_1()
+            .border_color(_cx.theme().colors().border)
+            .bg(_cx.theme().colors().elevated_surface_background)
+            .p_2()
+            .shadow_sm()
+            .child(
+                Icon::new(self.icon)
+                    .size(IconSize::Small)
+                    .color(Color::Muted),
+            )
+            .child(
+                v_flex()
+                    .min_w_0()
+                    .gap_0p5()
+                    .child(
+                        Label::new(self.label.clone())
+                            .size(LabelSize::Small)
+                            .truncate(),
+                    )
+                    .when_some(self.subtitle.clone(), |this, subtitle| {
+                        this.child(
+                            Label::new(subtitle)
+                                .size(LabelSize::XSmall)
+                                .color(Color::Muted)
+                                .truncate(),
+                        )
+                    }),
+            )
     }
 }
 
@@ -8333,7 +8366,7 @@ impl Sidebar {
             id: id.clone(),
             icon: dragged.icon,
             label: dragged.label.to_string(),
-            subtitle: dragged.subtitle.as_ref().map(ToString::to_string),
+            subtitle: None,
             action: SerializedSidebarGridAction::OpenThread {
                 thread_id: dragged.thread_id,
             },
@@ -8425,6 +8458,13 @@ impl Sidebar {
                         .gap_2()
                         .children(row.iter().cloned().map(|entry| {
                             let action = entry.action.clone();
+                            let subtitle = if matches!(action, SidebarGridAction::OpenThread(_)) {
+                                None
+                            } else {
+                                entry.subtitle.clone()
+                            };
+                            let tooltip_label =
+                                subtitle.clone().unwrap_or_else(|| entry.label.clone());
 
                             div()
                                 .id(entry.id)
@@ -8443,12 +8483,7 @@ impl Sidebar {
                                 .items_center()
                                 .justify_center()
                                 .cursor_pointer()
-                                .tooltip(Tooltip::text(
-                                    entry
-                                        .subtitle
-                                        .clone()
-                                        .unwrap_or_else(|| entry.label.clone()),
-                                ))
+                                .tooltip(Tooltip::text(tooltip_label))
                                 .hover(|style| style.bg(hover_bg).border_color(hover_border))
                                 .on_click(cx.listener(move |this, _, window, cx| {
                                     this.open_grid_entry(action.clone(), window, cx);
@@ -8461,7 +8496,7 @@ impl Sidebar {
                                 .child(div().w_full().text_center().child(
                                     Label::new(entry.label).size(LabelSize::Small).truncate(),
                                 ))
-                                .when_some(entry.subtitle, |this, subtitle| {
+                                .when_some(subtitle, |this, subtitle| {
                                     this.child(
                                         div().w_full().text_center().child(
                                             Label::new(subtitle)

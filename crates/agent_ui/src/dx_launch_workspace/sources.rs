@@ -25,7 +25,12 @@ pub(super) fn source_set_stack(
     if snapshot.total_sources == 0 {
         stack = stack.child(muted_card("No workspace source", cx));
     } else {
-        for (ix, set) in snapshot.sets.iter().enumerate() {
+        for (ix, set) in snapshot
+            .sets
+            .iter()
+            .filter(|set| !set.sources.is_empty())
+            .enumerate()
+        {
             stack = stack.child(source_set_card(
                 SharedString::from(format!("source-set-{ix}")),
                 set,

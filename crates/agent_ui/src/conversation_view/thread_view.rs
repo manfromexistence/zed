@@ -706,8 +706,8 @@ impl ThreadView {
                 agent_id.clone(),
                 &placeholder,
                 editor::EditorMode::AutoHeight {
-                    min_lines: AgentSettings::get_global(cx).message_editor_min_lines,
-                    max_lines: Some(AgentSettings::get_global(cx).set_message_editor_max_lines()),
+                    min_lines: 1,
+                    max_lines: Some(1),
                 },
                 window,
                 cx,
@@ -2006,11 +2006,10 @@ impl ThreadView {
                     cx,
                 )
             } else {
-                let agent_settings = AgentSettings::get_global(cx);
                 editor.set_mode(
                     EditorMode::AutoHeight {
-                        min_lines: agent_settings.message_editor_min_lines,
-                        max_lines: Some(agent_settings.set_message_editor_max_lines()),
+                        min_lines: 1,
+                        max_lines: Some(1),
                     },
                     cx,
                 )
@@ -3712,8 +3711,8 @@ impl ThreadView {
 
         h_flex()
             .px_2()
-            .pt_1()
-            .pb_1()
+            .pt_0p5()
+            .pb_2()
             .bg(cx.theme().colors().panel_background)
             .justify_center()
             .map(|this| {
@@ -3734,20 +3733,20 @@ impl ThreadView {
                             .border_1()
                             .border_color(cx.theme().colors().border)
                             .bg(editor_bg_color)
-                            .p_2()
+                            .p_1p5()
                             .shadow_sm()
                     })
                     .flex_shrink_1()
                     .flex_grow_0()
                     .justify_between()
-                    .gap_2()
+                    .gap_1()
                     .child(
                         v_flex()
                             .relative()
                             .w_full()
                             .min_h_0()
                             .when(fills_container, |this| this.flex_1())
-                            .pt_1()
+                            .pt_0p5()
                             .pr_2p5()
                             .child(self.message_editor.clone())
                             .when(has_messages, |this| {
@@ -3788,33 +3787,175 @@ impl ThreadView {
                             .w_full()
                             .flex_none()
                             .flex_wrap()
+                            .gap_1()
                             .justify_between()
                             .child(
                                 h_flex()
                                     .gap_0p5()
+                                    .flex_wrap()
                                     .child(self.render_add_context_button(cx))
-                                    .child(self.render_follow_toggle(cx))
-                                    .children(self.render_fast_mode_control(cx))
-                                    .children(self.render_thinking_control(cx)),
+                                    .child(self.render_access_control(cx))
+                                    .child(
+                                        div()
+                                            .h_5()
+                                            .child(Divider::vertical().color(DividerColor::Border)),
+                                    )
+                                    .children(self.render_mode_shortcuts(cx))
+                                    .child(self.render_follow_toggle(cx)),
                             )
                             .child(
                                 h_flex()
                                     .flex_wrap()
+                                    .items_center()
                                     .gap_1()
                                     .children(self.render_token_usage(cx))
-                                    .children(self.profile_selector.clone())
+                                    .children(self.render_fast_mode_control(cx))
+                                    .children(self.render_thinking_control(cx))
                                     .map(|this| match self.config_options_view.clone() {
                                         Some(config_view) => this.child(config_view),
                                         None => this
                                             .children(self.render_dx_agent_action(cx))
+                                            .children(self.profile_selector.clone())
                                             .children(self.mode_selector.clone())
                                             .children(self.model_selector.clone()),
                                     })
+                                    .child(self.render_voice_input_button())
                                     .child(self.render_send_button(cx)),
                             ),
                     ),
             )
             .into_any()
+    }
+
+    fn render_access_control(&self, _cx: &mut Context<Self>) -> AnyElement {
+        let capabilities = self.session_capabilities.read();
+        let supports_context = capabilities.supports_embedded_context();
+        let supports_images = capabilities.supports_images();
+        drop(capabilities);
+
+        let label = if supports_context {
+            "Access"
+        } else {
+            "Limited"
+        };
+
+        let image_row = if supports_images {
+            "Image attachments are accepted by the current session."
+        } else {
+            "Image attachments are unavailable for the current session."
+        };
+
+        let context_row = if supports_context {
+            "Files, symbols, threads, selections, and branch diffs use the existing context menu."
+        } else {
+            "The current session only accepts basic prompt context."
+        };
+
+        PopoverMenu::new("agent-composer-access")
+            .trigger_with_tooltip(
+                Button::new("agent-composer-access-trigger", label)
+                    .label_size(LabelSize::Small)
+                    .color(Color::Muted)
+                    .start_icon(
+                        Icon::new(IconName::LockOutlined)
+                            .size(IconSize::XSmall)
+                            .color(Color::Muted),
+                    )
+                    .end_icon(
+                        Icon::new(IconName::ChevronDown)
+                            .size(IconSize::XSmall)
+                            .color(Color::Muted),
+                    ),
+                Tooltip::text("Access is controlled by the active Agent profile and tool prompts"),
+            )
+            .anchor(gpui::Anchor::BottomLeft)
+            .menu(move |window, cx| {
+                Some(ContextMenu::build(window, cx, move |menu, _window, _cx| {
+                    menu.header("Access")
+                        .custom_row(move |_window, _cx| {
+                            access_menu_row(
+                                "Tools",
+                                "Permission prompts are requested when tools run.",
+                            )
+                        })
+                        .custom_row(move |_window, _cx| access_menu_row("Context", context_row))
+                        .custom_row(move |_window, _cx| access_menu_row("Media", image_row))
+                }))
+            })
+            .into_any_element()
+    }
+
+    fn render_mode_shortcuts(&self, cx: &mut Context<Self>) -> Vec<AnyElement> {
+        let Some(mode_selector) = self.mode_selector.clone() else {
+            return Vec::new();
+        };
+
+        let current_mode = mode_selector.read(cx).mode();
+        let modes = mode_selector.read(cx).modes();
+        let mut shortcuts = Vec::new();
+
+        for target in ["plan", "goal", "multitask"] {
+            let Some(mode) = modes.iter().find(|mode| {
+                let id = mode.id.0.to_lowercase();
+                let name = mode.name.to_lowercase();
+                id == target || name == target
+            }) else {
+                continue;
+            };
+
+            let selected = mode.id == current_mode;
+            let label = mode.name.clone();
+            let mode_id = mode.id.clone();
+            let button_id = format!("agent-composer-mode-{target}");
+            let selector = mode_selector.clone();
+            shortcuts.push(
+                Button::new(button_id, label.clone())
+                    .label_size(LabelSize::Small)
+                    .color(if selected {
+                        Color::Accent
+                    } else {
+                        Color::Muted
+                    })
+                    .style(if selected {
+                        ButtonStyle::Tinted(TintColor::Accent)
+                    } else {
+                        ButtonStyle::Subtle
+                    })
+                    .start_icon(
+                        Icon::new(match target {
+                            "plan" => IconName::ListTodo,
+                            "goal" => IconName::Crosshair,
+                            _ => IconName::ListTree,
+                        })
+                        .size(IconSize::XSmall)
+                        .color(if selected {
+                            Color::Accent
+                        } else {
+                            Color::Muted
+                        }),
+                    )
+                    .tooltip(Tooltip::text(format!("Switch to {label} mode")))
+                    .on_click(move |_, _window, cx| {
+                        selector.update(cx, |selector, cx| {
+                            selector.set_mode(mode_id.clone(), cx);
+                        });
+                    })
+                    .into_any_element(),
+            );
+        }
+
+        shortcuts
+    }
+
+    fn render_voice_input_button(&self) -> AnyElement {
+        IconButton::new("agent-composer-voice-input", IconName::Mic)
+            .icon_size(IconSize::Small)
+            .icon_color(Color::Muted)
+            .disabled(true)
+            .tooltip(Tooltip::text(
+                "Voice input will enable after the DX voice runtime is configured",
+            ))
+            .into_any_element()
     }
 
     fn render_dx_agent_action(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
@@ -6009,8 +6150,8 @@ impl ThreadView {
             }
         } else {
             EditorMode::AutoHeight {
-                min_lines: AgentSettings::get_global(cx).message_editor_min_lines,
-                max_lines: Some(AgentSettings::get_global(cx).set_message_editor_max_lines()),
+                min_lines: 1,
+                max_lines: Some(1),
             }
         };
         self.message_editor.update(cx, |editor, cx| {
@@ -9986,6 +10127,21 @@ impl Render for ThreadView {
             .children(self.render_token_limit_callout(cx))
             .child(self.render_message_editor(window, cx))
     }
+}
+
+fn access_menu_row(label: &'static str, detail: &'static str) -> AnyElement {
+    v_flex()
+        .min_w(rems(16.))
+        .max_w(rems(26.))
+        .gap_0p5()
+        .child(Label::new(label).size(LabelSize::Small))
+        .child(
+            Label::new(detail)
+                .size(LabelSize::XSmall)
+                .color(Color::Muted)
+                .line_height_style(LineHeightStyle::UiLabel),
+        )
+        .into_any_element()
 }
 
 pub(crate) fn open_link(

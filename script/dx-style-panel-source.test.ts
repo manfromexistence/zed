@@ -4401,7 +4401,10 @@ test("DX Style has a real right-dock GPUI shell", () => {
   assert.match(panelView, /take\(STYLE_PANEL_ROW_LIMIT\)/);
   assert.match(panelView, /can_open_generator/);
   assert.match(panelView, /snapshot\.web_preview_bridge_ready/);
-  assert.doesNotMatch(panelView, /active_context\.can_open_generator\(\)/);
+  assert.match(
+    panelView,
+    /snapshot\.web_preview_bridge_ready\s*&&\s*active_context\.can_open_generator\(\)/,
+  );
   assert.match(panelView, /generator_host_card/);
   assert.match(panelView, /style_context_card/);
   assert.match(panelView, /readiness_card/);
@@ -4509,7 +4512,7 @@ test("Zed Style rail surfaces source-only DX Style readiness", () => {
   assert.match(rail, /bounded_items\(\s*&snapshot\.readiness\.missing_rows/s);
   assert.match(
     rail,
-    /Button::new\(\s*"dx-style-open-generator-preview",\s*"Open Web Preview Generators",\s*\)/s,
+    /Button::new\(\s*"dx-style-open-generator-preview",\s*"Open Generator Workspace",\s*\)/s,
   );
   assert.match(panelCards, /"Open Web Preview Generators"/);
   assert.doesNotMatch(rail, /IconButton::new/);

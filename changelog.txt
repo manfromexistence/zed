@@ -1,3 +1,27 @@
+[2026-06-02] - AI Composer And Agent Screen Checkpoint
+
+ADDED:
+- `docs\superpowers\plans\2026-06-02-ai-screen-panel-composer.md` records the scoped Agent screen/composer implementation plan and verification path for this checkpoint.
+
+CHANGED:
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now gives the Agent composer a one-line, shorter, lifted rounded input card, capability-backed Access popover, ACP-backed Plan/Goal/Multitask shortcut buttons when those modes exist, a right-side provider/model/control cluster, and a disabled mic icon reserved for later DX voice runtime wiring, while removing the prototype-looking top status pills from inside the input box.
+- `crates\agent_ui\src\mode_selector.rs` now exposes the active session mode list so composer shortcuts can render only from real ACP session state.
+- `crates\agent_ui\src\agent_panel.rs` and `crates\agent_ui\src\dx_launch_workspace.rs` now start fullscreen Agent source/progress rails open, clip fullscreen overflow, move the progress rail to the true right edge to avoid stray right-side gaps, and always render a top-center response controller derived from real thread, source, task, and Style readiness state.
+- `crates\agent_ui\src\dx_launch_workspace\sources.rs` now hides empty source-set cards when other populated source sets exist, leaving a single honest empty state only when no sources are available.
+- `crates\agent_ui\src\dx_style_panel\panel_view.rs` and `crates\agent_ui\src\dx_launch_workspace\style_panel.rs` now use clearer Style generator wording and gate context generator opening on both Web Preview readiness and a style-bearing active context.
+- `crates\sidebar\src\sidebar.rs` now renders a row-shaped cursor drag preview for chat items using the real thread shortcut payload fields and stores/renders thread grid shortcuts without the worktree subtitle, so dragging visibly follows the cursor while the top shortcut grid no longer shows the extra `zed` line.
+- `script\dx-workspace-ui-state-source.test.ts` and `script\dx-style-panel-source.test.ts` now guard the lower composer padding, updated Style generator wording, and context-aware Style generator gate.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\agent_ui\src\dx_launch_workspace\sources.rs crates\agent_ui\src\mode_selector.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\dx_launch_workspace.rs crates\agent_ui\src\dx_style_panel\panel_view.rs crates\agent_ui\src\dx_launch_workspace\style_panel.rs`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-workspace-ui-state-source.test.ts script\dx-launch-workspace-source.test.ts script\dx-style-panel-source.test.ts script\dx-source-sets-source.test.ts`
+- `git diff --check`
+- `$env:CARGO_BUILD_JOBS='6'; just run` completed locked Zed and CLI builds, launched Zed process `20268`, and detected the main window.
+
+NOTES:
+- `DX.txt` remains an unrelated scratch/editor change and is intentionally not part of this checkpoint.
+- The mic is intentionally visual-only until the correct DX voice runtime is selected and wired in a separate pass.
+
 [2026-06-02] - Floating Agent Rails And Style Cockpit Polish
 
 CHANGED:
