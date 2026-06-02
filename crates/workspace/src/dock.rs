@@ -17,8 +17,8 @@ use serde::{Deserialize, Serialize};
 use settings::{Settings, SettingsStore, TerminalDockPosition};
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use ui::{
-    ButtonStyle, ContextMenu, CountBadge, Divider, DividerColor, IconButton, IconButtonShape,
-    IconName, IconSize, Tooltip, prelude::*, right_click_menu,
+    ContextMenu, CountBadge, Divider, DividerColor, IconButton, IconButtonShape, IconName,
+    IconSize, Tooltip, prelude::*, right_click_menu,
 };
 use util::ResultExt as _;
 
@@ -65,7 +65,6 @@ pub fn side_panel_header_controls(
         .child(
             IconButton::new(format!("{id_prefix}-split-side-panel"), IconName::SplitAlt)
                 .shape(IconButtonShape::Square)
-                .style(ButtonStyle::Subtle)
                 .icon_size(IconSize::Small)
                 .tooltip(if can_split {
                     Tooltip::text("Split Panel")
@@ -86,7 +85,6 @@ pub fn side_panel_header_controls(
         .child(
             IconButton::new(format!("{id_prefix}-close-side-panel"), IconName::Close)
                 .shape(IconButtonShape::Square)
-                .style(ButtonStyle::Subtle)
                 .icon_size(IconSize::Small)
                 .tooltip(if panel_is_registered {
                     Tooltip::text("Close Panel")

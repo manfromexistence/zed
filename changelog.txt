@@ -1,3 +1,20 @@
+[2026-06-03] - Core Side Panel Split Close Affordance
+
+CHANGED:
+- `crates\workspace\src\dock.rs` now lets the shared Project/Git/Outline/Collab split and close header controls use the same visible square button treatment as the newer tool panels, instead of forcing subtle chrome that could look missing in compact dark sidebars.
+- `script\dx-workspace-ui-state-source.test.ts` now guards against reintroducing subtle hidden-looking side-panel header controls while still requiring compact square header actions.
+- `todo.txt` records the focused panel-control affordance fix for handoff.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\workspace\src\dock.rs`
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-workspace-ui-state-source.test.ts` with 18/18 passing.
+- `git diff --check -- crates\workspace\src\dock.rs script\dx-workspace-ui-state-source.test.ts todo.txt changelog.txt`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" crates\workspace\src\dock.rs script\dx-workspace-ui-state-source.test.ts todo.txt changelog.txt` returned no conflict markers.
+
+NOTES:
+- `just run` was not run because the latest instruction explicitly forbids it until the user says so.
+- `DX.txt` remains an unrelated scratch/editor change and is intentionally left untouched.
+
 [2026-06-03] - Media And UI Panel Missing-Source Copy
 
 CHANGED:

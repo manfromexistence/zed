@@ -306,6 +306,16 @@ test("core side panels expose dock split and close controls in visible headers",
     /\.disabled\(!can_split\)|\.disabled\(!panel_is_registered\)/,
     "core side-panel split/close buttons must stay visible in narrow headers",
   );
+  assert.doesNotMatch(
+    sidePanelHeaderControls,
+    /ButtonStyle::Subtle/,
+    "core side-panel split/close buttons should use the same visible square treatment as tool panels",
+  );
+  assert.match(
+    sidePanelHeaderControls,
+    /IconButtonShape::Square/,
+    "core side-panel split/close buttons should remain compact square header actions",
+  );
   assert.match(
     sidePanelHeaderControls,
     /contains_side_panel_by_id\(panel_id, cx\)/,
