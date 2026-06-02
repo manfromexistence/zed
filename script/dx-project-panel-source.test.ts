@@ -298,7 +298,6 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
 
   assert.match(media, /pub\(crate\) const MAX_PROJECT_PANEL_MEDIA_CHILD_SCAN: usize = 512;/);
   assert.match(media, /pub\(crate\) const MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS: usize = 12;/);
-  assert.match(media, /pub\(crate\) const MAX_PROJECT_PANEL_MEDIA_INLINE_CARDS: usize = 4;/);
   assert.match(media, /pub\(crate\) const PROJECT_PANEL_MEDIA_GALLERY_COLUMNS: u16 = 3;/);
   assert.match(media, /pub\(crate\) enum MediaPreviewKind/);
   assert.match(media, /Image/);
@@ -468,9 +467,9 @@ test("project panel media preview renders direct image previews and video frames
   const renderFolderMediaGallery = functionBody(media, "render_folder_media_gallery");
   const renderFolderMediaShelf = functionBody(media, "render_folder_media_shelf");
   const renderMediaShelfCard = functionBody(media, "render_media_shelf_card");
-  const renderMediaPreviewCard = functionBody(media, "render_media_preview_card");
   const renderMediaGalleryCard = functionBody(media, "render_media_gallery_card");
   const mediaGalleryCardContainer = functionBody(media, "media_gallery_card_container");
+  const renderMediaShelfCardBody = functionBody(media, "render_media_shelf_card_body");
   const mediaPreviewCardTooltipMeta = functionBody(media, "media_preview_card_tooltip_meta");
   const audioGradientBackground = functionBody(media, "audio_gradient_background");
   const buildFolderMediaPreview = functionBody(media, "build_folder_media_preview");
@@ -488,6 +487,8 @@ test("project panel media preview renders direct image previews and video frames
   assert.match(media, /mod metadata;/);
   assert.match(metadata, /pub\(super\) struct MediaMetadataIndex/);
   assert.match(metadata, /pub\(super\) const MAX_PROJECT_PANEL_MEDIA_METADATA_MANIFEST_BYTES/);
+  assert.match(media, /const PROJECT_PANEL_MEDIA_SHELF_CARD_MIN_WIDTH: f32 = 96\.;/);
+  assert.match(media, /const PROJECT_PANEL_MEDIA_SHELF_CARD_HEIGHT: f32 = 72\.;/);
 
   assertBefore({
     body: buildFolderMediaPreview,
@@ -534,16 +535,15 @@ test("project panel media preview renders direct image previews and video frames
   );
   assertBefore({
     body: renderFolderMediaPreview,
-    before: /preview\s*\.items\s*\.iter\(\)/,
-    after: /take\(MAX_PROJECT_PANEL_MEDIA_INLINE_CARDS\)/,
-    message: "folder media preview must cap inline cards before render mapping",
+    before: /Label::new\(summary\)/,
+    after: /PopoverMenu::new\(gallery_id\)/,
+    message: "folder row media preview must stay a cheap summary before the optional grid popover",
   });
-  assertBefore({
-    body: renderFolderMediaPreview,
-    before: /take\(MAX_PROJECT_PANEL_MEDIA_INLINE_CARDS\)/,
-    after: /render_media_preview_card/,
-    message: "folder media preview must render from bounded preview items",
-  });
+  assert.doesNotMatch(
+    renderFolderMediaPreview,
+    /render_media_preview_card|img\(|preview\s*\.items\s*\.iter\(\)/,
+    "folder row media preview must not decode image/video cards in the virtualized tree row",
+  );
   assert.match(renderFolderMediaPreview, /\.h_6\(\)/);
   assert.match(renderFolderMediaPreview, /\.overflow_hidden\(\)/);
   assert.match(renderFolderMediaPreview, /Tooltip::with_meta/);
@@ -560,7 +560,7 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     renderFolderMediaShelf,
-    /\.border_t_1\(\)[\s\S]*\.grid\(\)[\s\S]*\.grid_cols\(PROJECT_PANEL_MEDIA_GALLERY_COLUMNS\)/,
+    /\.border_t_1\(\)[\s\S]*\.grid\(\)[\s\S]*\.grid_cols\(PROJECT_PANEL_MEDIA_GALLERY_COLUMNS\)[\s\S]*\.children\(shelf_cards\)/,
     "folder media shelf must render as a bottom three-column media grid",
   );
   assert.match(
@@ -586,7 +586,7 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     renderMediaShelfCard,
-    /SelectedEntry[\s\S]*worktree_id[\s\S]*entry_id[\s\S]*PreviewTabsSettings::get_global\(cx\)[\s\S]*panel\.open_entry/,
+    /media_shelf_card_container\([\s\S]*cursor_pointer\(\)[\s\S]*SelectedEntry[\s\S]*worktree_id[\s\S]*entry_id[\s\S]*PreviewTabsSettings::get_global\(cx\)[\s\S]*panel\.open_entry/,
     "media shelf cards must select and open real project entries",
   );
   assert.match(
@@ -600,24 +600,24 @@ test("project panel media preview renders direct image previews and video frames
     "media shelf cards must show selected state through the shared card container",
   );
   assert.match(
-    renderMediaPreviewCard,
-    /MediaPreviewKind::Image[\s\S]*img\(item\.absolute_path\.clone\(\)\)[\s\S]*object_fit\(ObjectFit::Cover\)/,
-    "image media cards must render direct visual previews from local paths",
+    renderMediaShelfCardBody,
+    /MediaPreviewKind::Image[\s\S]*w_full\(\)[\s\S]*h\(px\(PROJECT_PANEL_MEDIA_SHELF_CARD_HEIGHT\)\)[\s\S]*img\(item\.absolute_path\.clone\(\)\)[\s\S]*object_fit\(ObjectFit::Cover\)/,
+    "shelf image cards must use fixed rectangle previews from the real image path",
   );
   assert.match(
-    renderMediaPreviewCard,
-    /MediaPreviewKind::Video[\s\S]*item\.video_frame_preview\.as_ref\(\)[\s\S]*img\(preview\.path\.clone\(\)\)[\s\S]*IconName::PlayOutlined/,
-    "video media cards must use representative frame images when available and keep a play affordance",
+    renderMediaShelfCardBody,
+    /MediaPreviewKind::Video[\s\S]*w_full\(\)[\s\S]*h\(px\(PROJECT_PANEL_MEDIA_SHELF_CARD_HEIGHT\)\)[\s\S]*item\.video_frame_preview\.as_ref\(\)[\s\S]*img\(preview\.path\.clone\(\)\)[\s\S]*IconName::PlayOutlined/,
+    "shelf video cards must show the available center or representative frame with a play affordance",
   );
   assert.match(
-    renderMediaPreviewCard,
-    /MediaPreviewKind::Video[\s\S]*Icon::new\(IconName::PlayOutlined\)/,
-    "video media cards need a lightweight fallback when no preview frame exists",
+    renderMediaShelfCardBody,
+    /MediaPreviewKind::Audio[\s\S]*w_full\(\)[\s\S]*h\(px\(PROJECT_PANEL_MEDIA_SHELF_CARD_HEIGHT\)\)[\s\S]*audio_gradient_background\(&item\.name\)[\s\S]*Label::new\(item\.name\.clone\(\)\)[\s\S]*truncate\(\)/,
+    "shelf audio cards must use deterministic gradient rectangles with centered truncated filenames",
   );
-  assert.match(
-    renderMediaPreviewCard,
-    /let tooltip_title = item\.name\.clone\(\);[\s\S]*MediaPreviewKind::Audio[\s\S]*audio_gradient_background\(&item\.name\)[\s\S]*Label::new\(item\.name\.clone\(\)\)[\s\S]*Tooltip::with_meta\(tooltip_title\.clone\(\), None, tooltip_meta\.clone\(\), cx\)/,
-    "audio media cards must render stable gradient rectangles with centered truncated filenames",
+  assert.doesNotMatch(
+    media,
+    /fn render_media_preview_card/,
+    "media previews must avoid row-level image/video card rendering in the virtualized tree",
   );
   assert.match(
     mediaGalleryCardContainer,
@@ -681,8 +681,8 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.doesNotMatch(
     `${media}\n${metadata}`,
-    /path\.is_file\(\)|std::fs::metadata|fs::metadata/,
-    "media preview classification must stay snapshot-derived and avoid UI-path filesystem metadata probes",
+    /path\.is_file\(\)|std::fs::metadata|fs::metadata|ffmpeg|ffprobe/,
+    "media preview classification must stay snapshot-derived and avoid UI-path filesystem metadata or decoder probes",
   );
 });
 

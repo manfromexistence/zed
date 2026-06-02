@@ -1,3 +1,17 @@
+[2026-06-02] - Project Panel Media Shelf Card Grid Polish
+
+CHANGED:
+- `crates\project_panel\src\media_preview.rs` now keeps virtualized folder rows lightweight by replacing inline image/video/audio row cards with a compact media summary and grid trigger.
+- The active folder media shelf now uses shelf-specific rectangle card sizing, with image cards rendering real local previews, video cards rendering available center/representative frame images, and audio cards rendering deterministic gradient tiles with centered truncated filenames.
+- `script\dx-project-panel-source.test.ts` now guards the bottom three-column grid shape, shelf-specific image/video/audio card bodies, hover metadata, and the no-heavy-decode/no-filesystem-probe render-path contract.
+
+PASSED:
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-project-panel-source.test.ts`
+
+NOTES:
+- No `just run`, Cargo, build, server, browser automation, ffmpeg, or ffprobe validation was run for this source-only checkpoint.
+- Automatic video center-frame extraction and audio/video duration probing remain future background metadata-service work; this patch consumes bounded manifest/sidecar evidence and keeps the file browser render path fast.
+
 [2026-06-02] - Workspace Sidebar Shortcut Grid Persistence
 
 ADDED:

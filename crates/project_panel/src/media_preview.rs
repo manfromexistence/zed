@@ -13,14 +13,12 @@ use workspace::{PreviewTabsSettings, SelectedEntry};
 
 pub(crate) const MAX_PROJECT_PANEL_MEDIA_CHILD_SCAN: usize = 512;
 pub(crate) const MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS: usize = 12;
-pub(crate) const MAX_PROJECT_PANEL_MEDIA_INLINE_CARDS: usize = 4;
 pub(crate) const PROJECT_PANEL_MEDIA_GALLERY_COLUMNS: u16 = 3;
 
-const PROJECT_PANEL_MEDIA_CARD_WIDTH: f32 = 30.;
-const PROJECT_PANEL_AUDIO_CARD_WIDTH: f32 = 72.;
-const PROJECT_PANEL_MEDIA_CARD_HEIGHT: f32 = 20.;
 const PROJECT_PANEL_MEDIA_GALLERY_CARD_WIDTH: f32 = 86.;
 const PROJECT_PANEL_MEDIA_GALLERY_CARD_HEIGHT: f32 = 64.;
+const PROJECT_PANEL_MEDIA_SHELF_CARD_MIN_WIDTH: f32 = 96.;
+const PROJECT_PANEL_MEDIA_SHELF_CARD_HEIGHT: f32 = 72.;
 
 const IMAGE_MEDIA_EXTENSIONS: &[&str] = &[
     "avif", "bmp", "gif", "ico", "jpeg", "jpg", "png", "svg", "tif", "tiff", "webp",
@@ -170,12 +168,6 @@ pub(crate) fn render_folder_media_preview(
         "project-panel-media-gallery-{:016x}",
         stable_text_hash(&summary)
     );
-    let cards = preview
-        .items
-        .iter()
-        .take(MAX_PROJECT_PANEL_MEDIA_INLINE_CARDS)
-        .map(|item| render_media_preview_card(item, cx))
-        .collect::<Vec<_>>();
 
     h_flex()
         .id(tooltip_id)
@@ -185,7 +177,11 @@ pub(crate) fn render_folder_media_preview(
         .overflow_hidden()
         .block_mouse_except_scroll()
         .tooltip(move |_window, cx| Tooltip::with_meta(tooltip_summary.clone(), None, "Media", cx))
-        .children(cards)
+        .child(
+            Icon::new(IconName::Blocks)
+                .size(IconSize::XSmall)
+                .color(Color::Muted),
+        )
         .child(
             Label::new(summary)
                 .size(LabelSize::XSmall)
@@ -213,104 +209,6 @@ pub(crate) fn render_folder_media_preview(
                     }))
                 }),
         )
-        .into_any_element()
-}
-
-pub(crate) fn render_media_preview_card(item: &MediaPreviewItem, cx: &mut App) -> AnyElement {
-    let colors = cx.theme().colors();
-    let tooltip_title = item.name.clone();
-    let tooltip_meta = media_preview_card_tooltip_meta(item);
-    let card = match item.kind {
-        MediaPreviewKind::Image => div()
-            .w(px(PROJECT_PANEL_MEDIA_CARD_WIDTH))
-            .h(px(PROJECT_PANEL_MEDIA_CARD_HEIGHT))
-            .rounded_sm()
-            .overflow_hidden()
-            .border_1()
-            .border_color(colors.border_variant)
-            .child(
-                img(item.absolute_path.clone())
-                    .size_full()
-                    .object_fit(ObjectFit::Cover),
-            ),
-        MediaPreviewKind::Video => {
-            if let Some(preview) = item.video_frame_preview.as_ref() {
-                div()
-                    .relative()
-                    .w(px(PROJECT_PANEL_MEDIA_CARD_WIDTH))
-                    .h(px(PROJECT_PANEL_MEDIA_CARD_HEIGHT))
-                    .rounded_sm()
-                    .overflow_hidden()
-                    .border_1()
-                    .border_color(colors.border_variant)
-                    .child(
-                        img(preview.path.clone())
-                            .size_full()
-                            .object_fit(ObjectFit::Cover),
-                    )
-                    .child(
-                        div()
-                            .absolute()
-                            .right_0()
-                            .bottom_0()
-                            .rounded_full()
-                            .bg(colors.editor_background.opacity(0.72))
-                            .child(
-                                Icon::new(IconName::PlayOutlined)
-                                    .size(IconSize::XSmall)
-                                    .color(Color::Accent),
-                            ),
-                    )
-            } else {
-                div()
-                    .w(px(PROJECT_PANEL_MEDIA_CARD_WIDTH))
-                    .h(px(PROJECT_PANEL_MEDIA_CARD_HEIGHT))
-                    .rounded_sm()
-                    .border_1()
-                    .border_color(colors.border_variant)
-                    .bg(colors.elevated_surface_background)
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .child(
-                        Icon::new(IconName::PlayOutlined)
-                            .size(IconSize::Small)
-                            .color(Color::Muted),
-                    )
-            }
-        }
-        MediaPreviewKind::Audio => div()
-            .w(px(PROJECT_PANEL_AUDIO_CARD_WIDTH))
-            .h(px(PROJECT_PANEL_MEDIA_CARD_HEIGHT))
-            .rounded_sm()
-            .border_1()
-            .border_color(colors.border_variant)
-            .bg(audio_gradient_background(&item.name))
-            .overflow_hidden()
-            .flex()
-            .items_center()
-            .px_1()
-            .justify_center()
-            .child(
-                Label::new(item.name.clone())
-                    .size(LabelSize::XSmall)
-                    .color(Color::Default)
-                    .buffer_font(cx)
-                    .single_line()
-                    .truncate(),
-            ),
-    };
-
-    let card_id = SharedString::from(format!(
-        "project-panel-media-card-{:?}-{:016x}",
-        item.kind,
-        stable_text_hash(&item.name)
-    ));
-
-    card.id(card_id)
-        .tooltip(move |_window, cx| {
-            Tooltip::with_meta(tooltip_title.clone(), None, tooltip_meta.clone(), cx)
-        })
         .into_any_element()
 }
 
@@ -378,7 +276,7 @@ pub(crate) fn render_folder_media_shelf(
         .items
         .len()
         .min(MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS);
-    let gallery_cards = preview
+    let shelf_cards = preview
         .items
         .iter()
         .take(MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS)
@@ -434,7 +332,7 @@ pub(crate) fn render_folder_media_shelf(
                 .grid()
                 .grid_cols(PROJECT_PANEL_MEDIA_GALLERY_COLUMNS)
                 .gap_1p5()
-                .children(gallery_cards),
+                .children(shelf_cards),
         )
         .into_any_element()
 }
@@ -446,7 +344,7 @@ fn render_media_shelf_card(
     cx: &mut Context<super::ProjectPanel>,
 ) -> AnyElement {
     let entry_id = item.entry_id;
-    media_gallery_card_container("project-panel-media-shelf-card", item, is_selected, cx)
+    media_shelf_card_container("project-panel-media-shelf-card", item, is_selected, cx)
         .cursor_pointer()
         .on_click(
             cx.listener(move |panel, event: &gpui::ClickEvent, window, cx| {
@@ -512,6 +410,131 @@ fn render_media_gallery_card(
     cx: &mut App,
 ) -> AnyElement {
     media_gallery_card_container(id_prefix, item, false, cx).into_any_element()
+}
+
+fn media_shelf_card_container(
+    id_prefix: &'static str,
+    item: &MediaPreviewItem,
+    is_selected: bool,
+    cx: &mut App,
+) -> Stateful<Div> {
+    let colors = cx.theme().colors();
+    let tooltip_title = item.name.clone();
+    let tooltip_meta = media_preview_card_tooltip_meta(item);
+    let card = div()
+        .id(SharedString::from(format!(
+            "{id_prefix}-{:?}-{:016x}",
+            item.kind,
+            stable_text_hash(&item.name)
+        )))
+        .min_w(px(PROJECT_PANEL_MEDIA_SHELF_CARD_MIN_WIDTH))
+        .w_full()
+        .v_flex()
+        .gap_1()
+        .p_1()
+        .rounded_sm()
+        .border_1()
+        .border_color(if is_selected {
+            colors.border_focused
+        } else {
+            colors.border_variant
+        })
+        .bg(if is_selected {
+            colors.element_selected
+        } else {
+            colors.element_background
+        })
+        .hover(|style| style.bg(colors.element_hover))
+        .tooltip(move |_window, cx| {
+            Tooltip::with_meta(tooltip_title.clone(), None, tooltip_meta.clone(), cx)
+        })
+        .child(render_media_shelf_card_body(item, cx));
+
+    if item.kind == MediaPreviewKind::Audio {
+        card
+    } else {
+        card.child(
+            Label::new(item.name.clone())
+                .size(LabelSize::XSmall)
+                .color(Color::Muted)
+                .single_line()
+                .truncate(),
+        )
+    }
+}
+
+fn render_media_shelf_card_body(item: &MediaPreviewItem, cx: &mut App) -> Div {
+    let colors = cx.theme().colors();
+    match item.kind {
+        MediaPreviewKind::Image => div()
+            .relative()
+            .w_full()
+            .h(px(PROJECT_PANEL_MEDIA_SHELF_CARD_HEIGHT))
+            .rounded_sm()
+            .overflow_hidden()
+            .child(
+                img(item.absolute_path.clone())
+                    .size_full()
+                    .object_fit(ObjectFit::Cover),
+            ),
+        MediaPreviewKind::Video => {
+            let base = div()
+                .relative()
+                .w_full()
+                .h(px(PROJECT_PANEL_MEDIA_SHELF_CARD_HEIGHT))
+                .rounded_sm()
+                .overflow_hidden()
+                .bg(colors.elevated_surface_background);
+
+            let base = if let Some(preview) = item.video_frame_preview.as_ref() {
+                base.child(
+                    img(preview.path.clone())
+                        .size_full()
+                        .object_fit(ObjectFit::Cover),
+                )
+            } else {
+                base.flex().items_center().justify_center().child(
+                    Icon::new(IconName::PlayOutlined)
+                        .size(IconSize::Large)
+                        .color(Color::Muted),
+                )
+            };
+
+            base.child(
+                div()
+                    .absolute()
+                    .right_1()
+                    .bottom_1()
+                    .rounded_full()
+                    .bg(colors.editor_background.opacity(0.72))
+                    .p_0p5()
+                    .child(
+                        Icon::new(IconName::PlayOutlined)
+                            .size(IconSize::XSmall)
+                            .color(Color::Accent),
+                    ),
+            )
+        }
+        MediaPreviewKind::Audio => div()
+            .relative()
+            .w_full()
+            .h(px(PROJECT_PANEL_MEDIA_SHELF_CARD_HEIGHT))
+            .rounded_sm()
+            .overflow_hidden()
+            .bg(audio_gradient_background(&item.name))
+            .flex()
+            .items_center()
+            .justify_center()
+            .px_2()
+            .child(
+                Label::new(item.name.clone())
+                    .size(LabelSize::XSmall)
+                    .color(Color::Default)
+                    .buffer_font(cx)
+                    .single_line()
+                    .truncate(),
+            ),
+    }
 }
 
 fn media_gallery_card_container(
