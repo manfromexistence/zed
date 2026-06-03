@@ -1,3 +1,13 @@
+[2026-06-03] - Authorized Just Run Validation
+
+PASSED:
+- `CARGO_BUILD_JOBS=6 just run` completed successfully.
+- The run built `zed` with locked Cargo dependencies, built the `cli` companion, launched Zed once, and detected the main window.
+
+NOTES:
+- This validation followed the Style/media polish commit and the two compile-repair commits.
+- `DX.txt` remains an unrelated scratch/editor change and is intentionally left untouched.
+
 [2026-06-03] - Agent UI Just Run Compile Repair
 
 FIXED:
