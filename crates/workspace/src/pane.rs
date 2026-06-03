@@ -2765,6 +2765,14 @@ impl Pane {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if mode == SplitMode::MovePane
+            && self
+                .active_item()
+                .is_some_and(|item| item.screen_kind(cx) == WorkspaceScreenKind::Onboarding)
+        {
+            return;
+        }
+
         if self.items.len() <= 1 && mode == SplitMode::MovePane {
             // MovePane with only one pane present behaves like a SplitEmpty in the opposite direction
             let active_item = self.active_item();
@@ -4456,6 +4464,9 @@ fn default_render_tab_bar_buttons(
         return (None, None);
     }
     let (can_clone, can_split_move) = match pane.active_item() {
+        Some(active_item) if active_item.screen_kind(cx) == WorkspaceScreenKind::Onboarding => {
+            (false, false)
+        }
         Some(active_item) if active_item.can_split(cx) => (true, false),
         Some(_) => (false, pane.items_len() > 1),
         None => (false, false),

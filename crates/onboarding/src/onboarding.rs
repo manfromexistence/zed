@@ -8,7 +8,7 @@ use fs::Fs;
 use gpui::{
     Action, AnyElement, App, AppContext, AsyncWindowContext, Context, Entity, EventEmitter,
     FocusHandle, Focusable, Global, IntoElement, KeyContext, Render, ScrollHandle, SharedString,
-    Subscription, Task, WeakEntity, Window, actions, linear_color_stop, linear_gradient,
+    Subscription, Task, WeakEntity, Window, actions,
 };
 use notifications::status_toast::StatusToast;
 use project::agent_server_store::AllAgentServersSettings;
@@ -16,30 +16,28 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use settings::{SettingsStore, VsCodeSettingsSource};
 use std::{rc::Rc, sync::Arc};
-use ui::{KeyBinding, ParentElement as _, Vector, VectorName, prelude::*, rems_from_px};
+use ui::{ParentElement as _, prelude::*};
 
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 use web_preview::web_preview_view::WebPreviewView;
 pub use workspace::welcome::ShowWelcome;
 use workspace::welcome::WelcomePage;
 use workspace::{
-    AppState, ToggleWorkspaceSidebar, Workspace, WorkspaceId, ZoomIn, ZoomOut,
+    AppState, Workspace, WorkspaceId, ZoomIn, ZoomOut,
     dock::DockPosition,
     item::{Item, ItemEvent, WorkspaceScreenKind},
     notifications::NotifyResultExt as _,
     open_new, register_serializable_item, with_active_or_new_workspace,
 };
-use zed_actions::{OpenOnboarding, OpenSettings, assistant::ToggleFocus};
+use zed_actions::OpenOnboarding;
 
 mod base_keymap_picker;
 mod basics_page;
 mod dx_launch_onboarding;
-mod dx_provider_onboarding;
 pub mod multibuffer_hint;
 mod theme_preview;
 
-use dx_launch_onboarding::{DxLaunchPreviewTarget, DxLaunchPreviewTargets};
-use dx_provider_onboarding::DxProviderOnboardingStatus;
+use dx_launch_onboarding::DxLaunchPreviewTargets;
 
 /// Imports settings from Visual Studio Code.
 #[derive(Copy, Clone, Debug, Default, PartialEq, Deserialize, JsonSchema, Action)]
@@ -205,10 +203,6 @@ actions!(
         SignIn,
         /// Open the user account in zed.dev while in the onboarding flow.
         OpenAccount,
-        /// Load the selected DX WWW preview target in onboarding.
-        OpenDxWwwPreview,
-        /// Load the bundled DX onboarding fallback preview.
-        OpenBundledDxPreview,
         /// Resets the welcome screen hints to their initial state.
         ResetHints
     ]
@@ -436,14 +430,6 @@ fn zoom_active_onboarding_pane(
         .update(cx, |pane, cx| pane.zoom_in(&ZoomIn, window, cx));
 }
 
-fn provider_status_icon(state: &str) -> IconName {
-    match state {
-        "ready" | "visible" => IconName::Check,
-        "needs approval" => IconName::Warning,
-        _ => IconName::Info,
-    }
-}
-
 struct Onboarding {
     workspace: WeakEntity<Workspace>,
     focus_handle: FocusHandle,
@@ -562,45 +548,6 @@ impl Onboarding {
         cx.open_url(&zed_urls::account_url(cx))
     }
 
-    fn handle_open_dx_www_preview(
-        &mut self,
-        _: &OpenDxWwwPreview,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        if let Some(target) = self.dx_preview_targets.dx_www.clone() {
-            self.load_dx_preview_target(target, window, cx);
-        }
-    }
-
-    fn handle_open_bundled_dx_preview(
-        &mut self,
-        _: &OpenBundledDxPreview,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        self.load_dx_preview_target(self.dx_preview_targets.fallback.clone(), window, cx);
-    }
-
-    fn load_dx_preview_target(
-        &mut self,
-        target: DxLaunchPreviewTarget,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        self.dx_preview_targets.primary = target.clone();
-        #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
-        {
-            let preview = self.ensure_dx_web_preview(window, cx);
-            preview.update(cx, |preview, cx| {
-                preview.load_onboarding_url(&target.url, window, cx);
-            });
-        }
-        #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
-        let _ = window;
-        cx.notify();
-    }
-
     #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
     fn ensure_dx_web_preview(
         &mut self,
@@ -663,413 +610,6 @@ impl Onboarding {
             )
             .into_any_element()
     }
-
-    fn render_dx_launch_hero(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
-        let border_variant = cx.theme().colors().border_variant;
-        let panel_background = cx.theme().colors().panel_background;
-        let editor_background = cx.theme().colors().editor_background;
-        let target = self.dx_preview_targets.primary.clone();
-
-        v_flex()
-            .w_full()
-            .gap_5()
-            .child(
-                h_flex()
-                    .w_full()
-                    .gap_4()
-                    .justify_between()
-                    .child(
-                        h_flex()
-                            .min_w_0()
-                            .gap_4()
-                            .child(Vector::square(VectorName::ZedLogo, rems(2.5)))
-                            .child(
-                                v_flex()
-                                    .min_w_0()
-                                    .child(
-                                        Headline::new("DX Launch Workspace")
-                                            .size(HeadlineSize::Small),
-                                    )
-                                    .child(
-                                        Label::new(
-                                            "Web Preview onboarding for DX WWW, Forge, agents, and source-owned packages",
-                                        )
-                                        .color(Color::Muted)
-                                        .size(LabelSize::Small),
-                                    ),
-                            ),
-                    )
-                    .child(
-                        Button::new("skip_dx_onboarding", "Skip")
-                            .style(ButtonStyle::Subtle)
-                            .size(ButtonSize::Medium)
-                            .key_binding(KeyBinding::for_action_in(&Finish, &self.focus_handle, cx))
-                            .on_click(|_, window, cx| {
-                                window.dispatch_action(Finish.boxed_clone(), cx);
-                            }),
-                    ),
-            )
-            .child(
-                v_flex()
-                    .w_full()
-                    .gap_4()
-                    .p_4()
-                    .rounded_md()
-                    .border_1()
-                    .border_color(border_variant)
-                    .bg(linear_gradient(
-                        140.,
-                        linear_color_stop(panel_background, 0.88),
-                        linear_color_stop(editor_background, 1.0),
-                    ))
-                    .child(
-                        v_flex()
-                            .gap_2()
-                            .child(
-                                Label::new("Native editor. Live browser canvas. DX launch flow.")
-                                    .size(LabelSize::Large),
-                            )
-                            .child(
-                                Label::new(
-                                    "The first-run path now opens with a real Web Preview surface. It prefers the selected DX WWW target and falls back to a bundled original 3D launch page when the workspace target is missing.",
-                                )
-                                .color(Color::Muted),
-                            )
-                            .child(
-                                h_flex()
-                                    .gap_1()
-                                    .flex_wrap()
-                                    .children([
-                                        self.render_capability_pill("Native Zed performance", cx),
-                                        self.render_capability_pill("Web Preview hero", cx),
-                                        self.render_capability_pill("DX WWW / Forge", cx),
-                                        self.render_capability_pill("Agents", cx),
-                                        self.render_capability_pill("Browser checks", cx),
-                                        self.render_capability_pill("Source packages", cx),
-                                    ]),
-                            ),
-                    )
-                    .child(self.render_provider_strategy(cx))
-                    .child(self.render_preview_contract_status(&target, cx))
-                    .child(self.render_preview_frame(target, window, cx))
-                    .child(self.render_quick_launch_actions(cx))
-                    .when(self.dx_preview_targets.dx_www.is_none(), |this| {
-                        this.child(
-                            Label::new(self.dx_preview_targets.missing_dx_www_detail())
-                                .size(LabelSize::Small)
-                                .color(Color::Muted),
-                        )
-                    }),
-            )
-            .into_any_element()
-    }
-
-    fn render_preview_contract_status(
-        &self,
-        target: &DxLaunchPreviewTarget,
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
-        v_flex()
-            .w_full()
-            .gap_2()
-            .p_3()
-            .rounded_sm()
-            .border_1()
-            .border_color(cx.theme().colors().border_variant)
-            .bg(cx.theme().colors().element_background)
-            .child(
-                v_flex()
-                    .min_w_0()
-                    .child(Label::new("Preview Contract").size(LabelSize::Small))
-                    .child(
-                        Label::new(target.detail.clone())
-                            .size(LabelSize::Small)
-                            .color(Color::Muted)
-                            .truncate(),
-                    ),
-            )
-            .child(
-                h_flex().w_full().gap_2().flex_wrap().children(
-                    self.dx_preview_targets
-                        .preview_status_rows(target)
-                        .into_iter()
-                        .map(|row| {
-                            self.render_provider_status_row(row.label, row.detail, row.state, cx)
-                        }),
-                ),
-            )
-            .into_any_element()
-    }
-
-    fn render_provider_strategy(&self, cx: &mut Context<Self>) -> AnyElement {
-        let status = DxProviderOnboardingStatus::detect(cx);
-
-        v_flex()
-            .w_full()
-            .gap_2()
-            .p_3()
-            .rounded_sm()
-            .border_1()
-            .border_color(cx.theme().colors().border_variant)
-            .bg(cx.theme().colors().element_background)
-            .child(
-                h_flex()
-                    .w_full()
-                    .gap_2()
-                    .justify_between()
-                    .child(
-                        v_flex()
-                            .min_w_0()
-                            .child(Label::new("Provider Readiness").size(LabelSize::Small))
-                            .child(
-                                Label::new(status.summary.clone())
-                                    .size(LabelSize::Small)
-                                    .color(Color::Muted)
-                                    .truncate(),
-                            ),
-                    )
-                    .child(
-                        Button::new("dx_provider_readiness_settings", "Provider Settings")
-                            .size(ButtonSize::Default)
-                            .style(ButtonStyle::Outlined)
-                            .on_click(|_, window, cx| {
-                                window.dispatch_action(OpenSettings.boxed_clone(), cx);
-                            }),
-                    ),
-            )
-            .child(
-                h_flex()
-                    .w_full()
-                    .gap_2()
-                    .flex_wrap()
-                    .child(self.render_provider_status_row(
-                        "Native",
-                        status.native_provider_label(),
-                        status.state,
-                        cx,
-                    ))
-                    .child(self.render_provider_status_row(
-                        "DX Receipts",
-                        status.receipt_label(),
-                        if status.provider_receipt_present
-                            || status.model_receipt_present
-                            || status.contract_receipt_present
-                        {
-                            "visible"
-                        } else {
-                            "missing"
-                        },
-                        cx,
-                    ))
-                    .child(self.render_provider_status_row(
-                        "Catalog",
-                        status.catalog_label(),
-                        if status.catalog_present {
-                            "visible"
-                        } else {
-                            "missing"
-                        },
-                        cx,
-                    )),
-            )
-            .child(
-                Label::new(status.next_action)
-                    .size(LabelSize::Small)
-                    .color(Color::Muted)
-                    .truncate(),
-            )
-            .into_any_element()
-    }
-
-    fn render_provider_status_row(
-        &self,
-        label: &'static str,
-        detail: String,
-        state: &'static str,
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
-        v_flex()
-            .min_w(rems(12.))
-            .flex_1()
-            .gap_0p5()
-            .p_2()
-            .rounded_sm()
-            .border_1()
-            .border_color(cx.theme().colors().border)
-            .bg(cx.theme().colors().panel_background)
-            .child(
-                h_flex()
-                    .gap_1()
-                    .items_center()
-                    .child(
-                        Icon::new(provider_status_icon(state))
-                            .size(IconSize::XSmall)
-                            .color(match state {
-                                "ready" | "visible" => Color::Success,
-                                "needs approval" => Color::Warning,
-                                _ => Color::Muted,
-                            }),
-                    )
-                    .child(Label::new(label).size(LabelSize::XSmall)),
-            )
-            .child(
-                Label::new(detail)
-                    .size(LabelSize::XSmall)
-                    .color(Color::Muted)
-                    .truncate(),
-            )
-            .into_any_element()
-    }
-
-    fn render_capability_pill(&self, label: &'static str, cx: &mut Context<Self>) -> AnyElement {
-        div()
-            .px_2()
-            .py_1()
-            .rounded_sm()
-            .border_1()
-            .border_color(cx.theme().colors().border_variant)
-            .bg(cx.theme().colors().element_background)
-            .child(Label::new(label).size(LabelSize::Small).color(Color::Muted))
-            .into_any_element()
-    }
-
-    fn render_preview_frame(
-        &mut self,
-        target: DxLaunchPreviewTarget,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
-        let border_variant = cx.theme().colors().border_variant;
-        let surface_background = cx.theme().colors().surface_background;
-        let has_dx_www = self.dx_preview_targets.dx_www.is_some();
-
-        v_flex()
-            .w_full()
-            .overflow_hidden()
-            .rounded_md()
-            .border_1()
-            .border_color(border_variant)
-            .bg(surface_background)
-            .child(
-                h_flex()
-                    .min_w_0()
-                    .w_full()
-                    .gap_2()
-                    .justify_between()
-                    .px_3()
-                    .py_2()
-                    .border_b_1()
-                    .border_color(border_variant)
-                    .child(
-                        v_flex()
-                            .min_w_0()
-                            .child(Label::new(target.title).size(LabelSize::Small))
-                            .child(
-                                Label::new(target.detail)
-                                    .size(LabelSize::Small)
-                                    .color(Color::Muted)
-                                    .truncate(),
-                            ),
-                    )
-                    .child(
-                        h_flex()
-                            .gap_1()
-                            .child(
-                                Button::new("dx_load_www_preview", "Load G:\\WWW")
-                                    .size(ButtonSize::Default)
-                                    .style(ButtonStyle::Outlined)
-                                    .disabled(!has_dx_www)
-                                    .on_click(|_, window, cx| {
-                                        window.dispatch_action(OpenDxWwwPreview.boxed_clone(), cx);
-                                    }),
-                            )
-                            .child(
-                                Button::new("dx_load_bundled_preview", "Load 3D fallback")
-                                    .size(ButtonSize::Default)
-                                    .style(ButtonStyle::Outlined)
-                                    .on_click(|_, window, cx| {
-                                        window.dispatch_action(
-                                            OpenBundledDxPreview.boxed_clone(),
-                                            cx,
-                                        );
-                                    }),
-                            ),
-                    ),
-            )
-            .child(
-                div()
-                    .w_full()
-                    .h(px(480.))
-                    .min_h_0()
-                    .overflow_hidden()
-                    .child(self.render_web_preview_canvas(window, cx)),
-            )
-            .into_any_element()
-    }
-
-    fn render_quick_launch_actions(&self, cx: &mut Context<Self>) -> AnyElement {
-        let focus = self.focus_handle.clone();
-        let has_dx_www = self.dx_preview_targets.dx_www.is_some();
-
-        h_flex()
-            .w_full()
-            .gap_2()
-            .flex_wrap()
-            .child(
-                Button::new("dx_demo_web_preview", "Web Preview")
-                    .style(ButtonStyle::Outlined)
-                    .disabled(!has_dx_www)
-                    .on_click(|_, window, cx| {
-                        window.dispatch_action(OpenDxWwwPreview.boxed_clone(), cx);
-                    }),
-            )
-            .child(
-                Button::new("dx_demo_3d_preview", "3D Scene")
-                    .style(ButtonStyle::Outlined)
-                    .on_click(|_, window, cx| {
-                        window.dispatch_action(OpenBundledDxPreview.boxed_clone(), cx);
-                    }),
-            )
-            .child(
-                Button::new("dx_open_agent_panel", "Open Agent Panel")
-                    .style(ButtonStyle::Filled)
-                    .key_binding(
-                        KeyBinding::for_action_in(&ToggleFocus, &self.focus_handle, cx)
-                            .size(rems_from_px(12.)),
-                    )
-                    .on_click(move |_, window, cx| {
-                        focus.dispatch_action(&ToggleWorkspaceSidebar, window, cx);
-                        focus.dispatch_action(&ToggleFocus, window, cx);
-                    }),
-            )
-            .child(
-                Button::new("dx_open_automations", "Automations")
-                    .style(ButtonStyle::Outlined)
-                    .on_click(|_, window, cx| {
-                        window
-                            .dispatch_action(zed_actions::OpenProjectDebugTasks.boxed_clone(), cx);
-                    }),
-            )
-            .child(
-                Button::new("dx_open_provider_settings", "Provider Settings")
-                    .style(ButtonStyle::Outlined)
-                    .on_click(|_, window, cx| {
-                        window.dispatch_action(OpenSettings.boxed_clone(), cx);
-                    }),
-            )
-            .child(
-                Button::new("dx_skip_onboarding_action", "Skip")
-                    .style(ButtonStyle::Subtle)
-                    .on_click(|_, window, cx| {
-                        window.dispatch_action(Finish.boxed_clone(), cx);
-                    }),
-            )
-            .into_any_element()
-    }
-
-    fn render_page(&mut self, cx: &mut Context<Self>) -> AnyElement {
-        crate::basics_page::render_basics_page(&self.user_store, cx).into_any_element()
-    }
 }
 
 impl Render for Onboarding {
@@ -1087,8 +627,6 @@ impl Render for Onboarding {
             .on_action(cx.listener(Self::handle_finish))
             .on_action(cx.listener(Self::handle_sign_in))
             .on_action(Self::handle_open_account)
-            .on_action(cx.listener(Self::handle_open_dx_www_preview))
-            .on_action(cx.listener(Self::handle_open_bundled_dx_preview))
             .on_action(cx.listener(|_, _: &menu::SelectNext, window, cx| {
                 window.focus_next(cx);
                 cx.notify();
@@ -1220,42 +758,6 @@ fn close_onboarding_page<C: AppContext>(
         if closed_onboarding {
             cx.notify();
         }
-    });
-}
-
-fn go_to_welcome_page(cx: &mut App) {
-    with_active_or_new_workspace(cx, |workspace, window, cx| {
-        let Some((onboarding_id, onboarding_idx)) = workspace
-            .active_pane()
-            .read(cx)
-            .items()
-            .enumerate()
-            .find_map(|(idx, item)| {
-                let _ = item.downcast::<Onboarding>()?;
-                Some((item.item_id(), idx))
-            })
-        else {
-            return;
-        };
-
-        workspace.active_pane().update(cx, |pane, cx| {
-            // Get the index here to get around the borrow checker
-            let idx = pane.items().enumerate().find_map(|(idx, item)| {
-                let _ = item.downcast::<WelcomePage>()?;
-                Some(idx)
-            });
-
-            if let Some(idx) = idx {
-                pane.activate_item(idx, true, true, window, cx);
-            } else {
-                let item = Box::new(
-                    cx.new(|cx| WelcomePage::new(workspace.weak_handle(), false, window, cx)),
-                );
-                pane.add_item(item, true, true, Some(onboarding_idx), window, cx);
-            }
-
-            pane.remove_item(onboarding_id, false, false, window, cx);
-        });
     });
 }
 

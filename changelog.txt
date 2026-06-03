@@ -6,10 +6,20 @@ ADDED:
 CHANGED:
 - `crates\onboarding\src\onboarding.rs` now opens the existing local single-button Web Preview onboarding page as a non-splittable zoomed center screen and closes that onboarding screen when the Web Preview `Complete` button sends the existing completion bridge message.
 - `crates\onboarding\src\onboarding.rs` now routes both native Finish and Web Preview Complete through the workspace that owns the onboarding item, so completion cannot accidentally close onboarding in another active window.
+- `crates\onboarding\src\onboarding.rs` no longer carries the old unused native onboarding hero or welcome-replacement path now that the live onboarding surface is the Web Preview page.
+- `crates\onboarding\src\dx_launch_onboarding.rs` now only models the local Web Preview onboarding target, and the unused provider-readiness helper plus old DX launch fallback asset were removed.
 
 FIXED:
 - `crates\onboarding\src\onboarding.rs` now tracks and persists which docks were closed to create the onboarding fullscreen surface and restores only those docks on completion, preserving the user's prior dock layout instead of leaving side/bottom panels hidden.
+- `crates\workspace\src\pane.rs` now disables both pane-chrome and command-path move-split behavior for the Onboarding screen, so a hidden-tab center pane cannot move the fullscreen onboarding item into a split pane.
 - `script\dx-title-bar-source.test.ts` and `script\web-preview-platform-lifecycle.test.ts` now guard the new screen-dock route, Onboarding screen kind, Web Preview completion bridge, zoomed center presentation, dock restoration, non-splittable onboarding behavior, and close-on-complete behavior.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\onboarding\src\onboarding.rs crates\onboarding\src\dx_launch_onboarding.rs crates\workspace\src\pane.rs crates\title_bar\src\title_bar.rs crates\workspace\src\workspace.rs crates\workspace\src\screen_carousel.rs crates\agent_ui\src\agent_panel.rs crates\sidebar\src\sidebar.rs`
+- `node --test script\web-preview-platform-lifecycle.test.ts script\dx-title-bar-source.test.ts` with 27/27 passing.
+- `git diff --check`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" ...` returned no conflict markers across the touched source, guard, todo, and changelog files.
+- The final pre-commit diff was limited to the onboarding Web Preview source, pane hardening, focused source guards, and handoff docs.
 
 NOTES:
 - `just run` was not run because the current request explicitly asked not to run it.

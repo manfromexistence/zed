@@ -137,7 +137,7 @@ test("onboarding DX preview uses native Web Preview on macOS and Linux", () => {
     /#\[cfg\(any\(target_os = "windows", target_os = "macos", target_os = "linux"\)\)\]\s+dx_web_preview: Option<Entity<WebPreviewView>>,/,
   );
   assert.match(source, /fn ensure_dx_web_preview\(/);
-  assert.match(source, /preview\.load_onboarding_url\(&target\.url, window, cx\);/);
+  assert.match(source, /WebPreviewView::new_for_onboarding\(/);
   assert.match(
     source,
     /#\[cfg\(any\(target_os = "windows", target_os = "macos", target_os = "linux"\)\)\]\s+fn render_web_preview_canvas\(/,
@@ -152,7 +152,9 @@ test("onboarding DX preview uses native Web Preview on macOS and Linux", () => {
 
 test("onboarding uses a local Web Preview page with a real completion bridge", () => {
   const source = read("crates/onboarding/src/onboarding.rs");
+  const dxLaunchSource = read("crates/onboarding/src/dx_launch_onboarding.rs");
   const workspaceSource = read("crates/workspace/src/workspace.rs");
+  const paneSource = read("crates/workspace/src/pane.rs");
   const agentPanelSource = read("crates/agent_ui/src/agent_panel.rs");
   const sidebarSource = read("crates/sidebar/src/sidebar.rs");
 
@@ -169,6 +171,12 @@ test("onboarding uses a local Web Preview page with a real completion bridge", (
     /go_to_welcome_page\(cx\)/,
     "complete should remove the fullscreen onboarding surface instead of replacing it with welcome",
   );
+  assert.doesNotMatch(source, /fn go_to_welcome_page\(/);
+  assert.doesNotMatch(source, /fn render_dx_launch_hero\(/);
+  assert.doesNotMatch(source, /OpenDxWwwPreview|OpenBundledDxPreview/);
+  assert.match(dxLaunchSource, /pub struct DxLaunchPreviewTargets \{\s+pub primary: DxLaunchPreviewTarget,\s+\}/);
+  assert.match(dxLaunchSource, /DxLaunchPreviewTarget \{ url \}/);
+  assert.doesNotMatch(dxLaunchSource, /DX_WWW|FALLBACK_HTML|preview_status_rows|missing_dx_www_detail|detect\(/);
   const ensurePreview = functionBody(source, "ensure_dx_web_preview");
   assert.match(
     ensurePreview,
@@ -205,6 +213,16 @@ test("onboarding uses a local Web Preview page with a real completion bridge", (
   assert.match(source, /workspace\.toggle_dock\(position, window, cx\);/);
   assert.match(source, /pane\.remove_item\(onboarding_id, true, false, window, cx\);/);
   assert.match(source, /fn can_split\(&self\) -> bool \{\s+false\s+\}/);
+  assert.match(
+    paneSource,
+    /mode == SplitMode::MovePane[\s\S]*?item\.screen_kind\(cx\) == WorkspaceScreenKind::Onboarding[\s\S]*?return;/,
+    "Onboarding must not be movable into a split pane through MovePane commands",
+  );
+  assert.match(
+    paneSource,
+    /Some\(active_item\) if active_item\.screen_kind\(cx\) == WorkspaceScreenKind::Onboarding => \{\s*\(false, false\)\s*\}/,
+    "Onboarding must not expose clone or move split actions in pane chrome",
+  );
   assert.match(
     source,
     /fn screen_kind\(&self\) -> WorkspaceScreenKind \{\s+WorkspaceScreenKind::Onboarding\s+\}/,
