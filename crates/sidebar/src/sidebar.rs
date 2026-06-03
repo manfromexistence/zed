@@ -140,6 +140,7 @@ impl From<WorkspaceScreenKind> for SerializedSidebarGridScreenKind {
             WorkspaceScreenKind::Browser => Self::Browser,
             WorkspaceScreenKind::Terminal => Self::Terminal,
             WorkspaceScreenKind::LiquidGlass => Self::LiquidGlass,
+            WorkspaceScreenKind::Onboarding => Self::Other,
             WorkspaceScreenKind::Other => Self::Other,
         }
     }
@@ -8268,6 +8269,7 @@ impl Sidebar {
                 .project_root_path(cx)
                 .or_else(|| std::env::current_dir().ok()),
             WorkspaceScreenKind::Editor
+            | WorkspaceScreenKind::Onboarding
             | WorkspaceScreenKind::LiquidGlass
             | WorkspaceScreenKind::Other => self.project_root_path(cx),
         };
@@ -8290,9 +8292,9 @@ impl Sidebar {
         }
 
         let entries = match kind {
-            WorkspaceScreenKind::Editor | WorkspaceScreenKind::Other => {
-                self.editor_grid_entries(cx)
-            }
+            WorkspaceScreenKind::Editor
+            | WorkspaceScreenKind::Onboarding
+            | WorkspaceScreenKind::Other => self.editor_grid_entries(cx),
             WorkspaceScreenKind::Browser => self.browser_grid_entries(),
             WorkspaceScreenKind::Terminal => self.terminal_grid_entries(cx),
             WorkspaceScreenKind::LiquidGlass => self.editor_grid_entries(cx),

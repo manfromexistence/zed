@@ -5955,6 +5955,11 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> bool {
+        if kind == WorkspaceScreenKind::Onboarding {
+            window.dispatch_action(OpenOnboarding.boxed_clone(), cx);
+            return true;
+        }
+
         let target_pane = self.screen_host_pane();
         self.set_active_pane(&target_pane, window, cx);
 

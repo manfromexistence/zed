@@ -332,23 +332,15 @@ fn open_onboarding_page(
     window: &mut Window,
     cx: &mut Context<Workspace>,
 ) {
-    for dock_position in [
-        DockPosition::Left,
-        DockPosition::Right,
-        DockPosition::Bottom,
-    ] {
-        if workspace.is_dock_at_position_open(dock_position, cx) {
-            workspace.toggle_dock(dock_position, window, cx);
-        }
-    }
+    let closed_docks_for_fullscreen = close_open_docks_for_onboarding(workspace, window, cx);
 
-    let existing = workspace
-        .active_pane()
-        .read(cx)
-        .items()
-        .find_map(|item| item.downcast::<Onboarding>());
+    let existing = find_onboarding_page(workspace, cx);
 
     if let Some(existing) = existing {
+        existing.update(cx, |onboarding, cx| {
+            onboarding.track_closed_docks_for_fullscreen(closed_docks_for_fullscreen);
+            cx.emit(ItemEvent::UpdateTab);
+        });
         workspace.activate_item(&existing, true, true, window, cx);
         window.focus(&existing.focus_handle(cx), cx);
         zoom_active_onboarding_pane(workspace, window, cx);
@@ -357,11 +349,81 @@ fn open_onboarding_page(
     }
 
     let onboarding_page = Onboarding::new(workspace, cx);
+    onboarding_page.update(cx, |onboarding, _| {
+        onboarding.track_closed_docks_for_fullscreen(closed_docks_for_fullscreen);
+    });
     workspace.add_item_to_center(Box::new(onboarding_page.clone()), window, cx);
+    onboarding_page.update(cx, |_, cx| cx.emit(ItemEvent::UpdateTab));
     workspace.activate_item(&onboarding_page, true, true, window, cx);
     window.focus(&onboarding_page.focus_handle(cx), cx);
     zoom_active_onboarding_pane(workspace, window, cx);
     cx.notify();
+}
+
+fn find_onboarding_page(workspace: &Workspace, cx: &App) -> Option<Entity<Onboarding>> {
+    workspace.panes().iter().find_map(|pane| {
+        pane.read(cx)
+            .items()
+            .find_map(|item| item.downcast::<Onboarding>())
+    })
+}
+
+fn close_open_docks_for_onboarding(
+    workspace: &mut Workspace,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) -> Vec<DockPosition> {
+    let mut closed_docks = Vec::new();
+
+    for dock_position in [
+        DockPosition::Left,
+        DockPosition::Right,
+        DockPosition::Bottom,
+    ] {
+        if workspace.is_dock_at_position_open(dock_position, cx) {
+            workspace.toggle_dock(dock_position, window, cx);
+            closed_docks.push(dock_position);
+        }
+    }
+
+    closed_docks
+}
+
+fn serialize_closed_docks_for_fullscreen(positions: &[DockPosition]) -> String {
+    positions
+        .iter()
+        .map(|position| dock_position_token(*position))
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+fn deserialize_closed_docks_for_fullscreen(value: &str) -> Vec<DockPosition> {
+    value.split(',').filter_map(dock_position_from_token).fold(
+        Vec::new(),
+        |mut positions, position| {
+            if !positions.contains(&position) {
+                positions.push(position);
+            }
+            positions
+        },
+    )
+}
+
+fn dock_position_token(position: DockPosition) -> &'static str {
+    match position {
+        DockPosition::Left => "left",
+        DockPosition::Bottom => "bottom",
+        DockPosition::Right => "right",
+    }
+}
+
+fn dock_position_from_token(token: &str) -> Option<DockPosition> {
+    match token {
+        "left" => Some(DockPosition::Left),
+        "bottom" => Some(DockPosition::Bottom),
+        "right" => Some(DockPosition::Right),
+        _ => None,
+    }
 }
 
 fn zoom_active_onboarding_pane(
@@ -388,6 +450,7 @@ struct Onboarding {
     user_store: Entity<UserStore>,
     scroll_handle: ScrollHandle,
     dx_preview_targets: DxLaunchPreviewTargets,
+    closed_docks_for_fullscreen: Vec<DockPosition>,
     #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
     dx_web_preview: Option<Entity<WebPreviewView>>,
     _settings_subscription: Subscription,
@@ -449,6 +512,7 @@ impl Onboarding {
                 scroll_handle: ScrollHandle::new(),
                 user_store: workspace.user_store().clone(),
                 dx_preview_targets,
+                closed_docks_for_fullscreen: Vec::new(),
                 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
                 dx_web_preview: None,
                 _settings_subscription: cx
@@ -457,8 +521,8 @@ impl Onboarding {
         })
     }
 
-    fn on_finish(_: &Finish, _: &mut Window, cx: &mut App) {
-        finish_setup(cx);
+    fn handle_finish(&mut self, _: &Finish, window: &mut Window, cx: &mut Context<Self>) {
+        finish_setup(self.workspace.clone(), window, cx);
     }
 
     fn handle_sign_in(&mut self, _: &SignIn, window: &mut Window, cx: &mut Context<Self>) {
@@ -476,12 +540,24 @@ impl Onboarding {
     }
 }
 
-fn finish_setup(cx: &mut App) {
+fn finish_setup<C: AppContext>(workspace: WeakEntity<Workspace>, window: &mut Window, cx: &mut C) {
     telemetry::event!("Finish Setup");
-    close_onboarding_page(cx);
+    close_onboarding_page(workspace, window, cx);
 }
 
 impl Onboarding {
+    fn track_closed_docks_for_fullscreen(&mut self, positions: Vec<DockPosition>) {
+        for position in positions {
+            if !self.closed_docks_for_fullscreen.contains(&position) {
+                self.closed_docks_for_fullscreen.push(position);
+            }
+        }
+    }
+
+    fn take_closed_docks_for_fullscreen(&mut self) -> Vec<DockPosition> {
+        std::mem::take(&mut self.closed_docks_for_fullscreen)
+    }
+
     fn handle_open_account(_: &OpenAccount, _: &mut Window, cx: &mut App) {
         cx.open_url(&zed_urls::account_url(cx))
     }
@@ -536,9 +612,10 @@ impl Onboarding {
         }
 
         let workspace = self.workspace.clone();
+        let completion_workspace = workspace.clone();
         let url = self.dx_preview_targets.primary.url.clone();
-        let complete_onboarding = Rc::new(|_window: &mut Window, cx: &mut App| {
-            finish_setup(cx);
+        let complete_onboarding = Rc::new(move |window: &mut Window, cx: &mut App| {
+            finish_setup(completion_workspace.clone(), window, cx);
         });
         let preview = cx.new(|cx| {
             WebPreviewView::new_for_onboarding(
@@ -1007,7 +1084,7 @@ impl Render for Onboarding {
             })
             .track_focus(&self.focus_handle)
             .size_full()
-            .on_action(Self::on_finish)
+            .on_action(cx.listener(Self::handle_finish))
             .on_action(cx.listener(Self::handle_sign_in))
             .on_action(Self::handle_open_account)
             .on_action(cx.listener(Self::handle_open_dx_www_preview))
@@ -1048,7 +1125,7 @@ impl Item for Onboarding {
     }
 
     fn can_split(&self) -> bool {
-        true
+        false
     }
 
     fn screen_kind(&self) -> WorkspaceScreenKind {
@@ -1081,6 +1158,7 @@ impl Item for Onboarding {
             scroll_handle: ScrollHandle::new(),
             focus_handle: cx.focus_handle(),
             dx_preview_targets: self.dx_preview_targets.clone(),
+            closed_docks_for_fullscreen: Vec::new(),
             #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
             dx_web_preview: None,
             _settings_subscription: cx.observe_global::<SettingsStore>(move |_, cx| cx.notify()),
@@ -1092,29 +1170,48 @@ impl Item for Onboarding {
     }
 }
 
-fn close_onboarding_page(cx: &mut App) {
-    with_active_or_new_workspace(cx, |workspace, window, cx| {
+fn close_onboarding_page<C: AppContext>(
+    workspace: WeakEntity<Workspace>,
+    window: &mut Window,
+    cx: &mut C,
+) {
+    let _ = workspace.update(cx, |workspace, cx| {
         let panes = workspace.panes().to_vec();
         let mut closed_onboarding = false;
 
         for pane in panes {
-            let onboarding_ids = pane
+            let onboarding_entries = pane
                 .read(cx)
                 .items()
                 .filter_map(|item| {
-                    let _ = item.downcast::<Onboarding>()?;
-                    Some(item.item_id())
+                    let onboarding = item.downcast::<Onboarding>()?;
+                    Some((onboarding, item.item_id()))
                 })
                 .collect::<Vec<_>>();
 
-            if onboarding_ids.is_empty() {
+            if onboarding_entries.is_empty() {
                 continue;
             }
 
             closed_onboarding = true;
             pane.update(cx, |pane, cx| {
                 pane.zoom_out(&ZoomOut, window, cx);
-                for onboarding_id in onboarding_ids {
+            });
+
+            for (onboarding, _) in &onboarding_entries {
+                let positions = onboarding.update(cx, |onboarding, _| {
+                    onboarding.take_closed_docks_for_fullscreen()
+                });
+
+                for position in positions {
+                    if !workspace.is_dock_at_position_open(position, cx) {
+                        workspace.toggle_dock(position, window, cx);
+                    }
+                }
+            }
+
+            pane.update(cx, |pane, cx| {
+                for (_, onboarding_id) in onboarding_entries {
                     pane.remove_item(onboarding_id, true, false, window, cx);
                 }
             });
@@ -1311,8 +1408,17 @@ impl workspace::SerializableItem for Onboarding {
     ) -> gpui::Task<gpui::Result<Entity<Self>>> {
         let db = persistence::OnboardingPagesDb::global(cx);
         window.spawn(cx, async move |cx| {
-            if let Some(_) = db.get_onboarding_page(item_id, workspace_id)? {
-                workspace.update(cx, |workspace, cx| Onboarding::new(workspace, cx))
+            if let Some(closed_docks_for_fullscreen) =
+                db.get_onboarding_page(item_id, workspace_id)?
+            {
+                let onboarding =
+                    workspace.update(cx, |workspace, cx| Onboarding::new(workspace, cx))?;
+                onboarding.update(cx, |onboarding, _| {
+                    onboarding.track_closed_docks_for_fullscreen(
+                        deserialize_closed_docks_for_fullscreen(&closed_docks_for_fullscreen),
+                    );
+                });
+                Ok(onboarding)
             } else {
                 Err(anyhow::anyhow!("No onboarding page to deserialize"))
             }
@@ -1330,11 +1436,12 @@ impl workspace::SerializableItem for Onboarding {
         let workspace_id = workspace.database_id()?;
 
         let db = persistence::OnboardingPagesDb::global(cx);
-        Some(
-            cx.background_spawn(
-                async move { db.save_onboarding_page(item_id, workspace_id).await },
-            ),
-        )
+        let closed_docks_for_fullscreen =
+            serialize_closed_docks_for_fullscreen(&self.closed_docks_for_fullscreen);
+        Some(cx.background_spawn(async move {
+            db.save_onboarding_page(item_id, workspace_id, closed_docks_for_fullscreen)
+                .await
+        }))
     }
 
     fn should_serialize(&self, event: &Self::Event) -> bool {
@@ -1380,6 +1487,10 @@ mod persistence {
                         DROP TABLE onboarding_pages;
                         ALTER TABLE onboarding_pages_2 RENAME TO onboarding_pages;
             ),
+            sql!(
+                        ALTER TABLE onboarding_pages
+                        ADD COLUMN closed_docks_for_fullscreen TEXT NOT NULL DEFAULT "";
+            ),
         ];
     }
 
@@ -1389,10 +1500,15 @@ mod persistence {
         query! {
             pub async fn save_onboarding_page(
                 item_id: workspace::ItemId,
-                workspace_id: workspace::WorkspaceId
+                workspace_id: workspace::WorkspaceId,
+                closed_docks_for_fullscreen: String
             ) -> Result<()> {
-                INSERT OR REPLACE INTO onboarding_pages(item_id, workspace_id)
-                VALUES (?, ?)
+                INSERT OR REPLACE INTO onboarding_pages(
+                    item_id,
+                    workspace_id,
+                    closed_docks_for_fullscreen
+                )
+                VALUES (?, ?, ?)
             }
         }
 
@@ -1400,8 +1516,8 @@ mod persistence {
             pub fn get_onboarding_page(
                 item_id: workspace::ItemId,
                 workspace_id: workspace::WorkspaceId
-            ) -> Result<Option<workspace::ItemId>> {
-                SELECT item_id
+            ) -> Result<Option<String>> {
+                SELECT closed_docks_for_fullscreen
                 FROM onboarding_pages
                 WHERE item_id = ? AND workspace_id = ?
             }

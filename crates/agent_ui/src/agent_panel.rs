@@ -1201,6 +1201,7 @@ impl DxWorkspaceSnapshot {
                 WorkspaceScreenKind::Editor => has_editor = true,
                 WorkspaceScreenKind::Browser => has_browser = true,
                 WorkspaceScreenKind::Terminal
+                | WorkspaceScreenKind::Onboarding
                 | WorkspaceScreenKind::LiquidGlass
                 | WorkspaceScreenKind::Other => {}
             }

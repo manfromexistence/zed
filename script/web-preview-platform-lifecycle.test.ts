@@ -152,27 +152,88 @@ test("onboarding DX preview uses native Web Preview on macOS and Linux", () => {
 
 test("onboarding uses a local Web Preview page with a real completion bridge", () => {
   const source = read("crates/onboarding/src/onboarding.rs");
+  const workspaceSource = read("crates/workspace/src/workspace.rs");
+  const agentPanelSource = read("crates/agent_ui/src/agent_panel.rs");
+  const sidebarSource = read("crates/sidebar/src/sidebar.rs");
 
   assert.match(source, /const WEB_PREVIEW_ONBOARDING_HTML: &str/);
   assert.match(source, /JSON\.stringify\(\{ kind: "onboarding-complete" \}\)/);
   assert.match(source, /DxLaunchPreviewTargets::local_web_preview_onboarding\(web_preview_onboarding_url\(\)\)/);
-  assert.match(source, /Some\(complete_onboarding\)/);
-  assert.match(source, /fn finish_setup\(cx: &mut App\)/);
-  assert.match(source, /finish_setup\(cx\);/);
-  assert.match(source, /fn close_onboarding_page\(cx: &mut App\)/);
+  assert.match(source, /fn handle_finish\(&mut self, _: &Finish, window: &mut Window, cx: &mut Context<Self>\)/);
+  assert.match(source, /finish_setup\(self\.workspace\.clone\(\), window, cx\);/);
+  assert.match(source, /fn finish_setup<C: AppContext>\(/);
+  const finishSetup = functionBody(source, "finish_setup");
+  assert.match(finishSetup, /close_onboarding_page\(workspace, window, cx\);/);
+  assert.doesNotMatch(
+    finishSetup,
+    /go_to_welcome_page\(cx\)/,
+    "complete should remove the fullscreen onboarding surface instead of replacing it with welcome",
+  );
+  const ensurePreview = functionBody(source, "ensure_dx_web_preview");
+  assert.match(
+    ensurePreview,
+    /let completion_workspace = workspace\.clone\(\);/,
+  );
+  assert.match(
+    ensurePreview,
+    /let complete_onboarding = Rc::new\(move \|window: &mut Window, cx: &mut App\| \{\s*finish_setup\(completion_workspace\.clone\(\), window, cx\);\s*\}\);/s,
+  );
+  assert.match(
+    ensurePreview,
+    /WebPreviewView::new_for_onboarding\([\s\S]*Some\(complete_onboarding\)[\s\S]*\)/,
+  );
+  assert.match(source, /fn close_onboarding_page<C: AppContext>\(/);
+  const closeOnboardingPage = functionBody(source, "close_onboarding_page");
+  assert.match(closeOnboardingPage, /workspace\.update\(cx, \|workspace, cx\|/);
+  assert.doesNotMatch(closeOnboardingPage, /with_active_or_new_workspace/);
+  assert.match(source, /fn find_onboarding_page\(workspace: &Workspace, cx: &App\) -> Option<Entity<Onboarding>>/);
+  assert.match(source, /workspace\.panes\(\)\.iter\(\)\.find_map/);
+  assert.match(source, /fn close_open_docks_for_onboarding\(/);
+  assert.match(source, /closed_docks_for_fullscreen: Vec<DockPosition>/);
+  assert.match(source, /fn track_closed_docks_for_fullscreen\(&mut self, positions: Vec<DockPosition>\)/);
+  assert.match(source, /fn take_closed_docks_for_fullscreen\(&mut self\) -> Vec<DockPosition>/);
+  assert.match(source, /cx\.emit\(ItemEvent::UpdateTab\);/);
+  assert.match(source, /fn serialize_closed_docks_for_fullscreen\(positions: &\[DockPosition\]\) -> String/);
+  assert.match(source, /fn deserialize_closed_docks_for_fullscreen\(value: &str\) -> Vec<DockPosition>/);
+  assert.match(source, /ALTER TABLE onboarding_pages\s+ADD COLUMN closed_docks_for_fullscreen TEXT NOT NULL DEFAULT "";/);
+  assert.match(source, /db\.save_onboarding_page\(item_id, workspace_id, closed_docks_for_fullscreen\)/);
+  assert.match(source, /SELECT closed_docks_for_fullscreen\s+FROM onboarding_pages/);
   assert.match(source, /fn zoom_active_onboarding_pane\(/);
   assert.match(source, /pane\.zoom_in\(&ZoomIn, window, cx\)/);
   assert.match(source, /pane\.zoom_out\(&ZoomOut, window, cx\);/);
+  assert.match(source, /if !workspace\.is_dock_at_position_open\(position, cx\) \{/);
+  assert.match(source, /workspace\.toggle_dock\(position, window, cx\);/);
   assert.match(source, /pane\.remove_item\(onboarding_id, true, false, window, cx\);/);
+  assert.match(source, /fn can_split\(&self\) -> bool \{\s+false\s+\}/);
   assert.match(
     source,
     /fn screen_kind\(&self\) -> WorkspaceScreenKind \{\s+WorkspaceScreenKind::Onboarding\s+\}/,
   );
   assert.match(source, /\.child\(self\.render_web_preview_canvas\(window, cx\)\)/);
-  assert.doesNotMatch(
-    functionBody(source, "finish_setup"),
-    /go_to_welcome_page\(cx\)/,
-    "complete should remove the fullscreen onboarding surface instead of replacing it with welcome",
+  assert.match(
+    workspaceSource,
+    /if kind == WorkspaceScreenKind::Onboarding \{\s*window\.dispatch_action\(OpenOnboarding\.boxed_clone\(\), cx\);\s*return true;\s*\}/s,
+    "screen dock activation must route existing onboarding through the fullscreen onboarding opener",
+  );
+  assert.match(
+    agentPanelSource,
+    /WorkspaceScreenKind::Terminal\s*\|\s*WorkspaceScreenKind::Onboarding\s*\|\s*WorkspaceScreenKind::LiquidGlass/s,
+    "Agent workspace snapshots should treat Onboarding like other non-editor screens",
+  );
+  assert.match(
+    sidebarSource,
+    /WorkspaceScreenKind::Onboarding => Self::Other/,
+    "sidebar grid persistence should deliberately fold Onboarding into the existing non-primary screen context",
+  );
+  assert.match(
+    sidebarSource,
+    /WorkspaceScreenKind::Editor\s*\|\s*WorkspaceScreenKind::Onboarding\s*\|\s*WorkspaceScreenKind::LiquidGlass\s*\|\s*WorkspaceScreenKind::Other => self\.project_root_path\(cx\)/s,
+    "sidebar grid context should use project-root shortcuts while Onboarding is active",
+  );
+  assert.match(
+    sidebarSource,
+    /WorkspaceScreenKind::Editor\s*\|\s*WorkspaceScreenKind::Onboarding\s*\|\s*WorkspaceScreenKind::Other => (?:self\.editor_grid_entries\(cx\)|\{\s*self\.editor_grid_entries\(cx\)\s*\})/s,
+    "sidebar grid generation should show editor/project entries while Onboarding is active",
   );
 
   const renderStart = source.indexOf("impl Render for Onboarding");
@@ -194,6 +255,10 @@ for (const [name, path] of desktopOnboardingPreviewViews) {
     assert.match(source, /"onboarding-complete" => \{/);
     assert.match(source, /if let Some\(complete\) = self\.onboarding_complete\.clone\(\)/);
     assert.match(source, /complete\(window, cx\);/);
+    const newForOnboarding = functionBody(source, "new_for_onboarding");
+    assert.match(newForOnboarding, /Self::new_for_url\([\s\S]*onboarding_complete/s);
+    const newForUrl = functionBody(source, "new_for_url");
+    assert.match(newForUrl, /onboarding_complete,/);
   });
 }
 

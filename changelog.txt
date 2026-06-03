@@ -4,10 +4,12 @@ ADDED:
 - `crates\workspace\src\item.rs`, `crates\title_bar\src\title_bar.rs`, `crates\workspace\src\workspace.rs`, `crates\workspace\src\pane.rs`, and `crates\workspace\src\screen_carousel.rs` now model Onboarding as a first-class screen kind with a dedicated topbar screen-dock button, label, activation route, and non-carousel fullscreen behavior.
 
 CHANGED:
-- `crates\onboarding\src\onboarding.rs` now opens the existing local single-button Web Preview onboarding page as a zoomed center screen and closes that onboarding screen when the Web Preview `Complete` button sends the existing completion bridge message.
+- `crates\onboarding\src\onboarding.rs` now opens the existing local single-button Web Preview onboarding page as a non-splittable zoomed center screen and closes that onboarding screen when the Web Preview `Complete` button sends the existing completion bridge message.
+- `crates\onboarding\src\onboarding.rs` now routes both native Finish and Web Preview Complete through the workspace that owns the onboarding item, so completion cannot accidentally close onboarding in another active window.
 
 FIXED:
-- `script\dx-title-bar-source.test.ts` and `script\web-preview-platform-lifecycle.test.ts` now guard the new screen-dock route, Onboarding screen kind, Web Preview completion bridge, zoomed center presentation, and close-on-complete behavior.
+- `crates\onboarding\src\onboarding.rs` now tracks and persists which docks were closed to create the onboarding fullscreen surface and restores only those docks on completion, preserving the user's prior dock layout instead of leaving side/bottom panels hidden.
+- `script\dx-title-bar-source.test.ts` and `script\web-preview-platform-lifecycle.test.ts` now guard the new screen-dock route, Onboarding screen kind, Web Preview completion bridge, zoomed center presentation, dock restoration, non-splittable onboarding behavior, and close-on-complete behavior.
 
 NOTES:
 - `just run` was not run because the current request explicitly asked not to run it.
