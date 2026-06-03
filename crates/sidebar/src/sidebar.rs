@@ -708,7 +708,6 @@ impl Render for ThreadIconPickerMenu {
                     .id("thread-icon-picker-grid-icons")
                     .flex_wrap()
                     .gap_1()
-                    .pr_5()
                     .children(icons.into_iter().map(|icon_name| {
                         IconButton::new(
                             format!("thread-icon-picker-grid-icon-{icon_name:?}"),
@@ -721,16 +720,25 @@ impl Render for ThreadIconPickerMenu {
                         .on_click(cx.listener(
                             move |this, _, _window, cx| {
                                 this.sidebar
-                                    .update(cx, |sidebar, cx| {
-                                        sidebar
-                                            .thread_icon_overrides
-                                            .insert(this.thread_id, icon_name);
-                                        sidebar.grid_entry_cache.borrow_mut().clear();
-                                        sidebar.update_entries(cx);
-                                        sidebar.serialize(cx);
-                                        cx.notify();
-                                    })
-                                    .ok();
+                                .update(cx, |sidebar, cx| {
+                                    sidebar
+                                        .thread_icon_overrides
+                                        .insert(this.thread_id, icon_name);
+                                    for shortcut in &mut sidebar.grid_shortcuts {
+                                        if matches!(
+                                            &shortcut.action,
+                                            SerializedSidebarGridAction::OpenThread { thread_id }
+                                                if *thread_id == this.thread_id
+                                        ) {
+                                            shortcut.icon = icon_name;
+                                        }
+                                    }
+                                    sidebar.grid_entry_cache.borrow_mut().clear();
+                                    sidebar.update_entries(cx);
+                                    sidebar.serialize(cx);
+                                    cx.notify();
+                                })
+                                .ok();
                                 cx.emit(DismissEvent);
                             },
                         ))
@@ -6626,7 +6634,7 @@ impl Sidebar {
             })
             .selected(is_selected)
             .focused(is_focused)
-            .hovered(is_hovered)
+            .hovered(is_hovered || is_icon_picker_open)
             .on_hover(cx.listener(move |this, is_hovered: &bool, _window, cx| {
                 if *is_hovered {
                     this.hovered_thread_index = Some(ix);
@@ -6658,7 +6666,7 @@ impl Sidebar {
                 )
             })
             .when(
-                (is_hovered || is_icon_picker_open) && !is_renaming,
+                (is_hovered || is_icon_picker_open || is_focused) && !is_renaming,
                 |this| {
                     let rename_button = IconButton::new(("rename-thread", ix), IconName::Pencil)
                         .icon_size(IconSize::Small)
@@ -6686,7 +6694,7 @@ impl Sidebar {
                                 );
                             })
                         });
-                    let icon_picker = {
+                    let icon_picker = (!is_draft).then(|| {
                         let sidebar = cx.weak_entity();
                         let icon_picker_handle = icon_picker_handle.clone();
                         PopoverMenu::new(format!("thread-icon-picker-menu-{ix}"))
@@ -6707,7 +6715,7 @@ impl Sidebar {
                                     focus_handle: cx.focus_handle(),
                                 }))
                             })
-                    };
+                    });
 
                     let contextual_action: Option<AnyElement> = if is_running {
                         Some(
@@ -6773,7 +6781,7 @@ impl Sidebar {
                     this.action_slot(
                         h_flex()
                             .gap_0p5()
-                            .child(icon_picker)
+                            .when_some(icon_picker, |this, picker| this.child(picker))
                             .child(rename_button)
                             .when_some(contextual_action, |this, action| this.child(action)),
                     )
@@ -8280,10 +8288,19 @@ impl Sidebar {
         entries
     }
 
-    fn pinned_grid_entries(&self, context: &SidebarGridContext) -> Vec<SidebarGridEntry> {
+    fn pinned_grid_entries(&self, context: &SidebarGridContext, cx: &App) -> Vec<SidebarGridEntry> {
         self.grid_shortcuts
             .iter()
             .filter(|shortcut| shortcut.matches_context(context))
+            .filter(|shortcut| match &shortcut.action {
+                SerializedSidebarGridAction::OpenThread { thread_id } => {
+                    ThreadMetadataStore::global(cx)
+                        .read(cx)
+                        .entry(*thread_id)
+                        .is_some()
+                }
+                _ => true,
+            })
             .take(SIDEBAR_SPACE_GRID_ITEMS)
             .map(SerializedSidebarGridShortcut::to_grid_entry)
             .collect()
@@ -8291,7 +8308,7 @@ impl Sidebar {
 
     fn grid_entries(&self, cx: &App) -> Vec<SidebarGridEntry> {
         let (kind, root_path, context) = self.grid_context(cx);
-        let pinned_entries = self.pinned_grid_entries(&context);
+        let pinned_entries = self.pinned_grid_entries(&context, cx);
         let generated_entries = self.generated_grid_entries(kind, root_path, cx);
         let mut seen_actions = HashSet::new();
 

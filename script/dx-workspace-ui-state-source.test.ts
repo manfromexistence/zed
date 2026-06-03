@@ -255,11 +255,26 @@ test("side dock stack controls use real panel entries and preserve single-panel 
   assert.match(workspace, /fn close_active_side_panel\(/);
   assert.match(agentPanel, /"agent-panel-split-side-panel"/);
   assert.match(agentPanel, /"agent-panel-close-side-panel"/);
-  assert.match(iconPicker, /"icon-picker-split-side-panel"/);
-  assert.match(fontPanel, /"font-panel-split-side-panel"/);
-  assert.match(mediaPanel, /"media-panel-split-side-panel"/);
-  assert.match(uiPanel, /"shadcn-ui-split-side-panel"/);
-  assert.match(stylePanel, /"dx-style-panel-split-side-panel"/);
+  for (const [source, prefix, name] of [
+    [iconPicker, "icon-picker", "Icon picker"],
+    [fontPanel, "font-panel", "Font panel"],
+    [mediaPanel, "media-panel", "Media panel"],
+    [uiPanel, "shadcn-ui", "UI panel"],
+    [stylePanel, "dx-style-panel", "Style panel"],
+  ] as const) {
+    assert.match(
+      source,
+      new RegExp(
+        `side_panel_header_controls\\(\\s*"${prefix}",[\\s\\S]*?(?:self\\.)?workspace\\.clone\\(\\)[\\s\\S]*?(?:cx\\.entity\\(\\)\\.entity_id\\(\\)|panel_id)`,
+      ),
+      `${name} must target its own panel entity for split/close controls`,
+    );
+    assert.doesNotMatch(
+      source,
+      /workspace::SplitActiveSidePanel|workspace::CloseActiveSidePanel/,
+      `${name} header controls must not depend on active side-panel focus`,
+    );
+  }
   assert.doesNotMatch(dockRender, /"dock-panel-inline-split"/);
   assert.doesNotMatch(dockRender, /"dock-panel-inline-close"/);
   assert.doesNotMatch(dockRender, /"dock-panel-inline-control-mask"/);
@@ -419,16 +434,22 @@ test("sidebar chat groups expose persistent sort and icon override controls", ()
   assert.match(sidebar, /"thread-icon-picker-grid-icons"/);
   assert.match(sidebar, /"thread-icon-picker-close"/);
   assert.match(sidebar, /cx\.emit\(DismissEvent\)/);
-  assert.match(sidebar, /\.pr_5\(\)/);
+  assert.doesNotMatch(sidebar, /\.pr_5\(\)/);
   assert.match(sidebar, /"sidebar-chat-sort-\{label\}"/);
   assert.match(sidebar, /"thread-icon-picker"/);
   assert.match(sidebar, /\.with_handle\(icon_picker_handle\)/);
-  assert.match(sidebar, /is_hovered \|\| is_icon_picker_open/);
+  assert.match(sidebar, /is_hovered \|\| is_icon_picker_open \|\| is_focused/);
+  assert.match(sidebar, /\.hovered\(is_hovered \|\| is_icon_picker_open\)/);
+  assert.match(sidebar, /\(!is_draft\)\.then\(\|\|/);
+  assert.match(sidebar, /shortcut\.icon = icon_name/);
+  assert.match(sidebar, /ThreadMetadataStore::global\(cx\)[\s\S]*?\.entry\(\*thread_id\)[\s\S]*?\.is_some\(\)/);
   assert.match(sidebar, /IconButton::new\(\("thread-icon-picker", ix\), IconName::Sparkle\)/);
   assert.match(sidebar, /IconName::iter\(\)/);
   assert.match(sidebar, /SerializedThreadIconOverride/);
   assert.match(threadItem, /let timestamp_color = if self\.selected \|\| self\.hovered/);
+  assert.match(threadItem, /Color::Custom\(color\.text\.opacity\(0\.68\)\)/);
   assert.match(threadItem, /Label::new\(timestamp\.clone\(\)\)[\s\S]*\.color\(timestamp_color\)/);
+  assert.match(threadItem, /self\.hovered \|\| self\.focused/);
   assert.doesNotMatch(sidebar, /ContextMenuEntry::new\(format!\("\{icon_name:\?\}"\)\)/);
 });
 
@@ -505,9 +526,9 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(dxLaunchStylePanel, /metric_row\(\s*"Generators",/);
   assert.match(dxLaunchStylePanel, /format!\("\{\} declared", snapshot\.visual_generator_count\)/);
   assert.match(dxLaunchStylePanel, /metric_row\(\s*"Web Preview",/);
-  assert.match(dxLaunchStylePanel, /"Preview bridge ready"/);
-  assert.match(dxLaunchStylePanel, /"Host source present"/);
-  assert.match(dxLaunchStylePanel, /"Host source missing"/);
+  assert.match(dxLaunchStylePanel, /"Ready"/);
+  assert.match(dxLaunchStylePanel, /"Bridge available"/);
+  assert.match(dxLaunchStylePanel, /"Bridge missing"/);
   assert.match(
     dxLaunchStylePanel,
     /Button::new\("dx-style-open-generator-preview", "Open Style Controls"\)/,
@@ -515,7 +536,7 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(dxLaunchStylePanel, /style_contract_row\(\s*"Control Catalog",/);
   assert.doesNotMatch(
     dxLaunchStylePanel,
-    /Style Cockpit|Open Generator Workspace|Open Generator"|Open Style Generator|Generator Host|Generator Contract|Web Preview ready|Web Preview host present|Web Preview host missing|Readiness Contracts|Readiness Fixtures|controls ready|host connected|host unavailable|cataloged/,
+    /Style Cockpit|Open Generator Workspace|Open Generator"|Open Style Generator|Generator Host|Generator Contract|Web Preview ready|Web Preview host present|Web Preview host missing|Host source|Readiness Contracts|Readiness Fixtures|controls ready|host connected|host unavailable|cataloged/,
   );
   assert.match(dxLaunchCheckPanel, /"Readiness score"/);
   assert.doesNotMatch(dxLaunchCheckPanel, /"Rail score"/);
@@ -597,10 +618,10 @@ test("agent launch rails use professional operator-facing copy", () => {
   assert.match(dxCheckScore, /"\{\} worktrees, \{\} roots"/);
   assert.match(dxCheckScore, /"\{\} attachable, \{\} total"/);
 
-  assert.match(styleState, /"Preview bridge ready"/);
-  assert.match(styleState, /"Host source present"/);
-  assert.match(styleState, /"Host source missing"/);
-  assert.match(webPreviewState, /"preview bridge ready"/);
+  assert.match(styleState, /"Ready"/);
+  assert.match(styleState, /"Bridge available"/);
+  assert.match(styleState, /"Bridge missing"/);
+  assert.match(webPreviewState, /"Ready"/);
   assert.match(agentConfiguration, /"\{\} active tasks, \{\} automations,/);
   assert.match(dxLaunchStatusSummary, /"\{\} automations, \{\} active, \{\} QR-ready"/);
   assert.doesNotMatch(
@@ -750,13 +771,13 @@ test("panel headers keep titles flexible and side actions fixed", () => {
   );
 
   for (const [source, actionId, label] of [
-    [iconPicker, "icon-picker-split-side-panel", "Icons"],
-    [fontPanel, "font-panel-split-side-panel", "Fonts"],
-    [mediaPanel, "media-panel-split-side-panel", "Media"],
-    [uiPanel, "shadcn-ui-split-side-panel", "UI"],
-    [stylePanel, "dx-style-panel-split-side-panel", "Style"],
+    [iconPicker, "side_panel_header_controls", "Icons"],
+    [fontPanel, "side_panel_header_controls", "Fonts"],
+    [mediaPanel, "side_panel_header_controls", "Media"],
+    [uiPanel, "side_panel_header_controls", "UI"],
+    [stylePanel, "side_panel_header_controls", "Style"],
   ] as const) {
-    assert.match(sourceWindow(source, actionId, 3600, 300), /\.flex_none\(\)/);
+    assert.match(source, new RegExp(actionId));
     assert.match(sourceWindow(source, `Label::new("${label}")`), /\.truncate\(\)/);
     assert.match(
       sourceWindow(source, `Label::new("${label}")`),
@@ -777,9 +798,11 @@ test("recent tool panels use professional visible copy", () => {
   assert.match(dxStylePanelCards, /metric\(\s*"Generators",/);
   assert.match(dxStylePanelCards, /\{\} declared/);
   assert.match(dxStylePanelCards, /"Open Style Controls"/);
-  assert.match(dxStylePanelCards, /"preview bridge ready"/);
-  assert.match(dxStylePanelCards, /"host source present"/);
-  assert.match(dxStylePanelCards, /"host source missing"/);
+  assert.match(dxStylePanelCards, /"Ready"/);
+  assert.match(dxStylePanelCards, /"Bridge available"/);
+  assert.match(dxStylePanelCards, /"Bridge missing"/);
+  assert.match(dxStylePanelCards, /apply_gate_state_label/);
+  assert.match(dxStylePanelCards, /metric\("Apply", apply_gate_state_label\(&gate\.state\)\)/);
   assert.doesNotMatch(
     dxStylePanelCards,
     /"Host"|"Open Web Preview Controls"|"Open Web Preview Generators"|generator bridge ready|host present|host missing|controls ready|host connected|host unavailable|cataloged controls/,
@@ -807,8 +830,10 @@ test("recent tool panels use professional visible copy", () => {
   assert.match(mediaPanel, /No missing \{section\} entries/);
   assert.match(mediaPanel, /open remote sources/);
   assert.match(mediaPanel, /Clear recent media entries/);
+  assert.match(mediaPanel, /Pinned media and search results stay/);
+  assert.match(mediaPanel, /Pin to pinned media/);
   assert.match(mediaPanel, /Remove this entry from history/);
-  assert.doesNotMatch(mediaPanel, /Previewing |"Clean"|use Clean|use Remove|CLEAN_STALE|remove-stale|\bstale\b|No-key|No no-key|no-key|recent media actions|\{ready\} ready|available \//);
+  assert.doesNotMatch(mediaPanel, /Previewing |"Clean"|use Clean|use Remove|CLEAN_STALE|remove-stale|\bstale\b|No-key|No no-key|no-key|recent media actions|local index|remote cache|working set|\{ready\} ready|available \//);
 
   assert.match(uiPanel, /"Preview in Web Preview"/);
   assert.match(uiPanel, /ui_history_availability_label/);
@@ -822,8 +847,11 @@ test("recent tool panels use professional visible copy", () => {
   assert.match(uiPanel, /Changes queued/);
   assert.match(uiPanel, /UI registry preview/);
   assert.match(uiPanel, /Clear recent UI entries/);
+  assert.match(uiPanel, /Component source is missing/);
+  assert.match(uiPanel, /Install missing component files without overwriting existing files/);
+  assert.match(uiPanel, /Open component source/);
   assert.match(uiPanel, /Remove this entry from history/);
-  assert.doesNotMatch(uiPanel, /Previewing |"Clean"|use Clean|use Remove|CLEAN_STALE|remove-stale|\bstale\b|recent UI action|pinned UI action|Saved changes|The UI registry is ready|Preview in WebPreview|\{ready\} ready|available \//);
+  assert.doesNotMatch(uiPanel, /Previewing |"Clean"|use Clean|use Remove|CLEAN_STALE|remove-stale|\bstale\b|recent UI action|pinned UI action|Recent UI actions|registry files|registry manifest|primary target|No editor paste|Open this registry source|working set|Saved changes|The UI registry is ready|Preview in WebPreview|\{ready\} ready|available \//);
 });
 
 test("item project-handle collections cap visited items before pushing handles", () => {

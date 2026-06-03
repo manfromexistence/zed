@@ -24,7 +24,7 @@ use ui::{TintColor, Tooltip, prelude::*};
 use url::Url;
 use workspace::{
     DraggedShadcnAsset, DraggedShadcnKind, Workspace,
-    dock::{DockPosition, Panel, PanelEvent},
+    dock::{DockPosition, Panel, PanelEvent, side_panel_header_controls},
 };
 
 mod registry_directory;
@@ -49,11 +49,11 @@ const MAX_PINNED_UI_ACTIONS: usize = 8;
 const PINNED_UI_ACTIONS_KEY: &str = "asset_panel_pinned_ui_v1";
 const PINNED_UI_ACTIONS_STATE_VERSION: u32 = 1;
 const REMOVE_MISSING_UI_TOOLTIP: &str =
-    "Remove UI entries whose source or registry files are missing. Available entries stay.";
+    "Remove UI entries whose component source is missing. Available entries stay.";
 const CLEAR_RECENT_UI_TOOLTIP: &str =
     "Clear recent UI entries. Pinned UI entries and the catalog stay.";
 const CLEAR_PINNED_UI_TOOLTIP: &str =
-    "Clear pinned UI entries. Recent UI actions and the catalog stay.";
+    "Clear pinned UI entries. Recent UI entries and the catalog stay.";
 const PREVIEW_IMAGE_CACHE_INITIAL_CAPACITY: usize = MAX_SHADCN_ROWS * 4;
 const CATALOG_CACHE_FILE_NAME: &str = "catalog-v4.rkyv";
 const STATIC_SHADCN_CATALOG_INDEX: &str = include_str!("shadcn_catalog_index.tsv");
@@ -797,7 +797,7 @@ impl ShadcnUiPanel {
         if !item_source_available(&item, &payload) {
             self.status = Some(
                 format!(
-                    "Missing source or registry manifest: {}",
+                    "Component source is missing: {}",
                     payload.source_path.to_string_lossy().replace('\\', "/")
                 )
                 .into(),
@@ -1639,40 +1639,12 @@ impl Render for ShadcnUiPanel {
                                             ),
                                         )
                                     })
-                                    .child(
-                                        IconButton::new(
-                                            "shadcn-ui-split-side-panel",
-                                            IconName::SplitAlt,
-                                        )
-                                        .shape(ui::IconButtonShape::Square)
-                                        .icon_size(IconSize::Small)
-                                        .tooltip(Tooltip::text("Split Panel"))
-                                        .on_click(
-                                            |_, window, cx| {
-                                                window.dispatch_action(
-                                                    Box::new(workspace::SplitActiveSidePanel),
-                                                    cx,
-                                                );
-                                            },
-                                        ),
-                                    )
-                                    .child(
-                                        IconButton::new(
-                                            "shadcn-ui-close-side-panel",
-                                            IconName::Close,
-                                        )
-                                        .shape(ui::IconButtonShape::Square)
-                                        .icon_size(IconSize::Small)
-                                        .tooltip(Tooltip::text("Close Panel"))
-                                        .on_click(
-                                            |_, window, cx| {
-                                                window.dispatch_action(
-                                                    Box::new(workspace::CloseActiveSidePanel),
-                                                    cx,
-                                                );
-                                            },
-                                        ),
-                                    ),
+                                    .child(side_panel_header_controls(
+                                        "shadcn-ui",
+                                        self.workspace.clone(),
+                                        cx.entity().entity_id(),
+                                        cx,
+                                    )),
                             ),
                     )
                     .child(self.filter_editor.clone()),
@@ -1864,18 +1836,18 @@ fn shadcn_add_command(item: &CatalogItem) -> String {
 fn shadcn_install_plan_label(item: &CatalogItem) -> SharedString {
     let target = item.target_file_name.as_ref();
     let mut text = String::with_capacity(
-        "Click row to preview. Install writes missing registry files and keeps existing files; primary target: ".len()
+        "Click row to preview. Install missing component files without overwriting existing files; component: ".len()
             + target.len()
-            + ". No editor paste.".len(),
+            + ". Inserts only by explicit action.".len(),
     );
     text.push_str(
-        "Click row to preview. Install writes missing registry files and keeps existing files",
+        "Click row to preview. Install missing component files without overwriting existing files",
     );
     if !target.is_empty() {
-        text.push_str("; primary target: ");
+        text.push_str("; component: ");
         text.push_str(target);
     }
-    text.push_str(". No editor paste.");
+    text.push_str(". Inserts only by explicit action.");
     text.into()
 }
 
@@ -1901,11 +1873,11 @@ fn shadcn_loaded_status(count: usize) -> SharedString {
 
 fn ui_catalog_primary_tooltip(item: &CatalogItem) -> &'static str {
     if item.install_only {
-        "Install writes missing registry files and keeps existing files"
+        "Install missing component files without overwriting existing files"
     } else if can_drag_into_editor(item.source) {
         "Insert this UI snippet into the active React editor"
     } else {
-        "Open this registry source"
+        "Open component source"
     }
 }
 
@@ -1923,19 +1895,19 @@ fn ui_history_primary_tooltip(
     source_available: bool,
 ) -> &'static str {
     if can_insert && !source_available {
-        "Source file or registry manifest is missing. Remove this entry from history."
+        "Component source is missing. Remove this entry from history."
     } else if install_only {
-        "Install writes missing registry files and keeps existing files"
+        "Install missing component files without overwriting existing files"
     } else if can_insert {
         "Insert this UI snippet into the active React editor"
     } else {
-        "Open this registry source"
+        "Open component source"
     }
 }
 
 fn ui_history_preview_tooltip(can_insert: bool, source_available: bool) -> &'static str {
     if can_insert && !source_available {
-        "Source file or registry manifest is missing. Remove this entry from history."
+        "Component source is missing. Remove this entry from history."
     } else {
         "Preview in Web Preview"
     }
@@ -1944,14 +1916,14 @@ fn ui_history_preview_tooltip(can_insert: bool, source_available: bool) -> &'sta
 fn ui_history_pin_tooltip(pinned: bool, source_available: bool) -> &'static str {
     if pinned {
         if source_available {
-            "Unpin from the UI working set"
+            "Unpin from pinned UI"
         } else {
             "Remove this missing pinned UI entry"
         }
     } else if source_available {
-        "Pin to the UI working set"
+        "Pin to pinned UI"
     } else {
-        "Source file or registry manifest is missing. Remove this entry from history."
+        "Component source is missing. Remove this entry from history."
     }
 }
 

@@ -26,11 +26,11 @@ pub(super) fn dx_style_panel_state(snapshot: &DxStylePanelSnapshot, cx: &App) ->
         .child(metric_row(
             "Web Preview",
             if snapshot.web_preview_bridge_ready {
-                "Preview bridge ready"
+                "Ready"
             } else if snapshot.web_preview_host_present {
-                "Host source present"
+                "Bridge available"
             } else {
-                "Host source missing"
+                "Bridge missing"
             },
         ))
         .child(metric_row("Readiness", snapshot.readiness.status.clone()))
@@ -120,7 +120,7 @@ pub(super) fn dx_style_panel_state(snapshot: &DxStylePanelSnapshot, cx: &App) ->
             &snapshot.editor_contract_path,
         ))
         .child(style_contract_row(
-            "Web Preview Host",
+            "Preview Bridge",
             snapshot.web_preview_host_present,
             &snapshot.web_preview_host_path,
         ));

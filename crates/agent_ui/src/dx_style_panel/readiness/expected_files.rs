@@ -255,7 +255,7 @@ pub(super) const EXPECTED_STYLE_FILES: &[ExpectedReadinessFile] = &[
         marker: Some("dx.style.css-declaration-dry-run-contract"),
     },
     ExpectedReadinessFile {
-        label: "Demo CSS",
+        label: "Reference CSS fixture",
         relative_path: "style.css",
         kind: ReadinessKind::Artifact,
         marker: Some(":root"),

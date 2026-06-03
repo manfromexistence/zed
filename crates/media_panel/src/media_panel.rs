@@ -24,7 +24,7 @@ use ui::{TintColor, Tooltip, prelude::*};
 use url::Url;
 use workspace::{
     DraggedMediaAsset, DraggedMediaKind, Workspace,
-    dock::{DockPosition, Panel, PanelEvent},
+    dock::{DockPosition, Panel, PanelEvent, side_panel_header_controls},
 };
 
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
@@ -53,9 +53,9 @@ const PINNED_MEDIA_ACTIONS_STATE_VERSION: u32 = 1;
 const REMOVE_MISSING_MEDIA_TOOLTIP: &str =
     "Remove media entries whose source files are missing. Available entries stay.";
 const CLEAR_RECENT_MEDIA_TOOLTIP: &str =
-    "Clear recent media entries. Pinned media, local index, and remote cache stay.";
+    "Clear recent media entries. Pinned media and search results stay.";
 const CLEAR_PINNED_MEDIA_TOOLTIP: &str =
-    "Clear pinned media. Recent media, local index, and remote cache stay.";
+    "Clear pinned media. Recent media and search results stay.";
 const OPENVERSE_RESULT_LIMIT: usize = 90;
 const OPENVERSE_FOCUSED_RESULT_LIMIT: usize = 150;
 const WIKIMEDIA_RESULT_LIMIT: usize = 50;
@@ -2284,40 +2284,12 @@ impl Render for MediaPanel {
                                             ),
                                         )
                                     })
-                                    .child(
-                                        IconButton::new(
-                                            "media-panel-split-side-panel",
-                                            IconName::SplitAlt,
-                                        )
-                                        .shape(ui::IconButtonShape::Square)
-                                        .icon_size(IconSize::Small)
-                                        .tooltip(Tooltip::text("Split Panel"))
-                                        .on_click(
-                                            |_, window, cx| {
-                                                window.dispatch_action(
-                                                    Box::new(workspace::SplitActiveSidePanel),
-                                                    cx,
-                                                );
-                                            },
-                                        ),
-                                    )
-                                    .child(
-                                        IconButton::new(
-                                            "media-panel-close-side-panel",
-                                            IconName::Close,
-                                        )
-                                        .shape(ui::IconButtonShape::Square)
-                                        .icon_size(IconSize::Small)
-                                        .tooltip(Tooltip::text("Close Panel"))
-                                        .on_click(
-                                            |_, window, cx| {
-                                                window.dispatch_action(
-                                                    Box::new(workspace::CloseActiveSidePanel),
-                                                    cx,
-                                                );
-                                            },
-                                        ),
-                                    ),
+                                    .child(side_panel_header_controls(
+                                        "media-panel",
+                                        self.workspace.clone(),
+                                        cx.entity().entity_id(),
+                                        cx,
+                                    )),
                             ),
                     )
                     .child(self.filter_editor.clone()),
@@ -2654,12 +2626,12 @@ fn media_history_insert_tooltip(source_available: bool) -> &'static str {
 fn media_history_pin_tooltip(pinned: bool, source_available: bool) -> &'static str {
     if pinned {
         if source_available {
-            "Unpin from the media working set"
+            "Unpin from pinned media"
         } else {
             "Remove this missing pinned media entry"
         }
     } else if source_available {
-        "Pin to the media working set"
+        "Pin to pinned media"
     } else {
         "Source file is missing. Remove this entry from history."
     }

@@ -23,7 +23,7 @@ use ui::{TintColor, Tooltip, prelude::*};
 use url::Url;
 use workspace::{
     Workspace,
-    dock::{DockPosition, Panel, PanelEvent},
+    dock::{DockPosition, Panel, PanelEvent, side_panel_header_controls},
 };
 
 mod font_metadata;
@@ -1265,36 +1265,12 @@ impl FontPanel {
                             .min_w_0()
                             .child(Label::new("Fonts").size(LabelSize::Small).truncate()),
                     )
-                    .child(
-                        h_flex()
-                            .gap_1()
-                            .items_center()
-                            .flex_none()
-                            .child(
-                                IconButton::new("font-panel-split-side-panel", IconName::SplitAlt)
-                                    .shape(ui::IconButtonShape::Square)
-                                    .icon_size(IconSize::Small)
-                                    .tooltip(Tooltip::text("Split Panel"))
-                                    .on_click(|_, window, cx| {
-                                        window.dispatch_action(
-                                            Box::new(workspace::SplitActiveSidePanel),
-                                            cx,
-                                        );
-                                    }),
-                            )
-                            .child(
-                                IconButton::new("font-panel-close-side-panel", IconName::Close)
-                                    .shape(ui::IconButtonShape::Square)
-                                    .icon_size(IconSize::Small)
-                                    .tooltip(Tooltip::text("Close Panel"))
-                                    .on_click(|_, window, cx| {
-                                        window.dispatch_action(
-                                            Box::new(workspace::CloseActiveSidePanel),
-                                            cx,
-                                        );
-                                    }),
-                            ),
-                    ),
+                    .child(side_panel_header_controls(
+                        "font-panel",
+                        self.workspace.clone(),
+                        cx.entity().entity_id(),
+                        cx,
+                    )),
             )
             .child(self.filter_editor.clone())
             .child(self.render_source_filters(counts, cx))

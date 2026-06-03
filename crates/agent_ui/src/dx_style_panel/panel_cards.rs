@@ -82,7 +82,7 @@ pub(super) fn style_context_card(
         .when_some(active_context.span_byte_range(), |this, span| {
             this.child(metric("Span", span))
         })
-        .child(metric("Apply", gate.state.clone()))
+        .child(metric("Apply", apply_gate_state_label(&gate.state)))
         .child(metric("Gate", gate.reason.clone()))
         .into_any_element()
 }
@@ -130,10 +130,22 @@ pub(super) fn readiness_card(snapshot: &DxStylePanelSnapshot, cx: &App) -> AnyEl
 
 fn web_preview_state(snapshot: &DxStylePanelSnapshot) -> String {
     if snapshot.web_preview_bridge_ready {
-        "preview bridge ready".to_string()
+        "Ready".to_string()
     } else if snapshot.web_preview_host_present {
-        "host source present".to_string()
+        "Bridge available".to_string()
     } else {
-        "host source missing".to_string()
+        "Bridge missing".to_string()
+    }
+}
+
+fn apply_gate_state_label(state: &str) -> &'static str {
+    match state {
+        "ready_for_explicit_apply" => "Ready for review",
+        "needs_static_style_token" => "Needs class token",
+        "needs_active_source_digest" => "Needs source digest",
+        "needs_trusted_dry_run_receipt" => "Needs dry-run receipt",
+        "needs_matching_active_source_receipt" => "Needs matching receipt",
+        "needs_editor_write_bridge" => "Needs editor bridge",
+        _ => "Review required",
     }
 }

@@ -69,7 +69,7 @@ pub(crate) fn dx_style_readiness_snapshot(
         artifact_rows: Vec::new(),
         receipt_rows: Vec::new(),
         missing_rows: Vec::new(),
-        next_action: "read_dx_style_sources".to_string(),
+        next_action: "Connect the DX Style workspace before enabling Style controls.".to_string(),
     };
 
     if !root_exists {

@@ -1,6 +1,6 @@
-use gpui::{App, IntoElement, ScrollHandle, SharedString, Window};
-use ui::{IconName, Tooltip, WithScrollbar, prelude::*};
-use workspace::{CloseActiveSidePanel, SplitActiveSidePanel};
+use gpui::{App, EntityId, IntoElement, ScrollHandle, SharedString, WeakEntity, Window};
+use ui::{IconName, WithScrollbar, prelude::*};
+use workspace::{Workspace, dock::side_panel_header_controls};
 
 use super::{
     DxStylePanelRow, DxStylePanelSnapshot,
@@ -13,6 +13,8 @@ const STYLE_PANEL_ROW_LIMIT: usize = 13;
 pub(super) fn render_panel(
     snapshot: &DxStylePanelSnapshot,
     active_context: &ActiveStyleContextSnapshot,
+    workspace: &WeakEntity<Workspace>,
+    panel_id: EntityId,
     scroll_handle: &ScrollHandle,
     window: &mut Window,
     cx: &mut App,
@@ -28,7 +30,7 @@ pub(super) fn render_panel(
         .gap_2()
         .p_2()
         .bg(cx.theme().colors().panel_background)
-        .child(panel_header())
+        .child(panel_header(workspace, panel_id, cx))
         .child(
             v_flex()
                 .id("dx-style-panel-scroll")
@@ -50,7 +52,11 @@ pub(super) fn render_panel(
                 .vertical_scrollbar_for(scroll_handle, window, cx),
         )
 }
-fn panel_header() -> impl IntoElement {
+fn panel_header(
+    workspace: &WeakEntity<Workspace>,
+    panel_id: EntityId,
+    cx: &App,
+) -> impl IntoElement {
     h_flex()
         .justify_between()
         .gap_2()
@@ -62,30 +68,12 @@ fn panel_header() -> impl IntoElement {
                 .child(Icon::new(IconName::Sparkle).size(IconSize::Small))
                 .child(Label::new("Style").size(LabelSize::Small).truncate()),
         )
-        .child(
-            h_flex()
-                .gap_1()
-                .items_center()
-                .flex_none()
-                .child(
-                    IconButton::new("dx-style-panel-split-side-panel", IconName::SplitAlt)
-                        .shape(ui::IconButtonShape::Square)
-                        .icon_size(IconSize::Small)
-                        .tooltip(Tooltip::text("Split Panel"))
-                        .on_click(|_, window, cx| {
-                            window.dispatch_action(Box::new(SplitActiveSidePanel), cx);
-                        }),
-                )
-                .child(
-                    IconButton::new("dx-style-panel-close-side-panel", IconName::Close)
-                        .shape(ui::IconButtonShape::Square)
-                        .icon_size(IconSize::Small)
-                        .tooltip(Tooltip::text("Close Panel"))
-                        .on_click(|_, window, cx| {
-                            window.dispatch_action(Box::new(CloseActiveSidePanel), cx);
-                        }),
-                ),
-        )
+        .child(side_panel_header_controls(
+            "dx-style-panel",
+            workspace.clone(),
+            panel_id,
+            cx,
+        ))
 }
 fn style_rows(snapshot: &DxStylePanelSnapshot, cx: &App) -> impl IntoElement + use<> {
     let mut stack = v_flex()
@@ -93,13 +81,7 @@ fn style_rows(snapshot: &DxStylePanelSnapshot, cx: &App) -> impl IntoElement + u
         .gap_1()
         .min_w_0()
         .child(section_label("Contracts"));
-    for (ix, row) in snapshot
-        .rows
-        .iter()
-        .filter(|row| row.label != "Native Sidebar")
-        .take(STYLE_PANEL_ROW_LIMIT)
-        .enumerate()
-    {
+    for (ix, row) in snapshot.rows.iter().take(STYLE_PANEL_ROW_LIMIT).enumerate() {
         stack = stack.child(style_row(
             SharedString::from(format!("dx-style-panel-row-{ix}")),
             row,

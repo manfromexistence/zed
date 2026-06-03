@@ -1,3 +1,21 @@
+[2026-06-03] - Tool Sidebar And Style Polish
+
+CHANGED:
+- `crates\icon_picker\src\icon_picker.rs`, `crates\font_panel\src\font_panel.rs`, `crates\media_panel\src\media_panel.rs`, `crates\shadcn_ui_panel\src\shadcn_ui_panel.rs`, and `crates\agent_ui\src\dx_style_panel\panel_view.rs` now use the shared panel-targeted side-panel header controls so split/close actions operate on the header's own panel instead of whichever side panel has focus.
+- `crates\agent_ui\src\dx_style_panel.rs`, `crates\agent_ui\src\dx_style_panel\panel_cards.rs`, `crates\agent_ui\src\dx_style_panel\readiness.rs`, `crates\agent_ui\src\dx_style_panel\readiness\expected_files.rs`, and `crates\agent_ui\src\dx_launch_workspace\style_panel.rs` now use professional preview-bridge/operator-facing Style copy, map raw apply-gate states to visible labels, and remove the hidden Native Sidebar row.
+- `crates\media_panel\src\media_panel.rs` and `crates\shadcn_ui_panel\src\shadcn_ui_panel.rs` now avoid local-cache, registry-file, primary-target, and working-set jargon in visible Media/UI action copy.
+- `crates\sidebar\src\sidebar.rs` and `crates\ui\src\components\ai\thread_item.rs` now keep chat row actions visible for focused/open picker rows, avoid ignored draft icon pickers, sync pinned grid shortcut icons after a thread icon override, filter stale thread shortcuts from the grid, and render right-side chat timestamps/counts with higher contrast.
+- `script\dx-workspace-ui-state-source.test.ts` and `script\dx-style-panel-source.test.ts` now guard the panel-targeted controls, Style copy, Media/UI visible copy, and sidebar icon-picker/grid behavior.
+- `todo.txt` records the focused tool/sidebar/Style polish for handoff.
+
+PASSED:
+- `rustfmt --edition 2024 --check` across the touched Rust files.
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-workspace-ui-state-source.test.ts script\dx-style-panel-source.test.ts` with 27/27 passing.
+
+NOTES:
+- `just run`, Cargo, build, and runtime/WebView validation were not run in this source-polish pass.
+- `DX.txt` remains an unrelated scratch/editor change and is intentionally left untouched.
+
 [2026-06-03] - Agent Fullscreen Rail Copy Polish
 
 CHANGED:

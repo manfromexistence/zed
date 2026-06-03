@@ -129,6 +129,14 @@ impl Render for DxStylePanel {
         let snapshot = dx_style_panel_snapshot();
         let active_context = self.active_style_context(cx);
 
-        panel_view::render_panel(&snapshot, &active_context, &self.scroll_handle, window, cx)
+        panel_view::render_panel(
+            &snapshot,
+            &active_context,
+            &self.workspace,
+            cx.entity().entity_id(),
+            &self.scroll_handle,
+            window,
+            cx,
+        )
     }
 }

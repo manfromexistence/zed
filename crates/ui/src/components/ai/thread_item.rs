@@ -380,7 +380,7 @@ impl RenderOnce for ThreadItem {
         let timestamp_color = if self.selected || self.hovered {
             Color::Default
         } else {
-            Color::Muted
+            Color::Custom(color.text.opacity(0.68))
         };
 
         let show_tooltip = matches!(
@@ -441,7 +441,7 @@ impl RenderOnce for ThreadItem {
                         )
                     })
                     .when(self.is_truncated, |this| this.child(gradient_overlay))
-                    .when(self.hovered, |this| {
+                    .when(self.hovered || self.focused, |this| {
                         this.when_some(self.action_slot, |this, slot| {
                             let overlay = GradientFade::new(base_bg, hover_bg, hover_bg)
                                 .width(px(80.0))
