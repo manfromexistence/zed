@@ -106,6 +106,7 @@ const TOKEN_THRESHOLD: u64 = 250;
 
 pub(crate) const DRAFT_PROMPT_PERSIST_DEBOUNCE: Duration = Duration::from_millis(250);
 
+mod composer_profile_options;
 mod thread_view;
 pub use thread_view::*;
 
@@ -238,9 +239,7 @@ impl ProfileProvider for Entity<agent::Thread> {
     }
 
     fn profiles_supported(&self, cx: &App) -> bool {
-        self.read(cx)
-            .model()
-            .is_some_and(|model| model.supports_tools())
+        self.read(cx).model().is_some()
     }
 
     fn model_selected(&self, cx: &App) -> bool {

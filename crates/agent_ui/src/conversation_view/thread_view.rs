@@ -5,11 +5,11 @@ use crate::{
     thread_metadata_store::{ThreadId, ThreadMetadataStore},
 };
 use agent_client_protocol::schema as acp;
-use std::cell::RefCell;
+use std::{cell::RefCell, ops::Range};
 
 use acp_thread::{ContentBlock, PlanEntry};
 use agent::{SkillLoadingError, SkillLoadingErrorsUpdated};
-use agent_settings::UserAgentsMd;
+use agent_settings::{UserAgentsMd, builtin_profiles};
 use cloud_api_types::{SubmitAgentThreadFeedbackBody, SubmitAgentThreadFeedbackCommentsBody};
 use editor::actions::OpenExcerpts;
 use feature_flags::AcpBetaFeatureFlag;
@@ -30,6 +30,9 @@ use ui::{ButtonLike, SpinnerLabel, SpinnerVariant, SplitButton, SplitButtonStyle
 use workspace::SERIALIZATION_THROTTLE_TIME;
 use workspace::notifications::NotificationId;
 
+use super::composer_profile_options::{
+    ComposerOptionEntry, ComposerOptionSlot, ComposerProfileKind,
+};
 use super::*;
 
 #[derive(Default)]
@@ -616,6 +619,8 @@ pub struct ThreadView {
     pub generating_indicator_in_list: bool,
     pub skill_loading_errors: Vec<SkillLoadingError>,
     response_anchor_scroll_request: Option<ResponseAnchorScrollRequest>,
+    active_response_anchor_entry_ix: Option<usize>,
+    visible_entry_range: Option<Range<usize>>,
     /// Errors the user has explicitly dismissed. Each entry is matched against
     /// emitted errors by full equality; when an error no longer appears in the
     /// emitted list (i.e. the underlying file was fixed or removed), it's
@@ -633,6 +638,7 @@ pub(crate) struct AgentResponseAnchor {
 }
 
 const RESPONSE_ANCHOR_SCROLL_RETRY_FRAMES: usize = 6;
+const FLOATING_MESSAGE_EDITOR_SAFE_PADDING_PX: f32 = 118.0;
 
 #[derive(Clone, Copy)]
 struct ResponseAnchorScrollRequest {
@@ -943,6 +949,8 @@ impl ThreadView {
             generating_indicator_in_list: false,
             skill_loading_errors: Vec::new(),
             response_anchor_scroll_request: None,
+            active_response_anchor_entry_ix: None,
+            visible_entry_range: None,
             dismissed_skill_loading_errors: HashSet::default(),
         };
 
@@ -952,15 +960,25 @@ impl ThreadView {
         let thread_view = cx.entity().downgrade();
 
         this.list_state
-            .set_scroll_handler(move |_event, _window, cx| {
+            .set_scroll_handler(move |event, _window, cx| {
                 let list_state = list_state_for_scroll.clone();
                 let thread_view = thread_view.clone();
+                let visible_range = event.visible_range.clone();
                 // N.B. We must defer because the scroll handler is called while the
                 // ListState's RefCell is mutably borrowed. Reading logical_scroll_top()
                 // directly would panic from a double borrow.
                 cx.defer(move |cx| {
                     let scroll_top = list_state.logical_scroll_top();
                     let _ = thread_view.update(cx, |this, cx| {
+                        this.visible_entry_range = Some(visible_range.clone());
+                        if this.response_anchor_scroll_request.is_none() {
+                            this.active_response_anchor_entry_ix = this
+                                .response_anchor_for_scroll_position(
+                                    visible_range.clone(),
+                                    scroll_top.item_ix,
+                                    cx,
+                                );
+                        }
                         this.thread.update(cx, |thread, _cx| {
                             thread.set_ui_scroll_position(Some(scroll_top));
                         });
@@ -3737,7 +3755,12 @@ impl ThreadView {
             .px_2()
             .pt_0p5()
             .pb_2()
-            .bg(cx.theme().colors().panel_background)
+            .when(has_messages, |this| {
+                this.absolute().left_0().right_0().bottom_0()
+            })
+            .when(!has_messages, |this| {
+                this.bg(cx.theme().colors().panel_background)
+            })
             .justify_center()
             .map(|this| {
                 if has_messages {
@@ -3818,7 +3841,8 @@ impl ThreadView {
                                     .gap_0p5()
                                     .flex_wrap()
                                     .child(self.render_add_context_button(cx))
-                                    .child(self.render_access_control(cx))
+                                    .children(self.profile_selector.clone())
+                                    .children(self.render_profile_option_slots(cx))
                                     .child(
                                         div()
                                             .h_5()
@@ -3839,7 +3863,6 @@ impl ThreadView {
                                         Some(config_view) => this.child(config_view),
                                         None => this
                                             .children(self.render_dx_agent_action(cx))
-                                            .children(self.profile_selector.clone())
                                             .children(self.mode_selector.clone())
                                             .children(self.model_selector.clone()),
                                     })
@@ -3851,60 +3874,124 @@ impl ThreadView {
             .into_any()
     }
 
-    fn render_access_control(&self, _cx: &mut Context<Self>) -> AnyElement {
-        let capabilities = self.session_capabilities.read();
-        let supports_context = capabilities.supports_embedded_context();
-        let supports_images = capabilities.supports_images();
-        drop(capabilities);
+    fn render_profile_option_slots(&self, cx: &mut Context<Self>) -> Vec<AnyElement> {
+        let slots = self.composer_profile_kind(cx).slots();
+        let mut rendered = slots
+            .iter()
+            .take(3)
+            .copied()
+            .map(Self::render_composer_option_slot)
+            .collect::<Vec<_>>();
 
-        let label = if supports_context {
-            "Access"
-        } else {
-            "Limited"
-        };
+        if slots.len() > 3 {
+            let overflow_slots: &'static [ComposerOptionSlot] = &slots[3..];
+            rendered.push(Self::render_composer_option_overflow(overflow_slots));
+        }
 
-        let image_row = if supports_images {
-            "Image attachments are accepted by the current session."
-        } else {
-            "Image attachments are unavailable for the current session."
-        };
+        rendered
+    }
 
-        let context_row = if supports_context {
-            "Files, symbols, threads, selections, and branch diffs use the existing context menu."
-        } else {
-            "The current session only accepts basic prompt context."
-        };
+    fn composer_profile_kind(&self, cx: &App) -> ComposerProfileKind {
+        if let Some(profile_id) = self.current_mode_id(cx) {
+            match Self::composer_profile_kind_for_id(profile_id.as_ref()) {
+                Some(kind) => return kind,
+                None => {}
+            }
+        }
 
-        PopoverMenu::new("agent-composer-access")
+        if let Some(mode_selector) = &self.mode_selector {
+            let mode_selector = mode_selector.read(cx);
+            let current_mode = mode_selector.mode();
+            if let Some(kind) = Self::composer_profile_kind_for_id(current_mode.0.as_ref()) {
+                return kind;
+            }
+        }
+
+        ComposerProfileKind::Agents
+    }
+
+    fn composer_profile_kind_for_id(profile_id: &str) -> Option<ComposerProfileKind> {
+        match profile_id {
+            builtin_profiles::WRITE => Some(ComposerProfileKind::Agents),
+            builtin_profiles::ASK | builtin_profiles::LEGACY_MINIMAL => {
+                Some(ComposerProfileKind::Ask)
+            }
+            builtin_profiles::MEDIA => Some(ComposerProfileKind::Media),
+            builtin_profiles::SEARCH => Some(ComposerProfileKind::Search),
+            builtin_profiles::STUDY => Some(ComposerProfileKind::Study),
+            _ => None,
+        }
+    }
+
+    fn render_composer_option_slot(slot: ComposerOptionSlot) -> AnyElement {
+        PopoverMenu::new(format!("agent-composer-profile-slot-{}", slot.id))
             .trigger_with_tooltip(
-                Button::new("agent-composer-access-trigger", label)
-                    .label_size(LabelSize::Small)
-                    .color(Color::Muted)
-                    .start_icon(
-                        Icon::new(IconName::LockOutlined)
-                            .size(IconSize::XSmall)
-                            .color(Color::Muted),
-                    )
-                    .end_icon(
-                        Icon::new(IconName::ChevronDown)
-                            .size(IconSize::XSmall)
-                            .color(Color::Muted),
-                    ),
-                Tooltip::text("Access is controlled by the active Agent profile and tool prompts"),
+                IconButton::new(
+                    format!("agent-composer-profile-slot-trigger-{}", slot.id),
+                    slot.icon,
+                )
+                .icon_size(IconSize::Small)
+                .icon_color(Color::Muted),
+                Tooltip::text(slot.tooltip),
             )
             .anchor(gpui::Anchor::BottomLeft)
+            .offset(gpui::Point {
+                x: px(0.0),
+                y: px(-2.0),
+            })
             .menu(move |window, cx| {
-                Some(ContextMenu::build(window, cx, move |menu, _window, _cx| {
-                    menu.header("Access")
-                        .custom_row(move |_window, _cx| {
-                            access_menu_row(
-                                "Tools",
-                                "Permission prompts are requested when tools run.",
-                            )
-                        })
-                        .custom_row(move |_window, _cx| access_menu_row("Context", context_row))
-                        .custom_row(move |_window, _cx| access_menu_row("Media", image_row))
-                }))
+                Some(ContextMenu::build(
+                    window,
+                    cx,
+                    move |mut menu, _window, _cx| {
+                        menu = menu.header(slot.label);
+                        for option in slot.options {
+                            let option = *option;
+                            menu = menu
+                                .custom_row(move |_window, _cx| composer_option_menu_row(option));
+                        }
+                        menu
+                    },
+                ))
+            })
+            .into_any_element()
+    }
+
+    fn render_composer_option_overflow(slots: &'static [ComposerOptionSlot]) -> AnyElement {
+        PopoverMenu::new("agent-composer-profile-slots-more")
+            .trigger_with_tooltip(
+                IconButton::new(
+                    "agent-composer-profile-slots-more-trigger",
+                    IconName::Ellipsis,
+                )
+                .icon_size(IconSize::Small)
+                .icon_color(Color::Muted),
+                Tooltip::text("More profile options"),
+            )
+            .anchor(gpui::Anchor::BottomLeft)
+            .offset(gpui::Point {
+                x: px(0.0),
+                y: px(-2.0),
+            })
+            .menu(move |window, cx| {
+                Some(ContextMenu::build(
+                    window,
+                    cx,
+                    move |mut menu, _window, _cx| {
+                        menu = menu.header("More profile options");
+                        for slot in slots {
+                            let slot = *slot;
+                            menu = menu.header(slot.label);
+                            for option in slot.options {
+                                let option = *option;
+                                menu = menu.custom_row(move |_window, _cx| {
+                                    composer_option_menu_row(option)
+                                });
+                            }
+                        }
+                        menu
+                    },
+                ))
             })
             .into_any_element()
     }
@@ -5288,14 +5375,25 @@ impl ThreadView {
             cx.processor(move |this, index: usize, window, cx| {
                 let entries = this.thread.read(cx).entries();
                 if let Some(entry) = entries.get(index) {
-                    let rendered = this.render_entry(index, entries.len(), entry, window, cx);
+                    let rendered = this.render_entry(
+                        index,
+                        entries.len(),
+                        !this.generating_indicator_in_list,
+                        entry,
+                        window,
+                        cx,
+                    );
                     centered_container(rendered.into_any_element()).into_any_element()
                 } else if this.generating_indicator_in_list {
                     let confirmation = entries
                         .last()
                         .is_some_and(|entry| Self::is_waiting_for_confirmation(entry));
                     let rendered = this.render_generating(confirmation, cx);
-                    centered_container(rendered.into_any_element()).into_any_element()
+                    v_flex()
+                        .w_full()
+                        .child(centered_container(rendered.into_any_element()))
+                        .pb(px(FLOATING_MESSAGE_EDITOR_SAFE_PADDING_PX))
+                        .into_any_element()
                 } else {
                     Empty.into_any()
                 }
@@ -5309,6 +5407,7 @@ impl ThreadView {
         &self,
         entry_ix: usize,
         total_entries: usize,
+        render_trailing_safe_area: bool,
         entry: &AgentThreadEntry,
         window: &Window,
         cx: &Context<Self>,
@@ -5679,7 +5778,7 @@ impl ThreadView {
 
         let comments_editor = self.thread_feedback.comments_editor.clone();
 
-        let primary = if entry_ix + 1 == total_entries {
+        let primary = if render_trailing_safe_area && entry_ix + 1 == total_entries {
             v_flex()
                 .w_full()
                 .child(primary)
@@ -5689,6 +5788,7 @@ impl ThreadView {
                 .when_some(comments_editor, |this, editor| {
                     this.child(Self::render_feedback_feedback_editor(editor, cx))
                 })
+                .pb(px(FLOATING_MESSAGE_EDITOR_SAFE_PADDING_PX))
                 .into_any_element()
         } else {
             primary
@@ -5982,15 +6082,25 @@ impl ThreadView {
 
     pub(crate) fn response_anchors(&self, cx: &App) -> Vec<AgentResponseAnchor> {
         let entries = self.thread.read(cx).entries();
-        let current_ix = self.list_state.logical_scroll_top().item_ix;
-        let current_prompt_ix = entries
-            .iter()
-            .enumerate()
-            .take(current_ix.saturating_add(1))
-            .rev()
-            .find_map(|(entry_ix, entry)| {
-                matches!(entry, AgentThreadEntry::UserMessage(_)).then_some(entry_ix)
-            });
+        let selected_prompt_ix = self
+            .active_response_anchor_entry_ix
+            .filter(|entry_ix| self.is_response_anchor_entry(*entry_ix, cx))
+            .filter(|_| self.response_anchor_scroll_request.is_some());
+        let visible_prompt_ix = self
+            .visible_entry_range
+            .clone()
+            .and_then(|range| self.response_anchor_for_visible_range(range, cx));
+        let current_prompt_ix = selected_prompt_ix.or(visible_prompt_ix).or_else(|| {
+            let current_ix = self.list_state.logical_scroll_top().item_ix;
+            entries
+                .iter()
+                .enumerate()
+                .take(current_ix.saturating_add(1))
+                .rev()
+                .find_map(|(entry_ix, entry)| {
+                    matches!(entry, AgentThreadEntry::UserMessage(_)).then_some(entry_ix)
+                })
+        });
 
         let mut prompt_ordinal = 0usize;
         entries
@@ -6027,13 +6137,64 @@ impl ThreadView {
             .collect()
     }
 
+    fn response_anchor_for_visible_range(
+        &self,
+        visible_range: Range<usize>,
+        cx: &App,
+    ) -> Option<usize> {
+        self.response_anchor_for_scroll_position(
+            visible_range,
+            self.list_state.logical_scroll_top().item_ix,
+            cx,
+        )
+    }
+
+    fn response_anchor_for_scroll_position(
+        &self,
+        visible_range: Range<usize>,
+        scroll_item_ix: usize,
+        cx: &App,
+    ) -> Option<usize> {
+        let entries = self.thread.read(cx).entries();
+        let start = visible_range.start.min(entries.len());
+        let end = visible_range.end.min(entries.len());
+
+        entries
+            .iter()
+            .enumerate()
+            .take(scroll_item_ix.saturating_add(1).min(entries.len()))
+            .rev()
+            .find_map(|(entry_ix, entry)| {
+                matches!(entry, AgentThreadEntry::UserMessage(_)).then_some(entry_ix)
+            })
+            .or_else(|| {
+                entries
+                    .iter()
+                    .enumerate()
+                    .skip(start)
+                    .take(end.saturating_sub(start))
+                    .rev()
+                    .find_map(|(entry_ix, entry)| {
+                        matches!(entry, AgentThreadEntry::UserMessage(_)).then_some(entry_ix)
+                    })
+            })
+    }
+
+    fn is_response_anchor_entry(&self, entry_ix: usize, cx: &App) -> bool {
+        self.thread
+            .read(cx)
+            .entries()
+            .get(entry_ix)
+            .is_some_and(|entry| matches!(entry, AgentThreadEntry::UserMessage(_)))
+    }
+
     pub(crate) fn scroll_to_response_anchor(
         &mut self,
         entry_ix: usize,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if entry_ix >= self.thread.read(cx).entries().len() {
+        if !self.is_response_anchor_entry(entry_ix, cx) {
             return;
         }
 
@@ -6041,6 +6202,7 @@ impl ThreadView {
             entry_ix,
             frames_remaining: RESPONSE_ANCHOR_SCROLL_RETRY_FRAMES,
         });
+        self.active_response_anchor_entry_ix = Some(entry_ix);
         self.apply_response_anchor_scroll_request(window, cx);
     }
 
@@ -6084,7 +6246,7 @@ impl ThreadView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> bool {
-        if entry_ix >= self.thread.read(cx).entries().len() {
+        if !self.is_response_anchor_entry(entry_ix, cx) {
             return false;
         }
 
@@ -9225,7 +9387,7 @@ impl ThreadView {
             .enumerate()
             .map(|(i, entry)| {
                 let actual_ix = start_ix + i;
-                subagent_view.render_entry(actual_ix, total_entries, entry, window, cx)
+                subagent_view.render_entry(actual_ix, total_entries, false, entry, window, cx)
             })
             .collect();
 
@@ -10098,6 +10260,7 @@ impl Render for ThreadView {
 
         v_flex()
             .key_context("AcpThread")
+            .relative()
             .track_focus(&self.focus_handle)
             .on_action(cx.listener(|this, _: &menu::Cancel, _, cx| {
                 if this.parent_session_id.is_none() {
@@ -10293,17 +10456,27 @@ impl Render for ThreadView {
     }
 }
 
-fn access_menu_row(label: &'static str, detail: &'static str) -> AnyElement {
-    v_flex()
+fn composer_option_menu_row(option: ComposerOptionEntry) -> AnyElement {
+    h_flex()
+        .id(("agent-composer-option", option.id))
         .min_w(rems(16.))
         .max_w(rems(26.))
-        .gap_0p5()
-        .child(Label::new(label).size(LabelSize::Small))
+        .gap_2()
         .child(
-            Label::new(detail)
-                .size(LabelSize::XSmall)
-                .color(Color::Muted)
-                .line_height_style(LineHeightStyle::UiLabel),
+            Icon::new(option.icon)
+                .size(IconSize::Small)
+                .color(Color::Muted),
+        )
+        .child(
+            v_flex()
+                .gap_0p5()
+                .child(Label::new(option.label).size(LabelSize::Small))
+                .child(
+                    Label::new(option.detail)
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted)
+                        .line_height_style(LineHeightStyle::UiLabel),
+                ),
         )
         .into_any_element()
 }

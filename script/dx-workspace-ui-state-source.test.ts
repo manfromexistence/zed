@@ -5,7 +5,10 @@ import test from "node:test";
 const read = (path: string) => readFileSync(path, "utf8");
 
 const dock = read("crates/workspace/src/dock.rs");
+const defaultSettings = read("assets/settings/default.json");
 const agentSettings = read("crates/agent_settings/src/agent_settings.rs");
+const agentProfileSettings = read("crates/agent_settings/src/agent_profile.rs");
+const agentThread = read("crates/agent/src/thread.rs");
 const historyManager = read("crates/workspace/src/history_manager.rs");
 const item = read("crates/workspace/src/item.rs");
 const pane = read("crates/workspace/src/pane.rs");
@@ -13,7 +16,13 @@ const workspace = read("crates/workspace/src/workspace.rs");
 const multiWorkspace = read("crates/workspace/src/multi_workspace.rs");
 const titleBar = read("crates/title_bar/src/title_bar.rs");
 const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
+const conversationView = read("crates/agent_ui/src/conversation_view.rs");
 const threadView = read("crates/agent_ui/src/conversation_view/thread_view.rs");
+const composerProfileOptions = read(
+  "crates/agent_ui/src/conversation_view/composer_profile_options.rs",
+);
+const profileSelector = read("crates/agent_ui/src/profile_selector.rs");
+const manageProfilesModal = read("crates/agent_ui/src/agent_configuration/manage_profiles_modal.rs");
 const dxLaunchWorkspace = read("crates/agent_ui/src/dx_launch_workspace.rs");
 const dxLaunchAuditSummary = read("crates/agent_ui/src/dx_launch_workspace/audit/summary.rs");
 const dxLaunchAuditStatus = read("crates/agent_ui/src/dx_launch_workspace/audit/status.rs");
@@ -371,8 +380,14 @@ test("core side panels expose dock split and close controls in visible headers",
 test("agent fullscreen uses agent rails while sidebar button remains dock-scoped", () => {
   const fullscreenCenter = functionBody(agentPanel, "render_fullscreen_agent_center");
   const messageEditor = functionBody(threadView, "render_message_editor");
+  const renderEntry = functionBody(threadView, "render_entry");
+  const threadRender = functionBody(
+    threadView.slice(threadView.indexOf("impl Render for ThreadView")),
+    "render",
+  );
   const toolbar = functionBody(agentPanel, "render_toolbar");
   const responseIndicator = functionBody(agentPanel, "render_toolbar_response_indicator");
+  const responseIndicatorAnchors = functionBody(agentPanel, "toolbar_response_indicator_anchors");
   const responseSegment = functionBody(agentPanel, "toolbar_response_indicator_segment");
   const activeVisibleThread = functionBody(agentPanel, "active_visible_thread_view");
   const visibleThreadForConversation = functionBody(
@@ -380,9 +395,13 @@ test("agent fullscreen uses agent rails while sidebar button remains dock-scoped
     "active_visible_thread_view_for_conversation",
   );
   const subscribeActiveThread = functionBody(agentPanel, "subscribe_to_active_thread_view");
+  const focusAgentFullscreen = functionBody(agentPanel, "focus_fullscreen");
   const scrollAnchor = functionBody(threadView, "scroll_to_response_anchor");
   const scrollRequest = functionBody(threadView, "apply_response_anchor_scroll_request");
   const applyScrollAnchor = functionBody(threadView, "apply_response_anchor_scroll");
+  const isResponseAnchorEntry = functionBody(threadView, "is_response_anchor_entry");
+  const visibleRangeAnchor = functionBody(threadView, "response_anchor_for_visible_range");
+  const profilesSupported = functionBody(conversationView, "profiles_supported");
   assert.match(agentPanel, /"agent-toolbar-toggle-sources-rail"/);
   assert.match(agentPanel, /"agent-toolbar-toggle-progress-rail"/);
   assert.match(agentPanel, /fullscreen_sources_rail_open/);
@@ -394,7 +413,7 @@ test("agent fullscreen uses agent rails while sidebar button remains dock-scoped
   assert.match(toolbar, /render_toolbar_response_indicator\(cx\)/);
   assert.match(workspace, /zoomed_is_agent_panel: bool/);
   assert.match(workspace, /zoomed_is_agent_panel: false/);
-  assert.match(workspace, /pub\(crate\) fn zoomed_is_agent_panel\(&self\) -> bool/);
+  assert.match(workspace, /pub fn zoomed_is_agent_panel\(&self\) -> bool/);
   assert.match(workspace, /pub fn client_side_decorations_with_content_flush\(/);
   assert.match(workspace, /content_flush_tiling: Tiling/);
   assert.match(workspace, /let content_tiling = Tiling\s*\{/);
@@ -408,23 +427,49 @@ test("agent fullscreen uses agent rails while sidebar button remains dock-scoped
   assert.match(dock, /workspace\.zoomed_is_agent_panel = false/);
   assert.match(threadView, /struct AgentResponseAnchor/);
   assert.match(threadView, /const RESPONSE_ANCHOR_SCROLL_RETRY_FRAMES: usize = 6;/);
+  assert.match(threadView, /const FLOATING_MESSAGE_EDITOR_SAFE_PADDING_PX: f32 = 118\.0;/);
   assert.match(threadView, /struct ResponseAnchorScrollRequest/);
   assert.match(threadView, /response_anchor_scroll_request: Option<ResponseAnchorScrollRequest>/);
+  assert.match(threadView, /active_response_anchor_entry_ix: Option<usize>/);
+  assert.match(threadView, /visible_entry_range: Option<Range<usize>>/);
+  assert.match(threadView, /let visible_range = event\.visible_range\.clone\(\)/);
+  assert.match(threadView, /this\.visible_entry_range = Some\(visible_range\.clone\(\)\)/);
+  assert.match(
+    threadView,
+    /this\.active_response_anchor_entry_ix\s*=\s*this\s*\.response_anchor_for_scroll_position\(\s*visible_range\.clone\(\),\s*scroll_top\.item_ix,\s*cx,\s*\)/s,
+  );
   assert.match(activeVisibleThread, /Self::active_visible_thread_view_for_conversation\(server_view, cx\)/);
   assert.match(visibleThreadForConversation, /\.active_thread\(\)\s*\.cloned\(\)\s*\.or_else\(\|\| server_view\.root_thread_view\(\)\)/);
   assert.match(subscribeActiveThread, /Self::active_visible_thread_view_for_conversation\(server_view, cx\)/);
   assert.match(threadView, /ScrollPositionChanged/);
   assert.match(threadView, /pub\(crate\) fn response_anchors\(&self, cx: &App\) -> Vec<AgentResponseAnchor>/);
+  assert.match(threadView, /fn response_anchor_for_visible_range\(/);
+  assert.match(threadView, /fn response_anchor_for_scroll_position\(/);
+  assert.match(threadView, /fn is_response_anchor_entry\(/);
+  assert.match(visibleRangeAnchor, /logical_scroll_top\(\)\.item_ix/);
+  assert.doesNotMatch(visibleRangeAnchor, /\.take\(end\.saturating_add\(1\)\)/);
+  const scrollPositionAnchor = functionBody(threadView, "response_anchor_for_scroll_position");
+  assert.match(scrollPositionAnchor, /scroll_item_ix: usize/);
+  assert.match(scrollPositionAnchor, /\.take\(scroll_item_ix\.saturating_add\(1\)\.min\(entries\.len\(\)\)\)/);
+  assert.match(scrollPositionAnchor, /\.rev\(\)[\s\S]*?\.find_map/);
+  assert.match(scrollPositionAnchor, /\.skip\(start\)[\s\S]*?\.take\(end\.saturating_sub\(start\)\)[\s\S]*?\.rev\(\)[\s\S]*?\.find_map/);
+  assert.match(isResponseAnchorEntry, /matches!\(entry, AgentThreadEntry::UserMessage\(_\)\)/);
+  assert.match(threadView, /active_response_anchor_entry_ix[\s\S]*?visible_entry_range[\s\S]*?logical_scroll_top\(\)\.item_ix/);
+  assert.match(threadView, /selected_prompt_ix[\s\S]*?response_anchor_scroll_request\.is_some\(\)/);
+  assert.match(threadView, /let visible_prompt_ix = self[\s\S]*?response_anchor_for_visible_range\(range, cx\)/);
+  assert.match(threadView, /let current_prompt_ix = selected_prompt_ix\.or\(visible_prompt_ix\)/);
   assert.match(threadView, /pub\(crate\) fn scroll_to_response_anchor\(/);
   assert.match(scrollAnchor, /window: &mut Window/);
-  assert.match(scrollAnchor, /if entry_ix >= self\.thread\.read\(cx\)\.entries\(\)\.len\(\)/);
+  assert.match(scrollAnchor, /if !self\.is_response_anchor_entry\(entry_ix, cx\)/);
   assert.match(scrollAnchor, /self\.response_anchor_scroll_request = Some\(ResponseAnchorScrollRequest \{/);
+  assert.match(scrollAnchor, /self\.active_response_anchor_entry_ix = Some\(entry_ix\)/);
   assert.match(scrollAnchor, /frames_remaining: RESPONSE_ANCHOR_SCROLL_RETRY_FRAMES/);
   assert.match(scrollAnchor, /self\.apply_response_anchor_scroll_request\(window, cx\)/);
   assert.match(scrollRequest, /let record_navigation = request\.frames_remaining == RESPONSE_ANCHOR_SCROLL_RETRY_FRAMES;/);
   assert.match(scrollRequest, /window\.on_next_frame\(move \|window, cx\|/);
   assert.match(scrollRequest, /thread_view\.apply_response_anchor_scroll_request\(window, cx\)/);
   assert.match(applyScrollAnchor, /record_navigation: bool/);
+  assert.match(applyScrollAnchor, /if !self\.is_response_anchor_entry\(entry_ix, cx\)/);
   assert.match(applyScrollAnchor, /self\.should_be_following = false/);
   assert.match(applyScrollAnchor, /workspace\.unfollow\(CollaboratorId::Agent, window, cx\)/);
   assert.match(applyScrollAnchor, /set_follow_mode\(gpui::FollowMode::Normal\)/);
@@ -436,7 +481,11 @@ test("agent fullscreen uses agent rails while sidebar button remains dock-scoped
   assert.match(applyScrollAnchor, /cx\.emit\(AcpThreadViewEvent::ScrollPositionChanged\)/);
   assert.match(responseIndicator, /self\.active_visible_thread_view\(cx\)/);
   assert.doesNotMatch(responseIndicator, /self\.active_thread_view\(cx\)/);
-  assert.match(responseIndicator, /active_thread\.read\(cx\)\.response_anchors\(cx\)/);
+  assert.match(responseIndicator, /toolbar_response_indicator_anchors\(active_thread\.read\(cx\)\.response_anchors\(cx\)\)/);
+  assert.match(agentPanel, /const MAX_TOOLBAR_RESPONSE_INDICATORS: usize = 32;/);
+  assert.match(responseIndicatorAnchors, /anchors\.len\(\) <= MAX_TOOLBAR_RESPONSE_INDICATORS/);
+  assert.match(responseIndicatorAnchors, /position\(\|anchor\| anchor\.is_current\)/);
+  assert.match(responseIndicatorAnchors, /anchors\.truncate\(MAX_TOOLBAR_RESPONSE_INDICATORS\)/);
   assert.match(agentPanel, /AcpThreadViewEvent::ScrollPositionChanged => \{\s*cx\.notify\(\);\s*\}/);
   assert.match(agentPanel, /Tooltip::with_meta\(label\.clone\(\), None, detail\.clone\(\), cx\)/);
   assert.match(responseSegment, /thread\.scroll_to_response_anchor\(entry_ix, window, cx\)/);
@@ -449,14 +498,89 @@ test("agent fullscreen uses agent rails while sidebar button remains dock-scoped
   assert.doesNotMatch(responseSegment, /CursorStyle::PointingHand/);
   assert.match(responseSegment, /\.w\(px\(2\.0\)\)\.h\(height\)/);
   assert.match(agentPanel, /"agent-fullscreen-center"/);
+  assert.match(threadRender, /\.key_context\("AcpThread"\)[\s\S]*?\.relative\(\)/);
   assert.doesNotMatch(fullscreenCenter, /\.px_4\(\)/);
   assert.doesNotMatch(fullscreenCenter, /\.pb_3\(\)/);
   assert.doesNotMatch(fullscreenCenter, /max_content_width/);
   assert.match(messageEditor, /\.pt_0p5\(\)/);
   assert.match(messageEditor, /\.pb_2\(\)/);
+  assert.match(messageEditor, /this\.absolute\(\)\.left_0\(\)\.right_0\(\)\.bottom_0\(\)/);
+  assert.match(messageEditor, /this\.bg\(cx\.theme\(\)\.colors\(\)\.panel_background\)/);
+  assert.match(renderEntry, /\.pb\(px\(FLOATING_MESSAGE_EDITOR_SAFE_PADDING_PX\)\)/);
+  assert.match(threadView, /render_entry\(\s*index,\s*entries\.len\(\),\s*!this\.generating_indicator_in_list,/s);
+  assert.match(threadView, /render_generating\(confirmation, cx\)[\s\S]*?\.pb\(px\(FLOATING_MESSAGE_EDITOR_SAFE_PADDING_PX\)\)/);
   assert.match(messageEditor, /\.p_1p5\(\)/);
   assert.match(threadView, /EditorMode::AutoHeight\s*\{\s*min_lines: 2,\s*max_lines: Some\(2\),/s);
   assert.doesNotMatch(messageEditor, /render_composer_status_row/);
+  assert.doesNotMatch(threadView, /fn render_access_control/);
+  assert.doesNotMatch(messageEditor, /render_access_control/);
+  assert.match(messageEditor, /render_add_context_button\(cx\)[\s\S]*?profile_selector\.clone\(\)[\s\S]*?render_profile_option_slots\(cx\)/);
+  assert.match(messageEditor, /render_profile_option_slots\(cx\)/);
+  assert.doesNotMatch(profilesSupported, /supports_tools\(\)/);
+  assert.match(profilesSupported, /self\.read\(cx\)\.model\(\)\.is_some\(\)/);
+  assert.match(composerProfileOptions, /enum ComposerProfileKind/);
+  assert.match(composerProfileOptions, /static ASK_COMPOSER_SLOTS/);
+  assert.match(composerProfileOptions, /static AGENTS_COMPOSER_SLOTS/);
+  assert.match(composerProfileOptions, /static MEDIA_COMPOSER_SLOTS: \[ComposerOptionSlot; 4\]/);
+  assert.match(composerProfileOptions, /static SEARCH_COMPOSER_SLOTS/);
+  assert.match(composerProfileOptions, /static STUDY_COMPOSER_SLOTS/);
+  assert.match(composerProfileOptions, /pub\(super\) id: &'static str/);
+  assert.match(composerProfileOptions, /"media-quality-production"/);
+  assert.match(threadView, /fn render_composer_option_overflow/);
+  assert.match(threadView, /fn composer_profile_kind_for_id\(profile_id: &str\) -> Option<ComposerProfileKind>/);
+  assert.match(threadView, /builtin_profiles::WRITE => Some\(ComposerProfileKind::Agents\)/);
+  assert.match(threadView, /builtin_profiles::ASK\s*\|\s*builtin_profiles::LEGACY_MINIMAL\s*=>\s*\{?\s*Some\(ComposerProfileKind::Ask\)/);
+  assert.match(threadView, /builtin_profiles::MEDIA => Some\(ComposerProfileKind::Media\)/);
+  assert.match(threadView, /builtin_profiles::SEARCH => Some\(ComposerProfileKind::Search\)/);
+  assert.match(threadView, /builtin_profiles::STUDY => Some\(ComposerProfileKind::Study\)/);
+  assert.doesNotMatch(functionBody(threadView, "composer_profile_kind"), /contains\(/);
+  assert.match(functionBody(threadView, "render_composer_option_overflow"), /for option in slot\.options/);
+  assert.match(threadView, /ComposerProfileKind::Agents/);
+  assert.match(profileSelector, /fn profile_display_name/);
+  assert.match(profileSelector, /AgentProfile::display_name\(profile_id, name\)/);
+  assert.match(profileSelector, /\.map_or\(0, \|current_index\| \(current_index \+ 1\) % profiles\.len\(\)\)/);
+  assert.match(agentProfileSettings, /pub fn normalize_id\(/);
+  assert.match(agentProfileSettings, /pub fn normalize_id_from_profiles\(/);
+  assert.match(agentProfileSettings, /profile_id\.as_str\(\) == builtin_profiles::LEGACY_MINIMAL[\s\S]*?builtin_profiles::ASK/);
+  assert.match(agentProfileSettings, /pub fn display_name\(/);
+  assert.match(agentProfileSettings, /pub const MEDIA: &str = "media"/);
+  assert.match(agentProfileSettings, /pub const SEARCH: &str = "search"/);
+  assert.match(agentProfileSettings, /pub const STUDY: &str = "study"/);
+  assert.match(agentProfileSettings, /pub const LEGACY_MINIMAL: &str = "minimal"/);
+  assert.match(agentProfileSettings, /WRITE\s*\|\s*ASK\s*\|\s*MEDIA\s*\|\s*SEARCH\s*\|\s*STUDY/);
+  assert.match(agentProfileSettings, /id\.as_str\(\) == builtin_profiles::LEGACY_MINIMAL/);
+  assert.match(agentSettings, /let profiles: IndexMap<AgentProfileId, AgentProfileSettings>/);
+  assert.match(agentSettings, /let default_profile = AgentProfile::normalize_id_from_profiles/);
+  assert.match(agentThread, /let profile_id = AgentProfile::normalize_id\(settings\.default_profile\.clone\(\), cx\)/);
+  assert.match(agentThread, /let profile_id = AgentProfile::normalize_id\(profile_id, cx\)/);
+  assert.match(functionBody(agentThread, "set_profile"), /let profile_id = AgentProfile::normalize_id\(profile_id, cx\)/);
+  assert.match(defaultSettings, /"default_profile": "write"/);
+  assert.match(defaultSettings, /"write": \{\s*"name": "Agents"/);
+  assert.match(defaultSettings, /"ask": \{\s*"name": "Ask"/);
+  assert.match(defaultSettings, /"media": \{\s*"name": "Media"/);
+  assert.match(defaultSettings, /"media": \{[\s\S]*?"list_dx_launch_demo_recipes": true[\s\S]*?"plan_dx_media_tool": true[\s\S]*?"gate_dx_media_tool_runner": true[\s\S]*?"execute_dx_media_tool": true[\s\S]*?"prepare_dx_source_attachment": true/);
+  assert.match(defaultSettings, /"search": \{\s*"name": "Search"/);
+  assert.match(defaultSettings, /"study": \{\s*"name": "Study"/);
+  assert.doesNotMatch(defaultSettings, /"minimal": \{/);
+  assert.match(profileSelector, /builtin_profiles::MEDIA/);
+  assert.match(profileSelector, /builtin_profiles::SEARCH/);
+  assert.match(profileSelector, /builtin_profiles::STUDY/);
+  assert.match(manageProfilesModal, /fn profile_icon\(profile_id: &AgentProfileId\) -> IconName/);
+  assert.match(manageProfilesModal, /builtin_profiles::WRITE => IconName::ZedAgent/);
+  assert.match(manageProfilesModal, /builtin_profiles::MEDIA => IconName::Image/);
+  assert.match(manageProfilesModal, /builtin_profiles::SEARCH => IconName::ToolSearch/);
+  assert.match(manageProfilesModal, /builtin_profiles::STUDY => IconName::Book/);
+  assert.match(manageProfilesModal, /AgentProfile::available_profiles\(cx\)/);
+  assert.match(manageProfilesModal, /AgentProfile::display_name\(&mode\.profile_id, &profile\.name\)/);
+  assert.match(agentPanel, /then_some\(IconName::Chat\)/);
+  assert.ok(
+    focusAgentFullscreen.indexOf("enabled(cx)") < focusAgentFullscreen.indexOf("focus_panel::<Self>"),
+    "FocusAgentFullscreen must prove the Agent panel is enabled before focusing the side panel",
+  );
+  assert.match(dock, /let agent_screen_is_zoomed = workspace/);
+  assert.match(dock, /zoomed_is_agent_panel\(\)/);
+  assert.match(dock, /let is_agent_sidechat_button = entry\.panel\.is_agent_panel\(cx\)/);
+  assert.match(dock, /!\(is_agent_sidechat_button && agent_screen_is_zoomed\)/);
   assert.doesNotMatch(messageEditor, /\.border_t_1\(\)/);
   assert.match(threadView, /\.rounded_md\(\)/);
   assert.match(threadView, /\.shadow_sm\(\)/);

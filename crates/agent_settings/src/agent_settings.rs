@@ -630,6 +630,17 @@ pub fn normalize_path(raw: &str) -> String {
 impl Settings for AgentSettings {
     fn from_settings(content: &settings::SettingsContent) -> Self {
         let agent = content.agent.clone().unwrap();
+        let profiles: IndexMap<AgentProfileId, AgentProfileSettings> = agent
+            .profiles
+            .unwrap()
+            .into_iter()
+            .map(|(key, val)| (AgentProfileId(key), val.into()))
+            .collect();
+        let default_profile = AgentProfile::normalize_id_from_profiles(
+            AgentProfileId(agent.default_profile.unwrap()),
+            &profiles,
+        );
+
         Self {
             enabled: agent.enabled.unwrap(),
             button: agent.button.unwrap(),
@@ -654,13 +665,8 @@ impl Settings for AgentSettings {
             thread_summary_model: agent.thread_summary_model,
             inline_alternatives: agent.inline_alternatives.unwrap_or_default(),
             favorite_models: agent.favorite_models,
-            default_profile: AgentProfileId(agent.default_profile.unwrap()),
-            profiles: agent
-                .profiles
-                .unwrap()
-                .into_iter()
-                .map(|(key, val)| (AgentProfileId(key), val.into()))
-                .collect(),
+            default_profile,
+            profiles,
 
             notify_when_agent_waiting: agent.notify_when_agent_waiting.unwrap(),
             play_sound_when_agent_done: agent.play_sound_when_agent_done.unwrap_or_default(),

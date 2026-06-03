@@ -1987,6 +1987,9 @@ impl Render for PanelButtons {
 
         let dock_entity = self.dock.clone();
         let workspace = dock.workspace.clone();
+        let agent_screen_is_zoomed = workspace
+            .upgrade()
+            .is_some_and(|workspace| workspace.read(cx).zoomed_is_agent_panel());
         let mut buttons: Vec<_> = dock
             .panel_entries
             .iter()
@@ -2008,12 +2011,15 @@ impl Render for PanelButtons {
                 let can_stack_panel = dock.can_stack_panel(panel_id);
                 let is_panel_stacked = dock.is_panel_stacked(panel_id);
                 let has_panel_stack = dock.has_panel_stack();
+                let is_agent_sidechat_button = entry.panel.is_agent_panel(cx);
                 let dock_for_menu = dock_entity.clone();
                 let workspace_for_menu = workspace.clone();
                 let dock_for_trigger = dock_entity.clone();
                 let workspace_for_trigger = workspace.clone();
 
-                let is_active_button = Some(i) == active_index && is_open;
+                let is_active_button = Some(i) == active_index
+                    && is_open
+                    && !(is_agent_sidechat_button && agent_screen_is_zoomed);
                 let (action, tooltip) = if is_active_button {
                     let action = dock.toggle_action();
 

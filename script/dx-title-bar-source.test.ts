@@ -59,21 +59,42 @@ test("application menu hover closes deployed popovers after leaving the menu are
 });
 
 test("title bar screen and right-tool buttons use domain-specific icons", () => {
+  const screenDock = functionBodyFrom(titleBarSource, "render_screen_dock");
+  const agentScreenButton = functionBodyFrom(titleBarSource, "render_agent_screen_button");
+  const agentScreenActive = functionBodyFrom(titleBarSource, "agent_screen_is_active");
+  const agentButtonIndex = screenDock.indexOf("render_agent_screen_button(cx)");
+  const editorButtonIndex = screenDock.indexOf("WorkspaceScreenKind::Editor", agentButtonIndex);
+  const browserButtonIndex = screenDock.indexOf("WorkspaceScreenKind::Browser", editorButtonIndex);
+  const terminalButtonIndex = screenDock.indexOf("WorkspaceScreenKind::Terminal", browserButtonIndex);
+  assert.ok(agentButtonIndex >= 0, "screen dock should render the AI button");
+  assert.ok(editorButtonIndex > agentButtonIndex, "AI should be first in the screen dock");
+  assert.ok(browserButtonIndex > editorButtonIndex, "Editor should be second in the screen dock");
+  assert.ok(terminalButtonIndex > browserButtonIndex, "Browser should be third in the screen dock");
+  assert.match(
+    screenDock,
+    /\.child\(self\.render_agent_screen_button\(cx\)\)[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Editor,[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Browser,[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Terminal,[\s\S]*?\.children\(\s*extra_entries/s,
+    "primary screen dock buttons must stay AI, Editor, Browser, Terminal before overflow entries",
+  );
   assert.match(
     titleBarSource,
     /WorkspaceScreenKind::Browser => IconName::ToolWeb/,
     "Browser screen dock button should use the preview/browser tool icon",
   );
   assert.match(
-    titleBarSource,
+    agentScreenButton,
     /"screen-dock-agent",\s*IconName::ZedAssistant/s,
     "screen dock should expose a real AI button",
   );
   assert.match(
-    titleBarSource,
+    agentScreenButton,
     /zed_actions::assistant::FocusAgentFullscreen\.boxed_clone\(\)/,
     "AI screen dock button should open the real Agent panel fullscreen action",
   );
+  assert.match(agentScreenButton, /toggle_state\(self\.agent_screen_is_active\(cx\)\)/);
+  assert.match(titleBarSource, /fn agent_screen_is_active\(&self, cx: &App\) -> bool/);
+  assert.match(agentScreenActive, /workspace\.read\(cx\)\.zoomed_is_agent_panel\(\)/);
+  assert.doesNotMatch(agentScreenActive, /dock_at_position|visible_panel|agent_panel_is_active/);
+  assert.doesNotMatch(titleBarSource, /fn agent_panel_is_active/);
   assert.match(
     titleBarSource,
     /"titlebar-shadcn-ui-panel",\s*IconName::Blocks,\s*"UI"/s,
@@ -97,21 +118,25 @@ test("title-bar source guard stays scoped to worker-owned files", () => {
 });
 
 function functionBody(name: string): string {
-  const start = source.search(new RegExp(`fn\\s+${name}\\b`));
+  return functionBodyFrom(source, name);
+}
+
+function functionBodyFrom(sourceText: string, name: string): string {
+  const start = sourceText.search(new RegExp(`fn\\s+${name}\\b`));
   assert.ok(start >= 0, `expected ${name}`);
 
-  const bodyStart = source.indexOf("{", start);
+  const bodyStart = sourceText.indexOf("{", start);
   assert.ok(bodyStart > start, `expected ${name} body`);
 
   let depth = 0;
-  for (let index = bodyStart; index < source.length; index += 1) {
-    const char = source[index];
+  for (let index = bodyStart; index < sourceText.length; index += 1) {
+    const char = sourceText[index];
     if (char === "{") {
       depth += 1;
     } else if (char === "}") {
       depth -= 1;
       if (depth === 0) {
-        return source.slice(start, index + 1);
+        return sourceText.slice(start, index + 1);
       }
     }
   }

@@ -1,3 +1,92 @@
+[2026-06-03] - Agent Profile And Response Edge Hardening
+
+CHANGED:
+- `assets\settings\default.json` keeps `write` as the compatible default id but presents it as Agents, removes the legacy Minimal built-in from defaults, and adds real Media, Search, and Study tool presets.
+- `crates\agent_settings\src\agent_profile.rs`, `crates\agent_settings\src\agent_settings.rs`, and `crates\agent\src\thread.rs` now normalize old `minimal` state into Ask at settings load, thread restore, new-thread creation, and profile switching boundaries.
+- `crates\agent_ui\src\conversation_view\composer_profile_options.rs` now owns stable profile-aware composer slot and option ids for Ask, Agents, Media, Search, and Study, including real Media overflow options.
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now routes composer slots by exact built-in profile id, keeps overflow menus populated with real option rows, limits floating-composer safe spacing to the trailing/generating thread area, and keeps response anchors prompt-only.
+- `crates\agent_ui\src\agent_configuration\manage_profiles_modal.rs` now shows the DX profile set with profile-specific icons and rejects duplicate custom profile ids or display names.
+- `crates\agent_ui\src\agent_panel.rs`, `crates\title_bar\src\title_bar.rs`, and `crates\workspace\src\dock.rs` now keep the fullscreen Agent screen and bottom-bar Agent sidechat represented separately while bounding long-thread toolbar response markers around the active prompt.
+- Focused source guards now cover profile normalization, exact profile routing, composer option ids, Media tool presets, prompt-only response navigation, fullscreen/sidechat active-state separation, and enabled-before-focus Agent fullscreen routing.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\agent\src\thread.rs crates\agent_settings\src\agent_profile.rs crates\agent_settings\src\agent_settings.rs crates\agent_ui\src\agent_configuration\manage_profiles_modal.rs crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\conversation_view.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\conversation_view\composer_profile_options.rs crates\agent_ui\src\profile_selector.rs crates\title_bar\src\title_bar.rs crates\workspace\src\dock.rs crates\workspace\src\workspace.rs`
+- `node --test script\dx-workspace-ui-state-source.test.ts script\dx-title-bar-source.test.ts script\dx-agent-configuration-modal-source.test.ts` with 29/29 passing.
+- `git diff --check`
+- Focused conflict-marker scan across touched source, guard, todo, and changelog files.
+
+NOTES:
+- `just run` was not run in this pass because the current instruction is to avoid it until explicitly requested.
+- Exactly six subagents reviewed the lane and the resulting edge-case fixes were kept inside the Agent profile, composer, response indicator, titlebar/dock, and source-guard scope.
+
+[2026-06-03] - Agent Five Profiles And Sidechat Separation
+
+CHANGED:
+- `assets\settings\default.json` now replaces the legacy Minimal built-in with DX profiles for Media, Search, and Study, and the stored `write` profile now displays as Agents while preserving the compatible `write` id.
+- `crates\agent_settings\src\agent_profile.rs` now treats Ask, Agents, Media, Search, and Study as built-in profiles and filters the legacy Minimal id out of the visible profile list.
+- `crates\agent_ui\src\profile_selector.rs` and `crates\agent_ui\src\agent_configuration\manage_profiles_modal.rs` now describe and icon the five DX profiles instead of the old three-profile Zed set.
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now makes manual response-marker activation follow the prompt at or before the viewport scroll position, while clicked markers only dominate during the explicit click-scroll settling window.
+- `crates\agent_ui\src\agent_panel.rs` and `crates\workspace\src\dock.rs` now represent the bottom-bar Agent sidechat with a chat icon and keep that sidechat button inactive while the fullscreen Agent screen is zoomed.
+- `script\dx-workspace-ui-state-source.test.ts` now guards the five-profile registry, legacy Minimal filtering, scroll-position response marker sync, and sidechat/fullscreen Agent active-state separation.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\agent_settings\src\agent_profile.rs crates\agent_ui\src\profile_selector.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\agent_configuration\manage_profiles_modal.rs crates\workspace\src\dock.rs`
+- `node --test script\dx-workspace-ui-state-source.test.ts` with 19/19 passing.
+- `node --test script\dx-title-bar-source.test.ts` with 4/4 passing.
+- `git diff --check`
+
+NOTES:
+- `just run` was not run in this pass because it was not explicitly requested.
+
+[2026-06-03] - Agent Screen Dock And Profile Selector Polish
+
+CHANGED:
+- `crates\title_bar\src\title_bar.rs` now orders the screen dock as AI, Editor, Browser, Terminal and marks the AI button active from fullscreen Agent zoom state instead of side-dock panel visibility.
+- `crates\workspace\src\workspace.rs` now exposes the fullscreen Agent zoom-state accessor to the title bar crate so the screen and side-panel states stay separated at compile time.
+- `crates\agent_ui\src\conversation_view.rs` now keeps profile selection available whenever a model is selected, including local models that do not advertise tool support.
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now places the profile selector beside the profile-aware composer slots and makes manual-scroll response marker activation prefer the latest visible prompt.
+- `script\dx-title-bar-source.test.ts` and `script\dx-workspace-ui-state-source.test.ts` now guard the screen-dock order, fullscreen AI active-state separation, profile-selector visibility, and latest-visible response marker contract.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\workspace\src\workspace.rs crates\title_bar\src\title_bar.rs crates\agent_ui\src\conversation_view.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\conversation_view\composer_profile_options.rs crates\agent_ui\src\profile_selector.rs`
+- `node --test script\dx-workspace-ui-state-source.test.ts` with 19/19 passing.
+- `node --test script\dx-title-bar-source.test.ts` with 4/4 passing.
+- `git diff --check`
+
+NOTES:
+- `just run` was not run in this pass because it was not explicitly requested.
+
+[2026-06-03] - Agent Composer Profile Slot Polish
+
+CHANGED:
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now removes the old composer Access pill and renders compact profile-aware icon slots beside the add-context button.
+- `crates\agent_ui\src\conversation_view\composer_profile_options.rs` now owns the typed Ask, Agents, Media, Search, and Study slot catalog, including Media overflow options.
+- `crates\agent_ui\src\profile_selector.rs` now displays the built-in `write` profile as `Agents` while preserving the stored `write` profile id.
+- `script\dx-workspace-ui-state-source.test.ts` now guards the no-Access composer contract, profile slot catalog, Media overflow slot, and Agents display label.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\agent_ui\src\conversation_view.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\conversation_view\composer_profile_options.rs crates\agent_ui\src\profile_selector.rs`
+- `node --test script\dx-workspace-ui-state-source.test.ts` with 19/19 passing.
+- `git diff --check`
+
+NOTES:
+- `just run` was not run in this pass because it was not explicitly requested.
+
+[2026-06-03] - Agent Fullscreen Response Marker And Composer Fix
+
+FIXED:
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now keeps the operator-selected response anchor active while the programmatic jump settles, tracks visible list ranges for later active-marker updates, and avoids falling back to the first marker after a successful click.
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now renders the message composer as a floating bottom overlay when a thread has messages, while the final conversation entry keeps a composer-sized safe-area spacer so the latest message rests above the floating input.
+- `script\dx-workspace-ui-state-source.test.ts` now guards the selected-anchor state, visible-range fallback, floating composer overlay, and last-entry safe-area contract.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\agent_ui\src\conversation_view\thread_view.rs`
+- `node --test script\dx-workspace-ui-state-source.test.ts` with 19/19 passing.
+- `git diff --check`
+
+NOTES:
+- `just run` was not run in this pass because it was not explicitly requested.
+
 [2026-06-03] - Agent Response Indicator Navigation Fix
 
 FIXED:

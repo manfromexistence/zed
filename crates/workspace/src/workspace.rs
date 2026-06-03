@@ -8220,7 +8220,7 @@ impl Workspace {
         self.zoomed.as_ref()
     }
 
-    pub(crate) fn zoomed_is_agent_panel(&self) -> bool {
+    pub fn zoomed_is_agent_panel(&self) -> bool {
         self.zoomed_is_agent_panel
     }
 

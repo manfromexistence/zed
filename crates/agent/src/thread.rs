@@ -13,18 +13,16 @@ use crate::{
     DxCatalogProviderSettingsRegistrationTool, DxCatalogProviderSettingsTool,
     DxForgeBackupExecutorTool, DxForgeBackupRunnerGateTool, DxForgeHistoryTool,
     DxForgeRestoreApprovalTool, DxForgeRestoreExecutorTool, DxForgeSafetyPolicyTool,
-    DxLaunchDemoRecipesTool,
-    DxMediaToolPlanTool, DxMediaToolRunnerGateTool, DxMediaToolRunnerTool,
+    DxLaunchDemoRecipesTool, DxMediaToolPlanTool, DxMediaToolRunnerGateTool, DxMediaToolRunnerTool,
     DxMetasearchContextAdapterTool, DxMetasearchSourceExtractTool, DxMetasearchStatusTool,
     DxMetasearchTool, DxRuntimeProofImportTool, DxRuntimeProofPlanTool,
     DxSerializerRlmExecutionPlanTool, DxSerializerRlmExecutionPreviewTool,
     DxSerializerRlmExternalExecutionTool, DxSerializerRlmReducedContextTool,
     DxSerializerRlmRunnerGateTool, DxSourceAttachmentTool, EditFileTool, FetchTool, FindPathTool,
-    FindReferencesTool, GetCodeActionsTool,
-    GoToDefinitionTool, GrepTool, ListDirectoryTool, MovePathTool, ProjectSnapshot, ReadFileTool,
-    RenameTool, SpawnAgentTool, SystemPromptTemplate, Template, Templates, TerminalTool,
-    ToolPermissionDecision, UpdatePlanTool, UpdateTitleTool, WebSearchTool, WriteFileTool,
-    decide_permission_from_settings,
+    FindReferencesTool, GetCodeActionsTool, GoToDefinitionTool, GrepTool, ListDirectoryTool,
+    MovePathTool, ProjectSnapshot, ReadFileTool, RenameTool, SpawnAgentTool, SystemPromptTemplate,
+    Template, Templates, TerminalTool, ToolPermissionDecision, UpdatePlanTool, UpdateTitleTool,
+    WebSearchTool, WriteFileTool, decide_permission_from_settings,
 };
 use acp_thread::{MentionUri, UserMessageId};
 use action_log::ActionLog;
@@ -36,7 +34,8 @@ use feature_flags::{
 
 use agent_client_protocol::schema as acp;
 use agent_settings::{
-    AgentProfileId, AgentSettings, SUMMARIZE_THREAD_DETAILED_PROMPT, SUMMARIZE_THREAD_PROMPT,
+    AgentProfile, AgentProfileId, AgentSettings, SUMMARIZE_THREAD_DETAILED_PROMPT,
+    SUMMARIZE_THREAD_PROMPT,
 };
 use anyhow::{Context as _, Result, anyhow};
 use chrono::{DateTime, Local, Utc};
@@ -1120,7 +1119,7 @@ impl Thread {
         cx: &mut Context<Self>,
     ) -> Self {
         let settings = AgentSettings::get_global(cx);
-        let profile_id = settings.default_profile.clone();
+        let profile_id = AgentProfile::normalize_id(settings.default_profile.clone(), cx);
         let enable_thinking = settings
             .default_model
             .as_ref()
@@ -1448,6 +1447,7 @@ impl Thread {
         let profile_id = db_thread
             .profile
             .unwrap_or_else(|| settings.default_profile.clone());
+        let profile_id = AgentProfile::normalize_id(profile_id, cx);
 
         let mut model = LanguageModelRegistry::global(cx).update(cx, |registry, cx| {
             db_thread
@@ -1884,6 +1884,7 @@ impl Thread {
     }
 
     pub fn set_profile(&mut self, profile_id: AgentProfileId, cx: &mut Context<Self>) {
+        let profile_id = AgentProfile::normalize_id(profile_id, cx);
         if self.profile_id == profile_id {
             return;
         }

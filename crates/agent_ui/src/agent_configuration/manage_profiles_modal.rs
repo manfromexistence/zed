@@ -47,6 +47,17 @@ fn profile_name_snapshot_exceeds_limit(snapshot: &MultiBufferSnapshot) -> bool {
         || summary.chars > MAX_AGENT_PROFILE_NAME_INPUT_CHARS
 }
 
+fn profile_icon(profile_id: &AgentProfileId) -> IconName {
+    match profile_id.as_str() {
+        builtin_profiles::WRITE => IconName::ZedAgent,
+        builtin_profiles::ASK | builtin_profiles::LEGACY_MINIMAL => IconName::Chat,
+        builtin_profiles::MEDIA => IconName::Image,
+        builtin_profiles::SEARCH => IconName::ToolSearch,
+        builtin_profiles::STUDY => IconName::Book,
+        _ => IconName::UserRoundPen,
+    }
+}
+
 enum Mode {
     ChooseProfile(ChooseProfileMode),
     NewProfile(NewProfileMode),
@@ -70,18 +81,16 @@ enum Mode {
 
 impl Mode {
     pub fn choose_profile(_window: &mut Window, cx: &mut Context<ManageProfilesModal>) -> Self {
-        let settings = AgentSettings::get_global(cx);
-
         let mut builtin_profiles = Vec::new();
         let mut custom_profiles = Vec::new();
 
-        for (profile_id, profile) in settings.profiles.iter() {
+        for (profile_id, profile_name) in AgentProfile::available_profiles(cx) {
             let entry = ProfileEntry {
                 id: profile_id.clone(),
-                name: profile.name.clone(),
+                name: profile_name.clone(),
                 navigation: NavigableEntry::focusable(cx),
             };
-            if builtin_profiles::is_builtin(profile_id) {
+            if builtin_profiles::is_builtin(&profile_id) {
                 builtin_profiles.push(entry);
             } else {
                 custom_profiles.push(entry);
@@ -450,8 +459,19 @@ impl ManageProfilesModal {
                 let base_profile_id = mode.base_profile_id.clone();
                 mode.new_profile_error = None;
 
-                let profile_id =
-                    AgentProfile::create(name, base_profile_id.clone(), self.fs.clone(), cx);
+                let profile_id = match AgentProfile::create(
+                    name,
+                    base_profile_id.clone(),
+                    self.fs.clone(),
+                    cx,
+                ) {
+                    Ok(profile_id) => profile_id,
+                    Err(error) => {
+                        mode.new_profile_error = Some(error.to_string().into());
+                        cx.notify();
+                        return;
+                    }
+                };
                 telemetry::event!(
                     "Agent Profile Created",
                     profile_id = profile_id.as_str(),
@@ -571,6 +591,7 @@ impl ManageProfilesModal {
                     .toggle_state(is_focused)
                     .inset(true)
                     .spacing(ListItemSpacing::Sparse)
+                    .start_slot(Icon::new(profile_icon(&profile.id)).size(IconSize::Small))
                     .child(Label::new(profile.name.clone()))
                     .when(is_focused, |this| {
                         this.end_slot(
@@ -732,14 +753,10 @@ impl ManageProfilesModal {
         let profile_name = settings
             .profiles
             .get(&mode.profile_id)
-            .map(|profile| profile.name.clone())
+            .map(|profile| AgentProfile::display_name(&mode.profile_id, &profile.name))
             .unwrap_or_else(|| "Unknown".into());
 
-        let icon = match mode.profile_id.as_str() {
-            "write" => IconName::Pencil,
-            "ask" => IconName::Chat,
-            _ => IconName::UserRoundPen,
-        };
+        let icon = profile_icon(&mode.profile_id);
 
         Navigable::new(
             div()

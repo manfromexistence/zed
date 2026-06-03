@@ -34,7 +34,7 @@ pub trait ProfileProvider {
     /// Set the profile ID
     fn set_profile(&self, profile_id: AgentProfileId, cx: &mut App);
 
-    /// Check if profiles are supported in the current context (e.g. if the model that is selected has tool support)
+    /// Check if profiles are supported in the current context.
     fn profiles_supported(&self, cx: &App) -> bool;
 
     /// Check if there is a model selected in the current context.
@@ -91,12 +91,10 @@ impl ProfileSelector {
         }
 
         let current_profile_id = self.provider.profile_id(cx);
-        let current_index = profiles
+        let next_index = profiles
             .keys()
             .position(|id| id == &current_profile_id)
-            .unwrap_or(0);
-
-        let next_index = (current_index + 1) % profiles.len();
+            .map_or(0, |current_index| (current_index + 1) % profiles.len());
 
         if let Some((next_profile_id, _)) = profiles.get_index(next_index) {
             self.provider.set_profile(next_profile_id.clone(), cx);
@@ -180,7 +178,7 @@ impl Render for ProfileSelector {
         let profile = settings.profiles.get(&profile_id);
 
         let selected_profile = profile
-            .map(|profile| profile.name.clone())
+            .map(|profile| profile_display_name(&profile_id, &profile.name))
             .unwrap_or_else(|| "Unknown".into());
 
         let icon = if self.picker_handle.is_deployed() {
@@ -227,6 +225,10 @@ impl Render for ProfileSelector {
         .render(window, cx)
         .into_any_element()
     }
+}
+
+fn profile_display_name(profile_id: &AgentProfileId, name: &SharedString) -> SharedString {
+    AgentProfile::display_name(profile_id, name)
 }
 
 #[derive(Clone)]
@@ -337,8 +339,8 @@ impl ProfilePickerDelegate {
             .take(MAX_PROFILE_SELECTOR_CANDIDATES)
             .map(|(id, name)| ProfileCandidate {
                 is_builtin: builtin_profiles::is_builtin(&id),
+                name: profile_display_name(&id, &name),
                 id,
-                name,
             })
             .collect()
     }
@@ -362,9 +364,11 @@ impl ProfilePickerDelegate {
 
     fn documentation(candidate: &ProfileCandidate) -> Option<&'static str> {
         match candidate.id.as_str() {
-            builtin_profiles::WRITE => Some("Get help to write anything."),
-            builtin_profiles::ASK => Some("Chat about your codebase."),
-            builtin_profiles::MINIMAL => Some("Chat about anything with no tools."),
+            builtin_profiles::WRITE => Some("Use Agents for workspace edits and tool-backed work."),
+            builtin_profiles::ASK => Some("Ask questions without editing project files."),
+            builtin_profiles::MEDIA => Some("Prepare image, video, audio, and document outputs."),
+            builtin_profiles::SEARCH => Some("Search current web and workspace sources."),
+            builtin_profiles::STUDY => Some("Study sources with notebook-style context."),
             _ => None,
         }
     }

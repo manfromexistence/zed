@@ -271,6 +271,8 @@ test("profile names are capped before profile creation", () => {
     confirm.indexOf(profileNameGuard) < confirm.indexOf("AgentProfile::create"),
     "profile name guard must run before handing text to AgentProfile::create",
   );
+  assert.match(confirm, /match AgentProfile::create\(/);
+  assert.match(confirm, /Err\(error\) => \{\s*mode\.new_profile_error = Some\(error\.to_string\(\)\.into\(\)\);/s);
 
   const renderNewProfile = sliceBetween(
     profilesModal,

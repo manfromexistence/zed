@@ -18,10 +18,13 @@ pub mod builtin_profiles {
 
     pub const WRITE: &str = "write";
     pub const ASK: &str = "ask";
-    pub const MINIMAL: &str = "minimal";
+    pub const MEDIA: &str = "media";
+    pub const SEARCH: &str = "search";
+    pub const STUDY: &str = "study";
+    pub const LEGACY_MINIMAL: &str = "minimal";
 
     pub fn is_builtin(profile_id: &AgentProfileId) -> bool {
-        profile_id.as_str() == WRITE || profile_id.as_str() == ASK || profile_id.as_str() == MINIMAL
+        matches!(profile_id.as_str(), WRITE | ASK | MEDIA | SEARCH | STUDY)
     }
 }
 
@@ -41,17 +44,71 @@ impl AgentProfile {
         &self.id
     }
 
+    pub fn normalize_id(profile_id: AgentProfileId, cx: &App) -> AgentProfileId {
+        Self::normalize_id_from_profiles(profile_id, &AgentSettings::get_global(cx).profiles)
+    }
+
+    pub fn normalize_id_from_profiles(
+        profile_id: AgentProfileId,
+        profiles: &IndexMap<AgentProfileId, AgentProfileSettings>,
+    ) -> AgentProfileId {
+        if profile_id.as_str() == builtin_profiles::LEGACY_MINIMAL {
+            return AgentProfileId(builtin_profiles::ASK.into());
+        }
+
+        if profiles.contains_key(&profile_id) {
+            return profile_id;
+        }
+
+        let write_profile = AgentProfileId(builtin_profiles::WRITE.into());
+        if profiles.contains_key(&write_profile) {
+            return write_profile;
+        }
+
+        let ask_profile = AgentProfileId(builtin_profiles::ASK.into());
+        if profiles.contains_key(&ask_profile) {
+            return ask_profile;
+        }
+
+        profile_id
+    }
+
+    pub fn display_name(profile_id: &AgentProfileId, name: &SharedString) -> SharedString {
+        match profile_id.as_str() {
+            builtin_profiles::WRITE => "Agents".into(),
+            builtin_profiles::LEGACY_MINIMAL => "Ask".into(),
+            _ => name.clone(),
+        }
+    }
+
     /// Saves a new profile to the settings.
     pub fn create(
         name: String,
         base_profile_id: Option<AgentProfileId>,
         fs: Arc<dyn Fs>,
         cx: &App,
-    ) -> AgentProfileId {
+    ) -> Result<AgentProfileId> {
         let id = AgentProfileId(name.to_case(Case::Kebab).into());
+        let settings = AgentSettings::get_global(cx);
+        if settings.profiles.contains_key(&id) {
+            bail!("A profile named `{}` already exists.", name);
+        }
+        if settings
+            .profiles
+            .iter()
+            .filter(|(profile_id, _)| profile_id.as_str() != builtin_profiles::LEGACY_MINIMAL)
+            .any(|(profile_id, profile)| {
+                Self::display_name(profile_id, &profile.name)
+                    .as_ref()
+                    .eq_ignore_ascii_case(&name)
+            })
+        {
+            bail!("A profile named `{}` already exists.", name);
+        }
 
-        let base_profile =
-            base_profile_id.and_then(|id| AgentSettings::get_global(cx).profiles.get(&id).cloned());
+        let base_profile = base_profile_id
+            .map(|id| Self::normalize_id(id, cx))
+            .and_then(|id| AgentSettings::get_global(cx).profiles.get(&id).cloned());
 
         // Copy toggles from the base profile so the new profile starts with familiar defaults.
         let tools = base_profile
@@ -86,14 +143,17 @@ impl AgentProfile {
             }
         });
 
-        id
+        Ok(id)
     }
 
     /// Returns a map of AgentProfileIds to their names
     pub fn available_profiles(cx: &App) -> AvailableProfiles {
         let mut profiles = AvailableProfiles::default();
         for (id, profile) in AgentSettings::get_global(cx).profiles.iter() {
-            profiles.insert(id.clone(), profile.name.clone());
+            if id.as_str() == builtin_profiles::LEGACY_MINIMAL {
+                continue;
+            }
+            profiles.insert(id.clone(), Self::display_name(id, &profile.name));
         }
         profiles
     }

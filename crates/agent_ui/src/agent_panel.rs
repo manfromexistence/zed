@@ -135,6 +135,7 @@ const MIN_PANEL_WIDTH: Pixels = px(300.);
 const DX_CODING_PANEL_WIDTH: Pixels = px(360.);
 const LAST_USED_AGENT_KEY: &str = "agent_panel__last_used_external_agent";
 const LAST_CREATED_ENTRY_KIND_KEY: &str = "agent_panel__last_created_entry_kind";
+const MAX_TOOLBAR_RESPONSE_INDICATORS: usize = 32;
 const TERMINAL_AGENT_TELEMETRY_ID: &str = "terminal";
 const MAX_LAST_USED_AGENT_JSON_BYTES: usize = 16 * 1024;
 const MAX_LAST_CREATED_ENTRY_KIND_JSON_BYTES: usize = 4 * 1024;
@@ -1692,12 +1693,14 @@ impl AgentPanel {
         window: &mut Window,
         cx: &mut Context<Workspace>,
     ) {
-        if let Some(panel) = workspace.focus_panel::<Self>(window, cx) {
+        if workspace
+            .panel::<Self>(cx)
+            .is_some_and(|panel| panel.read(cx).enabled(cx))
+            && let Some(panel) = workspace.focus_panel::<Self>(window, cx)
+        {
             panel.update(cx, |panel, cx| {
-                if panel.enabled(cx) {
-                    panel.manual_zoom_override = Some(true);
-                    cx.emit(PanelEvent::ZoomIn);
-                }
+                panel.manual_zoom_override = Some(true);
+                cx.emit(PanelEvent::ZoomIn);
             });
         }
     }
@@ -4934,7 +4937,7 @@ impl Panel for AgentPanel {
     }
 
     fn icon(&self, _window: &Window, cx: &App) -> Option<IconName> {
-        (self.enabled(cx) && AgentSettings::get_global(cx).button).then_some(IconName::ZedAssistant)
+        (self.enabled(cx) && AgentSettings::get_global(cx).button).then_some(IconName::Chat)
     }
 
     fn icon_tooltip(&self, _window: &Window, _cx: &App) -> Option<&'static str> {
@@ -6146,7 +6149,8 @@ impl AgentPanel {
         let Some(active_thread) = self.active_visible_thread_view(cx) else {
             return div().into_any_element();
         };
-        let anchors = active_thread.read(cx).response_anchors(cx);
+        let anchors =
+            Self::toolbar_response_indicator_anchors(active_thread.read(cx).response_anchors(cx));
         if anchors.is_empty() {
             return div().into_any_element();
         }
@@ -6173,6 +6177,26 @@ impl AgentPanel {
                     })),
             )
             .into_any_element()
+    }
+
+    fn toolbar_response_indicator_anchors(
+        mut anchors: Vec<AgentResponseAnchor>,
+    ) -> Vec<AgentResponseAnchor> {
+        if anchors.len() <= MAX_TOOLBAR_RESPONSE_INDICATORS {
+            return anchors;
+        }
+
+        let current_index = anchors
+            .iter()
+            .position(|anchor| anchor.is_current)
+            .unwrap_or_else(|| anchors.len().saturating_sub(1));
+        let half_window = MAX_TOOLBAR_RESPONSE_INDICATORS / 2;
+        let mut start = current_index.saturating_sub(half_window);
+        let end = (start + MAX_TOOLBAR_RESPONSE_INDICATORS).min(anchors.len());
+        start = end.saturating_sub(MAX_TOOLBAR_RESPONSE_INDICATORS);
+        anchors.drain(..start);
+        anchors.truncate(MAX_TOOLBAR_RESPONSE_INDICATORS);
+        anchors
     }
 
     fn toolbar_response_indicator_segment(
