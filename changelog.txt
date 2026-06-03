@@ -1,3 +1,19 @@
+[2026-06-03] - Agent UI Just Run Compile Repair
+
+FIXED:
+- `crates\agent_ui\src\dx_launch_workspace.rs` now imports the shared `yes_no` label helper and `Disclosure` control used by the launch rails.
+- `crates\agent_ui\src\agent_panel.rs` now returns ordinary empty elements for missing response anchors and calls thread response-anchor scrolling without treating the update as a fallible result.
+- `crates\agent_ui\src\dx_launch_workspace\sources\rows.rs` now builds one hover metadata string for source rows and passes it through the correct tooltip metadata argument.
+- `script\dx-launch-workspace-source.test.ts` now guards the combined bounded-list helper import shape.
+
+PASSED:
+- `rustfmt --edition 2024 --check` on the touched Agent UI files.
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-launch-workspace-source.test.ts script\dx-workspace-ui-state-source.test.ts` with 37/37 passing.
+
+NOTES:
+- This entry records the Agent UI compile repair found by the authorized `just run` retry.
+- `DX.txt` remains an unrelated scratch/editor change and is intentionally left untouched.
+
 [2026-06-03] - Project Panel Just Run Compile Repair
 
 FIXED:

@@ -14,12 +14,12 @@ pub(super) fn source_item_row(
     cx: &App,
 ) -> AnyElement {
     let tooltip_label = source.label.clone();
-    let tooltip_detail = if source.detail.is_empty() {
-        None
-    } else {
-        Some(source.detail.clone())
+    let tooltip_meta = match (source.detail.is_empty(), source.path.is_empty()) {
+        (true, true) => source.label.clone(),
+        (true, false) => source.path.clone(),
+        (false, true) => source.detail.clone(),
+        (false, false) => format!("{} - {}", source.detail, source.path),
     };
-    let tooltip_path = source.path.clone();
     let has_detail = !source.detail.is_empty();
     let mut stack = v_flex()
         .id(id)
@@ -31,12 +31,7 @@ pub(super) fn source_item_row(
         .bg(cx.theme().colors().element_background)
         .hover(|this| this.bg(cx.theme().colors().element_hover))
         .tooltip(move |_window, cx| {
-            Tooltip::with_meta(
-                tooltip_label.clone(),
-                tooltip_detail.clone(),
-                tooltip_path.clone(),
-                cx,
-            )
+            Tooltip::with_meta(tooltip_label.clone(), None, tooltip_meta.clone(), cx)
         })
         .child(
             h_flex()

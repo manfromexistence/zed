@@ -1230,7 +1230,7 @@ test("DX launch workspace delegates bounded list labels", () => {
   const parent = read("crates/agent_ui/src/dx_launch_workspace.rs");
   const listLabels = read("crates/agent_ui/src/dx_launch_workspace/list_labels.rs");
 
-  assert.match(parent, /use (?:self::)?list_labels::bounded_items/);
+  assert.match(parent, /use (?:self::)?list_labels::\{bounded_items, yes_no\}/);
   assert.doesNotMatch(parent, /fn bounded_items/);
   assert.doesNotMatch(parent, /fn yes_no/);
   assert.match(listLabels, /pub\(crate\) fn bounded_items/);

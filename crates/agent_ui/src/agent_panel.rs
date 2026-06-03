@@ -6128,11 +6128,11 @@ impl AgentPanel {
 
     fn render_toolbar_response_indicator(&self, cx: &mut Context<Self>) -> AnyElement {
         let Some(active_thread) = self.active_thread_view(cx) else {
-            return Empty.into_any_element();
+            return div().into_any_element();
         };
         let anchors = active_thread.read(cx).response_anchors(cx);
         if anchors.is_empty() {
-            return Empty.into_any_element();
+            return div().into_any_element();
         }
 
         div()
@@ -6188,11 +6188,9 @@ impl AgentPanel {
             .hover(|style| style.bg(cx.theme().colors().text_accent))
             .tooltip(move |_window, cx| Tooltip::with_meta(label.clone(), None, detail.clone(), cx))
             .on_click(move |_event, _window, cx| {
-                active_thread
-                    .update(cx, |thread, cx| {
-                        thread.scroll_to_response_anchor(entry_ix, cx);
-                    })
-                    .ok();
+                active_thread.update(cx, |thread, cx| {
+                    thread.scroll_to_response_anchor(entry_ix, cx);
+                });
             })
             .into_any_element()
     }

@@ -4,7 +4,7 @@ use gpui::{
     AnyElement, App, ClickEvent, Context, DismissEvent, EventEmitter, FocusHandle, Focusable,
     Render, SharedString, Window, prelude::*,
 };
-use ui::{IconName, PopoverMenu, Tooltip, prelude::*};
+use ui::{Disclosure, IconName, PopoverMenu, Tooltip, prelude::*};
 
 use crate::dx_agent_bridge::DxAgentBridgeSnapshot;
 use crate::dx_check_score::DxCheckScoreSnapshot;
@@ -44,7 +44,7 @@ mod sources;
 mod style_panel;
 mod tool_history;
 mod www_evidence;
-use self::list_labels::bounded_items;
+use self::list_labels::{bounded_items, yes_no};
 
 #[derive(Clone)]
 pub(crate) struct DxLaunchWorkspaceStatus {
