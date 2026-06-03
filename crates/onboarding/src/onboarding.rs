@@ -23,9 +23,9 @@ use web_preview::web_preview_view::WebPreviewView;
 pub use workspace::welcome::ShowWelcome;
 use workspace::welcome::WelcomePage;
 use workspace::{
-    AppState, ToggleWorkspaceSidebar, Workspace, WorkspaceId,
+    AppState, ToggleWorkspaceSidebar, Workspace, WorkspaceId, ZoomIn, ZoomOut,
     dock::DockPosition,
-    item::{Item, ItemEvent},
+    item::{Item, ItemEvent, WorkspaceScreenKind},
     notifications::NotifyResultExt as _,
     open_new, register_serializable_item, with_active_or_new_workspace,
 };
@@ -351,14 +351,27 @@ fn open_onboarding_page(
     if let Some(existing) = existing {
         workspace.activate_item(&existing, true, true, window, cx);
         window.focus(&existing.focus_handle(cx), cx);
+        zoom_active_onboarding_pane(workspace, window, cx);
         cx.notify();
         return;
     }
 
     let onboarding_page = Onboarding::new(workspace, cx);
     workspace.add_item_to_center(Box::new(onboarding_page.clone()), window, cx);
+    workspace.activate_item(&onboarding_page, true, true, window, cx);
     window.focus(&onboarding_page.focus_handle(cx), cx);
+    zoom_active_onboarding_pane(workspace, window, cx);
     cx.notify();
+}
+
+fn zoom_active_onboarding_pane(
+    workspace: &mut Workspace,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    workspace
+        .active_pane()
+        .update(cx, |pane, cx| pane.zoom_in(&ZoomIn, window, cx));
 }
 
 fn provider_status_icon(state: &str) -> IconName {
@@ -465,7 +478,7 @@ impl Onboarding {
 
 fn finish_setup(cx: &mut App) {
     telemetry::event!("Finish Setup");
-    go_to_welcome_page(cx);
+    close_onboarding_page(cx);
 }
 
 impl Onboarding {
@@ -1038,6 +1051,10 @@ impl Item for Onboarding {
         true
     }
 
+    fn screen_kind(&self) -> WorkspaceScreenKind {
+        WorkspaceScreenKind::Onboarding
+    }
+
     fn deactivated(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
         self.deactivate_dx_web_preview(window, cx);
@@ -1073,6 +1090,40 @@ impl Item for Onboarding {
     fn to_item_events(event: &Self::Event, f: &mut dyn FnMut(workspace::item::ItemEvent)) {
         f(*event)
     }
+}
+
+fn close_onboarding_page(cx: &mut App) {
+    with_active_or_new_workspace(cx, |workspace, window, cx| {
+        let panes = workspace.panes().to_vec();
+        let mut closed_onboarding = false;
+
+        for pane in panes {
+            let onboarding_ids = pane
+                .read(cx)
+                .items()
+                .filter_map(|item| {
+                    let _ = item.downcast::<Onboarding>()?;
+                    Some(item.item_id())
+                })
+                .collect::<Vec<_>>();
+
+            if onboarding_ids.is_empty() {
+                continue;
+            }
+
+            closed_onboarding = true;
+            pane.update(cx, |pane, cx| {
+                pane.zoom_out(&ZoomOut, window, cx);
+                for onboarding_id in onboarding_ids {
+                    pane.remove_item(onboarding_id, true, false, window, cx);
+                }
+            });
+        }
+
+        if closed_onboarding {
+            cx.notify();
+        }
+    });
 }
 
 fn go_to_welcome_page(cx: &mut App) {

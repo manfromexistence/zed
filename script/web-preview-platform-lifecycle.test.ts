@@ -158,7 +158,22 @@ test("onboarding uses a local Web Preview page with a real completion bridge", (
   assert.match(source, /DxLaunchPreviewTargets::local_web_preview_onboarding\(web_preview_onboarding_url\(\)\)/);
   assert.match(source, /Some\(complete_onboarding\)/);
   assert.match(source, /fn finish_setup\(cx: &mut App\)/);
+  assert.match(source, /finish_setup\(cx\);/);
+  assert.match(source, /fn close_onboarding_page\(cx: &mut App\)/);
+  assert.match(source, /fn zoom_active_onboarding_pane\(/);
+  assert.match(source, /pane\.zoom_in\(&ZoomIn, window, cx\)/);
+  assert.match(source, /pane\.zoom_out\(&ZoomOut, window, cx\);/);
+  assert.match(source, /pane\.remove_item\(onboarding_id, true, false, window, cx\);/);
+  assert.match(
+    source,
+    /fn screen_kind\(&self\) -> WorkspaceScreenKind \{\s+WorkspaceScreenKind::Onboarding\s+\}/,
+  );
   assert.match(source, /\.child\(self\.render_web_preview_canvas\(window, cx\)\)/);
+  assert.doesNotMatch(
+    functionBody(source, "finish_setup"),
+    /go_to_welcome_page\(cx\)/,
+    "complete should remove the fullscreen onboarding surface instead of replacing it with welcome",
+  );
 
   const renderStart = source.indexOf("impl Render for Onboarding");
   assert.ok(renderStart >= 0, "expected Onboarding render impl");
@@ -180,6 +195,29 @@ for (const [name, path] of desktopOnboardingPreviewViews) {
     assert.match(source, /if let Some\(complete\) = self\.onboarding_complete\.clone\(\)/);
     assert.match(source, /complete\(window, cx\);/);
   });
+}
+
+function functionBody(sourceText, name) {
+  const start = sourceText.search(new RegExp(`fn\\s+${name}\\b`));
+  assert.ok(start >= 0, `expected ${name}`);
+
+  const bodyStart = sourceText.indexOf("{", start);
+  assert.ok(bodyStart > start, `expected ${name} body`);
+
+  let depth = 0;
+  for (let index = bodyStart; index < sourceText.length; index += 1) {
+    const char = sourceText[index];
+    if (char === "{") {
+      depth += 1;
+    } else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return sourceText.slice(start, index + 1);
+      }
+    }
+  }
+
+  assert.fail(`could not find body for ${name}`);
 }
 
 for (const [name, path, cfg] of platformLibs) {

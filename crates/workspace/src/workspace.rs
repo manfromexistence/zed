@@ -158,7 +158,7 @@ pub use workspace_settings::{
     AutosaveSetting, BottomDockLayout, EncodingDisplayOptions, FocusFollowsMouse,
     RestoreOnStartupBehavior, StatusBarSettings, TabBarSettings, WorkspaceSettings,
 };
-use zed_actions::{Spawn, feedback::FileBugReport, theme::ToggleMode};
+use zed_actions::{OpenOnboarding, Spawn, feedback::FileBugReport, theme::ToggleMode};
 
 use crate::{dock::PanelSizeState, item::ItemBufferKind, notifications::NotificationId};
 use crate::{
@@ -5986,6 +5986,9 @@ impl Workspace {
                     }
                     WorkspaceScreenKind::Terminal => {
                         window.dispatch_action(NewCenterTerminal::default().boxed_clone(), cx);
+                    }
+                    WorkspaceScreenKind::Onboarding => {
+                        window.dispatch_action(OpenOnboarding.boxed_clone(), cx);
                     }
                     WorkspaceScreenKind::LiquidGlass => {
                         window.dispatch_action(NewLiquidGlass.boxed_clone(), cx);

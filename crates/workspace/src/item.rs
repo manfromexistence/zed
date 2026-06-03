@@ -186,6 +186,7 @@ pub enum WorkspaceScreenKind {
     Editor,
     Browser,
     Terminal,
+    Onboarding,
     LiquidGlass,
     Other,
 }

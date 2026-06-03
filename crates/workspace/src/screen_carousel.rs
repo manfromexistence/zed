@@ -62,7 +62,12 @@ impl Workspace {
             (WorkspaceScreenKind::Terminal, ScreenCarouselEdge::Right) => {
                 Some(WorkspaceScreenKind::Editor)
             }
-            (WorkspaceScreenKind::LiquidGlass | WorkspaceScreenKind::Other, _) => None,
+            (
+                WorkspaceScreenKind::Onboarding
+                | WorkspaceScreenKind::LiquidGlass
+                | WorkspaceScreenKind::Other,
+                _,
+            ) => None,
         }
     }
 
@@ -280,6 +285,7 @@ impl Workspace {
             WorkspaceScreenKind::Editor => "Editor",
             WorkspaceScreenKind::Browser => "Browser",
             WorkspaceScreenKind::Terminal => "Terminal",
+            WorkspaceScreenKind::Onboarding => "Onboarding",
             WorkspaceScreenKind::LiquidGlass => "Glass",
             WorkspaceScreenKind::Other => "Screen",
         }
@@ -290,6 +296,7 @@ impl Workspace {
             WorkspaceScreenKind::Editor => IconName::Code,
             WorkspaceScreenKind::Browser => IconName::ToolWeb,
             WorkspaceScreenKind::Terminal => IconName::Terminal,
+            WorkspaceScreenKind::Onboarding => IconName::Sparkle,
             WorkspaceScreenKind::LiquidGlass => IconName::Sparkle,
             WorkspaceScreenKind::Other => IconName::Circle,
         }

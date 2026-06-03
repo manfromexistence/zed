@@ -66,14 +66,16 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
   const editorButtonIndex = screenDock.indexOf("WorkspaceScreenKind::Editor", agentButtonIndex);
   const browserButtonIndex = screenDock.indexOf("WorkspaceScreenKind::Browser", editorButtonIndex);
   const terminalButtonIndex = screenDock.indexOf("WorkspaceScreenKind::Terminal", browserButtonIndex);
+  const onboardingButtonIndex = screenDock.indexOf("WorkspaceScreenKind::Onboarding", terminalButtonIndex);
   assert.ok(agentButtonIndex >= 0, "screen dock should render the AI button");
   assert.ok(editorButtonIndex > agentButtonIndex, "AI should be first in the screen dock");
   assert.ok(browserButtonIndex > editorButtonIndex, "Editor should be second in the screen dock");
   assert.ok(terminalButtonIndex > browserButtonIndex, "Browser should be third in the screen dock");
+  assert.ok(onboardingButtonIndex > terminalButtonIndex, "Terminal should be fourth in the screen dock");
   assert.match(
     screenDock,
-    /\.child\(self\.render_agent_screen_button\(agent_screen_is_active, cx\)\)[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Editor,[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Browser,[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Terminal,[\s\S]*?\.children\(\s*extra_entries/s,
-    "primary screen dock buttons must stay AI, Editor, Browser, Terminal before overflow entries",
+    /\.child\(self\.render_agent_screen_button\(agent_screen_is_active, cx\)\)[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Editor,[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Browser,[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Terminal,[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Onboarding,[\s\S]*?\.children\(\s*extra_entries/s,
+    "primary screen dock buttons must stay AI, Editor, Browser, Terminal, Onboarding before overflow entries",
   );
   assert.match(screenDock, /let agent_screen_is_active = self\.agent_screen_is_active\(cx\);/);
   assert.match(screenDock, /&& !agent_screen_is_active/);
@@ -91,6 +93,21 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
     screenDock,
     /WorkspaceScreenKind::Terminal,\s*!agent_screen_is_active\s*&& active_screen_kind == WorkspaceScreenKind::Terminal/s,
     "terminal dock button must not stay active while fullscreen AI is active",
+  );
+  assert.match(
+    screenDock,
+    /WorkspaceScreenKind::Onboarding,\s*!agent_screen_is_active\s*&& active_screen_kind == WorkspaceScreenKind::Onboarding/s,
+    "onboarding dock button must not stay active while fullscreen AI is active",
+  );
+  assert.match(
+    titleBarSource,
+    /WorkspaceScreenKind::Onboarding => \{\s*window\.dispatch_action\(zed_actions::OpenOnboarding\.boxed_clone\(\), cx\);\s*\}/s,
+    "Onboarding screen dock button should open the real onboarding action",
+  );
+  assert.match(
+    titleBarSource,
+    /WorkspaceScreenKind::Onboarding => "Onboarding"/,
+    "Onboarding screen dock button should have a clear label",
   );
   assert.match(
     titleBarSource,

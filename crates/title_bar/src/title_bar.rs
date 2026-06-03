@@ -484,6 +484,7 @@ impl TitleBar {
             WorkspaceScreenKind::Editor
                 | WorkspaceScreenKind::Browser
                 | WorkspaceScreenKind::Terminal
+                | WorkspaceScreenKind::Onboarding
         ) && !agent_screen_is_active;
         let extra_entries = if should_show_extra_entries {
             self.collect_active_pane_screen_entries(cx)
@@ -494,6 +495,7 @@ impl TitleBar {
                         WorkspaceScreenKind::Editor
                             | WorkspaceScreenKind::Browser
                             | WorkspaceScreenKind::Terminal
+                            | WorkspaceScreenKind::Onboarding
                     )
                 })
                 .collect::<Vec<_>>()
@@ -550,6 +552,12 @@ impl TitleBar {
                         WorkspaceScreenKind::Terminal,
                         !agent_screen_is_active
                             && active_screen_kind == WorkspaceScreenKind::Terminal,
+                        cx,
+                    ))
+                    .child(self.render_screen_kind_button(
+                        WorkspaceScreenKind::Onboarding,
+                        !agent_screen_is_active
+                            && active_screen_kind == WorkspaceScreenKind::Onboarding,
                         cx,
                     ))
                     .children(
@@ -921,6 +929,9 @@ impl TitleBar {
             WorkspaceScreenKind::Terminal => {
                 window.dispatch_action(NewCenterTerminal::default().boxed_clone(), cx);
             }
+            WorkspaceScreenKind::Onboarding => {
+                window.dispatch_action(zed_actions::OpenOnboarding.boxed_clone(), cx);
+            }
             WorkspaceScreenKind::LiquidGlass => {
                 window.dispatch_action(NewLiquidGlass.boxed_clone(), cx);
             }
@@ -933,6 +944,7 @@ impl TitleBar {
             WorkspaceScreenKind::Editor => "Editor",
             WorkspaceScreenKind::Browser => "Browser",
             WorkspaceScreenKind::Terminal => "Terminal",
+            WorkspaceScreenKind::Onboarding => "Onboarding",
             WorkspaceScreenKind::LiquidGlass => "Glass",
             WorkspaceScreenKind::Other => "Screen",
         }
@@ -943,6 +955,7 @@ impl TitleBar {
             WorkspaceScreenKind::Editor => "New Untitled File",
             WorkspaceScreenKind::Browser => "New Browser Tab",
             WorkspaceScreenKind::Terminal => "New Terminal",
+            WorkspaceScreenKind::Onboarding => "Open Onboarding",
             WorkspaceScreenKind::LiquidGlass => "New Liquid Glass",
             WorkspaceScreenKind::Other => "New Item",
         }
@@ -953,6 +966,7 @@ impl TitleBar {
             WorkspaceScreenKind::Editor => IconName::Code,
             WorkspaceScreenKind::Browser => IconName::ToolWeb,
             WorkspaceScreenKind::Terminal => IconName::Terminal,
+            WorkspaceScreenKind::Onboarding => IconName::Sparkle,
             WorkspaceScreenKind::LiquidGlass => IconName::Sparkle,
             WorkspaceScreenKind::Other => IconName::Circle,
         }
