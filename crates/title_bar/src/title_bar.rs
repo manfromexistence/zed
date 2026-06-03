@@ -478,12 +478,13 @@ impl TitleBar {
                 .map(IntoElement::into_any_element)
         });
         let active_screen_kind = self.active_screen_kind(cx);
+        let agent_screen_is_active = self.agent_screen_is_active(cx);
         let should_show_extra_entries = !matches!(
             active_screen_kind,
             WorkspaceScreenKind::Editor
                 | WorkspaceScreenKind::Browser
                 | WorkspaceScreenKind::Terminal
-        );
+        ) && !agent_screen_is_active;
         let extra_entries = if should_show_extra_entries {
             self.collect_active_pane_screen_entries(cx)
                 .into_iter()
@@ -532,20 +533,23 @@ impl TitleBar {
                 h_flex()
                     .items_center()
                     .gap_0p5()
-                    .child(self.render_agent_screen_button(cx))
+                    .child(self.render_agent_screen_button(agent_screen_is_active, cx))
                     .child(self.render_screen_kind_button(
                         WorkspaceScreenKind::Editor,
-                        active_screen_kind == WorkspaceScreenKind::Editor,
+                        !agent_screen_is_active
+                            && active_screen_kind == WorkspaceScreenKind::Editor,
                         cx,
                     ))
                     .child(self.render_screen_kind_button(
                         WorkspaceScreenKind::Browser,
-                        active_screen_kind == WorkspaceScreenKind::Browser,
+                        !agent_screen_is_active
+                            && active_screen_kind == WorkspaceScreenKind::Browser,
                         cx,
                     ))
                     .child(self.render_screen_kind_button(
                         WorkspaceScreenKind::Terminal,
-                        active_screen_kind == WorkspaceScreenKind::Terminal,
+                        !agent_screen_is_active
+                            && active_screen_kind == WorkspaceScreenKind::Terminal,
                         cx,
                     ))
                     .children(
@@ -729,11 +733,11 @@ impl TitleBar {
             .into_any_element()
     }
 
-    fn render_agent_screen_button(&self, cx: &mut Context<Self>) -> AnyElement {
+    fn render_agent_screen_button(&self, selected: bool, cx: &mut Context<Self>) -> AnyElement {
         IconButton::new("screen-dock-agent", IconName::ZedAssistant)
             .size(ButtonSize::Default)
             .icon_size(IconSize::Medium)
-            .toggle_state(self.agent_screen_is_active(cx))
+            .toggle_state(selected)
             .tooltip(Tooltip::text("AI"))
             .on_click(move |_, window, cx| {
                 window.dispatch_action(

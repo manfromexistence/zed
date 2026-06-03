@@ -2420,7 +2420,7 @@ impl Render for MultiWorkspace {
         let workspace = self.workspace().clone();
         let workspace_key_context = workspace.update(cx, |workspace, cx| workspace.key_context(cx));
         let root = workspace.update(cx, |workspace, cx| workspace.actions(h_flex(), window, cx));
-        let agent_fullscreen_flush_right = workspace.read(cx).zoomed_is_agent_panel();
+        let agent_fullscreen_flush_right = false;
 
         client_side_decorations_with_content_flush(
             root.key_context(workspace_key_context)

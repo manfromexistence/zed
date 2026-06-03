@@ -1,3 +1,25 @@
+[2026-06-03] - Agent Fullscreen Dock And Response Follow-up
+
+FIXED:
+- `crates\title_bar\src\title_bar.rs` now suppresses Editor, Browser, and Terminal active screen states while fullscreen Agent is the active AI screen.
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now retires response-anchor click retries once the requested prompt is visible, keeps the clicked prompt active through that settling event, and lets later manual scroll updates follow the prompt governing the logical top of the viewport.
+- `crates\workspace\src\workspace.rs` now renders fullscreen Agent as center-screen content instead of a full-workspace overlay, so the editor's real left/right docks remain mounted and visible.
+- `crates\workspace\src\multi_workspace.rs` no longer treats Agent fullscreen as owning the right window edge for content-flush decoration.
+- `crates\agent_ui\src\agent_panel.rs` now starts fullscreen Agent's internal DX rails closed so the editor side panels are the default side surfaces.
+- Focused source guards now cover Agent screen active-state suppression, response-anchor retry/manual-scroll ownership, and fullscreen Agent center-slot layout with native editor docks.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\title_bar\src\title_bar.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\agent_panel.rs crates\workspace\src\workspace.rs crates\workspace\src\multi_workspace.rs`
+- `node --test script\dx-workspace-ui-state-source.test.ts script\dx-title-bar-source.test.ts` with 23/23 passing.
+- `git diff --check`
+- Focused conflict-marker scan across touched source and guard files.
+
+NOTES:
+- After explicit authorization, `just run` with six Cargo jobs first exposed a `Workspace::render_center_screen` context-type mismatch, which was fixed in `crates\workspace\src\workspace.rs`.
+- The follow-up `just run` with six Cargo jobs progressed past that source error but failed from rustc/LLVM out-of-memory while compiling downstream crates under current machine load, so runtime launch remains blocked by available memory rather than a known source diagnostic.
+- Cargo check/test/clippy and other heavy validation were not run separately.
+- Exactly six GPT-5.5 extra-high subagents inspected the updated dock active-state, response-anchor, fullscreen layout, guard, review, and hygiene scopes before the final source patch.
+
 [2026-06-03] - Agent UI Runtime Compile Repair
 
 FIXED:

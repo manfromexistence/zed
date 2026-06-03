@@ -972,13 +972,22 @@ impl ThreadView {
                     let scroll_top = list_state.logical_scroll_top();
                     let _ = thread_view.update(cx, |this, cx| {
                         this.visible_entry_range = Some(visible_range.clone());
-                        if let Some(request) = this.response_anchor_scroll_request
-                            && (scroll_top.item_ix != request.entry_ix
-                                || scroll_top.offset_in_item != px(0.0))
-                        {
-                            this.response_anchor_scroll_request = None;
+                        let mut preserve_response_anchor = false;
+                        if let Some(request) = this.response_anchor_scroll_request {
+                            let request_is_visible = visible_range.contains(&request.entry_ix);
+                            if request_is_visible {
+                                this.response_anchor_scroll_request = None;
+                                this.active_response_anchor_entry_ix = Some(request.entry_ix);
+                                preserve_response_anchor = true;
+                            } else if scroll_top.item_ix != request.entry_ix
+                                || scroll_top.offset_in_item != px(0.0)
+                            {
+                                this.response_anchor_scroll_request = None;
+                            }
                         }
-                        if this.response_anchor_scroll_request.is_none() {
+                        if this.response_anchor_scroll_request.is_none()
+                            && !preserve_response_anchor
+                        {
                             this.active_response_anchor_entry_ix = this
                                 .response_anchor_for_scroll_position(
                                     visible_range.clone(),
@@ -6074,8 +6083,7 @@ impl ThreadView {
         let entries = self.thread.read(cx).entries();
         let selected_prompt_ix = self
             .active_response_anchor_entry_ix
-            .filter(|entry_ix| self.is_response_anchor_entry(*entry_ix, cx))
-            .filter(|_| self.response_anchor_scroll_request.is_some());
+            .filter(|entry_ix| self.is_response_anchor_entry(*entry_ix, cx));
         let visible_prompt_ix = self
             .visible_entry_range
             .clone()
@@ -6173,28 +6181,22 @@ impl ThreadView {
         let entries = self.thread.read(cx).entries();
         let start = visible_range.start.min(entries.len());
         let end = visible_range.end.min(entries.len());
-        let visible_span = end.saturating_sub(start);
-        let reference_ix = scroll_item_ix
-            .saturating_add(visible_span / 2)
-            .min(entries.len().saturating_sub(1));
+        let reference_ix = scroll_item_ix.min(entries.len().saturating_sub(1));
 
         entries
             .iter()
             .enumerate()
-            .skip(start)
-            .take(end.saturating_sub(start))
-            .filter_map(|(entry_ix, entry)| {
-                matches!(entry, AgentThreadEntry::UserMessage(_))
-                    .then_some((entry_ix, entry_ix.abs_diff(reference_ix)))
+            .take(reference_ix.saturating_add(1).min(entries.len()))
+            .rev()
+            .find_map(|(entry_ix, entry)| {
+                matches!(entry, AgentThreadEntry::UserMessage(_)).then_some(entry_ix)
             })
-            .min_by_key(|(_, distance)| *distance)
-            .map(|(entry_ix, _)| entry_ix)
             .or_else(|| {
                 entries
                     .iter()
                     .enumerate()
-                    .take(scroll_item_ix.saturating_add(1).min(entries.len()))
-                    .rev()
+                    .skip(start)
+                    .take(end.saturating_sub(start))
                     .find_map(|(entry_ix, entry)| {
                         matches!(entry, AgentThreadEntry::UserMessage(_)).then_some(entry_ix)
                     })
@@ -6237,20 +6239,6 @@ impl ThreadView {
         };
 
         let record_navigation = request.frames_remaining == RESPONSE_ANCHOR_SCROLL_RETRY_FRAMES;
-        if !record_navigation {
-            let current_scroll_top = self.list_state.logical_scroll_top();
-            if current_scroll_top.item_ix != request.entry_ix
-                || current_scroll_top.offset_in_item != px(0.0)
-            {
-                self.response_anchor_scroll_request = None;
-                self.active_response_anchor_entry_ix = self
-                    .visible_entry_range
-                    .clone()
-                    .and_then(|range| self.response_anchor_for_visible_range(range, cx));
-                cx.notify();
-                return;
-            }
-        }
 
         if !self.apply_response_anchor_scroll(request.entry_ix, record_navigation, window, cx) {
             self.response_anchor_scroll_request = None;
@@ -6259,6 +6247,8 @@ impl ThreadView {
 
         if request.frames_remaining == 0 {
             self.response_anchor_scroll_request = None;
+            self.active_response_anchor_entry_ix = Some(request.entry_ix);
+            cx.notify();
             return;
         }
 

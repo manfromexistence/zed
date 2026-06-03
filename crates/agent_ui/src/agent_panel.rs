@@ -1642,8 +1642,8 @@ impl AgentPanel {
             last_context_source: None,
             show_trust_workspace_message: false,
             is_active: false,
-            fullscreen_sources_rail_open: true,
-            fullscreen_progress_rail_open: true,
+            fullscreen_sources_rail_open: false,
+            fullscreen_progress_rail_open: false,
             collapsed_dx_launch_rail_sections: Self::default_collapsed_dx_launch_rail_sections(),
         };
 

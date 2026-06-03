@@ -377,7 +377,7 @@ test("core side panels expose dock split and close controls in visible headers",
   );
 });
 
-test("agent fullscreen uses agent rails while sidebar button remains dock-scoped", () => {
+test("agent fullscreen keeps editor docks while sidebar button remains dock-scoped", () => {
   const fullscreenCenter = functionBody(agentPanel, "render_fullscreen_agent_center");
   const messageEditor = functionBody(threadView, "render_message_editor");
   const renderEntry = functionBody(threadView, "render_entry");
@@ -401,11 +401,16 @@ test("agent fullscreen uses agent rails while sidebar button remains dock-scoped
   const applyScrollAnchor = functionBody(threadView, "apply_response_anchor_scroll");
   const isResponseAnchorEntry = functionBody(threadView, "is_response_anchor_entry");
   const visibleRangeAnchor = functionBody(threadView, "response_anchor_for_visible_range");
+  const responseAnchors = functionBody(threadView, "response_anchors");
+  const workspaceRenderDock = functionBody(workspace, "render_dock");
+  const workspaceRenderCenterScreen = functionBody(workspace, "render_center_screen");
   const profilesSupported = functionBody(conversationView, "profiles_supported");
   assert.match(agentPanel, /"agent-toolbar-toggle-sources-rail"/);
   assert.match(agentPanel, /"agent-toolbar-toggle-progress-rail"/);
   assert.match(agentPanel, /fullscreen_sources_rail_open/);
   assert.match(agentPanel, /fullscreen_progress_rail_open/);
+  assert.match(agentPanel, /fullscreen_sources_rail_open: false/);
+  assert.match(agentPanel, /fullscreen_progress_rail_open: false/);
   assert.match(agentPanel, /fn render_fullscreen_agent_center\(/);
   assert.match(agentPanel, /fn render_toolbar_response_indicator\(/);
   assert.match(agentPanel, /fn toolbar_response_indicator_segment\(/);
@@ -418,9 +423,16 @@ test("agent fullscreen uses agent rails while sidebar button remains dock-scoped
   assert.match(workspace, /content_flush_tiling: Tiling/);
   assert.match(workspace, /let content_tiling = Tiling\s*\{/);
   assert.match(workspace, /\.when\(!content_tiling\.right/);
-  assert.match(workspace, /WorkspaceSettings::get_global\(cx\)\.zoomed_padding\s*\|\|\s*self\.zoomed_is_agent_panel/);
+  assert.match(workspaceRenderDock, /self\.zoomed_position == Some\(position\) && !self\.zoomed_is_agent_panel/);
+  assert.match(workspaceRenderCenterScreen, /if self\.zoomed_is_agent_panel/);
+  assert.match(workspaceRenderCenterScreen, /"workspace-agent-screen-center"/);
+  assert.match(workspaceRenderCenterScreen, /\.child\(zoomed_view\)/);
+  assert.match(workspaceRenderCenterScreen, /self\.render_screen_carousel_center\(center, cx\)/);
+  assert.match(workspace, /\.children\(\(!self\.zoomed_is_agent_panel\)\.then\(\|\| \{/);
+  assert.doesNotMatch(workspace, /WorkspaceSettings::get_global\(cx\)\.zoomed_padding\s*\|\|\s*self\.zoomed_is_agent_panel/);
   assert.match(multiWorkspace, /client_side_decorations_with_content_flush/);
-  assert.match(multiWorkspace, /let agent_fullscreen_flush_right = workspace\.read\(cx\)\.zoomed_is_agent_panel\(\);/);
+  assert.match(multiWorkspace, /let agent_fullscreen_flush_right = false;/);
+  assert.doesNotMatch(multiWorkspace, /let agent_fullscreen_flush_right = workspace\.read\(cx\)\.zoomed_is_agent_panel\(\);/);
   assert.match(multiWorkspace, /right: agent_fullscreen_flush_right/);
   assert.match(dock, /workspace\.zoomed_is_agent_panel = panel\.is_agent_panel\(cx\)/);
   assert.match(dock, /workspace\.zoomed_is_agent_panel = panel\.read\(cx\)\.is_agent_panel\(\)/);
@@ -436,7 +448,8 @@ test("agent fullscreen uses agent rails while sidebar button remains dock-scoped
   assert.match(threadView, /this\.visible_entry_range = Some\(visible_range\.clone\(\)\)/);
   assert.match(
     threadView,
-    /if let Some\(request\) = this\.response_anchor_scroll_request[\s\S]*?scroll_top\.item_ix != request\.entry_ix[\s\S]*?scroll_top\.offset_in_item != px\(0\.0\)[\s\S]*?this\.response_anchor_scroll_request = None;/,
+    /if let Some\(request\) = this\.response_anchor_scroll_request[\s\S]*?let request_is_visible = visible_range\.contains\(&request\.entry_ix\);[\s\S]*?if request_is_visible \{[\s\S]*?this\.response_anchor_scroll_request = None;[\s\S]*?this\.active_response_anchor_entry_ix = Some\(request\.entry_ix\);[\s\S]*?preserve_response_anchor = true;[\s\S]*?\} else if scroll_top\.item_ix != request\.entry_ix/s,
+    "programmatic response-anchor retries should not cancel while the requested anchor is already visible",
   );
   assert.match(
     threadView,
@@ -461,21 +474,26 @@ test("agent fullscreen uses agent rails while sidebar button remains dock-scoped
   assert.doesNotMatch(visibleRangeAnchor, /\.take\(end\.saturating_add\(1\)\)/);
   const scrollPositionAnchor = functionBody(threadView, "response_anchor_for_scroll_position");
   assert.match(scrollPositionAnchor, /scroll_item_ix: usize/);
-  assert.match(scrollPositionAnchor, /let visible_span = end\.saturating_sub\(start\);/);
-  assert.match(scrollPositionAnchor, /let reference_ix = scroll_item_ix/);
-  assert.match(scrollPositionAnchor, /entry_ix\.abs_diff\(reference_ix\)/);
-  assert.match(scrollPositionAnchor, /\.min_by_key\(\|\(_, distance\)\| \*distance\)/);
-  assert.match(scrollPositionAnchor, /\.take\(scroll_item_ix\.saturating_add\(1\)\.min\(entries\.len\(\)\)\)/);
+  assert.doesNotMatch(scrollPositionAnchor, /visible_span/);
+  assert.match(scrollPositionAnchor, /let reference_ix = scroll_item_ix\.min\(entries\.len\(\)\.saturating_sub\(1\)\);/);
+  assert.doesNotMatch(scrollPositionAnchor, /entry_ix\.abs_diff\(reference_ix\)/);
+  assert.doesNotMatch(scrollPositionAnchor, /\.min_by_key/);
+  assert.match(scrollPositionAnchor, /\.take\(reference_ix\.saturating_add\(1\)\.min\(entries\.len\(\)\)\)/);
   assert.match(scrollPositionAnchor, /\.rev\(\)[\s\S]*?\.find_map/);
-  assert.match(scrollPositionAnchor, /\.skip\(start\)[\s\S]*?\.take\(end\.saturating_sub\(start\)\)[\s\S]*?\.min_by_key/);
+  assert.match(scrollPositionAnchor, /\.skip\(start\)[\s\S]*?\.take\(end\.saturating_sub\(start\)\)[\s\S]*?\.find_map/);
   assert.ok(
-    scrollPositionAnchor.indexOf(".skip(start)") <
-      scrollPositionAnchor.indexOf(".take(scroll_item_ix.saturating_add(1).min(entries.len()))"),
-    "active response marker selection should prefer the nearest visible prompt before prior logical-top prompt",
+    scrollPositionAnchor.indexOf(".take(reference_ix.saturating_add(1).min(entries.len()))") <
+      scrollPositionAnchor.indexOf(".skip(start)"),
+    "manual scroll marker selection should prefer the prompt governing the logical top before lower visible prompts",
   );
   assert.match(isResponseAnchorEntry, /matches!\(entry, AgentThreadEntry::UserMessage\(_\)\)/);
   assert.match(threadView, /active_response_anchor_entry_ix[\s\S]*?visible_entry_range[\s\S]*?logical_scroll_top\(\)\.item_ix/);
-  assert.match(threadView, /selected_prompt_ix[\s\S]*?response_anchor_scroll_request\.is_some\(\)/);
+  assert.match(responseAnchors, /let selected_prompt_ix = self[\s\S]*?active_response_anchor_entry_ix[\s\S]*?is_response_anchor_entry/);
+  assert.doesNotMatch(
+    responseAnchors,
+    /selected_prompt_ix[\s\S]*?response_anchor_scroll_request\.is_some\(\)/,
+    "active response marker state must not be ignored after a click request settles",
+  );
   assert.match(threadView, /let visible_prompt_ix = self[\s\S]*?response_anchor_for_visible_range\(range, cx\)/);
   assert.match(threadView, /let current_prompt_ix = selected_prompt_ix\.or\(visible_prompt_ix\)/);
   assert.match(threadView, /pub\(crate\) fn scroll_to_response_anchor\(/);
@@ -486,10 +504,10 @@ test("agent fullscreen uses agent rails while sidebar button remains dock-scoped
   assert.match(scrollAnchor, /frames_remaining: RESPONSE_ANCHOR_SCROLL_RETRY_FRAMES/);
   assert.match(scrollAnchor, /self\.apply_response_anchor_scroll_request\(window, cx\)/);
   assert.match(scrollRequest, /let record_navigation = request\.frames_remaining == RESPONSE_ANCHOR_SCROLL_RETRY_FRAMES;/);
-  assert.match(scrollRequest, /let current_scroll_top = self\.list_state\.logical_scroll_top\(\);/);
-  assert.match(scrollRequest, /current_scroll_top\.item_ix != request\.entry_ix/);
-  assert.match(scrollRequest, /current_scroll_top\.offset_in_item != px\(0\.0\)/);
+  assert.doesNotMatch(scrollRequest, /current_scroll_top/);
+  assert.doesNotMatch(scrollRequest, /offset_in_item != px\(0\.0\)/);
   assert.match(scrollRequest, /self\.response_anchor_scroll_request = None;/);
+  assert.match(scrollRequest, /self\.active_response_anchor_entry_ix = Some\(request\.entry_ix\);/);
   assert.match(scrollRequest, /window\.on_next_frame\(move \|window, cx\|/);
   assert.match(scrollRequest, /thread_view\.apply_response_anchor_scroll_request\(window, cx\)/);
   assert.match(applyScrollAnchor, /record_navigation: bool/);

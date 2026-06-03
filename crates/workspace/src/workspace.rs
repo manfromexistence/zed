@@ -8138,7 +8138,7 @@ impl Workspace {
         window: &mut Window,
         cx: &mut App,
     ) -> Option<Div> {
-        if self.zoomed_position == Some(position) {
+        if self.zoomed_position == Some(position) && !self.zoomed_is_agent_panel {
             return None;
         }
 
@@ -8208,6 +8208,32 @@ impl Workspace {
         }
 
         Some(container)
+    }
+
+    fn render_center_screen(
+        &self,
+        pane_render_context: &PaneRenderContext<'_>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        if self.zoomed_is_agent_panel
+            && let Some(zoomed_view) = self.zoomed.as_ref().and_then(|view| view.upgrade())
+        {
+            return div()
+                .id("workspace-agent-screen-center")
+                .size_full()
+                .min_w_0()
+                .overflow_hidden()
+                .bg(cx.theme().colors().background)
+                .child(zoomed_view)
+                .into_any_element();
+        }
+
+        let center = self
+            .center
+            .render(self.zoomed.as_ref(), pane_render_context, window, cx)
+            .into_any_element();
+        self.render_screen_carousel_center(center, cx)
     }
 
     pub fn for_window(window: &Window, cx: &App) -> Option<Entity<Workspace>> {
@@ -8997,17 +9023,10 @@ impl Render for Workspace {
                                                                     this.child(p.border_r_1())
                                                                 })
                                                                 .child({
-                                                                    let center = self
-                                                                        .center
-                                                                        .render(
-                                                                            self.zoomed.as_ref(),
-                                                                            &pane_render_context,
-                                                                            window,
-                                                                            cx,
-                                                                        )
-                                                                        .into_any_element();
-                                                                    self.render_screen_carousel_center(
-                                                                        center, cx,
+                                                                    self.render_center_screen(
+                                                                        &pane_render_context,
+                                                                        window,
+                                                                        cx,
                                                                     )
                                                                 })
                                                                 .when_some(
@@ -9071,18 +9090,10 @@ impl Render for Workspace {
                                                                             },
                                                                         )
                                                                         .child({
-                                                                            let center = self
-                                                                                .center
-                                                                                .render(
-                                                                                    self.zoomed
-                                                                                        .as_ref(),
-                                                                                    &pane_render_context,
-                                                                                    window,
-                                                                                    cx,
-                                                                                )
-                                                                                .into_any_element();
-                                                                            self.render_screen_carousel_center(
-                                                                                center, cx,
+                                                                            self.render_center_screen(
+                                                                                &pane_render_context,
+                                                                                window,
+                                                                                cx,
                                                                             )
                                                                         })
                                                                         .when_some(
@@ -9148,18 +9159,10 @@ impl Render for Workspace {
                                                                             },
                                                                         )
                                                                         .child({
-                                                                            let center = self
-                                                                                .center
-                                                                                .render(
-                                                                                    self.zoomed
-                                                                                        .as_ref(),
-                                                                                    &pane_render_context,
-                                                                                    window,
-                                                                                    cx,
-                                                                                )
-                                                                                .into_any_element();
-                                                                            self.render_screen_carousel_center(
-                                                                                center, cx,
+                                                                            self.render_center_screen(
+                                                                                &pane_render_context,
+                                                                                window,
+                                                                                cx,
                                                                             )
                                                                         })
                                                                         .when_some(
@@ -9209,17 +9212,10 @@ impl Render for Workspace {
                                                             this.child(p.border_r_1())
                                                         })
                                                         .child({
-                                                            let center = self
-                                                                .center
-                                                                .render(
-                                                                    self.zoomed.as_ref(),
-                                                                    &pane_render_context,
-                                                                    window,
-                                                                    cx,
-                                                                )
-                                                                .into_any_element();
-                                                            self.render_screen_carousel_center(
-                                                                center, cx,
+                                                            self.render_center_screen(
+                                                                &pane_render_context,
+                                                                window,
+                                                                cx,
                                                             )
                                                         })
                                                         .when_some(paddings.1, |this, p| {
@@ -9241,31 +9237,33 @@ impl Render for Workspace {
                                         )),
                                 }
                             })
-                            .children(self.zoomed.as_ref().and_then(|view| {
-                                let zoomed_view = view.upgrade()?;
-                                let div = div()
-                                    .occlude()
-                                    .absolute()
-                                    .overflow_hidden()
-                                    .border_color(colors.border)
-                                    .bg(colors.background)
-                                    .child(zoomed_view)
-                                    .inset_0()
-                                    .shadow_lg();
+                            .children((!self.zoomed_is_agent_panel).then(|| {
+                                self.zoomed.as_ref().and_then(|view| {
+                                    let zoomed_view = view.upgrade()?;
+                                    let div = div()
+                                        .occlude()
+                                        .absolute()
+                                        .overflow_hidden()
+                                        .border_color(colors.border)
+                                        .bg(colors.background)
+                                        .child(zoomed_view)
+                                        .inset_0()
+                                        .shadow_lg();
 
-                                if !WorkspaceSettings::get_global(cx).zoomed_padding
-                                    || self.zoomed_is_agent_panel
-                                {
-                                    return Some(div);
-                                }
+                                    if !WorkspaceSettings::get_global(cx).zoomed_padding {
+                                        return Some(div);
+                                    }
 
-                                Some(match self.zoomed_position {
-                                    Some(DockPosition::Left) => div.right_2().border_r_1(),
-                                    Some(DockPosition::Right) => div.left_2().border_l_1(),
-                                    Some(DockPosition::Bottom) => div.top_2().border_t_1(),
-                                    None => div.top_2().bottom_2().left_2().right_2().border_1(),
+                                    Some(match self.zoomed_position {
+                                        Some(DockPosition::Left) => div.right_2().border_r_1(),
+                                        Some(DockPosition::Right) => div.left_2().border_l_1(),
+                                        Some(DockPosition::Bottom) => div.top_2().border_t_1(),
+                                        None => {
+                                            div.top_2().bottom_2().left_2().right_2().border_1()
+                                        }
+                                    })
                                 })
-                            }))
+                            }).flatten())
                             .children(self.render_notifications(window, cx)),
                     )
                     .when(self.status_bar_visible(cx), |parent| {

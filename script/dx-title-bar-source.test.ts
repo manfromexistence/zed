@@ -62,7 +62,7 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
   const screenDock = functionBodyFrom(titleBarSource, "render_screen_dock");
   const agentScreenButton = functionBodyFrom(titleBarSource, "render_agent_screen_button");
   const agentScreenActive = functionBodyFrom(titleBarSource, "agent_screen_is_active");
-  const agentButtonIndex = screenDock.indexOf("render_agent_screen_button(cx)");
+  const agentButtonIndex = screenDock.indexOf("render_agent_screen_button(agent_screen_is_active, cx)");
   const editorButtonIndex = screenDock.indexOf("WorkspaceScreenKind::Editor", agentButtonIndex);
   const browserButtonIndex = screenDock.indexOf("WorkspaceScreenKind::Browser", editorButtonIndex);
   const terminalButtonIndex = screenDock.indexOf("WorkspaceScreenKind::Terminal", browserButtonIndex);
@@ -72,8 +72,25 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
   assert.ok(terminalButtonIndex > browserButtonIndex, "Browser should be third in the screen dock");
   assert.match(
     screenDock,
-    /\.child\(self\.render_agent_screen_button\(cx\)\)[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Editor,[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Browser,[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Terminal,[\s\S]*?\.children\(\s*extra_entries/s,
+    /\.child\(self\.render_agent_screen_button\(agent_screen_is_active, cx\)\)[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Editor,[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Browser,[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Terminal,[\s\S]*?\.children\(\s*extra_entries/s,
     "primary screen dock buttons must stay AI, Editor, Browser, Terminal before overflow entries",
+  );
+  assert.match(screenDock, /let agent_screen_is_active = self\.agent_screen_is_active\(cx\);/);
+  assert.match(screenDock, /&& !agent_screen_is_active/);
+  assert.match(
+    screenDock,
+    /WorkspaceScreenKind::Editor,\s*!agent_screen_is_active\s*&& active_screen_kind == WorkspaceScreenKind::Editor/s,
+    "editor dock button must not stay active while fullscreen AI is active",
+  );
+  assert.match(
+    screenDock,
+    /WorkspaceScreenKind::Browser,\s*!agent_screen_is_active\s*&& active_screen_kind == WorkspaceScreenKind::Browser/s,
+    "browser dock button must not stay active while fullscreen AI is active",
+  );
+  assert.match(
+    screenDock,
+    /WorkspaceScreenKind::Terminal,\s*!agent_screen_is_active\s*&& active_screen_kind == WorkspaceScreenKind::Terminal/s,
+    "terminal dock button must not stay active while fullscreen AI is active",
   );
   assert.match(
     titleBarSource,
@@ -90,7 +107,7 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
     /zed_actions::assistant::FocusAgentFullscreen\.boxed_clone\(\)/,
     "AI screen dock button should open the real Agent panel fullscreen action",
   );
-  assert.match(agentScreenButton, /toggle_state\(self\.agent_screen_is_active\(cx\)\)/);
+  assert.match(agentScreenButton, /toggle_state\(selected\)/);
   assert.match(titleBarSource, /fn agent_screen_is_active\(&self, cx: &App\) -> bool/);
   assert.match(agentScreenActive, /workspace\.read\(cx\)\.zoomed_is_agent_panel\(\)/);
   assert.doesNotMatch(agentScreenActive, /dock_at_position|visible_panel|agent_panel_is_active/);
