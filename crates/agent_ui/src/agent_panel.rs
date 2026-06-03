@@ -1698,7 +1698,7 @@ impl AgentPanel {
     pub fn focus_fullscreen(
         workspace: &mut Workspace,
         _: &FocusAgentFullscreen,
-        window: &mut Window,
+        _window: &mut Window,
         cx: &mut Context<Workspace>,
     ) {
         if workspace

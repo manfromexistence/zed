@@ -10493,7 +10493,7 @@ impl Render for ThreadView {
 
 fn composer_option_menu_row(option: ComposerOptionEntry) -> AnyElement {
     h_flex()
-        .id(("agent-composer-option", option.id))
+        .id(format!("agent-composer-option-{}", option.id))
         .min_w(rems(16.))
         .max_w(rems(26.))
         .gap_2()

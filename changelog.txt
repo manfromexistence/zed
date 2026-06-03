@@ -1,3 +1,16 @@
+[2026-06-03] - Agent UI Runtime Compile Repair
+
+FIXED:
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now gives composer option popover rows a GPUI-supported stable string element id instead of a tuple with a string payload.
+- `crates\agent_ui\src\agent_panel.rs` now marks the fullscreen Agent action's unused window argument intentionally, removing the warning caught during runtime validation.
+
+PASSED:
+- `node --test script\dx-workspace-ui-state-source.test.ts`
+- `CARGO_BUILD_JOBS=6 just run` built `zed` and the CLI companion, launched Zed once, and detected the main window.
+
+NOTES:
+- This was the authorized `just run` pass requested after the source-only edge-case work.
+
 [2026-06-03] - Agent Profile And Response Edge Hardening Follow-up
 
 FIXED:
