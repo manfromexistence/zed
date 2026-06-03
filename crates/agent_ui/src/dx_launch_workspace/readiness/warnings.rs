@@ -25,7 +25,7 @@ pub(super) fn launch_readiness_warning(snapshot: &DxLaunchReadinessSnapshot) -> 
             "dx-launch-readiness-fanout-review".into(),
             IconName::Warning,
             Color::Warning,
-            "Launch readiness packets report command fanout; keep import blocked.".to_string(),
+            "Launch readiness needs command-safety review before import.".to_string(),
         ))
     } else {
         None

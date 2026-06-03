@@ -54,7 +54,7 @@ pub(super) fn launch_contract_status_rows(
             "dx-launch-contract-fanout-review".into(),
             IconName::Warning,
             Color::Warning,
-            "Launch handoff reports command fanout; keep GPUI import blocked.".to_string(),
+            "Launch handoff needs command-safety review before agent import.".to_string(),
         ));
     } else {
         rows.push(

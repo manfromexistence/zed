@@ -15,7 +15,7 @@ pub(super) fn launch_audit_warning(
     } else if snapshot.command_fanout_count > 0 {
         Some((
             "dx-launch-audit-fanout-review".into(),
-            "Launch audit reports command fanout; keep final handoff blocked.".to_string(),
+            "Launch audit needs command-safety review before final handoff.".to_string(),
         ))
     } else {
         None

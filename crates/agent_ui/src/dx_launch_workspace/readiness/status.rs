@@ -13,7 +13,7 @@ pub(super) fn launch_readiness_status_row(
     if !snapshot.root_exists {
         return muted_card(
             format!(
-                "Missing source-owned launch examples: {}",
+                "Missing source-owned launch scenarios: {}",
                 snapshot.root.display()
             ),
             cx,

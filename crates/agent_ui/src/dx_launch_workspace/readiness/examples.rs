@@ -11,7 +11,7 @@ pub(super) fn launch_readiness_example_rows(
 
     for (ix, example) in snapshot.examples.iter().take(3).enumerate() {
         rows.push(metric_row(
-            format!("Example {}", ix + 1),
+            format!("Scenario {}", ix + 1),
             format!("{}: {} ({})", example.label, example.status, example.detail),
         ));
 

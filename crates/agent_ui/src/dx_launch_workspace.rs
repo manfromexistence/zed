@@ -496,13 +496,11 @@ fn rail_section(
                 .items_center()
                 .gap_1()
                 .py_0p5()
-                .child(
-                    Disclosure::new(format!("{id}-disclosure"), is_open).on_click(
-                        move |event, window, cx| {
-                            on_toggle(section, event, window, cx);
-                        },
-                    ),
-                )
+                .cursor_pointer()
+                .on_click(move |event, window, cx| {
+                    on_toggle(section, event, window, cx);
+                })
+                .child(Disclosure::new(format!("{id}-disclosure"), is_open))
                 .child(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
                 .child(Label::new(label).size(LabelSize::Small).color(Color::Muted))
                 .child(div().flex_1()),

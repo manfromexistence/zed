@@ -5929,7 +5929,11 @@ impl AgentPanel {
         )
         .icon_size(IconSize::Small)
         .toggle_state(self.fullscreen_sources_rail_open)
-        .tooltip(Tooltip::text("Show or hide sources"))
+        .tooltip(Tooltip::text(if self.fullscreen_sources_rail_open {
+            "Hide sources rail"
+        } else {
+            "Show sources rail"
+        }))
         .on_click(cx.listener(|this, _, _window, cx| {
             this.fullscreen_sources_rail_open = !this.fullscreen_sources_rail_open;
             cx.notify();
@@ -5940,7 +5944,11 @@ impl AgentPanel {
         )
         .icon_size(IconSize::Small)
         .toggle_state(self.fullscreen_progress_rail_open)
-        .tooltip(Tooltip::text("Show or hide progress"))
+        .tooltip(Tooltip::text(if self.fullscreen_progress_rail_open {
+            "Hide progress rail"
+        } else {
+            "Show progress rail"
+        }))
         .on_click(cx.listener(|this, _, _window, cx| {
             this.fullscreen_progress_rail_open = !this.fullscreen_progress_rail_open;
             cx.notify();
@@ -6953,7 +6961,7 @@ impl AgentPanel {
                 "dx-launch-audit-action",
                 IconName::ListTodo,
                 "Launch Audit",
-                "Review schemas, fixtures, smoke, and status examples.",
+                "Review schemas, fixtures, smoke, and launch scenarios.",
                 "Review Audit",
                 launch_audit_prompt(
                     &status.launch_audit,

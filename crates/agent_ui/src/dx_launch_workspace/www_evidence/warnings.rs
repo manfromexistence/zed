@@ -10,7 +10,7 @@ pub(super) fn www_launch_evidence_warning(
     } else if snapshot.present_count < snapshot.expected_count {
         Some((
             "dx-www-evidence-partial".into(),
-            "DX-WWW release evidence is partial; keep runtime-green claims gated.".to_string(),
+            "DX-WWW release evidence is partial; keep runtime status gated.".to_string(),
         ))
     } else {
         None

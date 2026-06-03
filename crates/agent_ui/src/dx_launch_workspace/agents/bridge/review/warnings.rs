@@ -19,8 +19,7 @@ pub(super) fn dx_agent_bridge_warning_row(snapshot: &DxAgentBridgeSnapshot) -> O
     } else if snapshot.release_gate.present && !snapshot.release_gate.no_command_fanout {
         Some(warning_row(
             "dx-agent-release-gate-fanout-review",
-            "DX Agents release gate reports command fanout; keep bridge import blocked."
-                .to_string(),
+            "DX Agents release gate needs command-safety review before import.".to_string(),
         ))
     } else if let Some(reason) = snapshot.release_gate.warning_reasons.first() {
         Some(warning_row(
@@ -35,7 +34,7 @@ pub(super) fn dx_agent_bridge_warning_row(snapshot: &DxAgentBridgeSnapshot) -> O
     } else if snapshot.import_summary.present && !snapshot.import_summary.no_command_fanout {
         Some(warning_row(
             "dx-agent-import-summary-fanout-review",
-            "DX Agents import summary reports command fanout; keep recovery controls disabled."
+            "DX Agents import summary needs command-safety review before recovery actions."
                 .to_string(),
         ))
     } else if let Some(reason) = snapshot.import_summary.warning_reasons.first() {

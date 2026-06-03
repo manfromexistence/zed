@@ -14,7 +14,7 @@ pub(super) fn launch_audit_status_rows(
 
     if !snapshot.root_exists {
         rows.push(muted_card(
-            format!("Missing launch example root: {}", snapshot.root.display()),
+            format!("Missing launch scenario root: {}", snapshot.root.display()),
             cx,
         ));
     }

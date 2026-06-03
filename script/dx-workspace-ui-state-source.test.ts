@@ -15,6 +15,18 @@ const titleBar = read("crates/title_bar/src/title_bar.rs");
 const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
 const threadView = read("crates/agent_ui/src/conversation_view/thread_view.rs");
 const dxLaunchWorkspace = read("crates/agent_ui/src/dx_launch_workspace.rs");
+const dxLaunchAuditSummary = read("crates/agent_ui/src/dx_launch_workspace/audit/summary.rs");
+const dxLaunchAuditStatus = read("crates/agent_ui/src/dx_launch_workspace/audit/status.rs");
+const dxLaunchAuditWarnings = read("crates/agent_ui/src/dx_launch_workspace/audit/warnings.rs");
+const dxLaunchContracts = read("crates/agent_ui/src/dx_launch_workspace/contracts.rs");
+const dxLaunchContractStatus = read("crates/agent_ui/src/dx_launch_workspace/contracts/status.rs");
+const dxLaunchReadinessExamples = read("crates/agent_ui/src/dx_launch_workspace/readiness/examples.rs");
+const dxLaunchReadinessStatus = read("crates/agent_ui/src/dx_launch_workspace/readiness/status.rs");
+const dxLaunchReadinessWarnings = read("crates/agent_ui/src/dx_launch_workspace/readiness/warnings.rs");
+const dxLaunchWwwWarnings = read("crates/agent_ui/src/dx_launch_workspace/www_evidence/warnings.rs");
+const dxAgentBridgeWarnings = read(
+  "crates/agent_ui/src/dx_launch_workspace/agents/bridge/review/warnings.rs",
+);
 const dxLaunchSourceRows = read("crates/agent_ui/src/dx_launch_workspace/sources/rows.rs");
 const dxLaunchSourceAttachments = read(
   "crates/agent_ui/src/dx_launch_workspace/sources/attachments.rs",
@@ -458,8 +470,10 @@ test("agent rails and project badges keep compact production layout", () => {
   const sourcesRail = functionBody(dxLaunchWorkspace, "render_sources_rail");
   const progressRail = functionBody(dxLaunchWorkspace, "render_right_rail");
   const diagnosticsMenu = functionBody(dxLaunchWorkspace, "diagnostics_menu");
+  const railSection = functionBody(dxLaunchWorkspace, "rail_section");
   const sourceRow = functionBody(dxLaunchSourceRows, "source_item_row");
   const sourceRowControls = functionBody(agentPanel, "render_dx_launch_source_row_controls");
+  const toolbar = functionBody(agentPanel, "render_toolbar");
   assert.match(dxLaunchWorkspace, /fn progress_summary\(/);
   assert.doesNotMatch(dxLaunchWorkspace, /fn render_response_controller\(/);
   assert.doesNotMatch(dxLaunchWorkspace, /fn response_indicator_segment\(/);
@@ -469,6 +483,10 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(dxLaunchWorkspace, /struct DxLaunchRailControls/);
   assert.match(dxLaunchWorkspace, /fn rail_section\(/);
   assert.match(dxLaunchWorkspace, /Disclosure::new\(format!\("\{id\}-disclosure"\), is_open\)/);
+  assert.match(railSection, /\.cursor_pointer\(\)/);
+  assert.match(railSection, /\.on_click\(move \|event, window, cx\| \{/);
+  assert.match(railSection, /on_toggle\(section, event, window, cx\)/);
+  assert.doesNotMatch(railSection, /Disclosure::new\(format!\("\{id\}-disclosure"\), is_open\)\.on_click/);
   assert.match(dxLaunchWorkspace, /"dx-progress-summary-section"/);
   assert.match(dxLaunchWorkspace, /"dx-environment-section"/);
   assert.match(dxLaunchWorkspace, /"dx-subagents-section"/);
@@ -484,6 +502,11 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(agentPanel, /DxLaunchRailSection::WorkspaceState/);
   assert.match(agentPanel, /DxLaunchRailSection::Readiness/);
   assert.match(agentPanel, /toggle_dx_launch_rail_section/);
+  assert.match(toolbar, /"Hide sources rail"/);
+  assert.match(toolbar, /"Show sources rail"/);
+  assert.match(toolbar, /"Hide progress rail"/);
+  assert.match(toolbar, /"Show progress rail"/);
+  assert.doesNotMatch(toolbar, /Show or hide sources|Show or hide progress/);
   assert.match(agentPanel, /DxLaunchRailControls\s*\{/);
   assert.match(agentPanel, /render_workspace_chrome\([\s\S]*rail_controls/);
   assert.doesNotMatch(dxLaunchWorkspace, /section_title\("Guided Actions"/);
@@ -547,6 +570,36 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.doesNotMatch(dxLaunchWorkspace, /source bridge wired|source bridge missing|No automation receipts|Fresh proof|worktree\(s\)|task\(s\)/);
   assert.match(dxLaunchWorkspace, /"Preview Bridge"/);
   assert.match(dxLaunchWorkspace, /"Attachable"/);
+  assert.match(dxLaunchAuditSummary, /"Scenario"/);
+  assert.match(dxLaunchAuditSummary, /"Scenario Agents"/);
+  assert.match(dxLaunchReadinessExamples, /format!\("Scenario \{\}", ix \+ 1\)/);
+  assert.match(dxLaunchAuditStatus, /Missing launch scenario root/);
+  assert.match(dxLaunchReadinessStatus, /Missing source-owned launch scenarios/);
+  assert.match(dxLaunchContracts, /\{\} packets, \{\} fixture families/);
+  assert.match(dxLaunchContracts, /\{\} commands, \{\} actions/);
+  assert.match(dxLaunchAuditWarnings, /command-safety review before final handoff/);
+  assert.match(dxLaunchContractStatus, /command-safety review before agent import/);
+  assert.match(dxLaunchReadinessWarnings, /command-safety review before import/);
+  assert.match(dxLaunchWwwWarnings, /runtime status gated/);
+  assert.match(dxAgentBridgeWarnings, /command-safety review before import/);
+  assert.match(dxAgentBridgeWarnings, /command-safety review before recovery actions/);
+  assert.match(agentPanel, /Review schemas, fixtures, smoke, and launch scenarios/);
+  assert.doesNotMatch(
+    [
+      dxLaunchAuditSummary,
+      dxLaunchAuditStatus,
+      dxLaunchReadinessExamples,
+      dxLaunchReadinessStatus,
+      dxLaunchContracts,
+      dxLaunchAuditWarnings,
+      dxLaunchContractStatus,
+      dxLaunchReadinessWarnings,
+      dxLaunchWwwWarnings,
+      dxAgentBridgeWarnings,
+      agentPanel,
+    ].join("\n"),
+    /"Example"|"Example Agents"|"Example Tokens"|"Example Discovery"|Missing launch example root|Missing source-owned launch examples|fixture familie\(s\)|command fanout|GPUI import|runtime-green|bridge import|recovery controls|status examples/,
+  );
   assert.doesNotMatch(dxLaunchWorkspace, /section_title\("Token And Tool Slots"/);
   assert.doesNotMatch(dxLaunchWorkspace, /fn token_meter_slots\(/);
   assert.doesNotMatch(dxLaunchWorkspace, /fn background_task_state\(/);

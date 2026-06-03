@@ -1,3 +1,21 @@
+[2026-06-03] - Agent Rail Interaction And Copy Polish
+
+CHANGED:
+- `crates\agent_ui\src\dx_launch_workspace.rs` now lets each floating rail section toggle from the full header row while keeping the disclosure glyph as the visual state indicator.
+- `crates\agent_ui\src\agent_panel.rs` now uses state-aware fullscreen rail tooltips and changes the launch-audit card copy from status examples to launch scenarios.
+- `crates\agent_ui\src\dx_launch_workspace\audit\summary.rs`, `audit\status.rs`, `readiness\examples.rs`, and `readiness\status.rs` now use Scenario language instead of visible Example/example wording.
+- `crates\agent_ui\src\dx_launch_workspace\contracts.rs`, `audit\warnings.rs`, `contracts\status.rs`, `readiness\warnings.rs`, `www_evidence\warnings.rs`, and `agents\bridge\review\warnings.rs` now use professional packet/count, command-safety, runtime-status, import, and recovery-action language instead of internal fanout/runtime-green/GPUI wording.
+- `script\dx-workspace-ui-state-source.test.ts` now guards the full-header rail toggle behavior, state-aware tooltips, scenario labels, and operator-facing rail warning copy.
+- `todo.txt` records the focused Agent rail interaction/copy polish for handoff.
+
+PASSED:
+- `rustfmt --edition 2024 --check` across the touched Agent rail Rust files.
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-workspace-ui-state-source.test.ts` with 19/19 passing.
+
+NOTES:
+- `just run`, Cargo, build, and runtime/WebView validation were not run in this source-polish pass.
+- `DX.txt` remains an unrelated scratch/editor change and is intentionally left untouched.
+
 [2026-06-03] - Tool Sidebar And Style Polish
 
 CHANGED:

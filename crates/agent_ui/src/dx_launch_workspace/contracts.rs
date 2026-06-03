@@ -34,14 +34,14 @@ pub(super) fn launch_contract_state(snapshot: &DxLaunchContractSnapshot, cx: &Ap
         .child(metric_row(
             "Packets",
             format!(
-                "{} packet(s), {} fixture familie(s)",
+                "{} packets, {} fixture families",
                 snapshot.packet_count, snapshot.fixture_family_count
             ),
         ))
         .child(metric_row(
             "Commands",
             format!(
-                "{} command(s), {} action(s)",
+                "{} commands, {} actions",
                 snapshot.command_count, snapshot.action_count
             ),
         ))
