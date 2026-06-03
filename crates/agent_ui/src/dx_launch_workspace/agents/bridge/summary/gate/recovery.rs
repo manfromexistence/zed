@@ -19,7 +19,7 @@ pub(super) fn dx_agent_bridge_gate_recovery_rows(
         metric_row(
             "Gate Recovery",
             format!(
-                "{} via {}, {} fixture(s), {}",
+                "{} via {}, {} fixtures, {}",
                 snapshot.release_gate.recovery_controls_status,
                 snapshot.release_gate.recovery_render_first,
                 snapshot.release_gate.recovery_fixture_count,
@@ -27,7 +27,7 @@ pub(super) fn dx_agent_bridge_gate_recovery_rows(
             ),
         ),
         metric_row(
-            "Gate Fanout",
+            "Gate Command Safety",
             if snapshot.release_gate.no_command_fanout {
                 "none".to_string()
             } else {

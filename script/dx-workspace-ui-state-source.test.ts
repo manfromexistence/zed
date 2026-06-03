@@ -598,7 +598,7 @@ test("agent rails and project badges keep compact production layout", () => {
       dxAgentBridgeWarnings,
       agentPanel,
     ].join("\n"),
-    /"Example"|"Example Agents"|"Example Tokens"|"Example Discovery"|Missing launch example root|Missing source-owned launch examples|fixture familie\(s\)|command fanout|GPUI import|runtime-green|bridge import|recovery controls|status examples/,
+    /"Example"|"Example Agents"|"Example Tokens"|"Example Discovery"|Missing launch example root|Missing source-owned launch examples|fixture\(s\)|fixture familie\(s\)|packet\(s\)|command fanout|GPUI import|runtime-green|bridge import|recovery controls|status examples/,
   );
   assert.doesNotMatch(dxLaunchWorkspace, /section_title\("Token And Tool Slots"/);
   assert.doesNotMatch(dxLaunchWorkspace, /fn token_meter_slots\(/);

@@ -56,14 +56,14 @@ impl MediaMetadataProbePlan {
             .count();
 
         let safety = if self.is_non_executing_managed_plan() {
-            "no tool execution, no project writes"
+            "metadata will stay in the managed cache"
         } else {
-            "metadata plan needs review"
+            "metadata needs review before refresh"
         };
         let cap = if self.cap_hit { ", capped" } else { "" };
 
         format!(
-            "Metadata needed: {duration_count} durations, {center_frame_count} center frames ({planned_video_count} video, {planned_audio_count} audio{cap}; {safety})"
+            "Some media details are unavailable: {duration_count} durations, {center_frame_count} thumbnails ({planned_video_count} video, {planned_audio_count} audio{cap}; {safety})"
         )
     }
 

@@ -187,7 +187,7 @@ test("workspace shortcut grid persists user-pinned entries by screen and project
   );
   assert.match(
     gridEntries,
-    /let pinned_entries = self\.pinned_grid_entries\(&context\);[\s\S]*let generated_entries = self\.generated_grid_entries\(kind, root_path, cx\);/,
+    /let pinned_entries = self\.pinned_grid_entries\(&context, cx\);[\s\S]*let generated_entries = self\.generated_grid_entries\(kind, root_path, cx\);/,
     "grid entries must place persisted user-pinned shortcuts before generated suggestions",
   );
   assert.match(
@@ -331,7 +331,7 @@ test("DX launch workspace delegates Launch Audit rail rendering", () => {
   assert.doesNotMatch(audit, /dx-launch-audit-fanout-review/);
   assert.match(auditStatus, /pub\(super\) fn launch_audit_status_rows/);
   assert.match(auditStatus, /DxLaunchAuditSnapshot/);
-  assert.match(auditStatus, /Missing launch example root/);
+  assert.match(auditStatus, /Missing launch scenario root/);
   assert.match(auditStatus, /Missing \{label\}/);
   assert.match(auditStatus, /schemas_path/);
   assert.match(auditStatus, /fixtures_path/);
@@ -584,7 +584,7 @@ test("DX launch workspace delegates Launch Gate rail rendering", () => {
   assert.match(readinessExamples, /pub\(super\) fn launch_readiness_example_rows/);
   assert.match(readinessExamples, /DxLaunchReadinessSnapshot/);
   assert.match(readinessExamples, /snapshot\.examples\.iter\(\)\.take\(3\)/);
-  assert.match(readinessExamples, /Example \{\}/);
+  assert.match(readinessExamples, /Scenario \{\}/);
   assert.match(readinessExamples, /Next \{\}/);
   assert.match(readinessExamples, /use super::super::metric_row/);
   assert.match(readinessSummary, /pub\(super\) fn launch_readiness_summary_rows/);
@@ -596,7 +596,7 @@ test("DX launch workspace delegates Launch Gate rail rendering", () => {
   assert.match(readinessStatus, /pub\(super\) fn launch_readiness_status_row/);
   assert.match(readinessStatus, /DxLaunchReadinessSnapshot/);
   assert.match(readinessStatus, /launch_readiness_warning\(snapshot\)/);
-  assert.match(readinessStatus, /Missing source-owned launch examples/);
+  assert.match(readinessStatus, /Missing source-owned launch scenarios/);
   assert.match(readinessStatus, /snapshot\.next_action\.clone\(\)/);
   assert.match(readinessStatus, /use super::warnings::launch_readiness_warning/);
   assert.match(readinessStatus, /use super::super::muted_card/);
@@ -895,7 +895,7 @@ test("DX launch workspace delegates agents and source rails", () => {
   assert.match(agentBridgeSummaryGate, /rows\.extend\(dx_agent_bridge_gate_recovery_rows\(snapshot\)\)/);
   assert.doesNotMatch(agentBridgeSummaryGate, /metric_row\(\s*"Gate Action"/);
   assert.doesNotMatch(agentBridgeSummaryGate, /metric_row\(\s*"Gate Recovery"/);
-  assert.doesNotMatch(agentBridgeSummaryGate, /metric_row\(\s*"Gate Fanout"/);
+  assert.doesNotMatch(agentBridgeSummaryGate, /metric_row\(\s*"Gate Command Safety"/);
   assert.doesNotMatch(agentBridgeSummaryGate, /release_gate\.recovery_counts\.label\(\)/);
   assert.doesNotMatch(agentBridgeSummaryGate, /release_gate\.no_command_fanout/);
   assert.match(
@@ -904,7 +904,7 @@ test("DX launch workspace delegates agents and source rails", () => {
   );
   assert.match(agentBridgeSummaryGateRecovery, /metric_row\(\s*"Gate Action"/);
   assert.match(agentBridgeSummaryGateRecovery, /metric_row\(\s*"Gate Recovery"/);
-  assert.match(agentBridgeSummaryGateRecovery, /metric_row\(\s*"Gate Fanout"/);
+  assert.match(agentBridgeSummaryGateRecovery, /metric_row\(\s*"Gate Command Safety"/);
   assert.match(agentBridgeSummaryGateRecovery, /release_gate\.recovery_counts\.label\(\)/);
   assert.match(agentBridgeSummaryGateRecovery, /release_gate\.no_command_fanout/);
   assert.match(agentBridgeSummaryGateRecovery, /use super::super::super::super::super::metric_row/);
@@ -1104,10 +1104,11 @@ test("DX launch workspace delegates agents and source rails", () => {
     /pub\(in crate::dx_launch_workspace\) fn source_attachment_state/,
   );
   assert.match(sourceAttachments, /DxSourceAttachmentSummary/);
-  assert.match(sourceAttachments, /Attach-ready/);
+  assert.match(sourceAttachments, /Attachable/);
+  assert.match(sourceAttachments, /No attachable sources found/);
   assert.match(sourceAttachments, /Produced media/);
   assert.match(sourceAttachments, /Restore previews/);
-  assert.match(sourceAttachments, /Create a source-pack or media receipt first/);
+  assert.match(sourceAttachments, /Source pack or media receipt required for attachments/);
   assert.match(sourceAttachments, /use super::super::\{metric_row, muted_card\}/);
   assert.doesNotMatch(sources, /pub\(super\) fn receipt_source_state/);
   assert.doesNotMatch(sources, /DxReceiptSnapshot/);
@@ -1120,7 +1121,8 @@ test("DX launch workspace delegates agents and source rails", () => {
   assert.match(sourceReceipts, /DxReceiptSnapshot/);
   assert.match(sourceReceipts, /latest-receipt-\{ix\}/);
   assert.match(sourceReceipts, /IconName::FileTextOutlined/);
-  assert.match(sourceReceipts, /Receipts not found/);
+  assert.match(sourceReceipts, /Receipt directory not found/);
+  assert.match(sourceReceipts, /No DX receipts found/);
   assert.match(sourceReceipts, /use super::super::\{metric_row, muted_card, source_row\}/);
   assert.match(sourceRows, /use super::drilldowns::source_receipt_drilldown_rows/);
   assert.match(sourceRows, /use super::kinds::source_kind_icon/);

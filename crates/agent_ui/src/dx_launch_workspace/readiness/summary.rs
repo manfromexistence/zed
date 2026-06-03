@@ -22,7 +22,7 @@ pub(super) fn launch_readiness_summary_rows(
         metric_row(
             "Import",
             format!(
-                "{} packet(s), {}",
+                "{} packets, {}",
                 snapshot.import_summary_count,
                 snapshot.import_status_counts.summary()
             ),
@@ -30,7 +30,7 @@ pub(super) fn launch_readiness_summary_rows(
         metric_row(
             "Release Gate",
             format!(
-                "{} packet(s), {}",
+                "{} packets, {}",
                 snapshot.release_gate_count,
                 snapshot.release_gate_status_counts.summary()
             ),
@@ -38,7 +38,7 @@ pub(super) fn launch_readiness_summary_rows(
         metric_row(
             "Fallback",
             format!(
-                "{} packet(s), {}",
+                "{} packets, {}",
                 snapshot.fallback_drill_count,
                 snapshot.fallback_status_counts.summary()
             ),

@@ -27,14 +27,14 @@ pub(super) fn dx_agent_bridge_import_rows(snapshot: &DxAgentBridgeSnapshot) -> V
         metric_row(
             "Recovery",
             format!(
-                "{} / {} fixture(s) / {}",
+                "{} / {} fixtures / {}",
                 snapshot.import_summary.recovery_controls_status,
                 snapshot.import_summary.recovery_fixture_count,
                 snapshot.import_summary.recovery_counts.label()
             ),
         ),
         metric_row(
-            "Command Fanout",
+            "Command Safety",
             if snapshot.import_summary.no_command_fanout {
                 "none".to_string()
             } else {

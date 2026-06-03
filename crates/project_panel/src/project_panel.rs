@@ -4547,9 +4547,16 @@ impl ProjectPanel {
         let hide_gitignore = settings.hide_gitignore;
         let sort_mode = settings.sort_mode;
         let sort_order = settings.sort_order;
-        let active_media_folder_for_visibility = self
-            .active_media_folder_for_selection(cx)
-            .map(|folder| (folder.worktree_id, folder.entry_id));
+        let media_preview_enabled = {
+            let project = self.project.read(cx);
+            project.is_local() || project.is_via_wsl_with_host_interop(cx)
+        };
+        let active_media_folder_for_visibility = media_preview_enabled
+            .then(|| {
+                self.active_media_folder_for_selection(cx)
+                    .map(|folder| (folder.worktree_id, folder.entry_id))
+            })
+            .flatten();
         let active_media_shelf_entry_ids: HashSet<ProjectEntryId> =
             active_media_folder_for_visibility
                 .as_ref()
@@ -4911,7 +4918,8 @@ impl ProjectPanel {
                             if entry_is_visible
                                 && entry.kind.is_dir()
                                 && expanded_dir_ids.binary_search(&entry.id).is_ok()
-                                && (is_active_media_folder
+                                    && media_preview_enabled
+                                    && (is_active_media_folder
                                     || media_preview_updates.len()
                                         < MAX_PROJECT_PANEL_BACKGROUND_MEDIA_PREVIEW_FOLDERS)
                             {
@@ -7921,7 +7929,7 @@ impl Render for ProjectPanel {
         .then(|| {
             self.render_selected_entries_toolbar(selected_entry_count, is_read_only, is_remote, cx)
         });
-        let active_media_preview = has_worktree
+        let active_media_preview = (has_worktree && is_local_or_wsl)
             .then(|| self.top_folder_media_preview(cx))
             .flatten();
         let panel_settings = ProjectPanelSettings::get_global(cx);

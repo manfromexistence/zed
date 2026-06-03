@@ -469,7 +469,9 @@ fn media_shelf_card_container(
         } else {
             colors.element_background
         })
-        .hover(|style| style.bg(colors.element_hover))
+        .when(!is_selected, |this| {
+            this.hover(|style| style.bg(colors.element_hover))
+        })
         .tooltip(move |_window, cx| {
             Tooltip::with_meta(tooltip_title.clone(), None, tooltip_meta.clone(), cx)
         })
@@ -695,7 +697,9 @@ fn media_gallery_card_container(
         } else {
             colors.element_background
         })
-        .hover(|style| style.bg(colors.element_hover))
+        .when(!is_selected, |this| {
+            this.hover(|style| style.bg(colors.element_hover))
+        })
         .tooltip(move |_window, cx| {
             Tooltip::with_meta(tooltip_title.clone(), None, tooltip_meta.clone(), cx)
         })
@@ -714,17 +718,22 @@ fn media_preview_card_tooltip_meta(item: &MediaPreviewItem) -> String {
     match item.kind {
         MediaPreviewKind::Image => format!("Size: {size_label}"),
         MediaPreviewKind::Video => {
-            let time_label = item.duration_label.as_deref().unwrap_or("Time unavailable");
+            let time_label = item
+                .duration_label
+                .as_deref()
+                .unwrap_or("Duration unavailable");
             if let Some(preview) = item.video_frame_preview.as_ref() {
                 let frame_label = video_frame_preview_label(preview);
                 format!("{frame_label} / Time: {time_label} / Size: {size_label}")
             } else {
-                format!("Frame unavailable / Time: {time_label} / Size: {size_label}")
+                format!("Thumbnail unavailable / Time: {time_label} / Size: {size_label}")
             }
         }
         MediaPreviewKind::Audio => format!(
             "Time: {} / Size: {size_label}",
-            item.duration_label.as_deref().unwrap_or("Time unavailable")
+            item.duration_label
+                .as_deref()
+                .unwrap_or("Duration unavailable")
         ),
     }
 }
@@ -888,8 +897,8 @@ fn video_frame_preview_kind_for_rank(rank: u8) -> VideoFramePreviewKind {
 
 fn video_frame_preview_label(preview: &VideoFramePreview) -> &'static str {
     match preview.kind {
-        VideoFramePreviewKind::Center => "Center frame",
-        VideoFramePreviewKind::Preview => "Frame preview",
+        VideoFramePreviewKind::Center => "Center thumbnail",
+        VideoFramePreviewKind::Preview => "Thumbnail",
     }
 }
 

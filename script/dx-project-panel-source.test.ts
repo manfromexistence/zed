@@ -389,7 +389,7 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   );
   assert.match(
     updateVisibleEntries,
-    /background_spawn\(async move \{[\s\S]*let mut active_media_shelf_entry_ids = active_media_shelf_entry_ids;[\s\S]*let mut media_preview_updates = Vec::new\(\);[\s\S]*let is_active_media_folder =[\s\S]*active_media_folder_for_visibility == Some\(cache_key\);[\s\S]*is_active_media_folder[\s\S]*MAX_PROJECT_PANEL_BACKGROUND_MEDIA_PREVIEW_FOLDERS[\s\S]*match generated_media_metadata\.get\(&cache_key\)[\s\S]*build_folder_media_preview_with_generated_metadata\([\s\S]*&absolute_path,[\s\S]*children,[\s\S]*Some\(generated_metadata\)[\s\S]*\)[\s\S]*build_folder_media_preview\([\s\S]*&absolute_path,[\s\S]*children,[\s\S]*\)[\s\S]*active_media_shelf_entry_ids\.extend\([\s\S]*preview\.items\.iter\(\)\.map\(\|item\| item\.entry_id\)[\s\S]*media_preview_updates\.push\(\(cache_key, preview\)\)[\s\S]*\(new_state, media_preview_updates, folder_file_count_updates\)/,
+    /background_spawn\(async move \{[\s\S]*let mut active_media_shelf_entry_ids = active_media_shelf_entry_ids;[\s\S]*let mut media_preview_updates = Vec::new\(\);[\s\S]*let is_active_media_folder =[\s\S]*active_media_folder_for_visibility == Some\(cache_key\);[\s\S]*media_preview_enabled[\s\S]*is_active_media_folder[\s\S]*MAX_PROJECT_PANEL_BACKGROUND_MEDIA_PREVIEW_FOLDERS[\s\S]*match generated_media_metadata\.get\(&cache_key\)[\s\S]*build_folder_media_preview_with_generated_metadata\([\s\S]*&absolute_path,[\s\S]*children,[\s\S]*Some\(generated_metadata\)[\s\S]*\)[\s\S]*build_folder_media_preview\([\s\S]*&absolute_path,[\s\S]*children,[\s\S]*\)[\s\S]*active_media_shelf_entry_ids\.extend\([\s\S]*preview\.items\.iter\(\)\.map\(\|item\| item\.entry_id\)[\s\S]*media_preview_updates\.push\(\(cache_key, preview\)\)[\s\S]*\(new_state, media_preview_updates, folder_file_count_updates\)/,
     "media preview cache misses must be warmed inside the visible-entry background task",
   );
   assert.match(
@@ -486,7 +486,7 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   );
   assert.match(
     updateVisibleEntries,
-    /let active_media_folder_for_visibility = self[\s\S]*active_media_folder_for_selection\(cx\)[\s\S]*map\(\|folder\| \(folder\.worktree_id, folder\.entry_id\)\)/,
+    /let media_preview_enabled =[\s\S]*project\.is_local\(\) \|\| project\.is_via_wsl_with_host_interop\(cx\)[\s\S]*let active_media_folder_for_visibility =[\s\S]*media_preview_enabled[\s\S]*\.then[\s\S]*active_media_folder_for_selection\(cx\)[\s\S]*map\(\|folder\| \(folder\.worktree_id, folder\.entry_id\)\)/,
     "visible-entry derivation must know which active folder is represented by the bottom media shelf",
   );
   assert.match(
@@ -524,10 +524,15 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   );
   assertBefore({
     body: renderProjectPanel,
-    before: /let active_media_preview = has_worktree/,
+    before: /let active_media_preview = \(has_worktree && is_local_or_wsl\)/,
     after: /let panel_settings = ProjectPanelSettings::get_global\(cx\);/,
     message: "active media shelf lookup must finish before panel rendering settings are applied",
   });
+  assert.match(
+    renderProjectPanel,
+    /\(has_worktree && is_local_or_wsl\)[\s\S]*self\.top_folder_media_preview\(cx\)/,
+    "media shelf thumbnails must only render for local or WSL-backed worktrees",
+  );
   assertBefore({
     body: renderProjectPanel,
     before: /media_preview::render_folder_media_shelf/,
@@ -1045,12 +1050,12 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     mediaPreviewCardTooltipMeta,
-    /let size_label = media_size_label\(item\.size\);[\s\S]*Time unavailable[\s\S]*Size: \{size_label\}/,
+    /let size_label = media_size_label\(item\.size\);[\s\S]*Duration unavailable[\s\S]*Size: \{size_label\}/,
     "media hover details must include snapshot size and manifest duration with an honest unavailable state",
   );
   assert.match(
     mediaPreviewCardTooltipMeta,
-    /Frame unavailable/,
+    /Thumbnail unavailable/,
     "video hover details must not imply a background frame job exists when no frame preview is available",
   );
   assert.doesNotMatch(
@@ -1075,7 +1080,7 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     videoFramePreviewLabel,
-    /VideoFramePreviewKind::Center[\s\S]*"Center frame"[\s\S]*VideoFramePreviewKind::Preview[\s\S]*"Frame preview"/,
+    /VideoFramePreviewKind::Center[\s\S]*"Center thumbnail"[\s\S]*VideoFramePreviewKind::Preview[\s\S]*"Thumbnail"/,
     "video hover details must label center/middle frames separately from generic preview frames",
   );
   assert.match(

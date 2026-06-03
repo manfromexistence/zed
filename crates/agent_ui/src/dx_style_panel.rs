@@ -328,8 +328,9 @@ fn scan_dx_style_panel() -> DxStylePanelSnapshot {
                     && text.contains("generatorForContext")
                     && text.contains("orderedCatalog")
                     && text.contains("suggested_generator")
-                    && text.contains("Review source")
-                    && text.contains("Apply gated")
+                    && text.contains("sourceApplyReviewReady")
+                    && text.contains("sourceApplyReviewBlocker")
+                    && text.contains("reviewApplyButton")
             })
             .unwrap_or_default()
         && dx_style_css_declaration_dry_run_script_text

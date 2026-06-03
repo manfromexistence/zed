@@ -34,7 +34,7 @@ pub(super) fn dx_agent_bridge_gate_rows(snapshot: &DxAgentBridgeSnapshot) -> Vec
         metric_row(
             "Gate Packets",
             format!(
-                "{} packet(s) / {} fixture(s)",
+                "{} packets / {} fixture families",
                 snapshot.release_gate.packet_count, snapshot.release_gate.fixture_family_count
             ),
         ),

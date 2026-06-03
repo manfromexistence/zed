@@ -83,7 +83,7 @@ pub(super) fn style_context_card(
             this.child(metric("Span", span))
         })
         .child(metric("Apply", apply_gate_state_label(&gate.state)))
-        .child(metric("Gate", gate.reason.clone()))
+        .child(metric("Gate", apply_gate_reason_label(&gate.state)))
         .into_any_element()
 }
 
@@ -120,7 +120,7 @@ pub(super) fn readiness_card(snapshot: &DxStylePanelSnapshot, cx: &App) -> AnyEl
             snapshot.readiness.receipt_count.to_string(),
         ))
         .child(
-            Label::new(snapshot.next_action.clone())
+            Label::new(snapshot.readiness.next_action.clone())
                 .size(LabelSize::XSmall)
                 .color(Color::Muted)
                 .truncate(),
@@ -147,5 +147,17 @@ fn apply_gate_state_label(state: &str) -> &'static str {
         "needs_matching_active_source_receipt" => "Needs matching receipt",
         "needs_editor_write_bridge" => "Needs editor bridge",
         _ => "Review required",
+    }
+}
+
+fn apply_gate_reason_label(state: &str) -> &'static str {
+    match state {
+        "ready_for_explicit_apply" => "Trusted review is ready",
+        "needs_static_style_token" => "Place the cursor on a class token.",
+        "needs_active_source_digest" => "Source digest is unavailable.",
+        "needs_trusted_dry_run_receipt" => "Generate a trusted dry-run receipt.",
+        "needs_matching_active_source_receipt" => "Receipt does not match this source span.",
+        "needs_editor_write_bridge" => "Editor write bridge is gated.",
+        _ => "Review the source apply gate.",
     }
 }

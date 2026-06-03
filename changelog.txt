@@ -1,3 +1,20 @@
+[2026-06-03] - Final UI Polish Source Slice
+
+CHANGED:
+- `crates\agent_ui\src\dx_style_panel.rs` now treats the Web Preview style bridge as ready only when stable source-apply review functions and IPC markers are present, instead of coupling native readiness to visible button text.
+- `crates\agent_ui\src\dx_style_panel\panel_cards.rs` now shows short operator-facing apply-gate labels and uses the readiness snapshot's own next action in the readiness card.
+- `crates\project_panel\src\project_panel.rs`, `crates\project_panel\src\media_preview.rs`, and `crates\project_panel\src\media_preview\metadata_probe.rs` now keep media preview warming/rendering to local or WSL-backed worktrees, preserve selected media-card hover state, and use thumbnail/duration labels instead of implementation-oriented media metadata text.
+- Agent bridge/readiness summary rows now use professional plural copy and command-safety wording instead of parenthetical packet/fixture/command labels.
+- Source guard tests now cover the stable Style readiness markers, local/WSL media preview gating, updated media labels, and current Agent/source rail copy.
+
+PASSED:
+- `rustfmt --edition 2024 --check` across the touched Rust files.
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-style-panel-source.test.ts script\dx-project-panel-source.test.ts script\dx-launch-workspace-source.test.ts script\dx-workspace-ui-state-source.test.ts` with 57/57 passing.
+
+NOTES:
+- `just run`, Cargo, build, and runtime/WebView validation have not been run yet in this final source-polish slice.
+- `DX.txt` remains an unrelated scratch/editor change and is intentionally left untouched.
+
 [2026-06-03] - Agent Rail Interaction And Copy Polish
 
 CHANGED:

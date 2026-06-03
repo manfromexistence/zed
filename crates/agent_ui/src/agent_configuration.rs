@@ -498,7 +498,7 @@ impl AgentConfiguration {
                     .color(Color::Muted),
             )
             .detail_label(format!(
-                "{} command(s), {} receipt(s), catalog {}, redaction {}",
+                "{} commands, {} receipts, catalog {}, redaction {}",
                 summary.command_count,
                 summary.receipt_count,
                 summary.provider_catalog_source,
@@ -706,7 +706,7 @@ impl AgentConfiguration {
             );
             stack = stack.child(
                 Label::new(format!(
-                    "Recovery: {} via {}, {}, {} fixture(s), retained overflow {}",
+                    "Recovery: {} via {}, {}, {} fixtures, retained overflow {}",
                     summary.recovery_controls_status,
                     summary.recovery_render_first,
                     summary.recovery_counts.label(),

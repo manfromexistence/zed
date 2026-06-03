@@ -1881,6 +1881,11 @@ test("Zed Style rail keeps GPUI as the shell and Web Preview as the generator ho
   assert.match(snapshot, /generatorForContext/);
   assert.match(snapshot, /orderedCatalog/);
   assert.match(snapshot, /suggested_generator/);
+  assert.match(snapshot, /sourceApplyReviewReady/);
+  assert.match(snapshot, /sourceApplyReviewBlocker/);
+  assert.match(snapshot, /reviewApplyButton/);
+  assert.doesNotMatch(snapshot, /text\.contains\("Review source"\)/);
+  assert.doesNotMatch(snapshot, /text\.contains\("Apply gated"\)/);
   assert.match(snapshot, /Open Style controls; source changes stay receipt-gated/);
   assert.match(snapshot, /source_apply_review_receipt/);
   assert.match(snapshot, /source_apply_contract_ready/);
@@ -4420,6 +4425,10 @@ test("DX Style has a real right-dock GPUI shell", () => {
   assert.match(panelCards, /Span/);
   assert.match(panelCards, /active_context\.span_byte_range\(\)/);
   assert.match(panelCards, /active_style_target/);
+  assert.match(panelCards, /apply_gate_reason_label\(&gate\.state\)/);
+  assert.match(panelCards, /snapshot\.readiness\.next_action\.clone\(\)/);
+  assert.doesNotMatch(panelCards, /gate\.reason\.clone\(\)/);
+  assert.doesNotMatch(panelCards, /snapshot\.next_action\.clone\(\)/);
   assert.doesNotMatch(panelView, /receipt\.edit_count/);
   assert.doesNotMatch(panelView, /receipt\.edits\.first\(\)/);
   assert.match(surfaceScript, /Structured edit previews/);
