@@ -65,7 +65,7 @@ use ui::{
     Color, ContextMenu, ContextMenuEntry, DecoratedIcon, Icon, IconButtonShape, IconDecoration,
     IconDecorationKind, IndentGuideColors, IndentGuideLayout, Indicator, KeyBinding, Label,
     LabelSize, ListItem, ListItemSpacing, ProjectEmptyState, ScrollAxes, ScrollableHandle,
-    Scrollbars, StickyCandidate, Tooltip, WithScrollbar, prelude::*, v_flex,
+    Scrollbars, StickyCandidate, Tab, Tooltip, WithScrollbar, prelude::*, v_flex,
 };
 use util::{
     ResultExt, TakeUntilExt, TryFutureExt,
@@ -7932,13 +7932,19 @@ impl Render for ProjectPanel {
         let active_media_preview = (has_worktree && is_local_or_wsl)
             .then(|| self.top_folder_media_preview(cx))
             .flatten();
-        let panel_settings = ProjectPanelSettings::get_global(cx);
-        let indent_size = panel_settings.indent_size;
-        let show_indent_guides = panel_settings.indent_guides.show == ShowIndentGuides::Always;
-        let _horizontal_scroll_setting = panel_settings.scrollbar.horizontal_scroll;
+        let (indent_size, show_indent_guides, sticky_scroll, drag_and_drop) = {
+            let panel_settings = ProjectPanelSettings::get_global(cx);
+            let _horizontal_scroll_setting = panel_settings.scrollbar.horizontal_scroll;
+            (
+                panel_settings.indent_size,
+                panel_settings.indent_guides.show == ShowIndentGuides::Always,
+                panel_settings.sticky_scroll,
+                panel_settings.drag_and_drop,
+            )
+        };
         let horizontal_scroll = false;
         let show_sticky_entries = {
-            if panel_settings.sticky_scroll {
+            if sticky_scroll {
                 let is_scrollable = self.scroll_handle.is_scrollable();
                 let is_scrolled = self.scroll_handle.offset().y < px(0.);
                 is_scrollable && is_scrolled
@@ -8026,7 +8032,7 @@ impl Render for ProjectPanel {
             h_flex()
                 .id("project-panel")
                 .group("project-panel")
-                .when(panel_settings.drag_and_drop, |this| {
+                .when(drag_and_drop, |this| {
                     this.on_drag_move(cx.listener(handle_drag_move::<ExternalPaths>))
                         .on_drag_move(cx.listener(handle_drag_move::<DraggedSelection>))
                 })
@@ -8593,7 +8599,7 @@ impl Render for ProjectPanel {
                     }),
                 )
                 .when(is_local, |div| {
-                    div.when(panel_settings.drag_and_drop, |div| {
+                    div.when(drag_and_drop, |div| {
                         div.drag_over::<ExternalPaths>(|style, _, _, cx| {
                             style.bg(cx.theme().colors().drop_target_background)
                         })

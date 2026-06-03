@@ -1,3 +1,17 @@
+[2026-06-03] - Project Panel Just Run Compile Repair
+
+FIXED:
+- `crates\project_panel\src\project_panel.rs` now imports `ui::Tab` for the native Project panel header height used by the shared split/close controls.
+- Project Panel render now copies the needed panel settings before mutable header rendering, fixing the immutable settings borrow that `just run` caught when the empty-project render path reused drag/drop settings later.
+
+PASSED:
+- `rustfmt --edition 2024` on `crates\project_panel\src\project_panel.rs`.
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-project-panel-source.test.ts script\dx-workspace-ui-state-source.test.ts` with 31/31 passing.
+
+NOTES:
+- This entry records the compile repair found by the authorized `just run` pass before the next runtime launch retry.
+- `DX.txt` remains an unrelated scratch/editor change and is intentionally left untouched.
+
 [2026-06-03] - Final UI Polish Source Slice
 
 CHANGED:
