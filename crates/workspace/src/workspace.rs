@@ -4687,6 +4687,7 @@ impl Workspace {
                     && panel.is_zoomed(window, cx)
                 {
                     focus_center |= panel.panel_focus_handle(cx).contains_focused(window, cx);
+                    panel.set_zoomed(false, window, cx);
                     dock.set_open(false, window, cx);
                 }
             });

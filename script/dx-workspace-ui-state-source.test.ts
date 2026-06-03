@@ -436,13 +436,24 @@ test("agent fullscreen uses agent rails while sidebar button remains dock-scoped
   assert.match(threadView, /this\.visible_entry_range = Some\(visible_range\.clone\(\)\)/);
   assert.match(
     threadView,
+    /if let Some\(request\) = this\.response_anchor_scroll_request[\s\S]*?scroll_top\.item_ix != request\.entry_ix[\s\S]*?scroll_top\.offset_in_item != px\(0\.0\)[\s\S]*?this\.response_anchor_scroll_request = None;/,
+  );
+  assert.match(
+    threadView,
     /this\.active_response_anchor_entry_ix\s*=\s*this\s*\.response_anchor_for_scroll_position\(\s*visible_range\.clone\(\),\s*scroll_top\.item_ix,\s*cx,\s*\)/s,
   );
   assert.match(activeVisibleThread, /Self::active_visible_thread_view_for_conversation\(server_view, cx\)/);
   assert.match(visibleThreadForConversation, /\.active_thread\(\)\s*\.cloned\(\)\s*\.or_else\(\|\| server_view\.root_thread_view\(\)\)/);
   assert.match(subscribeActiveThread, /Self::active_visible_thread_view_for_conversation\(server_view, cx\)/);
   assert.match(threadView, /ScrollPositionChanged/);
-  assert.match(threadView, /pub\(crate\) fn response_anchors\(&self, cx: &App\) -> Vec<AgentResponseAnchor>/);
+  assert.match(
+    threadView,
+    /pub\(crate\) fn response_anchors\(\s*&self,\s*max_anchors: usize,\s*cx: &App,\s*\) -> Vec<AgentResponseAnchor>/s,
+  );
+  assert.match(threadView, /if max_anchors == 0 \{\s*return Vec::new\(\);\s*\}/);
+  assert.match(threadView, /let prompt_entries = entries[\s\S]*?\.enumerate\(\)[\s\S]*?prompt_ix \+ 1/);
+  assert.match(threadView, /let current_prompt_position = current_prompt_ix/);
+  assert.match(threadView, /prompt_entries\[start\.\.end\]/);
   assert.match(threadView, /fn response_anchor_for_visible_range\(/);
   assert.match(threadView, /fn response_anchor_for_scroll_position\(/);
   assert.match(threadView, /fn is_response_anchor_entry\(/);
@@ -450,9 +461,18 @@ test("agent fullscreen uses agent rails while sidebar button remains dock-scoped
   assert.doesNotMatch(visibleRangeAnchor, /\.take\(end\.saturating_add\(1\)\)/);
   const scrollPositionAnchor = functionBody(threadView, "response_anchor_for_scroll_position");
   assert.match(scrollPositionAnchor, /scroll_item_ix: usize/);
+  assert.match(scrollPositionAnchor, /let visible_span = end\.saturating_sub\(start\);/);
+  assert.match(scrollPositionAnchor, /let reference_ix = scroll_item_ix/);
+  assert.match(scrollPositionAnchor, /entry_ix\.abs_diff\(reference_ix\)/);
+  assert.match(scrollPositionAnchor, /\.min_by_key\(\|\(_, distance\)\| \*distance\)/);
   assert.match(scrollPositionAnchor, /\.take\(scroll_item_ix\.saturating_add\(1\)\.min\(entries\.len\(\)\)\)/);
   assert.match(scrollPositionAnchor, /\.rev\(\)[\s\S]*?\.find_map/);
-  assert.match(scrollPositionAnchor, /\.skip\(start\)[\s\S]*?\.take\(end\.saturating_sub\(start\)\)[\s\S]*?\.rev\(\)[\s\S]*?\.find_map/);
+  assert.match(scrollPositionAnchor, /\.skip\(start\)[\s\S]*?\.take\(end\.saturating_sub\(start\)\)[\s\S]*?\.min_by_key/);
+  assert.ok(
+    scrollPositionAnchor.indexOf(".skip(start)") <
+      scrollPositionAnchor.indexOf(".take(scroll_item_ix.saturating_add(1).min(entries.len()))"),
+    "active response marker selection should prefer the nearest visible prompt before prior logical-top prompt",
+  );
   assert.match(isResponseAnchorEntry, /matches!\(entry, AgentThreadEntry::UserMessage\(_\)\)/);
   assert.match(threadView, /active_response_anchor_entry_ix[\s\S]*?visible_entry_range[\s\S]*?logical_scroll_top\(\)\.item_ix/);
   assert.match(threadView, /selected_prompt_ix[\s\S]*?response_anchor_scroll_request\.is_some\(\)/);
@@ -466,13 +486,17 @@ test("agent fullscreen uses agent rails while sidebar button remains dock-scoped
   assert.match(scrollAnchor, /frames_remaining: RESPONSE_ANCHOR_SCROLL_RETRY_FRAMES/);
   assert.match(scrollAnchor, /self\.apply_response_anchor_scroll_request\(window, cx\)/);
   assert.match(scrollRequest, /let record_navigation = request\.frames_remaining == RESPONSE_ANCHOR_SCROLL_RETRY_FRAMES;/);
+  assert.match(scrollRequest, /let current_scroll_top = self\.list_state\.logical_scroll_top\(\);/);
+  assert.match(scrollRequest, /current_scroll_top\.item_ix != request\.entry_ix/);
+  assert.match(scrollRequest, /current_scroll_top\.offset_in_item != px\(0\.0\)/);
+  assert.match(scrollRequest, /self\.response_anchor_scroll_request = None;/);
   assert.match(scrollRequest, /window\.on_next_frame\(move \|window, cx\|/);
   assert.match(scrollRequest, /thread_view\.apply_response_anchor_scroll_request\(window, cx\)/);
   assert.match(applyScrollAnchor, /record_navigation: bool/);
   assert.match(applyScrollAnchor, /if !self\.is_response_anchor_entry\(entry_ix, cx\)/);
   assert.match(applyScrollAnchor, /self\.should_be_following = false/);
   assert.match(applyScrollAnchor, /workspace\.unfollow\(CollaboratorId::Agent, window, cx\)/);
-  assert.match(applyScrollAnchor, /set_follow_mode\(gpui::FollowMode::Normal\)/);
+  assert.doesNotMatch(applyScrollAnchor, /set_follow_mode\(gpui::FollowMode::Normal\)/);
   assert.match(applyScrollAnchor, /self\.list_state\.scroll_to\(scroll_position\)/);
   assert.match(applyScrollAnchor, /self\.thread\.update\(cx, \|thread, _cx\| \{/);
   assert.match(applyScrollAnchor, /thread\.set_ui_scroll_position\(Some\(scroll_position\)\)/);
@@ -481,7 +505,7 @@ test("agent fullscreen uses agent rails while sidebar button remains dock-scoped
   assert.match(applyScrollAnchor, /cx\.emit\(AcpThreadViewEvent::ScrollPositionChanged\)/);
   assert.match(responseIndicator, /self\.active_visible_thread_view\(cx\)/);
   assert.doesNotMatch(responseIndicator, /self\.active_thread_view\(cx\)/);
-  assert.match(responseIndicator, /toolbar_response_indicator_anchors\(active_thread\.read\(cx\)\.response_anchors\(cx\)\)/);
+  assert.match(responseIndicator, /response_anchors\(MAX_TOOLBAR_RESPONSE_INDICATORS, cx\)/);
   assert.match(agentPanel, /const MAX_TOOLBAR_RESPONSE_INDICATORS: usize = 32;/);
   assert.match(responseIndicatorAnchors, /anchors\.len\(\) <= MAX_TOOLBAR_RESPONSE_INDICATORS/);
   assert.match(responseIndicatorAnchors, /position\(\|anchor\| anchor\.is_current\)/);
@@ -527,18 +551,42 @@ test("agent fullscreen uses agent rails while sidebar button remains dock-scoped
   assert.match(composerProfileOptions, /pub\(super\) id: &'static str/);
   assert.match(composerProfileOptions, /"media-quality-production"/);
   assert.match(threadView, /fn render_composer_option_overflow/);
+  assert.match(threadView, /const MAX_VISIBLE_PROFILE_OPTION_SLOTS: usize = 4;/);
+  assert.match(
+    functionBody(threadView, "render_profile_option_slots"),
+    /let Some\(profile_kind\) = self\.composer_profile_kind\(cx\) else \{\s*return Vec::new\(\);\s*\}/s,
+  );
+  assert.match(
+    functionBody(threadView, "render_profile_option_slots"),
+    /\.take\(MAX_VISIBLE_PROFILE_OPTION_SLOTS\)/,
+  );
+  assert.doesNotMatch(
+    functionBody(threadView, "render_profile_option_slots"),
+    /\.take\(3\)/,
+  );
   assert.match(threadView, /fn composer_profile_kind_for_id\(profile_id: &str\) -> Option<ComposerProfileKind>/);
+  assert.match(threadView, /fn composer_profile_kind\(&self, cx: &App\) -> Option<ComposerProfileKind>/);
   assert.match(threadView, /builtin_profiles::WRITE => Some\(ComposerProfileKind::Agents\)/);
   assert.match(threadView, /builtin_profiles::ASK\s*\|\s*builtin_profiles::LEGACY_MINIMAL\s*=>\s*\{?\s*Some\(ComposerProfileKind::Ask\)/);
   assert.match(threadView, /builtin_profiles::MEDIA => Some\(ComposerProfileKind::Media\)/);
   assert.match(threadView, /builtin_profiles::SEARCH => Some\(ComposerProfileKind::Search\)/);
   assert.match(threadView, /builtin_profiles::STUDY => Some\(ComposerProfileKind::Study\)/);
   assert.doesNotMatch(functionBody(threadView, "composer_profile_kind"), /contains\(/);
+  assert.doesNotMatch(functionBody(threadView, "composer_profile_kind"), /ComposerProfileKind::Agents\s*$/);
   assert.match(functionBody(threadView, "render_composer_option_overflow"), /for option in slot\.options/);
+  assert.doesNotMatch(threadView, /fn render_dx_agent_action/);
+  assert.doesNotMatch(threadView, /dx-agent-action/);
   assert.match(threadView, /ComposerProfileKind::Agents/);
   assert.match(profileSelector, /fn profile_display_name/);
   assert.match(profileSelector, /AgentProfile::display_name\(profile_id, name\)/);
-  assert.match(profileSelector, /\.map_or\(0, \|current_index\| \(current_index \+ 1\) % profiles\.len\(\)\)/);
+  assert.match(profileSelector, /fn set_selected_profile\(/);
+  assert.match(profileSelector, /fn reconcile_current_profile\(/);
+  assert.match(profileSelector, /ProfilePickerDelegate::candidates_from\(profiles\)/);
+  assert.match(profileSelector, /\.map_or\(0, \|current_index\| \(current_index \+ 1\) % candidates\.len\(\)\)/);
+  assert.match(profileSelector, /provider\.set_profile\(fallback_profile_id\.clone\(\), cx\)/);
+  assert.match(profileSelector, /builtin_profiles\.sort_unstable_by/);
+  assert.match(profileSelector, /custom_profiles\.sort_unstable_by/);
+  assert.match(profileSelector, /set_selected_profile\([\s\S]*?source = source/);
   assert.match(agentProfileSettings, /pub fn normalize_id\(/);
   assert.match(agentProfileSettings, /pub fn normalize_id_from_profiles\(/);
   assert.match(agentProfileSettings, /profile_id\.as_str\(\) == builtin_profiles::LEGACY_MINIMAL[\s\S]*?builtin_profiles::ASK/);
@@ -573,10 +621,11 @@ test("agent fullscreen uses agent rails while sidebar button remains dock-scoped
   assert.match(manageProfilesModal, /AgentProfile::available_profiles\(cx\)/);
   assert.match(manageProfilesModal, /AgentProfile::display_name\(&mode\.profile_id, &profile\.name\)/);
   assert.match(agentPanel, /then_some\(IconName::Chat\)/);
-  assert.ok(
-    focusAgentFullscreen.indexOf("enabled(cx)") < focusAgentFullscreen.indexOf("focus_panel::<Self>"),
-    "FocusAgentFullscreen must prove the Agent panel is enabled before focusing the side panel",
-  );
+  assert.doesNotMatch(focusAgentFullscreen, /focus_panel::<Self>/);
+  assert.match(focusAgentFullscreen, /workspace[\s\S]*?\.panel::<Self>\(cx\)[\s\S]*?enabled\(cx\)/);
+  assert.match(focusAgentFullscreen, /cx\.emit\(PanelEvent::ZoomIn\)/);
+  assert.match(functionBody(agentPanel, "focus"), /cx\.emit\(PanelEvent::ZoomOut\)/);
+  assert.match(workspace, /panel\.set_zoomed\(false, window, cx\);\s*dock\.set_open\(false, window, cx\);/);
   assert.match(dock, /let agent_screen_is_zoomed = workspace/);
   assert.match(dock, /zoomed_is_agent_panel\(\)/);
   assert.match(dock, /let is_agent_sidechat_button = entry\.panel\.is_agent_panel\(cx\)/);

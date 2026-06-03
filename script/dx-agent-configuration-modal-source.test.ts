@@ -14,6 +14,10 @@ const profilesModal = readFileSync(
   "crates/agent_ui/src/agent_configuration/manage_profiles_modal.rs",
   "utf8",
 );
+const agentProfileSettings = readFileSync(
+  "crates/agent_settings/src/agent_profile.rs",
+  "utf8",
+);
 
 function sliceBetween(source, startNeedle, endNeedle) {
   const start = source.indexOf(startNeedle);
@@ -273,11 +277,51 @@ test("profile names are capped before profile creation", () => {
   );
   assert.match(confirm, /match AgentProfile::create\(/);
   assert.match(confirm, /Err\(error\) => \{\s*mode\.new_profile_error = Some\(error\.to_string\(\)\.into\(\)\);/s);
+  assert.match(
+    agentProfileSettings,
+    /let name = name\.trim\(\)\.to_string\(\);/,
+    "profile creation should canonicalize user-visible whitespace",
+  );
+  assert.match(
+    agentProfileSettings,
+    /if name\.is_empty\(\) \{\s*bail!\("Profile name is required\."\);\s*\}/s,
+    "blank or whitespace-only profile names should be rejected centrally",
+  );
+  assert.match(
+    agentProfileSettings,
+    /if id\.as_str\(\) == builtin_profiles::LEGACY_MINIMAL \{\s*bail!\(/s,
+    "profile creation should reject the reserved legacy Minimal profile id",
+  );
+  assert.match(
+    agentProfileSettings,
+    /if profile_id\.as_str\(\) == builtin_profiles::LEGACY_MINIMAL \{\s*bail!\(/s,
+    "settings save should reject the reserved legacy Minimal profile id defensively",
+  );
+  assert.match(
+    agentProfileSettings,
+    /if settings\.profiles\.contains_key\(&id\) \{\s*bail!\("A profile named `\{\}` already exists\.", name\);\s*\}/s,
+    "profile creation should reject duplicate generated ids before settings mutation",
+  );
+  assert.match(
+    agentProfileSettings,
+    /\.filter\(\|\(profile_id, _\)\| profile_id\.as_str\(\) != builtin_profiles::LEGACY_MINIMAL\)[\s\S]*?Self::display_name\(profile_id, &profile\.name\)[\s\S]*?\.eq_ignore_ascii_case\(&name\)[\s\S]*?bail!\("A profile named `\{\}` already exists\.", name\);/s,
+    "profile creation should reject duplicate visible display names case-insensitively",
+  );
+  assert.match(
+    agentProfileSettings,
+    /if profiles\.contains_key\(&profile_id\.0\) \{\s*bail!\("profile with ID '\{profile_id\}' already exists"\);\s*\}/s,
+    "settings save should fail closed on duplicate profile ids",
+  );
 
   const renderNewProfile = sliceBetween(
     profilesModal,
     "fn render_new_profile(",
     "\n    fn render_view_profile",
+  );
+  assert.match(
+    renderNewProfile,
+    /AgentProfile::display_name\(base_profile_id, &profile\.name\)/,
+    "fork profile header should use the same display name as profile rows",
   );
   assert.match(renderNewProfile, /when_some\(mode\.new_profile_error/);
   assert.match(renderNewProfile, /IconName::Warning/);

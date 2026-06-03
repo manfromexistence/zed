@@ -88,7 +88,19 @@ impl AgentProfile {
         fs: Arc<dyn Fs>,
         cx: &App,
     ) -> Result<AgentProfileId> {
+        let name = name.trim().to_string();
+        if name.is_empty() {
+            bail!("Profile name is required.");
+        }
+
         let id = AgentProfileId(name.to_case(Case::Kebab).into());
+        if id.as_str() == builtin_profiles::LEGACY_MINIMAL {
+            bail!(
+                "`{}` is reserved for legacy profile compatibility. Choose another profile name.",
+                name
+            );
+        }
+
         let settings = AgentSettings::get_global(cx);
         if settings.profiles.contains_key(&id) {
             bail!("A profile named `{}` already exists.", name);
@@ -193,6 +205,12 @@ impl AgentProfileSettings {
             .get_or_insert_default()
             .profiles
             .get_or_insert_default();
+        if profile_id.as_str() == builtin_profiles::LEGACY_MINIMAL {
+            bail!(
+                "'{profile_id}' is reserved for legacy profile compatibility and cannot be saved as a custom profile"
+            );
+        }
+
         if profiles.contains_key(&profile_id.0) {
             bail!("profile with ID '{profile_id}' already exists");
         }

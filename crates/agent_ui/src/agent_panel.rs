@@ -1683,6 +1683,14 @@ impl AgentPanel {
             .panel::<Self>(cx)
             .is_some_and(|panel| panel.read(cx).enabled(cx))
         {
+            if let Some(panel) = workspace.panel::<Self>(cx) {
+                panel.update(cx, |panel, cx| {
+                    if panel.zoomed {
+                        panel.manual_zoom_override = Some(false);
+                        cx.emit(PanelEvent::ZoomOut);
+                    }
+                });
+            }
             workspace.focus_panel::<Self>(window, cx);
         }
     }
@@ -1696,8 +1704,10 @@ impl AgentPanel {
         if workspace
             .panel::<Self>(cx)
             .is_some_and(|panel| panel.read(cx).enabled(cx))
-            && let Some(panel) = workspace.focus_panel::<Self>(window, cx)
         {
+            let Some(panel) = workspace.panel::<Self>(cx) else {
+                return;
+            };
             panel.update(cx, |panel, cx| {
                 panel.manual_zoom_override = Some(true);
                 cx.emit(PanelEvent::ZoomIn);
@@ -6149,8 +6159,11 @@ impl AgentPanel {
         let Some(active_thread) = self.active_visible_thread_view(cx) else {
             return div().into_any_element();
         };
-        let anchors =
-            Self::toolbar_response_indicator_anchors(active_thread.read(cx).response_anchors(cx));
+        let anchors = Self::toolbar_response_indicator_anchors(
+            active_thread
+                .read(cx)
+                .response_anchors(MAX_TOOLBAR_RESPONSE_INDICATORS, cx),
+        );
         if anchors.is_empty() {
             return div().into_any_element();
         }

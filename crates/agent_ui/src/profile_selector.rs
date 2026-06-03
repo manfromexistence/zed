@@ -90,21 +90,52 @@ impl ProfileSelector {
             return;
         }
 
-        let current_profile_id = self.provider.profile_id(cx);
-        let next_index = profiles
-            .keys()
-            .position(|id| id == &current_profile_id)
-            .map_or(0, |current_index| (current_index + 1) % profiles.len());
+        let candidates = ProfilePickerDelegate::candidates_from(profiles);
+        if candidates.is_empty() {
+            return;
+        }
 
-        if let Some((next_profile_id, _)) = profiles.get_index(next_index) {
-            self.provider.set_profile(next_profile_id.clone(), cx);
-            telemetry::event!(
-                "Agent Profile Switched",
-                profile_id = next_profile_id.as_str(),
-                source = "cycle"
+        let current_profile_id = self.provider.profile_id(cx);
+        let next_index = candidates
+            .iter()
+            .position(|profile| profile.id == current_profile_id)
+            .map_or(0, |current_index| (current_index + 1) % candidates.len());
+
+        if let Some(next_profile) = candidates.get(next_index) {
+            set_selected_profile(
+                self.fs.clone(),
+                self.provider.clone(),
+                next_profile.id.clone(),
+                "cycle",
+                cx,
             );
             cx.notify();
         }
+    }
+
+    fn reconcile_current_profile(&mut self, cx: &mut Context<Self>) -> AgentProfileId {
+        let current_profile_id = self.provider.profile_id(cx);
+        let profiles = AgentProfile::available_profiles(cx);
+        if profiles.contains_key(&current_profile_id) {
+            return current_profile_id;
+        }
+
+        let normalized_profile_id = AgentProfile::normalize_id(current_profile_id.clone(), cx);
+        let fallback_profile_id = if profiles.contains_key(&normalized_profile_id) {
+            normalized_profile_id
+        } else {
+            profiles
+                .keys()
+                .next()
+                .cloned()
+                .unwrap_or(current_profile_id.clone())
+        };
+
+        if fallback_profile_id != current_profile_id {
+            self.provider.set_profile(fallback_profile_id.clone(), cx);
+        }
+
+        fallback_profile_id
     }
 
     fn ensure_picker(
@@ -173,8 +204,8 @@ impl Render for ProfileSelector {
 
         let picker = self.ensure_picker(window, cx);
 
+        let profile_id = self.reconcile_current_profile(cx);
         let settings = AgentSettings::get_global(cx);
-        let profile_id = self.provider.profile_id(cx);
         let profile = settings.profiles.get(&profile_id);
 
         let selected_profile = profile
@@ -229,6 +260,32 @@ impl Render for ProfileSelector {
 
 fn profile_display_name(profile_id: &AgentProfileId, name: &SharedString) -> SharedString {
     AgentProfile::display_name(profile_id, name)
+}
+
+fn set_selected_profile(
+    fs: Arc<dyn Fs>,
+    provider: Arc<dyn ProfileProvider>,
+    profile_id: AgentProfileId,
+    source: &'static str,
+    cx: &mut App,
+) {
+    update_settings_file(fs, cx, {
+        let profile_id = profile_id.clone();
+        move |settings, _cx| {
+            settings
+                .agent
+                .get_or_insert_default()
+                .set_profile(profile_id.0);
+        }
+    });
+
+    provider.set_profile(profile_id.clone(), cx);
+
+    telemetry::event!(
+        "Agent Profile Switched",
+        profile_id = profile_id.as_str(),
+        source = source
+    );
 }
 
 #[derive(Clone)]
@@ -334,15 +391,26 @@ impl ProfilePickerDelegate {
             );
         }
 
-        profiles
-            .into_iter()
-            .take(MAX_PROFILE_SELECTOR_CANDIDATES)
-            .map(|(id, name)| ProfileCandidate {
+        let mut builtin_profiles = Vec::new();
+        let mut custom_profiles = Vec::new();
+
+        for (id, name) in profiles.into_iter().take(MAX_PROFILE_SELECTOR_CANDIDATES) {
+            let candidate = ProfileCandidate {
                 is_builtin: builtin_profiles::is_builtin(&id),
                 name: profile_display_name(&id, &name),
                 id,
-            })
-            .collect()
+            };
+            if candidate.is_builtin {
+                builtin_profiles.push(candidate);
+            } else {
+                custom_profiles.push(candidate);
+            }
+        }
+
+        builtin_profiles.sort_unstable_by(|a, b| a.name.cmp(&b.name));
+        custom_profiles.sort_unstable_by(|a, b| a.name.cmp(&b.name));
+        builtin_profiles.extend(custom_profiles);
+        builtin_profiles
     }
 
     fn string_candidates(candidates: &[ProfileCandidate]) -> Vec<StringMatchCandidate> {
@@ -590,26 +658,12 @@ impl PickerDelegate for ProfilePickerDelegate {
         match self.filtered_entries.get(self.selected_index) {
             Some(ProfilePickerEntry::Profile(entry)) => {
                 if let Some(candidate) = self.candidates.get(entry.candidate_index) {
-                    let profile_id = candidate.id.clone();
-                    let fs = self.fs.clone();
-                    let provider = self.provider.clone();
-
-                    update_settings_file(fs, cx, {
-                        let profile_id = profile_id.clone();
-                        move |settings, _cx| {
-                            settings
-                                .agent
-                                .get_or_insert_default()
-                                .set_profile(profile_id.0);
-                        }
-                    });
-
-                    provider.set_profile(profile_id.clone(), cx);
-
-                    telemetry::event!(
-                        "Agent Profile Switched",
-                        profile_id = profile_id.as_str(),
-                        source = "picker"
+                    set_selected_profile(
+                        self.fs.clone(),
+                        self.provider.clone(),
+                        candidate.id.clone(),
+                        "picker",
+                        cx,
                     );
                 }
 

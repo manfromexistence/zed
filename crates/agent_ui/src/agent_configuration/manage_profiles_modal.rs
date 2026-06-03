@@ -707,7 +707,7 @@ impl ManageProfilesModal {
             settings
                 .profiles
                 .get(base_profile_id)
-                .map(|profile| profile.name.clone())
+                .map(|profile| AgentProfile::display_name(base_profile_id, &profile.name))
                 .unwrap_or_else(|| "Unknown".into())
         });
 

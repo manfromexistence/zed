@@ -1,3 +1,22 @@
+[2026-06-03] - Agent Profile And Response Edge Hardening Follow-up
+
+FIXED:
+- `crates\agent_settings\src\agent_profile.rs` now trims custom profile names, rejects blank names, and prevents the reserved legacy `minimal` id from being created or saved as a custom profile.
+- `crates\agent_ui\src\profile_selector.rs` now reconciles missing or deleted selected profiles back to a real available profile, persists cycle/picker selections through the same settings path, and keeps selector ordering aligned between built-ins and custom profiles.
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now avoids misleading built-in composer slots for unknown/custom profiles, keeps four profile slots visible when room is available, removes the stale duplicate Agent action, bounds response anchor label work around the current prompt, cancels anchor retries after user scroll, and selects the nearest visible prompt instead of snapping to the last visible prompt in tall fullscreen chats.
+- `crates\agent_ui\src\agent_panel.rs` and `crates\workspace\src\workspace.rs` now keep fullscreen Agent zoom separate from the sidechat route and clear stale side-dock zoom state before dismissing other zoomed panels.
+- Focused source guards now cover reserved profile ids, profile reconciliation/persistence, bounded response anchors, user-scroll-aware retry cancellation, exact composer profile routing, and fullscreen Agent routing without side-panel activation.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\agent_settings\src\agent_profile.rs crates\agent_ui\src\agent_configuration\manage_profiles_modal.rs crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\profile_selector.rs crates\workspace\src\workspace.rs`
+- `node --test script\dx-workspace-ui-state-source.test.ts script\dx-title-bar-source.test.ts script\dx-agent-configuration-modal-source.test.ts`
+- `git diff --check`
+- Focused conflict-marker scan across touched source, guard, todo, and changelog files.
+
+NOTES:
+- `just run`, Cargo build/check/test/clippy, and other heavy validation commands were not run because the current instruction is to avoid them until explicitly authorized.
+- Exactly six GPT-5.5 extra-high subagents reviewed non-overlapping Agent/profile/composer/fullscreen/source-guard edge-case scopes before the follow-up fixes landed.
+
 [2026-06-03] - Agent Profile And Response Edge Hardening
 
 CHANGED:

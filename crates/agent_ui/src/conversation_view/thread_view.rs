@@ -639,6 +639,7 @@ pub(crate) struct AgentResponseAnchor {
 
 const RESPONSE_ANCHOR_SCROLL_RETRY_FRAMES: usize = 6;
 const FLOATING_MESSAGE_EDITOR_SAFE_PADDING_PX: f32 = 118.0;
+const MAX_VISIBLE_PROFILE_OPTION_SLOTS: usize = 4;
 
 #[derive(Clone, Copy)]
 struct ResponseAnchorScrollRequest {
@@ -971,6 +972,12 @@ impl ThreadView {
                     let scroll_top = list_state.logical_scroll_top();
                     let _ = thread_view.update(cx, |this, cx| {
                         this.visible_entry_range = Some(visible_range.clone());
+                        if let Some(request) = this.response_anchor_scroll_request
+                            && (scroll_top.item_ix != request.entry_ix
+                                || scroll_top.offset_in_item != px(0.0))
+                        {
+                            this.response_anchor_scroll_request = None;
+                        }
                         if this.response_anchor_scroll_request.is_none() {
                             this.active_response_anchor_entry_ix = this
                                 .response_anchor_for_scroll_position(
@@ -3862,7 +3869,6 @@ impl ThreadView {
                                     .map(|this| match self.config_options_view.clone() {
                                         Some(config_view) => this.child(config_view),
                                         None => this
-                                            .children(self.render_dx_agent_action(cx))
                                             .children(self.mode_selector.clone())
                                             .children(self.model_selector.clone()),
                                     })
@@ -3875,26 +3881,30 @@ impl ThreadView {
     }
 
     fn render_profile_option_slots(&self, cx: &mut Context<Self>) -> Vec<AnyElement> {
-        let slots = self.composer_profile_kind(cx).slots();
+        let Some(profile_kind) = self.composer_profile_kind(cx) else {
+            return Vec::new();
+        };
+        let slots = profile_kind.slots();
         let mut rendered = slots
             .iter()
-            .take(3)
+            .take(MAX_VISIBLE_PROFILE_OPTION_SLOTS)
             .copied()
             .map(Self::render_composer_option_slot)
             .collect::<Vec<_>>();
 
-        if slots.len() > 3 {
-            let overflow_slots: &'static [ComposerOptionSlot] = &slots[3..];
+        if slots.len() > MAX_VISIBLE_PROFILE_OPTION_SLOTS {
+            let overflow_slots: &'static [ComposerOptionSlot] =
+                &slots[MAX_VISIBLE_PROFILE_OPTION_SLOTS..];
             rendered.push(Self::render_composer_option_overflow(overflow_slots));
         }
 
         rendered
     }
 
-    fn composer_profile_kind(&self, cx: &App) -> ComposerProfileKind {
+    fn composer_profile_kind(&self, cx: &App) -> Option<ComposerProfileKind> {
         if let Some(profile_id) = self.current_mode_id(cx) {
             match Self::composer_profile_kind_for_id(profile_id.as_ref()) {
-                Some(kind) => return kind,
+                Some(kind) => return Some(kind),
                 None => {}
             }
         }
@@ -3903,11 +3913,11 @@ impl ThreadView {
             let mode_selector = mode_selector.read(cx);
             let current_mode = mode_selector.mode();
             if let Some(kind) = Self::composer_profile_kind_for_id(current_mode.0.as_ref()) {
-                return kind;
+                return Some(kind);
             }
         }
 
-        ComposerProfileKind::Agents
+        None
     }
 
     fn composer_profile_kind_for_id(profile_id: &str) -> Option<ComposerProfileKind> {
@@ -4067,34 +4077,6 @@ impl ThreadView {
                 "Voice input will enable after the DX voice runtime is configured",
             ))
             .into_any_element()
-    }
-
-    fn render_dx_agent_action(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
-        self.mode_selector.as_ref()?;
-
-        let focus_handle = self.focus_handle(cx);
-        Some(
-            Button::new("dx-agent-action", "Agent")
-                .label_size(LabelSize::Small)
-                .color(Color::Muted)
-                .start_icon(
-                    Icon::new(IconName::ZedAgent)
-                        .size(IconSize::XSmall)
-                        .color(Color::Muted),
-                )
-                .tooltip(move |_window, cx| {
-                    Tooltip::for_action_in(
-                        "Open Agent Profile and DX Agents controls",
-                        &ToggleProfileSelector,
-                        &focus_handle,
-                        cx,
-                    )
-                })
-                .on_click(|_event, window, cx| {
-                    window.dispatch_action(Box::new(ToggleProfileSelector), cx);
-                })
-                .into_any_element(),
-        )
     }
 
     fn render_message_queue_entries(
@@ -6080,7 +6062,15 @@ impl ThreadView {
         }
     }
 
-    pub(crate) fn response_anchors(&self, cx: &App) -> Vec<AgentResponseAnchor> {
+    pub(crate) fn response_anchors(
+        &self,
+        max_anchors: usize,
+        cx: &App,
+    ) -> Vec<AgentResponseAnchor> {
+        if max_anchors == 0 {
+            return Vec::new();
+        }
+
         let entries = self.thread.read(cx).entries();
         let selected_prompt_ix = self
             .active_response_anchor_entry_ix
@@ -6102,16 +6092,41 @@ impl ThreadView {
                 })
         });
 
-        let mut prompt_ordinal = 0usize;
-        entries
+        let prompt_entries = entries
             .iter()
             .enumerate()
             .filter_map(|(entry_ix, entry)| {
-                let AgentThreadEntry::UserMessage(message) = entry else {
+                matches!(entry, AgentThreadEntry::UserMessage(_)).then_some(entry_ix)
+            })
+            .enumerate()
+            .map(|(prompt_ix, entry_ix)| (entry_ix, prompt_ix + 1))
+            .collect::<Vec<_>>();
+
+        let current_prompt_position = current_prompt_ix
+            .and_then(|current_prompt_ix| {
+                prompt_entries
+                    .iter()
+                    .position(|(entry_ix, _)| *entry_ix == current_prompt_ix)
+            })
+            .unwrap_or_else(|| prompt_entries.len().saturating_sub(1));
+
+        let start = if prompt_entries.len() <= max_anchors {
+            0
+        } else {
+            let half_window = max_anchors / 2;
+            let mut start = current_prompt_position.saturating_sub(half_window);
+            let end = (start + max_anchors).min(prompt_entries.len());
+            start = end.saturating_sub(max_anchors);
+            start
+        };
+        let end = (start + max_anchors).min(prompt_entries.len());
+
+        prompt_entries[start..end]
+            .iter()
+            .filter_map(|(entry_ix, prompt_ordinal)| {
+                let AgentThreadEntry::UserMessage(message) = &entries[*entry_ix] else {
                     return None;
                 };
-                prompt_ordinal += 1;
-
                 let raw_label = message
                     .content
                     .to_markdown(cx)
@@ -6128,10 +6143,10 @@ impl ThreadView {
                     SharedString::from(format!("Prompt {} - click to scroll", prompt_ordinal));
 
                 Some(AgentResponseAnchor {
-                    entry_ix,
+                    entry_ix: *entry_ix,
                     label,
                     detail,
-                    is_current: current_prompt_ix == Some(entry_ix),
+                    is_current: current_prompt_ix == Some(*entry_ix),
                 })
             })
             .collect()
@@ -6158,21 +6173,27 @@ impl ThreadView {
         let entries = self.thread.read(cx).entries();
         let start = visible_range.start.min(entries.len());
         let end = visible_range.end.min(entries.len());
+        let visible_span = end.saturating_sub(start);
+        let reference_ix = scroll_item_ix
+            .saturating_add(visible_span / 2)
+            .min(entries.len().saturating_sub(1));
 
         entries
             .iter()
             .enumerate()
-            .take(scroll_item_ix.saturating_add(1).min(entries.len()))
-            .rev()
-            .find_map(|(entry_ix, entry)| {
-                matches!(entry, AgentThreadEntry::UserMessage(_)).then_some(entry_ix)
+            .skip(start)
+            .take(end.saturating_sub(start))
+            .filter_map(|(entry_ix, entry)| {
+                matches!(entry, AgentThreadEntry::UserMessage(_))
+                    .then_some((entry_ix, entry_ix.abs_diff(reference_ix)))
             })
+            .min_by_key(|(_, distance)| *distance)
+            .map(|(entry_ix, _)| entry_ix)
             .or_else(|| {
                 entries
                     .iter()
                     .enumerate()
-                    .skip(start)
-                    .take(end.saturating_sub(start))
+                    .take(scroll_item_ix.saturating_add(1).min(entries.len()))
                     .rev()
                     .find_map(|(entry_ix, entry)| {
                         matches!(entry, AgentThreadEntry::UserMessage(_)).then_some(entry_ix)
@@ -6216,6 +6237,21 @@ impl ThreadView {
         };
 
         let record_navigation = request.frames_remaining == RESPONSE_ANCHOR_SCROLL_RETRY_FRAMES;
+        if !record_navigation {
+            let current_scroll_top = self.list_state.logical_scroll_top();
+            if current_scroll_top.item_ix != request.entry_ix
+                || current_scroll_top.offset_in_item != px(0.0)
+            {
+                self.response_anchor_scroll_request = None;
+                self.active_response_anchor_entry_ix = self
+                    .visible_entry_range
+                    .clone()
+                    .and_then(|range| self.response_anchor_for_visible_range(range, cx));
+                cx.notify();
+                return;
+            }
+        }
+
         if !self.apply_response_anchor_scroll(request.entry_ix, record_navigation, window, cx) {
             self.response_anchor_scroll_request = None;
             return;
@@ -6264,7 +6300,6 @@ impl ThreadView {
                 })
                 .ok();
         }
-        self.list_state.set_follow_mode(gpui::FollowMode::Normal);
         self.list_state.scroll_to(scroll_position);
         self.thread.update(cx, |thread, _cx| {
             thread.set_ui_scroll_position(Some(scroll_position));
