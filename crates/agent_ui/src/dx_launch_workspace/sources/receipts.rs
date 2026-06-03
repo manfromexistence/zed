@@ -11,7 +11,7 @@ pub(in crate::dx_launch_workspace) fn receipt_source_state(
 ) -> AnyElement {
     if !snapshot.root_exists {
         return muted_card(
-            format!("Receipts not found: {}", snapshot.root.display()),
+            format!("Receipt directory not found: {}", snapshot.root.display()),
             cx,
         );
     }
@@ -26,7 +26,7 @@ pub(in crate::dx_launch_workspace) fn receipt_source_state(
         .child(metric_row("Receipt files", total.to_string()));
 
     if snapshot.latest.is_empty() {
-        stack = stack.child(muted_card("Waiting for first DX receipt", cx));
+        stack = stack.child(muted_card("No DX receipts found", cx));
     } else {
         for (ix, label) in snapshot.latest.iter().enumerate() {
             stack = stack.child(source_row(

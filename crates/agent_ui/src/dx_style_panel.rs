@@ -524,7 +524,7 @@ fn scan_dx_style_panel() -> DxStylePanelSnapshot {
         DxStylePanelRow {
             label: "Web Preview Host".to_string(),
             state: if web_preview_bridge_ready {
-                "source bridge wired"
+                "preview bridge ready"
             } else if web_preview_host_present {
                 "host source present"
             } else {

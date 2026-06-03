@@ -10,14 +10,14 @@ pub(in crate::dx_launch_workspace) fn source_attachment_state(
     cx: &App,
 ) -> AnyElement {
     let state = if summary.attachable_sources == 0 {
-        "No attach-ready sources".to_string()
+        "No attachable sources found".to_string()
     } else {
-        format!("{} ready", summary.attachable_sources)
+        format!("{} available", summary.attachable_sources)
     };
 
     let mut stack = v_flex()
         .gap_1()
-        .child(metric_row("Attach-ready", state))
+        .child(metric_row("Attachable", state))
         .child(metric_row(
             "Workspace roots",
             summary.workspace_roots.to_string(),
@@ -43,7 +43,7 @@ pub(in crate::dx_launch_workspace) fn source_attachment_state(
 
     if summary.attachable_sources == 0 {
         stack = stack.child(muted_card(
-            "Create a source-pack or media receipt first",
+            "Source pack or media receipt required for attachments",
             cx,
         ));
     }

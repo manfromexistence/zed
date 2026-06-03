@@ -29,7 +29,7 @@ pub(super) fn launch_status_summary_rows(snapshot: &DxLaunchStatusSnapshot) -> V
         metric_row(
             "Agent Work",
             format!(
-                "{} automation(s), {} active task(s), {} QR-ready",
+                "{} automations, {} active, {} QR-ready",
                 snapshot.agents.automation_count,
                 snapshot.agents.active_task_count,
                 snapshot.agents.qr_connect_supported

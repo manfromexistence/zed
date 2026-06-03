@@ -414,7 +414,7 @@ impl AgentConfiguration {
             error.clone()
         } else {
             format!(
-                "{} task(s), {} automation(s), accounts {}/{} connected ({} need connection, {} need auth), receipts {}, cli {}",
+                "{} active tasks, {} automations, accounts {}/{} connected ({} need connection, {} need auth), receipts {}, cli {}",
                 snapshot.active_task_count,
                 snapshot.automation_count,
                 snapshot.connected_accounts_summary.connected,

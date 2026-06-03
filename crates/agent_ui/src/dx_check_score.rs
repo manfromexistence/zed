@@ -70,7 +70,7 @@ pub(crate) fn check_score_snapshot(input: DxCheckScoreInput<'_>) -> DxCheckScore
         score += 25;
     } else if attachment.workspace_roots > 0 {
         score += 10;
-        blockers.push("No managed attach-ready source receipts".to_string());
+        blockers.push("No managed attachable source receipts".to_string());
     } else {
         blockers.push("No source rail entries".to_string());
     }
@@ -159,7 +159,7 @@ pub(crate) fn check_score_snapshot(input: DxCheckScoreInput<'_>) -> DxCheckScore
             DxCheckScoreItem {
                 label: "Structure",
                 state: format!(
-                    "{} worktree(s), {} root(s)",
+                    "{} worktrees, {} roots",
                     input.visible_worktree_count, attachment.workspace_roots
                 ),
             },
@@ -174,7 +174,7 @@ pub(crate) fn check_score_snapshot(input: DxCheckScoreInput<'_>) -> DxCheckScore
             DxCheckScoreItem {
                 label: "Sources",
                 state: format!(
-                    "{} attach-ready, {} total",
+                    "{} attachable, {} total",
                     attachment.attachable_sources, input.source_sets.total_sources
                 ),
             },

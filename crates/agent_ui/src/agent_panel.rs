@@ -6745,7 +6745,7 @@ impl AgentPanel {
                 source_action_icon(source.kind),
                 source_action_title(source),
                 source.path.clone(),
-                "Draft Action",
+                "Review Source",
                 prompt,
                 can_create_entries,
                 cx,
@@ -6761,7 +6761,7 @@ impl AgentPanel {
                 IconName::Public,
                 "Deploy Readiness".to_string(),
                 target.path.clone(),
-                "Draft Check",
+                "Review Deploy Readiness",
                 prompt,
                 can_create_entries,
                 cx,
@@ -6779,7 +6779,7 @@ impl AgentPanel {
                     .px_2()
                     .py_1()
                     .child(
-                        Label::new("No source actions available")
+                        Label::new("No source actions yet")
                             .size(LabelSize::XSmall)
                             .color(Color::Muted)
                             .truncate(),
@@ -6922,7 +6922,7 @@ impl AgentPanel {
                 IconName::FileTextOutlined,
                 "Launch Handoff",
                 "Review CLI packet map, polling policy, and action contracts.",
-                "Draft Handoff",
+                "Prepare Handoff",
                 launch_handoff_prompt(
                     &status.launch_contracts,
                     &status.launch_readiness,
@@ -6938,7 +6938,7 @@ impl AgentPanel {
                 IconName::Check,
                 "Launch Gate",
                 "Review import-summary, release-gate, and fallback states.",
-                "Draft Gate",
+                "Review Gate",
                 launch_readiness_prompt(
                     &status.launch_readiness,
                     &status.launch_contracts,
@@ -6954,7 +6954,7 @@ impl AgentPanel {
                 IconName::ListTodo,
                 "Launch Audit",
                 "Review schemas, fixtures, smoke, and status examples.",
-                "Draft Audit",
+                "Review Audit",
                 launch_audit_prompt(
                     &status.launch_audit,
                     &status.launch_readiness,
@@ -6970,7 +6970,7 @@ impl AgentPanel {
                 IconName::GitBranch,
                 "Source Audit",
                 "Review hub coordination, worker output, and risk-review state.",
-                "Draft Source",
+                "Review Sources",
                 launch_source_audit_prompt(&status.source_audit),
                 can_create_entries,
                 cx,
@@ -6980,8 +6980,8 @@ impl AgentPanel {
                 "dx-www-evidence-action",
                 IconName::Public,
                 "WWW Evidence",
-                "Review DX-WWW release packet and restart handoff artifacts.",
-                "Draft WWW",
+                "Review DX-WWW release packet and handoff readiness.",
+                "Review DX-WWW",
                 launch_www_evidence_prompt(&status.www_evidence),
                 can_create_entries,
                 cx,
@@ -7014,7 +7014,7 @@ impl AgentPanel {
                 IconName::Check,
                 "Runtime Proof",
                 "Review Check score, proof freshness, and deploy URL/status gates.",
-                "Draft Proof",
+                "Prepare Runtime Proof",
                 runtime_proof_prompt(
                     &status.check_score,
                     &status.receipt_snapshot,
@@ -7031,7 +7031,7 @@ impl AgentPanel {
                 IconName::FileTextOutlined,
                 "Import Proof",
                 "Capture operator evidence into managed runtime receipts.",
-                "Draft Import",
+                "Prepare Import",
                 runtime_proof_import_prompt(
                     &status.check_score,
                     &status.proof_freshness,
@@ -7046,8 +7046,8 @@ impl AgentPanel {
                 "dx-runtime-proof-evidence-action",
                 IconName::ListTodo,
                 "Evidence Form",
-                "Draft the operator fields needed before proof import.",
-                "Draft Form",
+                "Prepare operator evidence fields for proof import.",
+                "Prepare Evidence Form",
                 runtime_proof_evidence_template_prompt(
                     &status.check_score,
                     &status.proof_freshness,
@@ -7063,7 +7063,7 @@ impl AgentPanel {
                 IconName::FileLock,
                 "Restore Approval",
                 "Draft restore-to-target checks without mutating live paths.",
-                "Draft Approval",
+                "Prepare Approval",
                 restore_approval_prompt(&status.tool_history),
                 can_create_entries,
                 cx,
@@ -7073,8 +7073,8 @@ impl AgentPanel {
                 "dx-reducer-guard-action",
                 IconName::ListTodo,
                 "Reducer Guard",
-                "Review serializer/RLM gates before any external reducer run.",
-                "Draft Guard",
+                "Review serializer/RLM gates before external reducer execution.",
+                "Review Guard",
                 DX_REDUCER_GUARD_PROMPT,
                 can_create_entries,
                 cx,

@@ -16,9 +16,27 @@ const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
 const threadView = read("crates/agent_ui/src/conversation_view/thread_view.rs");
 const dxLaunchWorkspace = read("crates/agent_ui/src/dx_launch_workspace.rs");
 const dxLaunchSourceRows = read("crates/agent_ui/src/dx_launch_workspace/sources/rows.rs");
+const dxLaunchSourceAttachments = read(
+  "crates/agent_ui/src/dx_launch_workspace/sources/attachments.rs",
+);
+const dxLaunchSourceReceipts = read(
+  "crates/agent_ui/src/dx_launch_workspace/sources/receipts.rs",
+);
 const dxLaunchStylePanel = read("crates/agent_ui/src/dx_launch_workspace/style_panel.rs");
 const dxLaunchCheckPanel = read("crates/agent_ui/src/dx_launch_workspace/check.rs");
+const dxLaunchStatusSummary = read(
+  "crates/agent_ui/src/dx_launch_workspace/launch_status/summary.rs",
+);
+const dxSourceSets = read("crates/agent_ui/src/dx_source_sets.rs");
+const dxSourceSetFormatting = read(
+  "crates/agent_ui/src/dx_source_sets/formatting.rs",
+);
+const dxSourceSetDxEditorToolchain = read(
+  "crates/agent_ui/src/dx_source_sets/dx_editor_toolchain.rs",
+);
+const dxCheckScore = read("crates/agent_ui/src/dx_check_score.rs");
 const dxStylePanelCards = read("crates/agent_ui/src/dx_style_panel/panel_cards.rs");
+const agentConfiguration = read("crates/agent_ui/src/agent_configuration.rs");
 const sidebar = read("crates/sidebar/src/sidebar.rs");
 const threadItem = read("crates/ui/src/components/ai/thread_item.rs");
 const projectPanel = read("crates/project_panel/src/project_panel.rs");
@@ -438,7 +456,7 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(dxLaunchWorkspace, /fn subagent_pixel_icon/);
   assert.match(dxLaunchWorkspace, /gpui::hsla\(210\.0 \/ 360\.0/);
   assert.match(dxLaunchWorkspace, /status\.agent_bridge\.automations\.iter\(\)\.take\(6\)/);
-  assert.match(dxLaunchWorkspace, /muted_card\("No automation receipts", cx\)/);
+  assert.match(dxLaunchWorkspace, /muted_card\("No subagent activity", cx\)/);
   assert.match(agentPanel, /collapsed_dx_launch_rail_sections: HashSet<DxLaunchRailSection>/);
   assert.match(agentPanel, /default_collapsed_dx_launch_rail_sections/);
   assert.match(agentPanel, /DxLaunchRailSection::SourceTools/);
@@ -487,9 +505,9 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(dxLaunchStylePanel, /metric_row\(\s*"Generators",/);
   assert.match(dxLaunchStylePanel, /format!\("\{\} declared", snapshot\.visual_generator_count\)/);
   assert.match(dxLaunchStylePanel, /metric_row\(\s*"Web Preview",/);
-  assert.match(dxLaunchStylePanel, /"source bridge wired"/);
-  assert.match(dxLaunchStylePanel, /"host source present"/);
-  assert.match(dxLaunchStylePanel, /"host source missing"/);
+  assert.match(dxLaunchStylePanel, /"Preview bridge ready"/);
+  assert.match(dxLaunchStylePanel, /"Host source present"/);
+  assert.match(dxLaunchStylePanel, /"Host source missing"/);
   assert.match(
     dxLaunchStylePanel,
     /Button::new\("dx-style-open-generator-preview", "Open Style Controls"\)/,
@@ -501,10 +519,13 @@ test("agent rails and project badges keep compact production layout", () => {
   );
   assert.match(dxLaunchCheckPanel, /"Readiness score"/);
   assert.doesNotMatch(dxLaunchCheckPanel, /"Rail score"/);
-  assert.match(dxLaunchWorkspace, /"Validation"/);
+  assert.match(dxLaunchWorkspace, /"Quality Gate"/);
   assert.match(dxLaunchWorkspace, /"Worktrees"/);
-  assert.match(dxLaunchWorkspace, /"Fresh proof"/);
+  assert.match(dxLaunchWorkspace, /"Fresh Receipts"/);
   assert.doesNotMatch(dxLaunchWorkspace, /No active subagents|Show \{\} more|is working/);
+  assert.doesNotMatch(dxLaunchWorkspace, /source bridge wired|source bridge missing|No automation receipts|Fresh proof|worktree\(s\)|task\(s\)/);
+  assert.match(dxLaunchWorkspace, /"Preview Bridge"/);
+  assert.match(dxLaunchWorkspace, /"Attachable"/);
   assert.doesNotMatch(dxLaunchWorkspace, /section_title\("Token And Tool Slots"/);
   assert.doesNotMatch(dxLaunchWorkspace, /fn token_meter_slots\(/);
   assert.doesNotMatch(dxLaunchWorkspace, /fn background_task_state\(/);
@@ -516,6 +537,87 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(badgeSlot, /\.ml_auto\(\)/);
   assert.match(badgeSlot, /\.pr_1\(\)/);
   assert.match(badgeSlot, /\.justify_end\(\)/);
+});
+
+test("agent launch rails use professional operator-facing copy", () => {
+  const sidebarActions = functionBody(agentPanel, "render_dx_launch_sidebar_actions");
+  const sourceActions = functionBody(agentPanel, "render_dx_launch_source_actions");
+  const guidedCards = functionBody(agentPanel, "render_dx_launch_guided_cards");
+  const progressSummary = functionBody(dxLaunchWorkspace, "progress_summary");
+  const environmentSummary = functionBody(dxLaunchWorkspace, "environment_summary");
+  const subagentSummary = functionBody(dxLaunchWorkspace, "subagent_summary");
+  const sourceSummary = functionBody(dxLaunchWorkspace, "source_summary");
+  const styleState = functionBody(dxLaunchStylePanel, "dx_style_panel_state");
+  const webPreviewState = functionBody(dxStylePanelCards, "web_preview_state");
+  const sourceSetStatus = functionBody(dxSourceSetFormatting, "source_set_status");
+
+  assert.match(sidebarActions, /"Review Receipts"/);
+  assert.match(sourceActions, /"Review Source"/);
+  assert.match(sourceActions, /"Review Deploy Readiness"/);
+  assert.match(sourceActions, /"No source actions yet"/);
+  assert.match(guidedCards, /"Prepare Handoff"/);
+  assert.match(guidedCards, /"Review Gate"/);
+  assert.match(guidedCards, /"Review Audit"/);
+  assert.match(guidedCards, /"Review Sources"/);
+  assert.match(guidedCards, /"Review DX-WWW"/);
+  assert.match(guidedCards, /"Prepare Runtime Proof"/);
+  assert.match(guidedCards, /"Prepare Import"/);
+  assert.match(guidedCards, /"Prepare Evidence Form"/);
+  assert.match(guidedCards, /"Prepare Approval"/);
+  assert.match(guidedCards, /"Review Guard"/);
+  assert.doesNotMatch(
+    agentPanel,
+    /"Draft Action"|"Draft Check"|"Draft Handoff"|"Draft Gate"|"Draft Audit"|"Draft Source"|"Draft WWW"|"Draft Proof"|"Draft Import"|"Draft Form"|"Draft Approval"|"Draft Guard"|"No source actions available"/,
+  );
+
+  assert.match(progressSummary, /"Preview Bridge"/);
+  assert.match(progressSummary, /"Quality Gate"/);
+  assert.match(environmentSummary, /"Fresh Receipts"/);
+  assert.match(subagentSummary, /"Active Tasks"/);
+  assert.match(subagentSummary, /"No subagent activity"/);
+  assert.match(sourceSummary, /"Attachable"/);
+  assert.doesNotMatch(
+    dxLaunchWorkspace,
+    /source bridge wired|source bridge missing|No automation receipts|Fresh proof|worktree\(s\)|task\(s\)/,
+  );
+
+  assert.match(dxSourceSets, /"No workspace root found"/);
+  assert.match(dxSourceSets, /"No source pack receipts found"/);
+  assert.match(dxSourceSets, /"No media outputs found"/);
+  assert.match(dxSourceSets, /"No restore previews found"/);
+  assert.match(dxSourceSets, /"No reduced context receipts found"/);
+  assert.match(sourceSetStatus, /"No workspace open"/);
+  assert.match(dxSourceSetDxEditorToolchain, /"No extensionless dx config found"/);
+  assert.match(dxLaunchSourceAttachments, /"No attachable sources found"/);
+  assert.match(dxLaunchSourceAttachments, /"Attachable"/);
+  assert.match(dxLaunchSourceAttachments, /"Source pack or media receipt required for attachments"/);
+  assert.match(dxLaunchSourceReceipts, /"Receipt directory not found: \{\}"/);
+  assert.match(dxLaunchSourceReceipts, /"No DX receipts found"/);
+  assert.match(dxCheckScore, /"No managed attachable source receipts"/);
+  assert.match(dxCheckScore, /"\{\} worktrees, \{\} roots"/);
+  assert.match(dxCheckScore, /"\{\} attachable, \{\} total"/);
+
+  assert.match(styleState, /"Preview bridge ready"/);
+  assert.match(styleState, /"Host source present"/);
+  assert.match(styleState, /"Host source missing"/);
+  assert.match(webPreviewState, /"preview bridge ready"/);
+  assert.match(agentConfiguration, /"\{\} active tasks, \{\} automations,/);
+  assert.match(dxLaunchStatusSummary, /"\{\} automations, \{\} active, \{\} QR-ready"/);
+  assert.doesNotMatch(
+    [
+      dxSourceSets,
+      dxSourceSetFormatting,
+      dxSourceSetDxEditorToolchain,
+      dxLaunchSourceAttachments,
+      dxLaunchSourceReceipts,
+      dxCheckScore,
+      dxLaunchStylePanel,
+      dxStylePanelCards,
+      agentConfiguration,
+      dxLaunchStatusSummary,
+    ].join("\n"),
+    /No source-pack receipts|No produced media outputs|No reduced-context receipts|Attach-ready|attach-ready|source bridge wired|source bridge missing|task\(s\)|worktree\(s\)|automation\(s\)|Receipts not found|Waiting for first DX receipt|No extensionless dx config"/,
+  );
 });
 
 test("agent layout preset keeps project, git, outline, and collab on the left", () => {
@@ -675,7 +777,7 @@ test("recent tool panels use professional visible copy", () => {
   assert.match(dxStylePanelCards, /metric\(\s*"Generators",/);
   assert.match(dxStylePanelCards, /\{\} declared/);
   assert.match(dxStylePanelCards, /"Open Style Controls"/);
-  assert.match(dxStylePanelCards, /"source bridge wired"/);
+  assert.match(dxStylePanelCards, /"preview bridge ready"/);
   assert.match(dxStylePanelCards, /"host source present"/);
   assert.match(dxStylePanelCards, /"host source missing"/);
   assert.doesNotMatch(

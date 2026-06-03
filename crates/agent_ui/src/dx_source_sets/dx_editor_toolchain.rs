@@ -21,7 +21,11 @@ pub(super) fn dx_editor_toolchain_set(workspace_roots: &[PathBuf]) -> DxSourceSe
 
     DxSourceSet {
         label: "DX Config",
-        status: source_set_status(workspace_roots, &sources, "No extensionless dx config"),
+        status: source_set_status(
+            workspace_roots,
+            &sources,
+            "No extensionless dx config found",
+        ),
         sources,
     }
 }

@@ -159,7 +159,7 @@ fn workspace_root_set(workspace_roots: &[PathBuf]) -> DxSourceSet {
     DxSourceSet {
         label: "Workspace",
         status: if sources.is_empty() {
-            "No workspace root".to_string()
+            "No workspace root found".to_string()
         } else {
             format!("{} root(s)", sources.len())
         },
@@ -184,7 +184,7 @@ fn metasearch_source_pack_set(workspace_roots: &[PathBuf]) -> DxSourceSet {
 
     DxSourceSet {
         label: "Metasearch",
-        status: source_set_status(workspace_roots, &sources, "No source-pack receipts"),
+        status: source_set_status(workspace_roots, &sources, "No source pack receipts found"),
         sources,
     }
 }
@@ -201,7 +201,7 @@ fn media_output_set(workspace_roots: &[PathBuf]) -> DxSourceSet {
 
     DxSourceSet {
         label: "Media Outputs",
-        status: source_set_status(workspace_roots, &sources, "No produced media outputs"),
+        status: source_set_status(workspace_roots, &sources, "No media outputs found"),
         sources,
     }
 }
@@ -220,7 +220,7 @@ fn forge_restore_preview_set(workspace_roots: &[PathBuf]) -> DxSourceSet {
 
     DxSourceSet {
         label: "Restore Previews",
-        status: source_set_status(workspace_roots, &sources, "No restore previews"),
+        status: source_set_status(workspace_roots, &sources, "No restore previews found"),
         sources,
     }
 }
@@ -323,7 +323,11 @@ fn reduced_context_set(workspace_roots: &[PathBuf]) -> DxSourceSet {
 
     DxSourceSet {
         label: "Reduced Context",
-        status: source_set_status(workspace_roots, &sources, "No reduced-context receipts"),
+        status: source_set_status(
+            workspace_roots,
+            &sources,
+            "No reduced context receipts found",
+        ),
         sources,
     }
 }

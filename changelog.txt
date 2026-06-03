@@ -1,3 +1,23 @@
+[2026-06-03] - Agent Fullscreen Rail Copy Polish
+
+CHANGED:
+- `crates\agent_ui\src\agent_panel.rs` now labels launch/source/readiness cards with concise operator actions such as Review Source, Prepare Handoff, Review Gate, and Prepare Runtime Proof instead of prototype `Draft ...` labels.
+- `crates\agent_ui\src\dx_launch_workspace.rs` and related launch/source helper modules now use professional rail language for Preview Bridge, Quality Gate, Fresh Receipts, Active Tasks, attachable sources, and receipt empty states.
+- `crates\agent_ui\src\dx_source_sets.rs`, `crates\agent_ui\src\dx_source_sets\formatting.rs`, and `crates\agent_ui\src\dx_source_sets\dx_editor_toolchain.rs` now use found/missing empty-state wording instead of hyphenated receipt/debug labels.
+- `crates\agent_ui\src\dx_style_panel.rs`, `crates\agent_ui\src\dx_style_panel\panel_cards.rs`, `crates\agent_ui\src\dx_launch_workspace\style_panel.rs`, `crates\agent_ui\src\dx_check_score.rs`, `crates\agent_ui\src\agent_configuration.rs`, and `crates\agent_ui\src\dx_launch_workspace\launch_status\summary.rs` now align the same preview/source/task language across companion Agent and Style surfaces.
+- `script\dx-workspace-ui-state-source.test.ts` now guards the professional rail/action copy and rejects reintroducing `Draft ...`, attach-ready, source-bridge, parenthetical pluralization, and stale source empty-state wording in the touched surfaces.
+- `todo.txt` records the focused Agent fullscreen rail copy polish for handoff.
+
+PASSED:
+- `rustfmt --edition 2024 --check` across the touched Agent UI Rust files.
+- `C:\Users\Computer\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin\node.exe --test script\dx-workspace-ui-state-source.test.ts` with 19/19 passing.
+- `git diff --check --` across the touched source, guard, todo, and changelog files.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)"` across the touched source, guard, todo, and changelog files returned no conflict markers.
+
+NOTES:
+- `just run` was not run because the current validation request was conditional on all tasks being complete; the active UI-polish goal still has broader remaining scope.
+- `DX.txt` remains an unrelated scratch/editor change and is intentionally left untouched.
+
 [2026-06-03] - Core Side Panel Split Close Affordance
 
 CHANGED:

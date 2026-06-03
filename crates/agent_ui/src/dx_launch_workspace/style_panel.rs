@@ -26,11 +26,11 @@ pub(super) fn dx_style_panel_state(snapshot: &DxStylePanelSnapshot, cx: &App) ->
         .child(metric_row(
             "Web Preview",
             if snapshot.web_preview_bridge_ready {
-                "source bridge wired"
+                "Preview bridge ready"
             } else if snapshot.web_preview_host_present {
-                "host source present"
+                "Host source present"
             } else {
-                "host source missing"
+                "Host source missing"
             },
         ))
         .child(metric_row("Readiness", snapshot.readiness.status.clone()))

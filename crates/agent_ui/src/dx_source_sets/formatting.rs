@@ -35,7 +35,7 @@ pub(super) fn source_set_status(
     empty_label: &'static str,
 ) -> String {
     if workspace_roots.is_empty() {
-        "No workspace".to_string()
+        "No workspace open".to_string()
     } else if sources.is_empty() {
         empty_label.to_string()
     } else {

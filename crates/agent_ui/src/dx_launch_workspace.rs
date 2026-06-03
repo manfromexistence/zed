@@ -354,7 +354,7 @@ fn workspace_mode_state(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElemen
             IconName::ZedAgent,
             agent_state,
             format!(
-                "{} automation(s), {} active task(s)",
+                "{} automations, {} active",
                 status.agent_bridge.automation_count, status.agent_bridge.active_task_count
             ),
             cx,
@@ -559,22 +559,19 @@ fn progress_summary(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {
         .child(progress_step_row(
             "dx-progress-style",
             status.style_panel.web_preview_bridge_ready,
-            "Style",
+            "Preview Bridge",
             if status.style_panel.web_preview_bridge_ready {
-                "source bridge wired"
+                "Ready"
             } else {
-                "source bridge missing"
+                "Missing"
             },
             cx,
         ))
         .child(progress_step_row(
             "dx-progress-check",
             status.check_score.score >= 80,
-            "Validation",
-            format!(
-                "{}/100 {}",
-                status.check_score.score, status.check_score.state
-            ),
+            "Quality Gate",
+            format!("{}/100", status.check_score.score),
             cx,
         ))
         .child(progress_step_row(
@@ -594,7 +591,7 @@ fn environment_summary(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement
             "dx-env-workspace",
             IconName::Library,
             "Worktrees",
-            format!("{} worktree(s)", status.visible_worktree_count),
+            status.visible_worktree_count.to_string(),
             cx,
         ))
         .child(compact_status_row(
@@ -622,8 +619,8 @@ fn environment_summary(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement
         .child(compact_status_row(
             "dx-env-commit",
             IconName::GitBranch,
-            "Fresh proof",
-            format!("{} fresh", status.proof_freshness.fresh_receipt_count()),
+            "Fresh Receipts",
+            status.proof_freshness.fresh_receipt_count().to_string(),
             cx,
         ))
         .into_any_element()
@@ -633,14 +630,14 @@ fn subagent_summary(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {
     let mut stack = v_flex().gap_1().child(compact_status_row(
         "dx-subagents-active",
         IconName::ListTodo,
-        "Active",
-        format!("{} task(s)", status.agent_bridge.active_task_count),
+        "Active Tasks",
+        status.agent_bridge.active_task_count.to_string(),
         cx,
     ));
 
     if status.agent_bridge.automations.is_empty() {
         return stack
-            .child(muted_card("No automation receipts", cx))
+            .child(muted_card("No subagent activity", cx))
             .into_any_element();
     }
 
@@ -688,7 +685,7 @@ fn source_summary(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {
         .child(compact_status_row(
             "dx-source-summary-attach",
             IconName::Attach,
-            "Attach",
+            "Attachable",
             source_summary.attachable_sources.to_string(),
             cx,
         ))

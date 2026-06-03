@@ -130,7 +130,7 @@ pub(super) fn readiness_card(snapshot: &DxStylePanelSnapshot, cx: &App) -> AnyEl
 
 fn web_preview_state(snapshot: &DxStylePanelSnapshot) -> String {
     if snapshot.web_preview_bridge_ready {
-        "source bridge wired".to_string()
+        "preview bridge ready".to_string()
     } else if snapshot.web_preview_host_present {
         "host source present".to_string()
     } else {
