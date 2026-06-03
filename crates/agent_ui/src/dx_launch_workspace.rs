@@ -49,7 +49,6 @@ use self::list_labels::{bounded_items, yes_no};
 #[derive(Clone)]
 pub(crate) struct DxLaunchWorkspaceStatus {
     pub active_status: SharedString,
-    pub background_task_count: usize,
     pub visible_worktree_count: usize,
     pub agent_bridge: DxAgentBridgeSnapshot,
     pub launch_status: DxLaunchStatusSnapshot,
@@ -226,6 +225,7 @@ pub(crate) fn render_workspace_chrome(
     show_progress_rail: bool,
     rail_controls: DxLaunchRailControls,
     status: DxLaunchWorkspaceStatus,
+    window: &mut Window,
     cx: &mut App,
 ) -> AnyElement {
     div()
@@ -243,21 +243,29 @@ pub(crate) fn render_workspace_chrome(
                 source_actions,
                 &status,
                 &rail_controls,
+                window,
                 cx,
             ))
         })
         .when(show_progress_rail, |this| {
-            this.child(render_right_rail(&status, guided_cards, &rail_controls, cx))
+            this.child(render_right_rail(
+                &status,
+                guided_cards,
+                &rail_controls,
+                window,
+                cx,
+            ))
         })
         .into_any_element()
 }
 
 fn render_sources_rail(
-    sidebar_actions: AnyElement,
-    source_row_controls: Vec<DxSourceRowControl>,
-    source_actions: AnyElement,
+    _sidebar_actions: AnyElement,
+    _source_row_controls: Vec<DxSourceRowControl>,
+    _source_actions: AnyElement,
     status: &DxLaunchWorkspaceStatus,
     rail_controls: &DxLaunchRailControls,
+    window: &mut Window,
     cx: &mut App,
 ) -> AnyElement {
     v_flex()
@@ -265,8 +273,8 @@ fn render_sources_rail(
         .absolute()
         .left_2()
         .top_2()
-        .bottom_2()
         .w(px(300.0))
+        .max_h(vh(0.86, window))
         .gap_2()
         .p_2()
         .rounded_lg()
@@ -277,130 +285,15 @@ fn render_sources_rail(
         .overflow_y_scroll()
         .occlude()
         .child(rail_section(
-            "dx-sources-commands-section",
-            "Agent",
-            IconName::ZedAgent,
-            DxLaunchRailSection::SourceCommands,
-            rail_controls,
-            sidebar_actions,
-            cx,
-        ))
-        .child(rail_section(
             "dx-sources-stack-section",
             "Sources",
             IconName::Book,
             DxLaunchRailSection::SourceStack,
             rail_controls,
-            sources::source_set_stack(&status.source_sets, source_row_controls, cx),
+            sources::source_set_stack(&status.source_sets, Vec::new(), cx),
+            false,
             cx,
         ))
-        .child(rail_section(
-            "dx-sources-tools-section",
-            "Tools",
-            IconName::Paperclip,
-            DxLaunchRailSection::SourceTools,
-            rail_controls,
-            source_actions,
-            cx,
-        ))
-        .child(rail_section(
-            "dx-workspace-state-section",
-            "Workspace",
-            IconName::Library,
-            DxLaunchRailSection::WorkspaceState,
-            rail_controls,
-            workspace_mode_state(status, cx),
-            cx,
-        ))
-        .into_any_element()
-}
-
-fn workspace_mode_state(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {
-    let source_summary = status.source_sets.attachment_summary();
-    let agent_state = if status.agent_bridge.enabled {
-        status.agent_bridge.status.clone()
-    } else {
-        "disabled".to_string()
-    };
-
-    v_flex()
-        .gap_1()
-        .child(workspace_mode_row(
-            "Chat",
-            IconName::NewThread,
-            status.active_status.clone(),
-            "Current thread",
-            cx,
-        ))
-        .child(workspace_mode_row(
-            "Tasks",
-            IconName::Clock,
-            format!("{} retained", status.background_task_count),
-            "Retained threads",
-            cx,
-        ))
-        .child(workspace_mode_row(
-            "Sources",
-            IconName::Book,
-            format!("{} total", status.source_sets.total_sources),
-            format!(
-                "{} available, {} receipt-backed",
-                source_summary.attachable_sources, source_summary.managed_receipts
-            ),
-            cx,
-        ))
-        .child(workspace_mode_row(
-            "Agent",
-            IconName::ZedAgent,
-            agent_state,
-            format!(
-                "{} automations, {} active",
-                status.agent_bridge.automation_count, status.agent_bridge.active_task_count
-            ),
-            cx,
-        ))
-        .into_any_element()
-}
-
-fn workspace_mode_row(
-    label: &'static str,
-    icon: IconName,
-    state: impl Into<SharedString>,
-    detail: impl Into<SharedString>,
-    cx: &App,
-) -> AnyElement {
-    v_flex()
-        .min_w_0()
-        .gap_0p5()
-        .rounded_sm()
-        .px_1()
-        .py_0p5()
-        .bg(cx.theme().colors().element_background)
-        .child(
-            h_flex()
-                .justify_between()
-                .gap_2()
-                .min_w_0()
-                .child(
-                    h_flex()
-                        .gap_1()
-                        .min_w_0()
-                        .child(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
-                        .child(Label::new(label).size(LabelSize::Small).color(Color::Muted)),
-                )
-                .child(
-                    Label::new(state.into())
-                        .size(LabelSize::Small)
-                        .color(Color::Default)
-                        .truncate(),
-                ),
-        )
-        .child(
-            Label::new(detail.into())
-                .size(LabelSize::XSmall)
-                .color(Color::Muted)
-                .truncate(),
-        )
         .into_any_element()
 }
 
@@ -408,6 +301,7 @@ fn render_right_rail(
     status: &DxLaunchWorkspaceStatus,
     guided_cards: AnyElement,
     rail_controls: &DxLaunchRailControls,
+    window: &mut Window,
     cx: &mut App,
 ) -> AnyElement {
     v_flex()
@@ -415,8 +309,8 @@ fn render_right_rail(
         .absolute()
         .right_2()
         .top_2()
-        .bottom_2()
         .w(px(300.0))
+        .max_h(vh(0.86, window))
         .gap_2()
         .p_2()
         .rounded_lg()
@@ -434,6 +328,7 @@ fn render_right_rail(
             DxLaunchRailSection::Progress,
             rail_controls,
             progress_summary(status, cx),
+            true,
             cx,
         ))
         .child(rail_section(
@@ -443,6 +338,7 @@ fn render_right_rail(
             DxLaunchRailSection::Environment,
             rail_controls,
             environment_summary(status, cx),
+            true,
             cx,
         ))
         .child(rail_section(
@@ -452,6 +348,7 @@ fn render_right_rail(
             DxLaunchRailSection::Subagents,
             rail_controls,
             subagent_summary(status, cx),
+            true,
             cx,
         ))
         .child(rail_section(
@@ -461,6 +358,7 @@ fn render_right_rail(
             DxLaunchRailSection::SourceSummary,
             rail_controls,
             source_summary(status, cx),
+            true,
             cx,
         ))
         .child(rail_section(
@@ -470,6 +368,7 @@ fn render_right_rail(
             DxLaunchRailSection::Readiness,
             rail_controls,
             readiness_summary(status, guided_cards, cx),
+            false,
             cx,
         ))
         .into_any_element()
@@ -482,6 +381,7 @@ fn rail_section(
     section: DxLaunchRailSection,
     controls: &DxLaunchRailControls,
     content: AnyElement,
+    show_bottom_rule: bool,
     cx: &App,
 ) -> AnyElement {
     let is_open = controls.state.is_open(section);
@@ -506,7 +406,7 @@ fn rail_section(
                 .child(div().flex_1()),
         )
         .when(is_open, |this| this.child(content))
-        .when(!is_open, |this| {
+        .when(!is_open && show_bottom_rule, |this| {
             this.child(
                 div()
                     .h(px(1.0))

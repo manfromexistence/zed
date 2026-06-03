@@ -1,3 +1,114 @@
+[2026-06-03] - Agent Response Indicator Navigation Fix
+
+FIXED:
+- `crates\agent_ui\src\agent_panel.rs` now renders and subscribes the fullscreen response indicator against the visible active thread, falling back to the root thread only when no child/subagent thread is active.
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now owns response-anchor navigation through a durable pending scroll request, persists the selected offset into ACP/native thread state, disables tail-follow snapback, and reapplies the anchor briefly while GPUI list layout settles.
+- `script\dx-workspace-ui-state-source.test.ts` now guards the visible-thread response-indicator path, ThreadView-owned retry contract, ACP/native scroll persistence, and compact marker spacing.
+
+PASSED:
+- `rustfmt --edition 2024 --check` passed on all dirty Rust files.
+- `node --test script\dx-workspace-ui-state-source.test.ts script\dx-title-bar-source.test.ts script\dx-style-panel-source.test.ts script\dx-project-panel-source.test.ts` passed with 43/43 checks.
+- `git diff --check` passed.
+- `CARGO_BUILD_JOBS=6 just run` completed successfully, built `zed` and the CLI companion, launched Zed once, and detected the main window as process 23660.
+
+[2026-06-03] - DX Runtime Tracker Cleanup
+
+CHANGED:
+- `DX.txt` now tracks the current Zed/DX editor runtime status, latest authorized `just run` result, and guardrails instead of carrying an old pasted prompt plus scratch text.
+
+PASSED:
+- `git diff --check -- DX.txt`
+
+NOTES:
+- This was documentation-only. It did not run Cargo, build, or `just run`.
+
+[2026-06-03] - Agent Response Navigation And Menu Exit Fix
+
+FIXED:
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now treats response-indicator clicks as an explicit operator navigation action: it leaves follow mode, unfollows the generating Agent when needed, persists the selected scroll position, and saves the thread state so the list does not snap back.
+- `crates\agent_ui\src\agent_panel.rs` tightens the response indicator spacing while keeping wider click targets and now passes the active window through every deferred response-anchor jump.
+- `crates\ui\src\components\popover_menu.rs` exposes pointer-near checks from tracked trigger/menu bounds so hover-opened popovers can distinguish real menu use from fast mouse-away exits.
+- `crates\title_bar\src\application_menu.rs` uses the pointer-near popover guard to close application menus when the pointer leaves the trigger/menu area, even if the popover later receives focus.
+- `crates\agent_ui\src\dx_launch_workspace.rs` removes the stale `background_task_count` status field that became unused after the source-only left rail cleanup.
+- Focused source guards now reject the old weak response jump and focus-only menu dismissal contracts.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\ui\src\components\popover_menu.rs crates\title_bar\src\application_menu.rs crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\dx_launch_workspace.rs`
+- `node --test script\dx-workspace-ui-state-source.test.ts script\dx-title-bar-source.test.ts` with 23/23 passing.
+- `git diff --check`
+- Focused conflict-marker scan across touched source, guard, todo, and changelog files.
+
+NOTES:
+- This was source-only. It did not run Cargo, build, or `just run`, per the current instruction.
+- `DX.txt` remains an unrelated scratch/editor change and is intentionally left untouched.
+
+[2026-06-03] - Agent Screen Source Rail And Hover Polish
+
+CHANGED:
+- `crates\sidebar\src\sidebar.rs` restores a compact thread icon-picker close button and replaces the wrapping icon row with a fixed nine-column grid so the picker no longer leaves a right-side gutter.
+- `crates\agent_ui\src\dx_launch_workspace.rs` makes the Agent fullscreen left floating rail source-only, removes duplicated command/tool/workspace sections from that rail, and caps both floating rails inside the AI panel with internal scrolling.
+- `crates\agent_ui\src\agent_panel.rs` and `crates\agent_ui\src\conversation_view\thread_view.rs` strengthen top-center response marker navigation by stopping list follow-mode, widening marker hit targets, and repeating the anchor jump across follow-up frames.
+- `crates\title_bar\src\application_menu.rs` now closes hover-opened application menus after leaving the trigger/menu focus area instead of letting stale hover menus linger.
+- Focused source guards now cover the fixed icon-picker grid, source-only Agent rail, response-anchor scroll handoff, and titlebar hover dismissal.
+
+PASSED:
+- `rustfmt --edition 2024 crates\sidebar\src\sidebar.rs crates\agent_ui\src\dx_launch_workspace.rs crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\title_bar\src\application_menu.rs`
+- `node --test script\dx-workspace-ui-state-source.test.ts script\dx-title-bar-source.test.ts` with 23/23 passing.
+- `git diff --check`
+
+NOTES:
+- This was source-only. It did not run Cargo, build, or `just run`, per the current instruction.
+- `DX.txt` remains an unrelated scratch/editor change and is intentionally left untouched.
+
+[2026-06-03] - Follow-up Micro UI Polish
+
+CHANGED:
+- `crates\sidebar\src\sidebar.rs` removes the thread icon-picker cancel button so the popover no longer reserves a right-side action gap.
+- `crates\agent_ui\src\dx_launch_workspace.rs` lets the last floating rail section omit its collapsed bottom rule while preserving rules between earlier sections.
+- `crates\project_panel\src\project_panel.rs` removes the redundant Project title header from populated and empty Project panel states, leaving selection actions and the Media header controls as the visible action surfaces.
+- `crates\agent_ui\src\dx_style_panel\panel_view.rs` adds compact padding to the Style panel header.
+- `script\dx-workspace-ui-state-source.test.ts` now guards the icon picker, Project header removal, and updated rail/header contracts.
+
+PASSED:
+- `rustfmt --edition 2024 --check` on the touched Rust files.
+- `node --test script\dx-workspace-ui-state-source.test.ts script\dx-project-panel-source.test.ts script\dx-style-panel-source.test.ts` with 39/39 passing.
+
+NOTES:
+- `just run`, Cargo, build, and runtime/WebView validation were not run in this source-only pass.
+- `DX.txt` remains an unrelated scratch/editor change and is intentionally left untouched.
+
+[2026-06-03] - Small UI Polish Just Run Validation
+
+FIXED:
+- `crates\project_panel\src\project_panel.rs` now converts the Media-header side-panel controls into `AnyElement`, fixing the compile error found by the first authorized `just run`.
+- `crates\agent_ui\src\dx_style_panel.rs` scopes a dead-code allowance to the temporarily placeholder-only Style module so parked Style cockpit internals do not flood the build while the panel intentionally shows only the file-open prompt.
+
+PASSED:
+- `rustfmt --edition 2024` on the touched Rust files.
+- `node --test script\dx-workspace-ui-state-source.test.ts script\dx-project-panel-source.test.ts script\dx-style-panel-source.test.ts` with 39/39 passing.
+- `CARGO_BUILD_JOBS=6 just run` completed successfully, built `zed` and `cli`, launched Zed once, and detected the main window.
+
+NOTES:
+- The first authorized `just run` failed at `crates\project_panel\src\project_panel.rs` with a Media-header `AnyElement` type mismatch; the retry passed after the focused fix.
+- `DX.txt` remains an unrelated scratch/editor change and is intentionally left untouched.
+
+[2026-06-03] - Small AI And Project UI Polish
+
+CHANGED:
+- `crates\sidebar\src\sidebar.rs` now renders the chat icon picker with a compact header label and right-side close icon instead of an absolute close strip.
+- `crates\agent_ui\src\agent_panel.rs` and `crates\agent_ui\src\dx_launch_workspace.rs` now make fullscreen response markers smaller with wider click targets and let floating Agent rails shrink to content before scrolling at viewport height.
+- `crates\project_panel\src\project_panel.rs` and `crates\project_panel\src\media_preview.rs` now move Project split/close controls into the Media header and size the shelf through bounded 2/4/8/12 media slots with overflow kept behind the More card.
+- `crates\agent_ui\src\dx_style_panel\panel_view.rs` now shows only the requested centered file-open prompt until Style controls are restored through the Web Preview surface.
+- Focused source guards now cover the updated rails, media shelf, and Style placeholder contracts.
+
+PASSED:
+- `rustfmt --edition 2024 --check` on the touched Rust files.
+- `node --test script\dx-workspace-ui-state-source.test.ts script\dx-project-panel-source.test.ts script\dx-style-panel-source.test.ts` with 39/39 passing.
+
+NOTES:
+- `just run`, Cargo, build, and runtime/WebView validation were not run in this source-only pass.
+- `DX.txt` remains an unrelated scratch/editor change and is intentionally left untouched.
+
 [2026-06-03] - Authorized Just Run Validation
 
 PASSED:

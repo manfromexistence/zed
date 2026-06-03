@@ -4401,18 +4401,16 @@ test("DX Style has a real right-dock GPUI shell", () => {
   assert.match(panelMetric, /pub\(super\) fn metric/);
   assert.match(panelMetric, /max_w\(px\(190\.0\)\)/);
   assert.match(panelCards, /OpenGeneratorPreviewForContext/);
-  assert.match(panelView, /source_context_json/);
-  assert.match(panelView, /STYLE_PANEL_ROW_LIMIT: usize = 13/);
-  assert.match(panelView, /take\(STYLE_PANEL_ROW_LIMIT\)/);
-  assert.match(panelView, /can_open_generator/);
-  assert.match(panelView, /snapshot\.web_preview_bridge_ready/);
   assert.match(
     panelView,
-    /snapshot\.web_preview_bridge_ready\s*&&\s*active_context\.can_open_generator\(\)/,
+    /Label::new\("Open an HTML, CSS, or TSX file to view Style controls\."\)/,
   );
-  assert.match(panelView, /generator_host_card/);
-  assert.match(panelView, /style_context_card/);
-  assert.match(panelView, /readiness_card/);
+  assert.match(panelView, /id\("dx-style-panel-empty-state"\)/);
+  assert.doesNotMatch(panelView, /source_context_json/);
+  assert.doesNotMatch(panelView, /STYLE_PANEL_ROW_LIMIT/);
+  assert.doesNotMatch(panelView, /generator_host_card/);
+  assert.doesNotMatch(panelView, /style_context_card/);
+  assert.doesNotMatch(panelView, /readiness_card/);
   assert.doesNotMatch(panelView, /filter\(\|row\| row\.label != "Native Sidebar"\)/);
   assert.match(panelCards, /"dx-style-panel-generator-host"/);
   assert.match(panelCards, /"dx-style-panel-context-card"/);

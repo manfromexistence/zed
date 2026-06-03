@@ -306,7 +306,6 @@ test("side dock stack controls use real panel entries and preserve single-panel 
 
 test("core side panels expose dock split and close controls in visible headers", () => {
   const sidePanelHeaderControls = functionBody(dock, "side_panel_header_controls");
-  const projectHeader = functionBody(projectPanel, "render_panel_header");
   const projectSelectionToolbar = functionBody(
     projectPanel,
     "render_selected_entries_toolbar",
@@ -328,7 +327,8 @@ test("core side panels expose dock split and close controls in visible headers",
     assert.match(source, /side_panel_header_controls/);
   }
 
-  assert.match(projectHeader, /side_panel_header_controls\(\s*"project-panel"/);
+  assert.doesNotMatch(projectPanel, /fn render_panel_header/);
+  assert.match(projectPanel, /side_panel_header_controls\(\s*"project-panel-media"/);
   assert.match(
     projectSelectionToolbar,
     /side_panel_header_controls\(\s*"project-panel-selection"/,
@@ -372,6 +372,17 @@ test("agent fullscreen uses agent rails while sidebar button remains dock-scoped
   const fullscreenCenter = functionBody(agentPanel, "render_fullscreen_agent_center");
   const messageEditor = functionBody(threadView, "render_message_editor");
   const toolbar = functionBody(agentPanel, "render_toolbar");
+  const responseIndicator = functionBody(agentPanel, "render_toolbar_response_indicator");
+  const responseSegment = functionBody(agentPanel, "toolbar_response_indicator_segment");
+  const activeVisibleThread = functionBody(agentPanel, "active_visible_thread_view");
+  const visibleThreadForConversation = functionBody(
+    agentPanel,
+    "active_visible_thread_view_for_conversation",
+  );
+  const subscribeActiveThread = functionBody(agentPanel, "subscribe_to_active_thread_view");
+  const scrollAnchor = functionBody(threadView, "scroll_to_response_anchor");
+  const scrollRequest = functionBody(threadView, "apply_response_anchor_scroll_request");
+  const applyScrollAnchor = functionBody(threadView, "apply_response_anchor_scroll");
   assert.match(agentPanel, /"agent-toolbar-toggle-sources-rail"/);
   assert.match(agentPanel, /"agent-toolbar-toggle-progress-rail"/);
   assert.match(agentPanel, /fullscreen_sources_rail_open/);
@@ -396,16 +407,47 @@ test("agent fullscreen uses agent rails while sidebar button remains dock-scoped
   assert.match(dock, /workspace\.zoomed_is_agent_panel = panel\.read\(cx\)\.is_agent_panel\(\)/);
   assert.match(dock, /workspace\.zoomed_is_agent_panel = false/);
   assert.match(threadView, /struct AgentResponseAnchor/);
+  assert.match(threadView, /const RESPONSE_ANCHOR_SCROLL_RETRY_FRAMES: usize = 6;/);
+  assert.match(threadView, /struct ResponseAnchorScrollRequest/);
+  assert.match(threadView, /response_anchor_scroll_request: Option<ResponseAnchorScrollRequest>/);
+  assert.match(activeVisibleThread, /Self::active_visible_thread_view_for_conversation\(server_view, cx\)/);
+  assert.match(visibleThreadForConversation, /\.active_thread\(\)\s*\.cloned\(\)\s*\.or_else\(\|\| server_view\.root_thread_view\(\)\)/);
+  assert.match(subscribeActiveThread, /Self::active_visible_thread_view_for_conversation\(server_view, cx\)/);
   assert.match(threadView, /ScrollPositionChanged/);
   assert.match(threadView, /pub\(crate\) fn response_anchors\(&self, cx: &App\) -> Vec<AgentResponseAnchor>/);
   assert.match(threadView, /pub\(crate\) fn scroll_to_response_anchor\(/);
-  assert.match(threadView, /cx\.emit\(AcpThreadViewEvent::ScrollPositionChanged\)/);
-  assert.match(agentPanel, /active_thread\.read\(cx\)\.response_anchors\(cx\)/);
+  assert.match(scrollAnchor, /window: &mut Window/);
+  assert.match(scrollAnchor, /if entry_ix >= self\.thread\.read\(cx\)\.entries\(\)\.len\(\)/);
+  assert.match(scrollAnchor, /self\.response_anchor_scroll_request = Some\(ResponseAnchorScrollRequest \{/);
+  assert.match(scrollAnchor, /frames_remaining: RESPONSE_ANCHOR_SCROLL_RETRY_FRAMES/);
+  assert.match(scrollAnchor, /self\.apply_response_anchor_scroll_request\(window, cx\)/);
+  assert.match(scrollRequest, /let record_navigation = request\.frames_remaining == RESPONSE_ANCHOR_SCROLL_RETRY_FRAMES;/);
+  assert.match(scrollRequest, /window\.on_next_frame\(move \|window, cx\|/);
+  assert.match(scrollRequest, /thread_view\.apply_response_anchor_scroll_request\(window, cx\)/);
+  assert.match(applyScrollAnchor, /record_navigation: bool/);
+  assert.match(applyScrollAnchor, /self\.should_be_following = false/);
+  assert.match(applyScrollAnchor, /workspace\.unfollow\(CollaboratorId::Agent, window, cx\)/);
+  assert.match(applyScrollAnchor, /set_follow_mode\(gpui::FollowMode::Normal\)/);
+  assert.match(applyScrollAnchor, /self\.list_state\.scroll_to\(scroll_position\)/);
+  assert.match(applyScrollAnchor, /self\.thread\.update\(cx, \|thread, _cx\| \{/);
+  assert.match(applyScrollAnchor, /thread\.set_ui_scroll_position\(Some\(scroll_position\)\)/);
+  assert.match(applyScrollAnchor, /self\.schedule_save\(cx\)/);
+  assert.doesNotMatch(threadView, /scroll_to_reveal_item\(entry_ix\)/);
+  assert.match(applyScrollAnchor, /cx\.emit\(AcpThreadViewEvent::ScrollPositionChanged\)/);
+  assert.match(responseIndicator, /self\.active_visible_thread_view\(cx\)/);
+  assert.doesNotMatch(responseIndicator, /self\.active_thread_view\(cx\)/);
+  assert.match(responseIndicator, /active_thread\.read\(cx\)\.response_anchors\(cx\)/);
   assert.match(agentPanel, /AcpThreadViewEvent::ScrollPositionChanged => \{\s*cx\.notify\(\);\s*\}/);
   assert.match(agentPanel, /Tooltip::with_meta\(label\.clone\(\), None, detail\.clone\(\), cx\)/);
-  assert.match(agentPanel, /thread\.scroll_to_response_anchor\(entry_ix, cx\)/);
-  assert.match(agentPanel, /\.w\(px\(2\.0\)\)/);
-  assert.match(agentPanel, /\.h\(height\)/);
+  assert.match(responseSegment, /thread\.scroll_to_response_anchor\(entry_ix, window, cx\)/);
+  assert.doesNotMatch(responseSegment, /window\.on_next_frame/);
+  assert.match(responseSegment, /cx\.stop_propagation\(\)/);
+  assert.match(responseIndicator, /\.gap_0\(\)/);
+  assert.match(responseIndicator, /\.px_0p5\(\)/);
+  assert.match(responseSegment, /\.w\(px\(9\.0\)\)/);
+  assert.match(responseSegment, /\.cursor_pointer\(\)/);
+  assert.doesNotMatch(responseSegment, /CursorStyle::PointingHand/);
+  assert.match(responseSegment, /\.w\(px\(2\.0\)\)\.h\(height\)/);
   assert.match(agentPanel, /"agent-fullscreen-center"/);
   assert.doesNotMatch(fullscreenCenter, /\.px_4\(\)/);
   assert.doesNotMatch(fullscreenCenter, /\.pb_3\(\)/);
@@ -438,14 +480,24 @@ test("sidebar chat groups expose persistent sort and icon override controls", ()
   assert.match(sidebar, /subtitle: None,\s*action: SerializedSidebarGridAction::OpenThread/s);
   assert.match(sidebar, /matches!\(action, SidebarGridAction::OpenThread\(_\)\)/);
   assert.match(sidebar, /struct ThreadIconPickerMenu/);
+  const threadIconPickerStart = sidebar.indexOf("struct ThreadIconPickerMenu");
+  assert.ok(threadIconPickerStart >= 0, "expected thread icon picker menu");
+  const threadIconPickerEnd = sidebar.indexOf("pub struct Sidebar", threadIconPickerStart);
+  assert.ok(threadIconPickerEnd > threadIconPickerStart, "expected sidebar after picker menu");
+  const threadIconPicker = sidebar.slice(threadIconPickerStart, threadIconPickerEnd);
   assert.match(
     sidebar,
     /thread_icon_picker_handles: RefCell<HashMap<ThreadId, PopoverMenuHandle<ThreadIconPickerMenu>>>/,
   );
-  assert.match(sidebar, /"thread-icon-picker-grid"/);
-  assert.match(sidebar, /"thread-icon-picker-grid-icons"/);
-  assert.match(sidebar, /"thread-icon-picker-close"/);
-  assert.match(sidebar, /cx\.emit\(DismissEvent\)/);
+  assert.match(threadIconPicker, /"thread-icon-picker-grid"/);
+  assert.match(threadIconPicker, /"thread-icon-picker-header"/);
+  assert.match(threadIconPicker, /Choose Icons for your Chat/);
+  assert.match(threadIconPicker, /"thread-icon-picker-grid-icons"/);
+  assert.match(threadIconPicker, /"thread-icon-picker-close"/);
+  assert.match(threadIconPicker, /THREAD_ICON_PICKER_COLUMNS: u16 = 9/);
+  assert.match(threadIconPicker, /\.grid\(\)/);
+  assert.match(threadIconPicker, /\.grid_cols\(THREAD_ICON_PICKER_COLUMNS\)/);
+  assert.doesNotMatch(threadIconPicker, /\.flex_wrap\(\)/);
   assert.doesNotMatch(sidebar, /\.pr_5\(\)/);
   assert.match(sidebar, /"sidebar-chat-sort-\{label\}"/);
   assert.match(sidebar, /"thread-icon-picker"/);
@@ -518,14 +570,20 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(sourcesRail, /\.absolute\(\)/);
   assert.match(sourcesRail, /\.left_2\(\)/);
   assert.match(sourcesRail, /\.w\(px\(300\.0\)\)/);
+  assert.match(sourcesRail, /\.max_h\(vh\(0\.86, window\)\)/);
   assert.match(sourcesRail, /\.rounded_lg\(\)/);
   assert.match(sourcesRail, /\.shadow_md\(\)/);
   assert.match(sourcesRail, /\.occlude\(\)/);
+  assert.match(sourcesRail, /sources::source_set_stack\(&status\.source_sets, Vec::new\(\), cx\)/);
+  assert.doesNotMatch(sourcesRail, /dx-sources-commands-section/);
+  assert.doesNotMatch(sourcesRail, /dx-sources-tools-section/);
+  assert.doesNotMatch(sourcesRail, /dx-workspace-state-section/);
   assert.match(progressRail, /\.absolute\(\)/);
   assert.match(progressRail, /\.right_2\(\)/);
   assert.match(progressRail, /\.top_2\(\)/);
-  assert.match(progressRail, /\.bottom_2\(\)/);
+  assert.doesNotMatch(progressRail, /\.bottom_2\(\)/);
   assert.match(progressRail, /\.w\(px\(300\.0\)\)/);
+  assert.match(progressRail, /\.max_h\(vh\(0\.86, window\)\)/);
   assert.match(progressRail, /\.rounded_lg\(\)/);
   assert.match(progressRail, /\.border_1\(\)/);
   assert.match(progressRail, /\.shadow_md\(\)/);
@@ -710,7 +768,6 @@ test("agent layout preset keeps project, git, outline, and collab on the left", 
 });
 
 test("core left panels expose split and close controls in native headers", () => {
-  const projectHeader = functionBody(projectPanel, "render_panel_header");
   const projectSelectionToolbar = functionBody(
     projectPanel,
     "render_selected_entries_toolbar",
@@ -779,11 +836,9 @@ test("core left panels expose split and close controls in native headers", () =>
     );
   }
 
-  assert.match(projectHeader, /side_panel_header_controls\(\s*"project-panel",/);
-  assert.match(
-    emptyProjectWrapper,
-    /\.child\(self\.render_panel_header\(cx\)\)[\s\S]*ProjectEmptyState::new/,
-  );
+  assert.doesNotMatch(projectPanel, /fn render_panel_header/);
+  assert.match(projectPanel, /side_panel_header_controls\(\s*"project-panel-media",/);
+  assert.doesNotMatch(emptyProjectWrapper, /render_panel_header\(cx\)/);
   assert.match(
     projectSelectionToolbar,
     /side_panel_header_controls\(\s*"project-panel-selection",/,
@@ -807,13 +862,12 @@ test("panel headers keep titles flexible and side actions fixed", () => {
     "shared side-panel actions should not shrink in narrow stacked panels",
   );
 
-  const projectHeader = functionBody(projectPanel, "render_panel_header");
   const gitTabBar = functionBody(gitPanel, "render_tab_bar");
   const outlineFooter = functionBody(outlinePanel, "render_filter_footer");
   const collabHeader = functionBody(collabPanel, "render_panel_header");
   const collabSignedIn = functionBody(collabPanel, "render_signed_in");
 
-  assert.match(projectHeader, /\.flex_1\(\)[\s\S]*?\.min_w_0\(\)/);
+  assert.doesNotMatch(projectPanel, /fn render_panel_header/);
   assert.match(gitTabBar, /\.h_full\(\)[\s\S]*?\.flex_1\(\)[\s\S]*?\.min_w_0\(\)/);
   assert.match(outlineFooter, /\.flex_1\(\)[\s\S]*?\.min_w_0\(\)/);
   assert.match(outlineFooter, /\.items_center\(\)[\s\S]*?\.gap_0p5\(\)[\s\S]*?\.flex_none\(\)/);
@@ -844,7 +898,9 @@ test("recent tool panels use professional visible copy", () => {
   assert.doesNotMatch(titleBar, /More Hidden Features/);
 
   assert.match(stylePanel, /Label::new\("Style"\)/);
-  assert.match(stylePanel, /section_label\("Contracts"\)/);
+  assert.match(stylePanel, /Label::new\("Open an HTML, CSS, or TSX file to view Style controls\."\)/);
+  assert.match(stylePanel, /id\("dx-style-panel-empty-state"\)/);
+  assert.doesNotMatch(stylePanel, /section_label\("Contracts"\)/);
   assert.doesNotMatch(stylePanel, /Style Generators|Readiness Contracts/);
 
   assert.match(dxStylePanelCards, /metric\("Web Preview", web_preview_state\(snapshot\)\)/);

@@ -6,6 +6,8 @@ const sourcePath = "crates/title_bar/src/application_menu.rs";
 const source = readFileSync(sourcePath, "utf8").replace(/\r\n/g, "\n");
 const titleBarPath = "crates/title_bar/src/title_bar.rs";
 const titleBarSource = readFileSync(titleBarPath, "utf8").replace(/\r\n/g, "\n");
+const popoverMenuPath = "crates/ui/src/components/popover_menu.rs";
+const popoverMenuSource = readFileSync(popoverMenuPath, "utf8").replace(/\r\n/g, "\n");
 
 test("application menu activation checks stale entry indexes before handle use", () => {
   const activation = functionBody("navigate_menus_in_direction");
@@ -35,6 +37,25 @@ test("application menu activation checks stale entry indexes before handle use",
     activation,
     /let\s+next_handle\s*=\s*next_entry\.handle\.clone\(\);/,
   );
+});
+
+test("application menu hover closes deployed popovers after leaving the menu area", () => {
+  const standardMenu = functionBody("render_standard_menu");
+
+  assert.match(standardMenu, /\.on_hover\(move \|hover_enter, window, cx\| \{/);
+  assert.match(standardMenu, /if \*hover_enter && !current_handle\.is_deployed\(\)/);
+  assert.match(standardMenu, /else if !\*hover_enter/);
+  assert.match(standardMenu, /window\.on_next_frame\(move \|window, _cx\| \{/);
+  assert.match(standardMenu, /window\.on_next_frame\(move \|window, cx\| \{/);
+  assert.match(standardMenu, /handle\.is_deployed\(\) && !handle\.is_pointer_near\(window, px\(18\.0\)\)/);
+  assert.doesNotMatch(standardMenu, /handle\.is_deployed\(\) && !handle\.is_focused\(window, cx\)/);
+  assert.match(standardMenu, /handle\.hide\(cx\);/);
+  assert.match(popoverMenuSource, /pub fn is_pointer_near\(&self, window: &Window, padding: Pixels\) -> bool/);
+  assert.match(popoverMenuSource, /trigger_bounds: Rc<Cell<Option<Bounds<Pixels>>>>/);
+  assert.match(popoverMenuSource, /menu_bounds: Rc<Cell<Option<Bounds<Pixels>>>>/);
+  assert.match(popoverMenuSource, /bounds\.dilate\(padding\)\.contains\(&position\)/);
+  assert.match(popoverMenuSource, /element_state\.trigger_bounds\.set\(Some\(bounds\)\)/);
+  assert.match(popoverMenuSource, /element_state\.menu_bounds\.set\(/);
 });
 
 test("title bar screen and right-tool buttons use domain-specific icons", () => {
@@ -69,8 +90,10 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
 test("title-bar source guard stays scoped to worker-owned files", () => {
   assert.equal(sourcePath, "crates/title_bar/src/application_menu.rs");
   assert.equal(titleBarPath, "crates/title_bar/src/title_bar.rs");
+  assert.equal(popoverMenuPath, "crates/ui/src/components/popover_menu.rs");
   assert.doesNotMatch(sourcePath, /test/i);
   assert.doesNotMatch(titleBarPath, /test/i);
+  assert.doesNotMatch(popoverMenuPath, /test/i);
 });
 
 function functionBody(name: string): string {

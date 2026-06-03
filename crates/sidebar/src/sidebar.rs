@@ -677,11 +677,12 @@ impl EventEmitter<DismissEvent> for ThreadIconPickerMenu {}
 
 impl Render for ThreadIconPickerMenu {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        const THREAD_ICON_PICKER_COLUMNS: u16 = 9;
+
         let icons = IconName::iter().collect::<Vec<_>>();
         v_flex()
             .id("thread-icon-picker-grid")
             .track_focus(&self.focus_handle)
-            .relative()
             .w(px(228.0))
             .max_h_64()
             .overflow_y_scroll()
@@ -692,56 +693,71 @@ impl Render for ThreadIconPickerMenu {
             .bg(cx.theme().colors().elevated_surface_background)
             .p_1p5()
             .child(
-                div().absolute().top_1().right_1().child(
-                    IconButton::new("thread-icon-picker-close", IconName::Close)
-                        .shape(IconButtonShape::Square)
-                        .icon_size(IconSize::XSmall)
-                        .icon_color(Color::Muted)
-                        .tooltip(Tooltip::text("Close Icon Picker"))
-                        .on_click(cx.listener(|_this, _, _window, cx| {
-                            cx.emit(DismissEvent);
-                        })),
-                ),
+                h_flex()
+                    .id("thread-icon-picker-header")
+                    .items_center()
+                    .justify_between()
+                    .gap_2()
+                    .child(
+                        Label::new("Choose Icons for your Chat")
+                            .size(LabelSize::XSmall)
+                            .color(Color::Muted)
+                            .truncate(),
+                    )
+                    .child(
+                        IconButton::new("thread-icon-picker-close", IconName::Close)
+                            .shape(IconButtonShape::Square)
+                            .icon_size(IconSize::XSmall)
+                            .icon_color(Color::Muted)
+                            .tooltip(Tooltip::text("Close Icon Picker"))
+                            .on_click(cx.listener(|_, _, _window, cx| {
+                                cx.emit(DismissEvent);
+                            })),
+                    ),
             )
             .child(
-                h_flex()
+                div()
                     .id("thread-icon-picker-grid-icons")
-                    .flex_wrap()
+                    .grid()
+                    .grid_cols(THREAD_ICON_PICKER_COLUMNS)
                     .gap_1()
                     .children(icons.into_iter().map(|icon_name| {
-                        IconButton::new(
-                            format!("thread-icon-picker-grid-icon-{icon_name:?}"),
-                            icon_name,
+                        div().flex().items_center().justify_center().child(
+                            IconButton::new(
+                                format!("thread-icon-picker-grid-icon-{icon_name:?}"),
+                                icon_name,
+                            )
+                            .shape(IconButtonShape::Square)
+                            .icon_size(IconSize::Small)
+                            .toggle_state(icon_name == self.selected_icon)
+                            .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+                            .on_click(cx.listener(
+                                move |this, _, _window, cx| {
+                                    this.sidebar
+                                        .update(cx, |sidebar, cx| {
+                                            sidebar
+                                                .thread_icon_overrides
+                                                .insert(this.thread_id, icon_name);
+                                            for shortcut in &mut sidebar.grid_shortcuts {
+                                                if matches!(
+                                                    &shortcut.action,
+                                                    SerializedSidebarGridAction::OpenThread {
+                                                        thread_id
+                                                    } if *thread_id == this.thread_id
+                                                ) {
+                                                    shortcut.icon = icon_name;
+                                                }
+                                            }
+                                            sidebar.grid_entry_cache.borrow_mut().clear();
+                                            sidebar.update_entries(cx);
+                                            sidebar.serialize(cx);
+                                            cx.notify();
+                                        })
+                                        .ok();
+                                    cx.emit(DismissEvent);
+                                },
+                            )),
                         )
-                        .shape(IconButtonShape::Square)
-                        .icon_size(IconSize::Small)
-                        .toggle_state(icon_name == self.selected_icon)
-                        .selected_style(ButtonStyle::Tinted(TintColor::Accent))
-                        .on_click(cx.listener(
-                            move |this, _, _window, cx| {
-                                this.sidebar
-                                .update(cx, |sidebar, cx| {
-                                    sidebar
-                                        .thread_icon_overrides
-                                        .insert(this.thread_id, icon_name);
-                                    for shortcut in &mut sidebar.grid_shortcuts {
-                                        if matches!(
-                                            &shortcut.action,
-                                            SerializedSidebarGridAction::OpenThread { thread_id }
-                                                if *thread_id == this.thread_id
-                                        ) {
-                                            shortcut.icon = icon_name;
-                                        }
-                                    }
-                                    sidebar.grid_entry_cache.borrow_mut().clear();
-                                    sidebar.update_entries(cx);
-                                    sidebar.serialize(cx);
-                                    cx.notify();
-                                })
-                                .ok();
-                                cx.emit(DismissEvent);
-                            },
-                        ))
                     })),
             )
     }

@@ -14,8 +14,9 @@ use std::{
 };
 
 use gpui::{
-    App, Context, Div, FontWeight, Hsla, MouseButton, MouseDownEvent, ObjectFit, SharedString,
-    Stateful, StatefulInteractiveElement, hsla, img, linear_color_stop, linear_gradient,
+    AnyElement, App, Context, Div, FontWeight, Hsla, MouseButton, MouseDownEvent, ObjectFit,
+    SharedString, Stateful, StatefulInteractiveElement, hsla, img, linear_color_stop,
+    linear_gradient,
 };
 use project::{Entry, ProjectEntryId, WorktreeId};
 use settings::Settings;
@@ -232,6 +233,7 @@ pub(crate) fn render_folder_media_shelf(
     preview: &FolderMediaPreview,
     worktree_id: WorktreeId,
     selected_entry_id: Option<ProjectEntryId>,
+    panel_controls: Option<AnyElement>,
     cx: &mut Context<super::ProjectPanel>,
 ) -> AnyElement {
     let summary = media_preview_summary(preview);
@@ -239,11 +241,12 @@ pub(crate) fn render_folder_media_shelf(
         .metadata_probe_plan
         .as_ref()
         .map(|plan| plan.summary_label());
-    let has_overflow = preview.total_count > preview.items.len() || preview.scanned_cap_hit;
+    let visible_slots = media_shelf_visible_slots(preview);
+    let has_overflow = preview.total_count > visible_slots || preview.scanned_cap_hit;
     let media_card_limit = if has_overflow {
-        MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS.saturating_sub(1)
+        visible_slots.saturating_sub(1)
     } else {
-        MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS
+        visible_slots
     };
     let mut shelf_cards = preview
         .items
@@ -281,17 +284,22 @@ pub(crate) fn render_folder_media_shelf(
             })
         })
         .child(
-            h_flex().items_center().gap_2().child(
-                h_flex()
-                    .gap_1()
-                    .items_center()
-                    .child(Icon::new(IconName::Blocks).size(IconSize::XSmall))
-                    .child(
-                        Label::new("Media")
-                            .size(LabelSize::Small)
-                            .weight(FontWeight::SEMIBOLD),
-                    ),
-            ),
+            h_flex()
+                .items_center()
+                .justify_between()
+                .gap_2()
+                .child(
+                    h_flex()
+                        .gap_1()
+                        .items_center()
+                        .child(Icon::new(IconName::Blocks).size(IconSize::XSmall))
+                        .child(
+                            Label::new("Media")
+                                .size(LabelSize::Small)
+                                .weight(FontWeight::SEMIBOLD),
+                        ),
+                )
+                .when_some(panel_controls, |this, controls| this.child(controls)),
         )
         .child(
             div()
@@ -301,6 +309,20 @@ pub(crate) fn render_folder_media_shelf(
                 .children(shelf_cards),
         )
         .into_any_element()
+}
+
+fn media_shelf_visible_slots(preview: &FolderMediaPreview) -> usize {
+    let relevant_count = preview
+        .total_count
+        .max(preview.items.len())
+        .min(MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS);
+
+    match relevant_count {
+        0..=2 => relevant_count.max(1),
+        3..=4 => 4,
+        5..=8 => 8,
+        _ => MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS,
+    }
 }
 
 fn render_media_shelf_overflow_card(preview: &FolderMediaPreview, cx: &mut App) -> AnyElement {

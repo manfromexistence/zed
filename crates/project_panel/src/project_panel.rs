@@ -65,7 +65,7 @@ use ui::{
     Color, ContextMenu, ContextMenuEntry, DecoratedIcon, Icon, IconButtonShape, IconDecoration,
     IconDecorationKind, IndentGuideColors, IndentGuideLayout, Indicator, KeyBinding, Label,
     LabelSize, ListItem, ListItemSpacing, ProjectEmptyState, ScrollAxes, ScrollableHandle,
-    Scrollbars, StickyCandidate, Tab, Tooltip, WithScrollbar, prelude::*, v_flex,
+    Scrollbars, StickyCandidate, Tooltip, WithScrollbar, prelude::*, v_flex,
 };
 use util::{
     ResultExt, TakeUntilExt, TryFutureExt,
@@ -4133,44 +4133,6 @@ impl ProjectPanel {
             .into_any_element()
     }
 
-    fn render_panel_header(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        h_flex()
-            .id("project-panel-header")
-            .w_full()
-            .h(Tab::container_height(cx))
-            .items_center()
-            .justify_between()
-            .gap_2()
-            .px_2()
-            .border_b_1()
-            .border_color(cx.theme().colors().border.opacity(0.6))
-            .bg(cx.theme().colors().panel_background)
-            .child(
-                h_flex()
-                    .gap_1()
-                    .items_center()
-                    .flex_1()
-                    .min_w_0()
-                    .child(
-                        Icon::new(IconName::Folder)
-                            .size(IconSize::Small)
-                            .color(Color::Muted),
-                    )
-                    .child(
-                        Label::new("Project")
-                            .size(LabelSize::Small)
-                            .color(Color::Muted)
-                            .truncate(),
-                    ),
-            )
-            .child(side_panel_header_controls(
-                "project-panel",
-                self.workspace.clone(),
-                cx.entity().entity_id(),
-                cx,
-            ))
-    }
-
     fn start_marquee_selection(
         &mut self,
         event: &MouseDownEvent,
@@ -8123,7 +8085,7 @@ impl Render for ProjectPanel {
                             if let Some(toolbar) = selected_entries_toolbar {
                                 this.child(toolbar)
                             } else {
-                                this.child(self.render_panel_header(cx))
+                                this
                             }
                         })
                         .when(show_active_media_preview, |this| {
@@ -8156,6 +8118,15 @@ impl Render for ProjectPanel {
                                             &media_preview,
                                             active_media_folder.worktree_id,
                                             active_media_folder.selected_media_entry_id,
+                                            Some(
+                                                side_panel_header_controls(
+                                                    "project-panel-media",
+                                                    self.workspace.clone(),
+                                                    cx.entity().entity_id(),
+                                                    cx,
+                                                )
+                                                .into_any_element(),
+                                            ),
                                             cx,
                                         )),
                                 )
@@ -8573,7 +8544,6 @@ impl Render for ProjectPanel {
             v_flex()
                 .id("empty-project_panel-wrapper")
                 .size_full()
-                .child(self.render_panel_header(cx))
                 .child(
                     ProjectEmptyState::new(
                         "Project Panel",

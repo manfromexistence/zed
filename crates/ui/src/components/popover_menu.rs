@@ -1,4 +1,7 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
 
 use gpui::{
     Anchor, AnyElement, AnyView, App, Bounds, DismissEvent, DispatchPhase, Element, ElementId,
@@ -55,6 +58,8 @@ impl<M> Default for PopoverMenuHandle<M> {
 struct PopoverMenuHandleState<M> {
     menu_builder: Rc<dyn Fn(&mut Window, &mut App) -> Option<Entity<M>>>,
     menu: Rc<RefCell<Option<Entity<M>>>>,
+    trigger_bounds: Rc<Cell<Option<Bounds<Pixels>>>>,
+    menu_bounds: Rc<Cell<Option<Bounds<Pixels>>>>,
     on_open: Option<Rc<dyn Fn(&mut Window, &mut App)>>,
 }
 
@@ -103,6 +108,20 @@ impl<M: ManagedView> PopoverMenuHandle<M> {
                 .borrow()
                 .as_ref()
                 .is_some_and(|model| model.focus_handle(cx).is_focused(window))
+        })
+    }
+
+    pub fn is_pointer_near(&self, window: &Window, padding: Pixels) -> bool {
+        let position = window.mouse_position();
+        self.0.borrow().as_ref().is_some_and(|state| {
+            state
+                .trigger_bounds
+                .get()
+                .is_some_and(|bounds| bounds.dilate(padding).contains(&position))
+                || state
+                    .menu_bounds
+                    .get()
+                    .is_some_and(|bounds| bounds.dilate(padding).contains(&position))
         })
     }
 
@@ -319,6 +338,8 @@ fn show_menu<M: ManagedView>(
 pub struct PopoverMenuElementState<M> {
     menu: Rc<RefCell<Option<Entity<M>>>>,
     child_bounds: Option<Bounds<Pixels>>,
+    trigger_bounds: Rc<Cell<Option<Bounds<Pixels>>>>,
+    menu_bounds: Rc<Cell<Option<Bounds<Pixels>>>>,
 }
 
 impl<M> Clone for PopoverMenuElementState<M> {
@@ -326,6 +347,8 @@ impl<M> Clone for PopoverMenuElementState<M> {
         Self {
             menu: Rc::clone(&self.menu),
             child_bounds: self.child_bounds,
+            trigger_bounds: Rc::clone(&self.trigger_bounds),
+            menu_bounds: Rc::clone(&self.menu_bounds),
         }
     }
 }
@@ -335,12 +358,15 @@ impl<M> Default for PopoverMenuElementState<M> {
         Self {
             menu: Rc::default(),
             child_bounds: None,
+            trigger_bounds: Rc::new(Cell::new(None)),
+            menu_bounds: Rc::new(Cell::new(None)),
         }
     }
 }
 
 pub struct PopoverMenuFrameState<M: ManagedView> {
     child_layout_id: Option<LayoutId>,
+    menu_layout_id: Option<LayoutId>,
     child_element: Option<AnyElement>,
     menu_element: Option<AnyElement>,
     menu_handle: Rc<RefCell<Option<Entity<M>>>>,
@@ -399,6 +425,8 @@ impl<M: ManagedView> Element for PopoverMenu<M> {
                     *trigger_handle.0.borrow_mut() = Some(PopoverMenuHandleState {
                         menu_builder,
                         menu: element_state.menu.clone(),
+                        trigger_bounds: element_state.trigger_bounds.clone(),
+                        menu_bounds: element_state.menu_bounds.clone(),
                         on_open: self.on_open.clone(),
                     });
                 }
@@ -424,6 +452,7 @@ impl<M: ManagedView> Element for PopoverMenu<M> {
                         PopoverMenuFrameState {
                             child_element,
                             child_layout_id,
+                            menu_layout_id,
                             menu_element,
                             menu_handle: element_state.menu.clone(),
                         },
@@ -451,11 +480,21 @@ impl<M: ManagedView> Element for PopoverMenu<M> {
             menu.prepaint(window, cx);
         }
 
+        let menu_bounds = request_layout
+            .menu_layout_id
+            .map(|layout_id| window.layout_bounds(layout_id));
+        window.with_element_state(global_id.unwrap(), |element_state, _cx| {
+            let element_state: PopoverMenuElementState<M> = element_state.unwrap();
+            element_state.menu_bounds.set(menu_bounds);
+            ((), element_state)
+        });
+
         request_layout.child_layout_id.map(|layout_id| {
             let bounds = window.layout_bounds(layout_id);
             window.with_element_state(global_id.unwrap(), |element_state, _cx| {
                 let mut element_state: PopoverMenuElementState<M> = element_state.unwrap();
                 element_state.child_bounds = Some(bounds);
+                element_state.trigger_bounds.set(Some(bounds));
                 ((), element_state)
             });
 

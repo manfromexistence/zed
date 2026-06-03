@@ -4210,6 +4210,22 @@ impl AgentPanel {
         server_view.read(cx).root_thread_view()
     }
 
+    fn active_visible_thread_view(&self, cx: &App) -> Option<Entity<ThreadView>> {
+        let server_view = self.active_conversation_view()?;
+        Self::active_visible_thread_view_for_conversation(server_view, cx)
+    }
+
+    fn active_visible_thread_view_for_conversation(
+        server_view: &Entity<ConversationView>,
+        cx: &App,
+    ) -> Option<Entity<ThreadView>> {
+        let server_view = server_view.read(cx);
+        server_view
+            .active_thread()
+            .cloned()
+            .or_else(|| server_view.root_thread_view())
+    }
+
     pub fn active_agent_thread(&self, cx: &App) -> Option<Entity<AcpThread>> {
         match &self.base_view {
             BaseView::AgentThread { conversation_view } => {
@@ -4488,7 +4504,7 @@ impl AgentPanel {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<Subscription> {
-        server_view.read(cx).root_thread_view().map(|tv| {
+        Self::active_visible_thread_view_for_conversation(server_view, cx).map(|tv| {
             cx.subscribe_in(
                 &tv,
                 window,
@@ -6127,7 +6143,7 @@ impl AgentPanel {
     }
 
     fn render_toolbar_response_indicator(&self, cx: &mut Context<Self>) -> AnyElement {
-        let Some(active_thread) = self.active_thread_view(cx) else {
+        let Some(active_thread) = self.active_visible_thread_view(cx) else {
             return div().into_any_element();
         };
         let anchors = active_thread.read(cx).response_anchors(cx);
@@ -6150,8 +6166,8 @@ impl AgentPanel {
                     .id("agent-toolbar-response-indicator")
                     .h_full()
                     .items_center()
-                    .gap_1()
-                    .px_1p5()
+                    .gap_0()
+                    .px_0p5()
                     .children(anchors.into_iter().map(|anchor| {
                         Self::toolbar_response_indicator_segment(anchor, active_thread.clone(), cx)
                     })),
@@ -6167,11 +6183,7 @@ impl AgentPanel {
         let entry_ix = anchor.entry_ix;
         let label = anchor.label.clone();
         let detail = anchor.detail.clone();
-        let height = if anchor.is_current {
-            px(18.0)
-        } else {
-            px(11.0)
-        };
+        let height = if anchor.is_current { px(13.0) } else { px(7.0) };
         let color = if anchor.is_current {
             cx.theme().colors().text_accent.opacity(0.85)
         } else {
@@ -6180,18 +6192,22 @@ impl AgentPanel {
 
         div()
             .id(("agent-toolbar-response-indicator-segment", entry_ix))
-            .w(px(2.0))
-            .h(height)
-            .rounded_full()
-            .bg(color)
+            .w(px(9.0))
+            .h_full()
+            .flex()
+            .items_center()
+            .justify_center()
+            .rounded_sm()
             .cursor_pointer()
-            .hover(|style| style.bg(cx.theme().colors().text_accent))
+            .hover(|style| style.bg(cx.theme().colors().element_hover.opacity(0.72)))
             .tooltip(move |_window, cx| Tooltip::with_meta(label.clone(), None, detail.clone(), cx))
-            .on_click(move |_event, _window, cx| {
+            .on_click(move |_event, window, cx| {
+                cx.stop_propagation();
                 active_thread.update(cx, |thread, cx| {
-                    thread.scroll_to_response_anchor(entry_ix, cx);
+                    thread.scroll_to_response_anchor(entry_ix, window, cx);
                 });
             })
+            .child(div().w(px(2.0)).h(height).rounded_full().bg(color))
             .into_any_element()
     }
 
@@ -6592,6 +6608,7 @@ impl AgentPanel {
             self.fullscreen_progress_rail_open,
             rail_controls,
             status,
+            window,
             cx,
         )
     }
@@ -7371,7 +7388,6 @@ impl AgentPanel {
 
         DxLaunchWorkspaceStatus {
             active_status: self.dx_active_status(cx),
-            background_task_count: self.retained_threads.len(),
             visible_worktree_count,
             agent_bridge,
             launch_status,

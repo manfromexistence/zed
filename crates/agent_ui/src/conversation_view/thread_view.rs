@@ -615,6 +615,7 @@ pub struct ThreadView {
     pub multi_root_callout_dismissed: bool,
     pub generating_indicator_in_list: bool,
     pub skill_loading_errors: Vec<SkillLoadingError>,
+    response_anchor_scroll_request: Option<ResponseAnchorScrollRequest>,
     /// Errors the user has explicitly dismissed. Each entry is matched against
     /// emitted errors by full equality; when an error no longer appears in the
     /// emitted list (i.e. the underlying file was fixed or removed), it's
@@ -629,6 +630,14 @@ pub(crate) struct AgentResponseAnchor {
     pub(crate) label: SharedString,
     pub(crate) detail: SharedString,
     pub(crate) is_current: bool,
+}
+
+const RESPONSE_ANCHOR_SCROLL_RETRY_FRAMES: usize = 6;
+
+#[derive(Clone, Copy)]
+struct ResponseAnchorScrollRequest {
+    entry_ix: usize,
+    frames_remaining: usize,
 }
 
 impl Focusable for ThreadView {
@@ -933,6 +942,7 @@ impl ThreadView {
             multi_root_callout_dismissed: false,
             generating_indicator_in_list: false,
             skill_loading_errors: Vec::new(),
+            response_anchor_scroll_request: None,
             dismissed_skill_loading_errors: HashSet::default(),
         };
 
@@ -951,6 +961,9 @@ impl ThreadView {
                 cx.defer(move |cx| {
                     let scroll_top = list_state.logical_scroll_top();
                     let _ = thread_view.update(cx, |this, cx| {
+                        this.thread.update(cx, |thread, _cx| {
+                            thread.set_ui_scroll_position(Some(scroll_top));
+                        });
                         if let Some(thread) = this.as_native_thread(cx) {
                             thread.update(cx, |thread, _cx| {
                                 thread.set_ui_scroll_position(Some(scroll_top));
@@ -6014,15 +6027,97 @@ impl ThreadView {
             .collect()
     }
 
-    pub(crate) fn scroll_to_response_anchor(&mut self, entry_ix: usize, cx: &mut Context<Self>) {
-        if entry_ix < self.thread.read(cx).entries().len() {
-            self.list_state.scroll_to(ListOffset {
-                item_ix: entry_ix,
-                offset_in_item: px(0.0),
-            });
-            cx.emit(AcpThreadViewEvent::ScrollPositionChanged);
-            cx.notify();
+    pub(crate) fn scroll_to_response_anchor(
+        &mut self,
+        entry_ix: usize,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if entry_ix >= self.thread.read(cx).entries().len() {
+            return;
         }
+
+        self.response_anchor_scroll_request = Some(ResponseAnchorScrollRequest {
+            entry_ix,
+            frames_remaining: RESPONSE_ANCHOR_SCROLL_RETRY_FRAMES,
+        });
+        self.apply_response_anchor_scroll_request(window, cx);
+    }
+
+    fn apply_response_anchor_scroll_request(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(mut request) = self.response_anchor_scroll_request else {
+            return;
+        };
+
+        let record_navigation = request.frames_remaining == RESPONSE_ANCHOR_SCROLL_RETRY_FRAMES;
+        if !self.apply_response_anchor_scroll(request.entry_ix, record_navigation, window, cx) {
+            self.response_anchor_scroll_request = None;
+            return;
+        }
+
+        if request.frames_remaining == 0 {
+            self.response_anchor_scroll_request = None;
+            return;
+        }
+
+        request.frames_remaining -= 1;
+        self.response_anchor_scroll_request = Some(request);
+
+        let thread_view = cx.entity().downgrade();
+        window.on_next_frame(move |window, cx| {
+            thread_view
+                .update(cx, |thread_view, cx| {
+                    thread_view.apply_response_anchor_scroll_request(window, cx);
+                })
+                .ok();
+        });
+    }
+
+    fn apply_response_anchor_scroll(
+        &mut self,
+        entry_ix: usize,
+        record_navigation: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        if entry_ix >= self.thread.read(cx).entries().len() {
+            return false;
+        }
+
+        let scroll_position = ListOffset {
+            item_ix: entry_ix,
+            offset_in_item: px(0.0),
+        };
+        if record_navigation {
+            self.should_be_following = false;
+        }
+        if record_navigation && self.thread.read(cx).status() == ThreadStatus::Generating {
+            self.workspace
+                .update(cx, |workspace, cx| {
+                    workspace.unfollow(CollaboratorId::Agent, window, cx);
+                })
+                .ok();
+        }
+        self.list_state.set_follow_mode(gpui::FollowMode::Normal);
+        self.list_state.scroll_to(scroll_position);
+        self.thread.update(cx, |thread, _cx| {
+            thread.set_ui_scroll_position(Some(scroll_position));
+        });
+        if let Some(thread) = self.as_native_thread(cx) {
+            thread.update(cx, |thread, _cx| {
+                thread.set_ui_scroll_position(Some(scroll_position));
+            });
+        }
+        if record_navigation {
+            self.schedule_save(cx);
+        }
+        cx.emit(AcpThreadViewEvent::ScrollPositionChanged);
+        cx.notify();
+        true
     }
 
     pub fn scroll_to_end(&mut self, cx: &mut Context<Self>) {

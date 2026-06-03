@@ -1,1 +1,26 @@
-Today is 22 April 2026, and this is the code editor, so please look for all git changes - commit them - checkout to main branch pull all the upstream changes in the main branch and please merge the main branch with the forge branch - forge will merged into main not main into forge.
+# DX Zed Runtime Tracker
+
+Updated: 2026-06-03
+Branch: dev
+
+Purpose:
+- Keep this file as a short tracked operator note for the current Zed/DX editor checkout.
+- Use DX.md, todo.txt, changelog.txt, and PLAN.md for canonical handoff detail.
+- Do not use this file as a pasted prompt scratchpad.
+
+Current focus:
+- Agent fullscreen response navigation polish.
+- Titlebar application-menu hover-exit polish.
+- Sidebar, project panel, and Style panel UI cleanup from the active DX editor pass.
+
+Latest runtime validation:
+- Command: CARGO_BUILD_JOBS=6 just run
+- Result: Zed built and launched successfully.
+- Zed process: 23660
+- Main window: detected
+- Rust warnings: none reported in the latest run.
+
+Current guardrails:
+- Do not run just run again unless explicitly requested.
+- Preserve existing Zed behavior unless the user explicitly changes the brief.
+- Keep source guards, todo.txt, and changelog.txt aligned with future UI changes.

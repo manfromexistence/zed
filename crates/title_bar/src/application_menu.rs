@@ -212,6 +212,16 @@ impl ApplicationMenu {
                     // We need to defer this so that this menu handle can take focus from the previous menu
                     let handle = current_handle.clone();
                     window.defer(cx, move |window, cx| handle.show(window, cx));
+                } else if !*hover_enter {
+                    let handle = current_handle.clone();
+                    window.on_next_frame(move |window, _cx| {
+                        let handle = handle.clone();
+                        window.on_next_frame(move |window, cx| {
+                            if handle.is_deployed() && !handle.is_pointer_near(window, px(18.0)) {
+                                handle.hide(cx);
+                            }
+                        });
+                    });
                 }
             })
     }
