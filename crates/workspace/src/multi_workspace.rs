@@ -2420,6 +2420,36 @@ impl Render for MultiWorkspace {
         let workspace = self.workspace().clone();
         let workspace_key_context = workspace.update(cx, |workspace, cx| workspace.key_context(cx));
         let root = workspace.update(cx, |workspace, cx| workspace.actions(h_flex(), window, cx));
+        let active_full_window_overlay = workspace.update(cx, |workspace, cx| {
+            workspace.active_full_window_overlay(window, cx)
+        });
+
+        if let Some(active_full_window_overlay) = active_full_window_overlay {
+            return client_side_decorations_with_content_flush(
+                root.key_context(workspace_key_context)
+                    .relative()
+                    .size_full()
+                    .font(ui_font)
+                    .text_color(text_color)
+                    .on_action(cx.listener(Self::close_window))
+                    .child(active_full_window_overlay),
+                window,
+                cx,
+                Tiling {
+                    top: true,
+                    left: true,
+                    right: true,
+                    bottom: true,
+                },
+                Tiling {
+                    top: true,
+                    left: true,
+                    right: true,
+                    bottom: true,
+                },
+            );
+        }
+
         let agent_fullscreen_flush_right = false;
 
         client_side_decorations_with_content_flush(

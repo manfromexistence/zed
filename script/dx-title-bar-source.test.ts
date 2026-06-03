@@ -124,6 +124,11 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
     /zed_actions::assistant::FocusAgentFullscreen\.boxed_clone\(\)/,
     "AI screen dock button should open the real Agent panel fullscreen action",
   );
+  assert.match(
+    titleBarSource,
+    /fn render_agent_screen_button\(&self, selected: bool, _cx: &mut Context<Self>\)/,
+    "screen-dock Agent button should not leave warning-grade unused parameters",
+  );
   assert.match(agentScreenButton, /toggle_state\(selected\)/);
   assert.match(titleBarSource, /fn agent_screen_is_active\(&self, cx: &App\) -> bool/);
   assert.match(agentScreenActive, /workspace\.read\(cx\)\.zoomed_is_agent_panel\(\)/);

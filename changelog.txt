@@ -1,3 +1,21 @@
+[2026-06-03] - Onboarding Full Window And Agent Dock Gap Fix
+
+FIXED:
+- `crates\onboarding\src\onboarding.rs`, `crates\workspace\src\workspace.rs`, and `crates\workspace\src\multi_workspace.rs` now render Onboarding as a full-window Web Preview overlay at the MultiWorkspace root, replacing the normal workspace/sidebar/titlebar chrome while onboarding is active instead of embedding the native WebView inside the center pane.
+- `crates\workspace\src\workspace.rs` now disables centered-editor padding while fullscreen Agent owns the center screen, removing the inherited AI-screen gutter.
+- `crates\workspace\src\dock.rs` and `crates\workspace\src\workspace.rs` now size docks from the same filtered visible entries that `Dock::render` uses, fall back to a real enabled panel when the zoomed Agent is filtered from its source dock, and keep Agent fullscreen active when opening/revealing side panels.
+- `crates\title_bar\src\title_bar.rs` now marks the Agent screen-dock button context argument intentionally unused, removing the warning found during the last authorized runtime launch.
+- Focused source guards now cover full-window onboarding ownership, transparent onboarding/WebView layering, Agent dock sizing/fallback behavior, centered-padding suppression, side-panel reveal preservation, and the titlebar warning cleanup.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\onboarding\src\onboarding.rs crates\workspace\src\workspace.rs crates\workspace\src\dock.rs crates\workspace\src\multi_workspace.rs crates\title_bar\src\title_bar.rs`
+- `node --test script\web-preview-platform-lifecycle.test.ts script\dx-workspace-ui-state-source.test.ts script\dx-title-bar-source.test.ts` with 46/46 passing.
+- `git diff --check`
+
+NOTES:
+- `just run`, Cargo build/check/test/clippy, and browser automation were not run because this pass was source-only until the user explicitly asks for runtime validation.
+- Exactly six GPT-5.5 extra-high subagents inspected the current layout, onboarding/WebView layering, Agent fullscreen/dock fallback, source guards, and warning cleanup scopes before the final patch landed.
+
 [2026-06-03] - Onboarding Web Preview Screen Dock
 
 ADDED:

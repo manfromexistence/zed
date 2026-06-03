@@ -61,12 +61,13 @@ use futures::{
     future::{Shared, try_join_all},
 };
 use gpui::{
-    Action, AnyEntity, AnyView, AnyWeakView, App, AsyncApp, AsyncWindowContext, Axis, Bounds,
-    Context, CursorStyle, Decorations, DragMoveEvent, Entity, EntityId, EventEmitter, FocusHandle,
-    Focusable, Global, HitboxBehavior, Hsla, KeyContext, Keystroke, ManagedView, MouseButton,
-    PathPromptOptions, Point, PromptLevel, Render, ResizeEdge, Size, Stateful, Subscription,
-    SystemWindowTabController, Task, TaskExt, Tiling, WeakEntity, WindowBounds, WindowHandle,
-    WindowId, WindowOptions, actions, canvas, point, relative, size, transparent_black,
+    Action, AnyElement, AnyEntity, AnyView, AnyWeakView, App, AsyncApp, AsyncWindowContext, Axis,
+    Bounds, Context, CursorStyle, Decorations, DragMoveEvent, Entity, EntityId, EventEmitter,
+    FocusHandle, Focusable, Global, HitboxBehavior, Hsla, KeyContext, Keystroke, ManagedView,
+    MouseButton, PathPromptOptions, Point, PromptLevel, Render, ResizeEdge, Size, Stateful,
+    Subscription, SystemWindowTabController, Task, TaskExt, Tiling, WeakEntity, WindowBounds,
+    WindowHandle, WindowId, WindowOptions, actions, canvas, point, relative, size,
+    transparent_black,
 };
 pub use history_manager::*;
 pub use item::{
@@ -4216,7 +4217,9 @@ impl Workspace {
         let mut focus_center = false;
         let mut reveal_dock = false;
 
-        let other_is_zoomed = self.zoomed.is_some() && self.zoomed_position != Some(dock_side);
+        let other_is_zoomed = self.zoomed.is_some()
+            && !self.zoomed_is_agent_panel
+            && self.zoomed_position != Some(dock_side);
         let was_visible = self.is_dock_at_position_open(dock_side, cx) && !other_is_zoomed;
 
         if let Some(panel) = self.dock_at_position(dock_side).read(cx).active_panel() {
@@ -4260,7 +4263,7 @@ impl Workspace {
             }
         });
 
-        if reveal_dock {
+        if reveal_dock && !self.zoomed_is_agent_panel {
             self.dismiss_zoomed_items_to_reveal(Some(dock_side), window, cx);
         }
 
@@ -4645,7 +4648,9 @@ impl Workspace {
             let dock = dock.read(cx);
             dock.panel_index_for_type::<T>().map(|_| dock.position())
         });
-        self.dismiss_zoomed_items_to_reveal(dock_position, window, cx);
+        if !self.zoomed_is_agent_panel {
+            self.dismiss_zoomed_items_to_reveal(dock_position, window, cx);
+        }
         self.open_panel::<T>(window, cx);
     }
 
@@ -4679,6 +4684,7 @@ impl Workspace {
         }
 
         // If another dock is zoomed, hide it.
+        let preserve_agent_fullscreen = self.zoomed_is_agent_panel && dock_to_reveal.is_some();
         let mut focus_center = false;
         for dock in self.all_docks() {
             dock.update(cx, |dock, cx| {
@@ -4686,6 +4692,10 @@ impl Workspace {
                     && let Some(panel) = dock.active_panel()
                     && panel.is_zoomed(window, cx)
                 {
+                    if preserve_agent_fullscreen && panel.is_agent_panel(cx) {
+                        return;
+                    }
+
                     focus_center |= panel.panel_focus_handle(cx).contains_focused(window, cx);
                     panel.set_zoomed(false, window, cx);
                     dock.set_open(false, window, cx);
@@ -4698,7 +4708,7 @@ impl Workspace {
                 .update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx))
         }
 
-        if self.zoomed_position != dock_to_reveal {
+        if self.zoomed_position != dock_to_reveal && !preserve_agent_fullscreen {
             self.zoomed = None;
             self.zoomed_is_agent_panel = false;
             self.zoomed_position = None;
@@ -8167,7 +8177,7 @@ impl Workspace {
         // included in the element tree so its focus handle remains mounted — without
         // this, toggle_panel_focus cannot focus the panel when the dock is closed.
         let dock = dock.read(cx);
-        if let Some(panel) = dock.visible_panel() {
+        if let Some(panel) = dock.visible_panel_for_layout(cx) {
             let size_state = dock.stored_panel_size_state(panel.as_ref());
             let min_size = panel.min_size(window, cx);
             let max_size = panel.max_size(window, cx);
@@ -8216,6 +8226,20 @@ impl Workspace {
         }
 
         Some(container)
+    }
+
+    pub fn active_full_window_overlay(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
+        self.active_item(cx).and_then(|item| {
+            if item.screen_kind(cx) == WorkspaceScreenKind::Onboarding {
+                item.workspace_overlay(window, cx)
+            } else {
+                None
+            }
+        })
     }
 
     fn render_center_screen(
@@ -8827,6 +8851,7 @@ impl Render for Workspace {
         }
 
         let centered_layout = self.centered_layout
+            && !self.zoomed_is_agent_panel
             && self.center.panes().len() == 1
             && self.active_item(cx).is_some();
         let render_padding = |size| {

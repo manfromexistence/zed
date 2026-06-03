@@ -613,7 +613,7 @@ impl Onboarding {
 }
 
 impl Render for Onboarding {
-    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         div()
             .image_cache(gpui::retain_all("onboarding-page"))
             .key_context({
@@ -635,7 +635,6 @@ impl Render for Onboarding {
                 window.focus_prev(cx);
                 cx.notify();
             }))
-            .child(self.render_web_preview_canvas(window, cx))
     }
 }
 
@@ -668,6 +667,31 @@ impl Item for Onboarding {
 
     fn screen_kind(&self) -> WorkspaceScreenKind {
         WorkspaceScreenKind::Onboarding
+    }
+
+    fn workspace_overlay(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
+        Some(
+            div()
+                .id("onboarding-window-overlay")
+                .absolute()
+                .inset_0()
+                .size_full()
+                .occlude()
+                .track_focus(&self.focus_handle)
+                .on_action(cx.listener(Self::handle_finish))
+                .on_action(cx.listener(Self::handle_sign_in))
+                .on_action(Self::handle_open_account)
+                .child(self.render_web_preview_canvas(window, cx))
+                .into_any_element(),
+        )
+    }
+
+    fn requires_transparent_workspace_background() -> bool {
+        true
     }
 
     fn deactivated(&mut self, window: &mut Window, cx: &mut Context<Self>) {

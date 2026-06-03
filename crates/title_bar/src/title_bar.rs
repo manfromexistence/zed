@@ -741,7 +741,7 @@ impl TitleBar {
             .into_any_element()
     }
 
-    fn render_agent_screen_button(&self, selected: bool, cx: &mut Context<Self>) -> AnyElement {
+    fn render_agent_screen_button(&self, selected: bool, _cx: &mut Context<Self>) -> AnyElement {
         IconButton::new("screen-dock-agent", IconName::ZedAssistant)
             .size(ButtonSize::Default)
             .icon_size(IconSize::Medium)

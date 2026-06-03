@@ -412,9 +412,12 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   const scrollOutputToPreviousMessage = functionBody(threadView, "scroll_output_to_previous_message");
   const scrollOutputToNextMessage = functionBody(threadView, "scroll_output_to_next_message");
   const dockVisibleEntries = functionBody(dock, "visible_entries");
+  const dockVisiblePanelForLayout = functionBody(dock, "visible_panel_for_layout");
   const dockZoomedAgentPanelId = functionBody(dock, "zoomed_agent_panel_id");
   const workspaceRenderDock = functionBody(workspace, "render_dock");
   const workspaceRenderCenterScreen = functionBody(workspace, "render_center_screen");
+  const workspaceToggleDock = functionBody(workspace, "toggle_dock");
+  const workspaceDismissZoomed = functionBody(workspace, "dismiss_zoomed_items_to_reveal");
   const profilesSupported = functionBody(conversationView, "profiles_supported");
   assert.match(agentPanel, /"agent-toolbar-toggle-sources-rail"/);
   assert.match(agentPanel, /"agent-toolbar-toggle-progress-rail"/);
@@ -440,14 +443,41 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(dockZoomedAgentPanelId, /workspace\.zoomed_position != Some\(self\.position\)/);
   assert.match(dockZoomedAgentPanelId, /workspace[\s\S]*?\.zoomed_item\(\)[\s\S]*?\.and_then\(\|view\| view\.upgrade\(\)\)[\s\S]*?\.map\(\|view\| view\.entity_id\(\)\)/);
   assert.match(dockVisibleEntries, /let zoomed_agent_panel_id = self\.zoomed_agent_panel_id\(cx\)/);
-  assert.match(dockVisibleEntries, /\.filter\(\|\(_, entry\)\| Some\(entry\.panel\.panel_id\(\)\) != zoomed_agent_panel_id\)/);
+  assert.match(dockVisibleEntries, /entries\.retain\(\|\(_, entry\)\| Some\(entry\.panel\.panel_id\(\)\) != zoomed_agent_panel_id\)/);
+  assert.match(
+    dockVisibleEntries,
+    /if entries\.is_empty\(\)[\s\S]*?let Some\(zoomed_agent_panel_id\) = zoomed_agent_panel_id[\s\S]*?entry\.panel\.panel_id\(\) != zoomed_agent_panel_id && entry\.panel\.enabled\(cx\)/s,
+    "a dock whose active panel is the fullscreen Agent should fall back to a real enabled panel instead of rendering an empty shell",
+  );
   assert.match(dock, /\.visible_entries\(cx\)/);
+  assert.match(dockVisiblePanelForLayout, /self\.visible_entries\(cx\)/);
+  assert.match(dockVisiblePanelForLayout, /entry\.panel\.clone\(\)/);
+  assert.match(workspaceRenderDock, /dock\.visible_panel_for_layout\(cx\)/);
+  assert.doesNotMatch(
+    workspaceRenderDock,
+    /dock\.visible_panel\(\)/,
+    "render_dock must size from the same filtered panel model that Dock::render uses",
+  );
   assert.match(workspaceRenderCenterScreen, /if self\.zoomed_is_agent_panel/);
   assert.match(workspaceRenderCenterScreen, /"workspace-agent-screen-center"/);
   assert.match(workspaceRenderCenterScreen, /\.child\(zoomed_view\)/);
   assert.match(workspaceRenderCenterScreen, /self\.render_screen_carousel_center\(center, cx\)/);
+  assert.match(
+    workspace,
+    /let centered_layout = self\.centered_layout\s*&& !self\.zoomed_is_agent_panel\s*&& self\.center\.panes\(\)\.len\(\) == 1/s,
+    "Agent fullscreen should not inherit centered-editor padding gutters",
+  );
   assert.match(workspace, /\.children\(\(!self\.zoomed_is_agent_panel\)\.then\(\|\| \{/);
   assert.doesNotMatch(workspace, /WorkspaceSettings::get_global\(cx\)\.zoomed_padding\s*\|\|\s*self\.zoomed_is_agent_panel/);
+  assert.match(workspaceToggleDock, /&& !self\.zoomed_is_agent_panel\s*&& self\.zoomed_position != Some\(dock_side\)/);
+  assert.match(workspaceToggleDock, /if reveal_dock && !self\.zoomed_is_agent_panel/);
+  assert.match(
+    workspace,
+    /pub fn reveal_panel<T: Panel>\(&mut self, window: &mut Window, cx: &mut Context<Self>\) \{[\s\S]*?if !self\.zoomed_is_agent_panel \{\s*self\.dismiss_zoomed_items_to_reveal\(dock_position, window, cx\);\s*\}/s,
+  );
+  assert.match(workspaceDismissZoomed, /let preserve_agent_fullscreen = self\.zoomed_is_agent_panel && dock_to_reveal\.is_some\(\);/);
+  assert.match(workspaceDismissZoomed, /preserve_agent_fullscreen && panel\.is_agent_panel\(cx\)/);
+  assert.match(workspaceDismissZoomed, /self\.zoomed_position != dock_to_reveal && !preserve_agent_fullscreen/);
   assert.match(multiWorkspace, /client_side_decorations_with_content_flush/);
   assert.match(multiWorkspace, /let agent_fullscreen_flush_right = false;/);
   assert.doesNotMatch(multiWorkspace, /let agent_fullscreen_flush_right = workspace\.read\(cx\)\.zoomed_is_agent_panel\(\);/);

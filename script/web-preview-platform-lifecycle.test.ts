@@ -154,6 +154,7 @@ test("onboarding uses a local Web Preview page with a real completion bridge", (
   const source = read("crates/onboarding/src/onboarding.rs");
   const dxLaunchSource = read("crates/onboarding/src/dx_launch_onboarding.rs");
   const workspaceSource = read("crates/workspace/src/workspace.rs");
+  const multiWorkspaceSource = read("crates/workspace/src/multi_workspace.rs");
   const paneSource = read("crates/workspace/src/pane.rs");
   const agentPanelSource = read("crates/agent_ui/src/agent_panel.rs");
   const sidebarSource = read("crates/sidebar/src/sidebar.rs");
@@ -227,7 +228,28 @@ test("onboarding uses a local Web Preview page with a real completion bridge", (
     source,
     /fn screen_kind\(&self\) -> WorkspaceScreenKind \{\s+WorkspaceScreenKind::Onboarding\s+\}/,
   );
-  assert.match(source, /\.child\(self\.render_web_preview_canvas\(window, cx\)\)/);
+  assert.match(source, /fn workspace_overlay\([\s\S]*?id\("onboarding-window-overlay"\)/);
+  assert.match(source, /fn workspace_overlay\([\s\S]*?\.child\(self\.render_web_preview_canvas\(window, cx\)\)/);
+  assert.match(
+    source,
+    /fn requires_transparent_workspace_background\(\) -> bool \{\s*true\s*\}/,
+    "Onboarding must keep the GPUI workspace transparent so the native Web Preview underlay is visible",
+  );
+  assert.match(
+    workspaceSource,
+    /pub fn active_full_window_overlay\([\s\S]*?WorkspaceScreenKind::Onboarding[\s\S]*?item\.workspace_overlay\(window, cx\)/,
+    "Workspace should expose only Onboarding as a full-window overlay",
+  );
+  assert.match(
+    multiWorkspaceSource,
+    /let active_full_window_overlay = workspace\.update\(cx, \|workspace, cx\| \{\s*workspace\.active_full_window_overlay\(window, cx\)\s*\}\);/s,
+    "MultiWorkspace should query the active workspace for an app-root overlay",
+  );
+  assert.match(
+    multiWorkspaceSource,
+    /if let Some\(active_full_window_overlay\) = active_full_window_overlay \{[\s\S]*return client_side_decorations_with_content_flush\([\s\S]*\.child\(active_full_window_overlay\)[\s\S]*Tiling \{\s*top: true,\s*left: true,\s*right: true,\s*bottom: true,\s*\}[\s\S]*Tiling \{\s*top: true,\s*left: true,\s*right: true,\s*bottom: true,\s*\}/s,
+    "Onboarding should short-circuit the normal workspace chrome and fill the full client window",
+  );
   assert.match(
     workspaceSource,
     /if kind == WorkspaceScreenKind::Onboarding \{\s*window\.dispatch_action\(OpenOnboarding\.boxed_clone\(\), cx\);\s*return true;\s*\}/s,
@@ -256,7 +278,12 @@ test("onboarding uses a local Web Preview page with a real completion bridge", (
 
   const renderStart = source.indexOf("impl Render for Onboarding");
   assert.ok(renderStart >= 0, "expected Onboarding render impl");
-  const renderBody = source.slice(renderStart);
+  const renderBody = functionBody(source.slice(renderStart), "render");
+  assert.doesNotMatch(
+    renderBody,
+    /render_web_preview_canvas\(window, cx\)/,
+    "Onboarding pane render must not mount the native Web Preview below GPUI chrome",
+  );
   assert.doesNotMatch(
     renderBody,
     /render_dx_launch_hero\(window, cx\)/,

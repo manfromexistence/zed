@@ -709,7 +709,7 @@ impl Dock {
 
         let zoomed_agent_panel_id = self.zoomed_agent_panel_id(cx);
         let stacked_entries = self.stacked_entries();
-        let entries = if stacked_entries.len() > 1 {
+        let mut entries = if stacked_entries.len() > 1 {
             stacked_entries
         } else {
             self.active_panel_index
@@ -718,10 +718,17 @@ impl Dock {
                 .collect()
         };
 
+        entries.retain(|(_, entry)| Some(entry.panel.panel_id()) != zoomed_agent_panel_id);
+
+        if entries.is_empty()
+            && let Some(zoomed_agent_panel_id) = zoomed_agent_panel_id
+        {
+            entries.extend(self.panel_entries.iter().enumerate().find(|(_, entry)| {
+                entry.panel.panel_id() != zoomed_agent_panel_id && entry.panel.enabled(cx)
+            }));
+        }
+
         entries
-            .into_iter()
-            .filter(|(_, entry)| Some(entry.panel.panel_id()) != zoomed_agent_panel_id)
-            .collect()
     }
 
     fn is_panel_stacked(&self, panel_id: EntityId) -> bool {
@@ -1483,6 +1490,12 @@ impl Dock {
     pub fn visible_panel(&self) -> Option<&Arc<dyn PanelHandle>> {
         let entry = self.visible_entry()?;
         Some(&entry.panel)
+    }
+
+    pub(crate) fn visible_panel_for_layout(&self, cx: &App) -> Option<Arc<dyn PanelHandle>> {
+        self.visible_entries(cx)
+            .first()
+            .map(|(_, entry)| entry.panel.clone())
     }
 
     pub fn active_panel(&self) -> Option<&Arc<dyn PanelHandle>> {
