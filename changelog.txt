@@ -1,15 +1,18 @@
 [2026-06-03] - Agent Fullscreen Dock And Response Follow-up
 
 FIXED:
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now reconciles fullscreen response indicators from the current logical scroll position after keyboard/page/message jumps and render-time scrollbar changes, so manual scrolling is not limited to wheel/trackpad events.
+- `crates\workspace\src\dock.rs` now filters the zoomed Agent panel out of its source dock while Agent fullscreen is rendered in the center, preventing the same live Agent panel entity from being mounted twice while preserving the editor's other native side panels.
 - `crates\title_bar\src\title_bar.rs` now suppresses Editor, Browser, and Terminal active screen states while fullscreen Agent is the active AI screen.
 - `crates\agent_ui\src\conversation_view\thread_view.rs` now retires response-anchor click retries once the requested prompt is visible, keeps the clicked prompt active through that settling event, and lets later manual scroll updates follow the prompt governing the logical top of the viewport.
 - `crates\workspace\src\workspace.rs` now renders fullscreen Agent as center-screen content instead of a full-workspace overlay, so the editor's real left/right docks remain mounted and visible.
 - `crates\workspace\src\multi_workspace.rs` no longer treats Agent fullscreen as owning the right window edge for content-flush decoration.
 - `crates\agent_ui\src\agent_panel.rs` now starts fullscreen Agent's internal DX rails closed so the editor side panels are the default side surfaces.
 - Focused source guards now cover Agent screen active-state suppression, response-anchor retry/manual-scroll ownership, and fullscreen Agent center-slot layout with native editor docks.
+- Six GPT-5.5 extra-high source-review subagents audited the final active-state, click-settle, manual-scroll, dock-preservation, source-guard, and integration-risk scopes; the manual-scroll and duplicate-Agent dock findings from that review were patched.
 
 PASSED:
-- `rustfmt --edition 2024 --check crates\title_bar\src\title_bar.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\agent_panel.rs crates\workspace\src\workspace.rs crates\workspace\src\multi_workspace.rs`
+- `rustfmt --edition 2024 --check crates\agent_ui\src\conversation_view\thread_view.rs crates\workspace\src\dock.rs crates\workspace\src\workspace.rs crates\title_bar\src\title_bar.rs crates\agent_ui\src\agent_panel.rs crates\workspace\src\multi_workspace.rs`
 - `node --test script\dx-workspace-ui-state-source.test.ts script\dx-title-bar-source.test.ts` with 23/23 passing.
 - `git diff --check`
 - Focused conflict-marker scan across touched source and guard files.

@@ -689,20 +689,39 @@ impl Dock {
             .collect()
     }
 
-    fn visible_entries(&self) -> Vec<(usize, &PanelEntry)> {
+    fn zoomed_agent_panel_id(&self, cx: &App) -> Option<EntityId> {
+        let workspace = self.workspace.upgrade()?;
+        let workspace = workspace.read(cx);
+        if !workspace.zoomed_is_agent_panel() || workspace.zoomed_position != Some(self.position) {
+            return None;
+        }
+
+        workspace
+            .zoomed_item()
+            .and_then(|view| view.upgrade())
+            .map(|view| view.entity_id())
+    }
+
+    fn visible_entries(&self, cx: &App) -> Vec<(usize, &PanelEntry)> {
         if !self.is_open {
             return Vec::new();
         }
 
+        let zoomed_agent_panel_id = self.zoomed_agent_panel_id(cx);
         let stacked_entries = self.stacked_entries();
-        if stacked_entries.len() > 1 {
+        let entries = if stacked_entries.len() > 1 {
             stacked_entries
         } else {
             self.active_panel_index
                 .and_then(|index| self.panel_entries.get(index).map(|entry| (index, entry)))
                 .into_iter()
                 .collect()
-        }
+        };
+
+        entries
+            .into_iter()
+            .filter(|(_, entry)| Some(entry.panel.panel_id()) != zoomed_agent_panel_id)
+            .collect()
     }
 
     fn is_panel_stacked(&self, panel_id: EntityId) -> bool {
@@ -1757,7 +1776,7 @@ impl Render for Dock {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let dispatch_context = Self::dispatch_context();
         let visible_panels = self
-            .visible_entries()
+            .visible_entries(cx)
             .into_iter()
             .map(|(index, entry)| (index, entry.panel.panel_id(), entry.panel.to_any()))
             .collect::<Vec<_>>();

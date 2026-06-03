@@ -241,7 +241,7 @@ test("side dock stack controls use real panel entries and preserve single-panel 
     dock.slice(dock.indexOf("impl Render for Dock")),
     "render",
   );
-  assert.match(dockRender, /let visible_panels = self\s*\.visible_entries\(\)/);
+  assert.match(dockRender, /let visible_panels = self\s*\.visible_entries\(cx\)/);
   assert.match(dockRender, /\.when\(is_stacked, \|this\| this\.flex\(\)\.flex_col\(\)\)/);
   assert.match(dockRender, /\.flex_1\(\)/);
   assert.match(dockRender, /\.border_t_1\(\)/);
@@ -402,6 +402,17 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   const isResponseAnchorEntry = functionBody(threadView, "is_response_anchor_entry");
   const visibleRangeAnchor = functionBody(threadView, "response_anchor_for_visible_range");
   const responseAnchors = functionBody(threadView, "response_anchors");
+  const syncResponseAnchor = functionBody(threadView, "sync_response_anchor_from_scroll_position");
+  const scrollToEnd = functionBody(threadView, "scroll_to_end");
+  const scrollToTop = functionBody(threadView, "scroll_to_top");
+  const scrollOutputPageUp = functionBody(threadView, "scroll_output_page_up");
+  const scrollOutputPageDown = functionBody(threadView, "scroll_output_page_down");
+  const scrollOutputLineUp = functionBody(threadView, "scroll_output_line_up");
+  const scrollOutputLineDown = functionBody(threadView, "scroll_output_line_down");
+  const scrollOutputToPreviousMessage = functionBody(threadView, "scroll_output_to_previous_message");
+  const scrollOutputToNextMessage = functionBody(threadView, "scroll_output_to_next_message");
+  const dockVisibleEntries = functionBody(dock, "visible_entries");
+  const dockZoomedAgentPanelId = functionBody(dock, "zoomed_agent_panel_id");
   const workspaceRenderDock = functionBody(workspace, "render_dock");
   const workspaceRenderCenterScreen = functionBody(workspace, "render_center_screen");
   const profilesSupported = functionBody(conversationView, "profiles_supported");
@@ -424,6 +435,13 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(workspace, /let content_tiling = Tiling\s*\{/);
   assert.match(workspace, /\.when\(!content_tiling\.right/);
   assert.match(workspaceRenderDock, /self\.zoomed_position == Some\(position\) && !self\.zoomed_is_agent_panel/);
+  assert.match(dock, /fn zoomed_agent_panel_id\(&self, cx: &App\) -> Option<EntityId>/);
+  assert.match(dockZoomedAgentPanelId, /workspace\.zoomed_is_agent_panel\(\)/);
+  assert.match(dockZoomedAgentPanelId, /workspace\.zoomed_position != Some\(self\.position\)/);
+  assert.match(dockZoomedAgentPanelId, /workspace[\s\S]*?\.zoomed_item\(\)[\s\S]*?\.and_then\(\|view\| view\.upgrade\(\)\)[\s\S]*?\.map\(\|view\| view\.entity_id\(\)\)/);
+  assert.match(dockVisibleEntries, /let zoomed_agent_panel_id = self\.zoomed_agent_panel_id\(cx\)/);
+  assert.match(dockVisibleEntries, /\.filter\(\|\(_, entry\)\| Some\(entry\.panel\.panel_id\(\)\) != zoomed_agent_panel_id\)/);
+  assert.match(dock, /\.visible_entries\(cx\)/);
   assert.match(workspaceRenderCenterScreen, /if self\.zoomed_is_agent_panel/);
   assert.match(workspaceRenderCenterScreen, /"workspace-agent-screen-center"/);
   assert.match(workspaceRenderCenterScreen, /\.child\(zoomed_view\)/);
@@ -489,13 +507,34 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(isResponseAnchorEntry, /matches!\(entry, AgentThreadEntry::UserMessage\(_\)\)/);
   assert.match(threadView, /active_response_anchor_entry_ix[\s\S]*?visible_entry_range[\s\S]*?logical_scroll_top\(\)\.item_ix/);
   assert.match(responseAnchors, /let selected_prompt_ix = self[\s\S]*?active_response_anchor_entry_ix[\s\S]*?is_response_anchor_entry/);
-  assert.doesNotMatch(
-    responseAnchors,
-    /selected_prompt_ix[\s\S]*?response_anchor_scroll_request\.is_some\(\)/,
-    "active response marker state must not be ignored after a click request settles",
-  );
+  assert.match(responseAnchors, /let current_ix = self\.list_state\.logical_scroll_top\(\)\.item_ix/);
+  assert.match(responseAnchors, /let logical_prompt_ix = entries[\s\S]*?\.take\(current_ix\.saturating_add\(1\)\)[\s\S]*?\.rev\(\)[\s\S]*?\.find_map/);
   assert.match(threadView, /let visible_prompt_ix = self[\s\S]*?response_anchor_for_visible_range\(range, cx\)/);
-  assert.match(threadView, /let current_prompt_ix = selected_prompt_ix\.or\(visible_prompt_ix\)/);
+  assert.match(responseAnchors, /let scroll_prompt_ix = logical_prompt_ix\.or_else\(\|\| \{/);
+  assert.match(responseAnchors, /\.skip\(current_ix\)[\s\S]*?\.take\(1\)[\s\S]*?\.or\(visible_prompt_ix\)/);
+  assert.match(responseAnchors, /if self\.response_anchor_scroll_request\.is_some\(\) \{[\s\S]*?selected_prompt_ix\.or\(scroll_prompt_ix\)[\s\S]*?\} else \{[\s\S]*?scroll_prompt_ix\.or\(selected_prompt_ix\)/);
+  assert.match(threadView, /fn sync_response_anchor_from_scroll_position\(/);
+  assert.match(syncResponseAnchor, /if self\.response_anchor_scroll_request\.is_some\(\) \{[\s\S]*?return;/);
+  assert.match(syncResponseAnchor, /let visible_range = scroll_top\.item_ix\.\.scroll_top\.item_ix\.saturating_add\(1\)/);
+  assert.match(syncResponseAnchor, /self\.response_anchor_for_scroll_position\(visible_range, scroll_top\.item_ix, cx\)/);
+  assert.match(syncResponseAnchor, /self\.active_response_anchor_entry_ix = next_anchor/);
+  assert.match(syncResponseAnchor, /cx\.emit\(AcpThreadViewEvent::ScrollPositionChanged\)/);
+  for (const [name, body] of [
+    ["scroll_to_end", scrollToEnd],
+    ["scroll_to_top", scrollToTop],
+    ["scroll_output_page_up", scrollOutputPageUp],
+    ["scroll_output_page_down", scrollOutputPageDown],
+    ["scroll_output_line_up", scrollOutputLineUp],
+    ["scroll_output_line_down", scrollOutputLineDown],
+    ["scroll_output_to_previous_message", scrollOutputToPreviousMessage],
+    ["scroll_output_to_next_message", scrollOutputToNextMessage],
+  ]) {
+    assert.match(
+      body,
+      /sync_response_anchor_from_scroll_position\(cx\)/,
+      `${name} should keep the fullscreen response marker in sync after non-wheel manual scrolling`,
+    );
+  }
   assert.match(threadView, /pub\(crate\) fn scroll_to_response_anchor\(/);
   assert.match(scrollAnchor, /window: &mut Window/);
   assert.match(scrollAnchor, /if !self\.is_response_anchor_entry\(entry_ix, cx\)/);

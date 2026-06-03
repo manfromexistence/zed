@@ -6084,21 +6084,35 @@ impl ThreadView {
         let selected_prompt_ix = self
             .active_response_anchor_entry_ix
             .filter(|entry_ix| self.is_response_anchor_entry(*entry_ix, cx));
+        let current_ix = self.list_state.logical_scroll_top().item_ix;
+        let logical_prompt_ix = entries
+            .iter()
+            .enumerate()
+            .take(current_ix.saturating_add(1))
+            .rev()
+            .find_map(|(entry_ix, entry)| {
+                matches!(entry, AgentThreadEntry::UserMessage(_)).then_some(entry_ix)
+            });
         let visible_prompt_ix = self
             .visible_entry_range
             .clone()
             .and_then(|range| self.response_anchor_for_visible_range(range, cx));
-        let current_prompt_ix = selected_prompt_ix.or(visible_prompt_ix).or_else(|| {
-            let current_ix = self.list_state.logical_scroll_top().item_ix;
+        let scroll_prompt_ix = logical_prompt_ix.or_else(|| {
             entries
                 .iter()
                 .enumerate()
-                .take(current_ix.saturating_add(1))
-                .rev()
+                .skip(current_ix)
+                .take(1)
                 .find_map(|(entry_ix, entry)| {
                     matches!(entry, AgentThreadEntry::UserMessage(_)).then_some(entry_ix)
                 })
+                .or(visible_prompt_ix)
         });
+        let current_prompt_ix = if self.response_anchor_scroll_request.is_some() {
+            selected_prompt_ix.or(scroll_prompt_ix)
+        } else {
+            scroll_prompt_ix.or(selected_prompt_ix)
+        };
 
         let prompt_entries = entries
             .iter()
@@ -6309,7 +6323,23 @@ impl ThreadView {
 
     pub fn scroll_to_end(&mut self, cx: &mut Context<Self>) {
         self.list_state.scroll_to_end();
+        self.sync_response_anchor_from_scroll_position(cx);
         cx.notify();
+    }
+
+    fn sync_response_anchor_from_scroll_position(&mut self, cx: &mut Context<Self>) {
+        if self.response_anchor_scroll_request.is_some() {
+            return;
+        }
+
+        let scroll_top = self.list_state.logical_scroll_top();
+        let visible_range = scroll_top.item_ix..scroll_top.item_ix.saturating_add(1);
+        let next_anchor =
+            self.response_anchor_for_scroll_position(visible_range, scroll_top.item_ix, cx);
+        if self.active_response_anchor_entry_ix != next_anchor {
+            self.active_response_anchor_entry_ix = next_anchor;
+            cx.emit(AcpThreadViewEvent::ScrollPositionChanged);
+        }
     }
 
     fn handle_feedback_click(
@@ -6331,6 +6361,7 @@ impl ThreadView {
 
     pub(crate) fn scroll_to_top(&mut self, cx: &mut Context<Self>) {
         self.list_state.scroll_to(ListOffset::default());
+        self.sync_response_anchor_from_scroll_position(cx);
         cx.notify();
     }
 
@@ -6342,6 +6373,7 @@ impl ThreadView {
     ) {
         let page_height = self.list_state.viewport_bounds().size.height;
         self.list_state.scroll_by(-page_height * 0.9);
+        self.sync_response_anchor_from_scroll_position(cx);
         cx.notify();
     }
 
@@ -6353,6 +6385,7 @@ impl ThreadView {
     ) {
         let page_height = self.list_state.viewport_bounds().size.height;
         self.list_state.scroll_by(page_height * 0.9);
+        self.sync_response_anchor_from_scroll_position(cx);
         cx.notify();
     }
 
@@ -6363,6 +6396,7 @@ impl ThreadView {
         cx: &mut Context<Self>,
     ) {
         self.list_state.scroll_by(-window.line_height() * 3.);
+        self.sync_response_anchor_from_scroll_position(cx);
         cx.notify();
     }
 
@@ -6373,6 +6407,7 @@ impl ThreadView {
         cx: &mut Context<Self>,
     ) {
         self.list_state.scroll_by(window.line_height() * 3.);
+        self.sync_response_anchor_from_scroll_position(cx);
         cx.notify();
     }
 
@@ -6410,6 +6445,7 @@ impl ThreadView {
                 item_ix: target_ix,
                 offset_in_item: px(0.),
             });
+            self.sync_response_anchor_from_scroll_position(cx);
             cx.notify();
         }
     }
@@ -6429,6 +6465,7 @@ impl ThreadView {
                 item_ix: target_ix,
                 offset_in_item: px(0.),
             });
+            self.sync_response_anchor_from_scroll_position(cx);
             cx.notify();
         }
     }
