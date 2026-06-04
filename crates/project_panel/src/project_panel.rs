@@ -6725,6 +6725,14 @@ impl ProjectPanel {
                                 )
                             })
                             .child(hover_badge)
+                            .when(is_sticky && sticky_index == Some(0), |this| {
+                                this.child(side_panel_header_controls(
+                                    "project-panel-sticky",
+                                    self.workspace.clone(),
+                                    cx.entity().entity_id(),
+                                    cx,
+                                ))
+                            })
                             .into_any_element(),
                     )
                     .child(if let Some(icon) = &icon {

@@ -252,6 +252,7 @@ test("project panel display strings, sticky rows, and undo batches are bounded",
   const undo = read("crates/project_panel/src/undo.rs");
   const detailsForEntry = functionBody(source, "details_for_entry");
   const renderStickyEntries = functionBody(source, "render_sticky_entries");
+  const renderEntry = functionBody(source, "render_entry");
   const record = functionBody(undo, "record");
 
   assert.match(utils, /pub\(crate\) const MAX_PROJECT_PANEL_DISPLAY_LABEL_CHARS: usize = 1_024;/);
@@ -259,6 +260,8 @@ test("project panel display strings, sticky rows, and undo batches are bounded",
   assert.match(source, /const MAX_PROJECT_PANEL_STICKY_PARENTS: usize = 128;/);
   assert.match(undo, /const MAX_PROJECT_PANEL_UNDO_BATCH_CHANGES: usize = 4_096;/);
   assert.match(detailsForEntry, /utils::bounded_project_panel_label\(filename\)/);
+  assert.match(renderEntry, /is_sticky && sticky_index == Some\(0\)/);
+  assert.match(renderEntry, /side_panel_header_controls\(\s*"project-panel-sticky",/);
   assertBefore({
     body: renderStickyEntries,
     before: "sticky_parents.len() >= MAX_PROJECT_PANEL_STICKY_PARENTS",

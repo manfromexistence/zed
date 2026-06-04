@@ -5966,7 +5966,9 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) -> bool {
         if kind == WorkspaceScreenKind::Onboarding {
-            window.dispatch_action(OpenOnboarding.boxed_clone(), cx);
+            cx.defer_in(window, |_, window, cx| {
+                window.dispatch_action(OpenOnboarding.boxed_clone(), cx);
+            });
             return true;
         }
 
@@ -8990,7 +8992,7 @@ impl Render for Workspace {
                                 .absolute()
                                 .size_full()
                             })
-                            .when(self.zoomed.is_none(), |this| {
+                            .when(self.zoomed.is_none() || self.zoomed_is_agent_panel, |this| {
                                 this.on_drag_move(cx.listener(
                                     move |workspace, e: &DragMoveEvent<DraggedDock>, window, cx| {
                                         if workspace.previous_dock_drag_coordinates

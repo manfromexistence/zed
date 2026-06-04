@@ -246,13 +246,10 @@ test("side dock stack controls use real panel entries and preserve single-panel 
   assert.match(dockRender, /\.flex_1\(\)/);
   assert.match(dockRender, /\.border_t_1\(\)/);
   assert.match(dockRender, /dock\.activate_panel\(panel_ix, window, cx\);/);
-  assertBefore({
-    body: canSplitPanel,
-    before: /self\.panel_index_for_id\(panel_id\)\.is_none\(\)/,
-    after: /self\.first_stack_candidate_for\(panel_id, cx\)\.is_none\(\)/,
-    message:
-      "split controls must only enable for panels contained in the current dock",
-  });
+  assert.match(canSplitPanel, /self\.supports_panel_stack\(\)/);
+  assert.match(canSplitPanel, /self\.panel_index_for_id\(panel_id\)\.is_some\(\)/);
+  assert.match(canSplitPanel, /self\.first_stack_candidate_for\(panel_id, cx\)\.is_some\(\)/);
+  assert.doesNotMatch(canSplitPanel, /stacked_count|MAX_STACKED_PANELS/);
 
   const panelButtonsRender = functionBody(
     dock.slice(dock.indexOf("impl Render for PanelButtons")),
@@ -301,6 +298,9 @@ test("side dock stack controls use real panel entries and preserve single-panel 
   assert.doesNotMatch(dockRender, /"dock-panel-inline-control-mask"/);
   assert.doesNotMatch(panelButtonsRender, /"dock-panel-stack"/);
   assert.match(dockRender, /cursor_row_resize/);
+  assert.match(restoreStackedPanels, /self\.stacked_panel_ids = stacked_panel_ids;/);
+  assert.match(restoreStackedPanels, /self\.trim_stack_for_new_panel\(active_panel_id, Some\(active_panel_id\), cx\);/);
+  assert.match(restoreStackedPanels, /self\.stacked_panel_ids\.insert\(0, active_panel_id\);/);
   assert.match(restoreStackedPanels, /self\.pin_agent_panel_to_left_stack_bottom\(cx\);/);
   assert.match(panelButtonsRender, /dock\.stack_panel\(panel_id, window, cx\)/);
   assert.match(panelButtonsRender, /dock\.unstack_panel\(panel_id, window, cx\)/);
@@ -416,6 +416,10 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   const dockVisiblePanelForLayout = functionBody(dock, "visible_panel_for_layout");
   const dockZoomedAgentPanelId = functionBody(dock, "zoomed_agent_panel_id");
   const workspaceRenderDock = functionBody(workspace, "render_dock");
+  const workspaceRender = functionBody(
+    workspace.slice(workspace.indexOf("impl Render for Workspace")),
+    "render",
+  );
   const workspaceRenderCenterScreen = functionBody(workspace, "render_center_screen");
   const workspaceToggleDock = functionBody(workspace, "toggle_dock");
   const workspaceDismissZoomed = functionBody(workspace, "dismiss_zoomed_items_to_reveal");
@@ -439,6 +443,8 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(workspace, /let content_tiling = Tiling\s*\{/);
   assert.match(workspace, /\.when\(!content_tiling\.right/);
   assert.match(workspaceRenderDock, /self\.zoomed_position == Some\(position\) && !self\.zoomed_is_agent_panel/);
+  assert.match(workspaceRender, /self\.zoomed\.is_none\(\) \|\| self\.zoomed_is_agent_panel/);
+  assert.match(dock, /dock\.zoom_layer_open =\s*workspace\.zoomed\.is_some\(\) && !workspace\.zoomed_is_agent_panel\(\);/);
   assert.match(dock, /fn zoomed_agent_panel_id\(&self, cx: &App\) -> Option<EntityId>/);
   assert.match(dockZoomedAgentPanelId, /workspace\.zoomed_is_agent_panel\(\)/);
   assert.match(dockZoomedAgentPanelId, /workspace\.zoomed_position != Some\(self\.position\)/);
@@ -817,6 +823,10 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(dxLaunchWorkspace, /status\.agent_bridge\.automations\.iter\(\)\.take\(6\)/);
   assert.match(dxLaunchWorkspace, /muted_card\("No subagent activity", cx\)/);
   assert.match(agentPanel, /collapsed_dx_launch_rail_sections: HashSet<DxLaunchRailSection>/);
+  assert.match(agentPanel, /fullscreen_sources_rail_pinned: bool/);
+  assert.match(agentPanel, /fullscreen_progress_rail_pinned: bool/);
+  assert.match(agentPanel, /fullscreen_sources_rail_pinned: true/);
+  assert.match(agentPanel, /fullscreen_progress_rail_pinned: true/);
   assert.match(agentPanel, /default_collapsed_dx_launch_rail_sections/);
   assert.match(agentPanel, /DxLaunchRailSection::SourceTools/);
   assert.match(agentPanel, /DxLaunchRailSection::WorkspaceState/);
@@ -828,6 +838,10 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(toolbar, /"Show progress rail"/);
   assert.doesNotMatch(toolbar, /Show or hide sources|Show or hide progress/);
   assert.match(agentPanel, /DxLaunchRailControls\s*\{/);
+  assert.match(dxLaunchWorkspace, /enum DxLaunchRailSide/);
+  assert.match(dxLaunchWorkspace, /fn rail_pin_header\(/);
+  assert.match(dxLaunchWorkspace, /IconButton::new\(format!\("\{id\}-pin"\), IconName::Pin\)/);
+  assert.match(agentPanel, /on_toggle_pin: Arc::new/);
   assert.match(agentPanel, /render_workspace_chrome\([\s\S]*rail_controls/);
   assert.doesNotMatch(dxLaunchWorkspace, /section_title\("Guided Actions"/);
   assert.doesNotMatch(dxLaunchWorkspace, /section_title\("Source Tools"/);
@@ -842,6 +856,7 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(sourcesRail, /\.rounded_lg\(\)/);
   assert.match(sourcesRail, /\.shadow_md\(\)/);
   assert.match(sourcesRail, /\.occlude\(\)/);
+  assert.match(sourcesRail, /rail_pin_header\(\s*"dx-sources-rail-pin"/);
   assert.match(sourcesRail, /sources::source_set_stack\(&status\.source_sets, Vec::new\(\), cx\)/);
   assert.doesNotMatch(sourcesRail, /dx-sources-commands-section/);
   assert.doesNotMatch(sourcesRail, /dx-sources-tools-section/);
@@ -856,6 +871,7 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(progressRail, /\.border_1\(\)/);
   assert.match(progressRail, /\.shadow_md\(\)/);
   assert.match(progressRail, /\.occlude\(\)/);
+  assert.match(progressRail, /rail_pin_header\(\s*"dx-progress-rail-pin"/);
   assert.match(diagnosticsMenu, /IconButton::new\("dx-launch-diagnostics-button", IconName::Sliders\)/);
   assert.doesNotMatch(diagnosticsMenu, /Button::new\("dx-launch-diagnostics-button", "Diagnostics"\)|\.full_width\(\)/);
   assert.doesNotMatch(sourcesRail, /\.border_r_1\(\)/);
@@ -1106,6 +1122,7 @@ test("core left panels expose split and close controls in native headers", () =>
 
   assert.doesNotMatch(projectPanel, /fn render_panel_header/);
   assert.match(projectPanel, /side_panel_header_controls\(\s*"project-panel-media",/);
+  assert.match(projectPanel, /side_panel_header_controls\(\s*"project-panel-sticky",/);
   assert.doesNotMatch(emptyProjectWrapper, /render_panel_header\(cx\)/);
   assert.match(
     projectSelectionToolbar,

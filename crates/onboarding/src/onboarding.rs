@@ -145,7 +145,13 @@ const WEB_PREVIEW_ONBOARDING_HTML: &str = r##"<!doctype html>
     (() => {
       const button = document.getElementById("complete");
       const status = document.getElementById("status");
-      const postComplete = () => {
+      let completeSent = false;
+      const postComplete = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (completeSent) return;
+        completeSent = true;
+        button.disabled = true;
         const message = JSON.stringify({ kind: "onboarding-complete" });
         try {
           if (window.ipc && typeof window.ipc.postMessage === "function") {
@@ -158,6 +164,8 @@ const WEB_PREVIEW_ONBOARDING_HTML: &str = r##"<!doctype html>
           }
         } catch (_error) {}
         status.textContent = "Completion bridge unavailable.";
+        button.disabled = false;
+        completeSent = false;
       };
       button.addEventListener("click", postComplete);
     })();

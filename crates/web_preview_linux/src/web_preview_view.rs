@@ -365,10 +365,7 @@ impl WebPreviewView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        let workspace_context = workspace
-            .upgrade()
-            .map(|workspace| Self::workspace_context(workspace.read(cx), cx))
-            .unwrap_or_else(Self::fallback_workspace_context);
+        let workspace_context = Self::fallback_workspace_context();
 
         Self::new_for_url(
             workspace,

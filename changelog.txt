@@ -1,3 +1,23 @@
+[2026-06-04] - Onboarding Crash And Dock Interaction Hardening
+
+FIXED:
+- `crates\workspace\src\workspace.rs` now defers screen-dock onboarding activation until after the active Workspace update finishes, avoiding a re-entrant action dispatch path from the topbar click.
+- `crates\web_preview\src\web_preview_view.rs`, `crates\web_preview_macos\src\web_preview_view.rs`, and `crates\web_preview_linux\src\web_preview_view.rs` now create onboarding Web Preview instances with the fallback workspace context, so the fullscreen onboarding overlay cannot re-read the active Workspace during render.
+- `crates\onboarding\src\onboarding.rs` now prevents default click handling, stops propagation, and de-duplicates the Web Preview Complete button while completion IPC is in flight.
+- `crates\project_panel\src\project_panel.rs` now renders the shared split/close controls only on the top sticky file-tree row after the Project panel is scrolled past the media shelf.
+- `crates\workspace\src\dock.rs` now keeps side docks resizable while fullscreen Agent is the zoomed item, preserves the active panel in restored max-three stacks, and lets split controls rotate in another eligible panel even when a stack is already full.
+- `crates\agent_ui\src\agent_panel.rs` and `crates\agent_ui\src\dx_launch_workspace.rs` now give fullscreen Agent source/progress rails pinned state with real pin controls; rails remain hidden by default but are pinned by default whenever shown.
+- Focused source guards now cover deferred onboarding activation, fallback onboarding contexts on all desktop Web Preview paths, Project sticky controls, useful split behavior, active-panel stack restore, Agent fullscreen dock resizing, and rail pin controls.
+
+PASSED:
+- `node --test script\dx-workspace-ui-state-source.test.ts script\web-preview-platform-lifecycle.test.ts script\dx-project-panel-source.test.ts` with 54/54 passing.
+- `rustfmt --edition 2024 --check crates\onboarding\src\onboarding.rs crates\web_preview\src\web_preview_view.rs crates\web_preview_macos\src\web_preview_view.rs crates\web_preview_linux\src\web_preview_view.rs crates\workspace\src\dock.rs crates\workspace\src\workspace.rs crates\project_panel\src\project_panel.rs crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\dx_launch_workspace.rs`
+- `git diff --check`
+
+NOTES:
+- `just run`, Cargo check/build/test/clippy, and live onboarding click proof were not run in this pass because runtime validation was not explicitly authorized for this goal continuation.
+- Exactly six GPT-5.5 extra-high subagents inspected onboarding, Project sticky controls, dock split/stack behavior, Agent rail pinning, source guards, and integration risk before the final patch landed.
+
 [2026-06-04] - Dock Startup Restore Crash Fix
 
 FIXED:

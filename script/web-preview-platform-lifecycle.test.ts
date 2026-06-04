@@ -161,6 +161,12 @@ test("onboarding uses a local Web Preview page with a real completion bridge", (
 
   assert.match(source, /const WEB_PREVIEW_ONBOARDING_HTML: &str/);
   assert.match(source, /JSON\.stringify\(\{ kind: "onboarding-complete" \}\)/);
+  assert.match(source, /let completeSent = false;/);
+  assert.match(source, /const postComplete = \(event\) => \{/);
+  assert.match(source, /event\.preventDefault\(\);/);
+  assert.match(source, /event\.stopPropagation\(\);/);
+  assert.match(source, /if \(completeSent\) return;/);
+  assert.match(source, /button\.disabled = true;/);
   assert.match(source, /DxLaunchPreviewTargets::local_web_preview_onboarding\(web_preview_onboarding_url\(\)\)/);
   assert.match(source, /fn handle_finish\(&mut self, _: &Finish, window: &mut Window, cx: &mut Context<Self>\)/);
   assert.match(source, /finish_setup\(self\.workspace\.clone\(\), window, cx\);/);
@@ -252,8 +258,8 @@ test("onboarding uses a local Web Preview page with a real completion bridge", (
   );
   assert.match(
     workspaceSource,
-    /if kind == WorkspaceScreenKind::Onboarding \{\s*window\.dispatch_action\(OpenOnboarding\.boxed_clone\(\), cx\);\s*return true;\s*\}/s,
-    "screen dock activation must route existing onboarding through the fullscreen onboarding opener",
+    /if kind == WorkspaceScreenKind::Onboarding \{\s*cx\.defer_in\(window, \|_, window, cx\| \{\s*window\.dispatch_action\(OpenOnboarding\.boxed_clone\(\), cx\);\s*\}\);\s*return true;\s*\}/s,
+    "screen dock activation must route onboarding through the fullscreen opener after the Workspace update finishes",
   );
   assert.match(
     agentPanelSource,
@@ -301,6 +307,8 @@ for (const [name, path] of desktopOnboardingPreviewViews) {
     assert.match(source, /if let Some\(complete\) = self\.onboarding_complete\.clone\(\)/);
     assert.match(source, /complete\(window, cx\);/);
     const newForOnboarding = functionBody(source, "new_for_onboarding");
+    assert.match(newForOnboarding, /let workspace_context = Self::fallback_workspace_context\(\);/);
+    assert.doesNotMatch(newForOnboarding, /workspace\.read\(cx\)|Self::workspace_context/);
     assert.match(newForOnboarding, /Self::new_for_url\([\s\S]*onboarding_complete/s);
     const newForUrl = functionBody(source, "new_for_url");
     assert.match(newForUrl, /onboarding_complete,/);

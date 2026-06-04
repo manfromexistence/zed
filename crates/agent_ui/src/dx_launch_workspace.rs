@@ -119,7 +119,16 @@ impl DxLaunchRailState {
 #[derive(Clone)]
 pub(crate) struct DxLaunchRailControls {
     pub state: DxLaunchRailState,
+    pub sources_pinned: bool,
+    pub progress_pinned: bool,
     pub on_toggle: Arc<dyn Fn(DxLaunchRailSection, &ClickEvent, &mut Window, &mut App) + 'static>,
+    pub on_toggle_pin: Arc<dyn Fn(DxLaunchRailSide, &ClickEvent, &mut Window, &mut App) + 'static>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum DxLaunchRailSide {
+    Sources,
+    Progress,
 }
 
 struct DxLaunchDiagnosticsMenu {
@@ -284,6 +293,13 @@ fn render_sources_rail(
         .shadow_md()
         .overflow_y_scroll()
         .occlude()
+        .child(rail_pin_header(
+            "dx-sources-rail-pin",
+            "Sources",
+            rail_controls.sources_pinned,
+            DxLaunchRailSide::Sources,
+            rail_controls,
+        ))
         .child(rail_section(
             "dx-sources-stack-section",
             "Sources",
@@ -320,6 +336,13 @@ fn render_right_rail(
         .shadow_md()
         .overflow_y_scroll()
         .occlude()
+        .child(rail_pin_header(
+            "dx-progress-rail-pin",
+            "Progress",
+            rail_controls.progress_pinned,
+            DxLaunchRailSide::Progress,
+            rail_controls,
+        ))
         .child(diagnostics_menu(status.clone()))
         .child(rail_section(
             "dx-progress-summary-section",
@@ -371,6 +394,37 @@ fn render_right_rail(
             false,
             cx,
         ))
+        .into_any_element()
+}
+
+fn rail_pin_header(
+    id: &'static str,
+    label: &'static str,
+    pinned: bool,
+    side: DxLaunchRailSide,
+    controls: &DxLaunchRailControls,
+) -> AnyElement {
+    let on_toggle_pin = controls.on_toggle_pin.clone();
+
+    h_flex()
+        .id(id)
+        .items_center()
+        .gap_1()
+        .child(Label::new(label).size(LabelSize::Small).color(Color::Muted))
+        .child(div().flex_1())
+        .child(
+            IconButton::new(format!("{id}-pin"), IconName::Pin)
+                .icon_size(IconSize::Small)
+                .toggle_state(pinned)
+                .tooltip(Tooltip::text(if pinned {
+                    "Unpin rail"
+                } else {
+                    "Pin rail"
+                }))
+                .on_click(move |event, window, cx| {
+                    on_toggle_pin(side, event, window, cx);
+                }),
+        )
         .into_any_element()
 }
 

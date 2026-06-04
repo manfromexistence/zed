@@ -527,8 +527,9 @@ impl Dock {
                 });
             let zoom_subscription = cx.subscribe(&workspace, |dock, workspace, e: &Event, cx| {
                 if matches!(e, Event::ZoomChanged) {
-                    let is_zoomed = workspace.read(cx).zoomed.is_some();
-                    dock.zoom_layer_open = is_zoomed;
+                    let workspace = workspace.read(cx);
+                    dock.zoom_layer_open =
+                        workspace.zoomed.is_some() && !workspace.zoomed_is_agent_panel();
                 }
             });
             Self {
@@ -787,15 +788,9 @@ impl Dock {
     }
 
     fn can_split_panel(&self, panel_id: EntityId, cx: &App) -> bool {
-        if !self.supports_panel_stack()
-            || self.panel_index_for_id(panel_id).is_none()
-            || self.first_stack_candidate_for(panel_id, cx).is_none()
-        {
-            return false;
-        }
-
-        let stacked_count = self.stacked_entries().len();
-        !self.is_panel_stacked(panel_id) || stacked_count < MAX_STACKED_PANELS
+        self.supports_panel_stack()
+            && self.panel_index_for_id(panel_id).is_some()
+            && self.first_stack_candidate_for(panel_id, cx).is_some()
     }
 
     pub fn can_split_panel_by_id(&self, panel_id: EntityId, cx: &App) -> bool {
@@ -918,16 +913,17 @@ impl Dock {
             }
         }
 
+        self.stacked_panel_ids = stacked_panel_ids;
+
         if let Some(active_panel_id) = self
             .active_panel_entry()
             .map(|entry| entry.panel.panel_id())
-            && !stacked_panel_ids.contains(&active_panel_id)
-            && stacked_panel_ids.len() < MAX_STACKED_PANELS
+            && !self.stacked_panel_ids.contains(&active_panel_id)
         {
-            stacked_panel_ids.insert(0, active_panel_id);
+            self.trim_stack_for_new_panel(active_panel_id, Some(active_panel_id), cx);
+            self.stacked_panel_ids.insert(0, active_panel_id);
         }
 
-        self.stacked_panel_ids = stacked_panel_ids;
         self.prune_stacked_panel_ids();
         self.pin_agent_panel_to_left_stack_bottom(cx);
     }

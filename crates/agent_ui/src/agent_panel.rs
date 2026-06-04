@@ -57,8 +57,8 @@ use crate::dx_launch_receipts::launch_receipt_review_snapshot;
 use crate::dx_launch_source_audit::launch_source_audit_snapshot;
 use crate::dx_launch_status::launch_status_snapshot;
 use crate::dx_launch_workspace::{
-    DxLaunchRailControls, DxLaunchRailSection, DxLaunchRailState, DxLaunchWorkspaceStatus,
-    DxSourceRowControl, render_workspace_chrome,
+    DxLaunchRailControls, DxLaunchRailSection, DxLaunchRailSide, DxLaunchRailState,
+    DxLaunchWorkspaceStatus, DxSourceRowControl, render_workspace_chrome,
 };
 use crate::dx_proof_freshness::proof_freshness_snapshot;
 use crate::dx_receipt_history::tool_history_snapshot;
@@ -1170,6 +1170,8 @@ pub struct AgentPanel {
     is_active: bool,
     fullscreen_sources_rail_open: bool,
     fullscreen_progress_rail_open: bool,
+    fullscreen_sources_rail_pinned: bool,
+    fullscreen_progress_rail_pinned: bool,
     collapsed_dx_launch_rail_sections: HashSet<DxLaunchRailSection>,
 }
 
@@ -1645,6 +1647,8 @@ impl AgentPanel {
             is_active: false,
             fullscreen_sources_rail_open: false,
             fullscreen_progress_rail_open: false,
+            fullscreen_sources_rail_pinned: true,
+            fullscreen_progress_rail_pinned: true,
             collapsed_dx_launch_rail_sections: Self::default_collapsed_dx_launch_rail_sections(),
         };
 
@@ -6625,12 +6629,39 @@ impl AgentPanel {
             self.render_dx_launch_source_actions(&status.source_sets, &status.deploy_targets, cx);
         let guided_cards = self.render_dx_launch_guided_cards(&status, window, cx);
         let panel = cx.weak_entity();
+        let panel_for_section_toggle = panel.clone();
+        let panel_for_pin_toggle = panel;
         let rail_controls = DxLaunchRailControls {
             state: self.dx_launch_rail_state(),
+            sources_pinned: self.fullscreen_sources_rail_pinned,
+            progress_pinned: self.fullscreen_progress_rail_pinned,
             on_toggle: Arc::new(move |section, _event, _window, cx| {
-                panel
+                panel_for_section_toggle
                     .update(cx, |panel, cx| {
                         panel.toggle_dx_launch_rail_section(section);
+                        cx.notify();
+                    })
+                    .ok();
+            }),
+            on_toggle_pin: Arc::new(move |side, _event, _window, cx| {
+                panel_for_pin_toggle
+                    .update(cx, |panel, cx| {
+                        match side {
+                            DxLaunchRailSide::Sources => {
+                                panel.fullscreen_sources_rail_pinned =
+                                    !panel.fullscreen_sources_rail_pinned;
+                                if !panel.fullscreen_sources_rail_pinned {
+                                    panel.fullscreen_sources_rail_open = false;
+                                }
+                            }
+                            DxLaunchRailSide::Progress => {
+                                panel.fullscreen_progress_rail_pinned =
+                                    !panel.fullscreen_progress_rail_pinned;
+                                if !panel.fullscreen_progress_rail_pinned {
+                                    panel.fullscreen_progress_rail_open = false;
+                                }
+                            }
+                        }
                         cx.notify();
                     })
                     .ok();
