@@ -7,6 +7,7 @@ pub const DX_CATALOG_SCHEMA_VERSION: u16 = 1;
 #[derive(
     Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize,
 )]
+#[archive(check_bytes)]
 #[serde(rename_all = "snake_case")]
 pub struct DxCatalog {
     pub schema_version: u16,
@@ -98,6 +99,7 @@ impl DxCatalog {
 #[derive(
     Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize,
 )]
+#[archive(check_bytes)]
 #[serde(rename_all = "snake_case")]
 pub struct CatalogSourceRecord {
     pub id: String,
@@ -119,6 +121,7 @@ pub struct CatalogSourceRecord {
     RkyvSerialize,
     RkyvDeserialize,
 )]
+#[archive(check_bytes)]
 #[serde(rename_all = "snake_case")]
 pub enum CatalogSourceKind {
     FlowLocalRoles,
@@ -137,6 +140,7 @@ pub enum CatalogSourceKind {
 #[derive(
     Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize,
 )]
+#[archive(check_bytes)]
 #[serde(rename_all = "snake_case")]
 pub struct ProviderRecord {
     pub id: String,
@@ -168,6 +172,7 @@ pub struct ProviderRecord {
     RkyvSerialize,
     RkyvDeserialize,
 )]
+#[archive(check_bytes)]
 #[serde(rename_all = "snake_case")]
 pub enum ProviderKind {
     LocalLlamaCpp,
@@ -196,6 +201,7 @@ pub enum ProviderKind {
     RkyvSerialize,
     RkyvDeserialize,
 )]
+#[archive(check_bytes)]
 #[serde(rename_all = "snake_case")]
 pub enum ProviderAuthKind {
     None,
@@ -210,6 +216,7 @@ pub enum ProviderAuthKind {
 #[derive(
     Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize,
 )]
+#[archive(check_bytes)]
 #[serde(rename_all = "snake_case")]
 pub struct AuthProfileLink {
     pub profile_id: String,
@@ -220,6 +227,7 @@ pub struct AuthProfileLink {
 #[derive(
     Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize,
 )]
+#[archive(check_bytes)]
 #[serde(rename_all = "snake_case")]
 pub struct ModelRecord {
     pub id: String,
@@ -249,6 +257,7 @@ pub struct ModelRecord {
     RkyvSerialize,
     RkyvDeserialize,
 )]
+#[archive(check_bytes)]
 #[serde(rename_all = "snake_case")]
 pub struct ModelCapabilities {
     pub chat: bool,
@@ -277,6 +286,7 @@ pub struct ModelCapabilities {
     RkyvSerialize,
     RkyvDeserialize,
 )]
+#[archive(check_bytes)]
 #[serde(rename_all = "snake_case")]
 pub struct ModelPricingMicros {
     pub input_per_million_tokens: Option<u64>,
@@ -286,6 +296,7 @@ pub struct ModelPricingMicros {
 #[derive(
     Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize,
 )]
+#[archive(check_bytes)]
 #[serde(rename_all = "snake_case")]
 pub struct LocalRuntimeHints {
     pub runtime: LocalRuntimeKind,
@@ -308,6 +319,7 @@ pub struct LocalRuntimeHints {
     RkyvSerialize,
     RkyvDeserialize,
 )]
+#[archive(check_bytes)]
 #[serde(rename_all = "snake_case")]
 pub enum LocalRuntimeKind {
     LlamaCpp,
@@ -330,6 +342,7 @@ pub enum LocalRuntimeKind {
     RkyvSerialize,
     RkyvDeserialize,
 )]
+#[archive(check_bytes)]
 #[serde(rename_all = "snake_case")]
 pub enum RoutingRole {
     Helper,
@@ -345,6 +358,7 @@ pub enum RoutingRole {
 #[derive(
     Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize,
 )]
+#[archive(check_bytes)]
 #[serde(rename_all = "snake_case")]
 pub struct RoutingRule {
     pub role: RoutingRole,
@@ -359,6 +373,7 @@ pub struct RoutingRule {
 #[derive(
     Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Archive, RkyvSerialize, RkyvDeserialize,
 )]
+#[archive(check_bytes)]
 #[serde(rename_all = "snake_case")]
 pub struct CatalogValidationReport {
     pub is_valid: bool,

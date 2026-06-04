@@ -1297,7 +1297,17 @@ fn apply_openai_compatible_provider_settings(
 
     if provider.api_url.trim().is_empty() {
         provider.api_url = api_url;
+    } else if !catalog_base_url_matches_settings(
+        Some(api_url.as_str()),
+        Some(provider.api_url.as_str()),
+    ) {
+        log::warn!(
+            "DX catalog provider settings registration skipped `{}` because existing api_url does not match catalog api_url",
+            spec.provider_id
+        );
+        return;
     }
+
     for model in &spec.models {
         upsert_openai_compatible_model(
             &mut provider.available_models,
@@ -1322,7 +1332,16 @@ fn apply_open_router_provider_settings(
         if let Some(api_url) = &spec.base_url {
             open_router.api_url = Some(api_url.clone());
         }
+    } else if !catalog_base_url_matches_settings(
+        spec.base_url.as_deref(),
+        open_router.api_url.as_deref(),
+    ) {
+        log::warn!(
+            "DX catalog provider settings registration skipped OpenRouter because existing api_url does not match catalog api_url"
+        );
+        return;
     }
+
     let models = open_router.available_models.get_or_insert_default();
     for model in &spec.models {
         upsert_open_router_model(models, open_router_model_from_catalog(model));
@@ -1397,6 +1416,151 @@ fn upsert_open_router_model(
         *existing = model;
     } else {
         models.push(model);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use settings::{OpenRouterSettingsContent, SettingsContent};
+
+    #[test]
+    fn openai_compatible_settings_skip_catalog_models_when_api_url_differs() {
+        let mut settings = SettingsContent::default();
+        let language_models = settings.language_models.get_or_insert_default();
+        let providers = language_models.openai_compatible.get_or_insert_default();
+        providers.insert(
+            Arc::from("groq"),
+            OpenAiCompatibleSettingsContent {
+                api_url: "https://wrong.example/v1".to_string(),
+                available_models: vec![openai_compatible_available_model("existing-model")],
+            },
+        );
+
+        apply_openai_compatible_provider_settings(
+            &mut settings,
+            &registration_spec(
+                "groq",
+                CatalogExecutionAdapterKind::OpenAiCompatibleHttp,
+                "https://api.groq.com/openai/v1",
+            ),
+        );
+
+        let provider = settings
+            .language_models
+            .as_ref()
+            .and_then(|settings| settings.openai_compatible.as_ref())
+            .and_then(|providers| providers.get("groq"))
+            .expect("existing provider settings should remain");
+
+        assert_eq!(provider.api_url, "https://wrong.example/v1");
+        assert_eq!(provider.available_models.len(), 1);
+        assert_eq!(provider.available_models[0].name, "existing-model");
+    }
+
+    #[test]
+    fn open_router_settings_skip_catalog_models_when_api_url_differs() {
+        let mut settings = SettingsContent::default();
+        settings.language_models.get_or_insert_default().open_router =
+            Some(OpenRouterSettingsContent {
+                api_url: Some("https://wrong.example/api/v1".to_string()),
+                available_models: Some(vec![open_router_available_model("existing-model")]),
+            });
+
+        apply_open_router_provider_settings(
+            &mut settings,
+            &registration_spec(
+                "openrouter",
+                CatalogExecutionAdapterKind::OpenRouterHttp,
+                "https://openrouter.ai/api/v1",
+            ),
+        );
+
+        let open_router = settings
+            .language_models
+            .as_ref()
+            .and_then(|settings| settings.open_router.as_ref())
+            .expect("existing OpenRouter settings should remain");
+        let models = open_router
+            .available_models
+            .as_ref()
+            .expect("existing OpenRouter models should remain");
+
+        assert_eq!(
+            open_router.api_url.as_deref(),
+            Some("https://wrong.example/api/v1")
+        );
+        assert_eq!(models.len(), 1);
+        assert_eq!(models[0].name, "existing-model");
+    }
+
+    fn registration_spec(
+        provider_id: &str,
+        adapter_kind: CatalogExecutionAdapterKind,
+        base_url: &str,
+    ) -> CatalogProviderAdapterRegistrationSpec {
+        CatalogProviderAdapterRegistrationSpec {
+            provider_id: provider_id.to_string(),
+            provider_name: provider_id.to_string(),
+            adapter_kind,
+            permission: CatalogExecutionPermission::ApiKey,
+            settings_path: Some(format!("language_models.openai_compatible.{provider_id}")),
+            base_url: Some(base_url.to_string()),
+            auth_profile_id: None,
+            auth_configured: false,
+            user_approval_required: true,
+            can_register_settings: true,
+            ready_for_execution: false,
+            registration_blockers: Vec::new(),
+            execution_blockers: Vec::new(),
+            models: vec![CatalogProviderAdapterModelSpec {
+                model_id: format!("{provider_id}/catalog-model"),
+                display_name: "Catalog Model".to_string(),
+                context_window_tokens: Some(128_000),
+                max_output_tokens: Some(8_192),
+                supports_tools: true,
+                supports_images: false,
+                supports_audio: false,
+                supports_video: false,
+                supports_streaming: true,
+                free_tier: false,
+                premium_account: true,
+            }],
+            next_action: "Register provider settings".to_string(),
+        }
+    }
+
+    fn openai_compatible_available_model(name: &str) -> OpenAiCompatibleAvailableModel {
+        OpenAiCompatibleAvailableModel {
+            name: name.to_string(),
+            display_name: Some(name.to_string()),
+            max_tokens: 8_192,
+            max_output_tokens: Some(1_024),
+            max_completion_tokens: Some(1_024),
+            reasoning_effort: None,
+            capabilities: OpenAiCompatibleModelCapabilities {
+                tools: true,
+                images: false,
+                parallel_tool_calls: false,
+                prompt_cache_key: false,
+                chat_completions: true,
+                interleaved_reasoning: false,
+            },
+        }
+    }
+
+    fn open_router_available_model(name: &str) -> OpenRouterAvailableModel {
+        OpenRouterAvailableModel {
+            name: name.to_string(),
+            display_name: Some(name.to_string()),
+            max_tokens: 8_192,
+            max_output_tokens: Some(1_024),
+            max_completion_tokens: Some(1_024),
+            supports_tools: Some(true),
+            supports_images: Some(false),
+            mode: None,
+            provider: None,
+        }
     }
 }
 

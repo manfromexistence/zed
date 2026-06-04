@@ -607,23 +607,25 @@ mod tests {
 
     #[test]
     fn registration_specs_block_native_zed_provider_shadowing() {
-        let catalog = catalog_with_provider(
-            provider("deepseek", ProviderKind::OpenAiCompatible),
-            model("deepseek/deepseek-chat", "deepseek"),
-        );
+        for provider_id in reserved_native_openai_compatible_provider_ids() {
+            let catalog = catalog_with_provider(
+                provider(provider_id, ProviderKind::OpenAiCompatible),
+                model(&format!("{provider_id}/catalog-model"), provider_id),
+            );
 
-        let specs = build_catalog_provider_registration_specs(&catalog);
+            let specs = build_catalog_provider_registration_specs(&catalog);
 
-        assert_eq!(specs.len(), 1);
-        assert_eq!(specs[0].settings_path, None);
-        assert!(!specs[0].can_register_settings);
-        assert!(
-            specs[0]
-                .registration_blockers
-                .iter()
-                .any(|blocker| blocker.contains("native Zed provider")),
-            "native DeepSeek must be reported as blocked instead of re-registered as language_models.openai_compatible.deepseek"
-        );
+            assert_eq!(specs.len(), 1, "provider_id={provider_id}");
+            assert_eq!(specs[0].settings_path, None, "provider_id={provider_id}");
+            assert!(!specs[0].can_register_settings, "provider_id={provider_id}");
+            assert!(
+                specs[0]
+                    .registration_blockers
+                    .iter()
+                    .any(|blocker| blocker.contains("native Zed provider")),
+                "native provider `{provider_id}` must be blocked instead of re-registered as language_models.openai_compatible.{provider_id}"
+            );
+        }
     }
 
     #[test]
@@ -658,6 +660,27 @@ mod tests {
             models: vec![model],
             routing_rules: Vec::new(),
         }
+    }
+
+    fn reserved_native_openai_compatible_provider_ids() -> &'static [&'static str] {
+        &[
+            "amazon-bedrock",
+            "anthropic",
+            "copilot_chat",
+            "deepseek",
+            "google",
+            "llama_cpp",
+            "lmstudio",
+            "mistral",
+            "ollama",
+            "opencode",
+            "openai",
+            "openai-subscribed",
+            "openrouter",
+            "vercel_ai_gateway",
+            "x_ai",
+            "zed.dev",
+        ]
     }
 
     fn provider(id: &str, kind: ProviderKind) -> ProviderRecord {

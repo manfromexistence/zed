@@ -1,7 +1,7 @@
 use crate::{DxCatalog, DxCatalogError, Result};
 use memmap2::{Mmap, MmapOptions};
 use rkyv::{
-    Deserialize as RkyvDeserialize, Infallible, archived_root,
+    Deserialize as RkyvDeserialize, Infallible, check_archived_root,
     ser::{Serializer, serializers::AllocSerializer},
 };
 use serde::{Deserialize, Serialize};
@@ -183,10 +183,8 @@ pub fn deserialize_trusted_catalog_payload(payload: &[u8]) -> Result<DxCatalog> 
         return Err(DxCatalogError::EmptyPayload);
     }
 
-    // SAFETY: This is for catalog payloads produced by `serialize_catalog_payload`
-    // and wrapped by the DX catalog artifact header. Untrusted external catalog
-    // bytes must go through a bytecheck-backed validator before this path is used.
-    let archived = unsafe { archived_root::<DxCatalog>(payload) };
+    let archived = check_archived_root::<DxCatalog>(payload)
+        .map_err(|error| DxCatalogError::Archive(format!("{error:?}")))?;
     let mut deserializer = Infallible;
     let catalog = match archived.deserialize(&mut deserializer) {
         Ok(catalog) => catalog,
@@ -239,4 +237,31 @@ fn read_u64(bytes: &[u8], offset: usize) -> u64 {
         bytes[offset + 6],
         bytes[offset + 7],
     ])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn catalog_payload_round_trips_after_archive_validation() {
+        let catalog = DxCatalog::empty("archive-validation-test");
+        let payload = serialize_catalog_payload(&catalog).expect("catalog should serialize");
+
+        let decoded =
+            deserialize_trusted_catalog_payload(&payload).expect("catalog should deserialize");
+
+        assert_eq!(decoded, catalog);
+    }
+
+    #[test]
+    fn catalog_payload_rejects_malformed_archive_bytes() {
+        let error = deserialize_trusted_catalog_payload(&[1, 2, 3, 4])
+            .expect_err("malformed archive bytes should be rejected");
+
+        assert!(
+            matches!(error, DxCatalogError::Archive(_)),
+            "unexpected error: {error}"
+        );
+    }
 }
