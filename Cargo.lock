@@ -13174,6 +13174,7 @@ dependencies = [
  "component",
  "db",
  "documented",
+ "editor",
  "fs",
  "fuzzy",
  "gpui",

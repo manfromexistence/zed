@@ -239,6 +239,7 @@ pub struct WebPreviewView {
     deferred_ipc_messages: Vec<String>,
     ipc_flush_scheduled: bool,
     onboarding_complete: Option<OnboardingCompleteCallback>,
+    onboarding_completion_handoff: bool,
     event_pump_task: Option<Task<()>>,
     zoom_factor: f64,
     is_active_item: bool,
@@ -419,6 +420,7 @@ impl WebPreviewView {
             deferred_ipc_messages: Vec::new(),
             ipc_flush_scheduled: false,
             onboarding_complete,
+            onboarding_completion_handoff: false,
             event_pump_task: None,
             zoom_factor: 1.0,
             is_active_item: false,
@@ -614,6 +616,18 @@ impl WebPreviewView {
         not(target_os = "linux")
     ))]
     fn release_native_preview_focus(&self) {}
+
+    pub fn prepare_for_onboarding_completion(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.onboarding_completion_handoff = true;
+        self.is_active_item = false;
+        #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+        window.set_background_appearance(gpui::WindowBackgroundAppearance::Opaque);
+        cx.notify();
+    }
 
     fn activate_url_editor(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let focus_handle = self.url_editor_focus_handle.clone();
@@ -2206,6 +2220,7 @@ impl Item for WebPreviewView {
                 deferred_ipc_messages: Vec::new(),
                 ipc_flush_scheduled: false,
                 onboarding_complete,
+                onboarding_completion_handoff: false,
                 event_pump_task: None,
                 zoom_factor: self.zoom_factor,
                 is_active_item: false,
@@ -2256,6 +2271,10 @@ impl Item for WebPreviewView {
     }
 
     fn deactivated(&mut self, _window: &mut Window, _cx: &mut Context<Self>) {
+        if self.onboarding_completion_handoff {
+            return;
+        }
+
         self.is_active_item = false;
         // Hide webview when tab is deactivated
         #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
@@ -2274,6 +2293,10 @@ impl Item for WebPreviewView {
     }
 
     fn workspace_deactivated(&mut self, _window: &mut Window, _cx: &mut Context<Self>) {
+        if self.onboarding_completion_handoff {
+            return;
+        }
+
         self.is_active_item = false;
         #[cfg(target_os = "linux")]
         if let Some(preview) = self.native_preview.borrow_mut().as_mut() {

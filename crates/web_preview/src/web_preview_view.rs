@@ -707,6 +707,10 @@ impl NativeWebPreview {
         self.webview.set_visible(visible)
     }
 
+    fn park_for_onboarding_completion(&self) -> Result<()> {
+        self.webview.park_composition_visual_for_handoff()
+    }
+
     fn sync_bounds(&mut self, bounds: Bounds<Pixels>, scale_factor: f32) -> Result<()> {
         self.webview
             .set_bounds(client_rect_for_bounds(bounds, scale_factor), scale_factor)
@@ -787,6 +791,7 @@ pub struct WebPreviewView {
     dx_style_source_apply_session_source_identity: Option<DxStyleSourceApplySessionSourceIdentity>,
     dx_style_source_apply_session_sequence: u64,
     onboarding_complete: Option<OnboardingCompleteCallback>,
+    onboarding_completion_handoff: bool,
     latest_dx_studio_selection: Option<Value>,
     latest_dx_studio_edit_receipt: Option<Value>,
     latest_dx_style_source_apply_receipt: Option<Value>,
@@ -1168,6 +1173,7 @@ impl WebPreviewView {
             dx_style_source_apply_session_source_identity: None,
             dx_style_source_apply_session_sequence: 0,
             onboarding_complete,
+            onboarding_completion_handoff: false,
             latest_dx_studio_selection: None,
             latest_dx_studio_edit_receipt: None,
             latest_dx_style_source_apply_receipt: None,
@@ -1471,6 +1477,23 @@ impl WebPreviewView {
         {
             self.focus_native_preview_page();
         }
+    }
+
+    pub fn prepare_for_onboarding_completion(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.onboarding_completion_handoff = true;
+        self.is_active_item = false;
+        self.url_editor_focus_requested.set(false);
+        #[cfg(target_os = "windows")]
+        if let Some(preview) = self.native_preview.borrow().as_ref() {
+            let _ = preview.park_for_onboarding_completion();
+        }
+        #[cfg(any(target_os = "windows", target_os = "macos"))]
+        window.set_background_appearance(gpui::WindowBackgroundAppearance::Opaque);
+        cx.notify();
     }
 
     fn activate_url_editor(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -36024,6 +36047,7 @@ impl Item for WebPreviewView {
                 latest_annotated_screenshot: None,
                 latest_inspected_element: None,
                 latest_devtools_open_attempt: None,
+                onboarding_completion_handoff: false,
                 event_pump_task: None,
                 native_mount_task: None,
                 zoom_factor: 1.0,
@@ -36091,6 +36115,10 @@ impl Item for WebPreviewView {
     }
 
     fn deactivated(&mut self, _window: &mut Window, _cx: &mut Context<Self>) {
+        if self.onboarding_completion_handoff {
+            return;
+        }
+
         self.is_active_item = false;
         self.url_editor_focus_requested.set(false);
         // Hide webview when tab is deactivated
@@ -36103,6 +36131,10 @@ impl Item for WebPreviewView {
     }
 
     fn workspace_deactivated(&mut self, _window: &mut Window, _cx: &mut Context<Self>) {
+        if self.onboarding_completion_handoff {
+            return;
+        }
+
         self.is_active_item = false;
         self.url_editor_focus_requested.set(false);
         #[cfg(any(target_os = "windows", target_os = "macos"))]

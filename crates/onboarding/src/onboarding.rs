@@ -4,18 +4,19 @@ use crate::multibuffer_hint::MultibufferHint;
 use client::{Client, UserStore, zed_urls};
 use cloud_api_types::Plan;
 use db::kvp::KeyValueStore;
+use editor::Editor;
 use fs::Fs;
 use gpui::{
     Action, AnyElement, App, AppContext, AsyncWindowContext, Context, Entity, EventEmitter,
     FocusHandle, Focusable, Global, IntoElement, KeyContext, Render, ScrollHandle, SharedString,
-    Subscription, Task, WeakEntity, Window, actions,
+    Subscription, Task, TaskExt as _, WeakEntity, Window, actions,
 };
 use notifications::status_toast::StatusToast;
 use project::agent_server_store::AllAgentServersSettings;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use settings::{SettingsStore, VsCodeSettingsSource};
-use std::{rc::Rc, sync::Arc};
+use std::sync::Arc;
 use ui::{ParentElement as _, prelude::*};
 
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
@@ -145,41 +146,12 @@ const WEB_PREVIEW_ONBOARDING_HTML: &str = r##"<!doctype html>
     (() => {
       const button = document.getElementById("complete");
       const status = document.getElementById("status");
-      let completeSent = false;
-      const completePayload = { kind: "onboarding-complete" };
-      const completeMessage = JSON.stringify(completePayload);
-      const tryPostComplete = (post) => {
-        try {
-          post();
-          return true;
-        } catch (_error) {
-          return false;
-        }
-      };
-      const postComplete = (event) => {
+      const preventNativeBridgeFallback = (event) => {
         event.preventDefault();
         event.stopPropagation();
-        if (completeSent) return;
-        completeSent = true;
-        button.disabled = true;
-        status.textContent = "Completing...";
-        let posted = false;
-        if (!posted && window.ipc && typeof window.ipc.postMessage === "function") {
-          posted = tryPostComplete(() => window.ipc.postMessage(completeMessage)) || posted;
-        }
-        if (!posted && window.chrome?.webview && typeof window.chrome.webview.postMessage === "function") {
-          posted = tryPostComplete(() => window.chrome.webview.postMessage(completeMessage)) || posted;
-        }
-        if (!posted && window.external && typeof window.external.invoke === "function") {
-          posted = tryPostComplete(() => window.external.invoke(completeMessage)) || posted;
-        }
-        if (!posted) {
-          status.textContent = "Completion bridge unavailable.";
-          button.disabled = false;
-          completeSent = false;
-        }
+        status.textContent = "Use the Complete control above this preview.";
       };
-      button.addEventListener("click", postComplete);
+      button.addEventListener("click", preventNativeBridgeFallback);
     })();
   </script>
 </body>
@@ -457,6 +429,8 @@ struct Onboarding {
     scroll_handle: ScrollHandle,
     dx_preview_targets: DxLaunchPreviewTargets,
     closed_docks_for_fullscreen: Vec<DockPosition>,
+    completion_requested: bool,
+    completion_revealed: bool,
     #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
     dx_web_preview: Option<Entity<WebPreviewView>>,
     _settings_subscription: Subscription,
@@ -519,6 +493,8 @@ impl Onboarding {
                 user_store: workspace.user_store().clone(),
                 dx_preview_targets,
                 closed_docks_for_fullscreen: Vec::new(),
+                completion_requested: false,
+                completion_revealed: false,
                 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
                 dx_web_preview: None,
                 _settings_subscription: cx
@@ -579,17 +555,13 @@ impl Onboarding {
         }
 
         let workspace = self.workspace.clone();
-        let completion_workspace = workspace.clone();
         let url = self.dx_preview_targets.primary.url.clone();
-        let complete_onboarding = Rc::new(move |window: &mut Window, cx: &mut App| {
-            finish_setup(completion_workspace.clone(), window, cx);
-        });
         let preview = cx.new(|cx| {
             WebPreviewView::new_for_onboarding(
                 workspace,
                 url,
                 Some("Onboarding".into()),
-                Some(complete_onboarding),
+                None,
                 window,
                 cx,
             )
@@ -602,6 +574,19 @@ impl Onboarding {
     fn deactivate_dx_web_preview(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if let Some(preview) = self.dx_web_preview.as_ref() {
             preview.update(cx, |preview, cx| preview.deactivated(window, cx));
+        }
+    }
+
+    #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+    fn prepare_dx_web_preview_for_completion(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if let Some(preview) = self.dx_web_preview.as_ref() {
+            preview.update(cx, |preview, cx| {
+                preview.prepare_for_onboarding_completion(window, cx)
+            });
         }
     }
 
@@ -627,6 +612,26 @@ impl Onboarding {
                 Label::new("DX onboarding Web Preview is available on supported desktop runtimes.")
                     .size(LabelSize::Small)
                     .color(Color::Muted),
+            )
+            .into_any_element()
+    }
+
+    fn render_completion_control(&self, cx: &mut Context<Self>) -> AnyElement {
+        div()
+            .absolute()
+            .inset_0()
+            .size_full()
+            .flex()
+            .items_center()
+            .justify_center()
+            .occlude()
+            .child(
+                Button::new("complete-dx-onboarding", "Complete")
+                    .style(ButtonStyle::Tinted(TintColor::Accent))
+                    .size(ButtonSize::Large)
+                    .on_click(cx.listener(|_, _event, window, cx| {
+                        window.dispatch_action(Finish.boxed_clone(), cx);
+                    })),
             )
             .into_any_element()
     }
@@ -694,6 +699,10 @@ impl Item for Onboarding {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<AnyElement> {
+        if self.completion_revealed {
+            return None;
+        }
+
         Some(
             div()
                 .id("onboarding-window-overlay")
@@ -706,6 +715,7 @@ impl Item for Onboarding {
                 .on_action(cx.listener(Self::handle_sign_in))
                 .on_action(Self::handle_open_account)
                 .child(self.render_web_preview_canvas(window, cx))
+                .child(self.render_completion_control(cx))
                 .into_any_element(),
         )
     }
@@ -716,14 +726,26 @@ impl Item for Onboarding {
 
     fn deactivated(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
-        self.deactivate_dx_web_preview(window, cx);
+        {
+            if self.completion_requested {
+                window.set_background_appearance(gpui::WindowBackgroundAppearance::Opaque);
+            } else {
+                self.deactivate_dx_web_preview(window, cx);
+            }
+        }
         #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
         let _ = (window, cx);
     }
 
     fn workspace_deactivated(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
-        self.deactivate_dx_web_preview(window, cx);
+        {
+            if self.completion_requested {
+                window.set_background_appearance(gpui::WindowBackgroundAppearance::Opaque);
+            } else {
+                self.deactivate_dx_web_preview(window, cx);
+            }
+        }
         #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
         let _ = (window, cx);
     }
@@ -741,6 +763,8 @@ impl Item for Onboarding {
             focus_handle: cx.focus_handle(),
             dx_preview_targets: self.dx_preview_targets.clone(),
             closed_docks_for_fullscreen: Vec::new(),
+            completion_requested: false,
+            completion_revealed: false,
             #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
             dx_web_preview: None,
             _settings_subscription: cx.observe_global::<SettingsStore>(move |_, cx| cx.notify()),
@@ -758,62 +782,171 @@ fn close_onboarding_page<C: AppContext>(
     cx: &mut C,
 ) {
     let _ = workspace.update(cx, |workspace, cx| {
-        if find_onboarding_page(workspace, cx).is_none() {
+        if !mark_onboarding_completion_requested(workspace, cx) {
             return;
         }
 
-        let panes = workspace.panes().to_vec();
-        let mut closed_onboarding = false;
-        let post_onboarding_item = find_post_onboarding_item(workspace, cx);
+        complete_onboarding_handoff(workspace, window, cx);
+    });
+}
 
-        if let Some(item) = post_onboarding_item.as_ref() {
-            workspace.activate_item(item.as_ref(), true, true, window, cx);
-        } else {
-            workspace.activate_screen_kind(WorkspaceScreenKind::Editor, window, cx);
-        }
+fn complete_onboarding_handoff(
+    workspace: &mut Workspace,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    if find_onboarding_page(workspace, cx).is_none() {
+        return;
+    }
 
-        for pane in panes {
-            let onboarding_entries = pane
-                .read(cx)
-                .items()
-                .filter_map(|item| {
-                    let onboarding = item.downcast::<Onboarding>()?;
-                    Some((onboarding, item.item_id()))
-                })
-                .collect::<Vec<_>>();
+    reveal_onboarding_completion(workspace, window, cx);
 
-            if onboarding_entries.is_empty() {
-                continue;
+    let post_onboarding_item = find_post_onboarding_item(workspace, cx);
+
+    if let Some(item) = post_onboarding_item.as_ref() {
+        workspace.activate_item(item.as_ref(), true, true, window, cx);
+    } else {
+        let create_editor = Editor::new_in_workspace(workspace, window, cx);
+        cx.spawn_in(window, async move |workspace, cx| {
+            match create_editor.await {
+                Ok(_) => Ok::<(), anyhow::Error>(()),
+                Err(error) => {
+                    workspace.update_in(cx, |workspace, _window, cx| {
+                        reset_onboarding_completion_request(workspace, cx);
+                    })?;
+                    Err(error)
+                }
             }
+        })
+        .detach_and_log_err(cx);
+    }
+}
 
-            closed_onboarding = true;
+fn mark_onboarding_completion_requested(workspace: &mut Workspace, cx: &mut App) -> bool {
+    let onboarding_pages = workspace
+        .panes()
+        .iter()
+        .flat_map(|pane| {
+            pane.read(cx)
+                .items()
+                .filter_map(|item| item.downcast::<Onboarding>())
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+
+    let mut newly_requested = false;
+    for onboarding in onboarding_pages {
+        onboarding.update(cx, |onboarding, _| {
+            if !onboarding.completion_requested {
+                onboarding.completion_requested = true;
+                newly_requested = true;
+            }
+        });
+    }
+
+    newly_requested
+}
+
+fn reset_onboarding_completion_request(workspace: &mut Workspace, cx: &mut App) {
+    let onboarding_pages = workspace
+        .panes()
+        .iter()
+        .flat_map(|pane| {
+            pane.read(cx)
+                .items()
+                .filter_map(|item| item.downcast::<Onboarding>())
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+
+    for onboarding in onboarding_pages {
+        onboarding.update(cx, |onboarding, cx| {
+            onboarding.completion_requested = false;
+            onboarding.completion_revealed = false;
+            cx.notify();
+        });
+    }
+}
+
+fn reveal_onboarding_completion(
+    workspace: &mut Workspace,
+    window: &mut Window,
+    cx: &mut Context<Workspace>,
+) {
+    for pane in workspace.panes().to_vec() {
+        let contains_onboarding = pane
+            .read(cx)
+            .items()
+            .any(|item| item.downcast::<Onboarding>().is_some());
+        if contains_onboarding {
             pane.update(cx, |pane, cx| {
                 pane.zoom_out(&ZoomOut, window, cx);
             });
+        }
+    }
 
-            for (onboarding, _) in &onboarding_entries {
-                let positions = onboarding.update(cx, |onboarding, _| {
-                    onboarding.take_closed_docks_for_fullscreen()
-                });
+    let onboarding_pages = workspace
+        .panes()
+        .iter()
+        .flat_map(|pane| {
+            pane.read(cx)
+                .items()
+                .filter_map(|item| Some((item.downcast::<Onboarding>()?, item.item_id())))
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
 
-                for position in positions {
-                    if !workspace.is_dock_at_position_open(position, cx) {
-                        workspace.toggle_dock(position, window, cx);
-                    }
-                }
+    let mut dock_positions_to_restore = Vec::new();
+    let mut completed_item_ids = Vec::new();
+    let workspace_id = workspace.database_id();
+
+    for (onboarding, item_id) in onboarding_pages {
+        let (positions, completed) = onboarding.update(cx, |onboarding, cx| {
+            let mut completed = false;
+            if onboarding.completion_requested && !onboarding.completion_revealed {
+                #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
+                onboarding.prepare_dx_web_preview_for_completion(window, cx);
+                onboarding.completion_revealed = true;
+                completed = true;
+                cx.notify();
             }
 
-            pane.update(cx, |pane, cx| {
-                for (_, onboarding_id) in onboarding_entries {
-                    pane.remove_item(onboarding_id, true, false, window, cx);
-                }
-            });
+            (onboarding.take_closed_docks_for_fullscreen(), completed)
+        });
+        if completed {
+            completed_item_ids.push(item_id);
         }
 
-        if closed_onboarding {
-            cx.notify();
+        for position in positions {
+            if !dock_positions_to_restore.contains(&position) {
+                dock_positions_to_restore.push(position);
+            }
         }
-    });
+    }
+
+    if let Some(workspace_id) = workspace_id {
+        for item_id in completed_item_ids {
+            forget_completed_onboarding_page(item_id, workspace_id, cx);
+        }
+    }
+
+    for position in dock_positions_to_restore {
+        if !workspace.is_dock_at_position_open(position, cx) {
+            workspace.toggle_dock(position, window, cx);
+        }
+    }
+
+    cx.notify();
+}
+
+fn forget_completed_onboarding_page(
+    item_id: workspace::ItemId,
+    workspace_id: WorkspaceId,
+    cx: &mut Context<Workspace>,
+) {
+    let db = persistence::OnboardingPagesDb::global(cx);
+    cx.background_spawn(async move { db.delete_onboarding_page(item_id, workspace_id).await })
+        .detach_and_log_err(cx);
 }
 
 fn find_post_onboarding_item(workspace: &Workspace, cx: &App) -> Option<Box<dyn ItemHandle>> {
@@ -1016,6 +1149,9 @@ impl workspace::SerializableItem for Onboarding {
         cx: &mut ui::Context<Self>,
     ) -> Option<gpui::Task<gpui::Result<()>>> {
         let workspace_id = workspace.database_id()?;
+        if self.completion_requested {
+            return None;
+        }
 
         let db = persistence::OnboardingPagesDb::global(cx);
         let closed_docks_for_fullscreen =
@@ -1027,7 +1163,7 @@ impl workspace::SerializableItem for Onboarding {
     }
 
     fn should_serialize(&self, event: &Self::Event) -> bool {
-        event == &ItemEvent::UpdateTab
+        !self.completion_requested && event == &ItemEvent::UpdateTab
     }
 }
 
@@ -1091,6 +1227,16 @@ mod persistence {
                     closed_docks_for_fullscreen
                 )
                 VALUES (?, ?, ?)
+            }
+        }
+
+        query! {
+            pub async fn delete_onboarding_page(
+                item_id: workspace::ItemId,
+                workspace_id: workspace::WorkspaceId
+            ) -> Result<()> {
+                DELETE FROM onboarding_pages
+                WHERE item_id = ? AND workspace_id = ?
             }
         }
 

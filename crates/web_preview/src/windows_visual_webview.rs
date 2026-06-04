@@ -365,6 +365,20 @@ impl WindowsVisualWebView {
         Ok(())
     }
 
+    pub(crate) fn park_composition_visual_for_handoff(&self) -> Result<()> {
+        set_webview_composition_visual_offset(self.main_window, &self.visual, -32000.0, -32000.0)?;
+        clear_webview_passthrough_target_for_controller(
+            self.main_window,
+            &self.composition_controller,
+        );
+        update_webview_passthrough_focus_for_controller(
+            self.main_window,
+            &self.composition_controller,
+            false,
+        );
+        Ok(())
+    }
+
     pub(crate) fn set_bounds(&mut self, bounds: RECT, scale_factor: f32) -> Result<()> {
         let bounds_changed = self.last_bounds != Some(bounds);
         let scale_changed = (self.last_scale_factor - scale_factor).abs() > f32::EPSILON;

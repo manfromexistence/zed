@@ -1,3 +1,25 @@
+[2026-06-04] - Onboarding Completion Native Handoff
+
+FIXED:
+- `crates\onboarding\src\onboarding.rs` now keeps the Web Preview as a visual-only onboarding surface while moving the actual Complete action to a native GPUI control layered above it, so completion no longer depends on WebView2 IPC, title changes, URL fallback, or browser-side click callbacks.
+- `crates\onboarding\src\onboarding.rs` now treats Complete as a native-safe handoff: it marks completion in progress, parks the Web Preview surface, stops drawing the fullscreen overlay immediately, restores onboarding-closed docks once, then activates an existing item or creates a real untitled editor with `Editor::new_in_workspace`.
+- `crates\onboarding\src\onboarding.rs` now deletes the completed onboarding persistence row and prevents parked completed onboarding items from serializing or advertising themselves as serializable, so a completed Web Preview onboarding surface is not restored as stale active state.
+- `crates\web_preview\src\web_preview_view.rs`, `crates\web_preview_macos\src\web_preview_view.rs`, and `crates\web_preview_linux\src\web_preview_view.rs` now expose a focused onboarding completion handoff method that avoids native focus release, native preview hide, reset, or close during completion.
+- `crates\web_preview\src\windows_visual_webview.rs` now parks the Windows DirectComposition WebView visual offscreen and clears passthrough/focus state for onboarding completion instead of calling WebView2 visibility or close APIs.
+- `crates\onboarding\Cargo.toml` now depends on the existing editor crate so onboarding can use the canonical editor creation path instead of deferred `WorkspaceScreenKind::Editor` dispatch.
+- `script\web-preview-platform-lifecycle.test.ts` now guards the native completion control, requires the onboarding Web Preview to be constructed without a completion callback, rejects browser-side onboarding completion signals in the HTML, rejects immediate onboarding item removal in the completion path, and verifies desktop Web Preview implementations do not use focus-release/hide/close/reset operations during completion.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\onboarding\src\onboarding.rs crates\web_preview\src\web_preview_view.rs crates\web_preview_macos\src\web_preview_view.rs crates\web_preview_linux\src\web_preview_view.rs`
+- `node --test script\web-preview-platform-lifecycle.test.ts` with 23/23 passing.
+- `node --test script\web-preview-platform-lifecycle.test.ts script\dx-workspace-ui-state-source.test.ts script\dx-style-panel-source.test.ts script\dx-title-bar-source.test.ts` with 54/54 passing.
+- `git diff --check`
+
+NOTES:
+- Six GPT-5.5 extra-high subagents inspected the runtime crash, native WebView lifecycle, overlay visibility, bridge dispatch, source guards, and risk paths. The runtime evidence showed Windows `BEX64` / `0xc0000409` after Complete with WebView2 loaded, so this pass avoids browser-side completion callbacks and native WebView hide/close/drop during the completion handoff rather than treating it as a button styling problem.
+- Previous authorized `just run` launches reached processes `4472` and `37148`; user Complete-click validation then produced Windows `BEX64` / `0xc0000409` crashes, so those launches are not treated as proof of the fixed completion flow.
+- `cargo update -p onboarding --offline` updated only the onboarding dependency metadata in `Cargo.lock` after adding the existing workspace `editor` dependency.
+
 [2026-06-04] - Onboarding Completion Bridge-Only Dismissal
 
 FIXED:
