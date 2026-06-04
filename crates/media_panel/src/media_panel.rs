@@ -30,6 +30,8 @@ use workspace::{
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 use web_preview::web_preview_view::WebPreviewView;
 
+mod dx_media_bridge;
+
 actions!(
     media_panel,
     [
@@ -232,11 +234,48 @@ impl RemoteMediaAsset {
         }
     }
 
+    fn owned_with_dynamic_provider(
+        id: String,
+        label: String,
+        provider: String,
+        url: String,
+        thumbnail_url: Option<String>,
+        kind: DraggedMediaKind,
+        license: String,
+        tags: String,
+    ) -> Self {
+        Self {
+            id: Cow::Owned(id),
+            label: Cow::Owned(label),
+            provider: Cow::Owned(provider),
+            url: Cow::Owned(url),
+            thumbnail_url: thumbnail_url.map(Cow::Owned),
+            kind,
+            license: Cow::Owned(license),
+            tags: Cow::Owned(tags),
+        }
+    }
+
     fn thumbnail_or_url(&self) -> &str {
         self.thumbnail_url
             .as_ref()
             .map(|url| url.as_ref())
             .unwrap_or_else(|| self.url.as_ref())
+    }
+}
+
+impl From<dx_media_bridge::PanelMediaAsset> for RemoteMediaAsset {
+    fn from(asset: dx_media_bridge::PanelMediaAsset) -> Self {
+        Self::owned_with_dynamic_provider(
+            asset.id,
+            asset.label,
+            asset.provider,
+            asset.url,
+            asset.thumbnail_url,
+            asset.kind.into(),
+            asset.license,
+            asset.tags,
+        )
     }
 }
 
@@ -278,6 +317,27 @@ impl MediaKindFilter {
             Self::Images => Some(DraggedMediaKind::Image),
             Self::Videos => Some(DraggedMediaKind::Video),
             Self::Audio => Some(DraggedMediaKind::Audio),
+        }
+    }
+}
+
+impl From<MediaKindFilter> for dx_media_bridge::PanelMediaKindFilter {
+    fn from(filter: MediaKindFilter) -> Self {
+        match filter {
+            MediaKindFilter::All => Self::All,
+            MediaKindFilter::Images => Self::Images,
+            MediaKindFilter::Videos => Self::Videos,
+            MediaKindFilter::Audio => Self::Audio,
+        }
+    }
+}
+
+impl From<dx_media_bridge::PanelMediaKind> for DraggedMediaKind {
+    fn from(kind: dx_media_bridge::PanelMediaKind) -> Self {
+        match kind {
+            dx_media_bridge::PanelMediaKind::Image => Self::Image,
+            dx_media_bridge::PanelMediaKind::Video => Self::Video,
+            dx_media_bridge::PanelMediaKind::Audio => Self::Audio,
         }
     }
 }
@@ -642,6 +702,7 @@ impl MediaPanel {
                 query,
                 kind_filter,
                 cx.background_executor().clone(),
+                cx,
             )
             .await;
             panel
@@ -3010,12 +3071,25 @@ async fn fetch_remote_media_assets(
     query: String,
     filter: MediaKindFilter,
     executor: BackgroundExecutor,
+    cx: &mut AsyncWindowContext,
 ) -> anyhow::Result<RemoteMediaFetchResult> {
     let provider_count = remote_provider_count(filter);
     let mut fetches: Vec<RemoteMediaFetch> = Vec::with_capacity(provider_count);
 
     let mut assets = Vec::with_capacity(MAX_REMOTE_MEDIA_RESULTS);
     let mut errors = Vec::with_capacity(provider_count);
+    let dx_media_request = dx_media_bridge::PanelMediaSearchRequest::new(
+        query.clone(),
+        filter.into(),
+        MAX_REMOTE_MEDIA_RESULTS,
+    );
+    match gpui_tokio::Tokio::spawn_result(cx, dx_media_bridge::fetch_panel_media(dx_media_request))
+        .await
+    {
+        Ok(result) => return Ok(remote_media_fetch_result_from_dx_media(result)),
+        Err(error) => errors.push(format!("DX Media: {error:#}")),
+    }
+
     let openverse_result_limit = focused_remote_limit(
         filter,
         OPENVERSE_RESULT_LIMIT,
@@ -3312,7 +3386,7 @@ async fn fetch_remote_media_assets(
         ));
     }
 
-    let direct_provider_count = fetches.len();
+    let direct_provider_count = fetches.len() + usize::from(!errors.is_empty());
     for (provider, result) in futures::future::join_all(fetches).await {
         match result {
             Ok(items) => assets.extend(items),
@@ -3364,6 +3438,40 @@ where
             ),
         }
     })
+}
+
+fn remote_media_fetch_result_from_dx_media(
+    result: dx_media_bridge::PanelMediaSearchResult,
+) -> RemoteMediaFetchResult {
+    let direct_provider_count = result.providers_searched.len();
+    let errors = result
+        .provider_errors
+        .iter()
+        .map(|(provider, error)| format!("{provider}: {error}"))
+        .collect::<Vec<_>>();
+    let mut assets = result
+        .assets
+        .into_iter()
+        .map(RemoteMediaAsset::from)
+        .collect::<Vec<_>>();
+
+    dedupe_remote_assets(&mut assets);
+    assets.truncate(MAX_REMOTE_MEDIA_RESULTS);
+
+    let provider_summaries = remote_provider_summaries(&assets);
+    let health = RemoteMediaProviderHealth {
+        direct_provider_count,
+        skipped_provider_count: result.provider_errors.len(),
+        asset_count: assets.len(),
+        provider_summaries,
+    };
+    let warning = remote_media_provider_warning(&errors, direct_provider_count);
+
+    RemoteMediaFetchResult {
+        assets,
+        warning,
+        health,
+    }
 }
 
 async fn fetch_openverse_media(
