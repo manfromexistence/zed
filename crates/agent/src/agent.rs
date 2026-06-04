@@ -516,7 +516,7 @@ impl NativeAgent {
                 cx.set_global(SkillIndex::default());
             }
 
-            dx_catalog_agent_bridge::apply_provider_settings_if_approved(fs.clone(), cx);
+            dx_catalog_agent_bridge::preview_provider_settings_registration_if_enabled(cx);
 
             Self {
                 sessions: HashMap::default(),

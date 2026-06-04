@@ -37,7 +37,7 @@ const DEFAULT_CATALOG_MODEL_MAX_TOKENS: u64 = 200_000;
 pub(crate) const DX_CATALOG_PROVIDER_SETTINGS_PREVIEW_SCHEMA: &str =
     "zed.dx_catalog.provider_settings.registration_preview.v2";
 pub(crate) const DX_CATALOG_PROVIDER_SETTINGS_REGISTRATION_SCHEMA: &str =
-    "zed.dx_catalog.provider_settings.registration_result.v1";
+    "zed.dx_catalog.provider_settings.registration_result.v2";
 
 #[derive(Clone, Debug, Default)]
 pub struct DxCatalogAgentBridge {
@@ -351,7 +351,7 @@ struct CatalogProviderSettingsLiveValidation {
     next_action: String,
 }
 
-pub fn apply_provider_settings_if_approved(fs: Arc<dyn Fs>, cx: &gpui::App) {
+pub fn preview_provider_settings_registration_if_enabled(_cx: &gpui::App) {
     if !provider_settings_registration_approved() {
         return;
     }
@@ -364,38 +364,16 @@ pub fn apply_provider_settings_if_approved(fs: Arc<dyn Fs>, cx: &gpui::App) {
     };
     let all_specs = build_catalog_provider_registration_specs(&catalog);
     let report = CatalogProviderSettingsRegistrationReport::from_specs(&all_specs);
-    let specs = all_specs
-        .into_iter()
-        .filter(can_write_provider_settings)
-        .collect::<Vec<_>>();
 
     if report.eligible_provider_count == 0 {
         log::warn!(
-            "DX catalog provider settings registration was approved, but no catalog providers were eligible for settings registration"
+            "DX catalog provider settings startup preview was enabled, but no catalog providers were eligible for settings registration"
         );
         return;
     }
-
-    if env_flag_enabled(DX_CATALOG_REGISTER_PROVIDERS_DRY_RUN_ENV) {
-        log::info!(
-            "DX catalog provider settings registration dry run: providers={}, skipped={}, openai_compatible={}, openrouter_models={}, models={}",
-            report.eligible_provider_count,
-            report.skipped_provider_count,
-            report.openai_compatible_provider_count,
-            report.open_router_model_count,
-            report.model_count,
-        );
-        return;
-    }
-
-    update_settings_file(fs, cx, move |settings, _| {
-        for spec in &specs {
-            apply_provider_settings_spec(settings, spec);
-        }
-    });
 
     log::info!(
-        "DX catalog provider settings registration queued: providers={}, skipped={}, openai_compatible={}, openrouter_models={}, models={}",
+        "DX catalog provider settings startup preview: providers={}, skipped={}, openai_compatible={}, openrouter_models={}, models={}; use the register_dx_catalog_provider_settings tool to write selected native settings",
         report.eligible_provider_count,
         report.skipped_provider_count,
         report.openai_compatible_provider_count,
@@ -501,7 +479,6 @@ pub(crate) fn provider_settings_registration_preview(cx: &gpui::App) -> serde_js
             &report,
             &live_report,
             approval_enabled,
-            dry_run_enabled,
         ),
     })
 }
@@ -545,6 +522,8 @@ pub(crate) fn register_provider_settings_from_catalog(
                 "skipped_provider_count": 0,
                 "matched_provider_count": 0,
                 "selected_provider_count": 0,
+                "selected_openai_compatible_provider_count": 0,
+                "selected_open_router_model_count": 0,
                 "selected_model_count": 0,
             },
             "providers": [],
@@ -1109,6 +1088,7 @@ fn provider_settings_registration_preview_model(
 ) -> serde_json::Value {
     serde_json::json!({
         "model_id": model.model_id.as_str(),
+        "api_model_id": model.api_model_id.as_str(),
         "display_name": model.display_name.as_str(),
         "context_window_tokens": model.context_window_tokens,
         "max_output_tokens": model.max_output_tokens,
@@ -1126,7 +1106,6 @@ fn provider_settings_registration_preview_next_action(
     report: &CatalogProviderSettingsRegistrationReport,
     live_report: &CatalogProviderSettingsLiveValidationReport,
     approval_enabled: bool,
-    dry_run_enabled: bool,
 ) -> String {
     if report.eligible_provider_count == 0 {
         return "Resolve provider registration blockers before enabling catalog provider settings."
@@ -1135,14 +1114,7 @@ fn provider_settings_registration_preview_next_action(
 
     if !approval_enabled {
         return format!(
-            "Review {} eligible provider(s), then set DX_CATALOG_REGISTER_PROVIDER_SETTINGS=1 to allow native settings registration.",
-            report.eligible_provider_count
-        );
-    }
-
-    if dry_run_enabled {
-        return format!(
-            "Dry run is enabled. Unset DX_CATALOG_REGISTER_PROVIDERS_DRY_RUN to write {} eligible provider(s) into native settings.",
+            "Review {} eligible provider(s), then run register_dx_catalog_provider_settings to write selected native settings.",
             report.eligible_provider_count
         );
     }
@@ -1155,7 +1127,7 @@ fn provider_settings_registration_preview_next_action(
     }
 
     format!(
-        "Provider settings registration is approved for {} provider(s); restart or reload Agent startup to apply the settings bridge.",
+        "Startup registration is preview-only for {} provider(s); run register_dx_catalog_provider_settings to write selected native settings.",
         report.eligible_provider_count
     )
 }
@@ -1199,7 +1171,7 @@ fn materialize_catalog_artifact_if_approved() {
     let source_revision = env::var(DX_CATALOG_SOURCE_REVISION_ENV)
         .ok()
         .filter(|value| !value.trim().is_empty())
-        .unwrap_or_else(|| "agent-approved-materialization".to_string());
+        .unwrap_or_else(|| "catalog-startup-materialization".to_string());
     let generated_unix_ms = current_unix_ms();
     let mut options =
         CatalogArtifactBuildOptions::new(artifact_path.clone(), source_revision, generated_unix_ms);
@@ -1352,7 +1324,7 @@ fn openai_compatible_model_from_catalog(
     model: &CatalogProviderAdapterModelSpec,
 ) -> OpenAiCompatibleAvailableModel {
     OpenAiCompatibleAvailableModel {
-        name: model.model_id.clone(),
+        name: model.api_model_id.clone(),
         display_name: Some(model.display_name.clone()),
         max_tokens: model
             .context_window_tokens
@@ -1376,7 +1348,7 @@ fn open_router_model_from_catalog(
     model: &CatalogProviderAdapterModelSpec,
 ) -> OpenRouterAvailableModel {
     OpenRouterAvailableModel {
-        name: model.model_id.clone(),
+        name: model.api_model_id.clone(),
         display_name: Some(model.display_name.clone()),
         max_tokens: model
             .context_window_tokens
@@ -1494,6 +1466,76 @@ mod tests {
         assert_eq!(models[0].name, "existing-model");
     }
 
+    #[test]
+    fn provider_settings_write_api_model_ids_not_catalog_route_ids() {
+        let mut settings = SettingsContent::default();
+
+        apply_openai_compatible_provider_settings(
+            &mut settings,
+            &registration_spec(
+                "groq",
+                CatalogExecutionAdapterKind::OpenAiCompatibleHttp,
+                "https://api.groq.com/openai/v1",
+            ),
+        );
+
+        let provider = settings
+            .language_models
+            .as_ref()
+            .and_then(|settings| settings.openai_compatible.as_ref())
+            .and_then(|providers| providers.get("groq"))
+            .expect("catalog provider settings should be written");
+
+        assert_eq!(provider.available_models.len(), 1);
+        assert_eq!(provider.available_models[0].name, "catalog-model");
+        assert_ne!(provider.available_models[0].name, "groq/catalog-model");
+    }
+
+    #[test]
+    fn open_router_settings_write_api_model_ids_not_catalog_route_ids() {
+        let mut settings = SettingsContent::default();
+
+        apply_open_router_provider_settings(
+            &mut settings,
+            &registration_spec(
+                "openrouter",
+                CatalogExecutionAdapterKind::OpenRouterHttp,
+                "https://openrouter.ai/api/v1",
+            ),
+        );
+
+        let models = settings
+            .language_models
+            .as_ref()
+            .and_then(|settings| settings.open_router.as_ref())
+            .and_then(|settings| settings.available_models.as_ref())
+            .expect("catalog OpenRouter models should be written");
+
+        assert_eq!(models.len(), 1);
+        assert_eq!(models[0].name, "catalog-model");
+        assert_ne!(models[0].name, "openrouter/catalog-model");
+    }
+
+    #[test]
+    fn preview_next_action_routes_startup_registration_to_permissioned_tool() {
+        let report = CatalogProviderSettingsRegistrationReport {
+            eligible_provider_count: 3,
+            skipped_provider_count: 0,
+            openai_compatible_provider_count: 2,
+            open_router_model_count: 1,
+            model_count: 8,
+        };
+        let live_report = CatalogProviderSettingsLiveValidationReport::default();
+
+        let next_action =
+            provider_settings_registration_preview_next_action(&report, &live_report, true);
+
+        assert!(next_action.contains("Startup registration is preview-only"));
+        assert!(next_action.contains("register_dx_catalog_provider_settings"));
+        assert!(!next_action.contains("restart"));
+        assert!(!next_action.contains("DX_CATALOG_REGISTER_PROVIDER_SETTINGS"));
+    }
+
     fn registration_spec(
         provider_id: &str,
         adapter_kind: CatalogExecutionAdapterKind,
@@ -1515,6 +1557,7 @@ mod tests {
             execution_blockers: Vec::new(),
             models: vec![CatalogProviderAdapterModelSpec {
                 model_id: format!("{provider_id}/catalog-model"),
+                api_model_id: "catalog-model".to_string(),
                 display_name: "Catalog Model".to_string(),
                 context_window_tokens: Some(128_000),
                 max_output_tokens: Some(8_192),

@@ -594,7 +594,7 @@ fn provider_template_from_env_key(env_key: &str) -> Option<ProviderTemplate> {
         ),
         "SAMBANOVA" | "SAMBANOVA_API_KEY" => openai_compatible("sambanova", "SambaNova"),
         "TOGETHER" | "TOGETHER_API_KEY" => openai_compatible("together", "Together AI"),
-        "XAI_GROK" | "XAI_API_KEY" => openai_compatible("xai-grok", "xAI Grok"),
+        "XAI_GROK" | "XAI_API_KEY" => openai_compatible("x_ai", "xAI"),
         _ => return None,
     };
     Some(template)
@@ -783,6 +783,35 @@ mod tests {
             output.report.skipped_entries[0]
                 .reason
                 .contains("exceeds the configured")
+        );
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn xai_env_keys_use_native_provider_id() {
+        let root = unique_root("xai-provider-env");
+        fs::create_dir_all(&root).expect("fixture root should create");
+        fs::write(root.join(".env"), "XAI_API_KEY=test").expect("fixture env should write");
+
+        let output = read_provider_source_root(
+            &root,
+            CatalogSourceKind::ModelsDev,
+            ProviderSourceReaderOptions::new().include_integration_dirs(false),
+        )
+        .expect("provider source should read xAI env keys");
+
+        assert!(
+            output
+                .report
+                .discovered_provider_ids
+                .contains(&"x_ai".to_string())
+        );
+        assert!(
+            !output
+                .report
+                .discovered_provider_ids
+                .contains(&"xai-grok".to_string())
         );
 
         let _ = fs::remove_dir_all(root);

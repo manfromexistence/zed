@@ -2,6 +2,7 @@ use crate::{
     CatalogSourceKind, ExternalModelInput, ExternalProviderInput, ModelCapabilities,
     ModelCatalogReadOutput, ModelCatalogReadReport, ModelCatalogReaderOptions, ModelPricingMicros,
     ProviderAuthKind, ProviderKind, Result, RoutingRole, SourceMetadata, dx_providers_rkyv_input,
+    file_limits::{DEFAULT_PROVIDER_ARCHIVE_MAX_BYTES, ensure_file_with_limit},
 };
 use memmap2::MmapOptions;
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
@@ -17,6 +18,7 @@ pub struct ProvidersCatalogReaderOptions {
     pub source_id: String,
     pub source_revision: Option<String>,
     pub generated_unix_ms: Option<u64>,
+    pub max_bytes: u64,
 }
 
 impl ProvidersCatalogReaderOptions {
@@ -25,6 +27,7 @@ impl ProvidersCatalogReaderOptions {
             source_id: DEFAULT_SOURCE_ID.to_string(),
             source_revision: None,
             generated_unix_ms: None,
+            max_bytes: DEFAULT_PROVIDER_ARCHIVE_MAX_BYTES,
         }
     }
 
@@ -42,6 +45,11 @@ impl ProvidersCatalogReaderOptions {
         self.generated_unix_ms = Some(generated_unix_ms);
         self
     }
+
+    pub fn with_max_bytes(mut self, max_bytes: u64) -> Self {
+        self.max_bytes = max_bytes.max(1);
+        self
+    }
 }
 
 impl Default for ProvidersCatalogReaderOptions {
@@ -56,6 +64,7 @@ impl From<ModelCatalogReaderOptions> for ProvidersCatalogReaderOptions {
             source_id: options.source_id,
             source_revision: options.source_revision,
             generated_unix_ms: options.generated_unix_ms,
+            max_bytes: options.max_bytes,
         }
     }
 }
@@ -76,6 +85,7 @@ pub fn read_providers_catalog_file(
         ));
     }
 
+    ensure_file_with_limit(&path, options.max_bytes)?;
     let file = File::open(&path)?;
     // SAFETY: The file is mapped read-only and immediately validated with rkyv
     // before the owned catalog is deserialized from the mapped bytes.
@@ -524,6 +534,25 @@ mod tests {
             output.report.model_count as usize,
             output.input.models.len()
         );
+    }
+
+    #[test]
+    fn providers_catalog_file_read_rejects_oversized_archive_before_mmap() {
+        let path = unique_fixture_path("oversized-providers-catalog.rkyv");
+        fs::write(&path, [0_u8, 1]).expect("fixture should write");
+
+        let error = read_providers_catalog_file(
+            &path,
+            ProvidersCatalogReaderOptions::new().with_max_bytes(1),
+        )
+        .expect_err("oversized providers archive should fail before mmap and rkyv validation");
+
+        assert!(
+            matches!(error, crate::DxCatalogError::FileTooLarge { .. }),
+            "unexpected error: {error}"
+        );
+
+        let _ = fs::remove_file(path);
     }
 
     fn unique_fixture_path(file_name: &str) -> std::path::PathBuf {

@@ -102,6 +102,7 @@ pub struct CatalogProviderAdapterRegistrationSpec {
 #[serde(rename_all = "snake_case")]
 pub struct CatalogProviderAdapterModelSpec {
     pub model_id: String,
+    pub api_model_id: String,
     pub display_name: String,
     pub context_window_tokens: Option<u32>,
     pub max_output_tokens: Option<u32>,
@@ -371,6 +372,7 @@ fn model_registration_spec(
 ) -> CatalogProviderAdapterModelSpec {
     CatalogProviderAdapterModelSpec {
         model_id: model.id.clone(),
+        api_model_id: api_model_id(model, provider),
         display_name: model.display_name.clone(),
         context_window_tokens: model.context_window_tokens,
         max_output_tokens: model.max_output_tokens,
@@ -382,6 +384,35 @@ fn model_registration_spec(
         free_tier: model.capabilities.free_tier || provider.supports_free_tier,
         premium_account: model.capabilities.premium_account || provider.supports_premium_account,
     }
+}
+
+fn api_model_id(model: &ModelRecord, provider: &ProviderRecord) -> String {
+    if let Some(raw_model_id) = strip_provider_prefix(&model.id, &provider.id) {
+        return raw_model_id.to_string();
+    }
+
+    for alias in &model.aliases {
+        if let Some(raw_model_id) = strip_provider_prefix(alias, &provider.id) {
+            return raw_model_id.to_string();
+        }
+    }
+
+    model
+        .aliases
+        .iter()
+        .find_map(|alias| {
+            let alias = alias.trim();
+            (!alias.is_empty() && !alias.contains('/')).then(|| alias.to_string())
+        })
+        .unwrap_or_else(|| model.id.clone())
+}
+
+fn strip_provider_prefix<'a>(model_id: &'a str, provider_id: &str) -> Option<&'a str> {
+    let raw_model_id = model_id
+        .trim()
+        .strip_prefix(provider_id)?
+        .strip_prefix('/')?;
+    (!raw_model_id.is_empty()).then_some(raw_model_id)
 }
 
 fn adapter_kind(provider: &ProviderRecord) -> CatalogExecutionAdapterKind {
@@ -644,6 +675,20 @@ mod tests {
         );
     }
 
+    #[test]
+    fn registration_specs_keep_catalog_and_api_model_ids_separate() {
+        let mut model = model("groq/llama-3.3-70b-versatile", "groq");
+        model.aliases = vec!["llama-3.3-70b-versatile".to_string()];
+        let catalog =
+            catalog_with_provider(provider("groq", ProviderKind::OpenAiCompatible), model);
+
+        let specs = build_catalog_provider_registration_specs(&catalog);
+
+        assert_eq!(specs.len(), 1);
+        assert_eq!(specs[0].models[0].model_id, "groq/llama-3.3-70b-versatile");
+        assert_eq!(specs[0].models[0].api_model_id, "llama-3.3-70b-versatile");
+    }
+
     fn catalog_with_provider(provider: ProviderRecord, model: ModelRecord) -> DxCatalog {
         DxCatalog {
             schema_version: crate::DX_CATALOG_SCHEMA_VERSION,
@@ -704,11 +749,15 @@ mod tests {
     }
 
     fn model(id: &str, provider_id: &str) -> ModelRecord {
+        let provider_prefix = format!("{provider_id}/");
         ModelRecord {
             id: id.to_string(),
             provider_id: provider_id.to_string(),
             display_name: id.to_string(),
-            aliases: Vec::new(),
+            aliases: id
+                .strip_prefix(&provider_prefix)
+                .map(|alias| vec![alias.to_string()])
+                .unwrap_or_default(),
             capabilities: ModelCapabilities {
                 chat: true,
                 tools: true,
