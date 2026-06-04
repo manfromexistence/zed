@@ -3,6 +3,7 @@ mod agent_picker;
 mod artifact;
 mod error;
 mod execution;
+mod file_limits;
 mod generator;
 mod materialize;
 mod model_catalog_readers;

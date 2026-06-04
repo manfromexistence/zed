@@ -1,4 +1,4 @@
-use std::{error::Error, fmt, io};
+use std::{error::Error, fmt, io, path::PathBuf};
 
 #[derive(Debug)]
 pub enum DxCatalogError {
@@ -21,6 +21,11 @@ pub enum DxCatalogError {
     PayloadTooShort {
         expected_len: usize,
         actual_len: usize,
+    },
+    FileTooLarge {
+        path: PathBuf,
+        len: u64,
+        max_len: u64,
     },
     EmptyPayload,
     Json(serde_json::Error),
@@ -59,6 +64,11 @@ impl fmt::Display for DxCatalogError {
             } => write!(
                 f,
                 "dx catalog payload is truncated: expected {expected_len} bytes, got {actual_len}"
+            ),
+            Self::FileTooLarge { path, len, max_len } => write!(
+                f,
+                "dx catalog source file {} is too large: {len} bytes exceeds {max_len} bytes",
+                path.display()
             ),
             Self::EmptyPayload => write!(f, "dx catalog archive payload is empty"),
             Self::Json(error) => write!(f, "dx catalog JSON parse failed: {error}"),

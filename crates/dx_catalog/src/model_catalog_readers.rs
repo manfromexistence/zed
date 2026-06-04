@@ -3,13 +3,14 @@ mod helpers;
 
 use crate::{
     CatalogGeneratorInput, CatalogSourceKind, ExternalModelInput, ExternalProviderInput, Result,
-    SourceMetadata, lite_llm_catalog_input, models_dev_input, openrouter_input,
+    SourceMetadata,
+    file_limits::{DEFAULT_MODEL_CATALOG_MAX_BYTES, read_to_string_with_limit},
+    lite_llm_catalog_input, models_dev_input, openrouter_input,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{
     collections::BTreeMap,
-    fs,
     path::{Path, PathBuf},
 };
 
@@ -23,6 +24,7 @@ pub struct ModelCatalogReaderOptions {
     pub source_revision: Option<String>,
     pub generated_unix_ms: Option<u64>,
     pub max_models: usize,
+    pub max_bytes: u64,
 }
 
 impl ModelCatalogReaderOptions {
@@ -32,6 +34,7 @@ impl ModelCatalogReaderOptions {
             source_revision: None,
             generated_unix_ms: None,
             max_models: DEFAULT_MAX_MODELS,
+            max_bytes: DEFAULT_MODEL_CATALOG_MAX_BYTES,
         }
     }
 
@@ -52,6 +55,11 @@ impl ModelCatalogReaderOptions {
 
     pub fn with_max_models(mut self, max_models: usize) -> Self {
         self.max_models = max_models;
+        self
+    }
+
+    pub fn with_max_bytes(mut self, max_bytes: u64) -> Self {
+        self.max_bytes = max_bytes.max(1);
         self
     }
 }
@@ -115,7 +123,7 @@ pub fn read_model_catalog_file(
         ));
     }
 
-    let contents = fs::read_to_string(&path)?;
+    let contents = read_to_string_with_limit(&path, options.max_bytes)?;
     read_model_catalog_json_with_path(&contents, source_kind, options, Some(path), true)
 }
 
@@ -233,5 +241,39 @@ pub(crate) fn skip(
     SkippedModelCatalogEntry {
         location: location.into(),
         reason: reason.into(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn model_catalog_file_read_rejects_oversized_json_before_parse() {
+        let path = unique_path("oversized-model-catalog.json");
+        fs::write(&path, "{}").expect("fixture should write");
+
+        let error = read_model_catalog_file(
+            &path,
+            CatalogSourceKind::ModelsDev,
+            ModelCatalogReaderOptions::new().with_max_bytes(1),
+        )
+        .expect_err("oversized model catalog should fail before JSON parse");
+
+        assert!(
+            matches!(error, crate::DxCatalogError::FileTooLarge { .. }),
+            "unexpected error: {error}"
+        );
+
+        let _ = fs::remove_file(path);
+    }
+
+    fn unique_path(file_name: &str) -> PathBuf {
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock should be after Unix epoch")
+            .as_nanos();
+        std::env::temp_dir().join(format!("{}-{nonce}-{file_name}", std::process::id()))
     }
 }

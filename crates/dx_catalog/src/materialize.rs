@@ -1,3 +1,4 @@
+use crate::file_limits::{DEFAULT_AUTH_PROFILE_MAX_BYTES, DEFAULT_MODEL_CATALOG_MAX_BYTES};
 use crate::{
     CatalogArtifactHeader, CatalogBuildReport, CatalogConflictPolicy, CatalogGeneratorInput,
     CatalogGeneratorOptions, CatalogSourceCandidateStatus, CatalogSourceDiscoveryConfig,
@@ -24,6 +25,8 @@ pub struct CatalogSourceReadOptions {
     pub generated_unix_ms: Option<u64>,
     pub local_model_max_depth: u8,
     pub model_catalog_max_models: usize,
+    pub model_catalog_max_bytes: u64,
+    pub auth_profile_max_bytes: u64,
 }
 
 impl CatalogSourceReadOptions {
@@ -33,6 +36,8 @@ impl CatalogSourceReadOptions {
             generated_unix_ms: None,
             local_model_max_depth: DEFAULT_LOCAL_MODEL_MAX_DEPTH,
             model_catalog_max_models: DEFAULT_MODEL_CATALOG_MAX_MODELS,
+            model_catalog_max_bytes: DEFAULT_MODEL_CATALOG_MAX_BYTES,
+            auth_profile_max_bytes: DEFAULT_AUTH_PROFILE_MAX_BYTES,
         }
     }
 
@@ -53,6 +58,16 @@ impl CatalogSourceReadOptions {
 
     pub fn with_model_catalog_max_models(mut self, max_models: usize) -> Self {
         self.model_catalog_max_models = max_models.max(1);
+        self
+    }
+
+    pub fn with_model_catalog_max_bytes(mut self, max_bytes: u64) -> Self {
+        self.model_catalog_max_bytes = max_bytes.max(1);
+        self
+    }
+
+    pub fn with_auth_profile_max_bytes(mut self, max_bytes: u64) -> Self {
+        self.auth_profile_max_bytes = max_bytes.max(1);
         self
     }
 }
@@ -426,7 +441,7 @@ fn provider_reader_options(
         reader_options = reader_options.with_generated_unix_ms(generated_unix_ms);
     }
 
-    reader_options
+    reader_options.with_max_auth_file_bytes(options.auth_profile_max_bytes)
 }
 
 fn model_catalog_reader_options(
@@ -436,7 +451,8 @@ fn model_catalog_reader_options(
 ) -> ModelCatalogReaderOptions {
     let mut reader_options = ModelCatalogReaderOptions::new()
         .with_source_id(stable_file_source_id(source, file, "model-catalog"))
-        .with_max_models(options.model_catalog_max_models);
+        .with_max_models(options.model_catalog_max_models)
+        .with_max_bytes(options.model_catalog_max_bytes);
 
     if let Some(source_revision) = &options.source_revision {
         reader_options = reader_options.with_source_revision(source_revision.clone());

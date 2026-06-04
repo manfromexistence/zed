@@ -1,8 +1,11 @@
 use crate::{
     AuthProfileInput, CatalogGeneratorInput, CatalogSourceCandidateStatus, CatalogSourceKind,
     CatalogSourcePurpose, ExternalProviderInput, LiteLlmAliasInput, ProviderAuthKind, ProviderKind,
-    Result, SourceMetadata, auth_profiles_input, lite_llm_aliases_input, models_dev_input,
-    openrouter_input, zeroclaw_providers_input,
+    Result, SourceMetadata, auth_profiles_input,
+    file_limits::{
+        DEFAULT_AUTH_PROFILE_MAX_BYTES, file_too_large_reason, read_to_string_with_limit,
+    },
+    lite_llm_aliases_input, models_dev_input, openrouter_input, zeroclaw_providers_input,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -26,6 +29,7 @@ pub struct ProviderSourceReaderOptions {
     pub include_integration_dirs: bool,
     pub include_env_auth_profiles: bool,
     pub secret_storage_prefix: String,
+    pub max_auth_file_bytes: u64,
 }
 
 impl ProviderSourceReaderOptions {
@@ -38,6 +42,7 @@ impl ProviderSourceReaderOptions {
             include_integration_dirs: true,
             include_env_auth_profiles: true,
             secret_storage_prefix: DEFAULT_SECRET_STORAGE_PREFIX.to_string(),
+            max_auth_file_bytes: DEFAULT_AUTH_PROFILE_MAX_BYTES,
         }
     }
 
@@ -73,6 +78,11 @@ impl ProviderSourceReaderOptions {
 
     pub fn with_secret_storage_prefix(mut self, secret_storage_prefix: impl Into<String>) -> Self {
         self.secret_storage_prefix = secret_storage_prefix.into();
+        self
+    }
+
+    pub fn with_max_auth_file_bytes(mut self, max_auth_file_bytes: u64) -> Self {
+        self.max_auth_file_bytes = max_auth_file_bytes.max(1);
         self
     }
 }
@@ -162,7 +172,7 @@ pub fn read_provider_source_root(
     }
 
     let env_keys = if source_available {
-        read_provider_env_keys(&root)?
+        read_provider_env_keys(&root, options.max_auth_file_bytes, &mut skipped_entries)?
     } else {
         BTreeSet::new()
     };
@@ -176,7 +186,7 @@ pub fn read_provider_source_root(
     ensure_source_specific_provider(source_kind, &mut providers);
 
     let auth_profiles = if source_available && options.include_env_auth_profiles {
-        auth_profiles_from_root(&root, &env_keys, &options)?
+        auth_profiles_from_root(&root, &env_keys, &options, &mut skipped_entries)?
     } else {
         Vec::new()
     };
@@ -343,7 +353,11 @@ fn read_integration_providers(
     Ok(count)
 }
 
-fn read_provider_env_keys(root: &Path) -> Result<BTreeSet<String>> {
+fn read_provider_env_keys(
+    root: &Path,
+    max_bytes: u64,
+    skipped_entries: &mut Vec<SkippedProviderSourceEntry>,
+) -> Result<BTreeSet<String>> {
     let mut keys = BTreeSet::new();
     for file_name in ENV_FILE_NAMES {
         let env_path = root.join(file_name);
@@ -351,7 +365,17 @@ fn read_provider_env_keys(root: &Path) -> Result<BTreeSet<String>> {
             continue;
         }
 
-        let contents = fs::read_to_string(env_path)?;
+        let contents = match read_to_string_with_limit(&env_path, max_bytes) {
+            Ok(contents) => contents,
+            Err(crate::DxCatalogError::FileTooLarge { path, len, max_len }) => {
+                skipped_entries.push(SkippedProviderSourceEntry {
+                    path: path.clone(),
+                    reason: file_too_large_reason(&path, len, max_len),
+                });
+                continue;
+            }
+            Err(error) => return Err(error),
+        };
         for line in contents.lines() {
             if let Some(key) = env_key(line) {
                 keys.insert(key.to_string());
@@ -365,6 +389,7 @@ fn auth_profiles_from_root(
     root: &Path,
     env_keys: &BTreeSet<String>,
     options: &ProviderSourceReaderOptions,
+    skipped_entries: &mut Vec<SkippedProviderSourceEntry>,
 ) -> Result<Vec<AuthProfileInput>> {
     let mut profiles = BTreeMap::new();
 
@@ -382,7 +407,9 @@ fn auth_profiles_from_root(
         }
     }
 
-    for provider_id in zeroclaw_provider_sections(root)? {
+    for provider_id in
+        zeroclaw_provider_sections(root, options.max_auth_file_bytes, skipped_entries)?
+    {
         let mut profile = AuthProfileInput::new(
             provider_id.clone(),
             format!("{provider_id}-zeroclaw-config"),
@@ -396,13 +423,27 @@ fn auth_profiles_from_root(
     Ok(profiles.into_values().collect())
 }
 
-fn zeroclaw_provider_sections(root: &Path) -> Result<Vec<String>> {
+fn zeroclaw_provider_sections(
+    root: &Path,
+    max_bytes: u64,
+    skipped_entries: &mut Vec<SkippedProviderSourceEntry>,
+) -> Result<Vec<String>> {
     let config_path = root.join("config.toml");
     if !config_path.exists() {
         return Ok(Vec::new());
     }
 
-    let contents = fs::read_to_string(config_path)?;
+    let contents = match read_to_string_with_limit(&config_path, max_bytes) {
+        Ok(contents) => contents,
+        Err(crate::DxCatalogError::FileTooLarge { path, len, max_len }) => {
+            skipped_entries.push(SkippedProviderSourceEntry {
+                path: path.clone(),
+                reason: file_too_large_reason(&path, len, max_len),
+            });
+            return Ok(Vec::new());
+        }
+        Err(error) => return Err(error),
+    };
     let mut providers = BTreeSet::new();
     for line in contents.lines() {
         let line = line.trim();
@@ -713,5 +754,45 @@ fn slug(value: &str) -> String {
         "provider".to_string()
     } else {
         slug
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn provider_source_skips_oversized_env_file_before_parsing_keys() {
+        let root = unique_root("oversized-provider-env");
+        fs::create_dir_all(&root).expect("fixture root should create");
+        fs::write(root.join(".env"), "GROQ_API_KEY=test").expect("fixture env should write");
+
+        let output = read_provider_source_root(
+            &root,
+            CatalogSourceKind::ModelsDev,
+            ProviderSourceReaderOptions::new()
+                .include_integration_dirs(false)
+                .with_max_auth_file_bytes(1),
+        )
+        .expect("provider source should skip oversized env files");
+
+        assert_eq!(output.report.env_key_count, 0);
+        assert_eq!(output.report.skipped_entries.len(), 1);
+        assert!(
+            output.report.skipped_entries[0]
+                .reason
+                .contains("exceeds the configured")
+        );
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    fn unique_root(name: &str) -> PathBuf {
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock should be after Unix epoch")
+            .as_nanos();
+        std::env::temp_dir().join(format!("{}-{nonce}-{name}", std::process::id()))
     }
 }
