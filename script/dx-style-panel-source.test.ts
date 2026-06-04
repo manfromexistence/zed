@@ -4401,11 +4401,10 @@ test("DX Style has a real right-dock GPUI shell", () => {
   assert.match(panelMetric, /pub\(super\) fn metric/);
   assert.match(panelMetric, /max_w\(px\(190\.0\)\)/);
   assert.match(panelCards, /OpenGeneratorPreviewForContext/);
-  assert.match(
-    panelView,
-    /Label::new\("Open an HTML, CSS, or TSX file to view Style controls\."\)/,
-  );
-  assert.match(panelView, /id\("dx-style-panel-empty-state"\)/);
+  assert.match(panelView, /id\("dx-style-panel-web-preview-host"\)/);
+  assert.match(panelView, /id\("dx-style-panel-web-preview"\)/);
+  assert.match(panelView, /Label::new\("Web Preview"\)/);
+  assert.match(panelView, /Label::new\("Styles"\)/);
   assert.doesNotMatch(panelView, /source_context_json/);
   assert.doesNotMatch(panelView, /STYLE_PANEL_ROW_LIMIT/);
   assert.doesNotMatch(panelView, /generator_host_card/);

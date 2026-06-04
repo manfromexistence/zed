@@ -1,3 +1,22 @@
+[2026-06-04] - Onboarding Completion And Agent Fullscreen Panel Ownership
+
+FIXED:
+- `crates\onboarding\src\onboarding.rs` now gives the Web Preview Complete button an IPC-first and URL-fallback completion route, so unsupported or delayed bridges can still close onboarding through the native preview URL event path.
+- `crates\web_preview\src\web_preview_view.rs`, `crates\web_preview_macos\src\web_preview_view.rs`, and `crates\web_preview_linux\src\web_preview_view.rs` now route `about:blank#zed-onboarding-complete` through the same deferred onboarding completion callback used by IPC.
+- `crates\workspace\src\multi_workspace.rs` now keeps fullscreen onboarding at the app root with only a controls-only system action strip above it, avoiding normal Zed menus, screen dock, tabs, panels, or status chrome.
+- `crates\agent_ui\src\agent_panel.rs`, `crates\workspace\src\dock.rs`, and `crates\workspace\src\workspace.rs` now make Agent fullscreen own its source/progress rails by default while preventing the zoom-source dock from promoting Project as a fallback or stealing width.
+- `crates\workspace\src\dock.rs` now stops mouse-down propagation from shared side-panel header controls and preserves Agent fullscreen when another same-side panel closes.
+- `crates\agent_ui\src\dx_style_panel\panel_view.rs` now shows the requested right-panel Web Preview shell with centered `Styles` text instead of the old file-open empty-state copy.
+- Source guards now cover the stronger onboarding completion fallback, controls-only fullscreen overlay, Agent fullscreen dock ownership, default-open Agent rails, and the simplified Style panel Web Preview host.
+
+PASSED:
+- `node --test script\web-preview-platform-lifecycle.test.ts script\dx-workspace-ui-state-source.test.ts script\dx-style-panel-source.test.ts script\dx-title-bar-source.test.ts` with 54/54 passing.
+- `rustfmt --edition 2024 --check crates\onboarding\src\onboarding.rs crates\web_preview\src\web_preview_view.rs crates\web_preview_macos\src\web_preview_view.rs crates\web_preview_linux\src\web_preview_view.rs crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\dx_style_panel\panel_view.rs crates\workspace\src\dock.rs crates\workspace\src\workspace.rs crates\workspace\src\multi_workspace.rs`
+
+NOTES:
+- `just run`, Cargo check/build/test/clippy, and live onboarding/Agent fullscreen validation were not run because this pass was source-only until the user explicitly asks for runtime validation.
+- Exactly six GPT-5.5 extra-high subagents inspected onboarding completion, Style panel architecture, Agent fullscreen dock ownership, dock close/split routing, fullscreen overlay system controls, and integration risk before the patch landed.
+
 [2026-06-04] - Onboarding Completion IPC Deferral
 
 FIXED:

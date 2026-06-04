@@ -1645,8 +1645,8 @@ impl AgentPanel {
             last_context_source: None,
             show_trust_workspace_message: false,
             is_active: false,
-            fullscreen_sources_rail_open: false,
-            fullscreen_progress_rail_open: false,
+            fullscreen_sources_rail_open: true,
+            fullscreen_progress_rail_open: true,
             fullscreen_sources_rail_pinned: true,
             fullscreen_progress_rail_pinned: true,
             collapsed_dx_launch_rail_sections: Self::default_collapsed_dx_launch_rail_sections(),
@@ -1703,18 +1703,21 @@ impl AgentPanel {
     pub fn focus_fullscreen(
         workspace: &mut Workspace,
         _: &FocusAgentFullscreen,
-        _window: &mut Window,
+        window: &mut Window,
         cx: &mut Context<Workspace>,
     ) {
         if workspace
             .panel::<Self>(cx)
             .is_some_and(|panel| panel.read(cx).enabled(cx))
         {
+            workspace.focus_panel::<Self>(window, cx);
             let Some(panel) = workspace.panel::<Self>(cx) else {
                 return;
             };
             panel.update(cx, |panel, cx| {
                 panel.manual_zoom_override = Some(true);
+                panel.fullscreen_sources_rail_open = true;
+                panel.fullscreen_progress_rail_open = true;
                 cx.emit(PanelEvent::ZoomIn);
             });
         }

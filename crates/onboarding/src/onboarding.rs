@@ -146,26 +146,42 @@ const WEB_PREVIEW_ONBOARDING_HTML: &str = r##"<!doctype html>
       const button = document.getElementById("complete");
       const status = document.getElementById("status");
       let completeSent = false;
+      const completePayload = { kind: "onboarding-complete" };
+      const completeMessage = JSON.stringify(completePayload);
+      const navigateCompletionFallback = () => {
+        window.location.href = "about:blank#zed-onboarding-complete";
+      };
+      const navigateFallback = () => {
+        window.setTimeout(() => {
+          if (completeSent) {
+            navigateCompletionFallback();
+          }
+        }, 350);
+      };
       const postComplete = (event) => {
         event.preventDefault();
         event.stopPropagation();
         if (completeSent) return;
         completeSent = true;
         button.disabled = true;
-        const message = JSON.stringify({ kind: "onboarding-complete" });
+        navigateFallback();
         try {
           if (window.ipc && typeof window.ipc.postMessage === "function") {
-            window.ipc.postMessage(message);
+            window.ipc.postMessage(completeMessage);
             return;
           }
           if (window.chrome?.webview && typeof window.chrome.webview.postMessage === "function") {
-            window.chrome.webview.postMessage(message);
+            window.chrome.webview.postMessage(completePayload);
+            window.chrome.webview.postMessage(completeMessage);
+            return;
+          }
+          if (window.external && typeof window.external.invoke === "function") {
+            window.external.invoke(completeMessage);
             return;
           }
         } catch (_error) {}
-        status.textContent = "Completion bridge unavailable.";
-        button.disabled = false;
-        completeSent = false;
+        status.textContent = "Completing...";
+        navigateCompletionFallback();
       };
       button.addEventListener("click", postComplete);
     })();

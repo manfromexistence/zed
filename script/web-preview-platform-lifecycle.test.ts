@@ -160,7 +160,9 @@ test("onboarding uses a local Web Preview page with a real completion bridge", (
   const sidebarSource = read("crates/sidebar/src/sidebar.rs");
 
   assert.match(source, /const WEB_PREVIEW_ONBOARDING_HTML: &str/);
-  assert.match(source, /JSON\.stringify\(\{ kind: "onboarding-complete" \}\)/);
+  assert.match(source, /const completePayload = \{ kind: "onboarding-complete" \};/);
+  assert.match(source, /const completeMessage = JSON\.stringify\(completePayload\);/);
+  assert.match(source, /window\.location\.href = "about:blank#zed-onboarding-complete";/);
   assert.match(source, /let completeSent = false;/);
   assert.match(source, /const postComplete = \(event\) => \{/);
   assert.match(source, /event\.preventDefault\(\);/);
@@ -253,9 +255,18 @@ test("onboarding uses a local Web Preview page with a real completion bridge", (
   );
   assert.match(
     multiWorkspaceSource,
-    /if let Some\(active_full_window_overlay\) = active_full_window_overlay \{[\s\S]*return client_side_decorations_with_content_flush\([\s\S]*\.child\(active_full_window_overlay\)[\s\S]*Tiling \{\s*top: true,\s*left: true,\s*right: true,\s*bottom: true,\s*\}[\s\S]*Tiling \{\s*top: true,\s*left: true,\s*right: true,\s*bottom: true,\s*\}/s,
-    "Onboarding should short-circuit the normal workspace chrome and fill the full client window",
+    /if let Some\(active_full_window_overlay\) = active_full_window_overlay \{[\s\S]*return client_side_decorations_with_content_flush\([\s\S]*\.child\(active_full_window_overlay\)[\s\S]*\.child\(render_full_window_overlay_system_controls\(window, cx\)\)[\s\S]*Tiling \{\s*top: true,\s*left: true,\s*right: true,\s*bottom: true,\s*\}[\s\S]*Tiling \{\s*top: true,\s*left: true,\s*right: true,\s*bottom: true,\s*\}/s,
+    "Onboarding should short-circuit normal workspace chrome, fill the full client window, and keep only system window controls above it",
   );
+  const fullWindowControls = functionBody(
+    multiWorkspaceSource,
+    "render_full_window_overlay_system_controls",
+  );
+  assert.match(fullWindowControls, /WindowControlArea::Drag/);
+  assert.match(fullWindowControls, /WindowControlArea::Min/);
+  assert.match(fullWindowControls, /WindowControlArea::Max/);
+  assert.match(fullWindowControls, /WindowControlArea::Close/);
+  assert.doesNotMatch(fullWindowControls, /TitleBar|render_screen_dock|application_menu|titlebar_item/);
   assert.match(
     workspaceSource,
     /if kind == WorkspaceScreenKind::Onboarding \{\s*cx\.defer_in\(window, \|_, window, cx\| \{\s*window\.dispatch_action\(OpenOnboarding\.boxed_clone\(\), cx\);\s*\}\);\s*return true;\s*\}/s,
@@ -322,6 +333,16 @@ for (const [name, path] of desktopOnboardingPreviewViews) {
     assert.match(newForOnboarding, /Self::new_for_url\([\s\S]*onboarding_complete/s);
     const newForUrl = functionBody(source, "new_for_url");
     assert.match(newForUrl, /onboarding_complete,/);
+    assert.match(source, /fn is_onboarding_complete_fallback_url\(url: &str\) -> bool/);
+    assert.match(source, /url == "about:blank#zed-onboarding-complete"/);
+    assert.match(source, /url\.ends_with\("#zed-onboarding-complete"\)/);
+    const applyBrowserEvents = functionBody(source, "apply_browser_events");
+    assert.match(applyBrowserEvents, /BrowserEvent::UrlChanged\(url\) => \{/);
+    assert.match(
+      applyBrowserEvents,
+      /self\.onboarding_complete\.is_some\(\)[\s\S]*?is_onboarding_complete_fallback_url\(url\.as_str\(\)\)[\s\S]*?cx\.defer_in\(window, move \|_, window, cx\| \{\s*complete\(window, cx\);\s*\}\);[\s\S]*?continue;/s,
+      `${name} should close onboarding when the page navigates to the completion fallback URL`,
+    );
     const syncActivation = functionBody(source, "sync_native_preview_window_activation");
     assert.match(syncActivation, /try_borrow_mut\(\)/);
     assert.doesNotMatch(syncActivation, /native_preview\.borrow\(\)\.is_none\(\)/);

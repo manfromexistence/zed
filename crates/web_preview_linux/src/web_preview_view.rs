@@ -890,6 +890,16 @@ impl WebPreviewView {
         for event in events {
             match event {
                 BrowserEvent::UrlChanged(url) => {
+                    if self.onboarding_complete.is_some()
+                        && is_onboarding_complete_fallback_url(url.as_str())
+                    {
+                        if let Some(complete) = self.onboarding_complete.clone() {
+                            cx.defer_in(window, move |_, window, cx| {
+                                complete(window, cx);
+                            });
+                        }
+                        continue;
+                    }
                     self.load_state = PreviewLoadState::Ready;
                     let previous_url = self.active_url.to_string();
                     self.active_url = url.clone().into();
@@ -2367,6 +2377,10 @@ impl Render for WebPreviewView {
                     }),
             )
     }
+}
+
+fn is_onboarding_complete_fallback_url(url: &str) -> bool {
+    url == "about:blank#zed-onboarding-complete" || url.ends_with("#zed-onboarding-complete")
 }
 
 pub(crate) fn push_browser_event(event_queue: &Arc<Mutex<Vec<BrowserEvent>>>, event: BrowserEvent) {

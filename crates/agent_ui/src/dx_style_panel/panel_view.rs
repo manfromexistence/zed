@@ -22,20 +22,42 @@ pub(super) fn render_panel(
         .child(panel_header(workspace, panel_id, cx))
         .child(
             div()
-                .id("dx-style-panel-empty-state")
+                .id("dx-style-panel-web-preview-host")
                 .flex_1()
                 .min_h_0()
                 .min_w_0()
-                .flex()
-                .items_center()
-                .justify_center()
-                .px_4()
+                .p_2()
                 .child(
-                    div().max_w(px(240.)).child(
-                        Label::new("Open an HTML, CSS, or TSX file to view Style controls.")
-                            .size(LabelSize::Small)
-                            .color(Color::Muted),
-                    ),
+                    v_flex()
+                        .id("dx-style-panel-web-preview")
+                        .size_full()
+                        .rounded_sm()
+                        .border_1()
+                        .border_color(cx.theme().colors().border)
+                        .bg(cx.theme().colors().editor_background)
+                        .overflow_hidden()
+                        .child(
+                            h_flex()
+                                .h(px(28.0))
+                                .flex_none()
+                                .px_2()
+                                .border_b_1()
+                                .border_color(cx.theme().colors().border)
+                                .child(
+                                    Label::new("Web Preview")
+                                        .size(LabelSize::XSmall)
+                                        .color(Color::Muted),
+                                ),
+                        )
+                        .child(
+                            div()
+                                .flex_1()
+                                .min_h_0()
+                                .flex()
+                                .items_center()
+                                .justify_center()
+                                .child(Label::new("Styles").size(LabelSize::Small)),
+                        ),
                 ),
         )
 }

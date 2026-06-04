@@ -428,8 +428,8 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(agentPanel, /"agent-toolbar-toggle-progress-rail"/);
   assert.match(agentPanel, /fullscreen_sources_rail_open/);
   assert.match(agentPanel, /fullscreen_progress_rail_open/);
-  assert.match(agentPanel, /fullscreen_sources_rail_open: false/);
-  assert.match(agentPanel, /fullscreen_progress_rail_open: false/);
+  assert.match(agentPanel, /fullscreen_sources_rail_open: true/);
+  assert.match(agentPanel, /fullscreen_progress_rail_open: true/);
   assert.match(agentPanel, /fn render_fullscreen_agent_center\(/);
   assert.match(agentPanel, /fn render_toolbar_response_indicator\(/);
   assert.match(agentPanel, /fn toolbar_response_indicator_segment\(/);
@@ -452,10 +452,10 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(dockVisibleEntries, /self\.visible_entries_for_zoomed_agent\(self\.zoomed_agent_panel_id\(cx\), cx\)/);
   assert.match(dockVisibleEntriesForZoomedAgent, /zoomed_agent_panel_id: Option<EntityId>/);
   assert.match(dockVisibleEntriesForZoomedAgent, /entries\.retain\(\|\(_, entry\)\| Some\(entry\.panel\.panel_id\(\)\) != zoomed_agent_panel_id\)/);
-  assert.match(
+  assert.doesNotMatch(
     dockVisibleEntriesForZoomedAgent,
-    /if entries\.is_empty\(\)[\s\S]*?let Some\(zoomed_agent_panel_id\) = zoomed_agent_panel_id[\s\S]*?entry\.panel\.panel_id\(\) != zoomed_agent_panel_id && entry\.panel\.enabled\(cx\)/s,
-    "a dock whose active panel is the fullscreen Agent should fall back to a real enabled panel instead of rendering an empty shell",
+    /if entries\.is_empty\(\)[\s\S]*?entry\.panel\.enabled\(cx\)/s,
+    "Agent fullscreen should not promote Project or another dock panel as a fallback",
   );
   assert.match(dock, /\.visible_entries\(cx\)/);
   assert.match(dockVisiblePanelForLayout, /self\.visible_entries_for_zoomed_agent\(zoomed_agent_panel_id, cx\)/);
@@ -466,7 +466,15 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
     /let zoomed_agent_panel_id =[\s\S]*self\.zoomed_is_agent_panel[\s\S]*self\.zoomed_position == Some\(position\)[\s\S]*self\.zoomed_item\(\)\.and_then\(\|view\| view\.upgrade\(\)\)[\s\S]*\.map\(\|view\| view\.entity_id\(\)\);/s,
     "render_dock must pass its existing zoomed Agent state into Dock sizing without re-reading Workspace through Dock",
   );
-  assert.match(workspaceRenderDock, /dock\.visible_panel_for_layout\(zoomed_agent_panel_id, cx\)/);
+  assert.match(
+    workspaceRenderDock,
+    /dock_state\.visible_panel_for_layout\(zoomed_agent_panel_id, cx\)/,
+  );
+  assert.match(
+    workspaceRenderDock,
+    /visible_panel\.is_none\(\) && zoomed_agent_panel_id\.is_some\(\)[\s\S]*?return None;/s,
+    "the Agent fullscreen source dock should not reserve layout width when the zoomed Agent is the only visible panel",
+  );
   assert.doesNotMatch(
     workspaceRenderDock,
     /dock\.visible_panel\(\)/,
@@ -722,8 +730,10 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(manageProfilesModal, /AgentProfile::available_profiles\(cx\)/);
   assert.match(manageProfilesModal, /AgentProfile::display_name\(&mode\.profile_id, &profile\.name\)/);
   assert.match(agentPanel, /then_some\(IconName::Chat\)/);
-  assert.doesNotMatch(focusAgentFullscreen, /focus_panel::<Self>/);
+  assert.match(focusAgentFullscreen, /workspace\.focus_panel::<Self>\(window, cx\);/);
   assert.match(focusAgentFullscreen, /workspace[\s\S]*?\.panel::<Self>\(cx\)[\s\S]*?enabled\(cx\)/);
+  assert.match(focusAgentFullscreen, /panel\.fullscreen_sources_rail_open = true;/);
+  assert.match(focusAgentFullscreen, /panel\.fullscreen_progress_rail_open = true;/);
   assert.match(focusAgentFullscreen, /cx\.emit\(PanelEvent::ZoomIn\)/);
   assert.match(functionBody(agentPanel, "focus"), /cx\.emit\(PanelEvent::ZoomOut\)/);
   assert.match(workspace, /panel\.set_zoomed\(false, window, cx\);\s*dock\.set_open\(false, window, cx\);/);
@@ -1183,8 +1193,10 @@ test("recent tool panels use professional visible copy", () => {
   assert.doesNotMatch(titleBar, /More Hidden Features/);
 
   assert.match(stylePanel, /Label::new\("Style"\)/);
-  assert.match(stylePanel, /Label::new\("Open an HTML, CSS, or TSX file to view Style controls\."\)/);
-  assert.match(stylePanel, /id\("dx-style-panel-empty-state"\)/);
+  assert.match(stylePanel, /id\("dx-style-panel-web-preview-host"\)/);
+  assert.match(stylePanel, /id\("dx-style-panel-web-preview"\)/);
+  assert.match(stylePanel, /Label::new\("Web Preview"\)/);
+  assert.match(stylePanel, /Label::new\("Styles"\)/);
   assert.doesNotMatch(stylePanel, /section_label\("Contracts"\)/);
   assert.doesNotMatch(stylePanel, /Style Generators|Readiness Contracts/);
 

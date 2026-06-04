@@ -62,6 +62,7 @@ pub fn side_panel_header_controls(
         .items_center()
         .flex_none()
         .gap_0p5()
+        .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
         .child(
             IconButton::new(format!("{id_prefix}-split-side-panel"), IconName::SplitAlt)
                 .shape(IconButtonShape::Square)
@@ -588,6 +589,14 @@ impl Dock {
                 return;
             }
             if workspace.zoomed_position == Some(position) {
+                let preserve_agent_fullscreen = workspace.zoomed_is_agent_panel()
+                    && workspace
+                        .zoomed_item()
+                        .and_then(|view| view.upgrade())
+                        .is_some();
+                if preserve_agent_fullscreen {
+                    return;
+                }
                 workspace.zoomed = None;
                 workspace.zoomed_is_agent_panel = false;
                 workspace.zoomed_position = None;
@@ -728,14 +737,6 @@ impl Dock {
 
         entries.retain(|(_, entry)| Some(entry.panel.panel_id()) != zoomed_agent_panel_id);
 
-        if entries.is_empty()
-            && let Some(zoomed_agent_panel_id) = zoomed_agent_panel_id
-        {
-            entries.extend(self.panel_entries.iter().enumerate().find(|(_, entry)| {
-                entry.panel.panel_id() != zoomed_agent_panel_id && entry.panel.enabled(cx)
-            }));
-        }
-
         entries
     }
 
@@ -779,9 +780,11 @@ impl Dock {
     }
 
     fn first_stack_candidate_for(&self, panel_id: EntityId, cx: &App) -> Option<EntityId> {
+        let zoomed_agent_panel_id = self.zoomed_agent_panel_id(cx);
         self.panel_entries
             .iter()
             .filter(|entry| entry.panel.panel_id() != panel_id)
+            .filter(|entry| Some(entry.panel.panel_id()) != zoomed_agent_panel_id)
             .filter(|entry| entry.panel.enabled(cx))
             .map(|entry| entry.panel.panel_id())
             .find(|candidate_id| !self.stacked_panel_ids.contains(candidate_id))

@@ -2,9 +2,9 @@ use anyhow::Result;
 use fs::Fs;
 
 use gpui::{
-    AnyView, App, Context, DragMoveEvent, Entity, EntityId, EventEmitter, FocusHandle, Focusable,
-    ManagedView, MouseButton, Pixels, Render, Subscription, Task, TaskExt, Tiling, WeakEntity,
-    Window, WindowId, actions, deferred, px,
+    AnyElement, AnyView, App, Context, DragMoveEvent, Entity, EntityId, EventEmitter, FocusHandle,
+    Focusable, ManagedView, MouseButton, Pixels, Render, Subscription, Task, TaskExt, Tiling,
+    WeakEntity, Window, WindowControlArea, WindowId, actions, deferred, px,
 };
 pub use project::ProjectGroupKey;
 use project::{DisableAiSettings, Project};
@@ -2432,7 +2432,8 @@ impl Render for MultiWorkspace {
                     .font(ui_font)
                     .text_color(text_color)
                     .on_action(cx.listener(Self::close_window))
-                    .child(active_full_window_overlay),
+                    .child(active_full_window_overlay)
+                    .child(render_full_window_overlay_system_controls(window, cx)),
                 window,
                 cx,
                 Tiling {
@@ -2575,4 +2576,92 @@ impl Render for MultiWorkspace {
             },
         )
     }
+}
+
+fn render_full_window_overlay_system_controls(window: &mut Window, cx: &App) -> AnyElement {
+    const HEIGHT: Pixels = px(32.0);
+
+    let controls = div()
+        .id("full-window-overlay-system-controls")
+        .absolute()
+        .top_0()
+        .left_0()
+        .right_0()
+        .h(HEIGHT)
+        .window_control_area(WindowControlArea::Drag);
+
+    #[cfg(target_os = "windows")]
+    {
+        let max_button = if window.is_maximized() {
+            full_window_overlay_caption_button(
+                "full-window-overlay-restore",
+                "\u{e923}",
+                WindowControlArea::Max,
+                cx,
+            )
+        } else {
+            full_window_overlay_caption_button(
+                "full-window-overlay-maximize",
+                "\u{e922}",
+                WindowControlArea::Max,
+                cx,
+            )
+        };
+
+        controls
+            .child(
+                h_flex()
+                    .absolute()
+                    .top_0()
+                    .right_0()
+                    .h(HEIGHT)
+                    .font_family("Segoe Fluent Icons")
+                    .child(full_window_overlay_caption_button(
+                        "full-window-overlay-minimize",
+                        "\u{e921}",
+                        WindowControlArea::Min,
+                        cx,
+                    ))
+                    .child(max_button)
+                    .child(full_window_overlay_caption_button(
+                        "full-window-overlay-close",
+                        "\u{e8bb}",
+                        WindowControlArea::Close,
+                        cx,
+                    )),
+            )
+            .into_any_element()
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = (window, cx);
+        controls.into_any_element()
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn full_window_overlay_caption_button(
+    id: &'static str,
+    icon: &'static str,
+    control_area: WindowControlArea,
+    cx: &App,
+) -> impl IntoElement {
+    let hover_bg = cx.theme().colors().ghost_element_hover;
+    let active_bg = cx.theme().colors().ghost_element_active;
+    let text_color = cx.theme().colors().text;
+
+    h_flex()
+        .id(id)
+        .justify_center()
+        .items_center()
+        .occlude()
+        .w(px(40.0))
+        .h_full()
+        .text_size(px(10.0))
+        .text_color(text_color)
+        .hover(move |style| style.bg(hover_bg))
+        .active(move |style| style.bg(active_bg))
+        .window_control_area(control_area)
+        .child(icon)
 }

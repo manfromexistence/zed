@@ -8162,10 +8162,22 @@ impl Workspace {
             return None;
         }
 
-        let leader_border = dock.read(cx).active_panel().and_then(|panel| {
-            let pane = panel.pane(cx)?;
-            let follower_states = &self.follower_states;
-            leader_border_for_pane(follower_states, &pane, window, cx)
+        let zoomed_agent_panel_id = (self.zoomed_is_agent_panel
+            && self.zoomed_position == Some(position))
+        .then(|| self.zoomed_item().and_then(|view| view.upgrade()))
+        .flatten()
+        .map(|view| view.entity_id());
+
+        let dock_state = dock.read(cx);
+        let visible_panel = dock_state.visible_panel_for_layout(zoomed_agent_panel_id, cx);
+        if visible_panel.is_none() && zoomed_agent_panel_id.is_some() {
+            return None;
+        }
+        let leader_border = visible_panel.as_ref().and_then(|panel| {
+            panel.as_ref().pane(cx).and_then(|pane| {
+                let follower_states = &self.follower_states;
+                leader_border_for_pane(follower_states, &pane, window, cx)
+            })
         });
 
         let mut container = div()
@@ -8178,14 +8190,8 @@ impl Workspace {
         // Apply sizing only when the dock is open. When closed the dock is still
         // included in the element tree so its focus handle remains mounted — without
         // this, toggle_panel_focus cannot focus the panel when the dock is closed.
-        let zoomed_agent_panel_id = (self.zoomed_is_agent_panel
-            && self.zoomed_position == Some(position))
-        .then(|| self.zoomed_item().and_then(|view| view.upgrade()))
-        .flatten()
-        .map(|view| view.entity_id());
-        let dock = dock.read(cx);
-        if let Some(panel) = dock.visible_panel_for_layout(zoomed_agent_panel_id, cx) {
-            let size_state = dock.stored_panel_size_state(panel.as_ref());
+        if let Some(panel) = visible_panel {
+            let size_state = dock_state.stored_panel_size_state(panel.as_ref());
             let min_size = panel.min_size(window, cx);
             let max_size = panel.max_size(window, cx);
             if position.axis() == Axis::Horizontal {
