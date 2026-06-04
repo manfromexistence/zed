@@ -1,3 +1,17 @@
+[2026-06-04] - Onboarding Completion IPC Deferral
+
+FIXED:
+- `crates\web_preview\src\web_preview_view.rs`, `crates\web_preview_macos\src\web_preview_view.rs`, and `crates\web_preview_linux\src\web_preview_view.rs` now defer the onboarding completion callback from the native Web Preview IPC handler, so the Complete button cannot close/remove the onboarding item synchronously while the WebView bridge is still dispatching the click message.
+- `script\web-preview-platform-lifecycle.test.ts` now guards the deferred onboarding completion contract and rejects the old synchronous callback path.
+
+PASSED:
+- `node --test script\web-preview-platform-lifecycle.test.ts` with 23/23 passing.
+- `rustfmt --edition 2024 --check crates\web_preview\src\web_preview_view.rs crates\web_preview_macos\src\web_preview_view.rs crates\web_preview_linux\src\web_preview_view.rs`
+- `git diff --check`
+
+NOTES:
+- This is the final source-side hardening for the onboarding click crash path. Runtime click validation still requires an authorized `just run` pass.
+
 [2026-06-04] - Web Preview Activation Borrow Hardening
 
 FIXED:

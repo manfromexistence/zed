@@ -31348,7 +31348,9 @@ impl WebPreviewView {
         match kind {
             "onboarding-complete" => {
                 if let Some(complete) = self.onboarding_complete.clone() {
-                    complete(window, cx);
+                    cx.defer_in(window, move |_, window, cx| {
+                        complete(window, cx);
+                    });
                 }
             }
             "inspect-element" => {

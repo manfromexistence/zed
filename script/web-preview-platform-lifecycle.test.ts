@@ -304,8 +304,18 @@ for (const [name, path] of desktopOnboardingPreviewViews) {
     assert.match(source, /pub type OnboardingCompleteCallback = Rc<dyn Fn\(&mut Window, &mut App\)>;/);
     assert.match(source, /onboarding_complete: Option<OnboardingCompleteCallback>/);
     assert.match(source, /"onboarding-complete" => \{/);
-    assert.match(source, /if let Some\(complete\) = self\.onboarding_complete\.clone\(\)/);
-    assert.match(source, /complete\(window, cx\);/);
+    const ipcHandler = functionBody(source, "handle_ipc_message");
+    assert.match(ipcHandler, /if let Some\(complete\) = self\.onboarding_complete\.clone\(\)/);
+    assert.match(
+      ipcHandler,
+      /cx\.defer_in\(window, move \|_, window, cx\| \{\s*complete\(window, cx\);\s*\}\);/s,
+      `${name} should defer onboarding completion until after native Web Preview IPC returns`,
+    );
+    assert.doesNotMatch(
+      ipcHandler,
+      /if let Some\(complete\) = self\.onboarding_complete\.clone\(\) \{\s*complete\(window, cx\);/s,
+      `${name} should not remove onboarding synchronously inside the Web Preview IPC callback`,
+    );
     const newForOnboarding = functionBody(source, "new_for_onboarding");
     assert.match(newForOnboarding, /let workspace_context = Self::fallback_workspace_context\(\);/);
     assert.doesNotMatch(newForOnboarding, /workspace\.read\(cx\)|Self::workspace_context/);
