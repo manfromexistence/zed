@@ -1,3 +1,17 @@
+[2026-06-04] - Onboarding Completion Bridge-Only Dismissal
+
+FIXED:
+- `crates\onboarding\src\onboarding.rs` now completes the Web Preview onboarding page only through the native bridge instead of changing `document.title`, changing `location.hash`, or navigating to `about:blank`, preventing the delayed navigation race that could keep onboarding stuck or close the app after clicking Complete.
+- `crates\onboarding\src\onboarding.rs` now posts the stringified JSON payload to one available desktop bridge and re-enables the button if no bridge is present.
+- `script\web-preview-platform-lifecycle.test.ts` now guards against reintroducing the title/hash/navigation fallback and requires string-based bridge completion.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\onboarding\src\onboarding.rs`
+- `node --test script\web-preview-platform-lifecycle.test.ts script\dx-title-bar-source.test.ts` with 27/27 passing.
+
+NOTES:
+- `just run` was not run in this follow-up because the user has not authorized another runtime launch after reporting the persisted Complete-click issue.
+
 [2026-06-04] - Onboarding Completion Keeps Workspace Open
 
 FIXED:

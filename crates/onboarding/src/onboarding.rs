@@ -148,23 +148,13 @@ const WEB_PREVIEW_ONBOARDING_HTML: &str = r##"<!doctype html>
       let completeSent = false;
       const completePayload = { kind: "onboarding-complete" };
       const completeMessage = JSON.stringify(completePayload);
-      const completionToken = "zed-onboarding-complete";
-      const signalCompletionFallback = () => {
-        document.title = completionToken;
-        if (window.location.hash !== `#${completionToken}`) {
-          window.location.hash = completionToken;
+      const tryPostComplete = (post) => {
+        try {
+          post();
+          return true;
+        } catch (_error) {
+          return false;
         }
-      };
-      const navigateCompletionFallback = () => {
-        signalCompletionFallback();
-        window.location.href = `about:blank#${completionToken}`;
-      };
-      const navigateFallback = () => {
-        window.setTimeout(() => {
-          if (completeSent) {
-            navigateCompletionFallback();
-          }
-        }, 350);
       };
       const postComplete = (event) => {
         event.preventDefault();
@@ -173,24 +163,21 @@ const WEB_PREVIEW_ONBOARDING_HTML: &str = r##"<!doctype html>
         completeSent = true;
         button.disabled = true;
         status.textContent = "Completing...";
-        signalCompletionFallback();
-        navigateFallback();
-        try {
-          if (window.ipc && typeof window.ipc.postMessage === "function") {
-            window.ipc.postMessage(completeMessage);
-            return;
-          }
-          if (window.chrome?.webview && typeof window.chrome.webview.postMessage === "function") {
-            window.chrome.webview.postMessage(completePayload);
-            window.chrome.webview.postMessage(completeMessage);
-            return;
-          }
-          if (window.external && typeof window.external.invoke === "function") {
-            window.external.invoke(completeMessage);
-            return;
-          }
-        } catch (_error) {}
-        navigateCompletionFallback();
+        let posted = false;
+        if (!posted && window.ipc && typeof window.ipc.postMessage === "function") {
+          posted = tryPostComplete(() => window.ipc.postMessage(completeMessage)) || posted;
+        }
+        if (!posted && window.chrome?.webview && typeof window.chrome.webview.postMessage === "function") {
+          posted = tryPostComplete(() => window.chrome.webview.postMessage(completeMessage)) || posted;
+        }
+        if (!posted && window.external && typeof window.external.invoke === "function") {
+          posted = tryPostComplete(() => window.external.invoke(completeMessage)) || posted;
+        }
+        if (!posted) {
+          status.textContent = "Completion bridge unavailable.";
+          button.disabled = false;
+          completeSent = false;
+        }
       };
       button.addEventListener("click", postComplete);
     })();
