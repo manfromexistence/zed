@@ -873,6 +873,10 @@ impl MediaPanel {
                 continue;
             }
 
+            if !query_terms.is_empty() && !remote_media_search_matches(asset, query_terms) {
+                continue;
+            }
+
             match_count += 1;
             if visible_assets.len() < limit {
                 visible_assets.push(asset.clone());
@@ -1662,6 +1666,32 @@ impl MediaPanel {
             )
     }
 
+    fn render_status_row(&self, status: SharedString, cx: &mut Context<Self>) -> impl IntoElement {
+        h_flex()
+            .id("media-panel-status-row")
+            .gap_2()
+            .items_center()
+            .p_2()
+            .rounded_sm()
+            .border_1()
+            .border_color(cx.theme().colors().border_variant)
+            .bg(cx.theme().colors().element_background)
+            .tooltip(Tooltip::text(status.clone()))
+            .child(
+                Icon::new(IconName::Info)
+                    .size(IconSize::Small)
+                    .color(Color::Muted),
+            )
+            .child(
+                div().flex_1().child(
+                    Label::new(status)
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted)
+                        .truncate(),
+                ),
+            )
+    }
+
     fn render_remote_health_row(
         &self,
         health: &RemoteMediaProviderHealth,
@@ -2208,6 +2238,7 @@ impl Render for MediaPanel {
             .map(|element| element.into_any_element());
         let kind_counts = MediaKindCounts::from_panel(self);
         let provider_count = remote_provider_count(self.kind_filter);
+        let status = self.status.clone();
         let remote_warning = self.remote_warning.clone();
         let show_remote_loading_row = self.remote_loading && remote_assets.is_empty();
         let remote_health = self.remote_health.as_ref();
@@ -2223,6 +2254,7 @@ impl Render for MediaPanel {
         };
         let mut asset_rows = Vec::with_capacity(
             usize::from(url_insert.is_some())
+                + usize::from(status.is_some())
                 + usize::from(remote_warning.is_some())
                 + usize::from(show_remote_loading_row)
                 + usize::from(remote_health.is_some())
@@ -2234,6 +2266,9 @@ impl Render for MediaPanel {
         );
         if let Some(url_insert) = url_insert {
             asset_rows.push(url_insert);
+        }
+        if let Some(status) = status {
+            asset_rows.push(self.render_status_row(status, cx).into_any_element());
         }
         if let Some(warning) = remote_warning {
             asset_rows.push(
@@ -3086,7 +3121,17 @@ async fn fetch_remote_media_assets(
     match gpui_tokio::Tokio::spawn_result(cx, dx_media_bridge::fetch_panel_media(dx_media_request))
         .await
     {
-        Ok(result) => return Ok(remote_media_fetch_result_from_dx_media(result)),
+        Ok(result) => {
+            let result = remote_media_fetch_result_from_dx_media(result);
+            if !result.assets.is_empty() {
+                return Ok(result);
+            }
+            if let Some(warning) = result.warning {
+                errors.push(format!("DX Media: {}", warning.as_ref()));
+            } else {
+                errors.push("DX Media: no panel-renderable rows".to_string());
+            }
+        }
         Err(error) => errors.push(format!("DX Media: {error:#}")),
     }
 

@@ -58,37 +58,82 @@ pub(crate) struct PanelMediaSearchResult {
 pub(crate) async fn fetch_panel_media(
     request: PanelMediaSearchRequest,
 ) -> anyhow::Result<PanelMediaSearchResult> {
-    let query = build_search_query(&request);
-    let result = DxMedia::new()?.search_query(&query).await?;
+    let queries = build_search_queries(&request);
+    let dx_media = DxMedia::new()?;
+    let mut results = Vec::with_capacity(queries.len());
+    let mut provider_errors = Vec::new();
 
-    Ok(from_search_result(result))
+    for query in queries {
+        match dx_media.search_query(&query).await {
+            Ok(result) => results.push(result),
+            Err(error) => provider_errors.push((search_query_label(&query), error.to_string())),
+        }
+    }
+
+    if results.is_empty() && !provider_errors.is_empty() {
+        let errors = provider_errors
+            .iter()
+            .map(|(provider, error)| format!("{provider}: {error}"))
+            .collect::<Vec<_>>();
+        anyhow::bail!(errors.join("; "));
+    }
+
+    Ok(from_search_results(results, provider_errors))
 }
 
-fn build_search_query(request: &PanelMediaSearchRequest) -> SearchQuery {
+fn build_search_queries(request: &PanelMediaSearchRequest) -> Vec<SearchQuery> {
+    let media_types = media_types_for_filter(request.filter);
+    if media_types.is_empty() {
+        return vec![build_search_query(request, None)];
+    }
+
+    media_types
+        .iter()
+        .map(|media_type| build_search_query(request, Some(*media_type)))
+        .collect()
+}
+
+fn build_search_query(
+    request: &PanelMediaSearchRequest,
+    media_type: Option<MediaType>,
+) -> SearchQuery {
     let mut query = SearchQuery::new(request.query.clone())
         .count(request.count)
         .page(request.page)
         .mode(SearchMode::Quality);
 
-    if let Some(media_type) = media_type_for_filter(request.filter) {
+    if let Some(media_type) = media_type {
         query = query.media_type(media_type);
     }
 
     query
 }
 
-fn from_search_result(result: SearchResult) -> PanelMediaSearchResult {
-    let assets = result
-        .assets
-        .into_iter()
-        .filter_map(panel_asset_from_media_asset)
-        .collect();
+fn from_search_results(
+    results: Vec<SearchResult>,
+    mut provider_errors: Vec<(String, String)>,
+) -> PanelMediaSearchResult {
+    let mut assets = Vec::new();
+    let mut total_count = 0;
+    let mut providers_searched = Vec::new();
+
+    for result in results {
+        total_count += result.total_count;
+        providers_searched.extend(result.providers_searched);
+        provider_errors.extend(result.provider_errors);
+        assets.extend(
+            result
+                .assets
+                .into_iter()
+                .filter_map(panel_asset_from_media_asset),
+        );
+    }
 
     PanelMediaSearchResult {
         assets,
-        total_count: result.total_count,
-        providers_searched: result.providers_searched,
-        provider_errors: result.provider_errors,
+        total_count,
+        providers_searched,
+        provider_errors,
     }
 }
 
@@ -110,12 +155,12 @@ fn panel_asset_from_media_asset(asset: MediaAsset) -> Option<PanelMediaAsset> {
     })
 }
 
-fn media_type_for_filter(filter: PanelMediaKindFilter) -> Option<MediaType> {
+fn media_types_for_filter(filter: PanelMediaKindFilter) -> &'static [MediaType] {
     match filter {
-        PanelMediaKindFilter::All => None,
-        PanelMediaKindFilter::Images => Some(MediaType::Image),
-        PanelMediaKindFilter::Videos => Some(MediaType::Video),
-        PanelMediaKindFilter::Audio => Some(MediaType::Audio),
+        PanelMediaKindFilter::All => &[],
+        PanelMediaKindFilter::Images => &[MediaType::Image, MediaType::Gif, MediaType::Vector],
+        PanelMediaKindFilter::Videos => &[MediaType::Video],
+        PanelMediaKindFilter::Audio => &[MediaType::Audio],
     }
 }
 
@@ -129,10 +174,37 @@ fn panel_kind_for_media_type(media_type: MediaType) -> Option<PanelMediaKind> {
 }
 
 fn is_panel_renderable_download(asset: &MediaAsset) -> bool {
-    !matches!(
-        asset.download_url_kind,
-        DownloadUrlKind::AssetManifest | DownloadUrlKind::LandingPage
-    )
+    match asset.download_url_kind {
+        DownloadUrlKind::DirectFile | DownloadUrlKind::PreviewDerivative => true,
+        DownloadUrlKind::Unknown => has_media_type_evidence(asset),
+        DownloadUrlKind::AssetManifest | DownloadUrlKind::LandingPage => false,
+    }
+}
+
+fn has_media_type_evidence(asset: &MediaAsset) -> bool {
+    asset
+        .mime_type
+        .as_deref()
+        .is_some_and(|mime_type| asset.media_type.matches_mime(mime_type))
+        || download_url_extension(asset.download_url.as_str())
+            .is_some_and(|extension| asset.media_type.matches_extension(extension))
+}
+
+fn download_url_extension(url: &str) -> Option<&str> {
+    let path = url
+        .split(['?', '#'])
+        .next()
+        .unwrap_or(url)
+        .trim_end_matches('/');
+    let extension = path.rsplit_once('.')?.1;
+    (!extension.is_empty() && !extension.contains('/')).then_some(extension)
+}
+
+fn search_query_label(query: &SearchQuery) -> String {
+    query
+        .media_type
+        .map(|media_type| format!("dx-media {}", media_type.as_str()))
+        .unwrap_or_else(|| "dx-media".to_string())
 }
 
 fn clean_panel_label(value: &str) -> String {

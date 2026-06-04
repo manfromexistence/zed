@@ -50,6 +50,15 @@ function assertBefore(
   assert.ok(beforeIndex < afterIndex, message);
 }
 
+function lockPackageBlock(name: string): string {
+  const start = lockfile.indexOf(`name = "${name}"`);
+  assert.ok(start >= 0, `expected lock package ${name}`);
+
+  const blockStart = lockfile.lastIndexOf("[[package]]", start);
+  const nextBlock = lockfile.indexOf("[[package]]", start + name.length);
+  return lockfile.slice(blockStart, nextBlock >= 0 ? nextBlock : undefined);
+}
+
 test("media panel depends on the dx-media crate without taking CLI defaults", () => {
   assert.match(
     workspaceManifest,
@@ -58,6 +67,13 @@ test("media panel depends on the dx-media crate without taking CLI defaults", ()
   assert.match(panelManifest, /^dx_media\.workspace = true$/m);
   assert.match(lockfile, /\[\[package\]\]\r?\nname = "dx-media"\r?\nversion = "1\.0\.0"/);
   assert.match(lockfile, /name = "media_panel"[\s\S]*"dx-media"[\s\S]*"gpui_tokio"/);
+
+  const dxMediaLock = lockPackageBlock("dx-media");
+  assert.doesNotMatch(dxMediaLock, /"clap"/);
+  assert.doesNotMatch(dxMediaLock, /"colored"/);
+  assert.doesNotMatch(dxMediaLock, /"console/);
+  assert.doesNotMatch(dxMediaLock, /"indicatif"/);
+  assert.doesNotMatch(dxMediaLock, /"tracing-subscriber"/);
 });
 
 test("media panel routes remote search through the dx-media bridge first", () => {
@@ -70,6 +86,8 @@ test("media panel routes remote search through the dx-media bridge first", () =>
   assert.match(fetchRemoteMediaAssets, /dx_media_bridge::fetch_panel_media\(/);
   assert.match(fetchRemoteMediaAssets, /dx_media_bridge::PanelMediaSearchRequest::new\(/);
   assert.match(fetchRemoteMediaAssets, /gpui_tokio::Tokio::spawn_result\(cx/);
+  assert.match(fetchRemoteMediaAssets, /if !result\.assets\.is_empty\(\)/);
+  assert.match(fetchRemoteMediaAssets, /DX Media: no panel-renderable rows/);
   assert.match(panelSource, /RemoteMediaAsset::from/);
   assertBefore(
     fetchRemoteMediaAssets,
@@ -82,6 +100,11 @@ test("media panel routes remote search through the dx-media bridge first", () =>
 test("dx-media bridge preserves query, type, page, count, and provider evidence", () => {
   assert.match(bridgeSource, /use dx_media::\{DxMedia, MediaAsset, MediaType, SearchMode, SearchQuery, SearchResult\};/);
 
+  const buildSearchQueries = functionBody(bridgeSource, "build_search_queries");
+  assert.match(buildSearchQueries, /media_types_for_filter\(request\.filter\)/);
+  assert.match(buildSearchQueries, /build_search_query\(request, None\)/);
+  assert.match(buildSearchQueries, /build_search_query\(request, Some\(\*media_type\)\)/);
+
   const buildSearchQuery = functionBody(bridgeSource, "build_search_query");
   assert.match(buildSearchQuery, /SearchQuery::new\(request\.query\.clone\(\)\)/);
   assert.match(buildSearchQuery, /\.count\(request\.count\)/);
@@ -89,13 +112,16 @@ test("dx-media bridge preserves query, type, page, count, and provider evidence"
   assert.match(buildSearchQuery, /\.mode\(SearchMode::Quality\)/);
   assert.match(buildSearchQuery, /query\.media_type\(media_type\)/);
 
-  const resultMapping = functionBody(bridgeSource, "from_search_result");
-  assert.match(resultMapping, /providers_searched: result\.providers_searched/);
-  assert.match(resultMapping, /provider_errors: result\.provider_errors/);
-  assert.match(resultMapping, /total_count: result\.total_count/);
+  const resultMapping = functionBody(bridgeSource, "from_search_results");
+  assert.match(resultMapping, /providers_searched\.extend\(result\.providers_searched\)/);
+  assert.match(resultMapping, /provider_errors\.extend\(result\.provider_errors\)/);
+  assert.match(resultMapping, /total_count \+= result\.total_count/);
 });
 
 test("dx-media bridge maps rich media assets into panel-supported media kinds", () => {
+  const mediaTypesForFilter = functionBody(bridgeSource, "media_types_for_filter");
+  assert.match(mediaTypesForFilter, /PanelMediaKindFilter::Images => &\[MediaType::Image, MediaType::Gif, MediaType::Vector\]/);
+
   const panelKindMapping = functionBody(bridgeSource, "panel_kind_for_media_type");
   assert.match(panelKindMapping, /MediaType::Image \| MediaType::Gif \| MediaType::Vector/);
   assert.match(panelKindMapping, /MediaType::Video/);
@@ -112,6 +138,24 @@ test("dx-media bridge maps rich media assets into panel-supported media kinds", 
   assert.match(assetMapping, /tags: asset\.tags\.join\(", "\)/);
 
   const renderableDownload = functionBody(bridgeSource, "is_panel_renderable_download");
-  assert.match(renderableDownload, /!\s*matches!/);
+  assert.match(renderableDownload, /DownloadUrlKind::DirectFile \| DownloadUrlKind::PreviewDerivative => true/);
+  assert.match(renderableDownload, /DownloadUrlKind::Unknown => has_media_type_evidence\(asset\)/);
   assert.match(renderableDownload, /DownloadUrlKind::AssetManifest \| DownloadUrlKind::LandingPage/);
+
+  const mediaTypeEvidence = functionBody(bridgeSource, "has_media_type_evidence");
+  assert.match(mediaTypeEvidence, /matches_mime\(mime_type\)/);
+  assert.match(mediaTypeEvidence, /matches_extension\(extension\)/);
+});
+
+test("media panel renders bridge state and filters fetched remote rows by query", () => {
+  const render = panelSource.slice(panelSource.indexOf("impl Render for MediaPanel"));
+  const matchingRemoteAssets = functionBody(panelSource, "matching_remote_assets");
+
+  assert.match(panelSource, /fn render_status_row\(/);
+  assert.match(render, /let status = self\.status\.clone\(\);/);
+  assert.match(render, /render_status_row\(status, cx\)/);
+  assert.match(
+    matchingRemoteAssets,
+    /if !query_terms\.is_empty\(\) && !remote_media_search_matches\(asset, query_terms\)/,
+  );
 });
