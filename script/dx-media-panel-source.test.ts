@@ -65,8 +65,11 @@ test("media panel routes remote search through the dx-media bridge first", () =>
   assert.match(panelManifest, /^gpui_tokio\.workspace = true$/m);
 
   const fetchRemoteMediaAssets = functionBody(panelSource, "fetch_remote_media_assets");
+  assert.match(fetchRemoteMediaAssets, /cx: &mut AsyncApp/);
+  assert.doesNotMatch(fetchRemoteMediaAssets, /cx: &mut AsyncWindowContext/);
   assert.match(fetchRemoteMediaAssets, /dx_media_bridge::fetch_panel_media\(/);
   assert.match(fetchRemoteMediaAssets, /dx_media_bridge::PanelMediaSearchRequest::new\(/);
+  assert.match(fetchRemoteMediaAssets, /gpui_tokio::Tokio::spawn_result\(cx/);
   assert.match(panelSource, /RemoteMediaAsset::from/);
   assertBefore(
     fetchRemoteMediaAssets,

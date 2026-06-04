@@ -2,10 +2,10 @@ use db::kvp::KeyValueStore;
 use editor::{Editor, EditorEvent};
 use futures::AsyncReadExt as _;
 use gpui::{
-    AnyElement, App, AppContext as _, AsyncWindowContext, BackgroundExecutor, ClipboardItem,
-    Context, Entity, EventEmitter, FocusHandle, Focusable, InteractiveElement, ObjectFit, Pixels,
-    Render, ScrollHandle, SharedString, StatefulInteractiveElement, Subscription, WeakEntity,
-    Window, actions, div, img, point, px,
+    AnyElement, App, AppContext as _, AsyncApp, AsyncWindowContext, BackgroundExecutor,
+    ClipboardItem, Context, Entity, EventEmitter, FocusHandle, Focusable, InteractiveElement,
+    ObjectFit, Pixels, Render, ScrollHandle, SharedString, StatefulInteractiveElement,
+    Subscription, WeakEntity, Window, actions, div, img, point, px,
 };
 use http_client::{AsyncBody, HttpClient};
 use serde::{Deserialize, Serialize};
@@ -3071,7 +3071,7 @@ async fn fetch_remote_media_assets(
     query: String,
     filter: MediaKindFilter,
     executor: BackgroundExecutor,
-    cx: &mut AsyncWindowContext,
+    cx: &mut AsyncApp,
 ) -> anyhow::Result<RemoteMediaFetchResult> {
     let provider_count = remote_provider_count(filter);
     let mut fetches: Vec<RemoteMediaFetch> = Vec::with_capacity(provider_count);
