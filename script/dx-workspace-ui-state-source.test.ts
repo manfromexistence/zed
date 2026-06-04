@@ -412,6 +412,7 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   const scrollOutputToPreviousMessage = functionBody(threadView, "scroll_output_to_previous_message");
   const scrollOutputToNextMessage = functionBody(threadView, "scroll_output_to_next_message");
   const dockVisibleEntries = functionBody(dock, "visible_entries");
+  const dockVisibleEntriesForZoomedAgent = functionBody(dock, "visible_entries_for_zoomed_agent");
   const dockVisiblePanelForLayout = functionBody(dock, "visible_panel_for_layout");
   const dockZoomedAgentPanelId = functionBody(dock, "zoomed_agent_panel_id");
   const workspaceRenderDock = functionBody(workspace, "render_dock");
@@ -442,17 +443,24 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(dockZoomedAgentPanelId, /workspace\.zoomed_is_agent_panel\(\)/);
   assert.match(dockZoomedAgentPanelId, /workspace\.zoomed_position != Some\(self\.position\)/);
   assert.match(dockZoomedAgentPanelId, /workspace[\s\S]*?\.zoomed_item\(\)[\s\S]*?\.and_then\(\|view\| view\.upgrade\(\)\)[\s\S]*?\.map\(\|view\| view\.entity_id\(\)\)/);
-  assert.match(dockVisibleEntries, /let zoomed_agent_panel_id = self\.zoomed_agent_panel_id\(cx\)/);
-  assert.match(dockVisibleEntries, /entries\.retain\(\|\(_, entry\)\| Some\(entry\.panel\.panel_id\(\)\) != zoomed_agent_panel_id\)/);
+  assert.match(dockVisibleEntries, /self\.visible_entries_for_zoomed_agent\(self\.zoomed_agent_panel_id\(cx\), cx\)/);
+  assert.match(dockVisibleEntriesForZoomedAgent, /zoomed_agent_panel_id: Option<EntityId>/);
+  assert.match(dockVisibleEntriesForZoomedAgent, /entries\.retain\(\|\(_, entry\)\| Some\(entry\.panel\.panel_id\(\)\) != zoomed_agent_panel_id\)/);
   assert.match(
-    dockVisibleEntries,
+    dockVisibleEntriesForZoomedAgent,
     /if entries\.is_empty\(\)[\s\S]*?let Some\(zoomed_agent_panel_id\) = zoomed_agent_panel_id[\s\S]*?entry\.panel\.panel_id\(\) != zoomed_agent_panel_id && entry\.panel\.enabled\(cx\)/s,
     "a dock whose active panel is the fullscreen Agent should fall back to a real enabled panel instead of rendering an empty shell",
   );
   assert.match(dock, /\.visible_entries\(cx\)/);
-  assert.match(dockVisiblePanelForLayout, /self\.visible_entries\(cx\)/);
+  assert.match(dockVisiblePanelForLayout, /self\.visible_entries_for_zoomed_agent\(zoomed_agent_panel_id, cx\)/);
   assert.match(dockVisiblePanelForLayout, /entry\.panel\.clone\(\)/);
-  assert.match(workspaceRenderDock, /dock\.visible_panel_for_layout\(cx\)/);
+  assert.doesNotMatch(dockVisiblePanelForLayout, /workspace\.read\(cx\)|zoomed_agent_panel_id\(cx\)/);
+  assert.match(
+    workspaceRenderDock,
+    /let zoomed_agent_panel_id =[\s\S]*self\.zoomed_is_agent_panel[\s\S]*self\.zoomed_position == Some\(position\)[\s\S]*self\.zoomed_item\(\)\.and_then\(\|view\| view\.upgrade\(\)\)[\s\S]*\.map\(\|view\| view\.entity_id\(\)\);/s,
+    "render_dock must pass its existing zoomed Agent state into Dock sizing without re-reading Workspace through Dock",
+  );
+  assert.match(workspaceRenderDock, /dock\.visible_panel_for_layout\(zoomed_agent_panel_id, cx\)/);
   assert.doesNotMatch(
     workspaceRenderDock,
     /dock\.visible_panel\(\)/,

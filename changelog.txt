@@ -1,3 +1,19 @@
+[2026-06-04] - Dock Startup Restore Crash Fix
+
+FIXED:
+- `crates\workspace\src\dock.rs` and `crates\workspace\src\workspace.rs` now size docks with an explicit fullscreen Agent panel id supplied by `Workspace::render_dock`, avoiding the re-entrant `Workspace` read that panicked during early startup layout.
+- `script\dx-workspace-ui-state-source.test.ts` now guards the non-reentrant dock sizing path.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\workspace\src\dock.rs crates\workspace\src\workspace.rs crates\onboarding\src\onboarding.rs`
+- `node --test script\dx-workspace-ui-state-source.test.ts script\web-preview-platform-lifecycle.test.ts` with 42/42 passing.
+- `git diff --check`
+- `CARGO_BUILD_JOBS=6 just run` rebuilt `zed` and the CLI companion, launched Zed once, and detected the main window.
+
+NOTES:
+- The repeated runtime failure was `BEX64` / `0xc0000409` before a fresh Zed log block.
+- Running the built executable directly with `RUST_BACKTRACE=full` exposed the real fatal panic: `crates\workspace\src\dock.rs:694` tried to read `Workspace` while `Workspace` was already being updated.
+
 [2026-06-03] - Onboarding Full Window And Agent Dock Gap Fix
 
 FIXED:

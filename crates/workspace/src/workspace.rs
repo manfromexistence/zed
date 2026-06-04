@@ -8176,8 +8176,13 @@ impl Workspace {
         // Apply sizing only when the dock is open. When closed the dock is still
         // included in the element tree so its focus handle remains mounted — without
         // this, toggle_panel_focus cannot focus the panel when the dock is closed.
+        let zoomed_agent_panel_id = (self.zoomed_is_agent_panel
+            && self.zoomed_position == Some(position))
+        .then(|| self.zoomed_item().and_then(|view| view.upgrade()))
+        .flatten()
+        .map(|view| view.entity_id());
         let dock = dock.read(cx);
-        if let Some(panel) = dock.visible_panel_for_layout(cx) {
+        if let Some(panel) = dock.visible_panel_for_layout(zoomed_agent_panel_id, cx) {
             let size_state = dock.stored_panel_size_state(panel.as_ref());
             let min_size = panel.min_size(window, cx);
             let max_size = panel.max_size(window, cx);

@@ -703,11 +703,18 @@ impl Dock {
     }
 
     fn visible_entries(&self, cx: &App) -> Vec<(usize, &PanelEntry)> {
+        self.visible_entries_for_zoomed_agent(self.zoomed_agent_panel_id(cx), cx)
+    }
+
+    fn visible_entries_for_zoomed_agent(
+        &self,
+        zoomed_agent_panel_id: Option<EntityId>,
+        cx: &App,
+    ) -> Vec<(usize, &PanelEntry)> {
         if !self.is_open {
             return Vec::new();
         }
 
-        let zoomed_agent_panel_id = self.zoomed_agent_panel_id(cx);
         let stacked_entries = self.stacked_entries();
         let mut entries = if stacked_entries.len() > 1 {
             stacked_entries
@@ -1492,8 +1499,12 @@ impl Dock {
         Some(&entry.panel)
     }
 
-    pub(crate) fn visible_panel_for_layout(&self, cx: &App) -> Option<Arc<dyn PanelHandle>> {
-        self.visible_entries(cx)
+    pub(crate) fn visible_panel_for_layout(
+        &self,
+        zoomed_agent_panel_id: Option<EntityId>,
+        cx: &App,
+    ) -> Option<Arc<dyn PanelHandle>> {
+        self.visible_entries_for_zoomed_agent(zoomed_agent_panel_id, cx)
             .first()
             .map(|(_, entry)| entry.panel.clone())
     }
