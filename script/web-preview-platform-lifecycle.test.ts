@@ -162,13 +162,17 @@ test("onboarding uses a local Web Preview page with a real completion bridge", (
   assert.match(source, /const WEB_PREVIEW_ONBOARDING_HTML: &str/);
   assert.match(source, /const completePayload = \{ kind: "onboarding-complete" \};/);
   assert.match(source, /const completeMessage = JSON\.stringify\(completePayload\);/);
-  assert.match(source, /window\.location\.href = "about:blank#zed-onboarding-complete";/);
+  assert.match(source, /const completionToken = "zed-onboarding-complete";/);
+  assert.match(source, /document\.title = completionToken;/);
+  assert.match(source, /window\.location\.hash = completionToken;/);
+  assert.match(source, /window\.location\.href = `about:blank#\$\{completionToken\}`;/);
   assert.match(source, /let completeSent = false;/);
   assert.match(source, /const postComplete = \(event\) => \{/);
   assert.match(source, /event\.preventDefault\(\);/);
   assert.match(source, /event\.stopPropagation\(\);/);
   assert.match(source, /if \(completeSent\) return;/);
   assert.match(source, /button\.disabled = true;/);
+  assert.match(source, /signalCompletionFallback\(\);/);
   assert.match(source, /DxLaunchPreviewTargets::local_web_preview_onboarding\(web_preview_onboarding_url\(\)\)/);
   assert.match(source, /fn handle_finish\(&mut self, _: &Finish, window: &mut Window, cx: &mut Context<Self>\)/);
   assert.match(source, /finish_setup\(self\.workspace\.clone\(\), window, cx\);/);
@@ -336,12 +340,20 @@ for (const [name, path] of desktopOnboardingPreviewViews) {
     assert.match(source, /fn is_onboarding_complete_fallback_url\(url: &str\) -> bool/);
     assert.match(source, /url == "about:blank#zed-onboarding-complete"/);
     assert.match(source, /url\.ends_with\("#zed-onboarding-complete"\)/);
+    assert.match(source, /fn is_onboarding_complete_fallback_title\(title: &str\) -> bool/);
+    assert.match(source, /title == "zed-onboarding-complete"/);
     const applyBrowserEvents = functionBody(source, "apply_browser_events");
     assert.match(applyBrowserEvents, /BrowserEvent::UrlChanged\(url\) => \{/);
     assert.match(
       applyBrowserEvents,
       /self\.onboarding_complete\.is_some\(\)[\s\S]*?is_onboarding_complete_fallback_url\(url\.as_str\(\)\)[\s\S]*?cx\.defer_in\(window, move \|_, window, cx\| \{\s*complete\(window, cx\);\s*\}\);[\s\S]*?continue;/s,
       `${name} should close onboarding when the page navigates to the completion fallback URL`,
+    );
+    assert.match(applyBrowserEvents, /BrowserEvent::TitleChanged\(title\) => \{/);
+    assert.match(
+      applyBrowserEvents,
+      /self\.onboarding_complete\.is_some\(\)[\s\S]*?is_onboarding_complete_fallback_title\(title\.as_str\(\)\)[\s\S]*?cx\.defer_in\(window, move \|_, window, cx\| \{\s*complete\(window, cx\);\s*\}\);[\s\S]*?continue;/s,
+      `${name} should close onboarding when the page emits the completion fallback title`,
     );
     const syncActivation = functionBody(source, "sync_native_preview_window_activation");
     assert.match(syncActivation, /try_borrow_mut\(\)/);

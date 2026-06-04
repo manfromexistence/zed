@@ -719,7 +719,7 @@ impl Dock {
     fn visible_entries_for_zoomed_agent(
         &self,
         zoomed_agent_panel_id: Option<EntityId>,
-        cx: &App,
+        _cx: &App,
     ) -> Vec<(usize, &PanelEntry)> {
         if !self.is_open {
             return Vec::new();

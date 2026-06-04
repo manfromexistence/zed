@@ -1,3 +1,20 @@
+[2026-06-04] - Onboarding Completion Title Fallback
+
+FIXED:
+- `crates\onboarding\src\onboarding.rs` now emits an immediate `zed-onboarding-complete` title/hash completion signal before trying Web Preview IPC, so the Complete button has a native-observable fallback even when the active WebView bridge path does not deliver the message.
+- `crates\web_preview\src\web_preview_view.rs`, `crates\web_preview_macos\src\web_preview_view.rs`, and `crates\web_preview_linux\src\web_preview_view.rs` now route the completion title through the same deferred onboarding close callback used by IPC and URL fallback, before the marker can become a visible tab title.
+- `crates\workspace\src\dock.rs` now marks the zoomed-Agent helper context parameter intentionally unused, removing the warning seen during the last authorized `just run`.
+- `script\web-preview-platform-lifecycle.test.ts` now guards the title/hash fallback contract across Windows, macOS, and Linux Web Preview hosts.
+
+PASSED:
+- `node --test script\web-preview-platform-lifecycle.test.ts script\dx-workspace-ui-state-source.test.ts script\dx-style-panel-source.test.ts script\dx-title-bar-source.test.ts` with 54/54 passing.
+- `rustfmt --edition 2024 --check crates\onboarding\src\onboarding.rs crates\web_preview\src\web_preview_view.rs crates\web_preview_macos\src\web_preview_view.rs crates\web_preview_linux\src\web_preview_view.rs crates\workspace\src\dock.rs`
+- `git diff --check`
+
+NOTES:
+- The previous runtime log showed onboarding opened but no completion event after the user clicked Complete, so this pass hardens the browser-to-native signal path instead of changing the close/remove implementation.
+- `just run` was not run in this follow-up because the user has not asked for another runtime launch after reporting this click-dismissal bug.
+
 [2026-06-04] - Onboarding Completion And Agent Fullscreen Panel Ownership
 
 FIXED:

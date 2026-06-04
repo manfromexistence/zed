@@ -871,6 +871,16 @@ impl WebPreviewView {
                     }
                 }
                 BrowserEvent::TitleChanged(title) => {
+                    if self.onboarding_complete.is_some()
+                        && is_onboarding_complete_fallback_title(title.as_str())
+                    {
+                        if let Some(complete) = self.onboarding_complete.clone() {
+                            cx.defer_in(window, move |_, window, cx| {
+                                complete(window, cx);
+                            });
+                        }
+                        continue;
+                    }
                     self.page_title = Some(title.into());
                     tab_updated = true;
                 }
@@ -2237,6 +2247,10 @@ impl Render for WebPreviewView {
 
 fn is_onboarding_complete_fallback_url(url: &str) -> bool {
     url == "about:blank#zed-onboarding-complete" || url.ends_with("#zed-onboarding-complete")
+}
+
+fn is_onboarding_complete_fallback_title(title: &str) -> bool {
+    title == "zed-onboarding-complete"
 }
 
 pub(crate) fn push_browser_event(event_queue: &Arc<Mutex<Vec<BrowserEvent>>>, event: BrowserEvent) {

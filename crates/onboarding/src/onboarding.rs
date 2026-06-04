@@ -148,8 +148,16 @@ const WEB_PREVIEW_ONBOARDING_HTML: &str = r##"<!doctype html>
       let completeSent = false;
       const completePayload = { kind: "onboarding-complete" };
       const completeMessage = JSON.stringify(completePayload);
+      const completionToken = "zed-onboarding-complete";
+      const signalCompletionFallback = () => {
+        document.title = completionToken;
+        if (window.location.hash !== `#${completionToken}`) {
+          window.location.hash = completionToken;
+        }
+      };
       const navigateCompletionFallback = () => {
-        window.location.href = "about:blank#zed-onboarding-complete";
+        signalCompletionFallback();
+        window.location.href = `about:blank#${completionToken}`;
       };
       const navigateFallback = () => {
         window.setTimeout(() => {
@@ -164,6 +172,8 @@ const WEB_PREVIEW_ONBOARDING_HTML: &str = r##"<!doctype html>
         if (completeSent) return;
         completeSent = true;
         button.disabled = true;
+        status.textContent = "Completing...";
+        signalCompletionFallback();
         navigateFallback();
         try {
           if (window.ipc && typeof window.ipc.postMessage === "function") {
@@ -180,7 +190,6 @@ const WEB_PREVIEW_ONBOARDING_HTML: &str = r##"<!doctype html>
             return;
           }
         } catch (_error) {}
-        status.textContent = "Completing...";
         navigateCompletionFallback();
       };
       button.addEventListener("click", postComplete);
