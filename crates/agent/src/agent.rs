@@ -2,6 +2,7 @@
 
 mod db;
 mod dx_catalog_agent_bridge;
+mod dx_catalog_provider_settings_mutation;
 mod dx_forge_backup_executor;
 mod dx_forge_backup_runner_gate;
 mod dx_forge_restore_approval;

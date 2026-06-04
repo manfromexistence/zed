@@ -11,6 +11,7 @@ const DX_FLOW_ROOT_ENV: &str = "DX_FLOW_ROOT";
 const DX_CATALOG_ROOTS_ENV: &str = "DX_CATALOG_SOURCE_ROOTS";
 const DX_CATALOG_MODEL_ROOTS_ENV: &str = "DX_CATALOG_MODEL_ROOTS";
 const DX_CATALOG_AUTH_ROOTS_ENV: &str = "DX_CATALOG_AUTH_ROOTS";
+const DX_CATALOG_ENABLE_COMMON_WINDOWS_ROOTS_ENV: &str = "DX_CATALOG_ENABLE_COMMON_WINDOWS_ROOTS";
 const ZEROCLAW_HOME_ENV: &str = "ZEROCLAW_HOME";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -46,7 +47,11 @@ impl CatalogSourceDiscoveryConfig {
     }
 
     pub fn from_environment() -> Self {
-        let mut config = Self::new().with_common_windows_roots();
+        let mut config = Self::new();
+
+        if env_flag_enabled(DX_CATALOG_ENABLE_COMMON_WINDOWS_ROOTS_ENV) {
+            config = config.with_common_windows_roots();
+        }
 
         push_env_paths(&mut config.candidate_roots, DX_TOOLS_ROOT_ENV);
         push_env_paths(&mut config.candidate_roots, DX_FLOW_ROOT_ENV);
@@ -445,6 +450,19 @@ fn path_key(path: &Path) -> String {
     }
 }
 
+fn env_flag_enabled(key: &str) -> bool {
+    env::var(key)
+        .ok()
+        .is_some_and(|value| flag_value_enabled(&value))
+}
+
+fn flag_value_enabled(value: &str) -> bool {
+    matches!(
+        value.trim().to_ascii_lowercase().as_str(),
+        "1" | "true" | "yes" | "on"
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -473,6 +491,17 @@ mod tests {
         assert_eq!(source.root, catalog_path);
 
         let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn common_windows_root_opt_in_accepts_boolean_flag_values() {
+        for value in ["1", "true", "yes", "on", " TRUE "] {
+            assert!(flag_value_enabled(value), "value={value}");
+        }
+
+        for value in ["", "0", "false", "no", "off", "enabled"] {
+            assert!(!flag_value_enabled(value), "value={value}");
+        }
     }
 
     fn unique_root(name: &str) -> PathBuf {
