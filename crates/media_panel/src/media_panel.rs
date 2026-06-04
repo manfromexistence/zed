@@ -3123,9 +3123,10 @@ async fn fetch_remote_media_assets(
     {
         Ok(result) => {
             let result = remote_media_fetch_result_from_dx_media(result);
-            if !result.assets.is_empty() {
+            if !result.assets.is_empty() && result.warning.is_none() {
                 return Ok(result);
             }
+            assets.extend(result.assets);
             if let Some(warning) = result.warning {
                 errors.push(format!("DX Media: {}", warning.as_ref()));
             } else {
@@ -5023,7 +5024,7 @@ fn media_remote_signature(kind_label: &str, query: &str) -> SharedString {
     let mut signature = String::with_capacity(kind_label.len() + 1 + query.len());
     signature.push_str(kind_label);
     signature.push(':');
-    signature.push_str(query);
+    push_lowercase(&mut signature, query.trim());
     signature.into()
 }
 

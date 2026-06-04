@@ -86,7 +86,8 @@ test("media panel routes remote search through the dx-media bridge first", () =>
   assert.match(fetchRemoteMediaAssets, /dx_media_bridge::fetch_panel_media\(/);
   assert.match(fetchRemoteMediaAssets, /dx_media_bridge::PanelMediaSearchRequest::new\(/);
   assert.match(fetchRemoteMediaAssets, /gpui_tokio::Tokio::spawn_result\(cx/);
-  assert.match(fetchRemoteMediaAssets, /if !result\.assets\.is_empty\(\)/);
+  assert.match(fetchRemoteMediaAssets, /if !result\.assets\.is_empty\(\) && result\.warning\.is_none\(\)/);
+  assert.match(fetchRemoteMediaAssets, /assets\.extend\(result\.assets\)/);
   assert.match(fetchRemoteMediaAssets, /DX Media: no panel-renderable rows/);
   assert.match(panelSource, /RemoteMediaAsset::from/);
   assertBefore(
@@ -150,6 +151,7 @@ test("dx-media bridge maps rich media assets into panel-supported media kinds", 
 test("media panel renders bridge state and filters fetched remote rows by query", () => {
   const render = panelSource.slice(panelSource.indexOf("impl Render for MediaPanel"));
   const matchingRemoteAssets = functionBody(panelSource, "matching_remote_assets");
+  const remoteSignature = functionBody(panelSource, "media_remote_signature");
 
   assert.match(panelSource, /fn render_status_row\(/);
   assert.match(render, /let status = self\.status\.clone\(\);/);
@@ -158,4 +160,5 @@ test("media panel renders bridge state and filters fetched remote rows by query"
     matchingRemoteAssets,
     /if !query_terms\.is_empty\(\) && !remote_media_search_matches\(asset, query_terms\)/,
   );
+  assert.match(remoteSignature, /push_lowercase\(&mut signature, query\.trim\(\)\)/);
 });
