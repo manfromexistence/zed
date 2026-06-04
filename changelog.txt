@@ -1,3 +1,20 @@
+[2026-06-04] - Onboarding Completion Keeps Workspace Open
+
+FIXED:
+- `crates\onboarding\src\onboarding.rs` now activates an existing non-onboarding editor/screen before removing the fullscreen onboarding item, so clicking Complete reveals the Zed workspace instead of leaving the window with onboarding as the removed active item.
+- `crates\onboarding\src\onboarding.rs` now treats duplicate completion signals as no-ops after onboarding is gone, preventing title/IPC/URL fallback repeats from creating extra editor items.
+- `script\web-preview-platform-lifecycle.test.ts` now guards the post-onboarding activation sequence and duplicate-completion no-op behavior.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\onboarding\src\onboarding.rs`
+- `node --test script\web-preview-platform-lifecycle.test.ts script\dx-title-bar-source.test.ts` with 27/27 passing.
+- `node --test script\web-preview-platform-lifecycle.test.ts script\dx-workspace-ui-state-source.test.ts script\dx-style-panel-source.test.ts script\dx-title-bar-source.test.ts` with 54/54 passing.
+- `git diff --check`
+
+NOTES:
+- The root cause was completion removing the active fullscreen onboarding item without first reactivating the editor item that already existed behind it.
+- `just run` was not run in this follow-up because the user reported the runtime bug but did not request another launch yet.
+
 [2026-06-04] - Onboarding Completion Title Fallback
 
 FIXED:

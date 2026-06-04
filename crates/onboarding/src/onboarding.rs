@@ -25,7 +25,7 @@ use workspace::welcome::WelcomePage;
 use workspace::{
     AppState, Workspace, WorkspaceId, ZoomIn, ZoomOut,
     dock::DockPosition,
-    item::{Item, ItemEvent, WorkspaceScreenKind},
+    item::{Item, ItemEvent, ItemHandle, WorkspaceScreenKind},
     notifications::NotifyResultExt as _,
     open_new, register_serializable_item, with_active_or_new_workspace,
 };
@@ -771,8 +771,19 @@ fn close_onboarding_page<C: AppContext>(
     cx: &mut C,
 ) {
     let _ = workspace.update(cx, |workspace, cx| {
+        if find_onboarding_page(workspace, cx).is_none() {
+            return;
+        }
+
         let panes = workspace.panes().to_vec();
         let mut closed_onboarding = false;
+        let post_onboarding_item = find_post_onboarding_item(workspace, cx);
+
+        if let Some(item) = post_onboarding_item.as_ref() {
+            workspace.activate_item(item.as_ref(), true, true, window, cx);
+        } else {
+            workspace.activate_screen_kind(WorkspaceScreenKind::Editor, window, cx);
+        }
 
         for pane in panes {
             let onboarding_entries = pane
@@ -816,6 +827,31 @@ fn close_onboarding_page<C: AppContext>(
             cx.notify();
         }
     });
+}
+
+fn find_post_onboarding_item(workspace: &Workspace, cx: &App) -> Option<Box<dyn ItemHandle>> {
+    let mut fallback = None;
+
+    for pane in workspace.panes() {
+        for item in pane.read(cx).items() {
+            if item.downcast::<Onboarding>().is_some() {
+                continue;
+            }
+
+            match item.screen_kind(cx) {
+                WorkspaceScreenKind::Editor => return Some(item.boxed_clone()),
+                WorkspaceScreenKind::Browser
+                | WorkspaceScreenKind::Terminal
+                | WorkspaceScreenKind::LiquidGlass
+                | WorkspaceScreenKind::Other => {
+                    fallback.get_or_insert_with(|| item.boxed_clone());
+                }
+                WorkspaceScreenKind::Onboarding => {}
+            }
+        }
+    }
+
+    fallback
 }
 
 pub async fn handle_import_vscode_settings(

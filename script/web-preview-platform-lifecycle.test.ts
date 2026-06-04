@@ -204,11 +204,27 @@ test("onboarding uses a local Web Preview page with a real completion bridge", (
     /WebPreviewView::new_for_onboarding\([\s\S]*Some\(complete_onboarding\)[\s\S]*\)/,
   );
   assert.match(source, /fn close_onboarding_page<C: AppContext>\(/);
+  assert.match(source, /fn find_post_onboarding_item\(workspace: &Workspace, cx: &App\) -> Option<Box<dyn ItemHandle>>/);
   const closeOnboardingPage = functionBody(source, "close_onboarding_page");
   assert.match(closeOnboardingPage, /workspace\.update\(cx, \|workspace, cx\|/);
   assert.doesNotMatch(closeOnboardingPage, /with_active_or_new_workspace/);
+  assert.match(
+    closeOnboardingPage,
+    /if find_onboarding_page\(workspace, cx\)\.is_none\(\) \{\s*return;\s*\}/s,
+    "duplicate completion signals should not create a replacement editor after onboarding is already gone",
+  );
+  assert.match(closeOnboardingPage, /let post_onboarding_item = find_post_onboarding_item\(workspace, cx\);/);
+  assert.match(
+    closeOnboardingPage,
+    /if let Some\(item\) = post_onboarding_item\.as_ref\(\) \{\s*workspace\.activate_item\(item\.as_ref\(\), true, true, window, cx\);\s*\} else \{\s*workspace\.activate_screen_kind\(WorkspaceScreenKind::Editor, window, cx\);\s*\}/s,
+    "Complete must activate a real post-onboarding screen before removing the fullscreen onboarding item",
+  );
   assert.match(source, /fn find_onboarding_page\(workspace: &Workspace, cx: &App\) -> Option<Entity<Onboarding>>/);
   assert.match(source, /workspace\.panes\(\)\.iter\(\)\.find_map/);
+  const findPostOnboardingItem = functionBody(source, "find_post_onboarding_item");
+  assert.match(findPostOnboardingItem, /item\.downcast::<Onboarding>\(\)\.is_some\(\)[\s\S]*?continue;/);
+  assert.match(findPostOnboardingItem, /WorkspaceScreenKind::Editor => return Some\(item\.boxed_clone\(\)\)/);
+  assert.match(findPostOnboardingItem, /fallback\.get_or_insert_with\(\|\| item\.boxed_clone\(\)\);/);
   assert.match(source, /fn close_open_docks_for_onboarding\(/);
   assert.match(source, /closed_docks_for_fullscreen: Vec<DockPosition>/);
   assert.match(source, /fn track_closed_docks_for_fullscreen\(&mut self, positions: Vec<DockPosition>\)/);
