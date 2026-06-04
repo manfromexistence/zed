@@ -223,6 +223,7 @@ fn provider_source_output(
     };
     let metadata = source_metadata(&options, source_kind, &root, provider_count);
 
+    let mut auth_profiles = auth_profiles;
     let mut input = match source_kind {
         CatalogSourceKind::ModelsDev => models_dev_input(metadata, provider_values, Vec::new()),
         CatalogSourceKind::OpenRouter => openrouter_input(metadata, provider_values, Vec::new()),
@@ -235,7 +236,7 @@ fn provider_source_output(
         }
         CatalogSourceKind::UserAuthProfiles => auth_profiles_input(
             auth_source_metadata(&options, &root, auth_profile_count),
-            auth_profiles.clone(),
+            std::mem::take(&mut auth_profiles),
         ),
         _ => zeroclaw_providers_input(metadata, provider_values, Vec::new()),
     };
@@ -243,7 +244,7 @@ fn provider_source_output(
     if source_kind != CatalogSourceKind::UserAuthProfiles && !auth_profiles.is_empty() {
         let auth_input = auth_profiles_input(
             auth_source_metadata(&options, &root, auth_profile_count),
-            auth_profiles.clone(),
+            auth_profiles,
         );
         input.auth_profiles.extend(auth_input.auth_profiles);
     }

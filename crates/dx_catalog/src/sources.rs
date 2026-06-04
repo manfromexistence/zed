@@ -282,6 +282,18 @@ fn extend_root_candidates(candidates: &mut Vec<CatalogSourceCandidate>, root: &P
     );
 
     let providers_root = root.join("providers");
+    candidates.push(CatalogSourceCandidate::new(
+        "dx-providers-rkyv",
+        CatalogSourceKind::DxProvidersRkyv,
+        CatalogSourcePurpose::ProviderCatalog,
+        root.join("data").join("providers.rkyv"),
+    ));
+    candidates.push(CatalogSourceCandidate::new(
+        "dx-providers-rkyv",
+        CatalogSourceKind::DxProvidersRkyv,
+        CatalogSourcePurpose::ProviderCatalog,
+        providers_root.join("data").join("providers.rkyv"),
+    ));
     candidates.push(
         CatalogSourceCandidate::new(
             "zeroclaw-providers",
@@ -430,5 +442,44 @@ fn path_key(path: &Path) -> String {
         path.to_string_lossy().to_ascii_lowercase()
     } else {
         path.to_string_lossy().into_owned()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn discovers_dx_providers_rkyv_under_provider_root() {
+        let root = unique_root("dx-providers-rkyv-source");
+        let catalog_path = root.join("providers").join("data").join("providers.rkyv");
+        fs::create_dir_all(catalog_path.parent().expect("catalog should have a parent")).unwrap();
+        fs::write(&catalog_path, []).unwrap();
+
+        let discovery = CatalogSourceDiscoveryConfig::new()
+            .with_candidate_root(&root)
+            .discover();
+
+        let source = discovery
+            .available_sources()
+            .find(|source| {
+                source.id == "dx-providers-rkyv"
+                    && source.kind == CatalogSourceKind::DxProvidersRkyv
+                    && source.purpose == CatalogSourcePurpose::ProviderCatalog
+            })
+            .expect("providers rkyv source should be available");
+
+        assert_eq!(source.root, catalog_path);
+
+        let _ = fs::remove_dir_all(root);
+    }
+
+    fn unique_root(name: &str) -> PathBuf {
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock should be after Unix epoch")
+            .as_nanos();
+        std::env::temp_dir().join(format!("{}-{nonce}-{name}", std::process::id()))
     }
 }

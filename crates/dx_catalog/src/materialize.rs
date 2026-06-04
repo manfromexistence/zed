@@ -275,13 +275,15 @@ pub fn read_discovered_catalog_sources(
     for source in discovery.available_sources() {
         match source.purpose {
             CatalogSourcePurpose::ProviderCatalog | CatalogSourcePurpose::AuthProfiles => {
-                read_provider_candidate(
-                    source,
-                    options,
-                    &mut inputs,
-                    &mut provider_sources,
-                    &mut source_errors,
-                );
+                if supports_provider_source_reader(source.kind) {
+                    read_provider_candidate(
+                        source,
+                        options,
+                        &mut inputs,
+                        &mut provider_sources,
+                        &mut source_errors,
+                    );
+                }
                 read_model_catalog_candidates(
                     source,
                     options,
@@ -501,11 +503,23 @@ fn supports_model_catalog_reader(source_kind: CatalogSourceKind) -> bool {
         CatalogSourceKind::ModelsDev
             | CatalogSourceKind::OpenRouter
             | CatalogSourceKind::LiteLlmAliases
+            | CatalogSourceKind::DxProvidersRkyv
+    )
+}
+
+fn supports_provider_source_reader(source_kind: CatalogSourceKind) -> bool {
+    matches!(
+        source_kind,
+        CatalogSourceKind::ZeroclawProviders
+            | CatalogSourceKind::ModelsDev
+            | CatalogSourceKind::OpenRouter
+            | CatalogSourceKind::LiteLlmAliases
+            | CatalogSourceKind::UserAuthProfiles
     )
 }
 
 fn model_catalog_files_for_source(source: &CatalogSourceCandidateStatus) -> Vec<PathBuf> {
-    if source.root.is_file() && is_json_file(&source.root) {
+    if source.root.is_file() && is_model_catalog_file(source.kind, &source.root) {
         return vec![source.root.clone()];
     }
 
@@ -525,7 +539,7 @@ fn model_catalog_files_for_source(source: &CatalogSourceCandidateStatus) -> Vec<
     if let Ok(entries) = fs::read_dir(&source.root) {
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.is_file() && is_json_file(&path) {
+            if path.is_file() && is_model_catalog_file(source.kind, &path) {
                 push_existing_file(&mut files, path);
             }
         }
@@ -555,6 +569,9 @@ fn model_catalog_file_names(source_kind: CatalogSourceKind) -> Vec<&'static str>
                 "model_list.json",
             ]);
         }
+        CatalogSourceKind::DxProvidersRkyv => {
+            names.extend(["providers.rkyv", "data/providers.rkyv"]);
+        }
         _ => {}
     }
     names
@@ -570,6 +587,19 @@ fn is_json_file(path: &Path) -> bool {
     path.extension()
         .map(|extension| extension.to_string_lossy().eq_ignore_ascii_case("json"))
         .unwrap_or(false)
+}
+
+fn is_model_catalog_file(source_kind: CatalogSourceKind, path: &Path) -> bool {
+    match source_kind {
+        CatalogSourceKind::DxProvidersRkyv => path
+            .file_name()
+            .map(|name| {
+                name.to_string_lossy()
+                    .eq_ignore_ascii_case("providers.rkyv")
+            })
+            .unwrap_or(false),
+        _ => is_json_file(path),
+    }
 }
 
 fn skipped_model_catalog_source(
@@ -638,5 +668,56 @@ fn path_key(path: &Path) -> String {
         path.to_string_lossy().to_ascii_lowercase()
     } else {
         path.to_string_lossy().into_owned()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::{fs, path::PathBuf};
+
+    #[test]
+    fn materializes_copied_g_drive_dx_providers_catalog_when_available() {
+        let providers_path = PathBuf::from(r"G:\Dx\providers\data\providers.rkyv");
+        if !providers_path.is_file() {
+            return;
+        }
+
+        let artifact_path = unique_artifact_path("dx-providers-catalog.dxcat");
+        let output = build_catalog_artifact_from_sources(
+            CatalogArtifactBuildOptions::new(&artifact_path, "copied-g-drive-dx-providers", 0)
+                .with_discovery_config(CatalogSourceDiscoveryConfig::new().with_extra_candidate(
+                    crate::CatalogSourceCandidate::new(
+                        "dx-providers-rkyv",
+                        CatalogSourceKind::DxProvidersRkyv,
+                        CatalogSourcePurpose::ProviderCatalog,
+                        providers_path,
+                    ),
+                ))
+                .use_last_good_on_invalid(false),
+        )
+        .expect("copied G-drive providers catalog should materialize");
+
+        assert!(artifact_path.is_file());
+        assert!(output.catalog.providers.len() >= 100);
+        assert!(output.catalog.models.len() >= 1_000);
+        assert_eq!(
+            output.report.artifact_header.provider_count,
+            output.catalog.providers.len() as u32
+        );
+        assert_eq!(
+            output.report.artifact_header.model_count,
+            output.catalog.models.len() as u32
+        );
+
+        let _ = fs::remove_file(artifact_path);
+    }
+
+    fn unique_artifact_path(file_name: &str) -> PathBuf {
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock should be after Unix epoch")
+            .as_nanos();
+        std::env::temp_dir().join(format!("{}-{nonce}-{file_name}", std::process::id()))
     }
 }

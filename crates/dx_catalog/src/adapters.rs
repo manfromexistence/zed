@@ -370,6 +370,19 @@ pub fn models_dev_input(
     external_catalog_input(metadata, CatalogSourceKind::ModelsDev, providers, models)
 }
 
+pub fn dx_providers_rkyv_input(
+    metadata: SourceMetadata,
+    providers: impl IntoIterator<Item = ExternalProviderInput>,
+    models: impl IntoIterator<Item = ExternalModelInput>,
+) -> CatalogGeneratorInput {
+    external_catalog_input(
+        metadata,
+        CatalogSourceKind::DxProvidersRkyv,
+        providers,
+        models,
+    )
+}
+
 pub fn openrouter_input(
     metadata: SourceMetadata,
     providers: impl IntoIterator<Item = ExternalProviderInput>,

@@ -24,6 +24,7 @@ pub enum DxCatalogError {
     },
     EmptyPayload,
     Json(serde_json::Error),
+    Archive(String),
     Serialize(String),
     InvalidCatalog {
         reason: String,
@@ -61,6 +62,7 @@ impl fmt::Display for DxCatalogError {
             ),
             Self::EmptyPayload => write!(f, "dx catalog archive payload is empty"),
             Self::Json(error) => write!(f, "dx catalog JSON parse failed: {error}"),
+            Self::Archive(error) => write!(f, "dx catalog archive parse failed: {error}"),
             Self::Serialize(error) => write!(f, "dx catalog serialization failed: {error}"),
             Self::InvalidCatalog { reason } => {
                 write!(

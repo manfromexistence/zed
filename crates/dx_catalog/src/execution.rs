@@ -417,7 +417,9 @@ fn settings_path(
     match adapter_kind {
         CatalogExecutionAdapterKind::OpenAiCompatibleHttp
         | CatalogExecutionAdapterKind::OllamaCompatibleHttp
-        | CatalogExecutionAdapterKind::LiteLlmProxy => {
+        | CatalogExecutionAdapterKind::LiteLlmProxy
+            if !is_reserved_native_openai_compatible_provider_id(&provider.id) =>
+        {
             Some(format!("language_models.openai_compatible.{}", provider.id))
         }
         CatalogExecutionAdapterKind::OpenRouterHttp => {
@@ -435,7 +437,19 @@ fn registration_blockers(
 ) -> Vec<String> {
     let mut blockers = Vec::new();
 
-    if settings_path.is_none() {
+    if is_reserved_native_openai_compatible_provider_id(&provider.id)
+        && matches!(
+            adapter_kind,
+            CatalogExecutionAdapterKind::OpenAiCompatibleHttp
+                | CatalogExecutionAdapterKind::OllamaCompatibleHttp
+                | CatalogExecutionAdapterKind::LiteLlmProxy
+        )
+    {
+        blockers.push(format!(
+            "Provider `{}` is a native Zed provider; catalog metadata must not be registered as `language_models.openai_compatible.{}`.",
+            provider.id, provider.id
+        ));
+    } else if settings_path.is_none() {
         blockers.push(format!(
             "No settings path is defined for provider `{}` with adapter `{}`.",
             provider.id,
@@ -562,4 +576,130 @@ fn adapter_requires_base_url(adapter_kind: CatalogExecutionAdapterKind) -> bool 
             | CatalogExecutionAdapterKind::AnthropicHttp
             | CatalogExecutionAdapterKind::GoogleAiHttp
     )
+}
+
+fn is_reserved_native_openai_compatible_provider_id(provider_id: &str) -> bool {
+    matches!(
+        provider_id,
+        "amazon-bedrock"
+            | "anthropic"
+            | "copilot_chat"
+            | "deepseek"
+            | "google"
+            | "llama_cpp"
+            | "lmstudio"
+            | "mistral"
+            | "ollama"
+            | "opencode"
+            | "openai"
+            | "openai-subscribed"
+            | "openrouter"
+            | "vercel_ai_gateway"
+            | "x_ai"
+            | "zed.dev"
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{CatalogSourceRecord, ModelCapabilities};
+
+    #[test]
+    fn registration_specs_block_native_zed_provider_shadowing() {
+        let catalog = catalog_with_provider(
+            provider("deepseek", ProviderKind::OpenAiCompatible),
+            model("deepseek/deepseek-chat", "deepseek"),
+        );
+
+        let specs = build_catalog_provider_registration_specs(&catalog);
+
+        assert_eq!(specs.len(), 1);
+        assert_eq!(specs[0].settings_path, None);
+        assert!(!specs[0].can_register_settings);
+        assert!(
+            specs[0]
+                .registration_blockers
+                .iter()
+                .any(|blocker| blocker.contains("native Zed provider")),
+            "native DeepSeek must be reported as blocked instead of re-registered as language_models.openai_compatible.deepseek"
+        );
+    }
+
+    #[test]
+    fn registration_specs_keep_non_native_openai_compatible_providers() {
+        let catalog = catalog_with_provider(
+            provider("groq", ProviderKind::OpenAiCompatible),
+            model("groq/llama-3.3-70b-versatile", "groq"),
+        );
+
+        let specs = build_catalog_provider_registration_specs(&catalog);
+
+        assert_eq!(specs.len(), 1);
+        assert_eq!(
+            specs[0].settings_path.as_deref(),
+            Some("language_models.openai_compatible.groq")
+        );
+    }
+
+    fn catalog_with_provider(provider: ProviderRecord, model: ModelRecord) -> DxCatalog {
+        DxCatalog {
+            schema_version: crate::DX_CATALOG_SCHEMA_VERSION,
+            generated_unix_ms: 0,
+            source_revision: "test".to_string(),
+            sources: vec![CatalogSourceRecord {
+                id: "test-source".to_string(),
+                kind: crate::CatalogSourceKind::ZeroclawProviders,
+                revision: None,
+                generated_unix_ms: None,
+                notes: None,
+            }],
+            providers: vec![provider],
+            models: vec![model],
+            routing_rules: Vec::new(),
+        }
+    }
+
+    fn provider(id: &str, kind: ProviderKind) -> ProviderRecord {
+        ProviderRecord {
+            id: id.to_string(),
+            display_name: id.to_string(),
+            kind,
+            auth: ProviderAuthKind::ApiKey,
+            auth_profile: None,
+            aliases: Vec::new(),
+            base_url: Some(format!("https://api.{id}.example/v1")),
+            homepage_url: None,
+            supports_streaming: true,
+            supports_tools: true,
+            supports_free_tier: false,
+            supports_premium_account: true,
+            is_local: false,
+            is_enabled_by_default: true,
+            notes: None,
+        }
+    }
+
+    fn model(id: &str, provider_id: &str) -> ModelRecord {
+        ModelRecord {
+            id: id.to_string(),
+            provider_id: provider_id.to_string(),
+            display_name: id.to_string(),
+            aliases: Vec::new(),
+            capabilities: ModelCapabilities {
+                chat: true,
+                tools: true,
+                streaming: true,
+                ..ModelCapabilities::default()
+            },
+            context_window_tokens: Some(128_000),
+            max_output_tokens: Some(8_192),
+            pricing: None,
+            local_runtime: None,
+            recommended_roles: Vec::new(),
+            free_tier_hint: None,
+            premium_account_hint: None,
+            notes: None,
+        }
+    }
 }

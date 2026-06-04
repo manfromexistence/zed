@@ -7,6 +7,7 @@ mod generator;
 mod materialize;
 mod model_catalog_readers;
 mod provider_readers;
+mod providers_catalog_readers;
 mod readers;
 mod receipt_cache;
 mod receipt_cache_builder;
@@ -17,8 +18,9 @@ mod types;
 pub use adapters::{
     AuthProfileInput, ExternalModelInput, ExternalProviderInput, FlowLocalRoleInput,
     LiteLlmAliasInput, LlamaCppModelInput, SourceMetadata, auth_profiles_input,
-    flow_local_roles_input, lite_llm_aliases_input, lite_llm_catalog_input, llama_cpp_scan_input,
-    models_dev_input, openrouter_input, zeroclaw_providers_input,
+    dx_providers_rkyv_input, flow_local_roles_input, lite_llm_aliases_input,
+    lite_llm_catalog_input, llama_cpp_scan_input, models_dev_input, openrouter_input,
+    zeroclaw_providers_input,
 };
 pub use agent_picker::{
     AgentPickerAuthState, AgentPickerGroup, AgentPickerModel, AgentPickerProjection,
@@ -56,6 +58,7 @@ pub use provider_readers::{
     ProviderSourceReadOutput, ProviderSourceReadReport, ProviderSourceReaderOptions,
     SkippedProviderSourceEntry, read_provider_source, read_provider_source_root,
 };
+pub use providers_catalog_readers::{ProvidersCatalogReaderOptions, read_providers_catalog_file};
 pub use readers::{
     LocalModelCatalogReadOutput, LocalModelCatalogReadReport, LocalModelSourceReaderOptions,
     SkippedLocalModelFile, read_local_model_source, read_local_models_from_root,

@@ -131,6 +131,7 @@ pub enum CatalogSourceKind {
     UserAuthProfiles,
     Manual,
     Unknown,
+    DxProvidersRkyv,
 }
 
 #[derive(

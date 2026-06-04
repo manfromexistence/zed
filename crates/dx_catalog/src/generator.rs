@@ -3,7 +3,7 @@ use crate::{
     DxCatalog, ModelRecord, ProviderAuthKind, ProviderRecord, RoutingRule,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, btree_map::Entry};
 
 #[derive(Debug, Clone)]
 pub struct CatalogGeneratorInput {
@@ -249,18 +249,19 @@ fn merge_record<T>(
     replaced_ids: &mut Vec<String>,
     skipped_ids: &mut Vec<String>,
 ) {
-    if records.contains_key(&id) {
-        match conflict_policy {
+    match records.entry(id) {
+        Entry::Occupied(mut entry) => match conflict_policy {
             CatalogConflictPolicy::PreferFirstSource => {
-                skipped_ids.push(id);
+                skipped_ids.push(entry.key().clone());
             }
             CatalogConflictPolicy::PreferLatestSource => {
-                replaced_ids.push(id.clone());
-                records.insert(id, record);
+                replaced_ids.push(entry.key().clone());
+                entry.insert(record);
             }
+        },
+        Entry::Vacant(entry) => {
+            entry.insert(record);
         }
-    } else {
-        records.insert(id, record);
     }
 }
 

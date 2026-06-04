@@ -341,8 +341,8 @@ pub fn select_catalog_route(
 
     Some(route_selection(
         preferences.role,
-        *primary,
-        *provider,
+        primary,
+        provider,
         fallback_model_ids,
         "Best scored catalog route".to_string(),
     ))

@@ -100,6 +100,10 @@ pub fn read_model_catalog_file(
     options: ModelCatalogReaderOptions,
 ) -> Result<ModelCatalogReadOutput> {
     let path = path.as_ref().to_path_buf();
+    if source_kind == CatalogSourceKind::DxProvidersRkyv {
+        return crate::read_providers_catalog_file(&path, options.into());
+    }
+
     let source_available = path.exists();
     if !source_available || !supports_source_kind(source_kind) {
         return Ok(model_catalog_output(
