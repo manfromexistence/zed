@@ -661,11 +661,11 @@ impl WebPreviewView {
     #[cfg(target_os = "linux")]
     fn sync_native_preview_window_activation(&mut self, window: &mut Window) {
         self.reconcile_linux_native_preview_target(window);
-        if self.native_preview.borrow().is_none() {
-            window.refresh();
+        let Ok(mut native_preview) = self.native_preview.try_borrow_mut() else {
             return;
-        }
-        let Some(preview) = self.native_preview.borrow_mut().as_mut() else {
+        };
+        let Some(preview) = native_preview.as_mut() else {
+            window.refresh();
             return;
         };
 
@@ -685,7 +685,7 @@ impl WebPreviewView {
             let _ = set_linux_native_preview_visible(preview, false);
         }
 
-        drop(preview);
+        drop(native_preview);
         if self.should_focus_native_preview_page(window) {
             self.focus_native_preview_page();
         }

@@ -1441,7 +1441,9 @@ impl WebPreviewView {
 
     #[cfg(target_os = "windows")]
     fn focus_native_preview_page(&self) {
-        let borrow = self.native_preview.borrow();
+        let Ok(borrow) = self.native_preview.try_borrow() else {
+            return;
+        };
         if let Some(preview) = borrow.as_ref() {
             let _ = preview.focus_page();
         }
@@ -1449,21 +1451,20 @@ impl WebPreviewView {
 
     #[cfg(target_os = "windows")]
     fn sync_native_preview_window_activation(&mut self, window: &mut Window) {
-        if self.native_preview.borrow().is_none() {
+        let Ok(mut native_preview) = self.native_preview.try_borrow_mut() else {
             return;
-        }
-        {
-            let mut native_preview = self.native_preview.borrow_mut();
-            let Some(preview) = native_preview.as_mut() else {
-                return;
-            };
+        };
 
-            let should_be_visible = self.is_active_item;
-            let _ = preview.set_visible(should_be_visible);
-            if should_be_visible && let Some(bounds) = self.host_bounds.borrow().as_ref().copied() {
-                let _ = preview.sync_bounds(bounds, window.scale_factor());
-            }
+        let Some(preview) = native_preview.as_mut() else {
+            return;
+        };
+
+        let should_be_visible = self.is_active_item;
+        let _ = preview.set_visible(should_be_visible);
+        if should_be_visible && let Some(bounds) = self.host_bounds.borrow().as_ref().copied() {
+            let _ = preview.sync_bounds(bounds, window.scale_factor());
         }
+        drop(native_preview);
 
         if self.should_focus_native_preview_page(window)
             && !self.native_preview_has_keyboard_focus(window)

@@ -312,6 +312,9 @@ for (const [name, path] of desktopOnboardingPreviewViews) {
     assert.match(newForOnboarding, /Self::new_for_url\([\s\S]*onboarding_complete/s);
     const newForUrl = functionBody(source, "new_for_url");
     assert.match(newForUrl, /onboarding_complete,/);
+    const syncActivation = functionBody(source, "sync_native_preview_window_activation");
+    assert.match(syncActivation, /try_borrow_mut\(\)/);
+    assert.doesNotMatch(syncActivation, /native_preview\.borrow\(\)\.is_none\(\)/);
   });
 }
 

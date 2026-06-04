@@ -1,3 +1,17 @@
+[2026-06-04] - Web Preview Activation Borrow Hardening
+
+FIXED:
+- `crates\web_preview\src\web_preview_view.rs`, `crates\web_preview_macos\src\web_preview_view.rs`, and `crates\web_preview_linux\src\web_preview_view.rs` now use fail-closed `try_borrow` / `try_borrow_mut` in the native Web Preview activation path so re-entrant native callbacks skip a frame instead of panicking during onboarding/fullscreen overlay rendering.
+- `script\web-preview-platform-lifecycle.test.ts` now guards the panic-safe native activation borrow contract for all desktop Web Preview implementations.
+
+PASSED:
+- `node --test script\web-preview-platform-lifecycle.test.ts script\dx-workspace-ui-state-source.test.ts script\dx-project-panel-source.test.ts` with 54/54 passing.
+- `rustfmt --edition 2024 --check crates\web_preview\src\web_preview_view.rs crates\web_preview_macos\src\web_preview_view.rs crates\web_preview_linux\src\web_preview_view.rs`
+- `git diff --check`
+
+NOTES:
+- This is a source-hardening follow-up to the onboarding crash fix. `just run` and live click validation were still not run because runtime launch has not been explicitly authorized in this continuation.
+
 [2026-06-04] - Onboarding Crash And Dock Interaction Hardening
 
 FIXED:
