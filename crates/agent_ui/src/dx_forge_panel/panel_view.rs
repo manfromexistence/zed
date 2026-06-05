@@ -7,6 +7,7 @@ use workspace::{Workspace, dock::side_panel_header_controls};
 use super::{
     controls::{open_path_button, toolbar},
     panel::DxForgePanel,
+    providers::remote_target_strip,
     rows::{empty_row, receipt_row, section_header, source_row, status_strip},
     snapshot::DxForgePanelSnapshot,
 };
@@ -34,6 +35,7 @@ pub(super) fn render_panel(
             cx,
         ))
         .child(toolbar(snapshot, workspace, panel, cx))
+        .child(remote_target_strip(snapshot, cx))
         .child(
             v_flex()
                 .flex_1()
