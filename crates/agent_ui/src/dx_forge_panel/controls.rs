@@ -1,4 +1,4 @@
-use gpui::{AnyElement, App, AppContext as _, TaskExt, WeakEntity, Window, px};
+use gpui::{AnyElement, App, TaskExt, WeakEntity, Window, px};
 use std::path::PathBuf;
 use ui::{IconButtonShape, Tooltip, prelude::*};
 use workspace::{OpenOptions, Workspace};

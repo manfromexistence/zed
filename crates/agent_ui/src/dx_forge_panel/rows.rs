@@ -1,4 +1,4 @@
-use gpui::{AnyElement, App, SharedString, px};
+use gpui::{AnyElement, App, InteractiveElement, SharedString, Stateful, px};
 use ui::{IconName, Tooltip, prelude::*};
 
 use super::snapshot::{DxForgePanelState, DxForgeReceiptRow, DxForgeSourceRow};
@@ -139,7 +139,7 @@ pub(super) fn source_row(
     .into_any_element()
 }
 
-pub(super) fn empty_row(id: &'static str, label: &'static str, cx: &App) -> AnyElement {
+pub(super) fn empty_row(id: &'static str, label: &'static str, _cx: &App) -> AnyElement {
     h_flex()
         .id(id)
         .h(px(28.0))
@@ -183,7 +183,7 @@ fn row_shell(
     path: String,
     open_button: Option<AnyElement>,
     cx: &App,
-) -> Div {
+) -> Stateful<Div> {
     let mut row = h_flex()
         .id(id)
         .w_full()
