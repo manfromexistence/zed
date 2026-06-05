@@ -1,6 +1,5 @@
 use gpui::{
-    AnyElement, App, EntityId, InteractiveElement, IntoElement, ScrollHandle, SharedString,
-    WeakEntity, Window,
+    AnyElement, App, EntityId, InteractiveElement, IntoElement, ScrollHandle, WeakEntity, Window,
 };
 use ui::{WithScrollbar, prelude::*};
 use workspace::{Workspace, dock::side_panel_header_controls};
@@ -9,8 +8,9 @@ use super::{
     controls::{open_path_button, toolbar},
     panel::DxForgePanel,
     providers::remote_target_strip,
-    rows::{empty_row, receipt_row, section_header, source_row, status_strip},
-    snapshot::{DxForgePanelSnapshot, DxForgeSourceRow},
+    rows::{empty_row, receipt_row, section_header, status_strip},
+    snapshot::DxForgePanelSnapshot,
+    source_section::{SourceSection, source_section},
 };
 
 pub(super) fn render_panel(
@@ -51,6 +51,7 @@ pub(super) fn render_panel(
                         .min_h_0()
                         .min_w_0()
                         .py_1()
+                        .child(remote_registry_section(snapshot, workspace, cx))
                         .child(package_status_section(snapshot, workspace, cx))
                         .child(machine_cache_section(snapshot, workspace, cx))
                         .child(receipt_section(snapshot, workspace, cx))
@@ -85,6 +86,30 @@ fn panel_header(
             panel_id,
             cx,
         ))
+}
+
+fn remote_registry_section(
+    snapshot: &DxForgePanelSnapshot,
+    workspace: &WeakEntity<Workspace>,
+    cx: &App,
+) -> AnyElement {
+    source_section(
+        SourceSection {
+            header_id: "dx-forge-remote-registry-header",
+            title: "Remote Registry",
+            icon: IconName::CloudDownload,
+            empty_id: "dx-forge-remote-registry-empty",
+            workspace_empty: "Open a workspace to read Forge remotes",
+            empty: "No Forge remote registry found",
+            row_id: "dx-forge-remote-registry",
+            open_id: "dx-forge-open-remote-registry",
+            open_tooltip: "Open remote registry",
+        },
+        &snapshot.remote_registries,
+        snapshot,
+        workspace,
+        cx,
+    )
 }
 
 fn package_status_section(
@@ -133,58 +158,6 @@ fn machine_cache_section(
         workspace,
         cx,
     )
-}
-
-struct SourceSection {
-    header_id: &'static str,
-    title: &'static str,
-    icon: IconName,
-    empty_id: &'static str,
-    workspace_empty: &'static str,
-    empty: &'static str,
-    row_id: &'static str,
-    open_id: &'static str,
-    open_tooltip: &'static str,
-}
-
-fn source_section(
-    section: SourceSection,
-    rows: &[DxForgeSourceRow],
-    snapshot: &DxForgePanelSnapshot,
-    workspace: &WeakEntity<Workspace>,
-    cx: &App,
-) -> AnyElement {
-    let mut stack = v_flex().w_full().min_w_0().child(section_header(
-        section.header_id,
-        section.title,
-        section.icon,
-        rows.len(),
-        cx,
-    ));
-
-    if snapshot.workspace_roots.is_empty() {
-        stack = stack.child(empty_row(section.empty_id, section.workspace_empty, cx));
-    } else if rows.is_empty() {
-        stack = stack.child(empty_row(section.empty_id, section.empty, cx));
-    } else {
-        for (ix, row) in rows.iter().enumerate() {
-            stack = stack.child(source_row(
-                SharedString::from(format!("{}-{ix}", section.row_id)),
-                section.icon,
-                row,
-                Some(open_path_button(
-                    format!("{}-{ix}", section.open_id),
-                    section.open_tooltip,
-                    &row.path,
-                    &snapshot.workspace_roots,
-                    workspace,
-                )),
-                cx,
-            ));
-        }
-    }
-
-    stack.into_any_element()
 }
 
 fn receipt_section(

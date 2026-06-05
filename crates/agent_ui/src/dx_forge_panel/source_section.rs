@@ -1,0 +1,61 @@
+use gpui::{AnyElement, App, SharedString, WeakEntity};
+use ui::{IconName, prelude::*};
+use workspace::Workspace;
+
+use super::{
+    controls::open_path_button,
+    rows::{empty_row, section_header, source_row},
+    snapshot::{DxForgePanelSnapshot, DxForgeSourceRow},
+};
+
+pub(super) struct SourceSection {
+    pub(super) header_id: &'static str,
+    pub(super) title: &'static str,
+    pub(super) icon: IconName,
+    pub(super) empty_id: &'static str,
+    pub(super) workspace_empty: &'static str,
+    pub(super) empty: &'static str,
+    pub(super) row_id: &'static str,
+    pub(super) open_id: &'static str,
+    pub(super) open_tooltip: &'static str,
+}
+
+pub(super) fn source_section(
+    section: SourceSection,
+    rows: &[DxForgeSourceRow],
+    snapshot: &DxForgePanelSnapshot,
+    workspace: &WeakEntity<Workspace>,
+    cx: &App,
+) -> AnyElement {
+    let mut stack = v_flex().w_full().min_w_0().child(section_header(
+        section.header_id,
+        section.title,
+        section.icon,
+        rows.len(),
+        cx,
+    ));
+
+    if snapshot.workspace_roots.is_empty() {
+        stack = stack.child(empty_row(section.empty_id, section.workspace_empty, cx));
+    } else if rows.is_empty() {
+        stack = stack.child(empty_row(section.empty_id, section.empty, cx));
+    } else {
+        for (ix, row) in rows.iter().enumerate() {
+            stack = stack.child(source_row(
+                SharedString::from(format!("{}-{ix}", section.row_id)),
+                section.icon,
+                row,
+                Some(open_path_button(
+                    format!("{}-{ix}", section.open_id),
+                    section.open_tooltip,
+                    &row.path,
+                    &snapshot.workspace_roots,
+                    workspace,
+                )),
+                cx,
+            ));
+        }
+    }
+
+    stack.into_any_element()
+}

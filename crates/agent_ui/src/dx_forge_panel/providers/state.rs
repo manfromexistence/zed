@@ -1,6 +1,9 @@
 use ui::{Color, IconName};
 
-use super::{super::snapshot::DxForgePanelSnapshot, catalog::ProviderGroup};
+use super::{
+    super::snapshot::{DxForgePanelSnapshot, DxForgeRemoteProvider},
+    catalog::{ForgeProvider, ProviderGroup},
+};
 
 pub(super) struct RemoteTargetState {
     pub(super) label: &'static str,
@@ -23,10 +26,105 @@ pub(super) fn remote_target_state(
     }
 
     match group {
-        ProviderGroup::Code => code_target_state(snapshot),
-        ProviderGroup::Storage => storage_target_state(snapshot),
-        ProviderGroup::Media => media_target_state(snapshot),
+        ProviderGroup::Code => group_target_state(group, snapshot, code_target_state(snapshot)),
+        ProviderGroup::Storage => {
+            group_target_state(group, snapshot, storage_target_state(snapshot))
+        }
+        ProviderGroup::Media => group_target_state(group, snapshot, media_target_state(snapshot)),
     }
+}
+
+pub(super) fn provider_target_state(
+    provider: &ForgeProvider,
+    snapshot: &DxForgePanelSnapshot,
+) -> RemoteTargetState {
+    if snapshot.workspace_roots.is_empty() {
+        return target_state(
+            "offline",
+            "Open a workspace to inspect Forge targets",
+            Color::Muted,
+            IconName::Info,
+        );
+    }
+
+    let Some(remote) = snapshot.remote_provider_for(provider.id) else {
+        return target_state(
+            "catalog",
+            format!(
+                "{} is available in the DX icon catalog; no local remote is registered",
+                provider.label
+            ),
+            Color::Muted,
+            IconName::Circle,
+        );
+    };
+
+    provider_state_from_remote(remote)
+}
+
+fn group_target_state(
+    group: ProviderGroup,
+    snapshot: &DxForgePanelSnapshot,
+    fallback: RemoteTargetState,
+) -> RemoteTargetState {
+    let registry_count = snapshot.remote_registry_count_for_group(group.key());
+    if registry_count == 0 {
+        return fallback;
+    }
+
+    let configured_count = snapshot.configured_provider_count_for_group(group.key());
+    if configured_count == 0 {
+        return target_state(
+            "review",
+            format!(
+                "{} registered {}; none enabled",
+                registry_count,
+                plural(registry_count, "remote", "remotes"),
+            ),
+            Color::Warning,
+            IconName::Warning,
+        );
+    }
+
+    target_state(
+        "configured",
+        format!(
+            "{} of {} registered {} enabled; live remote health unchecked",
+            configured_count,
+            registry_count,
+            plural(registry_count, "remote", "remotes"),
+        ),
+        Color::Success,
+        IconName::Check,
+    )
+}
+
+fn provider_state_from_remote(remote: &DxForgeRemoteProvider) -> RemoteTargetState {
+    if !remote.enabled {
+        return target_state(
+            "disabled",
+            format!(
+                "{} remote '{}' is registered but disabled",
+                remote.label, remote.remote_name
+            ),
+            Color::Warning,
+            IconName::Warning,
+        );
+    }
+
+    target_state(
+        if remote.primary {
+            "primary"
+        } else {
+            "configured"
+        },
+        format!(
+            "{} remote '{}' configured; live remote health unchecked",
+            remote.label, remote.remote_name
+        ),
+        Color::Success,
+        IconName::Check,
+    )
 }
 
 fn code_target_state(snapshot: &DxForgePanelSnapshot) -> RemoteTargetState {

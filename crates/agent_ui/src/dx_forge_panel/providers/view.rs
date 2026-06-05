@@ -4,7 +4,8 @@ use workspace::Workspace;
 
 use super::{
     catalog::{ForgeProvider, ProviderGroup, providers_for},
-    state::{RemoteTargetState, remote_target_state},
+    state::{RemoteTargetState, provider_target_state, remote_target_state},
+    tooltips::{provider_tooltip_meta, remote_target_tooltip},
 };
 use crate::dx_forge_panel::{
     controls::{open_workspace_path, workspace_path},
@@ -61,14 +62,14 @@ fn provider_target_button(
     debug_assert!(!provider.source_pack.is_empty());
     debug_assert!(!provider.source_slug.is_empty());
 
-    let state = remote_target_state(provider.group, snapshot);
-    let target_path = target_path_for_group(provider.group, snapshot).map(String::from);
+    let state = provider_target_state(provider, snapshot);
+    let target_path = target_path_for_provider(provider, snapshot).map(String::from);
     let local_path = target_path
         .as_deref()
         .and_then(|path| workspace_path(path, &snapshot.workspace_roots));
     let enabled = local_path.as_ref().is_some_and(|path| path.exists());
     let title = SharedString::from(provider.label);
-    let meta = provider_tooltip_meta(provider, &state, target_path.as_deref(), enabled);
+    let meta = provider_tooltip_meta(provider, snapshot, &state, target_path.as_deref(), enabled);
 
     IconButton::new(format!("dx-forge-provider-{}", provider.id), provider.icon)
         .shape(IconButtonShape::Square)
@@ -215,51 +216,13 @@ fn target_path_for_group<'a>(
     }
 }
 
-fn provider_tooltip_meta(
+fn target_path_for_provider<'a>(
     provider: &ForgeProvider,
-    state: &RemoteTargetState,
-    target_path: Option<&str>,
-    enabled: bool,
-) -> String {
-    let mut lines = vec![
-        format!("{} target - {}", provider.group.title(), state.label),
-        state.detail.clone(),
-    ];
-
-    if let Some(path) = target_path {
-        lines.push(format!("Local evidence: {path}"));
-    } else {
-        lines.push("Local evidence is not available yet".to_string());
-    }
-
-    if !enabled {
-        lines.push("Open a workspace or generate Forge evidence to enable this target".to_string());
-    }
-
-    lines.join("\n")
-}
-
-fn remote_target_tooltip(
-    group: ProviderGroup,
-    state: &RemoteTargetState,
-    target_path: Option<&str>,
-    enabled: bool,
-) -> String {
-    let mut lines = vec![
-        state.label.to_string(),
-        state.detail.clone(),
-        format!("Providers: {}", group.provider_labels()),
-    ];
-
-    if let Some(path) = target_path {
-        lines.push(format!("Local evidence: {path}"));
-    }
-
-    if !enabled {
-        lines.push("No local evidence path is available for this lane".to_string());
-    }
-
-    lines.join("\n")
+    snapshot: &'a DxForgePanelSnapshot,
+) -> Option<&'a str> {
+    snapshot
+        .remote_provider_for(provider.id)
+        .map(|remote| remote.registry_path.as_str())
 }
 
 fn provider_button_style(state: &RemoteTargetState) -> ButtonStyle {

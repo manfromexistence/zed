@@ -1,8 +1,9 @@
 use crate::dx_forge_panel::machine_cache::machine_cache_rows;
 use crate::dx_forge_panel::package_status::package_status_rows;
+use crate::dx_forge_panel::remote_registry::remote_registry_snapshot;
 use crate::dx_forge_panel::snapshot_state::{
-    ForgeStateInputs, configured_forge_root_count, configured_root_scope, forge_history_root_path,
-    forge_state, workspace_scope,
+    ForgeStateInputs, configured_forge_root_count, forge_history_root_path, forge_state,
+    workspace_scope,
 };
 use crate::dx_receipt_history::{DxToolHistoryBucket, tool_history_snapshot};
 use crate::dx_source_sets::{DxSourceItem, source_set_snapshot};
@@ -10,6 +11,7 @@ use crate::dx_source_sets::{DxSourceItem, source_set_snapshot};
 const FORGE_HISTORY_LABEL: &str = "Forge History";
 const MACHINE_CACHES_LABEL: &str = "Machine Caches";
 const PACKAGE_STATUS_LABEL: &str = "Package Status";
+const REMOTE_REGISTRY_LABEL: &str = "Remote Registry";
 const RESTORE_PREVIEWS_LABEL: &str = "Restore Previews";
 const MEDIA_OUTPUTS_LABEL: &str = "Media Outputs";
 const MAX_PANEL_ROWS: usize = 4;
@@ -18,23 +20,62 @@ const MAX_PANEL_ROWS: usize = 4;
 pub(super) struct DxForgePanelSnapshot {
     pub(super) workspace_roots: Vec<String>,
     pub(super) workspace_scope: String,
-    pub(super) configured_root_scope: String,
     pub(super) state: DxForgePanelState,
     pub(super) state_detail: String,
-    pub(super) history_root_label: String,
     pub(super) history_root_path: Option<String>,
     pub(super) history_root_exists: bool,
     pub(super) receipt_count: usize,
     pub(super) summarized_receipt_count: usize,
     pub(super) visible_blocker_count: usize,
-    pub(super) visible_machine_cache_warning_count: usize,
-    pub(super) visible_package_status_warning_count: usize,
     pub(super) visible_restore_warning_count: usize,
     pub(super) machine_caches: Vec<DxForgeSourceRow>,
     pub(super) package_statuses: Vec<DxForgeSourceRow>,
+    pub(super) remote_registries: Vec<DxForgeSourceRow>,
+    pub(super) remote_providers: Vec<DxForgeRemoteProvider>,
     pub(super) latest_receipts: Vec<DxForgeReceiptRow>,
     pub(super) restore_previews: Vec<DxForgeSourceRow>,
     pub(super) media_outputs: Vec<DxForgeSourceRow>,
+}
+
+impl DxForgePanelSnapshot {
+    pub(super) fn remote_provider_for(&self, provider_id: &str) -> Option<&DxForgeRemoteProvider> {
+        let mut best = None;
+        for provider in self
+            .remote_providers
+            .iter()
+            .filter(|provider| provider.provider_id == provider_id)
+        {
+            if best.is_none_or(|current| {
+                remote_provider_rank(provider) > remote_provider_rank(current)
+            }) {
+                best = Some(provider);
+            }
+        }
+        best
+    }
+
+    pub(super) fn remote_registry_count_for_group(&self, group_key: &str) -> usize {
+        self.remote_providers
+            .iter()
+            .filter(|provider| provider.group_key == group_key)
+            .count()
+    }
+
+    pub(super) fn configured_provider_count_for_group(&self, group_key: &str) -> usize {
+        self.remote_providers
+            .iter()
+            .filter(|provider| provider.group_key == group_key && provider.enabled)
+            .count()
+    }
+}
+
+fn remote_provider_rank(provider: &DxForgeRemoteProvider) -> u8 {
+    match (provider.primary, provider.enabled) {
+        (true, true) => 3,
+        (false, true) => 2,
+        (true, false) => 1,
+        (false, false) => 0,
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -68,6 +109,18 @@ pub(super) struct DxForgeSourceRow {
 }
 
 #[derive(Clone)]
+pub(super) struct DxForgeRemoteProvider {
+    pub(super) provider_id: String,
+    pub(super) group_key: String,
+    pub(super) label: String,
+    pub(super) remote_name: String,
+    pub(super) registry_path: String,
+    pub(super) detail: String,
+    pub(super) enabled: bool,
+    pub(super) primary: bool,
+}
+
+#[derive(Clone)]
 pub(super) struct DxForgeReceiptDrilldown {
     pub(super) label: String,
     pub(super) detail: String,
@@ -84,6 +137,10 @@ pub(super) fn forge_panel_snapshot(workspace_roots: &[String]) -> DxForgePanelSn
     let latest_receipts = history.map(receipt_rows).unwrap_or_default();
     let summarized_receipt_count = latest_receipts.len();
     let receipt_count = history.map(|bucket| bucket.count).unwrap_or_default();
+    let remote_registry = remote_registry_snapshot(workspace_roots);
+    let remote_registries = remote_registry.rows;
+    let remote_providers = remote_registry.providers;
+    let visible_remote_registry_warning_count = remote_registry.warning_count;
     let package_statuses = package_status_rows(workspace_roots);
     let visible_package_status_warning_count = package_statuses
         .iter()
@@ -105,14 +162,13 @@ pub(super) fn forge_panel_snapshot(workspace_roots: &[String]) -> DxForgePanelSn
         .map(|preview| preview.warnings.len())
         .sum();
     let history_root_exists = history.map(|bucket| bucket.root_exists).unwrap_or(false);
-    let history_root_label = history
-        .map(|bucket| bucket.root_label.clone())
-        .unwrap_or_else(|| "No workspace".to_string());
     let history_root_path = forge_history_root_path(workspace_roots, history_root_exists);
     let (state, state_detail) = forge_state(ForgeStateInputs {
         workspace_roots,
         history_root_exists,
         configured_root_count,
+        remote_registry_label: REMOTE_REGISTRY_LABEL,
+        remote_registry_count: remote_registries.len(),
         machine_cache_count: machine_caches.len(),
         machine_caches_label: MACHINE_CACHES_LABEL,
         package_status_label: PACKAGE_STATUS_LABEL,
@@ -120,6 +176,7 @@ pub(super) fn forge_panel_snapshot(workspace_roots: &[String]) -> DxForgePanelSn
         receipt_count,
         summarized_receipt_count,
         visible_blocker_count,
+        visible_remote_registry_warning_count,
         visible_machine_cache_warning_count,
         visible_package_status_warning_count,
         visible_restore_warning_count,
@@ -128,20 +185,18 @@ pub(super) fn forge_panel_snapshot(workspace_roots: &[String]) -> DxForgePanelSn
     DxForgePanelSnapshot {
         workspace_roots: workspace_roots.to_vec(),
         workspace_scope: workspace_scope(workspace_roots),
-        configured_root_scope: configured_root_scope(workspace_roots, configured_root_count),
         state,
         state_detail,
-        history_root_label,
         history_root_path,
         history_root_exists,
         receipt_count,
         summarized_receipt_count,
         visible_blocker_count,
-        visible_machine_cache_warning_count,
-        visible_package_status_warning_count,
         visible_restore_warning_count,
         machine_caches,
         package_statuses,
+        remote_registries,
+        remote_providers,
         latest_receipts,
         restore_previews,
         media_outputs,

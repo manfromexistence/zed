@@ -14,10 +14,24 @@ const packageStatusPath = "crates/agent_ui/src/dx_forge_panel/package_status.rs"
 const packageStatus = existsSync(packageStatusPath)
   ? readFileSync(packageStatusPath, "utf8")
   : "";
+const remoteRegistryPath = "crates/agent_ui/src/dx_forge_panel/remote_registry.rs";
+const remoteRegistry = existsSync(remoteRegistryPath)
+  ? readFileSync(remoteRegistryPath, "utf8")
+  : "";
+const remoteRegistryProvidersPath =
+  "crates/agent_ui/src/dx_forge_panel/remote_registry/providers.rs";
+const remoteRegistryProviders = existsSync(remoteRegistryProvidersPath)
+  ? readFileSync(remoteRegistryProvidersPath, "utf8")
+  : "";
+const sourceSectionPath = "crates/agent_ui/src/dx_forge_panel/source_section.rs";
+const sourceSection = existsSync(sourceSectionPath)
+  ? readFileSync(sourceSectionPath, "utf8")
+  : "";
 const providersRootPath = "crates/agent_ui/src/dx_forge_panel/providers/mod.rs";
 const providersCatalogPath = "crates/agent_ui/src/dx_forge_panel/providers/catalog.rs";
 const providersStatePath = "crates/agent_ui/src/dx_forge_panel/providers/state.rs";
 const providersViewPath = "crates/agent_ui/src/dx_forge_panel/providers/view.rs";
+const providersTooltipsPath = "crates/agent_ui/src/dx_forge_panel/providers/tooltips.rs";
 const providersRoot = existsSync(providersRootPath)
   ? readFileSync(providersRootPath, "utf8")
   : "";
@@ -29,6 +43,9 @@ const providersState = existsSync(providersStatePath)
   : "";
 const providersView = existsSync(providersViewPath)
   ? readFileSync(providersViewPath, "utf8")
+  : "";
+const providersTooltips = existsSync(providersTooltipsPath)
+  ? readFileSync(providersTooltipsPath, "utf8")
   : "";
 const snapshot = readFileSync("crates/agent_ui/src/dx_forge_panel/snapshot.rs", "utf8");
 const snapshotStatePath = "crates/agent_ui/src/dx_forge_panel/snapshot_state.rs";
@@ -51,14 +68,23 @@ const receiptFields = readFileSync(
 );
 const sourceSets = readFileSync("crates/agent_ui/src/dx_source_sets.rs", "utf8");
 const sourceSetReceipts = readFileSync("crates/agent_ui/src/dx_source_sets/receipts.rs", "utf8");
-const providers = [providersRoot, providersCatalog, providersState, providersView].join("\n");
+const providers = [
+  providersRoot,
+  providersCatalog,
+  providersState,
+  providersView,
+  providersTooltips,
+].join("\n");
+const remoteRegistrySources = [remoteRegistry, remoteRegistryProviders].join("\n");
 const forgeSources = [
   moduleRoot,
   controls,
   machineCache,
   packageStatus,
+  remoteRegistrySources,
   panel,
   providers,
+  sourceSection,
   snapshot,
   snapshotState,
   panelView,
@@ -67,6 +93,7 @@ const forgeSources = [
 const forgeReaderSources = [
   machineCache,
   packageStatus,
+  remoteRegistrySources,
   receiptBuckets,
   receiptFiles,
   receiptFields,
@@ -239,7 +266,7 @@ test("Forge panel surfaces bounded machine-cache evidence without freshness over
   assert.match(snapshotState, /machine_caches_label: &'static str/);
   assert.match(snapshotState, /visible_machine_cache_warning_count: usize/);
   assert.match(snapshotState, /visible machine cache warning\(s\) need review/);
-  assert.match(snapshotState, /Missing Forge receipt, package-status, or machine-cache root/);
+  assert.match(snapshotState, /Missing Forge receipt, remote-registry, package-status, or machine-cache root/);
   assert.match(snapshotState, /input\.machine_cache_count > 0/);
   assert.match(panelView, /&snapshot\.machine_caches/);
   assert.match(panelView, /Open a workspace to read Forge machine caches/);
@@ -253,6 +280,85 @@ test("Forge panel surfaces bounded machine-cache evidence without freshness over
   assert.doesNotMatch(
     `${machineCache}\n${panelView}`,
     /source hash matches|receipt-backed machine|provider proof|browser proof|runtime proof|live Forge status|fresh machine|verified machine|hash verified|metadata verified|freshness verified|cache verified|runtime-backed machine|browser-backed machine|provider-backed machine/i,
+  );
+});
+
+test("Forge panel reads Forge remote registry and makes provider targets concrete", () => {
+  assert.ok(
+    existsSync(remoteRegistryPath),
+    "Forge remote registry reader must live in a focused module",
+  );
+  assert.match(moduleRoot, /mod remote_registry;/);
+  assert.match(snapshot, /remote_registry_snapshot\(workspace_roots\)/);
+  assert.match(snapshot, /pub\(super\) remote_registries: Vec<DxForgeSourceRow>/);
+  assert.match(snapshot, /pub\(super\) remote_providers: Vec<DxForgeRemoteProvider>/);
+  assert.match(snapshot, /visible_remote_registry_warning_count/);
+  assert.match(snapshot, /REMOTE_REGISTRY_LABEL/);
+  assert.match(panel, /invalidate_remote_registry_snapshot_cache\(\)/);
+  assert.match(panelView, /fn remote_registry_section/);
+  assert.match(panelView, /"Remote Registry"/);
+  assert.match(panelView, /No Forge remote registry found/);
+  assert.ok(
+    panelView.indexOf("remote_registry_section(snapshot, workspace, cx)") <
+      panelView.indexOf("package_status_section(snapshot, workspace, cx)"),
+    "remote registry should be visible before package/cache evidence",
+  );
+
+  assert.match(remoteRegistry, /const REMOTE_REGISTRY_CACHE_TTL: Duration = Duration::from_secs\(5\);/);
+  assert.match(remoteRegistry, /const MAX_REMOTE_REGISTRY_BYTES: u64 = 256 \* 1024;/);
+  assert.match(remoteRegistry, /const MAX_WORKSPACE_ROOTS: usize = 4;/);
+  assert.match(remoteRegistry, /join\("\.forge"\)[\s\S]*\.join\("remotes\.json"\)/);
+  assert.match(remoteRegistry, /File::open\(path\)\.ok\(\)\?/);
+  assert.match(remoteRegistry, /file\.by_ref\(\)\s*\.take\(MAX_REMOTE_REGISTRY_BYTES \+ 1\)/);
+  assert.match(remoteRegistry, /serde_json::from_slice/);
+  assert.match(remoteRegistry, /get\("primary"\)/);
+  assert.match(remoteRegistry, /get\("remotes"\)/);
+  assert.match(remoteRegistrySources, /kind_counts/);
+  assert.match(remoteRegistrySources, /enabled_count/);
+  assert.match(remoteRegistrySources, /disabled_count/);
+  assert.match(remoteRegistrySources, /branch_mapping_count/);
+  assert.match(remoteRegistrySources, /auth_backend_count/);
+  assert.match(remoteRegistrySources, /registry file only; live remote health unchecked/);
+
+  for (const kind of [
+    "GitHub",
+    "GitLab",
+    "Bitbucket",
+    "GoogleDrive",
+    "Dropbox",
+    "YouTube",
+    "SoundCloud",
+  ]) {
+    assert.match(remoteRegistrySources, new RegExp(kind));
+  }
+
+  assert.match(snapshot, /remote_provider_for\(&self, provider_id: &str\)/);
+  assert.match(snapshot, /fn remote_provider_rank/);
+  assert.doesNotMatch(snapshot, /\.find\(\|provider\| provider\.provider_id == provider_id\)/);
+  assert.match(snapshot, /remote_registry_count_for_group\(&self, group_key: &str\)/);
+  assert.match(snapshot, /configured_provider_count_for_group\(&self, group_key: &str\)/);
+  assert.match(providersState, /fn provider_target_state/);
+  assert.match(providersState, /snapshot\.remote_provider_for\(provider\.id\)/);
+  assert.match(providersState, /configured_provider_count_for_group\(group\.key\(\)\)/);
+  assert.match(providersView, /provider_target_state\(provider, snapshot\)/);
+  assert.match(providersView, /target_path_for_provider\(provider, snapshot\)/);
+  assert.match(providers, /Configured remote:/);
+  assert.match(providers, /Registry:/);
+  assert.match(remoteRegistrySources, /catalog_provider_info/);
+  assert.match(remoteRegistrySources, /remote kind\(s\) not in provider icon catalog/);
+  for (const unsupportedButton of ["forge", "r2", "mega", "pinterest", "sketchfab"]) {
+    assert.doesNotMatch(
+      remoteRegistryProviders,
+      new RegExp(`Some\\(\\("${unsupportedButton}",`),
+    );
+  }
+  assert.doesNotMatch(
+    remoteRegistrySources,
+    /std::process|Command::new|powershell|cmd\.exe|\bshell\b|spawn|reqwest|ureq|hyper|TcpStream/i,
+  );
+  assert.doesNotMatch(
+    `${remoteRegistrySources}\n${providers}`,
+    /connected remote|synced live|remote verified|provider verified|live health|network checked/i,
   );
 });
 
@@ -309,7 +415,9 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.ok(existsSync(providersCatalogPath), "Forge provider metadata must live in catalog.rs");
   assert.ok(existsSync(providersStatePath), "Forge provider state must live in state.rs");
   assert.ok(existsSync(providersViewPath), "Forge provider GPUI rendering must live in view.rs");
+  assert.ok(existsSync(providersTooltipsPath), "Forge provider tooltip copy must live in tooltips.rs");
   assert.match(providersRoot, /mod view;/);
+  assert.match(providersRoot, /mod tooltips;/);
   assert.match(providersRoot, /pub\(super\) use self::view::remote_target_strip;/);
 
   const providerTargets = [
@@ -395,7 +503,7 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.match(providersView, /fn provider_buttons_for_group/);
   assert.match(providersView, /fn remote_lane_row/);
   assert.match(providersView, /fn target_path_for_group/);
-  assert.match(providersView, /fn provider_tooltip_meta/);
+  assert.match(providers, /fn provider_tooltip_meta/);
   assert.match(providersView, /IconButton::new\(format!\("dx-forge-provider-\{\}", provider\.id\), provider\.icon\)/);
   assert.match(providersView, /provider_buttons_for_group\(group, snapshot, workspace, cx\)/);
   assert.match(providersView, /IconButtonShape::Square/);
@@ -451,11 +559,15 @@ test("Forge panel files stay small and professionally named", () => {
     ["controls.rs", controls],
     ["machine_cache.rs", machineCache],
     ["package_status.rs", packageStatus],
+    ["remote_registry.rs", remoteRegistry],
+    ["remote_registry/providers.rs", remoteRegistryProviders],
     ["panel.rs", panel],
     ["providers/mod.rs", providersRoot],
     ["providers/catalog.rs", providersCatalog],
     ["providers/state.rs", providersState],
+    ["providers/tooltips.rs", providersTooltips],
     ["providers/view.rs", providersView],
+    ["source_section.rs", sourceSection],
     ["snapshot.rs", snapshot],
     ["snapshot_state.rs", snapshotState],
     ["panel_view.rs", panelView],
