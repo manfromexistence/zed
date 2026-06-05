@@ -1,17 +1,25 @@
 use crate::{
     CatalogSourceKind, ExternalModelInput, ExternalProviderInput, ModelCapabilities,
     ModelCatalogReadOutput, ModelCatalogReadReport, ModelCatalogReaderOptions, ModelPricingMicros,
-    ProviderAuthKind, ProviderKind, Result, RoutingRole, SourceMetadata, dx_providers_rkyv_input,
-    file_limits::{DEFAULT_PROVIDER_ARCHIVE_MAX_BYTES, ensure_file_with_limit},
+    ProviderAuthKind, ProviderKind, Result, RoutingRole, SkippedModelCatalogEntry, SourceMetadata,
+    dx_providers_rkyv_input,
+    file_limits::{
+        DEFAULT_PROVIDER_ARCHIVE_MAX_BYTES, DEFAULT_PROVIDER_METADATA_SIDECAR_MAX_BYTES,
+        ensure_file_with_limit, read_to_string_with_limit,
+    },
 };
 use memmap2::MmapOptions;
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
+use serde::Deserialize;
+use std::collections::{BTreeMap, BTreeSet};
 use std::{
     fs::File,
     path::{Path, PathBuf},
 };
 
 const DEFAULT_SOURCE_ID: &str = "dx-providers-rkyv";
+const PROVIDER_METADATA_SCHEMA: &str = "dx.providers.metadata.v1";
+const PROVIDER_METADATA_SIDECAR_FILE: &str = "provider-metadata.generated.json";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProvidersCatalogReaderOptions {
@@ -19,6 +27,8 @@ pub struct ProvidersCatalogReaderOptions {
     pub source_revision: Option<String>,
     pub generated_unix_ms: Option<u64>,
     pub max_bytes: u64,
+    pub metadata_sidecar_path: Option<PathBuf>,
+    pub max_metadata_sidecar_bytes: u64,
 }
 
 impl ProvidersCatalogReaderOptions {
@@ -28,6 +38,8 @@ impl ProvidersCatalogReaderOptions {
             source_revision: None,
             generated_unix_ms: None,
             max_bytes: DEFAULT_PROVIDER_ARCHIVE_MAX_BYTES,
+            metadata_sidecar_path: None,
+            max_metadata_sidecar_bytes: DEFAULT_PROVIDER_METADATA_SIDECAR_MAX_BYTES,
         }
     }
 
@@ -50,6 +62,16 @@ impl ProvidersCatalogReaderOptions {
         self.max_bytes = max_bytes.max(1);
         self
     }
+
+    pub fn with_metadata_sidecar_path(mut self, path: impl Into<PathBuf>) -> Self {
+        self.metadata_sidecar_path = Some(path.into());
+        self
+    }
+
+    pub fn with_max_metadata_sidecar_bytes(mut self, max_bytes: u64) -> Self {
+        self.max_metadata_sidecar_bytes = max_bytes.max(1);
+        self
+    }
 }
 
 impl Default for ProvidersCatalogReaderOptions {
@@ -65,6 +87,8 @@ impl From<ModelCatalogReaderOptions> for ProvidersCatalogReaderOptions {
             source_revision: options.source_revision,
             generated_unix_ms: options.generated_unix_ms,
             max_bytes: options.max_bytes,
+            metadata_sidecar_path: None,
+            max_metadata_sidecar_bytes: DEFAULT_PROVIDER_METADATA_SIDECAR_MAX_BYTES,
         }
     }
 }
@@ -82,6 +106,7 @@ pub fn read_providers_catalog_file(
             source_available,
             Vec::new(),
             Vec::new(),
+            Vec::new(),
         ));
     }
 
@@ -92,7 +117,11 @@ pub fn read_providers_catalog_file(
     let mmap = unsafe { MmapOptions::new().map(&file)? };
     let archive = rkyv::from_bytes::<ProvidersData>(&mmap)
         .map_err(|error| crate::DxCatalogError::Archive(format!("{error:?}")))?;
-    let (providers, models) = convert_providers_catalog(archive);
+    let (mut providers, mut models) = convert_providers_catalog(archive);
+    let mut skipped_entries = Vec::new();
+    if let Some(metadata) = read_metadata_sidecar(&path, &options, &mut skipped_entries) {
+        apply_metadata_sidecar(&metadata, &mut providers, &mut models);
+    }
 
     Ok(providers_catalog_output(
         path,
@@ -100,6 +129,7 @@ pub fn read_providers_catalog_file(
         source_available,
         providers,
         models,
+        skipped_entries,
     ))
 }
 
@@ -109,6 +139,7 @@ fn providers_catalog_output(
     source_available: bool,
     providers: Vec<ExternalProviderInput>,
     models: Vec<ExternalModelInput>,
+    skipped_entries: Vec<SkippedModelCatalogEntry>,
 ) -> ModelCatalogReadOutput {
     let provider_count = providers.len() as u32;
     let model_count = models.len() as u32;
@@ -124,7 +155,7 @@ fn providers_catalog_output(
             source_available,
             provider_count,
             model_count,
-            skipped_entries: Vec::new(),
+            skipped_entries,
         },
     }
 }
@@ -192,6 +223,231 @@ fn convert_providers_catalog(
     }
 
     (providers, models)
+}
+
+fn read_metadata_sidecar(
+    catalog_path: &Path,
+    options: &ProvidersCatalogReaderOptions,
+    skipped_entries: &mut Vec<SkippedModelCatalogEntry>,
+) -> Option<ProviderMetadataSidecar> {
+    let sidecar_path = options
+        .metadata_sidecar_path
+        .clone()
+        .unwrap_or_else(|| catalog_path.with_file_name(PROVIDER_METADATA_SIDECAR_FILE));
+    if !sidecar_path.is_file() {
+        return None;
+    }
+
+    let content = match read_to_string_with_limit(&sidecar_path, options.max_metadata_sidecar_bytes)
+    {
+        Ok(content) => content,
+        Err(error) => {
+            skip_metadata_sidecar(skipped_entries, &sidecar_path, error.to_string());
+            return None;
+        }
+    };
+    let sidecar: ProviderMetadataSidecar = match serde_json::from_str(&content) {
+        Ok(sidecar) => sidecar,
+        Err(error) => {
+            skip_metadata_sidecar(
+                skipped_entries,
+                &sidecar_path,
+                format!("metadata sidecar JSON parse failed: {error}"),
+            );
+            return None;
+        }
+    };
+
+    if sidecar.schema != PROVIDER_METADATA_SCHEMA || sidecar.schema_version != 1 {
+        skip_metadata_sidecar(
+            skipped_entries,
+            &sidecar_path,
+            format!(
+                "metadata sidecar schema/version mismatch: {} v{}",
+                sidecar.schema, sidecar.schema_version
+            ),
+        );
+        return None;
+    }
+    if sidecar.redaction.secrets_included {
+        skip_metadata_sidecar(
+            skipped_entries,
+            &sidecar_path,
+            "metadata sidecar declares that secrets are included".to_string(),
+        );
+        return None;
+    }
+
+    Some(sidecar)
+}
+
+fn skip_metadata_sidecar(
+    skipped_entries: &mut Vec<SkippedModelCatalogEntry>,
+    path: &Path,
+    reason: String,
+) {
+    skipped_entries.push(SkippedModelCatalogEntry {
+        location: path.display().to_string(),
+        reason,
+    });
+}
+
+fn apply_metadata_sidecar(
+    sidecar: &ProviderMetadataSidecar,
+    providers: &mut [ExternalProviderInput],
+    models: &mut [ExternalModelInput],
+) {
+    for provider in providers {
+        let Some(metadata) = sidecar.provider_for(provider) else {
+            continue;
+        };
+
+        if let Some(display_name) = non_empty(metadata.identity.display_name.clone()) {
+            provider.display_name = display_name;
+        }
+        merge_provider_aliases(provider, sidecar, metadata);
+
+        if !metadata.freemium.free_model_ids.is_empty() {
+            provider.supports_free_tier = true;
+        }
+        if matches!(
+            metadata.identity.exposure_status.as_deref(),
+            Some("implemented" | "verified_working")
+        ) {
+            provider.is_enabled_by_default = true;
+        }
+        mark_free_models(provider, metadata, models);
+    }
+}
+
+fn merge_provider_aliases(
+    provider: &mut ExternalProviderInput,
+    sidecar: &ProviderMetadataSidecar,
+    metadata: &ProviderMetadataRow,
+) {
+    let mut aliases = BTreeSet::from_iter(provider.aliases.iter().cloned());
+    aliases.insert(metadata.identity.canonical_id.clone());
+    if let Some(runtime_id) = &metadata.identity.runtime_id {
+        aliases.insert(runtime_id.clone());
+    }
+    aliases.extend(metadata.identity.aliases.iter().cloned());
+    aliases.extend(metadata.identity.database_ids.iter().cloned());
+
+    let canonical = slug(&metadata.identity.canonical_id);
+    for (alias, canonical_id) in &sidecar.alias_index {
+        if slug(canonical_id) == canonical {
+            aliases.insert(alias.clone());
+        }
+    }
+
+    aliases.remove(&provider.id);
+    provider.aliases = aliases.into_iter().collect();
+}
+
+fn mark_free_models(
+    provider: &ExternalProviderInput,
+    metadata: &ProviderMetadataRow,
+    models: &mut [ExternalModelInput],
+) {
+    if metadata.freemium.free_model_ids.is_empty() {
+        return;
+    }
+
+    for model in models
+        .iter_mut()
+        .filter(|model| model.provider_id == provider.id)
+    {
+        if metadata
+            .freemium
+            .free_model_ids
+            .iter()
+            .any(|free_id| model_matches_free_id(model, &provider.id, free_id))
+        {
+            model.capabilities.free_tier = true;
+            model.free_tier_hint =
+                Some("DX Providers metadata lists this provider/model as free tier.".to_string());
+        }
+    }
+}
+
+fn model_matches_free_id(model: &ExternalModelInput, provider_id: &str, free_id: &str) -> bool {
+    let direct_id = direct_model_id(provider_id, free_id);
+    model.id == free_id
+        || model.id == direct_id
+        || model
+            .aliases
+            .iter()
+            .any(|alias| alias == free_id || alias == &direct_id)
+}
+
+#[derive(Debug, Deserialize)]
+struct ProviderMetadataSidecar {
+    schema: String,
+    schema_version: u16,
+    #[serde(default)]
+    redaction: ProviderMetadataRedaction,
+    #[serde(default)]
+    providers: Vec<ProviderMetadataRow>,
+    #[serde(default)]
+    alias_index: BTreeMap<String, String>,
+}
+
+impl ProviderMetadataSidecar {
+    fn provider_for(&self, provider: &ExternalProviderInput) -> Option<&ProviderMetadataRow> {
+        let mut candidates = BTreeSet::from_iter(std::iter::once(provider.id.as_str()));
+        candidates.extend(provider.aliases.iter().map(String::as_str));
+
+        for candidate in candidates {
+            let normalized = slug(candidate);
+            let canonical_id = self
+                .alias_index
+                .get(&normalized)
+                .map(String::as_str)
+                .unwrap_or(candidate);
+            let canonical_slug = slug(canonical_id);
+            if let Some(metadata) = self
+                .providers
+                .iter()
+                .find(|metadata| slug(&metadata.identity.canonical_id) == canonical_slug)
+            {
+                return Some(metadata);
+            }
+        }
+
+        None
+    }
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct ProviderMetadataRedaction {
+    #[serde(default)]
+    secrets_included: bool,
+}
+
+#[derive(Debug, Deserialize)]
+struct ProviderMetadataRow {
+    identity: ProviderMetadataIdentity,
+    freemium: ProviderMetadataFreemium,
+}
+
+#[derive(Debug, Deserialize)]
+struct ProviderMetadataIdentity {
+    canonical_id: String,
+    display_name: String,
+    #[serde(default)]
+    aliases: Vec<String>,
+    #[serde(default)]
+    database_ids: Vec<String>,
+    #[serde(default)]
+    runtime_id: Option<String>,
+    #[serde(default)]
+    exposure_status: Option<String>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+struct ProviderMetadataFreemium {
+    #[serde(default)]
+    free_model_ids: Vec<String>,
 }
 
 fn convert_model(
@@ -493,10 +749,10 @@ mod tests {
             output.report.source_kind,
             CatalogSourceKind::DxProvidersRkyv
         );
-        assert_eq!(output.report.provider_count, 2);
-        assert_eq!(output.report.model_count, 3);
-        assert_eq!(output.input.providers.len(), 2);
-        assert_eq!(output.input.models.len(), 3);
+        assert_eq!(output.report.provider_count, 3);
+        assert_eq!(output.report.model_count, 4);
+        assert_eq!(output.input.providers.len(), 3);
+        assert_eq!(output.input.models.len(), 4);
         assert_eq!(output.input.providers[0].id, "deepseek");
         assert_eq!(
             output.input.providers[0].kind,
@@ -555,6 +811,123 @@ mod tests {
         let _ = fs::remove_file(path);
     }
 
+    #[test]
+    fn providers_metadata_sidecar_overlays_provider_aliases_and_free_models() {
+        let path = unique_fixture_path("dx-providers-catalog.rkyv");
+        write_fixture_catalog(&path);
+        let sidecar_path = path.with_extension("metadata.json");
+        write_fixture_metadata_sidecar(
+            &sidecar_path,
+            "deepseek",
+            "DeepSeek Verified",
+            &["deepseek-platform"],
+            &["deepseek-chat"],
+        );
+
+        let output = read_providers_catalog_file(
+            &path,
+            ProvidersCatalogReaderOptions::new()
+                .with_source_id("dx-providers-test")
+                .with_metadata_sidecar_path(&sidecar_path),
+        )
+        .expect("providers catalog should load with metadata sidecar");
+        let provider = output
+            .input
+            .providers
+            .iter()
+            .find(|provider| provider.id == "deepseek")
+            .expect("deepseek provider");
+        let free_model = output
+            .input
+            .models
+            .iter()
+            .find(|model| model.id == "deepseek/deepseek-chat")
+            .expect("deepseek chat model");
+
+        assert_eq!(provider.display_name, "DeepSeek Verified");
+        assert_eq!(
+            provider.base_url.as_deref(),
+            Some("https://api.deepseek.com/v1")
+        );
+        assert!(provider.aliases.contains(&"deepseek-platform".to_string()));
+        assert!(provider.supports_free_tier);
+        assert!(free_model.capabilities.free_tier);
+        assert_eq!(
+            free_model.free_tier_hint.as_deref(),
+            Some("DX Providers metadata lists this provider/model as free tier.")
+        );
+
+        let _ = fs::remove_file(sidecar_path);
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn providers_metadata_sidecar_uses_alias_index_for_canonical_id_mismatches() {
+        let path = unique_fixture_path("dx-providers-catalog.rkyv");
+        write_fixture_catalog(&path);
+        let sidecar_path = path.with_extension("metadata.json");
+        write_fixture_metadata_sidecar(
+            &sidecar_path,
+            "google-gemini",
+            "Google AI Studio",
+            &["google-ai-studio"],
+            &[],
+        );
+
+        let output = read_providers_catalog_file(
+            &path,
+            ProvidersCatalogReaderOptions::new()
+                .with_source_id("dx-providers-test")
+                .with_metadata_sidecar_path(&sidecar_path),
+        )
+        .expect("providers catalog should load with metadata sidecar");
+        let provider = output
+            .input
+            .providers
+            .iter()
+            .find(|provider| provider.id == "google")
+            .expect("google provider");
+
+        assert_eq!(provider.display_name, "Google AI Studio");
+        assert!(provider.aliases.contains(&"google-ai-studio".to_string()));
+        assert!(provider.aliases.contains(&"google-gemini".to_string()));
+
+        let _ = fs::remove_file(sidecar_path);
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn wrong_schema_provider_metadata_sidecar_does_not_block_rkyv_load() {
+        let path = unique_fixture_path("dx-providers-catalog.rkyv");
+        write_fixture_catalog(&path);
+        let sidecar_path = path.with_extension("metadata.json");
+        fs::write(
+            &sidecar_path,
+            r#"{"schema":"wrong.schema","schema_version":1}"#,
+        )
+        .expect("metadata sidecar should write");
+
+        let output = read_providers_catalog_file(
+            &path,
+            ProvidersCatalogReaderOptions::new()
+                .with_source_id("dx-providers-test")
+                .with_metadata_sidecar_path(&sidecar_path),
+        )
+        .expect("providers catalog should load without applying bad metadata sidecar");
+        let provider = output
+            .input
+            .providers
+            .iter()
+            .find(|provider| provider.id == "deepseek")
+            .expect("deepseek provider");
+
+        assert_eq!(provider.display_name, "DeepSeek");
+        assert!(!provider.aliases.contains(&"deepseek-platform".to_string()));
+
+        let _ = fs::remove_file(sidecar_path);
+        let _ = fs::remove_file(path);
+    }
+
     fn unique_fixture_path(file_name: &str) -> std::path::PathBuf {
         let nonce = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -567,8 +940,8 @@ mod tests {
         let catalog = ProvidersData {
             version: "test-catalog".to_string(),
             generated_at: "2026-06-04T00:00:00Z".to_string(),
-            total_providers: 2,
-            total_models: 3,
+            total_providers: 3,
+            total_models: 4,
             providers: vec![
                 Provider {
                     id: "deepseek".to_string(),
@@ -620,12 +993,91 @@ mod tests {
                         output_cost: 0.79,
                     }],
                 },
+                Provider {
+                    id: "google-gemini".to_string(),
+                    name: "Gemini".to_string(),
+                    source: "models.dev".to_string(),
+                    model_count: 1,
+                    supports_chat: true,
+                    supports_embedding: false,
+                    supports_image: true,
+                    supports_audio: false,
+                    api_url: "https://generativelanguage.googleapis.com/v1beta".to_string(),
+                    docs_url: "https://ai.google.dev".to_string(),
+                    models: vec![Model {
+                        id: "gemini-2.5-pro".to_string(),
+                        name: "Gemini 2.5 Pro".to_string(),
+                        mode: "chat".to_string(),
+                        max_tokens: 1_048_576,
+                        input_cost: 1.25,
+                        output_cost: 10.00,
+                    }],
+                },
             ],
         };
 
         let mut serializer = AllocSerializer::<4096>::default();
         serializer.serialize_value(&catalog).unwrap();
         fs::write(path, serializer.into_serializer().into_inner()).unwrap();
+    }
+
+    fn write_fixture_metadata_sidecar(
+        path: &Path,
+        canonical_id: &str,
+        display_name: &str,
+        aliases: &[&str],
+        free_model_ids: &[&str],
+    ) {
+        let mut alias_index = serde_json::Map::new();
+        alias_index.insert(
+            slug(canonical_id),
+            serde_json::Value::String(canonical_id.to_string()),
+        );
+        for alias in aliases {
+            alias_index.insert(
+                slug(alias),
+                serde_json::Value::String(canonical_id.to_string()),
+            );
+        }
+
+        let content = serde_json::json!({
+            "schema": "dx.providers.metadata.v1",
+            "schema_version": 1,
+            "source": {
+                "repo": r"G:\Dx\providers",
+                "commit": "test",
+                "generated_at": "2026-06-05T00:00:00Z"
+            },
+            "summary": {
+                "provider_count": 1,
+                "alias_count": alias_index.len(),
+                "content_sha256": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+            },
+            "redaction": {
+                "secrets_included": false,
+                "statement": "environment variable names only"
+            },
+            "providers": [{
+                "identity": {
+                    "canonical_id": canonical_id,
+                    "display_name": display_name,
+                    "aliases": aliases,
+                    "database_ids": [],
+                    "runtime_id": canonical_id,
+                    "exposure_status": "verified_working"
+                },
+                "freemium": {
+                    "access": "api_key",
+                    "auth": ["api_key"],
+                    "env_vars": ["TEST_API_KEY"],
+                    "note": "fixture free tier",
+                    "free_model_ids": free_model_ids
+                }
+            }],
+            "alias_index": alias_index
+        });
+
+        fs::write(path, serde_json::to_string_pretty(&content).unwrap()).unwrap();
     }
 
     #[derive(Archive, RkyvDeserialize, RkyvSerialize, Debug)]

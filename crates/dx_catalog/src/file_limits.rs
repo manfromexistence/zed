@@ -7,6 +7,7 @@ use std::{
 pub(crate) const DEFAULT_AUTH_PROFILE_MAX_BYTES: u64 = 1024 * 1024;
 pub(crate) const DEFAULT_MODEL_CATALOG_MAX_BYTES: u64 = 64 * 1024 * 1024;
 pub(crate) const DEFAULT_PROVIDER_ARCHIVE_MAX_BYTES: u64 = 64 * 1024 * 1024;
+pub(crate) const DEFAULT_PROVIDER_METADATA_SIDECAR_MAX_BYTES: u64 = 4 * 1024 * 1024;
 
 pub(crate) fn read_to_string_with_limit(path: &Path, max_bytes: u64) -> Result<String> {
     ensure_file_with_limit(path, max_bytes)?;
