@@ -8,10 +8,12 @@ const voiceControlsPath =
   "crates/agent_ui/src/conversation_view/voice_controls.rs";
 const flowRuntimePath = "crates/agent_ui/src/flow_speech_runtime.rs";
 const messageEditorPath = "crates/agent_ui/src/message_editor.rs";
+const audioPipelinePath = "crates/audio/src/audio_pipeline.rs";
 
 const threadView = readFileSync(threadViewPath, "utf8");
 const conversationModule = readFileSync(conversationModulePath, "utf8");
 const messageEditor = readFileSync(messageEditorPath, "utf8");
+const audioPipeline = readFileSync(audioPipelinePath, "utf8");
 
 test("agent composer voice controls live in focused modules", () => {
   assert.ok(existsSync(voiceControlsPath), "expected composer voice controls module");
@@ -64,11 +66,15 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(runtime, /FlowSpeechRuntime/);
   assert.match(runtime, /G:\\\\Dx\\\\flow|DX_FLOW_ROOT|FLOW_ROOT/);
   assert.match(runtime, /parakeet-tdt-0\.6b-v3-int8/);
-  assert.match(runtime, /kokoro-v1\.0\.int8\.onnx/);
   assert.match(runtime, /flow-dictate/);
   assert.match(runtime, /--file/);
-  assert.match(runtime, /--speak/);
+  assert.match(runtime, /qwen3_tts_runner\.py/);
+  assert.match(runtime, /FLOW_TTS_PYTHON/);
+  assert.match(runtime, /KokoroTtsRuntime|kokoro_82m/);
+  assert.match(runtime, /run_command_with_timeout/);
   assert.doesNotMatch(runtime, /--transcribe/);
+  assert.doesNotMatch(runtime, /arg\("--speak"\)/);
+  assert.match(audioPipeline, /play_wav_file/);
   assert.doesNotMatch(runtime, /mock|placeholder|dummy/i);
 });
 
@@ -77,6 +83,7 @@ test("voice text paths use the real message editor contents and insert APIs", ()
   assert.match(messageEditor, /pub fn insert_text\(/);
   assert.match(threadView, /message_editor\.read\(cx\)\.text\(cx\)/);
   assert.match(threadView, /insert_text\(&transcript/);
+  assert.match(threadView, /Audio::play_wav_file/);
   assert.doesNotMatch(threadView, /set_text\(&transcript/);
 });
 

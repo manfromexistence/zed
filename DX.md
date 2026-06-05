@@ -939,7 +939,8 @@ Adjacent source guards:
 ## Agent Composer Flow Speech - 2026-06-05
 
 - Zed Agent composer now has a source-wired Flow mic control and adjacent Kokoro read-aloud control, both rendered before send and backed by focused modules instead of disabled placeholder UI.
-- The speech runtime discovers `G:\Dx\flow` by default, also honoring `DX_FLOW_ROOT`, `FLOW_ROOT`, `DX_FLOW_BINARY`, and `DX_FLOW_DICTATE_BINARY` for machine-specific builds.
-- STT captures microphone input through `cpal`, writes bounded 16 kHz mono WAV files, and requires `flow-dictate --file` so the composer mic stays on the Parakeet path instead of broker-selected transcription.
-- TTS reads the current composer text through Flow Kokoro by invoking `flow --speak` when the runtime binary and Kokoro assets are available.
-- Source-only verification: focused Node source tests passed, including the red/green guard that rejects `flow --transcribe` as a Parakeet fallback; targeted `rustfmt --check` passed, `git diff --check` passed, and the focused conflict scan returned no matches. Flow/Zed Cargo builds, `just run`, live microphone proof, and live playback proof remain deferred by repo policy.
+- The speech runtime discovers `G:\Dx\flow` by default, also honoring `DX_FLOW_ROOT`, `FLOW_ROOT`, and `DX_FLOW_DICTATE_BINARY` for machine-specific Parakeet builds.
+- STT captures microphone input through `cpal`, writes bounded 16 kHz mono WAV files under the OS temp directory, and requires `flow-dictate --file` so the composer mic stays on the Parakeet path instead of broker-selected transcription.
+- TTS reads the current composer text through the Friday Kokoro runtime by discovering a complete data root, `qwen3_tts_runner.py`, Kokoro 82M model assets, and a Kokoro Python interpreter. It writes a temp WAV and plays it through Zed's audio pipeline instead of invoking Flow's currently silent `flow --speak` path.
+- The TTS discovery path honors `DX_FLOW_DATA_ROOT`, `FLOW_DATA_DIR`, `FLOW_TTS_PYTHON`, `DX_KOKORO_TTS_PYTHON`, `FLOW_TTS_RUNNER`, `DX_KOKORO_TTS_RUNNER`, and `DX_KOKORO_MODEL_DIR`.
+- Source-only verification: focused Node source tests passed, including the red/green guard that rejects `flow --transcribe` as a Parakeet fallback and rejects the stale `flow --speak` TTS path; targeted `rustfmt --check` passed, `git diff --check` passed, and the focused conflict scan returned no matches. Flow/Zed Cargo builds, `just run`, live microphone proof, and live playback proof remain deferred by repo policy.

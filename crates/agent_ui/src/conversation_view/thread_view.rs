@@ -4246,9 +4246,33 @@ impl ThreadView {
             let result = task.await;
             this.update(cx, |this, cx| {
                 match result {
-                    Ok(()) => {
-                        this.composer_voice_state
-                            .set_ready("Kokoro finished reading the composer");
+                    Ok(audio_path) => {
+                        #[cfg(feature = "audio")]
+                        {
+                            match Audio::play_wav_file(&audio_path, cx) {
+                                Ok(()) => {
+                                    this.composer_voice_state
+                                        .set_ready("Kokoro finished reading the composer");
+                                }
+                                Err(error) => {
+                                    this.report_flow_voice_error(
+                                        "Kokoro playback failed",
+                                        error,
+                                        cx,
+                                    );
+                                }
+                            }
+                        }
+                        #[cfg(not(feature = "audio"))]
+                        {
+                            let _ = audio_path;
+                            this.composer_voice_state
+                                .set_error("Zed audio playback is not available in this build");
+                            this.show_flow_voice_toast(
+                                "Zed audio playback is not available in this build",
+                                cx,
+                            );
+                        }
                     }
                     Err(error) => {
                         this.report_flow_voice_error("Flow Kokoro read-aloud failed", error, cx);

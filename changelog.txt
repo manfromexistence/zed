@@ -14290,10 +14290,29 @@ PASSED:
 NOTES:
 - This remains source-only. It does not run Cargo, run `just run`, start a server, perform WebView runtime proof, enable Apply, or mutate source.
 
+[2026-06-05] - Agent Composer Friday Kokoro Playback
+
+CHANGED:
+- `crates\agent_ui\src\flow_speech_runtime.rs` now uses the Friday Kokoro data/runtime contract for composer read-aloud: it scans candidate Flow data roots until it finds a complete `qwen3_tts_runner.py`, Kokoro 82M model, voice, and Python runtime set.
+- Composer read-aloud now synthesizes to a temp WAV with offline Kokoro environment variables and bounded command timeouts, then hands that WAV to Zed's audio pipeline.
+- `crates\audio\src\audio_pipeline.rs` now exposes `Audio::play_wav_file`, and `crates\agent_ui\src\conversation_view\thread_view.rs` uses it for Kokoro read-aloud playback.
+- STT temp recordings now live under the OS temp directory instead of inside the copied Flow source tree, and STT/TTS child commands are guarded by timeouts.
+
+PASSED:
+- `node --test script\dx-agent-voice-controls-source.test.ts`
+- `node --test script\dx-agent-voice-controls-source.test.ts script\dx-agent-thread-view-source.test.ts script\dx-message-editor-source.test.ts`
+- `rustfmt --edition 2024 --check crates\audio\src\audio_pipeline.rs crates\agent_ui\src\flow_speech_runtime.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\conversation_view\voice_controls.rs crates\agent_ui\src\conversation_view.rs crates\agent_ui\src\agent_ui.rs`
+- `git diff --check -- crates\audio\src\audio_pipeline.rs crates\agent_ui\src\flow_speech_runtime.rs crates\agent_ui\src\conversation_view\thread_view.rs script\dx-agent-voice-controls-source.test.ts DX.md changelog.txt todo.txt`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" ...` across touched source, guard, todo, changelog, and DX files returned no conflict markers.
+
+NOTES:
+- This deliberately avoids Flow's `flow --speak` path because the copied Flow tree documents the current Kokoro CLI/tokenization path as silent output.
+- This remains source-only under current repo rules. Flow/Zed Cargo builds, `just run`, live microphone capture, and live Kokoro playback proof remain intentionally unrun until the governed validation window.
+
 [2026-06-05] - Agent Composer Flow Speech Controls
 
 ADDED:
-- `crates\agent_ui\src\flow_speech_runtime.rs` detects the copied `G:\Dx\flow` runtime, validates Parakeet/Kokoro model assets, records microphone input with `cpal`, writes bounded 16 kHz mono WAV files, and invokes `flow-dictate --file` / `flow --speak` when runtime binaries are available.
+- `crates\agent_ui\src\flow_speech_runtime.rs` detects the copied `G:\Dx\flow` runtime, validates Parakeet assets, records microphone input with `cpal`, writes bounded 16 kHz mono WAV files, and invokes `flow-dictate --file` when the Parakeet command is available.
 - `crates\agent_ui\src\conversation_view\voice_controls.rs` renders focused GPUI composer voice controls and recording/transcribing/speaking status states.
 - `script\dx-agent-voice-controls-source.test.ts` guards the source wiring so the mic/read-aloud buttons stay connected to real editor text and Flow runtime paths.
 
@@ -14301,7 +14320,7 @@ CHANGED:
 - The Agent composer now renders a real Flow mic control plus a separate Kokoro read-aloud button before send.
 - STT now requires the Parakeet `flow-dictate` command instead of falling back to broker-selected `flow` transcription.
 - Voice recording inserts the returned transcript into the existing message editor instead of replacing or auto-sending composer text.
-- Read-aloud uses the existing composer text and reports honest unavailable states when Flow runtime binaries or model files are missing.
+- Read-aloud uses the existing composer text and reports honest unavailable states when the Friday Kokoro runtime assets are missing.
 
 PASSED:
 - Red/green source guard for rejecting broker-based `flow` transcription as a Parakeet fallback.

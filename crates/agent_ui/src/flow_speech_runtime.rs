@@ -6,8 +6,9 @@ use cpal::{
 use std::{
     env, fs,
     path::{Path, PathBuf},
-    process::{Command, Stdio},
+    process::{Command, Output, Stdio},
     sync::{Arc, Mutex},
+    thread,
     time::{Duration, Instant},
 };
 use uuid::Uuid;
@@ -16,13 +17,31 @@ const TARGET_SAMPLE_RATE: u32 = 16_000;
 const MAX_RECORDING_SECONDS: usize = 90;
 const MIN_RECORDING_SAMPLES: usize = TARGET_SAMPLE_RATE as usize / 4;
 const PARAKEET_MODEL_DIR: &str = "models/stt/parakeet-tdt-0.6b-v3-int8";
-const KOKORO_MODEL_FILE: &str = "models/tts/kokoro-v1.0.int8.onnx";
+const KOKORO_MODEL_KEY: &str = "kokoro_82m";
+const KOKORO_RUNNER_SCRIPT: &str = "tools/qwen3_tts_runner.py";
+const DEFAULT_KOKORO_VOICE: &str = "af_bella";
+const STT_COMMAND_TIMEOUT: Duration = Duration::from_secs(120);
+const TTS_COMMAND_TIMEOUT: Duration = Duration::from_secs(180);
+const COMMAND_POLL_INTERVAL: Duration = Duration::from_millis(50);
+
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+#[cfg(target_os = "windows")]
+const BELOW_NORMAL_PRIORITY_CLASS: u32 = 0x00004000;
 
 #[derive(Clone, Debug)]
 pub(crate) struct FlowSpeechRuntime {
     flow_root: PathBuf,
-    flow_binary: Option<PathBuf>,
     flow_dictate_binary: Option<PathBuf>,
+    kokoro_tts_runtime: Option<KokoroTtsRuntime>,
+}
+
+#[derive(Clone, Debug)]
+struct KokoroTtsRuntime {
+    data_root: PathBuf,
+    python: PathBuf,
+    runner: PathBuf,
+    model_dir: PathBuf,
 }
 
 #[derive(Debug)]
@@ -44,20 +63,16 @@ impl FlowSpeechRuntime {
             .map(PathBuf::from)
             .unwrap_or_else(default_flow_root);
 
-        let flow_binary = env::var_os("DX_FLOW_BINARY")
-            .map(PathBuf::from)
-            .filter(|path| path.exists())
-            .or_else(|| find_binary(&flow_root, "flow"));
-
         let flow_dictate_binary = env::var_os("DX_FLOW_DICTATE_BINARY")
             .map(PathBuf::from)
             .filter(|path| path.exists())
             .or_else(|| find_binary(&flow_root, "flow-dictate"));
+        let kokoro_tts_runtime = KokoroTtsRuntime::detect(&flow_root);
 
         Self {
             flow_root,
-            flow_binary,
             flow_dictate_binary,
+            kokoro_tts_runtime,
         }
     }
 
@@ -96,41 +111,25 @@ impl FlowSpeechRuntime {
             .flow_dictate_binary
             .as_ref()
             .context("Flow Parakeet dictation command is not available")?;
-        let output = Command::new(binary)
+        let mut command = Command::new(binary);
+        command
             .current_dir(&self.flow_root)
             .arg("--file")
-            .arg(&audio_path)
-            .stdin(Stdio::null())
-            .output()
-            .with_context(|| format!("Failed to start {}", binary.display()))?;
+            .arg(&audio_path);
+        apply_windows_process_flags(&mut command);
+        let output =
+            run_command_with_timeout(command, STT_COMMAND_TIMEOUT, "Flow Parakeet transcription")?;
 
         let transcript = parse_transcript_output(output);
         let _ = fs::remove_file(audio_path);
         transcript
     }
 
-    pub(crate) fn speak_text(&self, text: &str) -> Result<()> {
-        self.ensure_kokoro_ready()?;
-        let binary = self.flow_binary.as_ref().ok_or_else(|| {
-            anyhow!(
-                "Flow Kokoro runtime is not built. Build flow in {} or set DX_FLOW_BINARY.",
-                self.flow_root.display()
-            )
-        })?;
-
-        let output = Command::new(binary)
-            .current_dir(&self.flow_root)
-            .arg("--speak")
-            .arg(text)
-            .stdin(Stdio::null())
-            .output()
-            .with_context(|| format!("Failed to start {}", binary.display()))?;
-
-        if output.status.success() {
-            Ok(())
-        } else {
-            Err(command_error("Flow Kokoro TTS failed", output))
-        }
+    pub(crate) fn speak_text(&self, text: &str) -> Result<PathBuf> {
+        self.kokoro_tts_runtime
+            .as_ref()
+            .context("Friday Kokoro TTS runtime is not available")?
+            .synthesize(text)
     }
 
     pub(crate) fn status_summary(&self) -> String {
@@ -139,27 +138,22 @@ impl FlowSpeechRuntime {
         } else {
             "Parakeet model missing"
         };
-        let tts = if self.kokoro_ready() {
-            "Kokoro ready"
+        let tts = if self.kokoro_tts_runtime.is_some() {
+            "Friday Kokoro ready"
         } else {
-            "Kokoro model missing"
+            "Friday Kokoro missing"
         };
         let stt_runtime = if self.flow_dictate_binary.is_some() {
             "Parakeet command ready"
         } else {
             "Parakeet command missing"
         };
-        let tts_runtime = if self.flow_binary.is_some() {
-            "TTS command ready"
-        } else {
-            "TTS command missing"
-        };
 
-        format!("{stt}; {tts}; {stt_runtime}; {tts_runtime}")
+        format!("{stt}; {tts}; {stt_runtime}")
     }
 
     fn write_recording_wav(&self, recording: &RecordedSpeech) -> Result<PathBuf> {
-        let tmp_dir = self.flow_root.join("tmp").join("zed-voice");
+        let tmp_dir = env::temp_dir().join("zed-flow-stt");
         fs::create_dir_all(&tmp_dir)?;
         let path = tmp_dir.join(format!(
             "zed-composer-recording-{}.wav",
@@ -192,17 +186,6 @@ impl FlowSpeechRuntime {
         }
     }
 
-    fn ensure_kokoro_ready(&self) -> Result<()> {
-        if self.kokoro_ready() {
-            Ok(())
-        } else {
-            Err(anyhow!(
-                "Flow Kokoro model file is missing at {}",
-                self.flow_root.join(KOKORO_MODEL_FILE).display()
-            ))
-        }
-    }
-
     fn parakeet_ready(&self) -> bool {
         let root = self.flow_root.join(PARAKEET_MODEL_DIR);
         [
@@ -214,11 +197,85 @@ impl FlowSpeechRuntime {
         .iter()
         .all(|file| root.join(file).exists())
     }
+}
 
-    fn kokoro_ready(&self) -> bool {
-        self.flow_root.join(KOKORO_MODEL_FILE).exists()
-            && self.flow_root.join("models/tts/voices-v1.0.bin").exists()
-            && self.flow_root.join("models/tts/config.json").exists()
+impl KokoroTtsRuntime {
+    fn detect(flow_root: &Path) -> Option<Self> {
+        candidate_flow_data_roots(flow_root)
+            .into_iter()
+            .filter(|root| root.exists())
+            .find_map(Self::from_data_root)
+    }
+
+    fn from_data_root(data_root: PathBuf) -> Option<Self> {
+        let python = env::var_os("FLOW_TTS_PYTHON")
+            .or_else(|| env::var_os("DX_KOKORO_TTS_PYTHON"))
+            .map(PathBuf::from)
+            .filter(|path| path.exists())
+            .or_else(|| find_kokoro_python(&data_root))?;
+        let runner = env::var_os("FLOW_TTS_RUNNER")
+            .or_else(|| env::var_os("DX_KOKORO_TTS_RUNNER"))
+            .map(PathBuf::from)
+            .filter(|path| path.exists())
+            .or_else(|| {
+                let path = data_root.join(KOKORO_RUNNER_SCRIPT);
+                path.exists().then_some(path)
+            })?;
+        let model_dir = env::var_os("DX_KOKORO_MODEL_DIR")
+            .map(PathBuf::from)
+            .filter(|path| kokoro_model_dir_ready(path))
+            .or_else(|| find_kokoro_model_dir(&data_root))?;
+
+        Some(Self {
+            data_root,
+            python,
+            runner,
+            model_dir,
+        })
+    }
+
+    fn synthesize(&self, text: &str) -> Result<PathBuf> {
+        let output_dir = env::temp_dir().join("zed-kokoro-tts");
+        fs::create_dir_all(&output_dir)?;
+        fs::create_dir_all(self.data_root.join("huggingface"))?;
+        fs::create_dir_all(self.data_root.join("torch"))?;
+        let output_path = output_dir.join(format!(
+            "zed-composer-kokoro-{}.wav",
+            Uuid::new_v4().as_simple()
+        ));
+
+        let mut command = Command::new(&self.python);
+        command
+            .arg(&self.runner)
+            .arg("--model-kind")
+            .arg("kokoro")
+            .arg("--model-dir")
+            .arg(&self.model_dir)
+            .arg("--text")
+            .arg(text)
+            .arg("--output")
+            .arg(&output_path)
+            .arg("--language")
+            .arg("English")
+            .arg("--speaker")
+            .arg(DEFAULT_KOKORO_VOICE)
+            .arg("--device")
+            .arg("cpu");
+        apply_tts_process_env(&mut command, &self.data_root);
+        apply_windows_process_flags(&mut command);
+
+        let output = run_command_with_timeout(command, TTS_COMMAND_TIMEOUT, "Friday Kokoro TTS")?;
+        if !output.status.success() {
+            return Err(command_error("Friday Kokoro TTS failed", output));
+        }
+        if !output_path.exists() {
+            return Err(anyhow!(
+                "Friday Kokoro TTS finished without writing {}",
+                output_path.display()
+            ));
+        }
+
+        Ok(output_path)
     }
 }
 
@@ -413,7 +470,7 @@ fn write_wav_i16(path: &Path, sample_rate: u32, samples: &[f32]) -> Result<()> {
     Ok(())
 }
 
-fn parse_transcript_output(output: std::process::Output) -> Result<String> {
+fn parse_transcript_output(output: Output) -> Result<String> {
     if !output.status.success() {
         return Err(command_error("Flow Parakeet transcription failed", output));
     }
@@ -431,7 +488,7 @@ fn parse_transcript_output(output: std::process::Output) -> Result<String> {
     Err(anyhow!("Flow STT finished without a transcript"))
 }
 
-fn command_error(label: &str, output: std::process::Output) -> anyhow::Error {
+fn command_error(label: &str, output: Output) -> anyhow::Error {
     let stderr = String::from_utf8_lossy(&output.stderr);
     let stdout = String::from_utf8_lossy(&output.stdout);
     anyhow!(
@@ -443,6 +500,141 @@ fn command_error(label: &str, output: std::process::Output) -> anyhow::Error {
             format!(" {}", stdout.trim())
         }
     )
+}
+
+fn run_command_with_timeout(
+    mut command: Command,
+    timeout: Duration,
+    label: &str,
+) -> Result<Output> {
+    command
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    let mut child = command
+        .spawn()
+        .with_context(|| format!("Failed to start {label}"))?;
+    let started_at = Instant::now();
+
+    loop {
+        if child.try_wait()?.is_some() {
+            return child
+                .wait_with_output()
+                .with_context(|| format!("Failed to collect {label} output"));
+        }
+
+        if started_at.elapsed() >= timeout {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(anyhow!("{label} timed out after {}s", timeout.as_secs()));
+        }
+
+        thread::sleep(COMMAND_POLL_INTERVAL);
+    }
+}
+
+fn apply_tts_process_env(command: &mut Command, data_root: &Path) {
+    let hf_home = data_root.join("huggingface");
+    let torch_home = data_root.join("torch");
+    command
+        .env("PYTHONUTF8", "1")
+        .env("PYTHONNOUSERSITE", "1")
+        .env("HF_HOME", &hf_home)
+        .env("HF_HUB_DISABLE_TELEMETRY", "1")
+        .env("HF_HUB_OFFLINE", "1")
+        .env("TRANSFORMERS_OFFLINE", "1")
+        .env("TRANSFORMERS_CACHE", hf_home.join("transformers"))
+        .env("TORCH_HOME", torch_home)
+        .env("TOKENIZERS_PARALLELISM", "false")
+        .env("OMP_NUM_THREADS", "4")
+        .env("MKL_NUM_THREADS", "4")
+        .env("NUMEXPR_NUM_THREADS", "4")
+        .env("FLOW_TTS_TORCH_THREADS", "4");
+}
+
+fn apply_windows_process_flags(command: &mut Command) {
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(CREATE_NO_WINDOW | BELOW_NORMAL_PRIORITY_CLASS);
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = command;
+    }
+}
+
+fn candidate_flow_data_roots(flow_root: &Path) -> Vec<PathBuf> {
+    let mut roots = Vec::new();
+    push_unique_path(
+        &mut roots,
+        env::var_os("DX_FLOW_DATA_ROOT").map(PathBuf::from),
+    );
+    push_unique_path(&mut roots, env::var_os("FLOW_DATA_DIR").map(PathBuf::from));
+    push_unique_path(&mut roots, Some(flow_root.join("data")));
+
+    #[cfg(target_os = "windows")]
+    {
+        if let Some(local_app_data) = env::var_os("LOCALAPPDATA").map(PathBuf::from) {
+            push_unique_path(&mut roots, Some(local_app_data.join("com.flow.data")));
+        }
+
+        for drive in b'D'..=b'Z' {
+            let root = PathBuf::from(format!("{}:\\Flow\\data", drive as char));
+            if root.exists() {
+                push_unique_path(&mut roots, Some(root));
+            }
+        }
+    }
+
+    roots
+}
+
+fn push_unique_path(paths: &mut Vec<PathBuf>, path: Option<PathBuf>) {
+    if let Some(path) = path
+        && !paths.iter().any(|existing| existing == &path)
+    {
+        paths.push(path);
+    }
+}
+
+fn find_kokoro_python(data_root: &Path) -> Option<PathBuf> {
+    let flow_home = data_root.parent()?;
+    let python = flow_home
+        .join("runtime")
+        .join("kokoro-tts")
+        .join(".venv")
+        .join(if cfg!(target_os = "windows") {
+            "Scripts/python.exe"
+        } else {
+            "bin/python"
+        });
+    python.exists().then_some(python)
+}
+
+fn find_kokoro_model_dir(data_root: &Path) -> Option<PathBuf> {
+    let installed_model = data_root.join("models").join("tts").join(KOKORO_MODEL_KEY);
+    if kokoro_model_dir_ready(&installed_model) {
+        return Some(installed_model);
+    }
+
+    let snapshots = data_root
+        .join("huggingface")
+        .join("hub")
+        .join("models--hexgrad--Kokoro-82M")
+        .join("snapshots");
+    fs::read_dir(snapshots)
+        .ok()?
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.path())
+        .find(|path| kokoro_model_dir_ready(path))
+}
+
+fn kokoro_model_dir_ready(path: &Path) -> bool {
+    path.join("config.json").is_file()
+        && path.join("kokoro-v1_0.pth").is_file()
+        && path.join("voices").join("af_bella.pt").is_file()
 }
 
 fn find_binary(flow_root: &Path, name: &str) -> Option<PathBuf> {

@@ -10,7 +10,7 @@ pub(super) use cpal::Sample;
 
 use rodio::{Decoder, DeviceSinkBuilder, MixerDeviceSink, Source, mixer::Mixer, source::Buffered};
 use settings::Settings;
-use std::io::Cursor;
+use std::{io::Cursor, path::Path};
 use util::ResultExt;
 
 mod echo_canceller;
@@ -89,6 +89,22 @@ impl Audio {
             output_mixer.add(source);
             Some(())
         });
+    }
+
+    pub fn play_wav_file(path: &Path, cx: &mut App) -> Result<()> {
+        let output_audio_device = AudioSettings::get_global(cx).output_audio_device.clone();
+        let bytes = std::fs::read(path)
+            .with_context(|| format!("Could not read WAV file {}", path.display()))?;
+
+        cx.update_default_global(|this: &mut Self, _cx| {
+            let source = Decoder::new(Cursor::new(bytes))?;
+            let output_mixer = this
+                .ensure_output_exists(output_audio_device)
+                .context("Could not get output mixer")?;
+
+            output_mixer.add(source);
+            Ok(())
+        })
     }
 
     pub fn end_call(cx: &mut App) {
