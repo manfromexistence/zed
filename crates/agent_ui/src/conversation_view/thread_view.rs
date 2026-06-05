@@ -3823,7 +3823,13 @@ impl ThreadView {
                             .pr_2p5()
                             .child(self.message_editor.clone())
                             .when_some(
-                                render_voice_recording_panel(&self.composer_voice_state, cx),
+                                render_voice_recording_panel(
+                                    &self.composer_voice_state,
+                                    cx.listener(|this, _event, window, cx| {
+                                        this.stop_flow_voice_recording(window, cx);
+                                    }),
+                                    cx,
+                                ),
                                 |this, panel| this.child(panel),
                             )
                             .when(has_messages, |this| {
@@ -4120,7 +4126,12 @@ impl ThreadView {
     fn start_flow_voice_recording(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let runtime = FlowSpeechRuntime::detect();
         let summary = runtime.status_summary();
-        match runtime.start_recording() {
+        #[cfg(feature = "audio")]
+        let input_audio_device = AudioSettings::get_global(cx).input_audio_device.clone();
+        #[cfg(not(feature = "audio"))]
+        let input_audio_device = None;
+
+        match runtime.start_recording(input_audio_device.as_ref()) {
             Ok(session) => {
                 self.flow_recording_session = Some(session);
                 self.composer_voice_state
@@ -4138,6 +4149,16 @@ impl ThreadView {
                             let is_recording =
                                 this.composer_voice_state.phase() == ComposerVoicePhase::Recording;
                             if is_recording {
+                                if let Some(telemetry) = this
+                                    .flow_recording_session
+                                    .as_ref()
+                                    .and_then(|session| session.telemetry().ok())
+                                {
+                                    this.composer_voice_state.update_recording_telemetry(
+                                        telemetry.captured_duration(),
+                                        telemetry.input_level(),
+                                    );
+                                }
                                 cx.notify();
                             }
                             is_recording
@@ -4251,6 +4272,7 @@ impl ThreadView {
                         {
                             match Audio::play_wav_file(&audio_path, cx) {
                                 Ok(()) => {
+                                    let _ = std::fs::remove_file(&audio_path);
                                     this.composer_voice_state
                                         .set_ready("Kokoro finished reading the composer");
                                 }

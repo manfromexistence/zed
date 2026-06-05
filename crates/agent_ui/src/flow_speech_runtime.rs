@@ -1,6 +1,6 @@
 use anyhow::{Context as _, Result, anyhow};
 use cpal::{
-    FromSample, Sample, SampleFormat, SizedSample,
+    DeviceId, FromSample, Sample, SampleFormat, SizedSample,
     traits::{DeviceTrait, HostTrait, StreamTrait},
 };
 use std::{
@@ -16,6 +16,8 @@ use uuid::Uuid;
 const TARGET_SAMPLE_RATE: u32 = 16_000;
 const MAX_RECORDING_SECONDS: usize = 90;
 const MIN_RECORDING_SAMPLES: usize = TARGET_SAMPLE_RATE as usize / 4;
+const FRIDAY_DEFAULT_STT_MODEL_KEY: &str = "parakeet_unified_en_int8";
+const FLOW_PARAKEET_EXECUTION_MODEL_KEY: &str = "parakeet-tdt-0.6b-v3-int8";
 const PARAKEET_MODEL_DIR: &str = "models/stt/parakeet-tdt-0.6b-v3-int8";
 const KOKORO_MODEL_KEY: &str = "kokoro_82m";
 const KOKORO_RUNNER_SCRIPT: &str = "tools/qwen3_tts_runner.py";
@@ -49,11 +51,27 @@ pub(crate) struct RecordedSpeech {
     samples: Vec<f32>,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct RecordingTelemetry {
+    captured_duration: Duration,
+    input_level: f32,
+}
+
 pub(crate) struct FlowRecordingSession {
     runtime: FlowSpeechRuntime,
     samples: Arc<Mutex<Vec<f32>>>,
     _stream: cpal::Stream,
     started_at: Instant,
+}
+
+impl RecordingTelemetry {
+    pub(crate) fn captured_duration(&self) -> Duration {
+        self.captured_duration
+    }
+
+    pub(crate) fn input_level(&self) -> f32 {
+        self.input_level
+    }
 }
 
 impl FlowSpeechRuntime {
@@ -65,7 +83,7 @@ impl FlowSpeechRuntime {
 
         let flow_dictate_binary = env::var_os("DX_FLOW_DICTATE_BINARY")
             .map(PathBuf::from)
-            .filter(|path| path.exists())
+            .filter(|path| path.is_file())
             .or_else(|| find_binary(&flow_root, "flow-dictate"));
         let kokoro_tts_runtime = KokoroTtsRuntime::detect(&flow_root);
 
@@ -76,13 +94,13 @@ impl FlowSpeechRuntime {
         }
     }
 
-    pub(crate) fn start_recording(&self) -> Result<FlowRecordingSession> {
+    pub(crate) fn start_recording(
+        &self,
+        input_device_id: Option<&DeviceId>,
+    ) -> Result<FlowRecordingSession> {
         self.ensure_stt_ready()?;
 
-        let host = cpal::default_host();
-        let device = host
-            .default_input_device()
-            .context("No microphone input device is available")?;
+        let device = resolve_input_device(input_device_id)?;
         let config = device.default_input_config()?;
         let channels = config.channels() as usize;
         let input_sample_rate = config.sample_rate().0;
@@ -180,8 +198,10 @@ impl FlowSpeechRuntime {
             Ok(())
         } else {
             Err(anyhow!(
-                "Flow Parakeet runtime is not built. Build flow-dictate with the sherpa-stt feature in {} or set DX_FLOW_DICTATE_BINARY.",
-                self.flow_root.display()
+                "Flow Parakeet runtime is not built. Build flow-dictate with the sherpa-stt feature in {} or set DX_FLOW_DICTATE_BINARY. This maps Friday's default STT model {} to {}.",
+                self.flow_root.display(),
+                FRIDAY_DEFAULT_STT_MODEL_KEY,
+                FLOW_PARAKEET_EXECUTION_MODEL_KEY
             ))
         }
     }
@@ -211,15 +231,15 @@ impl KokoroTtsRuntime {
         let python = env::var_os("FLOW_TTS_PYTHON")
             .or_else(|| env::var_os("DX_KOKORO_TTS_PYTHON"))
             .map(PathBuf::from)
-            .filter(|path| path.exists())
+            .filter(|path| path.is_file())
             .or_else(|| find_kokoro_python(&data_root))?;
         let runner = env::var_os("FLOW_TTS_RUNNER")
             .or_else(|| env::var_os("DX_KOKORO_TTS_RUNNER"))
             .map(PathBuf::from)
-            .filter(|path| path.exists())
+            .filter(|path| path.is_file())
             .or_else(|| {
                 let path = data_root.join(KOKORO_RUNNER_SCRIPT);
-                path.exists().then_some(path)
+                path.is_file().then_some(path)
             })?;
         let model_dir = env::var_os("DX_KOKORO_MODEL_DIR")
             .map(PathBuf::from)
@@ -274,6 +294,15 @@ impl KokoroTtsRuntime {
                 output_path.display()
             ));
         }
+        let audio_size = fs::metadata(&output_path)
+            .with_context(|| format!("Could not inspect {}", output_path.display()))?
+            .len();
+        if audio_size <= 44 {
+            return Err(anyhow!(
+                "Friday Kokoro TTS wrote an empty WAV file at {}",
+                output_path.display()
+            ));
+        }
 
         Ok(output_path)
     }
@@ -282,6 +311,21 @@ impl KokoroTtsRuntime {
 impl FlowRecordingSession {
     pub(crate) fn elapsed(&self) -> Duration {
         self.started_at.elapsed()
+    }
+
+    pub(crate) fn telemetry(&self) -> Result<RecordingTelemetry> {
+        let samples = self
+            .samples
+            .lock()
+            .map_err(|_| anyhow!("Microphone recording buffer was poisoned"))?;
+        let captured_duration =
+            Duration::from_secs_f32(samples.len() as f32 / TARGET_SAMPLE_RATE as f32);
+        let input_level = recent_input_level(&samples);
+
+        Ok(RecordingTelemetry {
+            captured_duration,
+            input_level,
+        })
     }
 
     pub(crate) fn finish(self) -> Result<(FlowSpeechRuntime, RecordedSpeech)> {
@@ -396,6 +440,19 @@ fn build_input_stream(
     }
 }
 
+fn resolve_input_device(input_device_id: Option<&DeviceId>) -> Result<cpal::Device> {
+    let host = cpal::default_host();
+    if let Some(device_id) = input_device_id {
+        if let Some(device) = host.device_by_id(device_id) {
+            return Ok(device);
+        }
+        log::warn!("Selected Flow microphone device was not found; falling back to default input");
+    }
+
+    host.default_input_device()
+        .context("No microphone input device is available")
+}
+
 fn build_input_stream_typed<T>(
     device: &cpal::Device,
     config: cpal::StreamConfig,
@@ -445,6 +502,25 @@ fn downmix_and_resample(input: &[f32], channels: usize, input_sample_rate: u32) 
     (0..target_len)
         .filter_map(|index| mono.get((index as f32 * ratio) as usize).copied())
         .collect()
+}
+
+fn recent_input_level(samples: &[f32]) -> f32 {
+    let window = (TARGET_SAMPLE_RATE as usize / 5).max(1);
+    let start = samples.len().saturating_sub(window);
+    let recent = &samples[start..];
+    if recent.is_empty() {
+        return 0.0;
+    }
+
+    let mean_square = recent
+        .iter()
+        .map(|sample| {
+            let value = sample.clamp(-1.0, 1.0);
+            value * value
+        })
+        .sum::<f32>()
+        / recent.len() as f32;
+    (mean_square.sqrt() * 4.0).clamp(0.0, 1.0)
 }
 
 fn write_wav_i16(path: &Path, sample_rate: u32, samples: &[f32]) -> Result<()> {
@@ -610,7 +686,7 @@ fn find_kokoro_python(data_root: &Path) -> Option<PathBuf> {
         } else {
             "bin/python"
         });
-    python.exists().then_some(python)
+    python.is_file().then_some(python)
 }
 
 fn find_kokoro_model_dir(data_root: &Path) -> Option<PathBuf> {
@@ -632,9 +708,20 @@ fn find_kokoro_model_dir(data_root: &Path) -> Option<PathBuf> {
 }
 
 fn kokoro_model_dir_ready(path: &Path) -> bool {
-    path.join("config.json").is_file()
-        && path.join("kokoro-v1_0.pth").is_file()
-        && path.join("voices").join("af_bella.pt").is_file()
+    [
+        path.join("config.json"),
+        path.join("kokoro-v1_0.pth"),
+        path.join("voices").join("af_heart.pt"),
+        path.join("voices").join("af_bella.pt"),
+    ]
+    .iter()
+    .all(|path| file_is_nonempty(path))
+}
+
+fn file_is_nonempty(path: &Path) -> bool {
+    path.metadata()
+        .map(|metadata| metadata.is_file() && metadata.len() > 0)
+        .unwrap_or(false)
 }
 
 fn find_binary(flow_root: &Path, name: &str) -> Option<PathBuf> {
@@ -646,7 +733,7 @@ fn find_binary(flow_root: &Path, name: &str) -> Option<PathBuf> {
     ["release", "debug"]
         .iter()
         .map(|profile| flow_root.join("target").join(profile).join(&exe))
-        .find(|path| path.exists())
+        .find(|path| path.is_file())
 }
 
 fn default_flow_root() -> PathBuf {

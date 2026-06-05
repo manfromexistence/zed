@@ -14290,6 +14290,20 @@ PASSED:
 NOTES:
 - This remains source-only. It does not run Cargo, run `just run`, start a server, perform WebView runtime proof, enable Apply, or mutate source.
 
+[2026-06-05] - Agent Composer Voice Telemetry And Friday Runtime Guards
+
+CHANGED:
+- `crates\agent_ui\src\conversation_view\voice_controls.rs` now renders a source-backed recording strip with elapsed time, captured audio duration, real input-level bars, and an in-panel stop control wired to the recorder stop/transcribe path.
+- `crates\agent_ui\src\flow_speech_runtime.rs` now exposes recording telemetry from the captured microphone samples, honors Zed's selected input audio device when available, records the Friday default Parakeet mapping, and rejects Friday Kokoro model directories unless all required files are non-empty.
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now updates recording telemetry while the recorder is active, passes the configured input audio device to the Flow recorder, and removes successful Kokoro temp WAVs after Zed decodes them for playback.
+- `script\dx-agent-voice-controls-source.test.ts` now guards the selected-mic path, Friday Kokoro env/model contract, no `flow --transcribe`/`flow --speak` regressions, child-process timeout behavior, audio feature fallback, recording telemetry, and temp-WAV cleanup.
+- `script\dx-handoff-source-guard-registry.test.ts` and `DX.md` now register the voice source guard in the lightweight guard registry.
+
+NOTES:
+- Six GPT-5.5 extra-high subagents audited STT defaults, Kokoro runtime reliability, current Zed voice wiring, GPUI recording patterns, Flow build artifacts, and source-guard gaps.
+- `G:\Dx\flow` is now a real directory, not a junction. It has Parakeet model files but no `flow-dictate.exe`; current Flow policy still defers builds.
+- Friday Kokoro Python runtime discovery is stricter now. Local inspection found `G:\Flow\data\models\tts\kokoro_82m` missing and the HF snapshot entries zero-length reparse files, so live read-aloud proof still needs a complete non-empty Friday Kokoro model directory or an explicit `DX_KOKORO_MODEL_DIR`.
+
 [2026-06-05] - Agent Composer Friday Kokoro Playback
 
 CHANGED:

@@ -6,6 +6,8 @@ use ui::{
 };
 use ui::{h_flex, prelude::*, v_flex};
 
+const VOICE_LEVEL_BAR_COUNT: usize = 12;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum ComposerVoicePhase {
     Ready,
@@ -20,6 +22,8 @@ pub(super) struct ComposerVoiceState {
     phase: ComposerVoicePhase,
     message: SharedString,
     started_at: Option<Instant>,
+    captured_duration: Duration,
+    input_level: f32,
 }
 
 impl Default for ComposerVoiceState {
@@ -28,6 +32,8 @@ impl Default for ComposerVoiceState {
             phase: ComposerVoicePhase::Ready,
             message: "Flow voice ready".into(),
             started_at: None,
+            captured_duration: Duration::ZERO,
+            input_level: 0.0,
         }
     }
 }
@@ -50,34 +56,52 @@ impl ComposerVoiceState {
         self.started_at
     }
 
+    pub(super) fn update_recording_telemetry(
+        &mut self,
+        captured_duration: Duration,
+        input_level: f32,
+    ) {
+        if self.phase == ComposerVoicePhase::Recording {
+            self.captured_duration = captured_duration;
+            self.input_level = input_level.clamp(0.0, 1.0);
+        }
+    }
+
     pub(super) fn set_ready(&mut self, message: impl Into<SharedString>) {
         self.phase = ComposerVoicePhase::Ready;
         self.message = message.into();
         self.started_at = None;
+        self.captured_duration = Duration::ZERO;
+        self.input_level = 0.0;
     }
 
     pub(super) fn set_recording(&mut self, message: impl Into<SharedString>) {
         self.phase = ComposerVoicePhase::Recording;
         self.message = message.into();
         self.started_at = Some(Instant::now());
+        self.captured_duration = Duration::ZERO;
+        self.input_level = 0.0;
     }
 
     pub(super) fn set_transcribing(&mut self, message: impl Into<SharedString>) {
         self.phase = ComposerVoicePhase::Transcribing;
         self.message = message.into();
         self.started_at = None;
+        self.input_level = 0.0;
     }
 
     pub(super) fn set_speaking(&mut self, message: impl Into<SharedString>) {
         self.phase = ComposerVoicePhase::Speaking;
         self.message = message.into();
         self.started_at = None;
+        self.input_level = 0.0;
     }
 
     pub(super) fn set_error(&mut self, message: impl Into<SharedString>) {
         self.phase = ComposerVoicePhase::Error;
         self.message = message.into();
         self.started_at = None;
+        self.input_level = 0.0;
     }
 
     fn voice_tooltip(&self) -> &'static str {
@@ -150,6 +174,7 @@ pub(super) fn render_voice_buttons(
 
 pub(super) fn render_voice_recording_panel(
     state: &ComposerVoiceState,
+    on_stop_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     cx: &App,
 ) -> Option<AnyElement> {
     if state.phase == ComposerVoicePhase::Ready {
@@ -157,14 +182,9 @@ pub(super) fn render_voice_recording_panel(
     }
 
     let (title, tone, detail) = match state.phase {
-        ComposerVoicePhase::Recording => (
-            "Recording with Flow",
-            Color::Error,
-            state
-                .recording_started_at()
-                .map(format_elapsed)
-                .unwrap_or_else(|| "Listening".into()),
-        ),
+        ComposerVoicePhase::Recording => {
+            ("Recording with Flow", Color::Error, recording_detail(state))
+        }
         ComposerVoicePhase::Transcribing => (
             "Transcribing with Parakeet",
             Color::Accent,
@@ -184,12 +204,10 @@ pub(super) fn render_voice_recording_panel(
     };
 
     Some(
-        h_flex()
+        v_flex()
             .id("agent-composer-voice-recording-panel")
             .w_full()
-            .justify_between()
-            .items_center()
-            .gap_2()
+            .gap_1()
             .px_2()
             .py_1()
             .rounded_sm()
@@ -198,31 +216,99 @@ pub(super) fn render_voice_recording_panel(
             .border_color(tone.color(cx).alpha(0.18))
             .child(
                 h_flex()
-                    .gap_1p5()
+                    .w_full()
+                    .justify_between()
                     .items_center()
+                    .gap_2()
                     .child(
-                        Icon::new(status_icon(state.phase))
-                            .size(IconSize::XSmall)
-                            .color(tone),
-                    )
-                    .child(
-                        v_flex()
-                            .gap_0p5()
-                            .child(Label::new(title).size(LabelSize::Small).color(tone))
+                        h_flex()
+                            .min_w_0()
+                            .flex_1()
+                            .gap_1p5()
+                            .items_center()
                             .child(
-                                Label::new(detail)
-                                    .size(LabelSize::XSmall)
-                                    .color(Color::Muted),
+                                Icon::new(status_icon(state.phase))
+                                    .size(IconSize::XSmall)
+                                    .color(tone),
+                            )
+                            .child(
+                                v_flex()
+                                    .min_w_0()
+                                    .gap_0p5()
+                                    .child(
+                                        Label::new(title)
+                                            .size(LabelSize::Small)
+                                            .color(tone)
+                                            .truncate(),
+                                    )
+                                    .child(
+                                        Label::new(detail)
+                                            .size(LabelSize::XSmall)
+                                            .color(Color::Muted)
+                                            .truncate(),
+                                    ),
                             ),
-                    ),
+                    )
+                    .when(state.phase == ComposerVoicePhase::Recording, |this| {
+                        this.child(
+                            IconButton::new("agent-composer-stop-voice-recording", IconName::Stop)
+                                .icon_size(IconSize::XSmall)
+                                .icon_color(Color::Error)
+                                .tooltip(Tooltip::text("Stop recording and transcribe"))
+                                .on_click(on_stop_click),
+                        )
+                    }),
             )
+            .when(state.phase == ComposerVoicePhase::Recording, |this| {
+                this.child(render_voice_level_meter(state.input_level, tone, cx))
+            })
             .child(
                 Label::new(state.message.clone())
                     .size(LabelSize::XSmall)
-                    .color(Color::Muted),
+                    .color(Color::Muted)
+                    .truncate(),
             )
             .into_any_element(),
     )
+}
+
+fn render_voice_level_meter(level: f32, tone: Color, cx: &App) -> AnyElement {
+    let active_bars = (level.clamp(0.0, 1.0) * VOICE_LEVEL_BAR_COUNT as f32).ceil() as usize;
+
+    h_flex()
+        .id("agent-composer-voice-level-meter")
+        .w_full()
+        .h_2()
+        .items_end()
+        .gap_0p5()
+        .children((0..VOICE_LEVEL_BAR_COUNT).map(|index| {
+            let is_active = index < active_bars;
+            let height = px(3.0 + (index % 4) as f32 * 2.0);
+            div().w(px(3.0)).h(height).rounded_full().bg(if is_active {
+                tone.color(cx).alpha(0.70)
+            } else {
+                Color::Muted.color(cx).alpha(0.18)
+            })
+        }))
+        .into_any_element()
+}
+
+fn recording_detail(state: &ComposerVoiceState) -> SharedString {
+    let elapsed = state
+        .recording_started_at()
+        .map(|started_at| format_clock(started_at.elapsed()))
+        .unwrap_or_else(|| "00:00".to_string());
+    let captured = format_captured_duration(state.captured_duration);
+    format!("{elapsed} elapsed / {captured} captured").into()
+}
+
+fn format_clock(duration: Duration) -> String {
+    let seconds = duration.as_secs().min(Duration::from_secs(599).as_secs());
+    format!("{:02}:{:02}", seconds / 60, seconds % 60)
+}
+
+fn format_captured_duration(duration: Duration) -> String {
+    format!("{:.1}s", duration.as_secs_f32())
 }
 
 fn status_icon(phase: ComposerVoicePhase) -> IconName {
@@ -232,10 +318,4 @@ fn status_icon(phase: ComposerVoicePhase) -> IconName {
         ComposerVoicePhase::Error => IconName::Warning,
         ComposerVoicePhase::Ready => IconName::Mic,
     }
-}
-
-fn format_elapsed(started_at: Instant) -> SharedString {
-    let elapsed = started_at.elapsed();
-    let seconds = elapsed.as_secs().min(Duration::from_secs(599).as_secs());
-    format!("{:02}:{:02}", seconds / 60, seconds % 60).into()
 }
