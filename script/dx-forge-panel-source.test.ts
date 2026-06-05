@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import test from "node:test";
 
 const agentUi = readFileSync("crates/agent_ui/src/agent_ui.rs", "utf8");
@@ -47,6 +48,17 @@ const providersView = existsSync(providersViewPath)
 const providersTooltips = existsSync(providersTooltipsPath)
   ? readFileSync(providersTooltipsPath, "utf8")
   : "";
+
+const normalizedPath = (path: string) => path.replaceAll("\\", "/");
+
+const collectRustFiles = (root: string): string[] =>
+  readdirSync(root, { withFileTypes: true })
+    .flatMap((entry) => {
+      const child = join(root, entry.name);
+      if (entry.isDirectory()) return collectRustFiles(child);
+      return entry.name.endsWith(".rs") ? [normalizedPath(child)] : [];
+    })
+    .sort();
 const snapshot = readFileSync("crates/agent_ui/src/dx_forge_panel/snapshot.rs", "utf8");
 const snapshotStatePath = "crates/agent_ui/src/dx_forge_panel/snapshot_state.rs";
 const snapshotState = existsSync(snapshotStatePath)
@@ -215,8 +227,24 @@ test("Forge panel reads package-status without runtime overclaims", () => {
   assert.match(packageStatus, /runtime_execution/);
   assert.match(packageStatus, /browser_proof/);
   assert.match(packageStatus, /live_provider_proof/);
-  assert.match(packageStatus, /runtime\/provider proof pending/);
+  assert.match(packageStatus, /source-only receipt evidence/);
+  assert.doesNotMatch(packageStatus, /runtime\/provider proof pending/);
+  assert.match(packageStatus, /package_status_evidence_detail\(/);
   assert.match(packageStatus, /status_detail\(/);
+  const statusDetailBody =
+    packageStatus.match(/fn status_detail\([\s\S]*?\n}\n\nfn package_status_label/)?.[0] ?? "";
+  assert.match(
+    statusDetailBody,
+    /\{package_count\} packages · \{status\} · \{current_receipts\} receipt hashes current/,
+  );
+  assert.doesNotMatch(
+    statusDetailBody,
+    /node_modules|proof|evidence|source-only|runtime\/provider|live checks not executed/i,
+  );
+  assert.match(
+    packageStatus,
+    /detail:\s*format!\("\{status\} package-status; \{node_modules\}; \{evidence_detail\}"\)/,
+  );
   assert.match(packageStatus, /warning_count\(/);
   assert.doesNotMatch(packageStatus, /\.machine/);
   assert.doesNotMatch(
@@ -351,9 +379,23 @@ test("Forge panel reads Forge remote registry and makes provider targets concret
     "Dropbox",
     "YouTube",
     "SoundCloud",
+    "SoundBox",
   ]) {
     assert.match(remoteRegistrySources, new RegExp(kind));
   }
+
+  assert.match(
+    remoteRegistryProviders,
+    /"soundcloud" \| "soundbox" => Some\(\("soundcloud", "media", "SoundCloud"\)\)/,
+  );
+  assert.match(
+    remoteRegistryProviders,
+    /"soundcloud" => "SoundCloud"/,
+  );
+  assert.match(
+    remoteRegistryProviders,
+    /"soundbox" => "SoundBox"/,
+  );
 
   assert.match(snapshot, /remote_provider_for\(&self, provider_id: &str\)/);
   assert.match(snapshot, /fn remote_provider_rank/);
@@ -506,7 +548,7 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
     const iconPath = `assets/icons/${fileName}.svg`;
     assert.ok(
       existsSync(iconPath),
-      `${fileName}.svg must be exported from the DX icon CLI`,
+      `${fileName}.svg must be a tracked DX provider icon asset`,
     );
     const svg = readFileSync(iconPath, "utf8");
     assert.match(svg, /^<svg\b[^>]*viewBox=/);
@@ -618,4 +660,34 @@ test("Forge panel files stay small and professionally named", () => {
   ]) {
     assert.doesNotMatch(forgeSources.toLowerCase(), new RegExp(`\\b${term}\\b`));
   }
+});
+
+test("Forge panel source surface is closed against UI slop and proof overclaims", () => {
+  const forgePanelSourcePaths = [
+    "crates/agent_ui/src/dx_forge_panel.rs",
+    ...collectRustFiles("crates/agent_ui/src/dx_forge_panel"),
+  ];
+  const allForgePanelSources = forgePanelSourcePaths
+    .map((path) => readFileSync(path, "utf8"))
+    .join("\n");
+
+  for (const path of forgePanelSourcePaths) {
+    assert.ok(
+      readFileSync(path, "utf8").split(/\r?\n/).length <= 300,
+      `${path} should stay small enough to review quickly`,
+    );
+  }
+
+  assert.doesNotMatch(
+    allForgePanelSources,
+    /\b(?:Badge|Chip|Pill|Tag|StatusBadge|BadgeCluster)\b|fn\s+\w*(?:badge|chip|pill|tag|cluster)\w*\s*\(|\b(?:badge|chip|pill)_cluster\b/i,
+  );
+  assert.doesNotMatch(
+    allForgePanelSources,
+    /\b(?:connected remote|synced live|runtime\s+(?:proven|verified|ready|green)|provider\s+(?:proven|verified|ready|green)|browser\s+(?:proven|verified|ready|green)|live\s+(?:remote\s+)?health\s+(?:checked|verified)|source\s+hash\s+matches|hash\s+verified|metadata\s+verified|freshness\s+verified|cache\s+verified|runtime-backed|browser-backed|provider-backed)\b/i,
+  );
+
+  assert.match(allForgePanelSources, /source-only receipt evidence/);
+  assert.match(allForgePanelSources, /receipt file only; live checks not executed/);
+  assert.match(allForgePanelSources, /live remote health unchecked/);
 });

@@ -65,21 +65,16 @@ fn package_status_row(workspace_root: &str, path: &Path, value: &Value) -> DxFor
         usize_field(value, &["package_count"]).unwrap_or_else(|| package_rows(value).len());
     let current_receipts = current_receipt_count(value);
     let warnings = warning_count(value);
-    let proof_detail = proof_detail(value);
+    let node_modules = node_modules_detail(value);
+    let evidence_detail = package_status_evidence_detail(value);
 
     DxForgeSourceRow {
         label: package_status_label(&status),
-        detail: status_detail(
-            value,
-            &status,
-            package_count,
-            current_receipts,
-            &proof_detail,
-        ),
+        detail: status_detail(&status, package_count, current_receipts),
         path: display_path(workspace_root, path),
         receipts: vec![DxForgeReceiptDrilldown {
             label: "Read model".to_string(),
-            detail: format!("{status} package-status; {proof_detail}"),
+            detail: format!("{status} package-status; {node_modules}; {evidence_detail}"),
         }],
         warnings: if warnings == 0 {
             Vec::new()
@@ -175,21 +170,8 @@ fn forge_summary_missing_count(value: &Value) -> usize {
     .count()
 }
 
-fn status_detail(
-    value: &Value,
-    status: &str,
-    package_count: usize,
-    current_receipts: usize,
-    proof_detail: &str,
-) -> String {
-    let node_modules = if bool_field(value, &["no_node_modules_required"]).unwrap_or(false) {
-        "no node_modules required"
-    } else {
-        "node_modules policy unknown"
-    };
-    format!(
-        "{package_count} packages · {status} · {current_receipts} receipt hashes current · {node_modules} · {proof_detail}"
-    )
+fn status_detail(status: &str, package_count: usize, current_receipts: usize) -> String {
+    format!("{package_count} packages · {status} · {current_receipts} receipt hashes current")
 }
 
 fn package_status_label(status: &str) -> String {
@@ -202,8 +184,16 @@ fn package_status_label(status: &str) -> String {
     }
 }
 
-fn proof_detail(value: &Value) -> String {
-    let proof_count = package_rows(value)
+fn node_modules_detail(value: &Value) -> &'static str {
+    if bool_field(value, &["no_node_modules_required"]).unwrap_or(false) {
+        "no node_modules required"
+    } else {
+        "node_modules policy unknown"
+    }
+}
+
+fn package_status_evidence_detail(value: &Value) -> String {
+    let evidence_count = package_rows(value)
         .iter()
         .filter(|row| {
             bool_field(row, &["browser_proof"]).unwrap_or(false)
@@ -212,10 +202,10 @@ fn proof_detail(value: &Value) -> String {
         })
         .count();
 
-    if proof_count == 0 {
-        "runtime/provider proof pending".to_string()
+    if evidence_count == 0 {
+        "source-only receipt evidence".to_string()
     } else {
-        format!("{proof_count} runtime/provider evidence flag(s)")
+        format!("{evidence_count} receipt evidence flag(s)")
     }
 }
 

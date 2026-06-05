@@ -42,7 +42,7 @@ pub(super) fn catalog_provider_info(
         "gdrive" | "googledrive" => Some(("drive", "storage", "Google Drive")),
         "dropbox" => Some(("dropbox", "storage", "Dropbox")),
         "youtube" => Some(("youtube", "media", "YouTube")),
-        "soundcloud" => Some(("soundcloud", "media", "SoundCloud")),
+        "soundcloud" | "soundbox" => Some(("soundcloud", "media", "SoundCloud")),
         _ => None,
     }
 }
@@ -60,6 +60,7 @@ pub(super) fn canonical_kind_label(kind: &str) -> &'static str {
         "youtube" => "YouTube",
         "pinterest" => "Pinterest",
         "soundcloud" => "SoundCloud",
+        "soundbox" => "SoundBox",
         "sketchfab" => "Sketchfab",
         _ => "Unknown",
     }
