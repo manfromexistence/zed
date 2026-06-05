@@ -14,15 +14,32 @@ pub(super) fn package_status_rows(workspace_roots: &[String]) -> Vec<DxForgeSour
     workspace_roots
         .iter()
         .take(MAX_WORKSPACE_ROOTS)
-        .filter_map(|root| {
-            let path = Path::new(root)
-                .join(".dx")
-                .join("forge")
-                .join("package-status.json");
-            let value = read_package_status_json(&path)?;
-            Some(package_status_row(root, &path, &value))
-        })
+        .filter_map(|root| package_status_candidate_rows(root))
         .collect()
+}
+
+fn package_status_candidate_rows(root: &str) -> Option<DxForgeSourceRow> {
+    [
+        Path::new(root)
+            .join(".forge")
+            .join("receipts")
+            .join("package-status.json"),
+        Path::new(root)
+            .join(".dx")
+            .join("forge")
+            .join("package-status.json"),
+    ]
+    .into_iter()
+    .find_map(|path| {
+        if !path.is_file() {
+            return None;
+        }
+
+        Some(match read_package_status_json(&path) {
+            Some(value) => package_status_row(root, &path, &value),
+            None => unreadable_package_status_row(root, &path),
+        })
+    })
 }
 
 fn read_package_status_json(path: &Path) -> Option<Value> {
@@ -39,6 +56,10 @@ fn read_package_status_json(path: &Path) -> Option<Value> {
 }
 
 fn package_status_row(workspace_root: &str, path: &Path, value: &Value) -> DxForgeSourceRow {
+    if string_field(value, &["schema"]).as_deref() == Some("forge.package_status_receipt") {
+        return forge_package_status_row(workspace_root, path, value);
+    }
+
     let status = string_field(value, &["status"]).unwrap_or_else(|| "unknown".to_string());
     let package_count =
         usize_field(value, &["package_count"]).unwrap_or_else(|| package_rows(value).len());
@@ -68,6 +89,92 @@ fn package_status_row(workspace_root: &str, path: &Path, value: &Value) -> DxFor
     }
 }
 
+fn unreadable_package_status_row(workspace_root: &str, path: &Path) -> DxForgeSourceRow {
+    let warning = format!(
+        "package status could not be read within {} bytes or parsed as JSON",
+        MAX_PACKAGE_STATUS_BYTES
+    );
+
+    DxForgeSourceRow {
+        label: "Package status unreadable".to_string(),
+        detail: warning.clone(),
+        path: display_path(workspace_root, path),
+        receipts: vec![DxForgeReceiptDrilldown {
+            label: "Read model".to_string(),
+            detail: warning.clone(),
+        }],
+        warnings: vec![warning],
+    }
+}
+
+fn forge_package_status_row(workspace_root: &str, path: &Path, value: &Value) -> DxForgeSourceRow {
+    let package_count = usize_field(value, &["summary", "package_count"])
+        .unwrap_or_else(|| package_rows(value).len());
+    let valid_packages = usize_field(value, &["summary", "valid_packages"]).unwrap_or(0);
+    let missing_packages = usize_field(value, &["summary", "missing_packages"]).unwrap_or(0);
+    let mismatched_packages = usize_field(value, &["summary", "mismatched_packages"]).unwrap_or(0);
+    let unsafe_remote_count = usize_field(value, &["summary", "unsafe_remote_count"]).unwrap_or(0);
+    let media_asset_count = usize_field(value, &["summary", "media_asset_count"]).unwrap_or(0);
+    let tracked_media_assets =
+        usize_field(value, &["summary", "tracked_media_assets"]).unwrap_or(0);
+    let package_lock_present = bool_field(value, &["package_lock_present"]).unwrap_or(false);
+    let missing_summary_fields = forge_summary_missing_count(value);
+    let warning_count = missing_packages
+        + mismatched_packages
+        + unsafe_remote_count
+        + media_asset_count.saturating_sub(tracked_media_assets)
+        + missing_summary_fields;
+
+    DxForgeSourceRow {
+        label: "Forge receipt".to_string(),
+        detail: format!(
+            "{valid_packages}/{package_count} valid · {missing_packages} missing · {mismatched_packages} mismatched · lock {} · media {tracked_media_assets}/{media_asset_count}",
+            if package_lock_present {
+                "present"
+            } else {
+                "missing"
+            },
+        ),
+        path: display_path(workspace_root, path),
+        receipts: vec![DxForgeReceiptDrilldown {
+            label: "Forge receipt".to_string(),
+            detail:
+                "forge.package_status_receipt; integrity_state read from receipt; receipt file only; live checks not executed"
+                    .to_string(),
+        }],
+        warnings: forge_package_status_warnings(warning_count, missing_summary_fields),
+    }
+}
+
+fn forge_package_status_warnings(
+    warning_count: usize,
+    missing_summary_fields: usize,
+) -> Vec<String> {
+    let mut warnings = Vec::new();
+    if warning_count > 0 {
+        warnings.push(format!("{warning_count} Forge receipt warning(s)"));
+    }
+    if missing_summary_fields > 0 {
+        warnings.push(format!("{missing_summary_fields} summary field(s) missing"));
+    }
+    warnings
+}
+
+fn forge_summary_missing_count(value: &Value) -> usize {
+    [
+        "package_count",
+        "valid_packages",
+        "missing_packages",
+        "mismatched_packages",
+        "unsafe_remote_count",
+        "media_asset_count",
+        "tracked_media_assets",
+    ]
+    .into_iter()
+    .filter(|field_name| field(value, &["summary", field_name]).is_none())
+    .count()
+}
+
 fn status_detail(
     value: &Value,
     status: &str,
@@ -87,9 +194,9 @@ fn status_detail(
 
 fn package_status_label(status: &str) -> String {
     if status.contains("visibility") {
-        "Root package visibility".to_string()
+        "DX read model".to_string()
     } else if status.contains("lock") {
-        "Lock-backed packages".to_string()
+        "DX read model".to_string()
     } else {
         "Package status".to_string()
     }

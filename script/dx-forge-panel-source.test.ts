@@ -184,8 +184,31 @@ test("Forge panel reads package-status without runtime overclaims", () => {
   assert.match(panelView, /No Forge package status found/);
   assert.match(packageStatus, /const MAX_PACKAGE_STATUS_BYTES: u64 = 1024 \* 1024;/);
   assert.match(packageStatus, /join\("\.dx"\)[\s\S]*\.join\("forge"\)[\s\S]*\.join\("package-status\.json"\)/);
+  assert.match(packageStatus, /join\("\.forge"\)[\s\S]*\.join\("receipts"\)[\s\S]*\.join\("package-status\.json"\)/);
+  assert.ok(
+    packageStatus.indexOf('join(".forge")') < packageStatus.indexOf('join(".dx")'),
+    "canonical .forge/receipts package-status should be checked before legacy .dx/forge package-status",
+  );
+  assert.match(packageStatus, /package_status_candidate_rows/);
+  assert.match(packageStatus, /\.find_map\(\|path\|/);
+  assert.doesNotMatch(packageStatus, /\.filter_map\(\|path\|/);
   assert.match(packageStatus, /file\.by_ref\(\)\s*\.take\(MAX_PACKAGE_STATUS_BYTES \+ 1\)/);
   assert.match(packageStatus, /serde_json::from_slice/);
+  assert.match(packageStatus, /forge\.package_status_receipt/);
+  assert.match(packageStatus, /forge_package_status_row/);
+  assert.match(packageStatus, /unreadable_package_status_row/);
+  assert.match(packageStatus, /path\.is_file\(\)/);
+  assert.match(packageStatus, /package status could not be read within/);
+  assert.match(packageStatus, /forge_summary_missing_count/);
+  assert.match(packageStatus, /summary field\(s\) missing/);
+  assert.match(packageStatus, /package_lock_present/);
+  assert.match(packageStatus, /integrity_state/);
+  assert.match(packageStatus, /valid_packages/);
+  assert.match(packageStatus, /missing_packages/);
+  assert.match(packageStatus, /mismatched_packages/);
+  assert.match(packageStatus, /unsafe_remote_count/);
+  assert.match(packageStatus, /tracked_media_assets/);
+  assert.match(packageStatus, /receipt file only; live checks not executed/);
   assert.match(packageStatus, /package_lane_visibility/);
   assert.match(packageStatus, /receipt_hash_refresh/);
   assert.match(packageStatus, /no_node_modules_required/);
