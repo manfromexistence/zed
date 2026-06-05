@@ -4,12 +4,17 @@ import test from "node:test";
 
 const agentUi = readFileSync("crates/agent_ui/src/agent_ui.rs", "utf8");
 const moduleRoot = readFileSync("crates/agent_ui/src/dx_forge_panel.rs", "utf8");
+const controls = readFileSync("crates/agent_ui/src/dx_forge_panel/controls.rs", "utf8");
 const panel = readFileSync("crates/agent_ui/src/dx_forge_panel/panel.rs", "utf8");
 const snapshot = readFileSync("crates/agent_ui/src/dx_forge_panel/snapshot.rs", "utf8");
 const panelView = readFileSync("crates/agent_ui/src/dx_forge_panel/panel_view.rs", "utf8");
 const rows = readFileSync("crates/agent_ui/src/dx_forge_panel/rows.rs", "utf8");
+const receiptHistoryRoot = readFileSync("crates/agent_ui/src/dx_receipt_history.rs", "utf8");
+const sourceSetsRoot = readFileSync("crates/agent_ui/src/dx_source_sets.rs", "utf8");
+const sourceSetCache = readFileSync("crates/agent_ui/src/dx_source_sets/cache.rs", "utf8");
 const zedActions = readFileSync("crates/zed_actions/src/lib.rs", "utf8");
 const receiptBuckets = readFileSync("crates/agent_ui/src/dx_receipt_history/buckets.rs", "utf8");
+const forgeHistory = readFileSync("crates/agent_ui/src/dx_receipt_history/forge_history.rs", "utf8");
 const receiptFiles = readFileSync("crates/agent_ui/src/dx_receipt_history/receipt_files.rs", "utf8");
 const receiptFields = readFileSync(
   "crates/agent_ui/src/dx_receipt_history/forge_receipt_fields.rs",
@@ -17,7 +22,7 @@ const receiptFields = readFileSync(
 );
 const sourceSets = readFileSync("crates/agent_ui/src/dx_source_sets.rs", "utf8");
 const sourceSetReceipts = readFileSync("crates/agent_ui/src/dx_source_sets/receipts.rs", "utf8");
-const forgeSources = [moduleRoot, panel, snapshot, panelView, rows].join("\n");
+const forgeSources = [moduleRoot, controls, panel, snapshot, panelView, rows].join("\n");
 const forgeReaderSources = [
   receiptBuckets,
   receiptFiles,
@@ -75,8 +80,11 @@ test("Forge snapshot reuses existing bounded DX readers", () => {
   assert.match(sourceSets, /join\("dx-forge"\)\.join\("restores"\)/);
   assert.match(sourceSets, /join\("dx-media"\)\.join\("executions"\)/);
   assert.match(snapshot, /target_path: summary\.target_path\.clone\(\)/);
+  assert.match(snapshot, /source_path: summary\.source_path\.clone\(\)/);
   assert.match(snapshot, /restore_destination_root: summary\.restore_destination_root\.clone\(\)/);
   assert.match(snapshot, /blocker_count: summary\.blocker_count/);
+  assert.match(receiptHistoryRoot, /pub source_path: String/);
+  assert.match(forgeHistory, /source_path: path\.display\(\)\.to_string\(\)/);
   assert.match(snapshot, /warnings: source\.warnings\.clone\(\)/);
   assert.match(snapshot, /receipt_drilldowns/);
   assert.doesNotMatch(
@@ -90,7 +98,7 @@ test("Forge panel renders real receipt, restore, and media states", () => {
   assert.match(panelView, /fn restore_section/);
   assert.match(panelView, /fn media_section/);
   assert.match(panelView, /WithScrollbar/);
-  assert.match(panelView, /vertical_scrollbar_for\(scroll_handle, _window, cx\)/);
+  assert.match(panelView, /vertical_scrollbar_for\(scroll_handle, window, cx\)/);
   assert.match(panelView, /No Forge receipts found/);
   assert.match(
     panelView,
@@ -103,6 +111,31 @@ test("Forge panel renders real receipt, restore, and media states", () => {
   assert.match(rows, /\.min_w_0\(\)/);
   assert.match(rows, /Tooltip::with_meta/);
   assert.match(rows, /truncate_start\(\)/);
+});
+
+test("Forge panel uses Git-style controls instead of metric cards", () => {
+  assert.match(moduleRoot, /mod controls;/);
+  assert.match(panelView, /toolbar\(snapshot, workspace, panel, cx\)/);
+  assert.match(panelView, /section_header\(/);
+  assert.match(rows, /pub\(super\) fn section_header/);
+  assert.match(rows, /ghost_element_background/);
+  assert.match(rows, /ghost_element_hover/);
+  assert.match(rows, /ghost_element_active/);
+  assert.match(controls, /Button::new\("dx-forge-open-history", "History"\)/);
+  assert.match(controls, /IconButton::new\("dx-forge-refresh", IconName::RotateCw\)/);
+  assert.match(controls, /IconButton::new\(id, IconName::ArrowUpRight\)/);
+  assert.match(controls, /open_abs_path\(/);
+  assert.match(controls, /OpenOptions/);
+  assert.match(panel, /pub\(super\) fn refresh/);
+  assert.match(panel, /invalidate_tool_history_snapshot_cache\(\)/);
+  assert.match(panel, /invalidate_source_set_snapshot_cache\(\)/);
+  assert.match(receiptHistoryRoot, /pub\(crate\) fn invalidate_tool_history_snapshot_cache/);
+  assert.match(sourceSetsRoot, /pub\(crate\) use self::cache::invalidate_source_set_snapshot_cache/);
+  assert.match(sourceSetCache, /pub\(crate\) fn invalidate_source_set_snapshot_cache/);
+  assert.doesNotMatch(rows, /pub\(super\) fn metric_row/);
+  assert.doesNotMatch(rows, /pub\(super\) fn section\(/);
+  assert.doesNotMatch(panelView, /Forge Proof|Workspace scope|Visible blockers|Visible restore warnings/);
+  assert.doesNotMatch(panelView, /\.p_2\(\)[\s\S]*receipt_section/);
 });
 
 test("Forge readers keep latest receipt edge cases visible", () => {
@@ -119,6 +152,7 @@ test("Forge readers keep latest receipt edge cases visible", () => {
 test("Forge panel files stay small and professionally named", () => {
   const lineCounts = new Map([
     ["dx_forge_panel.rs", moduleRoot],
+    ["controls.rs", controls],
     ["panel.rs", panel],
     ["snapshot.rs", snapshot],
     ["panel_view.rs", panelView],
@@ -127,7 +161,7 @@ test("Forge panel files stay small and professionally named", () => {
 
   for (const [name, source] of lineCounts) {
     assert.ok(
-      source.split("\n").length <= 360,
+      source.split("\n").length <= 300,
       `${name} should stay small enough to review quickly`,
     );
   }

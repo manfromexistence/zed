@@ -1,3 +1,5 @@
+use crate::dx_receipt_history::invalidate_tool_history_snapshot_cache;
+use crate::dx_source_sets::invalidate_source_set_snapshot_cache;
 use gpui::{
     Action, App, AppContext, Context, EventEmitter, FocusHandle, Focusable, IntoElement, Render,
     ScrollHandle, WeakEntity, Window, px,
@@ -70,6 +72,12 @@ impl DxForgePanel {
             .map(|path| path.display().to_string())
             .collect()
     }
+
+    pub(super) fn refresh(&mut self, cx: &mut Context<Self>) {
+        invalidate_tool_history_snapshot_cache();
+        invalidate_source_set_snapshot_cache();
+        cx.notify();
+    }
 }
 
 impl Focusable for DxForgePanel {
@@ -140,6 +148,7 @@ impl Render for DxForgePanel {
         panel_view::render_panel(
             &snapshot,
             &self.workspace,
+            &cx.entity().downgrade(),
             cx.entity().entity_id(),
             &self.scroll_handle,
             window,

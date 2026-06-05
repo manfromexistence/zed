@@ -26,6 +26,7 @@ pub(crate) struct DxToolHistoryBucket {
 #[derive(Clone)]
 pub(crate) struct DxToolHistoryReceiptSummary {
     pub label: String,
+    pub source_path: String,
     pub kind: String,
     pub headline: String,
     pub detail: String,
@@ -61,4 +62,11 @@ pub(crate) fn tool_history_snapshot(workspace_roots: &[String]) -> DxToolHistory
     }
 
     scan_tool_history(workspace_roots)
+}
+
+pub(crate) fn invalidate_tool_history_snapshot_cache() {
+    let cache = TOOL_HISTORY_CACHE.get_or_init(|| Mutex::new(None));
+    if let Ok(mut cache) = cache.lock() {
+        *cache = None;
+    }
 }

@@ -1,3 +1,4 @@
+use super::fields::string_field;
 use super::{
     DxToolHistoryReceiptSummary,
     forge_receipt_fields::{
@@ -7,7 +8,6 @@ use super::{
     },
     receipt_io::read_json,
 };
-use super::fields::string_field;
 use std::path::Path;
 
 pub(super) fn forge_receipt_summary(
@@ -51,6 +51,7 @@ pub(super) fn forge_receipt_summary(
 
     Some(DxToolHistoryReceiptSummary {
         label: label.to_string(),
+        source_path: path.display().to_string(),
         kind: kind.to_string(),
         headline: headline.to_string(),
         detail: if details.is_empty() {

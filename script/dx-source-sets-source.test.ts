@@ -7,26 +7,32 @@ const lineCount = (path: string) => read(path).split(/\r?\n/).length;
 
 test("DX source sets keep receipt IO and JSON field helpers in focused modules", () => {
   const parentPath = "crates/agent_ui/src/dx_source_sets.rs";
+  const cachePath = "crates/agent_ui/src/dx_source_sets/cache.rs";
   const formattingPath = "crates/agent_ui/src/dx_source_sets/formatting.rs";
   const receiptsPath = "crates/agent_ui/src/dx_source_sets/receipts.rs";
   const fieldsPath = "crates/agent_ui/src/dx_source_sets/receipt_fields.rs";
   const restorePath = "crates/agent_ui/src/dx_source_sets/restore.rs";
 
+  assert.ok(existsSync(cachePath), "missing focused source-set cache module");
   assert.ok(existsSync(formattingPath), "missing focused source-set formatting module");
   assert.ok(existsSync(receiptsPath), "missing focused source-set receipt IO module");
   assert.ok(existsSync(fieldsPath), "missing focused source-set JSON field helper module");
   assert.ok(existsSync(restorePath), "missing focused source-set restore warning module");
 
   const parent = read(parentPath);
+  const cache = read(cachePath);
   const formatting = read(formattingPath);
   const receipts = read(receiptsPath);
   const fields = read(fieldsPath);
   const restore = read(restorePath);
 
+  assert.match(parent, /^mod cache;$/m);
   assert.match(parent, /^mod formatting;$/m);
   assert.match(parent, /^mod receipt_fields;$/m);
   assert.match(parent, /^mod receipts;$/m);
   assert.match(parent, /^mod restore;$/m);
+  assert.match(parent, /pub\(crate\) use self::cache::invalidate_source_set_snapshot_cache;/);
+  assert.match(parent, /use self::cache::\{cached_source_set_snapshot, store_source_set_snapshot\};/);
   assert.match(
     parent,
     /use self::formatting::\{display_name, format_bytes, short_hash, source_set_status\};/,
@@ -50,8 +56,13 @@ test("DX source sets keep receipt IO and JSON field helpers in focused modules",
   assert.match(fields, /pub\(super\) fn array_strings_at/);
   assert.match(restore, /pub\(super\) fn forge_restore_warnings/);
   assert.match(restore, /target_mutation_applied/);
+  assert.match(cache, /SOURCE_SET_CACHE_TTL/);
+  assert.match(cache, /pub\(super\) fn cached_source_set_snapshot/);
+  assert.match(cache, /pub\(super\) fn store_source_set_snapshot/);
+  assert.match(cache, /pub\(crate\) fn invalidate_source_set_snapshot_cache/);
 
   assert.ok(lineCount(parentPath) < 420, "dx_source_sets.rs should stay a coordinator");
+  assert.ok(lineCount(cachePath) < 60, "source-set cache module should stay small");
   assert.ok(lineCount(formattingPath) < 55, "source-set formatting module should stay small");
   assert.ok(lineCount(receiptsPath) < 90, "source-set receipt IO module should stay small");
   assert.ok(lineCount(fieldsPath) < 70, "source-set field helper module should stay small");

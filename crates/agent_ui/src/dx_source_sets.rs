@@ -1,22 +1,19 @@
+mod cache;
 mod dx_editor_toolchain;
 mod formatting;
 mod receipt_fields;
 mod receipts;
 mod restore;
 
+pub(crate) use self::cache::invalidate_source_set_snapshot_cache;
+use self::cache::{cached_source_set_snapshot, store_source_set_snapshot};
 use self::dx_editor_toolchain::dx_editor_toolchain_set;
 use self::formatting::{display_name, format_bytes, short_hash, source_set_status};
 use self::receipt_fields::{bool_at, string_at, u64_at, usize_at};
 use self::receipts::{ReceiptCandidate, latest_receipts, read_receipt_json};
 use self::restore::forge_restore_warnings;
 use serde_json::Value;
-use std::{
-    path::{Path, PathBuf},
-    sync::{Mutex, OnceLock},
-    time::{Duration, Instant},
-};
-
-const SOURCE_SET_CACHE_TTL: Duration = Duration::from_secs(5);
+use std::path::{Path, PathBuf};
 
 #[derive(Clone)]
 pub(crate) struct DxSourceSetSnapshot {
@@ -96,28 +93,14 @@ pub(crate) enum DxSourceKind {
     DxToolchainConfig,
 }
 
-static SOURCE_SET_CACHE: OnceLock<Mutex<Option<(Instant, Vec<String>, DxSourceSetSnapshot)>>> =
-    OnceLock::new();
-
 pub(crate) fn source_set_snapshot(workspace_roots: &[String]) -> DxSourceSetSnapshot {
-    let cache = SOURCE_SET_CACHE.get_or_init(|| Mutex::new(None));
-    let now = Instant::now();
-
-    if let Ok(mut cache) = cache.lock() {
-        if let Some((cached_at, cached_roots, snapshot)) = cache.as_ref() {
-            if cached_roots == workspace_roots
-                && now.duration_since(*cached_at) <= SOURCE_SET_CACHE_TTL
-            {
-                return snapshot.clone();
-            }
-        }
-
-        let snapshot = scan_source_sets(workspace_roots);
-        *cache = Some((now, workspace_roots.to_vec(), snapshot.clone()));
+    if let Some(snapshot) = cached_source_set_snapshot(workspace_roots) {
         return snapshot;
     }
 
-    scan_source_sets(workspace_roots)
+    let snapshot = scan_source_sets(workspace_roots);
+    store_source_set_snapshot(workspace_roots, &snapshot);
+    snapshot
 }
 
 fn scan_source_sets(workspace_roots: &[String]) -> DxSourceSetSnapshot {

@@ -16,6 +16,7 @@ pub(super) struct DxForgePanelSnapshot {
     pub(super) state: DxForgePanelState,
     pub(super) state_detail: String,
     pub(super) history_root_label: String,
+    pub(super) history_root_path: Option<String>,
     pub(super) history_root_exists: bool,
     pub(super) receipt_count: usize,
     pub(super) summarized_receipt_count: usize,
@@ -38,6 +39,7 @@ pub(super) enum DxForgePanelState {
 #[derive(Clone)]
 pub(super) struct DxForgeReceiptRow {
     pub(super) label: String,
+    pub(super) source_path: String,
     pub(super) kind: String,
     pub(super) headline: String,
     pub(super) detail: String,
@@ -86,6 +88,7 @@ pub(super) fn forge_panel_snapshot(workspace_roots: &[String]) -> DxForgePanelSn
     let history_root_label = history
         .map(|bucket| bucket.root_label.clone())
         .unwrap_or_else(|| "No workspace".to_string());
+    let history_root_path = forge_history_root_path(workspace_roots, history_root_exists);
     let (state, state_detail) = forge_state(
         workspace_roots,
         history_root_exists,
@@ -103,6 +106,7 @@ pub(super) fn forge_panel_snapshot(workspace_roots: &[String]) -> DxForgePanelSn
         state,
         state_detail,
         history_root_label,
+        history_root_path,
         history_root_exists,
         receipt_count,
         summarized_receipt_count,
@@ -121,6 +125,7 @@ fn receipt_rows(bucket: &DxToolHistoryBucket) -> Vec<DxForgeReceiptRow> {
         .take(MAX_PANEL_ROWS)
         .map(|summary| DxForgeReceiptRow {
             label: summary.label.clone(),
+            source_path: summary.source_path.clone(),
             kind: summary.kind.clone(),
             headline: summary.headline.clone(),
             detail: summary.detail.clone(),
@@ -247,4 +252,21 @@ fn configured_forge_root_count(workspace_roots: &[String]) -> usize {
         .take(MAX_WORKSPACE_ROOTS)
         .filter(|root| Path::new(root).join("tools").join("dx-forge").is_dir())
         .count()
+}
+
+fn forge_history_root_path(
+    workspace_roots: &[String],
+    history_root_exists: bool,
+) -> Option<String> {
+    if !history_root_exists || workspace_roots.len() != 1 {
+        return None;
+    }
+
+    Some(
+        Path::new(&workspace_roots[0])
+            .join("tools")
+            .join("dx-forge")
+            .display()
+            .to_string(),
+    )
 }
