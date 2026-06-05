@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{collections::HashSet, path::PathBuf};
 
 use gpui::{
     AnyElement, App, AppContext as _, AsyncWindowContext, Context, Entity, EntityId, EventEmitter,
@@ -27,10 +27,60 @@ const MAX_SECTION_ROWS: usize = 8;
 const MAX_NOTICE_ROWS: usize = 4;
 const MAX_QUICK_FIX_ROWS: usize = 4;
 
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+enum DxCheckPanelSectionKind {
+    Run,
+    Receipt,
+    Sections,
+    WebAudit,
+    Notices,
+    QuickFixes,
+    Commands,
+}
+
+impl DxCheckPanelSectionKind {
+    fn id(self) -> &'static str {
+        match self {
+            Self::Run => "dx-check-section-run",
+            Self::Receipt => "dx-check-section-receipt",
+            Self::Sections => "dx-check-section-sections",
+            Self::WebAudit => "dx-check-section-web-audit",
+            Self::Notices => "dx-check-section-notices",
+            Self::QuickFixes => "dx-check-section-quick-fixes",
+            Self::Commands => "dx-check-section-commands",
+        }
+    }
+
+    fn title(self) -> &'static str {
+        match self {
+            Self::Run => "Run",
+            Self::Receipt => "Receipt",
+            Self::Sections => "Sections",
+            Self::WebAudit => "Web Audit",
+            Self::Notices => "Notices",
+            Self::QuickFixes => "Quick Fixes",
+            Self::Commands => "Commands",
+        }
+    }
+
+    fn icon(self) -> IconName {
+        match self {
+            Self::Run => IconName::PlayOutlined,
+            Self::Receipt => IconName::FileTextOutlined,
+            Self::Sections => IconName::ListTodo,
+            Self::WebAudit => IconName::Public,
+            Self::Notices => IconName::Warning,
+            Self::QuickFixes => IconName::Sparkle,
+            Self::Commands => IconName::Terminal,
+        }
+    }
+}
+
 pub struct DxCheckPanel {
     workspace: WeakEntity<Workspace>,
     focus_handle: FocusHandle,
     scroll_handle: ScrollHandle,
+    collapsed_sections: HashSet<DxCheckPanelSectionKind>,
 }
 
 pub fn init(cx: &mut App) {
@@ -66,6 +116,12 @@ impl DxCheckPanel {
             workspace,
             focus_handle: cx.focus_handle(),
             scroll_handle: ScrollHandle::new(),
+            collapsed_sections: [
+                DxCheckPanelSectionKind::Receipt,
+                DxCheckPanelSectionKind::Commands,
+            ]
+            .into_iter()
+            .collect(),
         })
     }
 
@@ -90,6 +146,38 @@ impl DxCheckPanel {
     fn refresh(&mut self, cx: &mut Context<Self>) {
         invalidate_dx_check_panel_snapshot_cache();
         cx.notify();
+    }
+
+    fn section_is_open(&self, section: DxCheckPanelSectionKind) -> bool {
+        !self.collapsed_sections.contains(&section)
+    }
+
+    fn toggle_section(&mut self, section: DxCheckPanelSectionKind, cx: &mut Context<Self>) {
+        if !self.collapsed_sections.insert(section) {
+            self.collapsed_sections.remove(&section);
+        }
+        cx.notify();
+    }
+
+    fn render_section_shell(
+        &self,
+        section_kind: DxCheckPanelSectionKind,
+        panel: WeakEntity<DxCheckPanel>,
+        cx: &App,
+    ) -> gpui::Div {
+        let is_open = self.section_is_open(section_kind);
+        section(
+            section_kind.id(),
+            section_kind.title(),
+            section_kind.icon(),
+            is_open,
+            move |_, _, cx| {
+                panel
+                    .update(cx, |panel, cx| panel.toggle_section(section_kind, cx))
+                    .ok();
+            },
+            cx,
+        )
     }
 
     fn render_header(
@@ -234,142 +322,201 @@ impl DxCheckPanel {
             .into_any_element()
     }
 
-    fn render_summary(&self, snapshot: &DxCheckPanelSnapshot, cx: &App) -> AnyElement {
-        section("Run", cx)
-            .child(detail_row("Last run", snapshot.last_run_label.clone()))
-            .child(detail_row("Profile", snapshot.weight_profile.clone()))
-            .child(detail_row(
-                "Outcome",
-                outcome_label(
-                    snapshot.pass_count,
-                    snapshot.fail_count,
-                    snapshot.warn_count,
-                    snapshot.skipped_count,
-                ),
-            ))
-            .child(detail_row("Duration", duration_label(snapshot.duration_ms)))
-            .child(detail_row(
-                "Checked",
-                count_label(snapshot.checked_paths.len(), "path"),
-            ))
-            .child(detail_row(
-                "Skipped",
-                count_label(snapshot.skipped_expensive_checks.len(), "check"),
-            ))
-            .child(detail_row(
-                "Config",
-                config_label(
-                    &snapshot.scoring_config_status,
-                    snapshot.scoring_config_applies_to_score,
-                ),
-            ))
-            .child(detail_row(
-                "Scoring",
-                snapshot.scoring_config_summary.clone(),
-            ))
-            .into_any_element()
+    fn render_summary(
+        &self,
+        snapshot: &DxCheckPanelSnapshot,
+        panel: WeakEntity<DxCheckPanel>,
+        cx: &App,
+    ) -> AnyElement {
+        let section_kind = DxCheckPanelSectionKind::Run;
+        let mut stack = self.render_section_shell(section_kind, panel, cx);
+        if self.section_is_open(section_kind) {
+            stack = stack
+                .child(detail_row("Last run", snapshot.last_run_label.clone()))
+                .child(detail_row("Profile", snapshot.weight_profile.clone()))
+                .child(detail_row(
+                    "Outcome",
+                    outcome_label(
+                        snapshot.pass_count,
+                        snapshot.fail_count,
+                        snapshot.warn_count,
+                        snapshot.skipped_count,
+                    ),
+                ))
+                .child(detail_row("Duration", duration_label(snapshot.duration_ms)))
+                .child(detail_row(
+                    "Checked",
+                    count_label(snapshot.checked_paths.len(), "path"),
+                ))
+                .child(detail_row(
+                    "Skipped",
+                    count_label(snapshot.skipped_expensive_checks.len(), "check"),
+                ))
+                .child(detail_row(
+                    "Config",
+                    config_label(
+                        &snapshot.scoring_config_status,
+                        snapshot.scoring_config_applies_to_score,
+                    ),
+                ))
+                .child(detail_row(
+                    "Scoring",
+                    snapshot.scoring_config_summary.clone(),
+                ));
+        }
+        stack.into_any_element()
     }
 
-    fn render_receipt(&self, snapshot: &DxCheckPanelSnapshot, cx: &App) -> AnyElement {
+    fn render_receipt(
+        &self,
+        snapshot: &DxCheckPanelSnapshot,
+        panel: WeakEntity<DxCheckPanel>,
+        cx: &App,
+    ) -> AnyElement {
         let receipt_status = if snapshot.receipt_present {
             "present"
         } else {
             "missing"
         };
-        let mut stack = section("Receipt", cx)
-            .child(detail_row("State", receipt_status))
-            .child(detail_row(
-                "Source",
-                snapshot.receipt_path.display().to_string(),
-            ))
-            .child(detail_row("Schema", snapshot.source_schema.clone()));
+        let section_kind = DxCheckPanelSectionKind::Receipt;
+        let mut stack = self.render_section_shell(section_kind, panel, cx);
+        if self.section_is_open(section_kind) {
+            stack = stack
+                .child(detail_row("State", receipt_status))
+                .child(detail_row(
+                    "Source",
+                    snapshot.receipt_path.display().to_string(),
+                ))
+                .child(detail_row("Schema", snapshot.source_schema.clone()));
 
-        if let Some(error) = snapshot.receipt_error.as_ref() {
-            stack = stack.child(notice_row(
-                "dx-check-receipt-error",
-                IconName::Warning,
-                Color::Warning,
-                error,
-                None,
-            ));
+            if let Some(error) = snapshot.receipt_error.as_ref() {
+                stack = stack.child(notice_row(
+                    "dx-check-receipt-error",
+                    IconName::Warning,
+                    Color::Warning,
+                    error,
+                    None,
+                ));
+            }
         }
 
         stack.into_any_element()
     }
 
-    fn render_sections(&self, snapshot: &DxCheckPanelSnapshot, cx: &App) -> AnyElement {
-        let mut stack = section("Sections", cx);
-        if snapshot.sections.is_empty() {
-            stack = stack.child(empty_row("No section scores in the latest receipt."));
-        } else {
-            for section in snapshot.sections.iter().take(MAX_SECTION_ROWS) {
-                stack = stack.child(section_row(section));
+    fn render_sections(
+        &self,
+        snapshot: &DxCheckPanelSnapshot,
+        panel: WeakEntity<DxCheckPanel>,
+        cx: &App,
+    ) -> AnyElement {
+        let section_kind = DxCheckPanelSectionKind::Sections;
+        let mut stack = self.render_section_shell(section_kind, panel, cx);
+        if self.section_is_open(section_kind) {
+            if snapshot.sections.is_empty() {
+                stack = stack.child(empty_row("No section scores in the latest receipt."));
+            } else {
+                for section in snapshot.sections.iter().take(MAX_SECTION_ROWS) {
+                    stack = stack.child(section_row(section));
+                }
             }
         }
         stack.into_any_element()
     }
 
-    fn render_notices(&self, snapshot: &DxCheckPanelSnapshot, cx: &App) -> AnyElement {
-        let mut stack = section("Notices", cx);
-        if snapshot.blockers.is_empty() && snapshot.warnings.is_empty() {
-            stack = stack.child(empty_row("No blockers or warnings in the latest receipt."));
-        }
-        for (index, blocker) in snapshot.blockers.iter().take(MAX_NOTICE_ROWS).enumerate() {
-            stack = stack.child(notice_row(
-                format!("dx-check-blocker-{index}"),
-                IconName::Warning,
-                Color::Error,
-                &notice_title(blocker),
-                blocker.next_action.as_deref(),
-            ));
-        }
-        for (index, warning) in snapshot.warnings.iter().take(MAX_NOTICE_ROWS).enumerate() {
-            stack = stack.child(notice_row(
-                format!("dx-check-warning-{index}"),
-                IconName::Warning,
-                Color::Warning,
-                &notice_title(warning),
-                warning.next_action.as_deref(),
-            ));
-        }
-        stack.into_any_element()
-    }
-
-    fn render_quick_fixes(&self, snapshot: &DxCheckPanelSnapshot, cx: &App) -> AnyElement {
-        let mut stack = section("Quick Fixes", cx);
-        if snapshot.quick_fixes.is_empty() {
-            stack = stack.child(empty_row("No quick fixes in the latest receipt."));
-        } else {
-            for (index, fix) in snapshot
-                .quick_fixes
-                .iter()
-                .take(MAX_QUICK_FIX_ROWS)
-                .enumerate()
-            {
-                stack = stack.child(quick_fix_row(index, fix));
+    fn render_notices(
+        &self,
+        snapshot: &DxCheckPanelSnapshot,
+        panel: WeakEntity<DxCheckPanel>,
+        cx: &App,
+    ) -> AnyElement {
+        let section_kind = DxCheckPanelSectionKind::Notices;
+        let mut stack = self.render_section_shell(section_kind, panel, cx);
+        if self.section_is_open(section_kind) {
+            if snapshot.blockers.is_empty() && snapshot.warnings.is_empty() {
+                stack = stack.child(empty_row("No blockers or warnings in the latest receipt."));
+            }
+            for (index, blocker) in snapshot.blockers.iter().take(MAX_NOTICE_ROWS).enumerate() {
+                stack = stack.child(notice_row(
+                    format!("dx-check-blocker-{index}"),
+                    IconName::Warning,
+                    Color::Error,
+                    &notice_title(blocker),
+                    blocker.next_action.as_deref(),
+                ));
+            }
+            for (index, warning) in snapshot.warnings.iter().take(MAX_NOTICE_ROWS).enumerate() {
+                stack = stack.child(notice_row(
+                    format!("dx-check-warning-{index}"),
+                    IconName::Warning,
+                    Color::Warning,
+                    &notice_title(warning),
+                    warning.next_action.as_deref(),
+                ));
             }
         }
         stack.into_any_element()
     }
 
-    fn render_web_audits(&self, snapshot: &DxCheckPanelSnapshot, cx: &App) -> AnyElement {
-        let mut stack = section("Web Audit", cx);
-        if snapshot.web_audits.is_empty() {
-            stack = stack.child(empty_row("No web-audit results in the latest receipt."));
-        } else {
-            for (index, audit) in snapshot.web_audits.iter().enumerate() {
-                stack = stack.child(web_audit_row(index, audit));
+    fn render_quick_fixes(
+        &self,
+        snapshot: &DxCheckPanelSnapshot,
+        panel: WeakEntity<DxCheckPanel>,
+        cx: &App,
+    ) -> AnyElement {
+        let section_kind = DxCheckPanelSectionKind::QuickFixes;
+        let mut stack = self.render_section_shell(section_kind, panel, cx);
+        if self.section_is_open(section_kind) {
+            if snapshot.quick_fixes.is_empty() {
+                stack = stack.child(empty_row("No quick fixes in the latest receipt."));
+            } else {
+                for (index, fix) in snapshot
+                    .quick_fixes
+                    .iter()
+                    .take(MAX_QUICK_FIX_ROWS)
+                    .enumerate()
+                {
+                    stack = stack.child(quick_fix_row(index, fix));
+                }
             }
         }
         stack.into_any_element()
     }
 
-    fn render_commands(&self, snapshot: &DxCheckPanelSnapshot, cx: &App) -> AnyElement {
-        let mut stack = section("Commands", cx)
-            .child(detail_row("Refresh", snapshot.refresh_command.clone()))
-            .child(detail_row("Next", snapshot.next_action.clone()));
-        if let Some(detail_command) = snapshot.detail_command.as_ref() {
-            stack = stack.child(detail_row("Details", detail_command.clone()));
+    fn render_web_audits(
+        &self,
+        snapshot: &DxCheckPanelSnapshot,
+        panel: WeakEntity<DxCheckPanel>,
+        cx: &App,
+    ) -> AnyElement {
+        let section_kind = DxCheckPanelSectionKind::WebAudit;
+        let mut stack = self.render_section_shell(section_kind, panel, cx);
+        if self.section_is_open(section_kind) {
+            if snapshot.web_audits.is_empty() {
+                stack = stack.child(empty_row("No web-audit results in the latest receipt."));
+            } else {
+                for (index, audit) in snapshot.web_audits.iter().enumerate() {
+                    stack = stack.child(web_audit_row(index, audit));
+                }
+            }
+        }
+        stack.into_any_element()
+    }
+
+    fn render_commands(
+        &self,
+        snapshot: &DxCheckPanelSnapshot,
+        panel: WeakEntity<DxCheckPanel>,
+        cx: &App,
+    ) -> AnyElement {
+        let section_kind = DxCheckPanelSectionKind::Commands;
+        let mut stack = self.render_section_shell(section_kind, panel, cx);
+        if self.section_is_open(section_kind) {
+            stack = stack
+                .child(detail_row("Refresh", snapshot.refresh_command.clone()))
+                .child(detail_row("Next", snapshot.next_action.clone()));
+            if let Some(detail_command) = snapshot.detail_command.as_ref() {
+                stack = stack.child(detail_row("Details", detail_command.clone()));
+            }
         }
         stack.into_any_element()
     }
@@ -450,7 +597,7 @@ impl Render for DxCheckPanel {
             .bg(cx.theme().colors().panel_background)
             .child(self.render_header(&snapshot, panel_id, cx))
             .child(self.render_status_strip(&snapshot, cx))
-            .child(self.render_toolbar(&snapshot, panel, cx))
+            .child(self.render_toolbar(&snapshot, panel.clone(), cx))
             .child(
                 div()
                     .size_full()
@@ -465,13 +612,13 @@ impl Render for DxCheckPanel {
                             .gap_1()
                             .py_1()
                             .overflow_y_scroll()
-                            .child(self.render_summary(&snapshot, cx))
-                            .child(self.render_receipt(&snapshot, cx))
-                            .child(self.render_sections(&snapshot, cx))
-                            .child(self.render_web_audits(&snapshot, cx))
-                            .child(self.render_notices(&snapshot, cx))
-                            .child(self.render_quick_fixes(&snapshot, cx))
-                            .child(self.render_commands(&snapshot, cx)),
+                            .child(self.render_summary(&snapshot, panel.clone(), cx))
+                            .child(self.render_sections(&snapshot, panel.clone(), cx))
+                            .child(self.render_web_audits(&snapshot, panel.clone(), cx))
+                            .child(self.render_notices(&snapshot, panel.clone(), cx))
+                            .child(self.render_quick_fixes(&snapshot, panel.clone(), cx))
+                            .child(self.render_receipt(&snapshot, panel.clone(), cx))
+                            .child(self.render_commands(&snapshot, panel, cx)),
                     )
                     .vertical_scrollbar_for(&self.scroll_handle, window, cx),
             )

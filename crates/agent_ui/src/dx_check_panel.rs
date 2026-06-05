@@ -418,4 +418,80 @@ mod tests {
             Some(".dx/receipts/check/web-home.json")
         );
     }
+
+    #[test]
+    fn runner_lighthouse_report_renders_as_panel_row() {
+        let receipt = json!({
+            "schema_version": "dx.check.receipt.v1",
+            "pass_count": 9,
+            "fail_count": 0,
+            "warn_count": 1,
+            "skipped_count": 0,
+            "duration_ms": 37,
+            "zed": {
+                "schema_version": "dx.check.zed_panel.v1",
+                "status": "warning",
+                "score_value": 486,
+                "score_max": 500,
+                "score_percent": 97,
+                "score_estimated": false,
+                "weight_profile": "dx-check.launch-default.v1",
+                "generated_at_unix_ms": 1779400000000_u64,
+                "refresh_command": "dx check --json",
+                "sections": []
+            },
+            "web": {
+                "lighthouse": {
+                    "schema_version": "dx.check.web_lighthouse",
+                    "id": "home-lighthouse",
+                    "target_id": "home",
+                    "url": "http://localhost:3000/",
+                    "score": 350,
+                    "max_score": 400,
+                    "categories": [
+                        {
+                            "id": "performance",
+                            "label": "Performance",
+                            "score": 80,
+                            "max_score": 100,
+                            "status": "warning"
+                        },
+                        {
+                            "id": "accessibility",
+                            "label": "Accessibility",
+                            "score": 90,
+                            "max_score": 100,
+                            "status": "warning"
+                        },
+                        {
+                            "id": "seo",
+                            "label": "SEO",
+                            "score": 100,
+                            "max_score": 100,
+                            "status": "ready"
+                        },
+                        {
+                            "id": "best-practices",
+                            "label": "Best Practices",
+                            "score": 80,
+                            "max_score": 100,
+                            "status": "warning"
+                        }
+                    ],
+                    "audits": []
+                }
+            }
+        });
+
+        let snapshot = panel_from_receipt_value(PathBuf::from("check-latest.json"), &receipt);
+
+        assert_eq!(snapshot.web_audits.len(), 1);
+        assert_eq!(snapshot.web_audits[0].label, "home Lighthouse");
+        assert_eq!(snapshot.web_audits[0].status, "warning");
+        assert!(snapshot.web_audits[0].detail.contains("350/400"));
+        assert!(snapshot.web_audits[0].detail.contains("Performance 80"));
+        assert!(snapshot.web_audits[0].detail.contains("Accessibility 90"));
+        assert!(snapshot.web_audits[0].detail.contains("SEO 100"));
+        assert!(snapshot.web_audits[0].detail.contains("Best Practices 80"));
+    }
 }

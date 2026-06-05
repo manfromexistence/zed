@@ -1,59 +1,60 @@
-use gpui::{
-    AnyElement, App, Div, InteractiveElement, IntoElement, ParentElement, SharedString, Styled, px,
-};
-use theme::ActiveTheme;
-use ui::prelude::*;
+use gpui::{AnyElement, App, ClickEvent, IntoElement, ParentElement, SharedString, Window};
+use ui::{ListHeader, ListItem, ListItemSpacing, prelude::*};
 
 use crate::dx_check_panel::{
     DxCheckPanelNotice, DxCheckPanelQuickFix, DxCheckPanelSection, DxCheckPanelSnapshot,
     DxCheckPanelWebAudit,
 };
 
-pub(super) fn section(title: &'static str, cx: &App) -> gpui::Div {
-    v_flex()
-        .w_full()
-        .min_w_0()
-        .gap_0p5()
-        .child(section_header(title, cx))
-}
-
-fn section_header(title: &'static str, cx: &App) -> AnyElement {
-    h_flex()
-        .h(px(28.0))
-        .w_full()
-        .min_w_0()
-        .pl_3()
-        .pr_1()
-        .gap_2()
-        .justify_between()
-        .border_1()
-        .border_r_2()
-        .hover(|style| style.bg(cx.theme().colors().ghost_element_hover))
-        .child(
-            Label::new(title)
-                .size(LabelSize::Small)
-                .color(Color::Muted)
-                .truncate(),
-        )
-        .into_any_element()
+pub(super) fn section(
+    _id: &'static str,
+    title: &'static str,
+    icon: IconName,
+    is_open: bool,
+    on_toggle: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+    _cx: &App,
+) -> gpui::Div {
+    v_flex().w_full().min_w_0().gap_0p5().child(
+        ListHeader::new(title)
+            .inset(true)
+            .toggle(Some(is_open))
+            .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
+            .on_toggle(on_toggle)
+            .end_slot(
+                Label::new(if is_open { "open" } else { "closed" })
+                    .size(LabelSize::XSmall)
+                    .color(Color::Muted),
+            ),
+    )
 }
 
 pub(super) fn detail_row(
     label: impl Into<SharedString>,
     value: impl Into<SharedString>,
 ) -> AnyElement {
-    row_shell()
+    let label = label.into();
+    ListItem::new(format!("dx-check-detail-{}", stable_id(label.as_ref())))
+        .inset(true)
+        .spacing(ListItemSpacing::ExtraDense)
+        .selectable(false)
         .child(
-            Label::new(label.into())
-                .size(LabelSize::XSmall)
-                .color(Color::Muted)
-                .flex_none(),
-        )
-        .child(
-            Label::new(value.into())
-                .size(LabelSize::XSmall)
-                .color(Color::Default)
-                .truncate(),
+            h_flex()
+                .min_w_0()
+                .w_full()
+                .gap_2()
+                .justify_between()
+                .child(
+                    Label::new(label)
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted)
+                        .flex_none(),
+                )
+                .child(
+                    Label::new(value.into())
+                        .size(LabelSize::XSmall)
+                        .color(Color::Default)
+                        .truncate(),
+                ),
         )
         .into_any_element()
 }
@@ -69,22 +70,16 @@ pub(super) fn notice_row(
     message: &str,
     next_action: Option<&str>,
 ) -> AnyElement {
-    let mut stack = row_stack().id(id.into()).child(
-        h_flex()
-            .min_w_0()
-            .gap_1()
-            .items_start()
-            .child(Icon::new(icon).size(IconSize::XSmall).color(color))
-            .child(
-                Label::new(message.to_string())
-                    .size(LabelSize::XSmall)
-                    .color(color)
-                    .truncate(),
-            ),
+    let id = id.into();
+    let mut content = v_flex().min_w_0().gap_0p5().child(
+        Label::new(message.to_string())
+            .size(LabelSize::XSmall)
+            .color(color)
+            .truncate(),
     );
 
     if let Some(next_action) = next_action {
-        stack = stack.child(
+        content = content.child(
             Label::new(next_action.to_string())
                 .size(LabelSize::XSmall)
                 .color(Color::Muted)
@@ -92,7 +87,12 @@ pub(super) fn notice_row(
         );
     }
 
-    stack.into_any_element()
+    ListItem::new(id)
+        .inset(true)
+        .spacing(ListItemSpacing::Sparse)
+        .start_slot(Icon::new(icon).size(IconSize::XSmall).color(color))
+        .child(content)
+        .into_any_element()
 }
 
 pub(super) fn quick_fix_row(index: usize, fix: &DxCheckPanelQuickFix) -> AnyElement {
@@ -110,8 +110,9 @@ pub(super) fn quick_fix_row(index: usize, fix: &DxCheckPanelQuickFix) -> AnyElem
             "no approval required"
         }
     );
-    let mut stack = row_stack()
-        .id(SharedString::from(format!("dx-check-quick-fix-{index}")))
+    let mut content = v_flex()
+        .min_w_0()
+        .gap_0p5()
         .child(
             h_flex()
                 .min_w_0()
@@ -137,7 +138,7 @@ pub(super) fn quick_fix_row(index: usize, fix: &DxCheckPanelQuickFix) -> AnyElem
         );
 
     if let Some(command) = fix.command.as_ref() {
-        stack = stack.child(
+        content = content.child(
             Label::new(command.clone())
                 .size(LabelSize::XSmall)
                 .color(Color::Accent)
@@ -145,12 +146,24 @@ pub(super) fn quick_fix_row(index: usize, fix: &DxCheckPanelQuickFix) -> AnyElem
         );
     }
 
-    stack.into_any_element()
+    ListItem::new(SharedString::from(format!("dx-check-quick-fix-{index}")))
+        .inset(true)
+        .spacing(ListItemSpacing::Sparse)
+        .start_slot(
+            Icon::new(IconName::ListTodo)
+                .size(IconSize::XSmall)
+                .color(Color::Muted),
+        )
+        .child(content)
+        .into_any_element()
 }
 
 pub(super) fn empty_row(message: &'static str) -> AnyElement {
-    row_shell()
-        .child(
+    ListItem::new(format!("dx-check-empty-{}", stable_id(message)))
+        .inset(true)
+        .spacing(ListItemSpacing::ExtraDense)
+        .selectable(false)
+        .start_slot(
             Icon::new(IconName::Info)
                 .size(IconSize::XSmall)
                 .color(Color::Muted),
@@ -173,9 +186,10 @@ pub(super) fn web_audit_row(index: usize, audit: &DxCheckPanelWebAudit) -> AnyEl
     };
     let source = audit.source.as_deref().unwrap_or(&audit.url);
 
-    row_shell()
-        .id(SharedString::from(format!("dx-check-web-audit-{index}")))
-        .child(Icon::new(icon).size(IconSize::Small).color(color))
+    ListItem::new(SharedString::from(format!("dx-check-web-audit-{index}")))
+        .inset(true)
+        .spacing(ListItemSpacing::Sparse)
+        .start_slot(Icon::new(icon).size(IconSize::Small).color(color))
         .child(
             v_flex()
                 .min_w_0()
@@ -284,27 +298,17 @@ fn section_score_label(section: &DxCheckPanelSection) -> String {
     }
 }
 
-fn row_shell() -> Div {
-    h_flex()
-        .w_full()
-        .min_w_0()
-        .gap_1p5()
-        .pl_3()
-        .pr_1()
-        .py_1()
-        .border_1()
-        .border_r_2()
-        .items_start()
-}
-
-fn row_stack() -> Div {
-    v_flex()
-        .w_full()
-        .min_w_0()
-        .gap_1()
-        .pl_3()
-        .pr_1()
-        .py_1()
-        .border_1()
-        .border_r_2()
+fn stable_id(value: &str) -> String {
+    value
+        .chars()
+        .map(|character| {
+            if character.is_ascii_alphanumeric() {
+                character.to_ascii_lowercase()
+            } else {
+                '-'
+            }
+        })
+        .collect::<String>()
+        .trim_matches('-')
+        .to_string()
 }
