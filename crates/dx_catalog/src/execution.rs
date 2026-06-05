@@ -449,7 +449,7 @@ fn settings_path(
         CatalogExecutionAdapterKind::OpenAiCompatibleHttp
         | CatalogExecutionAdapterKind::OllamaCompatibleHttp
         | CatalogExecutionAdapterKind::LiteLlmProxy
-            if !is_reserved_native_openai_compatible_provider_id(&provider.id) =>
+            if reserved_native_openai_compatible_provider_shadow(provider).is_none() =>
         {
             Some(format!("language_models.openai_compatible.{}", provider.id))
         }
@@ -468,7 +468,7 @@ fn registration_blockers(
 ) -> Vec<String> {
     let mut blockers = Vec::new();
 
-    if is_reserved_native_openai_compatible_provider_id(&provider.id)
+    if let Some(native_provider_id) = reserved_native_openai_compatible_provider_shadow(provider)
         && matches!(
             adapter_kind,
             CatalogExecutionAdapterKind::OpenAiCompatibleHttp
@@ -477,8 +477,8 @@ fn registration_blockers(
         )
     {
         blockers.push(format!(
-            "Provider `{}` is a native Zed provider; catalog metadata must not be registered as `language_models.openai_compatible.{}`.",
-            provider.id, provider.id
+            "Provider `{}` uses `{}` as a native Zed provider identifier; catalog metadata must not be registered as `language_models.openai_compatible.{}`.",
+            provider.id, native_provider_id, provider.id
         ));
     } else if settings_path.is_none() {
         blockers.push(format!(
@@ -609,9 +609,17 @@ fn adapter_requires_base_url(adapter_kind: CatalogExecutionAdapterKind) -> bool 
     )
 }
 
+fn reserved_native_openai_compatible_provider_shadow(provider: &ProviderRecord) -> Option<String> {
+    std::iter::once(provider.id.as_str())
+        .chain(provider.aliases.iter().map(String::as_str))
+        .find(|identifier| is_reserved_native_openai_compatible_provider_id(identifier))
+        .map(|identifier| identifier.trim().to_ascii_lowercase())
+}
+
 fn is_reserved_native_openai_compatible_provider_id(provider_id: &str) -> bool {
+    let provider_id = provider_id.trim().to_ascii_lowercase();
     matches!(
-        provider_id,
+        provider_id.as_str(),
         "amazon-bedrock"
             | "anthropic"
             | "copilot_chat"
@@ -657,6 +665,29 @@ mod tests {
                 "native provider `{provider_id}` must be blocked instead of re-registered as language_models.openai_compatible.{provider_id}"
             );
         }
+    }
+
+    #[test]
+    fn registration_specs_block_native_zed_provider_alias_shadowing() {
+        let mut provider = provider("google-gemini", ProviderKind::OpenAiCompatible);
+        provider.aliases = vec!["google".to_string(), "gemini".to_string()];
+        let catalog = catalog_with_provider(
+            provider,
+            model("google-gemini/gemini-3-pro-preview", "google-gemini"),
+        );
+
+        let specs = build_catalog_provider_registration_specs(&catalog);
+
+        assert_eq!(specs.len(), 1);
+        assert_eq!(specs[0].settings_path, None);
+        assert!(!specs[0].can_register_settings);
+        assert!(
+            specs[0]
+                .registration_blockers
+                .iter()
+                .any(|blocker| blocker.contains("native Zed provider")),
+            "provider aliases that shadow native providers must block OpenAI-compatible registration"
+        );
     }
 
     #[test]

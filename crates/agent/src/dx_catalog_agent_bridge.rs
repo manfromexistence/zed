@@ -57,7 +57,7 @@ struct CatalogModelPresentation {
 
 #[derive(Clone, Debug)]
 struct CatalogProviderModelGroup {
-    provider_id: String,
+    provider_identifiers: HashSet<String>,
     name: String,
     models: Vec<AgentModelInfo>,
 }
@@ -140,13 +140,21 @@ impl DxCatalogAgentBridge {
         model_groups: &mut IndexMap<AgentModelGroupName, Vec<AgentModelInfo>>,
         native_provider_ids: &HashSet<String>,
     ) {
+        let native_provider_ids = native_provider_ids
+            .iter()
+            .map(|provider_id| normalized_provider_identifier(provider_id))
+            .collect::<HashSet<_>>();
         let mut existing_group_names = model_groups
             .keys()
             .map(|name| name.0.to_string())
             .collect::<HashSet<_>>();
 
         for group in &self.provider_groups {
-            if native_provider_ids.contains(group.provider_id.as_str()) {
+            if group
+                .provider_identifiers
+                .iter()
+                .any(|identifier| native_provider_ids.contains(identifier))
+            {
                 continue;
             }
             if !existing_group_names.insert(group.name.clone()) {
@@ -244,13 +252,24 @@ impl DxCatalogAgentBridge {
             .iter()
             .map(|provider| (provider.id.as_str(), provider))
             .collect::<HashMap<_, _>>();
+        let provider_identifiers_by_id = catalog
+            .providers
+            .iter()
+            .map(|provider| {
+                (
+                    provider.id.clone(),
+                    provider_identifiers_for_record(provider),
+                )
+            })
+            .collect::<HashMap<_, _>>();
         let projection = build_agent_picker_projection(
             catalog,
             AgentPickerProjectionOptions::new()
                 .include_provider_groups(true)
                 .include_unselectable_models(true),
         );
-        let provider_groups = catalog_provider_model_groups(&projection.groups);
+        let provider_groups =
+            catalog_provider_model_groups(&projection.groups, &provider_identifiers_by_id);
         let route_recommendations = projection.route_recommendations.clone();
         let picker_models = projection
             .groups
@@ -848,16 +867,13 @@ fn provider_settings_live_validation(
     let registry_model_match_count = registry_provider
         .as_ref()
         .map(|provider| {
-            let catalog_model_ids = spec
-                .models
-                .iter()
-                .map(|model| model.model_id.as_str())
-                .collect::<HashSet<_>>();
-            provider
-                .provided_models(cx)
-                .into_iter()
-                .filter(|model| catalog_model_ids.contains(model.id().0.as_ref()))
-                .count()
+            matching_catalog_api_model_count(
+                spec,
+                provider
+                    .provided_models(cx)
+                    .into_iter()
+                    .map(|model| model.id().0.to_string()),
+            )
         })
         .unwrap_or_default();
     let (
@@ -961,21 +977,17 @@ fn provider_settings_native_state(
     spec: &CatalogProviderAdapterRegistrationSpec,
     settings: &AllLanguageModelSettings,
 ) -> (bool, Option<String>, bool, usize) {
-    let catalog_model_ids = spec
-        .models
-        .iter()
-        .map(|model| model.model_id.as_str())
-        .collect::<HashSet<_>>();
-
     match spec.adapter_kind {
         CatalogExecutionAdapterKind::OpenRouterHttp => {
             let api_url = settings.open_router.api_url.clone();
-            let model_match_count = settings
-                .open_router
-                .available_models
-                .iter()
-                .filter(|model| catalog_model_ids.contains(model.name.as_str()))
-                .count();
+            let model_match_count = matching_catalog_api_model_count(
+                spec,
+                settings
+                    .open_router
+                    .available_models
+                    .iter()
+                    .map(|model| model.name.as_str()),
+            );
             (
                 !api_url.trim().is_empty(),
                 Some(api_url.clone()),
@@ -990,11 +1002,13 @@ fn provider_settings_native_state(
             else {
                 return (false, None, false, 0);
             };
-            let model_match_count = provider_settings
-                .available_models
-                .iter()
-                .filter(|model| catalog_model_ids.contains(model.name.as_str()))
-                .count();
+            let model_match_count = matching_catalog_api_model_count(
+                spec,
+                provider_settings
+                    .available_models
+                    .iter()
+                    .map(|model| model.name.as_str()),
+            );
             (
                 true,
                 Some(provider_settings.api_url.clone()),
@@ -1007,6 +1021,26 @@ fn provider_settings_native_state(
         }
         _ => (false, None, false, 0),
     }
+}
+
+fn matching_catalog_api_model_count<I, S>(
+    spec: &CatalogProviderAdapterRegistrationSpec,
+    model_names: I,
+) -> usize
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<str>,
+{
+    let catalog_api_model_ids = spec
+        .models
+        .iter()
+        .map(|model| model.api_model_id.as_str())
+        .collect::<HashSet<_>>();
+
+    model_names
+        .into_iter()
+        .filter(|model_name| catalog_api_model_ids.contains(model_name.as_ref()))
+        .count()
 }
 
 fn provider_settings_credentials_ready(
@@ -1347,6 +1381,54 @@ mod tests {
         );
     }
 
+    #[test]
+    fn appends_catalog_provider_groups_without_shadowing_native_provider_aliases() {
+        let mut provider = provider("google-gemini", "Google Gemini Catalog");
+        provider.aliases = vec!["google".to_string()];
+        let catalog = DxCatalog {
+            schema_version: DX_CATALOG_SCHEMA_VERSION,
+            generated_unix_ms: 0,
+            source_revision: "catalog-bridge-test".to_string(),
+            sources: Vec::new(),
+            providers: vec![provider],
+            models: vec![model(
+                "google-gemini/gemini-3-pro-preview",
+                "google-gemini",
+                "Gemini 3 Pro Preview",
+            )],
+            routing_rules: Vec::new(),
+        };
+        let bridge = DxCatalogAgentBridge::from_catalog(&catalog);
+        let mut model_groups = IndexMap::from_iter([(
+            AgentModelGroupName("Google".into()),
+            vec![agent_model_info("google/gemini-3-pro", "Gemini 3 Pro")],
+        )]);
+        let native_provider_ids = HashSet::from_iter(["google".to_string()]);
+
+        bridge.append_catalog_provider_groups(&mut model_groups, &native_provider_ids);
+
+        assert!(model_groups.contains_key(&AgentModelGroupName("Google".into())));
+        assert!(!model_groups.contains_key(&AgentModelGroupName("Google Gemini Catalog".into())));
+    }
+
+    #[test]
+    fn provider_settings_live_validation_matches_api_model_ids_not_catalog_route_ids() {
+        let spec = registration_spec(
+            "groq",
+            CatalogExecutionAdapterKind::OpenAiCompatibleHttp,
+            "https://api.groq.com/openai/v1",
+        );
+
+        assert_eq!(
+            matching_catalog_api_model_count(&spec, ["catalog-model"].into_iter()),
+            1
+        );
+        assert_eq!(
+            matching_catalog_api_model_count(&spec, ["groq/catalog-model"].into_iter()),
+            0
+        );
+    }
+
     fn catalog_with_catalog_openai_and_groq() -> DxCatalog {
         DxCatalog {
             schema_version: DX_CATALOG_SCHEMA_VERSION,
@@ -1424,6 +1506,43 @@ mod tests {
             cost: None,
         }
     }
+
+    fn registration_spec(
+        provider_id: &str,
+        adapter_kind: CatalogExecutionAdapterKind,
+        base_url: &str,
+    ) -> CatalogProviderAdapterRegistrationSpec {
+        CatalogProviderAdapterRegistrationSpec {
+            provider_id: provider_id.to_string(),
+            provider_name: provider_id.to_string(),
+            adapter_kind,
+            permission: CatalogExecutionPermission::ApiKey,
+            settings_path: Some(format!("language_models.openai_compatible.{provider_id}")),
+            base_url: Some(base_url.to_string()),
+            auth_profile_id: None,
+            auth_configured: false,
+            user_approval_required: true,
+            can_register_settings: true,
+            ready_for_execution: false,
+            registration_blockers: Vec::new(),
+            execution_blockers: Vec::new(),
+            models: vec![CatalogProviderAdapterModelSpec {
+                model_id: format!("{provider_id}/catalog-model"),
+                api_model_id: "catalog-model".to_string(),
+                display_name: "Catalog Model".to_string(),
+                context_window_tokens: Some(128_000),
+                max_output_tokens: Some(8_192),
+                supports_tools: true,
+                supports_images: false,
+                supports_audio: false,
+                supports_video: false,
+                supports_streaming: true,
+                free_tier: false,
+                premium_account: true,
+            }],
+            next_action: "test".to_string(),
+        }
+    }
 }
 
 fn env_flag_enabled(key: &str) -> bool {
@@ -1467,7 +1586,10 @@ fn current_unix_ms() -> u64 {
         .unwrap_or_default()
 }
 
-fn catalog_provider_model_groups(groups: &[AgentPickerGroup]) -> Vec<CatalogProviderModelGroup> {
+fn catalog_provider_model_groups(
+    groups: &[AgentPickerGroup],
+    provider_identifiers_by_id: &HashMap<String, HashSet<String>>,
+) -> Vec<CatalogProviderModelGroup> {
     groups
         .iter()
         .filter_map(|group| {
@@ -1479,12 +1601,31 @@ fn catalog_provider_model_groups(groups: &[AgentPickerGroup]) -> Vec<CatalogProv
                 .collect::<Vec<_>>();
 
             (!models.is_empty()).then(|| CatalogProviderModelGroup {
-                provider_id: provider_id.to_string(),
+                provider_identifiers: provider_identifiers_by_id
+                    .get(provider_id)
+                    .cloned()
+                    .unwrap_or_else(|| {
+                        HashSet::from_iter([normalized_provider_identifier(provider_id)])
+                    }),
                 name: group.title.clone(),
                 models,
             })
         })
         .collect()
+}
+
+fn provider_identifiers_for_record(provider: &ProviderRecord) -> HashSet<String> {
+    std::iter::once(provider.id.as_str())
+        .chain(provider.aliases.iter().map(String::as_str))
+        .filter_map(|identifier| {
+            let identifier = normalized_provider_identifier(identifier);
+            (!identifier.is_empty()).then_some(identifier)
+        })
+        .collect()
+}
+
+fn normalized_provider_identifier(identifier: &str) -> String {
+    identifier.trim().to_ascii_lowercase()
 }
 
 fn catalog_picker_model_to_agent_model_info(model: &AgentPickerModel) -> AgentModelInfo {
