@@ -11,7 +11,7 @@ use workspace::{
 };
 use zed_actions::dx_forge::TogglePanel;
 
-use super::{panel_view, snapshot};
+use super::{machine_cache::invalidate_machine_cache_snapshot_cache, panel_view, snapshot};
 
 const DX_FORGE_PANEL_KEY: &str = "dx_forge_panel";
 const DEFAULT_PANEL_WIDTH: gpui::Pixels = px(360.0);
@@ -74,6 +74,7 @@ impl DxForgePanel {
     }
 
     pub(super) fn refresh(&mut self, cx: &mut Context<Self>) {
+        invalidate_machine_cache_snapshot_cache();
         invalidate_tool_history_snapshot_cache();
         invalidate_source_set_snapshot_cache();
         cx.notify();

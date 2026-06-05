@@ -10,7 +10,7 @@ use super::{
     panel::DxForgePanel,
     providers::remote_target_strip,
     rows::{empty_row, receipt_row, section_header, source_row, status_strip},
-    snapshot::DxForgePanelSnapshot,
+    snapshot::{DxForgePanelSnapshot, DxForgeSourceRow},
 };
 
 pub(super) fn render_panel(
@@ -52,6 +52,7 @@ pub(super) fn render_panel(
                         .min_w_0()
                         .py_1()
                         .child(package_status_section(snapshot, workspace, cx))
+                        .child(machine_cache_section(snapshot, workspace, cx))
                         .child(receipt_section(snapshot, workspace, cx))
                         .child(restore_section(snapshot, workspace, cx))
                         .child(media_section(snapshot, workspace, cx))
@@ -91,36 +92,90 @@ fn package_status_section(
     workspace: &WeakEntity<Workspace>,
     cx: &App,
 ) -> AnyElement {
+    source_section(
+        SourceSection {
+            header_id: "dx-forge-package-status-header",
+            title: "Package Status",
+            icon: IconName::Box,
+            empty_id: "dx-forge-package-status-empty",
+            workspace_empty: "Open a workspace to read Forge package status",
+            empty: "No Forge package status found",
+            row_id: "dx-forge-package-status",
+            open_id: "dx-forge-open-package-status",
+            open_tooltip: "Open package status",
+        },
+        &snapshot.package_statuses,
+        snapshot,
+        workspace,
+        cx,
+    )
+}
+
+fn machine_cache_section(
+    snapshot: &DxForgePanelSnapshot,
+    workspace: &WeakEntity<Workspace>,
+    cx: &App,
+) -> AnyElement {
+    source_section(
+        SourceSection {
+            header_id: "dx-forge-machine-caches-header",
+            title: "Machine Caches",
+            icon: IconName::Binary,
+            empty_id: "dx-forge-machine-caches-empty",
+            workspace_empty: "Open a workspace to read Forge machine caches",
+            empty: "No Forge machine caches found",
+            row_id: "dx-forge-machine-cache",
+            open_id: "dx-forge-open-machine-cache-root",
+            open_tooltip: "Open machine cache root",
+        },
+        &snapshot.machine_caches,
+        snapshot,
+        workspace,
+        cx,
+    )
+}
+
+struct SourceSection {
+    header_id: &'static str,
+    title: &'static str,
+    icon: IconName,
+    empty_id: &'static str,
+    workspace_empty: &'static str,
+    empty: &'static str,
+    row_id: &'static str,
+    open_id: &'static str,
+    open_tooltip: &'static str,
+}
+
+fn source_section(
+    section: SourceSection,
+    rows: &[DxForgeSourceRow],
+    snapshot: &DxForgePanelSnapshot,
+    workspace: &WeakEntity<Workspace>,
+    cx: &App,
+) -> AnyElement {
     let mut stack = v_flex().w_full().min_w_0().child(section_header(
-        "dx-forge-package-status-header",
-        "Package Status",
-        IconName::Box,
-        snapshot.package_statuses.len(),
+        section.header_id,
+        section.title,
+        section.icon,
+        rows.len(),
         cx,
     ));
 
     if snapshot.workspace_roots.is_empty() {
-        stack = stack.child(empty_row(
-            "dx-forge-package-status-empty",
-            "Open a workspace to read Forge package status",
-            cx,
-        ));
-    } else if snapshot.package_statuses.is_empty() {
-        stack = stack.child(empty_row(
-            "dx-forge-package-status-empty",
-            "No Forge package status found",
-            cx,
-        ));
+        stack = stack.child(empty_row(section.empty_id, section.workspace_empty, cx));
+    } else if rows.is_empty() {
+        stack = stack.child(empty_row(section.empty_id, section.empty, cx));
     } else {
-        for (ix, status) in snapshot.package_statuses.iter().enumerate() {
+        for (ix, row) in rows.iter().enumerate() {
             stack = stack.child(source_row(
-                SharedString::from(format!("dx-forge-package-status-{ix}")),
-                IconName::Box,
-                status,
+                SharedString::from(format!("{}-{ix}", section.row_id)),
+                section.icon,
+                row,
                 Some(open_path_button(
-                    format!("dx-forge-open-package-status-{ix}"),
-                    "Open package status",
-                    &status.path,
+                    format!("{}-{ix}", section.open_id),
+                    section.open_tooltip,
+                    &row.path,
                     &snapshot.workspace_roots,
                     workspace,
                 )),
@@ -184,45 +239,23 @@ fn restore_section(
     workspace: &WeakEntity<Workspace>,
     cx: &App,
 ) -> AnyElement {
-    let mut stack = v_flex().w_full().min_w_0().child(section_header(
-        "dx-forge-restores-header",
-        "Restore Previews",
-        IconName::Download,
-        snapshot.restore_previews.len(),
+    source_section(
+        SourceSection {
+            header_id: "dx-forge-restores-header",
+            title: "Restore Previews",
+            icon: IconName::Download,
+            empty_id: "dx-forge-restores-empty",
+            workspace_empty: "Open a workspace to read restore previews",
+            empty: "No restore previews found",
+            row_id: "dx-forge-restore",
+            open_id: "dx-forge-open-restore",
+            open_tooltip: "Open restore target",
+        },
+        &snapshot.restore_previews,
+        snapshot,
+        workspace,
         cx,
-    ));
-
-    if snapshot.workspace_roots.is_empty() {
-        stack = stack.child(empty_row(
-            "dx-forge-restores-empty",
-            "Open a workspace to read restore previews",
-            cx,
-        ));
-    } else if snapshot.restore_previews.is_empty() {
-        stack = stack.child(empty_row(
-            "dx-forge-restores-empty",
-            "No restore previews found",
-            cx,
-        ));
-    } else {
-        for (ix, preview) in snapshot.restore_previews.iter().enumerate() {
-            stack = stack.child(source_row(
-                SharedString::from(format!("dx-forge-restore-{ix}")),
-                IconName::Download,
-                preview,
-                Some(open_path_button(
-                    format!("dx-forge-open-restore-{ix}"),
-                    "Open restore target",
-                    &preview.path,
-                    &snapshot.workspace_roots,
-                    workspace,
-                )),
-                cx,
-            ));
-        }
-    }
-
-    stack.into_any_element()
+    )
 }
 
 fn media_section(
@@ -230,43 +263,21 @@ fn media_section(
     workspace: &WeakEntity<Workspace>,
     cx: &App,
 ) -> AnyElement {
-    let mut stack = v_flex().w_full().min_w_0().child(section_header(
-        "dx-forge-media-header",
-        "Media Outputs",
-        IconName::Image,
-        snapshot.media_outputs.len(),
+    source_section(
+        SourceSection {
+            header_id: "dx-forge-media-header",
+            title: "Media Outputs",
+            icon: IconName::Image,
+            empty_id: "dx-forge-media-empty",
+            workspace_empty: "Open a workspace to read media outputs",
+            empty: "No media outputs found",
+            row_id: "dx-forge-media",
+            open_id: "dx-forge-open-media",
+            open_tooltip: "Open media output",
+        },
+        &snapshot.media_outputs,
+        snapshot,
+        workspace,
         cx,
-    ));
-
-    if snapshot.workspace_roots.is_empty() {
-        stack = stack.child(empty_row(
-            "dx-forge-media-empty",
-            "Open a workspace to read media outputs",
-            cx,
-        ));
-    } else if snapshot.media_outputs.is_empty() {
-        stack = stack.child(empty_row(
-            "dx-forge-media-empty",
-            "No media outputs found",
-            cx,
-        ));
-    } else {
-        for (ix, output) in snapshot.media_outputs.iter().enumerate() {
-            stack = stack.child(source_row(
-                SharedString::from(format!("dx-forge-media-{ix}")),
-                IconName::Image,
-                output,
-                Some(open_path_button(
-                    format!("dx-forge-open-media-{ix}"),
-                    "Open media output",
-                    &output.path,
-                    &snapshot.workspace_roots,
-                    workspace,
-                )),
-                cx,
-            ));
-        }
-    }
-
-    stack.into_any_element()
+    )
 }

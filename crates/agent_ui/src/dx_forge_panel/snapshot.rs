@@ -1,3 +1,4 @@
+use crate::dx_forge_panel::machine_cache::machine_cache_rows;
 use crate::dx_forge_panel::package_status::package_status_rows;
 use crate::dx_forge_panel::snapshot_state::{
     ForgeStateInputs, configured_forge_root_count, configured_root_scope, forge_history_root_path,
@@ -7,6 +8,7 @@ use crate::dx_receipt_history::{DxToolHistoryBucket, tool_history_snapshot};
 use crate::dx_source_sets::{DxSourceItem, source_set_snapshot};
 
 const FORGE_HISTORY_LABEL: &str = "Forge History";
+const MACHINE_CACHES_LABEL: &str = "Machine Caches";
 const PACKAGE_STATUS_LABEL: &str = "Package Status";
 const RESTORE_PREVIEWS_LABEL: &str = "Restore Previews";
 const MEDIA_OUTPUTS_LABEL: &str = "Media Outputs";
@@ -25,8 +27,10 @@ pub(super) struct DxForgePanelSnapshot {
     pub(super) receipt_count: usize,
     pub(super) summarized_receipt_count: usize,
     pub(super) visible_blocker_count: usize,
+    pub(super) visible_machine_cache_warning_count: usize,
     pub(super) visible_package_status_warning_count: usize,
     pub(super) visible_restore_warning_count: usize,
+    pub(super) machine_caches: Vec<DxForgeSourceRow>,
     pub(super) package_statuses: Vec<DxForgeSourceRow>,
     pub(super) latest_receipts: Vec<DxForgeReceiptRow>,
     pub(super) restore_previews: Vec<DxForgeSourceRow>,
@@ -85,6 +89,11 @@ pub(super) fn forge_panel_snapshot(workspace_roots: &[String]) -> DxForgePanelSn
         .iter()
         .map(|status| status.warnings.len())
         .sum();
+    let machine_caches = machine_cache_rows(workspace_roots);
+    let visible_machine_cache_warning_count = machine_caches
+        .iter()
+        .map(|cache| cache.warnings.len())
+        .sum();
     let visible_blocker_count = latest_receipts
         .iter()
         .map(|receipt| receipt.blocker_count)
@@ -104,11 +113,14 @@ pub(super) fn forge_panel_snapshot(workspace_roots: &[String]) -> DxForgePanelSn
         workspace_roots,
         history_root_exists,
         configured_root_count,
+        machine_cache_count: machine_caches.len(),
+        machine_caches_label: MACHINE_CACHES_LABEL,
         package_status_label: PACKAGE_STATUS_LABEL,
         package_status_count: package_statuses.len(),
         receipt_count,
         summarized_receipt_count,
         visible_blocker_count,
+        visible_machine_cache_warning_count,
         visible_package_status_warning_count,
         visible_restore_warning_count,
     });
@@ -125,8 +137,10 @@ pub(super) fn forge_panel_snapshot(workspace_roots: &[String]) -> DxForgePanelSn
         receipt_count,
         summarized_receipt_count,
         visible_blocker_count,
+        visible_machine_cache_warning_count,
         visible_package_status_warning_count,
         visible_restore_warning_count,
+        machine_caches,
         package_statuses,
         latest_receipts,
         restore_previews,

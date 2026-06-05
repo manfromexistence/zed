@@ -8,11 +8,14 @@ pub(super) struct ForgeStateInputs<'a> {
     pub(super) workspace_roots: &'a [String],
     pub(super) history_root_exists: bool,
     pub(super) configured_root_count: usize,
+    pub(super) machine_cache_count: usize,
+    pub(super) machine_caches_label: &'static str,
     pub(super) package_status_label: &'static str,
     pub(super) package_status_count: usize,
     pub(super) receipt_count: usize,
     pub(super) summarized_receipt_count: usize,
     pub(super) visible_blocker_count: usize,
+    pub(super) visible_machine_cache_warning_count: usize,
     pub(super) visible_package_status_warning_count: usize,
     pub(super) visible_restore_warning_count: usize,
 }
@@ -24,10 +27,13 @@ pub(super) fn forge_state(input: ForgeStateInputs<'_>) -> (DxForgePanelState, St
             "Open a workspace to read Forge receipts".to_string(),
         );
     }
-    if !input.history_root_exists && input.package_status_count == 0 {
+    if !input.history_root_exists
+        && input.package_status_count == 0
+        && input.machine_cache_count == 0
+    {
         return (
             DxForgePanelState::Missing,
-            "Missing Forge receipt or package-status root".to_string(),
+            "Missing Forge receipt, package-status, or machine-cache root".to_string(),
         );
     }
     if input.receipt_count > 0 && input.summarized_receipt_count == 0 {
@@ -42,6 +48,15 @@ pub(super) fn forge_state(input: ForgeStateInputs<'_>) -> (DxForgePanelState, St
             format!(
                 "{} visible package status warning(s) need review",
                 input.visible_package_status_warning_count
+            ),
+        );
+    }
+    if input.visible_machine_cache_warning_count > 0 {
+        return (
+            DxForgePanelState::Attention,
+            format!(
+                "{} visible machine cache warning(s) need review",
+                input.visible_machine_cache_warning_count
             ),
         );
     }
@@ -77,6 +92,16 @@ pub(super) fn forge_state(input: ForgeStateInputs<'_>) -> (DxForgePanelState, St
                 format!(
                     "{} {} file(s) available",
                     input.package_status_count, input.package_status_label
+                ),
+            );
+        }
+
+        if input.machine_cache_count > 0 {
+            return (
+                DxForgePanelState::Ready,
+                format!(
+                    "{} {} row(s) available",
+                    input.machine_cache_count, input.machine_caches_label
                 ),
             );
         }

@@ -6,6 +6,10 @@ const agentUi = readFileSync("crates/agent_ui/src/agent_ui.rs", "utf8");
 const moduleRoot = readFileSync("crates/agent_ui/src/dx_forge_panel.rs", "utf8");
 const controls = readFileSync("crates/agent_ui/src/dx_forge_panel/controls.rs", "utf8");
 const panel = readFileSync("crates/agent_ui/src/dx_forge_panel/panel.rs", "utf8");
+const machineCachePath = "crates/agent_ui/src/dx_forge_panel/machine_cache.rs";
+const machineCache = existsSync(machineCachePath)
+  ? readFileSync(machineCachePath, "utf8")
+  : "";
 const packageStatusPath = "crates/agent_ui/src/dx_forge_panel/package_status.rs";
 const packageStatus = existsSync(packageStatusPath)
   ? readFileSync(packageStatusPath, "utf8")
@@ -51,6 +55,7 @@ const providers = [providersRoot, providersCatalog, providersState, providersVie
 const forgeSources = [
   moduleRoot,
   controls,
+  machineCache,
   packageStatus,
   panel,
   providers,
@@ -60,6 +65,7 @@ const forgeSources = [
   rows,
 ].join("\n");
 const forgeReaderSources = [
+  machineCache,
   packageStatus,
   receiptBuckets,
   receiptFiles,
@@ -173,6 +179,83 @@ test("Forge panel reads package-status without runtime overclaims", () => {
   );
 });
 
+test("Forge panel surfaces bounded machine-cache evidence without freshness overclaims", () => {
+  assert.ok(
+    existsSync(machineCachePath),
+    "Forge machine-cache reader must live in a focused module",
+  );
+  assert.match(moduleRoot, /mod machine_cache;/);
+  assert.match(snapshot, /machine_cache_rows\(workspace_roots\)/);
+  assert.match(snapshot, /pub\(super\) machine_caches: Vec<DxForgeSourceRow>/);
+  assert.match(snapshot, /visible_machine_cache_warning_count/);
+  assert.match(snapshot, /MACHINE_CACHES_LABEL/);
+  assert.match(panelView, /fn machine_cache_section/);
+  assert.ok(
+    panelView.indexOf("package_status_section(snapshot, workspace, cx)") <
+      panelView.indexOf("machine_cache_section(snapshot, workspace, cx)") &&
+      panelView.indexOf("machine_cache_section(snapshot, workspace, cx)") <
+        panelView.indexOf("receipt_section(snapshot, workspace, cx)"),
+    "machine cache evidence should sit between package status and raw receipts",
+  );
+  assert.match(panelView, /"Machine Caches"/);
+  assert.match(panelView, /No Forge machine caches found/);
+  assert.match(machineCache, /const MACHINE_CACHE_CACHE_TTL: Duration = Duration::from_secs\(5\);/);
+  assert.match(machineCache, /const MAX_MACHINE_CACHE_ROOTS: usize = 4;/);
+  assert.match(machineCache, /const MAX_MACHINE_CACHE_FILES: usize = 64;/);
+  assert.match(machineCache, /const MAX_MACHINE_CACHE_DIRECTORIES: usize = 512;/);
+  assert.match(machineCache, /const MAX_MACHINE_CACHE_ENTRIES_PER_DIRECTORY: usize = 256;/);
+  assert.match(machineCache, /const MAX_MACHINE_CACHE_TOTAL_ENTRIES: usize = 4096;/);
+  assert.match(machineCache, /const MACHINE_HEADER_BYTES: usize = 8;/);
+  assert.match(machineCache, /OnceLock<Mutex<Option<\(Instant, Vec<String>, Vec<DxForgeSourceRow>\)>>/);
+  assert.match(machineCache, /pub\(super\) fn invalidate_machine_cache_snapshot_cache/);
+  assert.match(machineCache, /VecDeque::from/);
+  assert.match(machineCache, /summary\.scanned_directories >= MAX_MACHINE_CACHE_DIRECTORIES/);
+  assert.match(machineCache, /total_entries >= MAX_MACHINE_CACHE_TOTAL_ENTRIES/);
+  assert.match(machineCache, /directory_entries > MAX_MACHINE_CACHE_ENTRIES_PER_DIRECTORY/);
+  assert.match(machineCache, /let dx_root = Path::new\(root\)\.join\("\.dx"\);/);
+  assert.match(machineCache, /join\("\.dx"\)/);
+  assert.match(machineCache, /eq_ignore_ascii_case\("machine"\)/);
+  assert.match(machineCache, /File::open\(path\)\.ok\(\)\?/);
+  assert.match(machineCache, /file\.read\(&mut bytes\)\.ok\(\)\?/);
+  assert.match(machineCache, /DXM1/);
+  assert.match(machineCache, /DXMCACH1/);
+  assert.match(machineCache, /metadata_path_for/);
+  assert.match(machineCache, /\.machine\.meta\.json/);
+  assert.match(machineCache, /freshness unchecked/);
+  assert.match(machineCache, /metadata sidecar/);
+  assert.match(machineCache, /Machine family/);
+  assert.match(machineCache, /serializer document cache/);
+  assert.match(machineCache, /typed cache/);
+  assert.match(machineCache, /unknown machine cache/);
+  assert.match(machineCache, /std::fs::read_dir/);
+  assert.match(machineCache, /entry\.file_type\(\)/);
+  assert.doesNotMatch(machineCache, /std::fs::read\(/);
+  assert.doesNotMatch(machineCache, /read_to_end|read_to_string|std::fs::read_to_string/);
+  assert.match(snapshot, /let machine_caches = machine_cache_rows\(workspace_roots\);/);
+  assert.match(snapshot, /machine_cache_count: machine_caches\.len\(\)/);
+  assert.match(snapshot, /machine_caches_label: MACHINE_CACHES_LABEL/);
+  assert.match(snapshot, /machine_caches,/);
+  assert.match(snapshotState, /machine_cache_count: usize/);
+  assert.match(snapshotState, /machine_caches_label: &'static str/);
+  assert.match(snapshotState, /visible_machine_cache_warning_count: usize/);
+  assert.match(snapshotState, /visible machine cache warning\(s\) need review/);
+  assert.match(snapshotState, /Missing Forge receipt, package-status, or machine-cache root/);
+  assert.match(snapshotState, /input\.machine_cache_count > 0/);
+  assert.match(panelView, /&snapshot\.machine_caches/);
+  assert.match(panelView, /Open a workspace to read Forge machine caches/);
+  assert.match(panelView, /row_id: "dx-forge-machine-cache"/);
+  assert.match(panelView, /open_id: "dx-forge-open-machine-cache-root"/);
+  assert.match(panelView, /open_tooltip: "Open machine cache root"/);
+  assert.doesNotMatch(
+    machineCache,
+    /std::process|Command::new|powershell|cmd\.exe|\bshell\b|spawn/i,
+  );
+  assert.doesNotMatch(
+    `${machineCache}\n${panelView}`,
+    /source hash matches|receipt-backed machine|provider proof|browser proof|runtime proof|live Forge status|fresh machine|verified machine|hash verified|metadata verified|freshness verified|cache verified|runtime-backed machine|browser-backed machine|provider-backed machine/i,
+  );
+});
+
 test("Forge panel renders real receipt, restore, and media states", () => {
   assert.match(panelView, /fn receipt_section/);
   assert.match(panelView, /fn restore_section/);
@@ -207,6 +290,7 @@ test("Forge panel uses Git-style controls instead of metric cards", () => {
   assert.match(controls, /open_abs_path\(/);
   assert.match(controls, /OpenOptions/);
   assert.match(panel, /pub\(super\) fn refresh/);
+  assert.match(panel, /invalidate_machine_cache_snapshot_cache\(\)/);
   assert.match(panel, /invalidate_tool_history_snapshot_cache\(\)/);
   assert.match(panel, /invalidate_source_set_snapshot_cache\(\)/);
   assert.match(receiptHistoryRoot, /pub\(crate\) fn invalidate_tool_history_snapshot_cache/);
@@ -365,6 +449,7 @@ test("Forge panel files stay small and professionally named", () => {
   const lineCounts = new Map([
     ["dx_forge_panel.rs", moduleRoot],
     ["controls.rs", controls],
+    ["machine_cache.rs", machineCache],
     ["package_status.rs", packageStatus],
     ["panel.rs", panel],
     ["providers/mod.rs", providersRoot],
