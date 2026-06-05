@@ -6,9 +6,17 @@ const agentUi = readFileSync("crates/agent_ui/src/agent_ui.rs", "utf8");
 const moduleRoot = readFileSync("crates/agent_ui/src/dx_forge_panel.rs", "utf8");
 const controls = readFileSync("crates/agent_ui/src/dx_forge_panel/controls.rs", "utf8");
 const panel = readFileSync("crates/agent_ui/src/dx_forge_panel/panel.rs", "utf8");
-const providersPath = "crates/agent_ui/src/dx_forge_panel/providers.rs";
-const providers = existsSync(providersPath)
-  ? readFileSync(providersPath, "utf8")
+const providersRootPath = "crates/agent_ui/src/dx_forge_panel/providers/mod.rs";
+const providersCatalogPath = "crates/agent_ui/src/dx_forge_panel/providers/catalog.rs";
+const providersStatePath = "crates/agent_ui/src/dx_forge_panel/providers/state.rs";
+const providersRoot = existsSync(providersRootPath)
+  ? readFileSync(providersRootPath, "utf8")
+  : "";
+const providersCatalog = existsSync(providersCatalogPath)
+  ? readFileSync(providersCatalogPath, "utf8")
+  : "";
+const providersState = existsSync(providersStatePath)
+  ? readFileSync(providersStatePath, "utf8")
   : "";
 const snapshot = readFileSync("crates/agent_ui/src/dx_forge_panel/snapshot.rs", "utf8");
 const panelView = readFileSync("crates/agent_ui/src/dx_forge_panel/panel_view.rs", "utf8");
@@ -27,6 +35,7 @@ const receiptFields = readFileSync(
 );
 const sourceSets = readFileSync("crates/agent_ui/src/dx_source_sets.rs", "utf8");
 const sourceSetReceipts = readFileSync("crates/agent_ui/src/dx_source_sets/receipts.rs", "utf8");
+const providers = [providersRoot, providersCatalog, providersState].join("\n");
 const forgeSources = [moduleRoot, controls, panel, providers, snapshot, panelView, rows].join("\n");
 const forgeReaderSources = [
   receiptBuckets,
@@ -146,8 +155,9 @@ test("Forge panel uses Git-style controls instead of metric cards", () => {
 test("Forge panel renders DX icon provider targets with snapshot-driven readiness", () => {
   assert.match(moduleRoot, /mod providers;/);
   assert.match(panelView, /remote_target_strip\(snapshot, cx\)/);
-  assert.ok(existsSync(providersPath), "Forge provider targets must live in providers.rs");
-  assert.ok(providers.length > 0, "Forge provider targets must live in a dedicated module");
+  assert.ok(existsSync(providersRootPath), "Forge provider view must live in providers/mod.rs");
+  assert.ok(existsSync(providersCatalogPath), "Forge provider metadata must live in catalog.rs");
+  assert.ok(existsSync(providersStatePath), "Forge provider state must live in state.rs");
 
   const providerTargets = [
     ["GitHub", "DxForgeProviderGithub", "dx_forge_provider_github", "ProviderGroup::Code", "svgl"],
@@ -211,23 +221,44 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
     const svg = readFileSync(iconPath, "utf8");
     assert.match(svg, /^<svg\b[^>]*viewBox=/);
     assert.match(svg, /<(path|circle|rect|polygon|g)\b/);
+    assert.match(svg, /currentColor/);
     assert.doesNotMatch(svg, /<script|<foreignObject|on[a-z]+\s*=|javascript:|data:|xlink:href|href=/i);
+    assert.doesNotMatch(svg, /<defs|linearGradient|url\(|stop-color|#[0-9a-f]{3,8}|fill=["']red["']/i);
     assert.doesNotMatch(svg, /placeholder|sample|todo/i);
   }
 
+  assert.equal((providersCatalog.match(/^\s*ForgeProvider\s*\{/gm) ?? []).length, providerTargets.length);
   assert.match(providers, /ProviderGroup::Code/);
   assert.match(providers, /ProviderGroup::Storage/);
   assert.match(providers, /ProviderGroup::Media/);
+  assert.match(providersRoot, /providers_for\(group\)/);
+  assert.match(providersRoot, /Icon::new\(provider\.icon\)/);
+  assert.match(providersState, /fn code_target_state/);
+  assert.match(providersState, /fn storage_target_state/);
+  assert.match(providersState, /fn media_target_state/);
   assert.match(providers, /source_pack: "svgl"/);
   assert.match(providers, /source_pack: "material-icon-theme"/);
+  assert.match(providers, /ProviderGroup::ALL/);
+  assert.match(providers, /for group in ProviderGroup::ALL/);
+  assert.match(providers, /fn remote_target_state/);
+  assert.match(providers, /fn provider_icon_stack/);
   assert.match(providers, /history_root_exists/);
-  assert.match(providers, /restore_previews\.is_empty\(\)/);
-  assert.match(providers, /media_outputs\.is_empty\(\)/);
+  assert.match(providers, /receipt_count/);
+  assert.match(providers, /summarized_receipt_count/);
+  assert.match(providers, /visible_blocker_count/);
+  assert.match(providers, /restore_previews\.len\(\)/);
+  assert.match(providers, /visible_restore_warning_count/);
+  assert.match(providers, /media_outputs\.len\(\)/);
   assert.match(providers, /Tooltip::with_meta/);
-  assert.match(providers, /Icon::new\(provider\.icon\)/);
-  assert.match(providers, /provider_status_label/);
-  assert.match(providers, /provider_status_color/);
+  assert.match(providers, /Icon::new\(state\.icon\)/);
+  assert.match(providers, /Label::new\(state\.label\)/);
+  assert.match(providers, /Label::new\(state\.detail\.clone\(\)\)/);
+  assert.match(providers, /h_flex\(\)[\s\S]*\.gap_0p5\(\)[\s\S]*\.flex_none\(\)[\s\S]*Icon::new\(state\.icon\)/);
   assert.doesNotMatch(providers, /Button::new|IconButton::new/);
+  assert.doesNotMatch(
+    providers,
+    /ProviderStatus|ready_count|provider_status|provider_tooltip\(provider|Status:/,
+  );
 });
 
 test("Forge readers keep latest receipt edge cases visible", () => {
@@ -246,7 +277,9 @@ test("Forge panel files stay small and professionally named", () => {
     ["dx_forge_panel.rs", moduleRoot],
     ["controls.rs", controls],
     ["panel.rs", panel],
-    ["providers.rs", providers],
+    ["providers/mod.rs", providersRoot],
+    ["providers/catalog.rs", providersCatalog],
+    ["providers/state.rs", providersState],
     ["snapshot.rs", snapshot],
     ["panel_view.rs", panelView],
     ["rows.rs", rows],
