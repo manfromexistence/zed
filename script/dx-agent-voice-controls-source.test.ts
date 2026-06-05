@@ -64,7 +64,7 @@ test("composer renders separate mic and read-aloud buttons before send", () => {
   assert.match(voiceControls, /IconName::Mic/);
   assert.match(voiceControls, /IconName::AudioOn/);
   assert.match(voiceControls, /IconName::Stop/);
-  assert.match(voiceButtons, /let voice_disabled = state\.phase == ComposerVoicePhase::Transcribing/);
+  assert.match(voiceButtons, /let voice_disabled = false/);
   assert.match(voiceButtons, /\.disabled\(voice_disabled\)/);
   assert.match(voiceButtons, /agent-composer-voice-input[\s\S]+\.on_click\(on_voice_click\)/);
   assert.match(
@@ -86,13 +86,16 @@ test("voice recording UI exposes real recording and transcription states", () =>
   assert.match(voiceControls, /Recording with Flow/);
   assert.match(voiceControls, /Transcribing with Parakeet/);
   assert.match(voiceControls, /Reading with Kokoro/);
+  assert.match(voiceControls, /90s max/);
   assert.match(voiceControls, /agent-composer-stop-voice-recording/);
+  assert.match(voiceControls, /agent-composer-cancel-flow-transcription/);
   assert.match(voiceControls, /agent-composer-voice-level-meter/);
   assert.match(voiceControls, /update_recording_telemetry/);
   assert.match(voiceControls, /captured_duration: Duration/);
   assert.match(voiceControls, /input_level: f32/);
   assert.match(voiceControls, /Duration::ZERO/);
   assert.match(voiceControls, /Stop recording and transcribe/);
+  assert.match(voiceControls, /Cancel Flow transcription/);
   assert.match(voiceControls, /Stop Kokoro read-aloud/);
   assert.match(voiceControls, /agent-composer-discard-voice-recording/);
   assert.match(voiceControls, /Discard voice recording/);
@@ -111,7 +114,11 @@ test("voice recording UI exposes real recording and transcription states", () =>
     threadView,
     /ComposerVoicePhase::Speaking => self\.stop_flow_voice_playback\(cx\)/,
   );
-  assert.match(threadView, /ComposerVoicePhase::Transcribing => \{\}/);
+  assert.match(
+    threadView,
+    /ComposerVoicePhase::Transcribing => self\.cancel_flow_speech_operation\(cx\)/,
+  );
+  assert.match(threadView, /Flow STT canceled/);
 });
 
 test("voice runtime uses Flow speech code instead of dummy text", () => {
@@ -148,7 +155,7 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   );
   const synthesize = sourceSlice(
     runtime,
-    "fn synthesize(&self, text: &str) -> Result<PathBuf>",
+    "fn synthesize(&self, text: &str, cancellation: &FlowSpeechCancellation) -> Result<PathBuf>",
     "impl FlowRecordingSession",
   );
   const timeoutHelper = sourceSlice(
@@ -164,11 +171,10 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   const defaultFlowRoot = sourceTail(runtime, "fn default_flow_root");
 
   assert.match(runtime, /FlowSpeechRuntime/);
+  assert.match(runtime, /FlowSpeechCancellation/);
+  assert.match(runtime, /AtomicBool/);
+  assert.match(runtime, /Ordering/);
   assert.match(runtime, /G:\\\\Dx\\\\flow|DX_FLOW_ROOT|FLOW_ROOT/);
-  assert.match(
-    runtime,
-    /FRIDAY_DEFAULT_STT_MODEL_KEY: &str = "parakeet_unified_en_int8"/,
-  );
   assert.match(
     runtime,
     /FLOW_PARAKEET_EXECUTION_MODEL_KEY: &str = "parakeet-tdt-0\.6b-v3-int8"/,
@@ -177,17 +183,28 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
     runtime,
     /PARAKEET_MODEL_DIR: &str = "models\/stt\/parakeet-tdt-0\.6b-v3-int8"/,
   );
+  assert.match(
+    runtime,
+    /FRIDAY_DEFAULT_STT_MODEL_KEY: &str = "parakeet-tdt-0\.6b-v3-int8"/,
+    "Zed must name the same Parakeet default as the copied Friday Flow runtime",
+  );
+  assert.doesNotMatch(runtime, /parakeet_unified_en_int8/);
   assert.match(runtime, /flow-dictate/);
   assert.match(startRecording, /ensure_stt_ready\(\)\?/);
   assert.match(startRecording, /device\.default_input_config\(\)\?/);
   assert.match(startRecording, /build_input_stream/);
   assert.match(startRecording, /stream\.play\(\)\?/);
+  assert.match(transcribeRecording, /cancellation: &FlowSpeechCancellation/);
   assert.match(transcribeRecording, /ensure_stt_ready\(\)\?/);
   assert.match(transcribeRecording, /TemporarySpeechFile::new/);
   assert.match(transcribeRecording, /write_recording_wav/);
   assert.match(transcribeRecording, /arg\("--file"\)/);
   assert.match(transcribeRecording, /arg\(audio_file\.path\(\)\)/);
   assert.match(transcribeRecording, /STT_COMMAND_TIMEOUT/);
+  assert.match(
+    transcribeRecording,
+    /run_command_with_timeout\([^,]+,[^,]+,[^,]+,\s*Some\(cancellation\)/,
+  );
   assert.match(transcribeRecording, /Flow Parakeet transcription/);
   assert.doesNotMatch(transcribeRecording, /remove_file/);
   assert.match(runtime, /TemporarySpeechFile/);
@@ -203,6 +220,7 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(runtime, /DX_FLOW_DATA_ROOT/);
   assert.match(runtime, /FLOW_DATA_DIR/);
   assert.match(runtime, /KokoroTtsRuntime|kokoro_82m/);
+  assert.match(speakText, /cancellation: &FlowSpeechCancellation/);
   assert.match(speakText, /Friday Kokoro TTS runtime is not available/);
   assert.match(ensureSttReady, /Flow Parakeet runtime is not built/);
   assert.match(ensureSttReady, /DX_FLOW_DICTATE_BINARY/);
@@ -230,16 +248,20 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(timeoutHelper, /stdout\(Stdio::piped\(\)\)/);
   assert.match(timeoutHelper, /stderr\(Stdio::piped\(\)\)/);
   assert.match(timeoutHelper, /try_wait\(\)/);
+  assert.match(timeoutHelper, /cancellation\.is_cancelled\(\)/);
   assert.match(timeoutHelper, /child\.kill\(\)/);
   assert.match(timeoutHelper, /child\.wait\(\)/);
+  assert.match(timeoutHelper, /was canceled/);
   assert.match(timeoutHelper, /timed out after/);
   assert.match(runtime, /HUGGINGFACE_HUB_CACHE/);
   assert.match(runtime, /hf_home\.join\("hub"\)/);
   assert.match(runtime, /fn normalize_flow_data_root/);
   assert.match(runtime, /fn canonicalize_candidate_path/);
   assert.match(runtime, /fn candidate_paths_equal/);
+  assert.match(runtime, /fn flow_root_from_dictate_binary/);
   assert.match(dataRootCandidates, /normalize_flow_data_root/);
   assert.match(dataRootCandidates, /FLOW_DATA_DIR/);
+  assert.match(dataRootCandidates, /DX_SCAN_FLOW_DRIVES/);
   assert.match(dataRootCandidates, /path\.join\("data"\)/);
   assert.match(dataRootCandidates, /push_unique_path/);
   assert.match(defaultFlowRoot, /flow_root_ready/);
@@ -307,8 +329,18 @@ test("voice text paths use the real message editor contents and insert APIs", ()
   assert.match(transcriptSeparator, /is_closing_transcript_punctuation/);
   assert.match(transcriptSeparator, /matches!\([\s\S]*character,[\s\S]*'\.'/);
   assert.match(threadView, /message_editor\.read\(cx\)\.text\(cx\)/);
-  assert.match(threadView, /let active_editor = this\.active_editor\(cx\)/);
-  assert.match(threadView, /insert_transcript_text\(&transcript/);
+  assert.match(threadView, /if self\.composer_voice_state\.is_busy\(\)/);
+  assert.match(threadView, /Finish Flow voice action before sending/);
+  assert.match(
+    threadView,
+    /this\.message_editor\.update\(cx,\s*\|editor, cx\|[\s\S]+insert_transcript_text\(&transcript/,
+    "Flow STT transcripts from the composer mic must insert into the composer input",
+  );
+  assert.doesNotMatch(
+    threadView,
+    /let active_editor = this\.active_editor\(cx\)[\s\S]+insert_transcript_text\(&transcript/,
+    "Composer mic transcripts must not follow an edited historical message",
+  );
   assert.match(threadView, /Audio::play_wav_file_tracked/);
   assert.match(threadView, /std::fs::remove_file\(&audio_path\)/);
   assert.match(conversationModule, /AudioPlaybackHandle/);
@@ -364,6 +396,7 @@ test("voice handoff keeps runtime readiness honest", () => {
 
   assert.match(voiceHandoff, /flow-dictate\.exe` now exists/);
   assert.match(voiceHandoff, /silent-WAV Parakeet smoke test passed/);
+  assert.match(voiceHandoff, /live Zed microphone proof still needs the governed validation window/);
   assert.match(voiceHandoff, /G:\\Flow\\data\\models\\tts\\kokoro_82m/);
   assert.match(voiceHandoff, /config\.json/);
   assert.match(voiceHandoff, /kokoro-v1_0\.pth/);

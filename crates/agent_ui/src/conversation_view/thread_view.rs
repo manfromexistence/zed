@@ -37,7 +37,7 @@ use super::voice_controls::{
     ComposerVoicePhase, ComposerVoiceState, render_voice_buttons, render_voice_recording_panel,
 };
 use super::*;
-use crate::flow_speech_runtime::{FlowRecordingSession, FlowSpeechRuntime};
+use crate::flow_speech_runtime::{FlowRecordingSession, FlowSpeechCancellation, FlowSpeechRuntime};
 
 #[derive(Default)]
 struct ThreadFeedbackState {
@@ -611,8 +611,10 @@ pub struct ThreadView {
     pub message_editor: Entity<MessageEditor>,
     composer_voice_state: ComposerVoiceState,
     flow_recording_session: Option<FlowRecordingSession>,
+    flow_speech_cancellation: Option<FlowSpeechCancellation>,
     #[cfg(feature = "audio")]
     flow_playback_handle: Option<AudioPlaybackHandle>,
+    flow_transcription_id: u64,
     flow_playback_id: u64,
     _flow_speech_task: Option<Task<()>>,
     pub add_context_menu_handle: PopoverMenuHandle<ContextMenu>,
@@ -951,8 +953,10 @@ impl ThreadView {
             message_editor,
             composer_voice_state: ComposerVoiceState::default(),
             flow_recording_session: None,
+            flow_speech_cancellation: None,
             #[cfg(feature = "audio")]
             flow_playback_handle: None,
+            flow_transcription_id: 0,
             flow_playback_id: 0,
             _flow_speech_task: None,
             add_context_menu_handle: PopoverMenuHandle::default(),
@@ -1385,6 +1389,11 @@ impl ThreadView {
         let thread = &self.thread;
 
         if self.is_loading_contents {
+            return;
+        }
+
+        if self.composer_voice_state.is_busy() {
+            self.show_flow_voice_toast("Finish Flow voice action before sending", cx);
             return;
         }
 
@@ -4132,7 +4141,7 @@ impl ThreadView {
         match self.composer_voice_state.phase() {
             ComposerVoicePhase::Recording => self.stop_flow_voice_recording(window, cx),
             ComposerVoicePhase::Speaking => self.stop_flow_voice_playback(cx),
-            ComposerVoicePhase::Transcribing => {}
+            ComposerVoicePhase::Transcribing => self.cancel_flow_speech_operation(cx),
             ComposerVoicePhase::Ready | ComposerVoicePhase::Error => {
                 self.start_flow_voice_recording(window, cx)
             }
@@ -4142,10 +4151,9 @@ impl ThreadView {
     fn stop_flow_voice_action(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         match self.composer_voice_state.phase() {
             ComposerVoicePhase::Recording => self.stop_flow_voice_recording(window, cx),
+            ComposerVoicePhase::Transcribing => self.cancel_flow_speech_operation(cx),
             ComposerVoicePhase::Speaking => self.stop_flow_voice_playback(cx),
-            ComposerVoicePhase::Ready
-            | ComposerVoicePhase::Transcribing
-            | ComposerVoicePhase::Error => {}
+            ComposerVoicePhase::Ready | ComposerVoicePhase::Error => {}
         }
     }
 
@@ -4225,14 +4233,22 @@ impl ThreadView {
             "Captured {:.1}s for Flow STT",
             elapsed.as_secs_f32()
         ));
+        self.flow_transcription_id = self.flow_transcription_id.wrapping_add(1);
+        let transcription_id = self.flow_transcription_id;
+        let cancellation = FlowSpeechCancellation::new();
+        self.flow_speech_cancellation = Some(cancellation.clone());
         cx.notify();
 
         self._flow_speech_task = Some(cx.spawn_in(window, async move |this, cx| {
             let task = cx
                 .background_executor()
-                .spawn(async move { runtime.transcribe_recording(recording) });
+                .spawn(async move { runtime.transcribe_recording(recording, &cancellation) });
             let result = task.await;
             this.update_in(cx, |this, window, cx| {
+                if this.flow_transcription_id != transcription_id {
+                    return;
+                }
+                this.flow_speech_cancellation = None;
                 match result {
                     Ok(transcript) => {
                         let transcript = transcript.trim().to_string();
@@ -4241,8 +4257,11 @@ impl ThreadView {
                                 .set_error("Flow STT returned an empty transcript");
                             this.show_flow_voice_toast("Flow STT returned an empty transcript", cx);
                         } else {
-                            let active_editor = this.active_editor(cx);
-                            active_editor.update(cx, |editor, cx| {
+                            this.message_editor
+                                .read(cx)
+                                .focus_handle(cx)
+                                .focus(window, cx);
+                            this.message_editor.update(cx, |editor, cx| {
                                 editor.insert_transcript_text(&transcript, window, cx);
                             });
                             this.composer_voice_state
@@ -4271,6 +4290,22 @@ impl ThreadView {
             self.composer_voice_state
                 .set_error("Flow voice recording was not active");
         }
+        cx.notify();
+    }
+
+    fn cancel_flow_speech_operation(&mut self, cx: &mut Context<Self>) {
+        if let Some(cancellation) = self.flow_speech_cancellation.take() {
+            cancellation.cancel();
+        }
+        self.flow_transcription_id = self.flow_transcription_id.wrapping_add(1);
+        self.flow_playback_id = self.flow_playback_id.wrapping_add(1);
+        #[cfg(feature = "audio")]
+        {
+            if let Some(handle) = self.flow_playback_handle.take() {
+                handle.cancel();
+            }
+        }
+        self.composer_voice_state.set_ready("Flow STT canceled");
         cx.notify();
     }
 
@@ -4306,22 +4341,28 @@ impl ThreadView {
             .set_speaking(format!("Flow voice runtime: {summary}"));
         self.flow_playback_id = self.flow_playback_id.wrapping_add(1);
         let playback_id = self.flow_playback_id;
+        let cancellation = FlowSpeechCancellation::new();
+        self.flow_speech_cancellation = Some(cancellation.clone());
         cx.notify();
 
         self._flow_speech_task = Some(cx.spawn(async move |this, cx| {
             let task = cx
                 .background_executor()
-                .spawn(async move { runtime.speak_text(&text) });
-            let result = task.await;
-            this.update(cx, |this, cx| {
+                .spawn(async move { runtime.speak_text(&text, &cancellation) });
+            let mut result = Some(task.await);
+            let update_result = this.update(cx, |this, cx| {
                 if this.flow_playback_id != playback_id {
-                    if let Ok(audio_path) = result {
+                    if let Some(Ok(audio_path)) = result.take() {
                         let _ = std::fs::remove_file(audio_path);
                     }
                     return;
                 }
 
-                match result {
+                this.flow_speech_cancellation = None;
+                match result
+                    .take()
+                    .expect("Kokoro synthesis result already handled")
+                {
                     Ok(audio_path) => {
                         #[cfg(feature = "audio")]
                         {
@@ -4386,12 +4427,19 @@ impl ThreadView {
                     }
                 }
                 cx.notify();
-            })
-            .ok();
+            });
+            if update_result.is_err() {
+                if let Some(Ok(audio_path)) = result {
+                    let _ = std::fs::remove_file(audio_path);
+                }
+            }
         }));
     }
 
     fn stop_flow_voice_playback(&mut self, cx: &mut Context<Self>) {
+        if let Some(cancellation) = self.flow_speech_cancellation.take() {
+            cancellation.cancel();
+        }
         #[cfg(feature = "audio")]
         {
             if let Some(handle) = self.flow_playback_handle.take() {
@@ -5193,6 +5241,7 @@ impl ThreadView {
         let focus_handle = message_editor.focus_handle(cx);
 
         let is_generating = self.thread.read(cx).status() != ThreadStatus::Idle;
+        let is_voice_busy = self.composer_voice_state.is_busy();
 
         if self.is_loading_contents {
             div()
@@ -5219,14 +5268,16 @@ impl ThreadView {
             IconButton::new("send-message", send_icon)
                 .style(ButtonStyle::Filled)
                 .map(|this| {
-                    if is_editor_empty && !is_generating {
+                    if is_voice_busy || (is_editor_empty && !is_generating) {
                         this.disabled(true).icon_color(Color::Muted)
                     } else {
                         this.icon_color(Color::Accent)
                     }
                 })
                 .tooltip(move |_window, cx| {
-                    if is_editor_empty && !is_generating {
+                    if is_voice_busy {
+                        Tooltip::text("Finish Flow voice action before sending")(_window, cx)
+                    } else if is_editor_empty && !is_generating {
                         Tooltip::for_action("Type to Send", &Chat, cx)
                     } else if is_generating {
                         let focus_handle = focus_handle.clone();

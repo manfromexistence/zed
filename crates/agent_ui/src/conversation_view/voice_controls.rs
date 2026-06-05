@@ -7,6 +7,7 @@ use ui::{
 use ui::{h_flex, prelude::*, v_flex};
 
 const VOICE_LEVEL_BAR_COUNT: usize = 12;
+const MAX_RECORDING_DURATION_LABEL: &str = "90s max";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum ComposerVoicePhase {
@@ -107,7 +108,7 @@ impl ComposerVoiceState {
     fn voice_tooltip(&self) -> &'static str {
         match self.phase {
             ComposerVoicePhase::Recording => "Stop recording and transcribe with Flow",
-            ComposerVoicePhase::Transcribing => "Flow is transcribing with Parakeet",
+            ComposerVoicePhase::Transcribing => "Cancel Flow transcription",
             ComposerVoicePhase::Speaking => "Stop Kokoro read-aloud",
             ComposerVoicePhase::Error => "Retry Flow voice input",
             ComposerVoicePhase::Ready => "Record voice input with Flow",
@@ -133,8 +134,9 @@ pub(super) fn render_voice_buttons(
     on_speak_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
 ) -> Vec<AnyElement> {
     let voice_icon = match state.phase {
-        ComposerVoicePhase::Recording | ComposerVoicePhase::Speaking => IconName::Stop,
-        ComposerVoicePhase::Transcribing => IconName::LoadCircle,
+        ComposerVoicePhase::Recording
+        | ComposerVoicePhase::Transcribing
+        | ComposerVoicePhase::Speaking => IconName::Stop,
         _ => IconName::Mic,
     };
     let voice_color = match state.phase {
@@ -149,7 +151,7 @@ pub(super) fn render_voice_buttons(
             | ComposerVoicePhase::Transcribing
             | ComposerVoicePhase::Speaking
     );
-    let voice_disabled = state.phase == ComposerVoicePhase::Transcribing;
+    let voice_disabled = false;
     let speak_color = if state.phase == ComposerVoicePhase::Speaking {
         Color::Accent
     } else {
@@ -257,7 +259,9 @@ pub(super) fn render_voice_recording_panel(
                     .when(
                         matches!(
                             state.phase,
-                            ComposerVoicePhase::Recording | ComposerVoicePhase::Speaking
+                            ComposerVoicePhase::Recording
+                                | ComposerVoicePhase::Transcribing
+                                | ComposerVoicePhase::Speaking
                         ),
                         |this| {
                             this.child(
@@ -269,6 +273,9 @@ pub(super) fn render_voice_recording_panel(
                                                 ComposerVoicePhase::Speaking => {
                                                     "agent-composer-stop-kokoro-read-aloud"
                                                 }
+                                                ComposerVoicePhase::Transcribing => {
+                                                    "agent-composer-cancel-flow-transcription"
+                                                }
                                                 _ => "agent-composer-stop-voice-recording",
                                             },
                                             IconName::Stop,
@@ -278,6 +285,9 @@ pub(super) fn render_voice_recording_panel(
                                         .tooltip(Tooltip::text(match state.phase {
                                             ComposerVoicePhase::Recording => {
                                                 "Stop recording and transcribe"
+                                            }
+                                            ComposerVoicePhase::Transcribing => {
+                                                "Cancel Flow transcription"
                                             }
                                             ComposerVoicePhase::Speaking => {
                                                 "Stop Kokoro read-aloud"
@@ -368,7 +378,7 @@ fn recording_detail(state: &ComposerVoiceState) -> SharedString {
         .map(|started_at| format_clock(started_at.elapsed()))
         .unwrap_or_else(|| "00:00".to_string());
     let captured = format_captured_duration(state.captured_duration);
-    format!("{elapsed} elapsed / {captured} captured").into()
+    format!("{elapsed} elapsed / {captured} captured / {MAX_RECORDING_DURATION_LABEL}").into()
 }
 
 fn format_clock(duration: Duration) -> String {

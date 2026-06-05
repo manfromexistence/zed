@@ -7,7 +7,10 @@ use std::{
     env, fs,
     path::{Path, PathBuf},
     process::{Command, Output, Stdio},
-    sync::{Arc, Mutex},
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
+    },
     thread,
     time::{Duration, Instant},
 };
@@ -16,7 +19,7 @@ use uuid::Uuid;
 const TARGET_SAMPLE_RATE: u32 = 16_000;
 const MAX_RECORDING_SECONDS: usize = 90;
 const MIN_RECORDING_SAMPLES: usize = TARGET_SAMPLE_RATE as usize / 4;
-const FRIDAY_DEFAULT_STT_MODEL_KEY: &str = "parakeet_unified_en_int8";
+const FRIDAY_DEFAULT_STT_MODEL_KEY: &str = "parakeet-tdt-0.6b-v3-int8";
 const FLOW_PARAKEET_EXECUTION_MODEL_KEY: &str = "parakeet-tdt-0.6b-v3-int8";
 const PARAKEET_MODEL_DIR: &str = "models/stt/parakeet-tdt-0.6b-v3-int8";
 const KOKORO_MODEL_KEY: &str = "kokoro_82m";
@@ -49,6 +52,11 @@ struct KokoroTtsRuntime {
 #[derive(Debug)]
 pub(crate) struct RecordedSpeech {
     samples: Vec<f32>,
+}
+
+#[derive(Clone, Debug, Default)]
+pub(crate) struct FlowSpeechCancellation {
+    canceled: Arc<AtomicBool>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -88,6 +96,20 @@ impl TemporarySpeechFile {
     }
 }
 
+impl FlowSpeechCancellation {
+    pub(crate) fn new() -> Self {
+        Self::default()
+    }
+
+    pub(crate) fn cancel(&self) {
+        self.canceled.store(true, Ordering::Release);
+    }
+
+    pub(crate) fn is_cancelled(&self) -> bool {
+        self.canceled.load(Ordering::Acquire)
+    }
+}
+
 impl Drop for TemporarySpeechFile {
     fn drop(&mut self) {
         let _ = fs::remove_file(&self.path);
@@ -96,15 +118,21 @@ impl Drop for TemporarySpeechFile {
 
 impl FlowSpeechRuntime {
     pub(crate) fn detect() -> Self {
+        let flow_dictate_binary = env::var_os("DX_FLOW_DICTATE_BINARY")
+            .map(PathBuf::from)
+            .filter(|path| path.is_file());
         let flow_root = env::var_os("DX_FLOW_ROOT")
             .or_else(|| env::var_os("FLOW_ROOT"))
             .map(PathBuf::from)
+            .or_else(|| {
+                flow_dictate_binary
+                    .as_ref()
+                    .and_then(|path| flow_root_from_dictate_binary(path))
+            })
             .unwrap_or_else(default_flow_root);
 
-        let flow_dictate_binary = env::var_os("DX_FLOW_DICTATE_BINARY")
-            .map(PathBuf::from)
-            .filter(|path| path.is_file())
-            .or_else(|| find_binary(&flow_root, "flow-dictate"));
+        let flow_dictate_binary =
+            flow_dictate_binary.or_else(|| find_binary(&flow_root, "flow-dictate"));
         let kokoro_tts_runtime = KokoroTtsRuntime::detect(&flow_root);
 
         Self {
@@ -142,7 +170,11 @@ impl FlowSpeechRuntime {
         })
     }
 
-    pub(crate) fn transcribe_recording(&self, recording: RecordedSpeech) -> Result<String> {
+    pub(crate) fn transcribe_recording(
+        &self,
+        recording: RecordedSpeech,
+        cancellation: &FlowSpeechCancellation,
+    ) -> Result<String> {
         self.ensure_stt_ready()?;
         let audio_file = TemporarySpeechFile::new(self.write_recording_wav(&recording)?);
         let binary = self
@@ -155,17 +187,25 @@ impl FlowSpeechRuntime {
             .arg("--file")
             .arg(audio_file.path());
         apply_windows_process_flags(&mut command);
-        let output =
-            run_command_with_timeout(command, STT_COMMAND_TIMEOUT, "Flow Parakeet transcription")?;
+        let output = run_command_with_timeout(
+            command,
+            STT_COMMAND_TIMEOUT,
+            "Flow Parakeet transcription",
+            Some(cancellation),
+        )?;
 
         parse_transcript_output(output)
     }
 
-    pub(crate) fn speak_text(&self, text: &str) -> Result<PathBuf> {
+    pub(crate) fn speak_text(
+        &self,
+        text: &str,
+        cancellation: &FlowSpeechCancellation,
+    ) -> Result<PathBuf> {
         self.kokoro_tts_runtime
             .as_ref()
             .context("Friday Kokoro TTS runtime is not available")?
-            .synthesize(text)
+            .synthesize(text, cancellation)
     }
 
     pub(crate) fn status_summary(&self) -> String {
@@ -272,7 +312,7 @@ impl KokoroTtsRuntime {
         })
     }
 
-    fn synthesize(&self, text: &str) -> Result<PathBuf> {
+    fn synthesize(&self, text: &str, cancellation: &FlowSpeechCancellation) -> Result<PathBuf> {
         let output_dir = env::temp_dir().join("zed-kokoro-tts");
         fs::create_dir_all(&output_dir)?;
         fs::create_dir_all(self.data_root.join("huggingface"))?;
@@ -302,14 +342,18 @@ impl KokoroTtsRuntime {
         apply_tts_process_env(&mut command, &self.data_root);
         apply_windows_process_flags(&mut command);
 
-        let output =
-            match run_command_with_timeout(command, TTS_COMMAND_TIMEOUT, "Friday Kokoro TTS") {
-                Ok(output) => output,
-                Err(error) => {
-                    let _ = fs::remove_file(&output_path);
-                    return Err(error);
-                }
-            };
+        let output = match run_command_with_timeout(
+            command,
+            TTS_COMMAND_TIMEOUT,
+            "Friday Kokoro TTS",
+            Some(cancellation),
+        ) {
+            Ok(output) => output,
+            Err(error) => {
+                let _ = fs::remove_file(&output_path);
+                return Err(error);
+            }
+        };
         if !output.status.success() {
             let _ = fs::remove_file(&output_path);
             return Err(command_error("Friday Kokoro TTS failed", output));
@@ -617,6 +661,7 @@ fn run_command_with_timeout(
     mut command: Command,
     timeout: Duration,
     label: &str,
+    cancellation: Option<&FlowSpeechCancellation>,
 ) -> Result<Output> {
     command
         .stdin(Stdio::null())
@@ -628,6 +673,14 @@ fn run_command_with_timeout(
     let started_at = Instant::now();
 
     loop {
+        if let Some(cancellation) = cancellation
+            && cancellation.is_cancelled()
+        {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(anyhow!("{label} was canceled"));
+        }
+
         if child.try_wait()?.is_some() {
             return child
                 .wait_with_output()
@@ -692,10 +745,12 @@ fn candidate_flow_data_roots(flow_root: &Path) -> Vec<PathBuf> {
             push_unique_data_root(&mut roots, Some(local_app_data.join("com.flow.data")));
         }
 
-        for drive in b'D'..=b'Z' {
-            let root = PathBuf::from(format!("{}:\\Flow", drive as char));
-            if root.exists() || root.join("data").exists() {
-                push_unique_data_root(&mut roots, Some(root));
+        if env::var_os("DX_SCAN_FLOW_DRIVES").is_some() {
+            for drive in b'D'..=b'Z' {
+                let root = PathBuf::from(format!("{}:\\Flow", drive as char));
+                if root.exists() || root.join("data").exists() {
+                    push_unique_data_root(&mut roots, Some(root));
+                }
             }
         }
     }
@@ -817,6 +872,13 @@ fn find_binary(flow_root: &Path, name: &str) -> Option<PathBuf> {
         .iter()
         .map(|profile| flow_root.join("target").join(profile).join(&exe))
         .find(|path| path.is_file())
+}
+
+fn flow_root_from_dictate_binary(binary: &Path) -> Option<PathBuf> {
+    binary
+        .ancestors()
+        .find(|candidate| flow_root_ready(candidate))
+        .map(Path::to_path_buf)
 }
 
 fn default_flow_root() -> PathBuf {
