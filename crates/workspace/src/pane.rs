@@ -4503,13 +4503,7 @@ fn default_render_tab_bar_buttons(
                     window.dispatch_action(NewCenterTerminal::default().boxed_clone(), cx);
                 })
                 .into_any_element(),
-            WorkspaceScreenKind::Onboarding => IconButton::new("plus", IconName::Plus)
-                .icon_size(IconSize::Small)
-                .tooltip(Tooltip::text("Open Onboarding"))
-                .on_click(|_, window, cx| {
-                    window.dispatch_action(zed_actions::OpenOnboarding.boxed_clone(), cx);
-                })
-                .into_any_element(),
+            WorkspaceScreenKind::Onboarding => div().into_any_element(),
             WorkspaceScreenKind::LiquidGlass => IconButton::new("plus", IconName::Plus)
                 .icon_size(IconSize::Small)
                 .tooltip(Tooltip::text("New Liquid Glass"))

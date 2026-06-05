@@ -285,7 +285,7 @@ impl Workspace {
             WorkspaceScreenKind::Editor => "Editor",
             WorkspaceScreenKind::Browser => "Browser",
             WorkspaceScreenKind::Terminal => "Terminal",
-            WorkspaceScreenKind::Onboarding => "Onboarding",
+            WorkspaceScreenKind::Onboarding => "Onboarding Disabled",
             WorkspaceScreenKind::LiquidGlass => "Glass",
             WorkspaceScreenKind::Other => "Screen",
         }

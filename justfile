@@ -19,13 +19,22 @@ ensure-build-headroom:
 launch-zed:
     @$zed = "{{build_target_dir}}/debug/zed.exe"; if (!(Test-Path -LiteralPath $zed)) { throw "Built Zed binary not found at $zed" }; $startedAt = Get-Date; $logPath = Join-Path $env:LOCALAPPDATA "Zed/logs/Zed.log"; $launchPath = (Get-Location).ProviderPath; $process = Start-Process -FilePath $zed -ArgumentList @($launchPath) -WorkingDirectory (Get-Location) -WindowStyle Normal -PassThru; for ($i = 0; $i -lt 600; $i++) { Start-Sleep -Milliseconds 500; $process.Refresh(); if ($process.HasExited) { if ($process.ExitCode -eq 0 -and (Get-Process zed -ErrorAction SilentlyContinue)) { Write-Host "Zed launch request was handed to an existing process"; exit 0 }; throw "Zed exited during startup with code $($process.ExitCode)" }; if ($process.MainWindowHandle -ne [IntPtr]::Zero) { Start-Sleep -Seconds 3; $process.Refresh(); if ($process.HasExited) { throw "Zed exited during startup with code $($process.ExitCode)" }; Write-Host "Launched Zed process $($process.Id) for $launchPath and detected its main window"; exit 0 }; if (Test-Path -LiteralPath $logPath) { $renderedLine = Get-Content -Path $logPath -Tail 160 -ErrorAction SilentlyContinue | Where-Object { $_ -match "INFO\\s+\\[workspace\\]\\s+Rendered first frame" } | Select-Object -Last 1; if ($renderedLine -match "^([^ ]+)") { try { $renderedAt = [DateTimeOffset]::Parse($Matches[1]).LocalDateTime; if ($renderedAt -ge $startedAt.AddSeconds(-2)) { Start-Sleep -Seconds 3; $process.Refresh(); if ($process.HasExited) { if ($process.ExitCode -eq 0 -and (Get-Process zed -ErrorAction SilentlyContinue)) { Write-Host "Zed rendered first frame in an existing process"; exit 0 }; throw "Zed exited during startup with code $($process.ExitCode)" }; Write-Host "Launched Zed process $($process.Id) for $launchPath and observed Rendered first frame"; exit 0 } } catch {} } } }; throw "Zed process $($process.Id) stayed alive but did not report a main window or fresh first-frame log within 300s"
 
-# RECOMMENDED: Run Zed with balanced local settings
+# RECOMMENDED: Fast local UI loop. Builds only the Zed app with incremental cache.
 run: ensure-build-headroom
-    @echo "Running Zed with balanced G-drive build settings..."
+    @echo "Running Zed with fast incremental G-drive build settings..."
+    @echo "Building the zed binary"
+    @$jobs = if ([string]::IsNullOrWhiteSpace($env:CARGO_BUILD_JOBS)) { "6" } else { $env:CARGO_BUILD_JOBS }; $env:CARGO_BUILD_JOBS = $jobs; Write-Host "Using Cargo config: locked Cargo.lock, $jobs job(s), G:/Zed/target, rust-lld linker, no debug info, incremental cache enabled"
+    $env:CARGO_INCREMENTAL = "1"; cargo build --locked -p zed --bin zed
+    @echo "Build complete! Launching Zed once..."
+    @just launch-zed
+
+# Full validation path when the development CLI companion also needs rebuilding.
+run-full: ensure-build-headroom
+    @echo "Running Zed with full incremental G-drive build settings..."
     @echo "Building the zed binary plus the development CLI companion"
-    @$jobs = if ([string]::IsNullOrWhiteSpace($env:CARGO_BUILD_JOBS)) { "1" } else { $env:CARGO_BUILD_JOBS }; Write-Host "Using Cargo config: locked Cargo.lock, $jobs job(s), G:/Zed/target, rust-lld linker, no debug info, incremental cache disabled"
-    $env:CARGO_INCREMENTAL = "0"; cargo build --locked -p zed --bin zed
-    $env:CARGO_INCREMENTAL = "0"; cargo build --locked -p cli --bin cli
+    @$jobs = if ([string]::IsNullOrWhiteSpace($env:CARGO_BUILD_JOBS)) { "6" } else { $env:CARGO_BUILD_JOBS }; $env:CARGO_BUILD_JOBS = $jobs; Write-Host "Using Cargo config: locked Cargo.lock, $jobs job(s), G:/Zed/target, rust-lld linker, no debug info, incremental cache enabled"
+    $env:CARGO_INCREMENTAL = "1"; cargo build --locked -p zed --bin zed
+    $env:CARGO_INCREMENTAL = "1"; cargo build --locked -p cli --bin cli
     @echo "Build complete! Launching Zed once..."
     @just launch-zed
 
@@ -41,16 +50,16 @@ run-cranelift: ensure-build-headroom
 # Continue interrupted build
 continue: ensure-build-headroom
     @echo "Continuing interrupted build..."
-    $env:CARGO_INCREMENTAL = "0"; cargo build --locked -p zed --bin zed
-    $env:CARGO_INCREMENTAL = "0"; cargo build --locked -p cli --bin cli
+    @$jobs = if ([string]::IsNullOrWhiteSpace($env:CARGO_BUILD_JOBS)) { "6" } else { $env:CARGO_BUILD_JOBS }; $env:CARGO_BUILD_JOBS = $jobs
+    $env:CARGO_INCREMENTAL = "1"; cargo build --locked -p zed --bin zed
     @echo "Build complete! Running Zed..."
     @just launch-zed
 
 # Build only (no run)
 build: ensure-build-headroom
     @echo "Building Zed with balanced G-drive settings..."
-    $env:CARGO_INCREMENTAL = "0"; cargo build --locked -p zed --bin zed
-    $env:CARGO_INCREMENTAL = "0"; cargo build --locked -p cli --bin cli
+    @$jobs = if ([string]::IsNullOrWhiteSpace($env:CARGO_BUILD_JOBS)) { "6" } else { $env:CARGO_BUILD_JOBS }; $env:CARGO_BUILD_JOBS = $jobs
+    $env:CARGO_INCREMENTAL = "1"; cargo build --locked -p zed --bin zed
 
 # Check code without building
 check:
@@ -95,9 +104,10 @@ show-memory-guide:
     @echo "  CPU: Ryzen 5 5600G, 6 cores / 12 logical processors"
     @echo "  RAM: 24 GB installed"
     @echo "  Build output: G:/Zed/target"
-    @echo "  Cargo workers: 1"
+    @echo "  Cargo workers: 6 by default, override with CARGO_BUILD_JOBS"
     @echo "  Runnable build preflight: at least 18 GB free on G:"
-    @echo "  Runnable build mode: CARGO_INCREMENTAL=0 to avoid query-cache disk spikes"
+    @echo "  Runnable build mode: CARGO_INCREMENTAL=1 for faster local UI iteration"
+    @echo "  Full zed + cli build: just run-full"
     @echo ""
     @echo "If builds still hit memory pressure, configure Windows virtual memory:"
     @echo "1. Open System Properties > Advanced > Performance Settings"
@@ -116,9 +126,10 @@ help:
     @echo ""
     @echo "RECOMMENDED BUILD COMMANDS:"
     @echo "  just ensure-build-headroom - Check G: free space before any runnable Cargo build"
-    @echo "  just run           - Build zed + cli and run with balanced G-drive settings"
+    @echo "  just run           - Build zed incrementally and launch the editor"
+    @echo "  just run-full      - Build zed + cli incrementally and launch the editor"
     @echo "  just run-cranelift - Build zed + cli with Cranelift backend"
-    @echo "  just continue      - Resume interrupted zed + cli build"
+    @echo "  just continue      - Resume interrupted zed build and launch"
     @echo "  just fmt           - Format the workspace with rustfmt"
     @echo "  just lint          - Lint web_preview with 6 workers"
     @echo "  just lint zed      - Lint the main app with 6 workers"

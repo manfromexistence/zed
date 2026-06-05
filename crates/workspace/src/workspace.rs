@@ -159,7 +159,7 @@ pub use workspace_settings::{
     AutosaveSetting, BottomDockLayout, EncodingDisplayOptions, FocusFollowsMouse,
     RestoreOnStartupBehavior, StatusBarSettings, TabBarSettings, WorkspaceSettings,
 };
-use zed_actions::{OpenOnboarding, Spawn, feedback::FileBugReport, theme::ToggleMode};
+use zed_actions::{Spawn, feedback::FileBugReport, theme::ToggleMode};
 
 use crate::{dock::PanelSizeState, item::ItemBufferKind, notifications::NotificationId};
 use crate::{
@@ -5966,10 +5966,10 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) -> bool {
         if kind == WorkspaceScreenKind::Onboarding {
-            cx.defer_in(window, |_, window, cx| {
-                window.dispatch_action(OpenOnboarding.boxed_clone(), cx);
-            });
-            return true;
+            // TODO(dx-onboarding): Re-enable after the fullscreen WebPreview
+            // onboarding completion path is safe on Windows.
+            let _ = window;
+            return false;
         }
 
         let target_pane = self.screen_host_pane();
@@ -6005,7 +6005,8 @@ impl Workspace {
                         window.dispatch_action(NewCenterTerminal::default().boxed_clone(), cx);
                     }
                     WorkspaceScreenKind::Onboarding => {
-                        window.dispatch_action(OpenOnboarding.boxed_clone(), cx);
+                        // TODO(dx-onboarding): Re-enable after the fullscreen WebPreview
+                        // onboarding completion path is safe on Windows.
                     }
                     WorkspaceScreenKind::LiquidGlass => {
                         window.dispatch_action(NewLiquidGlass.boxed_clone(), cx);

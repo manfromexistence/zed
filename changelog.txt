@@ -1,3 +1,27 @@
+[2026-06-04] - Onboarding Topbar Completion Action
+
+CHANGED:
+- `crates\workspace\src\multi_workspace.rs` now renders the onboarding `Complete` button in the full-window overlay topbar beside the window action buttons instead of inside the WebView content overlay.
+- `crates\zed_actions\src\lib.rs` now exposes `CompleteOnboarding` as a shared action that workspace chrome can dispatch without depending on the onboarding crate.
+- `crates\onboarding\src\onboarding.rs` now handles `CompleteOnboarding` through the existing native completion handoff and no longer renders the fullscreen GPUI Complete overlay above the Web Preview.
+- `script\web-preview-platform-lifecycle.test.ts` now guards against moving the Complete control back into the WebView overlay layer.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\onboarding\src\onboarding.rs crates\workspace\src\multi_workspace.rs crates\zed_actions\src\lib.rs`
+- `node --test script\web-preview-platform-lifecycle.test.ts` with 23/23 passing.
+- `git diff --check`
+
+[2026-06-04] - Fast Windows Just Run Loop
+
+CHANGED:
+- `crates\zed\src\main.rs` now uses the Windows GUI subsystem for debug and release Zed app builds, preventing the transient blank console window during `just run` launches.
+- `justfile` now makes `just run` the fast editor iteration path: Cargo incremental cache is enabled and only the `zed` binary is built before launch.
+- `justfile` now preserves the previous editor-plus-CLI validation behavior as `just run-full`.
+- `justfile` help and memory-guide text now describe the incremental local loop and the full validation recipe separately.
+
+NOTES:
+- `just run` was not executed for this config-only change.
+
 [2026-06-04] - Onboarding Completion Native Handoff
 
 FIXED:
@@ -14248,6 +14272,22 @@ PASSED:
 
 NOTES:
 - This remains source-only. It does not run Cargo, run `just run`, start a server, perform WebView runtime proof, enable Apply, or mutate source.
+
+[2026-06-05] - Park Fullscreen Onboarding WebPreview
+
+CHANGED:
+- Disabled the fullscreen onboarding WebPreview behind `DX_WEB_PREVIEW_ONBOARDING_DISABLED` with a `TODO(dx-onboarding)` re-enable marker.
+- First-open onboarding now opens a normal editor workspace and writes `FIRST_OPEN=false` instead of mounting the onboarding WebPreview.
+- Manual onboarding actions, finish/close handoff, stale serialized restore rows, onboarding restore registration, pane controls, titlebar screen-dock entry, welcome return action, and the full-window Complete control no longer expose the disabled onboarding surface.
+- `just run` now defaults to six Cargo jobs while preserving `CARGO_BUILD_JOBS` overrides and keeping incremental Zed-only builds.
+
+PASSED:
+- `rustfmt --edition 2024 crates\onboarding\src\onboarding.rs crates\workspace\src\multi_workspace.rs crates\workspace\src\workspace.rs crates\workspace\src\welcome.rs crates\workspace\src\pane.rs crates\title_bar\src\title_bar.rs crates\zed_actions\src\lib.rs`
+- `node --test script\web-preview-platform-lifecycle.test.ts script\dx-title-bar-source.test.ts`
+- `git diff --check`
+
+NOTES:
+- The disabled WebPreview onboarding code remains in place for a future dedicated repair pass, but it is not reachable from first-open, titlebar, welcome, restore registration, or completion paths.
 
 [2026-06-03] - Core Panel Split Controls Polish
 

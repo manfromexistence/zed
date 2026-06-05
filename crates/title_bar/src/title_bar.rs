@@ -554,12 +554,6 @@ impl TitleBar {
                             && active_screen_kind == WorkspaceScreenKind::Terminal,
                         cx,
                     ))
-                    .child(self.render_screen_kind_button(
-                        WorkspaceScreenKind::Onboarding,
-                        !agent_screen_is_active
-                            && active_screen_kind == WorkspaceScreenKind::Onboarding,
-                        cx,
-                    ))
                     .children(
                         extra_entries
                             .into_iter()
@@ -930,7 +924,8 @@ impl TitleBar {
                 window.dispatch_action(NewCenterTerminal::default().boxed_clone(), cx);
             }
             WorkspaceScreenKind::Onboarding => {
-                window.dispatch_action(zed_actions::OpenOnboarding.boxed_clone(), cx);
+                // TODO(dx-onboarding): Re-enable after the fullscreen WebPreview
+                // completion path is safe on Windows.
             }
             WorkspaceScreenKind::LiquidGlass => {
                 window.dispatch_action(NewLiquidGlass.boxed_clone(), cx);
@@ -944,7 +939,7 @@ impl TitleBar {
             WorkspaceScreenKind::Editor => "Editor",
             WorkspaceScreenKind::Browser => "Browser",
             WorkspaceScreenKind::Terminal => "Terminal",
-            WorkspaceScreenKind::Onboarding => "Onboarding",
+            WorkspaceScreenKind::Onboarding => "Onboarding Disabled",
             WorkspaceScreenKind::LiquidGlass => "Glass",
             WorkspaceScreenKind::Other => "Screen",
         }
@@ -955,7 +950,7 @@ impl TitleBar {
             WorkspaceScreenKind::Editor => "New Untitled File",
             WorkspaceScreenKind::Browser => "New Browser Tab",
             WorkspaceScreenKind::Terminal => "New Terminal",
-            WorkspaceScreenKind::Onboarding => "Open Onboarding",
+            WorkspaceScreenKind::Onboarding => "Onboarding Disabled",
             WorkspaceScreenKind::LiquidGlass => "New Liquid Glass",
             WorkspaceScreenKind::Other => "New Item",
         }
@@ -1091,7 +1086,6 @@ impl TitleBar {
                             zed_actions::assistant::ToggleFocus.boxed_clone(),
                         )
                         .action("Documentation", zed_actions::OpenDocs.boxed_clone())
-                        .action("Onboarding", zed_actions::OpenOnboarding.boxed_clone())
                         .action(
                             "Dependency Licenses",
                             zed_actions::OpenLicenses.boxed_clone(),

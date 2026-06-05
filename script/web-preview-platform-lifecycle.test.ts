@@ -125,9 +125,38 @@ test("desktop preview crates depend on web_preview for every supported desktop O
   }
 });
 
-test("onboarding DX preview uses native Web Preview on macOS and Linux", () => {
+test("onboarding Web Preview is disabled behind an explicit TODO", () => {
   const source = read("crates/onboarding/src/onboarding.rs");
 
+  assert.match(source, /TODO\(dx-onboarding\): Re-enable the fullscreen WebPreview onboarding/);
+  assert.match(source, /const DX_WEB_PREVIEW_ONBOARDING_DISABLED: bool = true;/);
+  assert.doesNotMatch(
+    source,
+    /^\s*register_serializable_item::<Onboarding>\(cx\);/m,
+    "disabled onboarding should not register a restorable item kind",
+  );
+  assert.match(
+    source,
+    /\/\/ register_serializable_item::<Onboarding>\(cx\);/,
+    "the parked restore path should stay as an explicit TODO, not disappear silently",
+  );
+  assert.match(
+    source,
+    /cx\.on_action\(\|_: &OpenOnboarding, cx\| \{\s*if DX_WEB_PREVIEW_ONBOARDING_DISABLED \{\s*return;\s*\}/s,
+    "manual onboarding action should not open the fullscreen WebPreview while disabled",
+  );
+  const showOnboardingView = functionBody(source, "show_onboarding_view");
+  assert.match(showOnboardingView, /if DX_WEB_PREVIEW_ONBOARDING_DISABLED \{\s*return open_new\(/s);
+  assert.match(
+    showOnboardingView,
+    /Editor::new_file\(workspace, &Default::default\(\), window, cx\);/,
+    "first-open startup should open the normal editor workspace while onboarding is parked",
+  );
+  assert.match(
+    showOnboardingView,
+    /kvp\.write_kvp\(FIRST_OPEN\.to_string\(\), "false"\.to_string\(\)\)/,
+    "first-open startup should mark onboarding complete so it does not retry every launch",
+  );
   assert.match(
     source,
     /#\[cfg\(any\(target_os = "windows", target_os = "macos", target_os = "linux"\)\)\]\s+use web_preview::web_preview_view::WebPreviewView;/,
@@ -136,52 +165,54 @@ test("onboarding DX preview uses native Web Preview on macOS and Linux", () => {
     source,
     /#\[cfg\(any\(target_os = "windows", target_os = "macos", target_os = "linux"\)\)\]\s+dx_web_preview: Option<Entity<WebPreviewView>>,/,
   );
-  assert.match(source, /fn ensure_dx_web_preview\(/);
-  assert.match(source, /WebPreviewView::new_for_onboarding\(/);
+  const workspaceOverlay = functionBody(source, "workspace_overlay");
   assert.match(
-    source,
-    /#\[cfg\(any\(target_os = "windows", target_os = "macos", target_os = "linux"\)\)\]\s+fn render_web_preview_canvas\(/,
+    workspaceOverlay,
+    /if DX_WEB_PREVIEW_ONBOARDING_DISABLED \{\s*return None;\s*\}/s,
+    "stale restored onboarding items must not expose the fullscreen WebPreview overlay",
   );
-  assert.match(source, /let preview = self\.ensure_dx_web_preview\(window, cx\);/);
+  const deserialize = functionBody(source, "deserialize");
   assert.match(
-    source,
-    /#\[cfg\(not\(any\(target_os = "windows", target_os = "macos", target_os = "linux"\)\)\)\]/,
+    deserialize,
+    /if DX_WEB_PREVIEW_ONBOARDING_DISABLED \{[\s\S]*delete_onboarding_page\(item_id, workspace_id\)\.await\?/,
+    "disabled onboarding should delete stale serialized rows instead of restoring the WebPreview item",
   );
-  assert.doesNotMatch(source, /Windows Web Preview runtime/);
+  const serialize = functionBody(source, "serialize");
+  assert.match(serialize, /if DX_WEB_PREVIEW_ONBOARDING_DISABLED \{\s*return None;\s*\}/);
+  const shouldSerialize = functionBody(source, "should_serialize");
+  assert.match(shouldSerialize, /!DX_WEB_PREVIEW_ONBOARDING_DISABLED/);
 });
 
-test("onboarding uses a local Web Preview page with native completion handoff", () => {
+test("fullscreen onboarding Web Preview is parked until the completion handoff is rebuilt", () => {
   const source = read("crates/onboarding/src/onboarding.rs");
   const dxLaunchSource = read("crates/onboarding/src/dx_launch_onboarding.rs");
   const workspaceSource = read("crates/workspace/src/workspace.rs");
   const onboardingCargo = read("crates/onboarding/Cargo.toml");
   const multiWorkspaceSource = read("crates/workspace/src/multi_workspace.rs");
   const paneSource = read("crates/workspace/src/pane.rs");
+  const titleBarSource = read("crates/title_bar/src/title_bar.rs");
   const agentPanelSource = read("crates/agent_ui/src/agent_panel.rs");
   const sidebarSource = read("crates/sidebar/src/sidebar.rs");
 
-  assert.match(source, /const WEB_PREVIEW_ONBOARDING_HTML: &str/);
-  const onboardingHtml = source.match(/const WEB_PREVIEW_ONBOARDING_HTML: &str = r##"([\s\S]*?)"##;/)?.[1] ?? "";
-  assert.match(onboardingHtml, /const preventNativeBridgeFallback = \(event\) => \{/);
-  assert.match(onboardingHtml, /event\.preventDefault\(\);/);
-  assert.match(onboardingHtml, /event\.stopPropagation\(\);/);
-  assert.match(onboardingHtml, /status\.textContent = "Use the Complete control above this preview\.";/);
-  assert.match(onboardingHtml, /button\.addEventListener\("click", preventNativeBridgeFallback\);/);
-  assert.doesNotMatch(onboardingHtml, /postMessage|external\.invoke|window\.ipc|window\.chrome/);
-  assert.doesNotMatch(onboardingHtml, /document\.title|window\.location|location\.(?:assign|replace)|window\.setTimeout/);
-  assert.doesNotMatch(onboardingHtml, /zed-onboarding-complete|about:blank|onboarding-complete/);
   assert.match(onboardingCargo, /^editor\.workspace = true$/m);
   assert.match(source, /use editor::Editor;/);
   assert.match(source, /completion_requested: bool,/);
-  assert.match(source, /fn render_completion_control\(&self, cx: &mut Context<Self>\) -> AnyElement/);
-  const completionControl = functionBody(source, "render_completion_control");
-  assert.match(completionControl, /Button::new\("complete-dx-onboarding", "Complete"\)/);
-  assert.match(completionControl, /window\.dispatch_action\(Finish\.boxed_clone\(\), cx\);/);
+  assert.match(source, /use zed_actions::OpenOnboarding;/);
+  assert.match(source, /const DX_WEB_PREVIEW_ONBOARDING_DISABLED: bool = true;/);
+  assert.doesNotMatch(source, /^\s*register_serializable_item::<Onboarding>\(cx\);/m);
+  assert.doesNotMatch(source, /CompleteOnboarding/);
+  assert.doesNotMatch(source, /fn render_completion_control\(/);
+  assert.doesNotMatch(source, /complete-dx-onboarding/);
   assert.match(source, /DxLaunchPreviewTargets::local_web_preview_onboarding\(web_preview_onboarding_url\(\)\)/);
   assert.match(source, /fn handle_finish\(&mut self, _: &Finish, window: &mut Window, cx: &mut Context<Self>\)/);
   assert.match(source, /finish_setup\(self\.workspace\.clone\(\), window, cx\);/);
   assert.match(source, /fn finish_setup<C: AppContext>\(/);
   const finishSetup = functionBody(source, "finish_setup");
+  assert.match(
+    finishSetup,
+    /if DX_WEB_PREVIEW_ONBOARDING_DISABLED \{\s*return;\s*\}/s,
+    "Finish action must not enter the old WebPreview handoff while onboarding is parked",
+  );
   assert.match(finishSetup, /close_onboarding_page\(workspace, window, cx\);/);
   assert.doesNotMatch(
     finishSetup,
@@ -204,6 +235,11 @@ test("onboarding uses a local Web Preview page with native completion handoff", 
   assert.match(source, /fn close_onboarding_page<C: AppContext>\(/);
   assert.match(source, /fn find_post_onboarding_item\(workspace: &Workspace, cx: &App\) -> Option<Box<dyn ItemHandle>>/);
   const closeOnboardingPage = functionBody(source, "close_onboarding_page");
+  assert.match(
+    closeOnboardingPage,
+    /if DX_WEB_PREVIEW_ONBOARDING_DISABLED \{\s*return;\s*\}/s,
+    "close handoff must be unreachable while the WebPreview onboarding is parked",
+  );
   assert.match(closeOnboardingPage, /workspace\.update\(cx, \|workspace, cx\|/);
   assert.doesNotMatch(closeOnboardingPage, /with_active_or_new_workspace/);
   assert.match(
@@ -260,7 +296,7 @@ test("onboarding uses a local Web Preview page with native completion handoff", 
   );
   assert.match(
     revealCompletion,
-    /forget_completed_onboarding_page\(item_id, workspace_id, cx\);/,
+    /forget_completed_onboarding_page\(item_id\.as_u64\(\), workspace_id, cx\);/,
     "completion should remove any saved onboarding restore row after parking the native Web Preview",
   );
   const forgetCompletedOnboardingPage = functionBody(source, "forget_completed_onboarding_page");
@@ -273,8 +309,8 @@ test("onboarding uses a local Web Preview page with native completion handoff", 
   assert.match(source, /DELETE FROM onboarding_pages\s+WHERE item_id = \? AND workspace_id = \?/);
   assert.match(
     source,
-    /if self\.completion_revealed \{\s*return None;\s*\}/,
-    "completed onboarding should stop returning the full-window overlay immediately",
+    /if DX_WEB_PREVIEW_ONBOARDING_DISABLED \{\s*return None;\s*\}/,
+    "disabled onboarding should never return the full-window overlay",
   );
   assert.doesNotMatch(
     source,
@@ -306,13 +342,19 @@ test("onboarding uses a local Web Preview page with native completion handoff", 
   const serializeOnboarding = functionBody(source, "serialize");
   assert.match(
     serializeOnboarding,
-    /if self\.completion_requested \{\s*return None;\s*\}/,
-    "completed onboarding handoff should not persist a parked Web Preview item",
+    /if DX_WEB_PREVIEW_ONBOARDING_DISABLED \{\s*return None;\s*\}/,
+    "disabled onboarding should not persist a parked Web Preview item",
+  );
+  const deserializeOnboarding = functionBody(source, "deserialize");
+  assert.match(
+    deserializeOnboarding,
+    /if DX_WEB_PREVIEW_ONBOARDING_DISABLED \{[\s\S]*delete_onboarding_page\(item_id, workspace_id\)\.await\?/,
+    "disabled onboarding should delete stale restore rows instead of restoring a WebPreview item",
   );
   const shouldSerializeOnboarding = functionBody(source, "should_serialize");
   assert.match(
     shouldSerializeOnboarding,
-    /!self\.completion_requested && event == &ItemEvent::UpdateTab/,
+    /!DX_WEB_PREVIEW_ONBOARDING_DISABLED[\s\S]*&& !self\.completion_requested[\s\S]*&& event == &ItemEvent::UpdateTab/,
     "completed onboarding handoff should not advertise the parked item as serializable",
   );
   assert.match(source, /fn can_split\(&self\) -> bool \{\s+false\s+\}/);
@@ -330,9 +372,11 @@ test("onboarding uses a local Web Preview page with native completion handoff", 
     source,
     /fn screen_kind\(&self\) -> WorkspaceScreenKind \{\s+WorkspaceScreenKind::Onboarding\s+\}/,
   );
-  assert.match(source, /fn workspace_overlay\([\s\S]*?id\("onboarding-window-overlay"\)/);
-  assert.match(source, /fn workspace_overlay\([\s\S]*?\.child\(self\.render_web_preview_canvas\(window, cx\)\)/);
-  assert.match(source, /fn workspace_overlay\([\s\S]*?\.child\(self\.render_completion_control\(cx\)\)/);
+  const workspaceOverlay = functionBody(source, "workspace_overlay");
+  assert.match(workspaceOverlay, /if DX_WEB_PREVIEW_ONBOARDING_DISABLED \{\s*return None;\s*\}/s);
+  assert.match(workspaceOverlay, /id\("onboarding-window-overlay"\)/);
+  assert.match(workspaceOverlay, /\.child\(self\.render_web_preview_canvas\(window, cx\)\)/);
+  assert.doesNotMatch(source, /fn workspace_overlay\([\s\S]*?\.child\(self\.render_completion_control\(cx\)\)/);
   assert.match(
     source,
     /fn requires_transparent_workspace_background\(\) -> bool \{\s*true\s*\}/,
@@ -357,15 +401,24 @@ test("onboarding uses a local Web Preview page with native completion handoff", 
     multiWorkspaceSource,
     "render_full_window_overlay_system_controls",
   );
+  assert.doesNotMatch(fullWindowControls, /full_window_overlay_complete_button\(\)/);
   assert.match(fullWindowControls, /WindowControlArea::Drag/);
   assert.match(fullWindowControls, /WindowControlArea::Min/);
   assert.match(fullWindowControls, /WindowControlArea::Max/);
   assert.match(fullWindowControls, /WindowControlArea::Close/);
   assert.doesNotMatch(fullWindowControls, /TitleBar|render_screen_dock|application_menu|titlebar_item/);
+  assert.doesNotMatch(multiWorkspaceSource, /CompleteOnboarding|full_window_overlay_complete_button|full-window-overlay-complete-onboarding/);
   assert.match(
     workspaceSource,
-    /if kind == WorkspaceScreenKind::Onboarding \{\s*cx\.defer_in\(window, \|_, window, cx\| \{\s*window\.dispatch_action\(OpenOnboarding\.boxed_clone\(\), cx\);\s*\}\);\s*return true;\s*\}/s,
-    "screen dock activation must route onboarding through the fullscreen opener after the Workspace update finishes",
+    /if kind == WorkspaceScreenKind::Onboarding \{[\s\S]*TODO\(dx-onboarding\)[\s\S]*return false;\s*\}/s,
+    "screen dock activation must not route onboarding while the fullscreen WebPreview is parked",
+  );
+  assert.doesNotMatch(workspaceSource, /if kind == WorkspaceScreenKind::Onboarding \{[\s\S]*OpenOnboarding/s);
+  assert.doesNotMatch(paneSource, /Open Onboarding|OpenOnboarding\.boxed_clone\(\)/);
+  assert.doesNotMatch(titleBarSource, /WorkspaceScreenKind::Onboarding => "Onboarding",/);
+  assert.doesNotMatch(
+    read("crates/workspace/src/screen_carousel.rs"),
+    /WorkspaceScreenKind::Onboarding => "Onboarding",/,
   );
   assert.match(
     agentPanelSource,

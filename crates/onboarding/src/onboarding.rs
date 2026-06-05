@@ -59,6 +59,11 @@ pub struct ImportCursorSettings {
 }
 
 pub const FIRST_OPEN: &str = "first_open";
+
+// TODO(dx-onboarding): Re-enable the fullscreen WebPreview onboarding after the
+// completion handoff is rebuilt so closing the page cannot close or hang Zed.
+const DX_WEB_PREVIEW_ONBOARDING_DISABLED: bool = true;
+
 const WEB_PREVIEW_ONBOARDING_HTML: &str = r##"<!doctype html>
 <html lang="en">
 <head>
@@ -208,6 +213,10 @@ pub fn init(cx: &mut App) {
     .detach();
 
     cx.on_action(|_: &OpenOnboarding, cx| {
+        if DX_WEB_PREVIEW_ONBOARDING_DISABLED {
+            return;
+        }
+
         with_active_or_new_workspace(cx, |workspace, window, cx| {
             workspace
                 .with_local_workspace(window, cx, |workspace, window, cx| {
@@ -290,11 +299,29 @@ pub fn init(cx: &mut App) {
 
     base_keymap_picker::init(cx);
 
-    register_serializable_item::<Onboarding>(cx);
+    // TODO(dx-onboarding): Re-enable serialization only after the fullscreen
+    // WebPreview onboarding flow is restored and completion is runtime-proven.
+    // register_serializable_item::<Onboarding>(cx);
     register_serializable_item::<WelcomePage>(cx);
 }
 
 pub fn show_onboarding_view(app_state: Arc<AppState>, cx: &mut App) -> Task<anyhow::Result<()>> {
+    if DX_WEB_PREVIEW_ONBOARDING_DISABLED {
+        return open_new(
+            Default::default(),
+            app_state,
+            cx,
+            |workspace, window, cx| {
+                Editor::new_file(workspace, &Default::default(), window, cx);
+                let kvp = KeyValueStore::global(cx);
+                db::write_and_log(cx, move || async move {
+                    kvp.write_kvp(FIRST_OPEN.to_string(), "false".to_string())
+                        .await
+                });
+            },
+        );
+    }
+
     telemetry::event!("Onboarding Page Opened");
     open_new(
         Default::default(),
@@ -504,6 +531,10 @@ impl Onboarding {
     }
 
     fn handle_finish(&mut self, _: &Finish, window: &mut Window, cx: &mut Context<Self>) {
+        if DX_WEB_PREVIEW_ONBOARDING_DISABLED {
+            return;
+        }
+
         finish_setup(self.workspace.clone(), window, cx);
     }
 
@@ -523,6 +554,10 @@ impl Onboarding {
 }
 
 fn finish_setup<C: AppContext>(workspace: WeakEntity<Workspace>, window: &mut Window, cx: &mut C) {
+    if DX_WEB_PREVIEW_ONBOARDING_DISABLED {
+        return;
+    }
+
     telemetry::event!("Finish Setup");
     close_onboarding_page(workspace, window, cx);
 }
@@ -615,26 +650,6 @@ impl Onboarding {
             )
             .into_any_element()
     }
-
-    fn render_completion_control(&self, cx: &mut Context<Self>) -> AnyElement {
-        div()
-            .absolute()
-            .inset_0()
-            .size_full()
-            .flex()
-            .items_center()
-            .justify_center()
-            .occlude()
-            .child(
-                Button::new("complete-dx-onboarding", "Complete")
-                    .style(ButtonStyle::Tinted(TintColor::Accent))
-                    .size(ButtonSize::Large)
-                    .on_click(cx.listener(|_, _event, window, cx| {
-                        window.dispatch_action(Finish.boxed_clone(), cx);
-                    })),
-            )
-            .into_any_element()
-    }
 }
 
 impl Render for Onboarding {
@@ -699,6 +714,10 @@ impl Item for Onboarding {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<AnyElement> {
+        if DX_WEB_PREVIEW_ONBOARDING_DISABLED {
+            return None;
+        }
+
         if self.completion_revealed {
             return None;
         }
@@ -715,7 +734,6 @@ impl Item for Onboarding {
                 .on_action(cx.listener(Self::handle_sign_in))
                 .on_action(Self::handle_open_account)
                 .child(self.render_web_preview_canvas(window, cx))
-                .child(self.render_completion_control(cx))
                 .into_any_element(),
         )
     }
@@ -781,6 +799,10 @@ fn close_onboarding_page<C: AppContext>(
     window: &mut Window,
     cx: &mut C,
 ) {
+    if DX_WEB_PREVIEW_ONBOARDING_DISABLED {
+        return;
+    }
+
     let _ = workspace.update(cx, |workspace, cx| {
         if !mark_onboarding_completion_requested(workspace, cx) {
             return;
@@ -926,7 +948,7 @@ fn reveal_onboarding_completion(
 
     if let Some(workspace_id) = workspace_id {
         for item_id in completed_item_ids {
-            forget_completed_onboarding_page(item_id, workspace_id, cx);
+            forget_completed_onboarding_page(item_id.as_u64(), workspace_id, cx);
         }
     }
 
@@ -1122,6 +1144,13 @@ impl workspace::SerializableItem for Onboarding {
         cx: &mut App,
     ) -> gpui::Task<gpui::Result<Entity<Self>>> {
         let db = persistence::OnboardingPagesDb::global(cx);
+        if DX_WEB_PREVIEW_ONBOARDING_DISABLED {
+            return window.spawn(cx, async move |_| {
+                db.delete_onboarding_page(item_id, workspace_id).await?;
+                Err(anyhow::anyhow!("Onboarding Web Preview is disabled"))
+            });
+        }
+
         window.spawn(cx, async move |cx| {
             if let Some(closed_docks_for_fullscreen) =
                 db.get_onboarding_page(item_id, workspace_id)?
@@ -1148,6 +1177,10 @@ impl workspace::SerializableItem for Onboarding {
         _window: &mut Window,
         cx: &mut ui::Context<Self>,
     ) -> Option<gpui::Task<gpui::Result<()>>> {
+        if DX_WEB_PREVIEW_ONBOARDING_DISABLED {
+            return None;
+        }
+
         let workspace_id = workspace.database_id()?;
         if self.completion_requested {
             return None;
@@ -1163,7 +1196,9 @@ impl workspace::SerializableItem for Onboarding {
     }
 
     fn should_serialize(&self, event: &Self::Event) -> bool {
-        !self.completion_requested && event == &ItemEvent::UpdateTab
+        !DX_WEB_PREVIEW_ONBOARDING_DISABLED
+            && !self.completion_requested
+            && event == &ItemEvent::UpdateTab
     }
 }
 

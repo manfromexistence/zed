@@ -1,4 +1,6 @@
 COMPLETED:
+- Onboarding Complete button moved out of the WebView overlay: the full-window topbar now owns a native `Complete` action beside the system window controls, dispatching a shared onboarding completion action while the Web Preview remains content-only.
+- Fast Windows `just run` loop is source-configured: debug Zed now uses the Windows GUI subsystem to avoid the transient blank console window, `just run` builds only the editor with Cargo incremental cache enabled, and the previous editor+CLI validation path is preserved as `just run-full`.
 - Onboarding Complete bridge-crash follow-up is source-verified: the onboarding HTML no longer calls WebView2 `postMessage`/IPC/title/URL completion paths at all, and the onboarding Web Preview is now constructed without a completion callback; the visible Complete action is a native GPUI control layered over the Web Preview, avoiding the latest crash point where telemetry never reached `Finish Setup`.
 - Onboarding Complete native-handoff follow-up is source-verified: completion now parks the native Web Preview surface before editor creation can stall, stops rendering the fullscreen overlay immediately, restores onboarding-closed docks once, and then activates an existing item or creates a real untitled editor.
 - Onboarding Complete native-crash follow-up is source-verified: Windows now moves the DirectComposition WebView visual offscreen and clears passthrough/focus state instead of calling WebView2 hide/close or native focus release during completion, while macOS/Linux also skip native focus release during the completion handoff.
@@ -1537,3 +1539,9 @@ COMPLETED:
 
 BLOCKED:
 - None
+
+PENDING:
+- TODO(dx-onboarding): Re-enable fullscreen WebPreview onboarding only after the Windows completion handoff is rebuilt and runtime-proven not to close, hang, or hide the editor.
+
+COMPLETED:
+- Parked fullscreen onboarding WebPreview for now: first-open/manual onboarding now opens the normal editor path, onboarding is no longer registered as a restorable item, stale onboarding restore rows are guarded from restore, visible onboarding topbar/menu controls are hidden, and `just run` defaults to six-job incremental Zed builds.
