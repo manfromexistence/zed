@@ -1,19 +1,23 @@
+use std::path::PathBuf;
+
 use gpui::{
-    AnyElement, App, AppContext as _, AsyncWindowContext, Context, Entity, EventEmitter,
+    AnyElement, App, AppContext as _, AsyncWindowContext, Context, Entity, EntityId, EventEmitter,
     FocusHandle, Focusable, InteractiveElement, IntoElement, ParentElement, Pixels, Render,
-    ScrollHandle, Styled, WeakEntity, Window, div, px,
+    ScrollHandle, Styled, TaskExt, WeakEntity, Window, div, px,
 };
 use theme::ActiveTheme;
-use ui::{WithScrollbar, prelude::*};
+use ui::{IconButtonShape, Tooltip, WithScrollbar, prelude::*};
 use workspace::{
-    Workspace,
-    dock::{DockPosition, Panel, PanelEvent},
+    OpenOptions, Workspace,
+    dock::{DockPosition, Panel, PanelEvent, side_panel_header_controls},
 };
 
-use crate::dx_check_panel::{DxCheckPanelSnapshot, dx_check_panel_snapshot};
+use crate::dx_check_panel::{
+    DxCheckPanelSnapshot, dx_check_panel_snapshot, invalidate_dx_check_panel_snapshot_cache,
+};
 use crate::dx_check_panel_view::view_rows::{
     config_label, count_label, detail_row, duration_label, empty_row, notice_row, notice_title,
-    outcome_label, quick_fix_row, section, section_row, status_color,
+    outcome_label, quick_fix_row, section, section_row, status_color, web_audit_row,
 };
 
 mod view_rows;
@@ -83,18 +87,27 @@ impl DxCheckPanel {
             .unwrap_or_default()
     }
 
-    fn render_header(&self, snapshot: &DxCheckPanelSnapshot, cx: &App) -> AnyElement {
+    fn refresh(&mut self, cx: &mut Context<Self>) {
+        invalidate_dx_check_panel_snapshot_cache();
+        cx.notify();
+    }
+
+    fn render_header(
+        &self,
+        snapshot: &DxCheckPanelSnapshot,
+        panel_id: EntityId,
+        cx: &App,
+    ) -> AnyElement {
         h_flex()
-            .p_3()
+            .px_2()
+            .py_1()
             .gap_2()
             .justify_between()
-            .items_start()
-            .border_b_1()
-            .border_color(cx.theme().colors().border)
             .child(
                 h_flex()
+                    .flex_1()
                     .min_w_0()
-                    .gap_2()
+                    .gap_1()
                     .items_center()
                     .child(
                         Icon::new(IconName::Check)
@@ -104,7 +117,7 @@ impl DxCheckPanel {
                     .child(
                         v_flex()
                             .min_w_0()
-                            .child(Label::new("Check").size(LabelSize::Small))
+                            .child(Label::new("Check").size(LabelSize::Small).truncate())
                             .child(
                                 Label::new(snapshot.title.clone())
                                     .size(LabelSize::XSmall)
@@ -113,22 +126,110 @@ impl DxCheckPanel {
                             ),
                     ),
             )
+            .child(side_panel_header_controls(
+                "dx-check-panel",
+                self.workspace.clone(),
+                panel_id,
+                cx,
+            ))
+            .into_any_element()
+    }
+
+    fn render_status_strip(&self, snapshot: &DxCheckPanelSnapshot, cx: &App) -> AnyElement {
+        h_flex()
+            .id("dx-check-status")
+            .h(px(32.0))
+            .w_full()
+            .min_w_0()
+            .gap_2()
+            .px_2()
+            .border_y_1()
+            .border_color(cx.theme().colors().border)
             .child(
-                v_flex()
-                    .items_end()
-                    .gap_1()
-                    .child(
-                        Label::new(snapshot.score_label())
-                            .size(LabelSize::XSmall)
-                            .color(status_color(snapshot))
-                            .truncate(),
-                    )
-                    .child(
-                        Label::new(snapshot.status.clone())
-                            .size(LabelSize::XSmall)
-                            .color(Color::Muted)
-                            .truncate(),
-                    ),
+                Icon::new(IconName::Check)
+                    .size(IconSize::Small)
+                    .color(status_color(snapshot)),
+            )
+            .child(
+                Label::new(snapshot.score_label())
+                    .size(LabelSize::Small)
+                    .color(status_color(snapshot))
+                    .truncate(),
+            )
+            .child(
+                Label::new(snapshot.status.clone())
+                    .size(LabelSize::XSmall)
+                    .color(Color::Muted)
+                    .truncate(),
+            )
+            .child(div().flex_1())
+            .child(
+                Label::new(outcome_label(
+                    snapshot.pass_count,
+                    snapshot.fail_count,
+                    snapshot.warn_count,
+                    snapshot.skipped_count,
+                ))
+                .size(LabelSize::XSmall)
+                .color(Color::Muted)
+                .truncate(),
+            )
+            .into_any_element()
+    }
+
+    fn render_toolbar(
+        &self,
+        snapshot: &DxCheckPanelSnapshot,
+        panel: WeakEntity<DxCheckPanel>,
+        cx: &App,
+    ) -> AnyElement {
+        let receipt_path = snapshot.receipt_path.clone();
+        let receipt_enabled = snapshot.receipt_present && receipt_path.exists();
+
+        h_flex()
+            .id("dx-check-toolbar")
+            .h(px(32.0))
+            .w_full()
+            .min_w_0()
+            .px_1()
+            .gap_2()
+            .justify_between()
+            .border_b_1()
+            .border_color(cx.theme().colors().border)
+            .child(
+                IconButton::new("dx-check-open-receipt", IconName::FileTextOutlined)
+                    .shape(IconButtonShape::Square)
+                    .icon_size(IconSize::Small)
+                    .icon_color(Color::Muted)
+                    .disabled(!receipt_enabled)
+                    .tooltip(Tooltip::text(if receipt_enabled {
+                        "Open latest Check receipt"
+                    } else {
+                        "Latest Check receipt is not available"
+                    }))
+                    .on_click({
+                        let workspace = self.workspace.clone();
+                        move |_, window, cx| {
+                            if receipt_path.exists() {
+                                open_workspace_path(
+                                    workspace.clone(),
+                                    receipt_path.clone(),
+                                    window,
+                                    cx,
+                                );
+                            }
+                        }
+                    }),
+            )
+            .child(
+                IconButton::new("dx-check-refresh", IconName::RotateCw)
+                    .shape(IconButtonShape::Square)
+                    .icon_size(IconSize::Small)
+                    .icon_color(Color::Muted)
+                    .tooltip(Tooltip::text("Refresh Check panel"))
+                    .on_click(move |_, _, cx| {
+                        panel.update(cx, |panel, cx| panel.refresh(cx)).ok();
+                    }),
             )
             .into_any_element()
     }
@@ -251,6 +352,18 @@ impl DxCheckPanel {
         stack.into_any_element()
     }
 
+    fn render_web_audits(&self, snapshot: &DxCheckPanelSnapshot, cx: &App) -> AnyElement {
+        let mut stack = section("Web Audit", cx);
+        if snapshot.web_audits.is_empty() {
+            stack = stack.child(empty_row("No web-audit results in the latest receipt."));
+        } else {
+            for (index, audit) in snapshot.web_audits.iter().enumerate() {
+                stack = stack.child(web_audit_row(index, audit));
+            }
+        }
+        stack.into_any_element()
+    }
+
     fn render_commands(&self, snapshot: &DxCheckPanelSnapshot, cx: &App) -> AnyElement {
         let mut stack = section("Commands", cx)
             .child(detail_row("Refresh", snapshot.refresh_command.clone()))
@@ -296,7 +409,7 @@ impl Panel for DxCheckPanel {
     }
 
     fn icon(&self, _: &Window, _: &App) -> Option<IconName> {
-        None
+        Some(IconName::Check)
     }
 
     fn icon_tooltip(&self, _: &Window, _: &App) -> Option<&'static str> {
@@ -323,15 +436,21 @@ impl EventEmitter<PanelEvent> for DxCheckPanel {}
 impl Render for DxCheckPanel {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let snapshot = self.snapshot(cx);
+        let panel = cx.entity().downgrade();
+        let panel_id = cx.entity().entity_id();
 
         v_flex()
             .id("dx-check-panel")
             .key_context("DxCheckPanel")
             .track_focus(&self.focus_handle(cx))
             .size_full()
+            .min_h_0()
+            .min_w_0()
             .overflow_hidden()
             .bg(cx.theme().colors().panel_background)
-            .child(self.render_header(&snapshot, cx))
+            .child(self.render_header(&snapshot, panel_id, cx))
+            .child(self.render_status_strip(&snapshot, cx))
+            .child(self.render_toolbar(&snapshot, panel, cx))
             .child(
                 div()
                     .size_full()
@@ -339,14 +458,17 @@ impl Render for DxCheckPanel {
                         v_flex()
                             .id("dx-check-panel-content")
                             .track_scroll(&self.scroll_handle)
+                            .flex_1()
                             .size_full()
+                            .min_h_0()
                             .min_w_0()
-                            .gap_2()
-                            .p_2()
+                            .gap_1()
+                            .py_1()
                             .overflow_y_scroll()
                             .child(self.render_summary(&snapshot, cx))
                             .child(self.render_receipt(&snapshot, cx))
                             .child(self.render_sections(&snapshot, cx))
+                            .child(self.render_web_audits(&snapshot, cx))
                             .child(self.render_notices(&snapshot, cx))
                             .child(self.render_quick_fixes(&snapshot, cx))
                             .child(self.render_commands(&snapshot, cx)),
@@ -354,4 +476,31 @@ impl Render for DxCheckPanel {
                     .vertical_scrollbar_for(&self.scroll_handle, window, cx),
             )
     }
+}
+
+fn open_workspace_path(
+    workspace: WeakEntity<Workspace>,
+    path: PathBuf,
+    window: &mut Window,
+    cx: &mut App,
+) {
+    if !path.exists() {
+        return;
+    }
+
+    workspace
+        .update(cx, |workspace, cx| {
+            workspace
+                .open_abs_path(
+                    path,
+                    OpenOptions {
+                        focus: Some(true),
+                        ..Default::default()
+                    },
+                    window,
+                    cx,
+                )
+                .detach_and_log_err(cx);
+        })
+        .ok();
 }

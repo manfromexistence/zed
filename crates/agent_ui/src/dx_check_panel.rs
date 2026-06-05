@@ -45,6 +45,7 @@ pub(crate) struct DxCheckPanelSnapshot {
     pub blockers: Vec<DxCheckPanelNotice>,
     pub warnings: Vec<DxCheckPanelNotice>,
     pub quick_fixes: Vec<DxCheckPanelQuickFix>,
+    pub web_audits: Vec<DxCheckPanelWebAudit>,
     pub next_action: String,
     pub source_schema: String,
 }
@@ -73,6 +74,15 @@ pub(crate) struct DxCheckPanelQuickFix {
     pub requires_user_approval: bool,
     pub writes_receipts: bool,
     pub command: Option<String>,
+}
+
+#[derive(Clone)]
+pub(crate) struct DxCheckPanelWebAudit {
+    pub label: String,
+    pub status: String,
+    pub detail: String,
+    pub url: String,
+    pub source: Option<String>,
 }
 
 struct DxCheckPanelCache {
@@ -111,6 +121,15 @@ pub(crate) fn dx_check_panel_snapshot(workspace_roots: &[String]) -> DxCheckPane
     }
 
     reader::read_latest_check_panel(&normalized_roots)
+}
+
+pub(crate) fn invalidate_dx_check_panel_snapshot_cache() {
+    let Some(cache) = CHECK_PANEL_CACHE.get() else {
+        return;
+    };
+    if let Ok(mut cache) = cache.lock() {
+        *cache = None;
+    }
 }
 
 impl DxCheckPanelSnapshot {
@@ -233,6 +252,7 @@ mod tests {
         assert_eq!(snapshot.quick_fixes[0].risk_level, "config-review");
         assert!(!snapshot.quick_fixes[0].requires_user_approval);
         assert!(!snapshot.quick_fixes[0].writes_receipts);
+        assert!(snapshot.web_audits.is_empty());
     }
 
     #[test]
@@ -343,6 +363,59 @@ mod tests {
         assert_eq!(
             snapshot.detail_command.as_deref(),
             Some("dx check score --json")
+        );
+    }
+
+    #[test]
+    fn engine_web_audit_results_render_as_panel_rows() {
+        let receipt = json!({
+            "schema_version": "dx.check.receipt.v1",
+            "pass_count": 9,
+            "fail_count": 0,
+            "warn_count": 1,
+            "skipped_count": 0,
+            "duration_ms": 37,
+            "zed": {
+                "schema_version": "dx.check.zed_panel.v1",
+                "status": "warning",
+                "score_value": 486,
+                "score_max": 500,
+                "score_percent": 97,
+                "score_estimated": false,
+                "weight_profile": "dx-check.launch-default.v1",
+                "generated_at_unix_ms": 1779400000000_u64,
+                "refresh_command": "dx check --json",
+                "sections": []
+            },
+            "engine": {
+                "web_audit_results": [
+                    {
+                        "id": "home-run",
+                        "target_id": "home",
+                        "url": "http://localhost:3000/",
+                        "status": 200,
+                        "html_bytes": 18200,
+                        "title_present": true,
+                        "description_present": true,
+                        "canonical_present": false,
+                        "viewport_present": true,
+                        "security_header_count": 3,
+                        "source": ".dx/receipts/check/web-home.json"
+                    }
+                ]
+            }
+        });
+
+        let snapshot = panel_from_receipt_value(PathBuf::from("check-latest.json"), &receipt);
+
+        assert_eq!(snapshot.web_audits.len(), 1);
+        assert_eq!(snapshot.web_audits[0].label, "home");
+        assert_eq!(snapshot.web_audits[0].status, "ready");
+        assert!(snapshot.web_audits[0].detail.contains("HTTP 200"));
+        assert!(snapshot.web_audits[0].detail.contains("18.2 KB"));
+        assert_eq!(
+            snapshot.web_audits[0].source.as_deref(),
+            Some(".dx/receipts/check/web-home.json")
         );
     }
 }

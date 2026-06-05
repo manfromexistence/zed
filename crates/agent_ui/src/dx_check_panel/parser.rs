@@ -4,7 +4,7 @@ use serde_json::Value;
 
 use super::{
     CHECK_RECEIPT_SCHEMA, DxCheckPanelNotice, DxCheckPanelQuickFix, DxCheckPanelSection,
-    DxCheckPanelSnapshot, VIEW_MODEL_SCHEMA, ZED_PANEL_SCHEMA,
+    DxCheckPanelSnapshot, DxCheckPanelWebAudit, VIEW_MODEL_SCHEMA, ZED_PANEL_SCHEMA,
 };
 
 const MAX_PANEL_TEXT_CHARS: usize = 320;
@@ -138,6 +138,7 @@ fn panel_from_zed_value(path: PathBuf, receipt: &Value, zed: &Value) -> DxCheckP
         blockers: notice_rows(zed.get("blockers")),
         warnings: notice_rows(zed.get("warnings")),
         quick_fixes: quick_fix_rows(zed.get("quick_fixes")),
+        web_audits: web_audit_rows(receipt),
         next_action,
         source_schema: ZED_PANEL_SCHEMA.to_string(),
     }
@@ -245,6 +246,7 @@ fn panel_from_view_model_value(
         blockers: notice_rows(view_model.get("blocker_rows")),
         warnings,
         quick_fixes: quick_fix_rows(view_model.get("quick_fix_rows")),
+        web_audits: web_audit_rows(receipt),
         next_action,
         source_schema: VIEW_MODEL_SCHEMA.to_string(),
     }
@@ -305,6 +307,7 @@ pub(super) fn missing_snapshot(path: PathBuf) -> DxCheckPanelSnapshot {
         blockers: Vec::new(),
         warnings: Vec::new(),
         quick_fixes: Vec::new(),
+        web_audits: Vec::new(),
         next_action: "Run dx check --json from the DX project root.".to_string(),
         source_schema: "missing".to_string(),
     }
@@ -347,6 +350,7 @@ pub(super) fn malformed_snapshot(path: PathBuf, message: String) -> DxCheckPanel
         }],
         warnings: Vec::new(),
         quick_fixes: Vec::new(),
+        web_audits: Vec::new(),
         next_action: "Rerun dx check --json with the current DX CLI.".to_string(),
         source_schema: "malformed".to_string(),
     }
@@ -435,6 +439,83 @@ fn quick_fix_rows(value: Option<&Value>) -> Vec<DxCheckPanelQuickFix> {
             })
         })
         .collect()
+}
+
+fn web_audit_rows(receipt: &Value) -> Vec<DxCheckPanelWebAudit> {
+    receipt
+        .get("engine")
+        .and_then(|engine| engine.get("web_audit_results"))
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .take(6)
+        .filter_map(|result| {
+            let url = bounded_string_from(result.get("url"))?;
+            let label = bounded_string_from(result.get("target_id"))
+                .or_else(|| bounded_string_from(result.get("id")))
+                .unwrap_or_else(|| url.clone());
+            Some(DxCheckPanelWebAudit {
+                label,
+                status: web_audit_status(result),
+                detail: web_audit_detail(result),
+                url,
+                source: bounded_string_from(result.get("source")),
+            })
+        })
+        .collect()
+}
+
+fn web_audit_status(result: &Value) -> String {
+    let http_status = u16_from(result.get("status"));
+    let metadata_missing = !bool_from(result.get("title_present")).unwrap_or(false)
+        || !bool_from(result.get("description_present")).unwrap_or(false)
+        || !bool_from(result.get("viewport_present")).unwrap_or(false);
+    let header_count = u16_from(result.get("security_header_count")).unwrap_or(0);
+
+    match http_status {
+        Some(200..=399) if !metadata_missing && header_count >= 2 => "ready".to_string(),
+        Some(200..=399) => "warning".to_string(),
+        Some(_) => "blocked".to_string(),
+        None => "unknown".to_string(),
+    }
+}
+
+fn web_audit_detail(result: &Value) -> String {
+    let status = u16_from(result.get("status"))
+        .map(|status| format!("HTTP {status}"))
+        .unwrap_or_else(|| "HTTP unknown".to_string());
+    let bytes = u64_from(result.get("html_bytes"))
+        .map(format_bytes)
+        .unwrap_or_else(|| "size unknown".to_string());
+    let headers = u16_from(result.get("security_header_count"))
+        .map(|count| format!("{count} security headers"))
+        .unwrap_or_else(|| "headers unknown".to_string());
+    let title = present_label("title", bool_from(result.get("title_present")));
+    let description = present_label("description", bool_from(result.get("description_present")));
+    let viewport = present_label("viewport", bool_from(result.get("viewport_present")));
+
+    bounded_panel_text(&format!(
+        "{status} / {bytes} / {headers} / {title}, {description}, {viewport}"
+    ))
+    .unwrap_or_else(|| status)
+}
+
+fn present_label(name: &str, value: Option<bool>) -> String {
+    match value {
+        Some(true) => format!("{name} yes"),
+        Some(false) => format!("{name} no"),
+        None => format!("{name} unknown"),
+    }
+}
+
+fn format_bytes(value: u64) -> String {
+    if value >= 1_000_000 {
+        format!("{:.1} MB", value as f64 / 1_000_000.0)
+    } else if value >= 1_000 {
+        format!("{:.1} KB", value as f64 / 1_000.0)
+    } else {
+        format!("{value} B")
+    }
 }
 
 fn quick_fix_risk_level(command: Option<&str>) -> &'static str {
@@ -526,6 +607,10 @@ fn bool_from(value: Option<&Value>) -> Option<bool> {
 
 fn u8_from(value: Option<&Value>) -> Option<u8> {
     u64_from(value).and_then(|value| u8::try_from(value).ok())
+}
+
+fn u16_from(value: Option<&Value>) -> Option<u16> {
+    u64_from(value).and_then(|value| u16::try_from(value).ok())
 }
 
 fn u32_from(value: Option<&Value>) -> Option<u32> {

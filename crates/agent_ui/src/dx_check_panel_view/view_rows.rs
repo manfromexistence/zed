@@ -1,36 +1,48 @@
-use gpui::{AnyElement, App, InteractiveElement, IntoElement, ParentElement, SharedString, Styled};
+use gpui::{
+    AnyElement, App, Div, InteractiveElement, IntoElement, ParentElement, SharedString, Styled, px,
+};
 use theme::ActiveTheme;
 use ui::prelude::*;
 
 use crate::dx_check_panel::{
     DxCheckPanelNotice, DxCheckPanelQuickFix, DxCheckPanelSection, DxCheckPanelSnapshot,
+    DxCheckPanelWebAudit,
 };
 
 pub(super) fn section(title: &'static str, cx: &App) -> gpui::Div {
     v_flex()
         .w_full()
-        .gap_1()
-        .p_2()
-        .rounded_sm()
+        .min_w_0()
+        .gap_0p5()
+        .child(section_header(title, cx))
+}
+
+fn section_header(title: &'static str, cx: &App) -> AnyElement {
+    h_flex()
+        .h(px(28.0))
+        .w_full()
+        .min_w_0()
+        .pl_3()
+        .pr_1()
+        .gap_2()
+        .justify_between()
         .border_1()
-        .border_color(cx.theme().colors().border_variant)
-        .bg(cx.theme().colors().elevated_surface_background)
+        .border_r_2()
+        .hover(|style| style.bg(cx.theme().colors().ghost_element_hover))
         .child(
             Label::new(title)
-                .size(LabelSize::XSmall)
+                .size(LabelSize::Small)
                 .color(Color::Muted)
                 .truncate(),
         )
+        .into_any_element()
 }
 
 pub(super) fn detail_row(
     label: impl Into<SharedString>,
     value: impl Into<SharedString>,
 ) -> AnyElement {
-    h_flex()
-        .min_w_0()
-        .gap_2()
-        .justify_between()
+    row_shell()
         .child(
             Label::new(label.into())
                 .size(LabelSize::XSmall)
@@ -57,7 +69,7 @@ pub(super) fn notice_row(
     message: &str,
     next_action: Option<&str>,
 ) -> AnyElement {
-    let mut stack = v_flex().id(id.into()).min_w_0().gap_1().child(
+    let mut stack = row_stack().id(id.into()).child(
         h_flex()
             .min_w_0()
             .gap_1()
@@ -98,11 +110,25 @@ pub(super) fn quick_fix_row(index: usize, fix: &DxCheckPanelQuickFix) -> AnyElem
             "no approval required"
         }
     );
-    let mut stack = v_flex()
+    let mut stack = row_stack()
         .id(SharedString::from(format!("dx-check-quick-fix-{index}")))
-        .min_w_0()
-        .gap_1()
-        .child(detail_row(fix.label.clone(), risk))
+        .child(
+            h_flex()
+                .min_w_0()
+                .gap_2()
+                .justify_between()
+                .child(
+                    Label::new(fix.label.clone())
+                        .size(LabelSize::XSmall)
+                        .truncate(),
+                )
+                .child(
+                    Label::new(risk)
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted)
+                        .truncate(),
+                ),
+        )
         .child(
             Label::new(fix.next_action.clone())
                 .size(LabelSize::XSmall)
@@ -123,10 +149,68 @@ pub(super) fn quick_fix_row(index: usize, fix: &DxCheckPanelQuickFix) -> AnyElem
 }
 
 pub(super) fn empty_row(message: &'static str) -> AnyElement {
-    Label::new(message)
-        .size(LabelSize::XSmall)
-        .color(Color::Muted)
-        .truncate()
+    row_shell()
+        .child(
+            Icon::new(IconName::Info)
+                .size(IconSize::XSmall)
+                .color(Color::Muted),
+        )
+        .child(
+            Label::new(message)
+                .size(LabelSize::XSmall)
+                .color(Color::Muted)
+                .truncate(),
+        )
+        .into_any_element()
+}
+
+pub(super) fn web_audit_row(index: usize, audit: &DxCheckPanelWebAudit) -> AnyElement {
+    let (icon, color) = match audit.status.as_str() {
+        "ready" => (IconName::Check, Color::Success),
+        "blocked" => (IconName::Warning, Color::Error),
+        "warning" => (IconName::Warning, Color::Warning),
+        _ => (IconName::Info, Color::Muted),
+    };
+    let source = audit.source.as_deref().unwrap_or(&audit.url);
+
+    row_shell()
+        .id(SharedString::from(format!("dx-check-web-audit-{index}")))
+        .child(Icon::new(icon).size(IconSize::Small).color(color))
+        .child(
+            v_flex()
+                .min_w_0()
+                .flex_1()
+                .gap_0p5()
+                .child(
+                    h_flex()
+                        .min_w_0()
+                        .gap_2()
+                        .justify_between()
+                        .child(
+                            Label::new(audit.label.clone())
+                                .size(LabelSize::Small)
+                                .truncate(),
+                        )
+                        .child(
+                            Label::new(audit.status.clone())
+                                .size(LabelSize::XSmall)
+                                .color(color)
+                                .truncate(),
+                        ),
+                )
+                .child(
+                    Label::new(audit.detail.clone())
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted)
+                        .truncate(),
+                )
+                .child(
+                    Label::new(source.to_string())
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted)
+                        .truncate_start(),
+                ),
+        )
         .into_any_element()
 }
 
@@ -198,4 +282,29 @@ fn section_score_label(section: &DxCheckPanelSection) -> String {
         }
         _ => section.status.clone(),
     }
+}
+
+fn row_shell() -> Div {
+    h_flex()
+        .w_full()
+        .min_w_0()
+        .gap_1p5()
+        .pl_3()
+        .pr_1()
+        .py_1()
+        .border_1()
+        .border_r_2()
+        .items_start()
+}
+
+fn row_stack() -> Div {
+    v_flex()
+        .w_full()
+        .min_w_0()
+        .gap_1()
+        .pl_3()
+        .pr_1()
+        .py_1()
+        .border_1()
+        .border_r_2()
 }
