@@ -27,6 +27,13 @@ pub(super) struct ComposerVoiceState {
     input_level: f32,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub(super) struct ComposerVoiceAvailability {
+    pub(super) has_composer_text: bool,
+    pub(super) stt_ready: bool,
+    pub(super) tts_ready: bool,
+}
+
 impl Default for ComposerVoiceState {
     fn default() -> Self {
         Self {
@@ -105,21 +112,31 @@ impl ComposerVoiceState {
         self.input_level = 0.0;
     }
 
-    fn voice_tooltip(&self) -> &'static str {
+    fn voice_tooltip(&self, availability: ComposerVoiceAvailability) -> &'static str {
         match self.phase {
             ComposerVoicePhase::Recording => "Stop recording and transcribe with Flow",
             ComposerVoicePhase::Transcribing => "Cancel Flow transcription",
             ComposerVoicePhase::Speaking => "Stop Kokoro read-aloud",
+            ComposerVoicePhase::Error if !availability.stt_ready => "Flow STT is not ready",
             ComposerVoicePhase::Error => "Retry Flow voice input",
+            ComposerVoicePhase::Ready if !availability.stt_ready => "Flow STT is not ready",
             ComposerVoicePhase::Ready => "Record voice input with Flow",
         }
     }
 
-    fn speak_tooltip(&self) -> &'static str {
+    fn speak_tooltip(&self, availability: ComposerVoiceAvailability) -> &'static str {
         match self.phase {
             ComposerVoicePhase::Speaking => "Stop Kokoro read-aloud",
             ComposerVoicePhase::Recording | ComposerVoicePhase::Transcribing => {
                 "Finish voice recording before reading aloud"
+            }
+            ComposerVoicePhase::Error | ComposerVoicePhase::Ready if !availability.tts_ready => {
+                "Kokoro runtime is not ready"
+            }
+            ComposerVoicePhase::Error | ComposerVoicePhase::Ready
+                if !availability.has_composer_text =>
+            {
+                "Type text in the composer before reading aloud"
             }
             ComposerVoicePhase::Error | ComposerVoicePhase::Ready => {
                 "Read the composer aloud with Kokoro"
@@ -130,6 +147,7 @@ impl ComposerVoiceState {
 
 pub(super) fn render_voice_buttons(
     state: &ComposerVoiceState,
+    availability: ComposerVoiceAvailability,
     on_voice_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     on_speak_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
 ) -> Vec<AnyElement> {
@@ -145,11 +163,17 @@ pub(super) fn render_voice_buttons(
         ComposerVoicePhase::Error => Color::Warning,
         _ => Color::Muted,
     };
-    let speak_disabled = matches!(
+    let speak_disabled = match state.phase {
+        ComposerVoicePhase::Speaking => false,
+        ComposerVoicePhase::Recording | ComposerVoicePhase::Transcribing => true,
+        ComposerVoicePhase::Ready | ComposerVoicePhase::Error => {
+            !availability.has_composer_text || !availability.tts_ready
+        }
+    };
+    let voice_disabled = matches!(
         state.phase,
-        ComposerVoicePhase::Recording | ComposerVoicePhase::Transcribing
-    );
-    let voice_disabled = false;
+        ComposerVoicePhase::Ready | ComposerVoicePhase::Error
+    ) && !availability.stt_ready;
     let speak_icon = match state.phase {
         ComposerVoicePhase::Speaking => IconName::Stop,
         _ => IconName::AudioOn,
@@ -165,14 +189,14 @@ pub(super) fn render_voice_buttons(
             .icon_size(IconSize::Small)
             .icon_color(voice_color)
             .disabled(voice_disabled)
-            .tooltip(Tooltip::text(state.voice_tooltip()))
+            .tooltip(Tooltip::text(state.voice_tooltip(availability)))
             .on_click(on_voice_click)
             .into_any_element(),
         IconButton::new("agent-composer-text-to-speech", speak_icon)
             .icon_size(IconSize::Small)
             .icon_color(speak_color)
             .disabled(speak_disabled)
-            .tooltip(Tooltip::text(state.speak_tooltip()))
+            .tooltip(Tooltip::text(state.speak_tooltip(availability)))
             .on_click(on_speak_click)
             .into_any_element(),
     ]

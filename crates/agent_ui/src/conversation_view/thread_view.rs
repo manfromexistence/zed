@@ -34,10 +34,13 @@ use super::composer_profile_options::{
     ComposerOptionEntry, ComposerOptionSlot, ComposerProfileKind,
 };
 use super::voice_controls::{
-    ComposerVoicePhase, ComposerVoiceState, render_voice_buttons, render_voice_recording_panel,
+    ComposerVoiceAvailability, ComposerVoicePhase, ComposerVoiceState, render_voice_buttons,
+    render_voice_recording_panel,
 };
 use super::*;
-use crate::flow_speech_runtime::{FlowRecordingSession, FlowSpeechCancellation, FlowSpeechRuntime};
+use crate::flow_speech_runtime::{
+    FlowRecordingSession, FlowSpeechCancellation, FlowSpeechRuntime, MAX_RECORDING_SECONDS,
+};
 
 #[derive(Default)]
 struct ThreadFeedbackState {
@@ -4134,8 +4137,16 @@ impl ThreadView {
         _window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Vec<AnyElement> {
+        let runtime = FlowSpeechRuntime::detect();
+        let availability = ComposerVoiceAvailability {
+            has_composer_text: !self.message_editor.read(cx).text(cx).trim().is_empty(),
+            stt_ready: runtime.stt_available(),
+            tts_ready: runtime.tts_available(),
+        };
+
         render_voice_buttons(
             &self.composer_voice_state,
+            availability,
             cx.listener(|this, _event, window, cx| {
                 this.toggle_flow_voice_recording(window, cx);
             }),
@@ -4182,12 +4193,12 @@ impl ThreadView {
                     .read(cx)
                     .focus_handle(cx)
                     .focus(window, cx);
-                self._flow_speech_task = Some(cx.spawn(async move |this, cx| {
+                self._flow_speech_task = Some(cx.spawn_in(window, async move |this, cx| {
                     loop {
                         cx.background_executor()
                             .timer(Duration::from_millis(250))
                             .await;
-                        let Ok(keep_recording) = this.update(cx, |this, cx| {
+                        let Ok(keep_recording) = this.update_in(cx, |this, window, cx| {
                             let is_recording =
                                 this.composer_voice_state.phase() == ComposerVoicePhase::Recording;
                             if is_recording {
@@ -4196,10 +4207,17 @@ impl ThreadView {
                                     .as_ref()
                                     .and_then(|session| session.telemetry().ok())
                                 {
+                                    let captured_duration = telemetry.captured_duration();
                                     this.composer_voice_state.update_recording_telemetry(
-                                        telemetry.captured_duration(),
+                                        captured_duration,
                                         telemetry.input_level(),
                                     );
+                                    if captured_duration
+                                        >= Duration::from_secs(MAX_RECORDING_SECONDS as u64)
+                                    {
+                                        this.stop_flow_voice_recording(window, cx);
+                                        return false;
+                                    }
                                 }
                                 cx.notify();
                             }

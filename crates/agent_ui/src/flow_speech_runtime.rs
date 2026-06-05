@@ -17,7 +17,7 @@ use std::{
 use uuid::Uuid;
 
 const TARGET_SAMPLE_RATE: u32 = 16_000;
-const MAX_RECORDING_SECONDS: usize = 90;
+pub(crate) const MAX_RECORDING_SECONDS: usize = 90;
 const MIN_RECORDING_SAMPLES: usize = TARGET_SAMPLE_RATE as usize / 4;
 const FLOW_DEFAULT_STT_MODEL_KEY: &str = "parakeet-tdt-0.6b-v3-int8";
 const FLOW_PARAKEET_EXECUTION_MODEL_KEY: &str = "parakeet-tdt-0.6b-v3-int8";
@@ -287,6 +287,14 @@ impl FlowSpeechRuntime {
         };
 
         format!("{stt}; {tts}; {stt_runtime}")
+    }
+
+    pub(crate) fn stt_available(&self) -> bool {
+        self.ensure_stt_ready().is_ok()
+    }
+
+    pub(crate) fn tts_available(&self) -> bool {
+        self.kokoro_tts_runtime.is_some()
     }
 
     fn write_recording_wav(&self, recording: &RecordedSpeech) -> Result<PathBuf> {
@@ -702,7 +710,7 @@ fn write_wav_i16(path: &Path, sample_rate: u32, samples: &[f32]) -> Result<()> {
 
 fn parse_transcript_output(output: Output) -> Result<String> {
     if !output.status.success() {
-        return Err(command_error("Flow Parakeet transcription failed", output));
+        return Err(command_error("Flow STT transcription failed", output));
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);

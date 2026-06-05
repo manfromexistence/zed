@@ -65,17 +65,29 @@ test("composer renders separate mic and read-aloud buttons before send", () => {
 
   assert.match(voiceControls, /agent-composer-voice-input/);
   assert.match(voiceControls, /agent-composer-text-to-speech/);
+  assert.match(voiceControls, /struct ComposerVoiceAvailability/);
+  assert.match(voiceControls, /has_composer_text: bool/);
+  assert.match(voiceControls, /stt_ready: bool/);
+  assert.match(voiceControls, /tts_ready: bool/);
   assert.match(voiceControls, /IconName::Mic/);
   assert.match(voiceControls, /IconName::AudioOn/);
   assert.match(voiceControls, /IconName::Stop/);
   assert.match(voiceButtons, /let speak_icon = match state\.phase/);
   assert.match(voiceButtons, /ComposerVoicePhase::Speaking => IconName::Stop/);
-  assert.match(voiceButtons, /let voice_disabled = false/);
+  assert.match(voiceButtons, /!availability\.stt_ready/);
   assert.match(voiceButtons, /\.disabled\(voice_disabled\)/);
   assert.match(
     voiceButtons,
-    /let speak_disabled = matches!\(\s*state\.phase,\s*ComposerVoicePhase::Recording\s*\|\s*ComposerVoicePhase::Transcribing\s*\)/,
+    /!availability\.has_composer_text/,
   );
+  assert.match(voiceButtons, /!availability\.tts_ready/);
+  assert.match(
+    voiceButtons,
+    /state\.speak_tooltip\(availability\)/,
+  );
+  assert.match(voiceControls, /Type text in the composer before reading aloud/);
+  assert.match(voiceControls, /Kokoro runtime is not ready/);
+  assert.match(voiceControls, /Flow STT is not ready/);
   assert.match(voiceButtons, /agent-composer-voice-input[\s\S]+\.on_click\(on_voice_click\)/);
   assert.match(
     voiceButtons,
@@ -116,6 +128,9 @@ test("voice recording UI exposes real recording and transcription states", () =>
   assert.match(voiceControls, /Dismiss Flow voice error/);
   assert.match(voiceControls, /Retry or dismiss to continue/);
   assert.match(threadView, /flow_recording_session[\s\S]+telemetry\(\)/);
+  assert.match(threadView, /MAX_RECORDING_SECONDS/);
+  assert.match(threadView, /captured_duration\s*>=\s*Duration::from_secs\(MAX_RECORDING_SECONDS as u64\)/);
+  assert.match(threadView, /stop_flow_voice_recording\(window, cx\)/);
   assert.match(threadView, /fn cancel_flow_voice_recording/);
   assert.match(threadView, /Flow voice recording discarded/);
   assert.match(threadView, /fn dismiss_flow_voice_error/);
@@ -146,6 +161,11 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
     runtime,
     "pub(crate) fn transcribe_recording",
     "pub(crate) fn speak_text",
+  );
+  const parseTranscriptOutput = sourceSlice(
+    runtime,
+    "fn parse_transcript_output",
+    "fn command_error",
   );
   const finishRecording = sourceSlice(
     runtime,
@@ -185,6 +205,8 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   const defaultFlowRoot = sourceTail(runtime, "fn default_flow_root");
 
   assert.match(runtime, /FlowSpeechRuntime/);
+  assert.match(runtime, /pub\(crate\) fn stt_available/);
+  assert.match(runtime, /pub\(crate\) fn tts_available/);
   assert.match(runtime, /FlowSpeechCancellation/);
   assert.match(runtime, /AtomicBool/);
   assert.match(runtime, /Ordering/);
@@ -234,6 +256,8 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
     /run_command_with_timeout\([^,]+,[^,]+,[^,]+,\s*Some\(cancellation\)/,
   );
   assert.match(transcribeRecording, /Flow STT transcription/);
+  assert.match(parseTranscriptOutput, /Flow STT transcription failed/);
+  assert.doesNotMatch(parseTranscriptOutput, /Flow Parakeet transcription failed/);
   assert.doesNotMatch(transcribeRecording, /remove_file/);
   assert.match(runtime, /TemporarySpeechFile/);
   assert.match(runtime, /impl Drop for TemporarySpeechFile/);
@@ -297,6 +321,7 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(defaultFlowRoot, /join\("src"\)[\s\S]+join\("bin"\)[\s\S]+join\("flow-dictate\.rs"\)/);
   assert.doesNotMatch(defaultFlowRoot, /PARAKEET_MODEL_DIR/);
   assert.match(runtime, /RecordingTelemetry/);
+  assert.match(runtime, /pub\(crate\) const MAX_RECORDING_SECONDS: usize = 90/);
   assert.match(runtime, /recent_input_level/);
   assertBefore(
     finishRecording,
@@ -467,6 +492,9 @@ test("voice handoff keeps runtime readiness honest", () => {
   assert.match(voiceHandoff, /DX_FLOW_STT_MODEL/);
   assert.match(voiceHandoff, /FLOW_STT_MODEL/);
   assert.match(voiceHandoff, /unsupported values fail closed/);
+  assert.match(voiceHandoff, /Keyless Whisper source exists/);
+  assert.match(voiceHandoff, /keyless-whisper/);
+  assert.match(voiceHandoff, /focused `flow-dictate` host has not imported that Candle Whisper path yet/);
   assert.match(voiceHandoff, /silent-WAV Parakeet smoke test passed/);
   assert.match(voiceHandoff, /Nemotron smoke proof/);
   assert.match(voiceHandoff, /live Zed microphone proof still needs the governed validation window/);
