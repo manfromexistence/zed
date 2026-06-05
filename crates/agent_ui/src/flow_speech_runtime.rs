@@ -22,8 +22,10 @@ const MIN_RECORDING_SAMPLES: usize = TARGET_SAMPLE_RATE as usize / 4;
 const FLOW_DEFAULT_STT_MODEL_KEY: &str = "parakeet-tdt-0.6b-v3-int8";
 const FLOW_PARAKEET_EXECUTION_MODEL_KEY: &str = "parakeet-tdt-0.6b-v3-int8";
 const FLOW_NEMOTRON_EXECUTION_MODEL_KEY: &str = "nemotron-speech-streaming-en-0.6b-int8";
+const FLOW_WHISPER_EXECUTION_MODEL_KEY: &str = "whisper-tiny-ggml";
 const PARAKEET_MODEL_DIR: &str = "models/stt/parakeet-tdt-0.6b-v3-int8";
 const NEMOTRON_MODEL_DIR: &str = "models/stt/nemotron-speech-streaming-en-0.6b-int8";
+const WHISPER_MODEL_FILE: &str = "models/stt/ggml-tiny.bin";
 const KOKORO_MODEL_KEY: &str = "kokoro_82m";
 const KOKORO_RUNNER_SCRIPT: &str = "tools/qwen3_tts_runner.py";
 const DEFAULT_KOKORO_VOICE: &str = "af_bella";
@@ -48,7 +50,13 @@ pub(crate) struct FlowSpeechRuntime {
 struct FlowSttModel {
     key: &'static str,
     label: &'static str,
-    model_dir: &'static str,
+    artifact_shape: FlowSttArtifactShape,
+}
+
+#[derive(Clone, Copy, Debug)]
+enum FlowSttArtifactShape {
+    SherpaTransducer { model_dir: &'static str },
+    WhisperCpp { model_file: &'static str },
 }
 
 #[derive(Clone, Debug)]
@@ -131,7 +139,9 @@ impl FlowSttModel {
         Self {
             key: FLOW_PARAKEET_EXECUTION_MODEL_KEY,
             label: "Parakeet",
-            model_dir: PARAKEET_MODEL_DIR,
+            artifact_shape: FlowSttArtifactShape::SherpaTransducer {
+                model_dir: PARAKEET_MODEL_DIR,
+            },
         }
     }
 
@@ -139,7 +149,19 @@ impl FlowSttModel {
         Self {
             key: FLOW_NEMOTRON_EXECUTION_MODEL_KEY,
             label: "Nemotron",
-            model_dir: NEMOTRON_MODEL_DIR,
+            artifact_shape: FlowSttArtifactShape::SherpaTransducer {
+                model_dir: NEMOTRON_MODEL_DIR,
+            },
+        }
+    }
+
+    fn whisper() -> Self {
+        Self {
+            key: FLOW_WHISPER_EXECUTION_MODEL_KEY,
+            label: "Whisper Tiny GGML",
+            artifact_shape: FlowSttArtifactShape::WhisperCpp {
+                model_file: WHISPER_MODEL_FILE,
+            },
         }
     }
 
@@ -147,6 +169,7 @@ impl FlowSttModel {
         match key {
             FLOW_PARAKEET_EXECUTION_MODEL_KEY => Some(Self::parakeet()),
             FLOW_NEMOTRON_EXECUTION_MODEL_KEY => Some(Self::nemotron()),
+            FLOW_WHISPER_EXECUTION_MODEL_KEY => Some(Self::whisper()),
             _ => None,
         }
     }
@@ -165,8 +188,11 @@ fn selected_stt_model() -> Result<FlowSttModel, String> {
 
     FlowSttModel::from_key(requested).ok_or_else(|| {
         format!(
-            "Unsupported Flow STT model '{}'. Supported: {}, {}.",
-            requested, FLOW_PARAKEET_EXECUTION_MODEL_KEY, FLOW_NEMOTRON_EXECUTION_MODEL_KEY
+            "Unsupported Flow STT model '{}'. Supported: {}, {}, {}.",
+            requested,
+            FLOW_PARAKEET_EXECUTION_MODEL_KEY,
+            FLOW_NEMOTRON_EXECUTION_MODEL_KEY,
+            FLOW_WHISPER_EXECUTION_MODEL_KEY
         )
     })
 }
@@ -272,7 +298,7 @@ impl FlowSpeechRuntime {
             Ok(stt_model) if self.stt_model_ready(stt_model) => {
                 format!("{} ready", stt_model.label)
             }
-            Ok(stt_model) => format!("{} model missing", stt_model.label),
+            Ok(stt_model) => self.missing_stt_model_message(stt_model),
             Err(error) => error.to_string(),
         };
         let tts = if self.kokoro_tts_runtime.is_some() {
@@ -313,11 +339,7 @@ impl FlowSpeechRuntime {
         if self.stt_model_ready(stt_model) {
             Ok(stt_model)
         } else {
-            Err(anyhow!(
-                "Flow {} model files are missing under {}",
-                stt_model.label,
-                self.flow_root.join(stt_model.model_dir).display()
-            ))
+            Err(anyhow!("{}", self.missing_stt_model_message(stt_model)))
         }
     }
 
@@ -327,11 +349,12 @@ impl FlowSpeechRuntime {
             Ok(stt_model)
         } else {
             Err(anyhow!(
-                "Flow STT runtime is not built. Build flow-dictate with the sherpa-stt feature in {} or set DX_FLOW_DICTATE_BINARY. This maps Flow's default STT model {} to {} and supports {} when DX_FLOW_STT_MODEL or FLOW_STT_MODEL selects it.",
+                "Flow STT runtime is not built. Build the focused flow-dictate host in {} or set DX_FLOW_DICTATE_BINARY. This maps Flow's default STT model {} to {} and supports {} and {} when DX_FLOW_STT_MODEL or FLOW_STT_MODEL selects them.",
                 self.flow_root.display(),
                 FLOW_DEFAULT_STT_MODEL_KEY,
                 FLOW_PARAKEET_EXECUTION_MODEL_KEY,
-                FLOW_NEMOTRON_EXECUTION_MODEL_KEY
+                FLOW_NEMOTRON_EXECUTION_MODEL_KEY,
+                FLOW_WHISPER_EXECUTION_MODEL_KEY
             ))
         }
     }
@@ -348,15 +371,78 @@ impl FlowSpeechRuntime {
     }
 
     fn stt_model_ready(&self, stt_model: FlowSttModel) -> bool {
-        let root = self.flow_root.join(stt_model.model_dir);
-        [
-            "encoder.int8.onnx",
-            "decoder.int8.onnx",
-            "joiner.int8.onnx",
-            "tokens.txt",
-        ]
-        .iter()
-        .all(|file| root.join(file).exists())
+        match stt_model.artifact_shape {
+            FlowSttArtifactShape::SherpaTransducer { model_dir } => {
+                let root = self.flow_root.join(model_dir);
+                [
+                    "encoder.int8.onnx",
+                    "decoder.int8.onnx",
+                    "joiner.int8.onnx",
+                    "tokens.txt",
+                ]
+                .iter()
+                .all(|file| file_is_nonempty(&root.join(file)))
+            }
+            FlowSttArtifactShape::WhisperCpp { model_file } => {
+                file_is_nonempty(&self.flow_root.join(model_file))
+                    && self.find_whisper_cpp_binary().is_some()
+            }
+        }
+    }
+
+    fn missing_stt_model_message(&self, stt_model: FlowSttModel) -> String {
+        match stt_model.artifact_shape {
+            FlowSttArtifactShape::SherpaTransducer { model_dir } => format!(
+                "Flow {} model files are missing or empty under {}",
+                stt_model.label,
+                self.flow_root.join(model_dir).display()
+            ),
+            FlowSttArtifactShape::WhisperCpp { model_file } => format!(
+                "Flow {} requires a non-empty {} file and a whisper.cpp binary from FLOW_WHISPER_CPP_BINARY or DX_WHISPER_CPP_BINARY",
+                stt_model.label,
+                self.flow_root.join(model_file).display()
+            ),
+        }
+    }
+
+    fn find_whisper_cpp_binary(&self) -> Option<PathBuf> {
+        env::var_os("FLOW_WHISPER_CPP_BINARY")
+            .or_else(|| env::var_os("DX_WHISPER_CPP_BINARY"))
+            .or_else(|| env::var_os("FLOW_WHISPER_CPP_EXE"))
+            .or_else(|| env::var_os("FLOW_WHISPER_CPP"))
+            .map(PathBuf::from)
+            .filter(|path| file_is_nonempty(path))
+            .or_else(|| {
+                let executable = if cfg!(windows) {
+                    "whisper-cli.exe"
+                } else {
+                    "whisper-cli"
+                };
+                [
+                    self.flow_root
+                        .join("tools")
+                        .join("whisper.cpp")
+                        .join("build")
+                        .join("bin")
+                        .join("Release")
+                        .join(executable),
+                    self.flow_root
+                        .join("tools")
+                        .join("whisper.cpp")
+                        .join("build")
+                        .join("bin")
+                        .join(executable),
+                    self.flow_root
+                        .join("runtime")
+                        .join("whisper.cpp")
+                        .join("build")
+                        .join("bin")
+                        .join("Release")
+                        .join(executable),
+                ]
+                .into_iter()
+                .find(|path| file_is_nonempty(path))
+            })
     }
 }
 

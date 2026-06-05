@@ -15,6 +15,7 @@ const agentUiCargoPath = "crates/agent_ui/Cargo.toml";
 const zedCargoPath = "crates/zed/Cargo.toml";
 const flowDictatePath = "../flow/src/bin/flow-dictate.rs";
 const flowDictationHostReadmePath = "../flow/tools/flow-dictation-host/README.md";
+const flowWhisperModelKey = "whisper-tiny-ggml";
 
 const threadView = readFileSync(threadViewPath, "utf8");
 const conversationModule = readFileSync(conversationModulePath, "utf8");
@@ -221,11 +222,24 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   );
   assert.match(
     runtime,
+    /FLOW_WHISPER_EXECUTION_MODEL_KEY: &str = "whisper-tiny-ggml"/,
+  );
+  assert.match(
+    runtime,
     /PARAKEET_MODEL_DIR: &str = "models\/stt\/parakeet-tdt-0\.6b-v3-int8"/,
   );
   assert.match(
     runtime,
     /NEMOTRON_MODEL_DIR: &str = "models\/stt\/nemotron-speech-streaming-en-0\.6b-int8"/,
+  );
+  assert.match(runtime, /WHISPER_MODEL_FILE: &str = "models\/stt\/ggml-tiny\.bin"/);
+  assert.match(runtime, /enum FlowSttArtifactShape/);
+  assert.match(runtime, /SherpaTransducer\s*\{\s*model_dir: &'static str\s*\}/);
+  assert.match(runtime, /WhisperCpp\s*\{\s*model_file: &'static str\s*\}/);
+  assert.match(runtime, /fn whisper\(\) -> Self/);
+  assert.match(
+    runtime,
+    /FLOW_WHISPER_EXECUTION_MODEL_KEY => Some\(Self::whisper\(\)\)/,
   );
   assert.match(
     runtime,
@@ -236,6 +250,8 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(runtime, /FLOW_STT_MODEL/);
   assert.match(runtime, /selected_stt_model/);
   assert.match(runtime, /Unsupported Flow STT model/);
+  assert.match(runtime, /find_whisper_cpp_binary/);
+  assert.match(runtime, /FLOW_WHISPER_CPP_BINARY|DX_WHISPER_CPP_BINARY/);
   assert.doesNotMatch(runtime, /parakeet_unified_en_int8/);
   assert.match(runtime, /flow-dictate/);
   assert.match(startRecording, /ensure_stt_ready\(\)\?/);
@@ -348,26 +364,49 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.doesNotMatch(runtime, /mock|placeholder|dummy/i);
 });
 
-test("Flow dictation host exposes focused Sherpa STT model selection", () => {
+test("Flow dictation host exposes focused STT model selection", () => {
   assert.match(flowDictate, /const DEFAULT_STT_MODEL_KEY: &str = "parakeet-tdt-0\.6b-v3-int8"/);
   assert.match(
     flowDictate,
     /const NEMOTRON_STT_MODEL_KEY: &str = "nemotron-speech-streaming-en-0\.6b-int8"/,
   );
+  assert.match(
+    flowDictate,
+    /const WHISPER_STT_MODEL_KEY: &str = "whisper-tiny-ggml"/,
+  );
+  assert.match(
+    flowDictate,
+    /const WHISPER_STT_MODEL_FILE: &str = "models\/stt\/ggml-tiny\.bin"/,
+  );
   assert.match(flowDictate, /struct DictationSttModel/);
+  assert.match(flowDictate, /enum DictationSttRuntime/);
+  assert.match(flowDictate, /SherpaTransducer\s*\{\s*root: &'static str\s*\}/);
+  assert.match(flowDictate, /WhisperCpp\s*\{\s*model_file: &'static str\s*\}/);
   assert.match(flowDictate, /fn selected_stt_model/);
   assert.match(flowDictate, /fn option_value/);
   assert.match(flowDictate, /--model/);
+  assert.match(flowDictate, /--whisper-bin/);
+  assert.match(flowDictate, /--whisper-model/);
   assert.match(flowDictate, /models\/stt\/parakeet-tdt-0\.6b-v3-int8/);
   assert.match(flowDictate, /models\/stt\/nemotron-speech-streaming-en-0\.6b-int8/);
+  assert.match(flowDictate, /models\/stt\/ggml-tiny\.bin/);
   assert.match(flowDictate, /Unsupported STT model/);
+  assert.match(flowDictate, /supported_stt_models/);
   assert.match(flowDictate, /load_sherpa_transducer/);
-  assert.match(flowDictate, /selected_model\.root/);
+  assert.match(flowDictate, /load_stt_backend/);
+  assert.match(flowDictate, /transcribe_with_whisper_cpp/);
+  assert.match(flowDictate, /resolve_whisper_cpp_binary/);
+  assert.match(flowDictate, /FLOW_WHISPER_CPP_BINARY/);
+  assert.match(flowDictate, /FLOW_WHISPER_MODEL/);
+  assert.match(flowDictate, /DictationSttRuntime::WhisperCpp/);
+  assert.doesNotMatch(flowDictate, /let mut recognizer = load_sherpa_transducer\(selected_model\)\?/);
   assert.match(flowDictate, /selected_model\.label/);
   assert.match(flowDictationHostReadme, /--model parakeet-tdt-0\.6b-v3-int8/);
   assert.match(flowDictationHostReadme, /--model nemotron-speech-streaming-en-0\.6b-int8/);
-  assert.match(flowDictationHostReadme, /focused host supports Sherpa Parakeet and Nemotron/);
-  assert.doesNotMatch(flowDictationHostReadme, /Whisper.*focused host/i);
+  assert.match(flowDictationHostReadme, new RegExp(`--model ${flowWhisperModelKey}`));
+  assert.match(flowDictationHostReadme, /focused host supports Sherpa Parakeet, Sherpa Nemotron, and whisper\.cpp Whisper/);
+  assert.match(flowDictationHostReadme, /FLOW_WHISPER_CPP_BINARY/);
+  assert.match(flowDictationHostReadme, /FLOW_WHISPER_MODEL/);
 });
 
 test("voice text paths use the real message editor contents and insert APIs", () => {
@@ -489,15 +528,19 @@ test("voice handoff keeps runtime readiness honest", () => {
   assert.match(voiceHandoff, /flow-dictate --file <wav> --model <key>/);
   assert.match(voiceHandoff, /Parakeet as the default/);
   assert.match(voiceHandoff, /Nemotron as an explicit opt-in/);
+  assert.match(voiceHandoff, /Whisper Tiny GGML as an explicit opt-in/);
   assert.match(voiceHandoff, /DX_FLOW_STT_MODEL/);
   assert.match(voiceHandoff, /FLOW_STT_MODEL/);
   assert.match(voiceHandoff, /unsupported values fail closed/);
   assert.match(voiceHandoff, /Keyless Whisper source exists/);
   assert.match(voiceHandoff, /keyless-whisper/);
-  assert.match(voiceHandoff, /focused `flow-dictate` host has not imported that Candle Whisper path yet/);
+  assert.match(voiceHandoff, /focused `flow-dictate` host now exposes `whisper-tiny-ggml` through a whisper\.cpp subprocess boundary/);
+  assert.match(voiceHandoff, /FLOW_WHISPER_CPP_BINARY/);
+  assert.match(voiceHandoff, /FLOW_WHISPER_MODEL/);
   assert.match(voiceHandoff, /silent-WAV Parakeet smoke test passed/);
   assert.match(voiceHandoff, /Nemotron smoke proof/);
-  assert.match(voiceHandoff, /live Zed microphone proof still needs the governed validation window/);
+  assert.match(voiceHandoff, /Whisper smoke proof/);
+  assert.match(voiceHandoff, /live Zed microphone proof still needs? the governed validation window/);
   assert.match(voiceHandoff, /G:\\Flow\\data\\models\\tts\\kokoro_82m/);
   assert.match(voiceHandoff, /config\.json/);
   assert.match(voiceHandoff, /kokoro-v1_0\.pth/);
@@ -506,7 +549,7 @@ test("voice handoff keeps runtime readiness honest", () => {
   assert.match(voiceHandoff, /Live audible playback proof is still deferred/);
   assert.doesNotMatch(
     voiceHandoff,
-    /runtime-green|production-ready|launch-ready|Nemotron live proof passed/i,
+    /runtime-green|production-ready|launch-ready|Nemotron live proof passed|Whisper live proof passed|Whisper smoke test passed/i,
   );
 });
 
