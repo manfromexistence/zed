@@ -1,6 +1,6 @@
 use gpui::{
     AnyElement, App, EntityId, InteractiveElement, IntoElement, ScrollHandle, SharedString,
-    StatefulInteractiveElement, WeakEntity, Window,
+    WeakEntity, Window,
 };
 use ui::{WithScrollbar, prelude::*};
 use workspace::{Workspace, dock::side_panel_header_controls};
