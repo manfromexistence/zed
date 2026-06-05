@@ -104,6 +104,7 @@ pub(super) struct DxForgeSourceRow {
     pub(super) label: String,
     pub(super) detail: String,
     pub(super) path: String,
+    pub(super) open_path: String,
     pub(super) receipts: Vec<DxForgeReceiptDrilldown>,
     pub(super) warnings: Vec<String>,
 }
@@ -115,6 +116,7 @@ pub(super) struct DxForgeRemoteProvider {
     pub(super) label: String,
     pub(super) remote_name: String,
     pub(super) registry_path: String,
+    pub(super) registry_open_path: String,
     pub(super) detail: String,
     pub(super) enabled: bool,
     pub(super) primary: bool,
@@ -242,6 +244,7 @@ fn source_row(source: &DxSourceItem) -> DxForgeSourceRow {
         label: source.label.clone(),
         detail: source.detail.clone(),
         path: source.path.clone(),
+        open_path: source.open_path.clone(),
         receipts: source
             .receipt_drilldowns
             .iter()

@@ -74,6 +74,14 @@ pub(super) const PROVIDERS: &[ForgeProvider] = &[
         source_slug: "youtube",
     },
     ForgeProvider {
+        id: "soundbox",
+        label: "SoundBox",
+        icon: IconName::DxForgeProviderSoundbox,
+        group: ProviderGroup::Media,
+        source_pack: "svgl",
+        source_slug: "soundcloud-logo",
+    },
+    ForgeProvider {
         id: "soundcloud",
         label: "SoundCloud",
         icon: IconName::DxForgeProviderSoundcloud,

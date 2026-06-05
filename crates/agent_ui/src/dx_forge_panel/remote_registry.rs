@@ -114,7 +114,14 @@ fn remote_registry_row(
     let kinds = kind_counts(&remotes);
     let warnings = registry_warnings(&remotes, primary.as_deref(), disabled_count);
     let path_label = display_path(workspace_root, path);
-    let providers = remote_providers(&remotes, primary.as_deref(), &path_label, MAX_REMOTE_ROWS);
+    let registry_open_path = path.display().to_string();
+    let providers = remote_providers(
+        &remotes,
+        primary.as_deref(),
+        &path_label,
+        &registry_open_path,
+        MAX_REMOTE_ROWS,
+    );
     let primary_detail = primary
         .as_deref()
         .map(|name| format!("primary {name}"))
@@ -133,6 +140,7 @@ fn remote_registry_row(
                 auth_backend_count,
             ),
             path: path_label,
+            open_path: registry_open_path.clone(),
             receipts: vec![
                 DxForgeReceiptDrilldown {
                     label: "Remote kinds".to_string(),
@@ -154,6 +162,7 @@ fn unreadable_registry_row(workspace_root: &str, path: &Path) -> DxForgeSourceRo
         label: "Forge remotes".to_string(),
         detail: "remote registry unreadable or above bounded read limit".to_string(),
         path: display_path(workspace_root, path),
+        open_path: path.display().to_string(),
         receipts: vec![DxForgeReceiptDrilldown {
             label: "Read model".to_string(),
             detail: "registry file only; live remote health unchecked".to_string(),

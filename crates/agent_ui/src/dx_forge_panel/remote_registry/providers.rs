@@ -6,6 +6,7 @@ pub(super) fn remote_providers(
     remotes: &[&Value],
     primary: Option<&str>,
     registry_path: &str,
+    registry_open_path: &str,
     limit: usize,
 ) -> Vec<DxForgeRemoteProvider> {
     remotes
@@ -24,6 +25,7 @@ pub(super) fn remote_providers(
                 label: label.to_string(),
                 remote_name: remote_name.clone(),
                 registry_path: registry_path.to_string(),
+                registry_open_path: registry_open_path.to_string(),
                 detail: provider_detail(&kind, mapping_count, has_auth_backend),
                 enabled,
                 primary: primary == Some(remote_name.as_str()),
@@ -42,7 +44,8 @@ pub(super) fn catalog_provider_info(
         "gdrive" | "googledrive" => Some(("drive", "storage", "Google Drive")),
         "dropbox" => Some(("dropbox", "storage", "Dropbox")),
         "youtube" => Some(("youtube", "media", "YouTube")),
-        "soundcloud" | "soundbox" => Some(("soundcloud", "media", "SoundCloud")),
+        "soundcloud" => Some(("soundcloud", "media", "SoundCloud")),
+        "soundbox" => Some(("soundbox", "media", "SoundBox")),
         _ => None,
     }
 }

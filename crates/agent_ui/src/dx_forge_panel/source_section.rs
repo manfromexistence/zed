@@ -3,7 +3,7 @@ use ui::{IconName, prelude::*};
 use workspace::Workspace;
 
 use super::{
-    controls::open_path_button,
+    controls::open_exact_abs_path_button,
     rows::{empty_row, section_header, source_row},
     snapshot::{DxForgePanelSnapshot, DxForgeSourceRow},
 };
@@ -45,11 +45,10 @@ pub(super) fn source_section(
                 SharedString::from(format!("{}-{ix}", section.row_id)),
                 section.icon,
                 row,
-                Some(open_path_button(
+                Some(open_exact_abs_path_button(
                     format!("{}-{ix}", section.open_id),
                     section.open_tooltip,
-                    &row.path,
-                    &snapshot.workspace_roots,
+                    &row.open_path,
                     workspace,
                 )),
                 cx,

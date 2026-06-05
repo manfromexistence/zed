@@ -189,6 +189,7 @@ fn machine_cache_row(
             metadata
         ),
         path: display_path(workspace_root, dx_root),
+        open_path: dx_root.display().to_string(),
         receipts: vec![DxForgeReceiptDrilldown {
             label: "Machine family".to_string(),
             detail: family,

@@ -72,6 +72,7 @@ fn package_status_row(workspace_root: &str, path: &Path, value: &Value) -> DxFor
         label: package_status_label(&status),
         detail: status_detail(&status, package_count, current_receipts),
         path: display_path(workspace_root, path),
+        open_path: path.display().to_string(),
         receipts: vec![DxForgeReceiptDrilldown {
             label: "Read model".to_string(),
             detail: format!("{status} package-status; {node_modules}; {evidence_detail}"),
@@ -94,6 +95,7 @@ fn unreadable_package_status_row(workspace_root: &str, path: &Path) -> DxForgeSo
         label: "Package status unreadable".to_string(),
         detail: warning.clone(),
         path: display_path(workspace_root, path),
+        open_path: path.display().to_string(),
         receipts: vec![DxForgeReceiptDrilldown {
             label: "Read model".to_string(),
             detail: warning.clone(),
@@ -131,6 +133,7 @@ fn forge_package_status_row(workspace_root: &str, path: &Path, value: &Value) ->
             },
         ),
         path: display_path(workspace_root, path),
+        open_path: path.display().to_string(),
         receipts: vec![DxForgeReceiptDrilldown {
             label: "Forge receipt".to_string(),
             detail:

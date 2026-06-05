@@ -8,7 +8,7 @@ use super::{
     tooltips::{provider_tooltip_meta, remote_target_tooltip},
 };
 use crate::dx_forge_panel::{
-    controls::{open_workspace_path, workspace_path},
+    controls::{exact_abs_path, open_exact_abs_path},
     snapshot::DxForgePanelSnapshot,
 };
 
@@ -64,9 +64,7 @@ fn provider_target_button(
 
     let state = provider_target_state(provider, snapshot);
     let target_path = target_path_for_provider(provider, snapshot).map(String::from);
-    let local_path = target_path
-        .as_deref()
-        .and_then(|path| workspace_path(path, &snapshot.workspace_roots));
+    let local_path = target_open_path_for_provider(provider, snapshot).and_then(exact_abs_path);
     let enabled = local_path.as_ref().is_some_and(|path| path.exists());
     let title = SharedString::from(provider.label);
     let meta = provider_tooltip_meta(provider, snapshot, &state, target_path.as_deref(), enabled);
@@ -82,7 +80,7 @@ fn provider_target_button(
             let workspace = workspace.clone();
             move |_, window, cx| {
                 if let Some(path) = local_path.clone().filter(|path| path.exists()) {
-                    open_workspace_path(workspace.clone(), path, window, cx);
+                    open_exact_abs_path(workspace.clone(), path, window, cx);
                 }
             }
         })
@@ -97,9 +95,7 @@ fn remote_lane_row(
 ) -> AnyElement {
     let state = remote_target_state(group, snapshot);
     let target_path = target_path_for_group(group, snapshot).map(String::from);
-    let local_path = target_path
-        .as_deref()
-        .and_then(|path| workspace_path(path, &snapshot.workspace_roots));
+    let local_path = target_open_path_for_group(group, snapshot).and_then(exact_abs_path);
     let enabled = local_path.as_ref().is_some_and(|path| path.exists());
     let tooltip_title = SharedString::from(group.title());
     let tooltip_meta = remote_target_tooltip(group, &state, target_path.as_deref(), enabled);
@@ -168,7 +164,7 @@ fn remote_lane_row(
                 let workspace = workspace.clone();
                 move |_, window, cx| {
                     if let Some(path) = local_path.clone().filter(|path| path.exists()) {
-                        open_workspace_path(workspace.clone(), path, window, cx);
+                        open_exact_abs_path(workspace.clone(), path, window, cx);
                     }
                 }
             }),
@@ -216,6 +212,23 @@ fn target_path_for_group<'a>(
     }
 }
 
+fn target_open_path_for_group<'a>(
+    group: ProviderGroup,
+    snapshot: &'a DxForgePanelSnapshot,
+) -> Option<&'a str> {
+    match group {
+        ProviderGroup::Code => snapshot.history_root_path.as_deref(),
+        ProviderGroup::Storage => snapshot
+            .restore_previews
+            .first()
+            .map(|preview| preview.open_path.as_str()),
+        ProviderGroup::Media => snapshot
+            .media_outputs
+            .first()
+            .map(|output| output.open_path.as_str()),
+    }
+}
+
 fn target_path_for_provider<'a>(
     provider: &ForgeProvider,
     snapshot: &'a DxForgePanelSnapshot,
@@ -223,6 +236,15 @@ fn target_path_for_provider<'a>(
     snapshot
         .remote_provider_for(provider.id)
         .map(|remote| remote.registry_path.as_str())
+}
+
+fn target_open_path_for_provider<'a>(
+    provider: &ForgeProvider,
+    snapshot: &'a DxForgePanelSnapshot,
+) -> Option<&'a str> {
+    snapshot
+        .remote_provider_for(provider.id)
+        .map(|remote| remote.registry_open_path.as_str())
 }
 
 fn provider_button_style(state: &RemoteTargetState) -> ButtonStyle {

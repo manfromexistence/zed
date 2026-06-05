@@ -232,7 +232,7 @@ test("Forge panel reads package-status without runtime overclaims", () => {
   assert.match(packageStatus, /package_status_evidence_detail\(/);
   assert.match(packageStatus, /status_detail\(/);
   const statusDetailBody =
-    packageStatus.match(/fn status_detail\([\s\S]*?\n}\n\nfn package_status_label/)?.[0] ?? "";
+    packageStatus.match(/fn status_detail\([\s\S]*?\r?\n}\r?\n\r?\nfn package_status_label/)?.[0] ?? "";
   assert.match(
     statusDetailBody,
     /\{package_count\} packages · \{status\} · \{current_receipts\} receipt hashes current/,
@@ -343,6 +343,8 @@ test("Forge panel reads Forge remote registry and makes provider targets concret
   assert.match(snapshot, /remote_registry_snapshot\(workspace_roots\)/);
   assert.match(snapshot, /pub\(super\) remote_registries: Vec<DxForgeSourceRow>/);
   assert.match(snapshot, /pub\(super\) remote_providers: Vec<DxForgeRemoteProvider>/);
+  assert.match(snapshot, /pub\(super\) open_path: String/);
+  assert.match(snapshot, /pub\(super\) registry_open_path: String/);
   assert.match(snapshot, /visible_remote_registry_warning_count/);
   assert.match(snapshot, /REMOTE_REGISTRY_LABEL/);
   assert.match(panel, /invalidate_remote_registry_snapshot_cache\(\)/);
@@ -370,6 +372,15 @@ test("Forge panel reads Forge remote registry and makes provider targets concret
   assert.match(remoteRegistrySources, /branch_mapping_count/);
   assert.match(remoteRegistrySources, /auth_backend_count/);
   assert.match(remoteRegistrySources, /registry file only; live remote health unchecked/);
+  assert.match(remoteRegistry, /let registry_open_path = path\.display\(\)\.to_string\(\)/);
+  assert.match(remoteRegistry, /open_path: registry_open_path\.clone\(\)/);
+  assert.match(
+    remoteRegistry,
+    /remote_providers\([\s\S]*&remotes,[\s\S]*primary\.as_deref\(\),[\s\S]*&path_label,[\s\S]*&registry_open_path,[\s\S]*MAX_REMOTE_ROWS,[\s\S]*\)/,
+  );
+  assert.match(remoteRegistryProviders, /registry_open_path: &str/);
+  assert.match(remoteRegistryProviders, /registry_open_path: registry_open_path\.to_string\(\)/);
+  assert.match(sourceSection, /&row\.open_path/);
 
   for (const kind of [
     "GitHub",
@@ -386,7 +397,11 @@ test("Forge panel reads Forge remote registry and makes provider targets concret
 
   assert.match(
     remoteRegistryProviders,
-    /"soundcloud" \| "soundbox" => Some\(\("soundcloud", "media", "SoundCloud"\)\)/,
+    /"soundcloud" => Some\(\("soundcloud", "media", "SoundCloud"\)\)/,
+  );
+  assert.match(
+    remoteRegistryProviders,
+    /"soundbox" => Some\(\("soundbox", "media", "SoundBox"\)\)/,
   );
   assert.match(
     remoteRegistryProviders,
@@ -407,6 +422,8 @@ test("Forge panel reads Forge remote registry and makes provider targets concret
   assert.match(providersState, /configured_provider_count_for_group\(group\.key\(\)\)/);
   assert.match(providersView, /provider_target_state\(provider, snapshot\)/);
   assert.match(providersView, /target_path_for_provider\(provider, snapshot\)/);
+  assert.match(providersView, /target_open_path_for_provider\(provider, snapshot\)/);
+  assert.match(providersView, /remote\.registry_open_path\.as_str\(\)/);
   assert.match(providers, /Configured remote:/);
   assert.match(providers, /Registry:/);
   assert.match(remoteRegistrySources, /catalog_provider_info/);
@@ -521,6 +538,14 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
       "youtube",
     ],
     [
+      "SoundBox",
+      "DxForgeProviderSoundbox",
+      "dx_forge_provider_soundbox",
+      "ProviderGroup::Media",
+      "svgl",
+      "soundcloud-logo",
+    ],
+    [
       "SoundCloud",
       "DxForgeProviderSoundcloud",
       "dx_forge_provider_soundcloud",
@@ -575,8 +600,7 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.match(providersView, /ButtonStyle::Subtle/);
   assert.match(providersView, /ButtonStyle::Tinted\(TintColor::Warning\)/);
   assert.match(providersView, /ButtonStyle::Tinted\(TintColor::Success\)/);
-  assert.match(providersView, /workspace_path\(/);
-  assert.match(providersView, /open_workspace_path\(/);
+  assert.match(providersView, /open_exact_abs_path\(/);
   assert.match(providersState, /fn code_target_state/);
   assert.match(providersState, /fn storage_target_state/);
   assert.match(providersState, /fn media_target_state/);
@@ -690,4 +714,40 @@ test("Forge panel source surface is closed against UI slop and proof overclaims"
   assert.match(allForgePanelSources, /source-only receipt evidence/);
   assert.match(allForgePanelSources, /receipt file only; live checks not executed/);
   assert.match(allForgePanelSources, /live remote health unchecked/);
+});
+
+test("Forge panel opens exact source-owned paths in multi-root workspaces", () => {
+  const openPathButtonBody =
+    controls.match(/pub\(super\) fn open_exact_abs_path_button\([\s\S]*?\n}\n\npub\(super\) fn exact_abs_path/)?.[0] ?? "";
+
+  assert.match(snapshot, /pub\(super\) open_path: String/);
+  assert.match(sourceSets, /pub open_path: String/);
+  assert.match(snapshot, /open_path:\s*source\.open_path\.clone\(\)/);
+  assert.doesNotMatch(snapshot, /open_path:\s*source\.path\.clone\(\)/);
+
+  assert.match(sourceSection, /open_exact_abs_path_button\([\s\S]*&row\.open_path/);
+  assert.doesNotMatch(sourceSection, /open_exact_abs_path_button\([\s\S]*&row\.path/);
+  assert.doesNotMatch(sourceSection, /open_exact_abs_path_button\([\s\S]*&snapshot\.workspace_roots/);
+
+  assert.equal(
+    (packageStatus.match(/open_path:\s*path\.display\(\)\.to_string\(\)/g) ?? []).length,
+    3,
+  );
+  assert.match(machineCache, /open_path:\s*dx_root\.display\(\)\.to_string\(\)/);
+  assert.match(remoteRegistry, /open_path:\s*registry_open_path\.clone\(\)/);
+  assert.match(remoteRegistryProviders, /registry_open_path:\s*registry_open_path\.to_string\(\)/);
+
+  assert.match(providersView, /target_open_path_for_provider\(provider, snapshot\)/);
+  assert.match(providersView, /target_open_path_for_group\(group, snapshot\)/);
+  assert.match(providersView, /remote\.registry_open_path\.as_str\(\)/);
+  assert.doesNotMatch(providersView, /workspace_path\([\s\S]*snapshot\.workspace_roots/);
+  assert.match(controls, /pub\(super\) fn exact_abs_path/);
+  assert.match(controls, /pub\(super\) fn open_exact_abs_path/);
+  assert.doesNotMatch(controls, /pub\(super\) fn open_workspace_path/);
+
+  assert.doesNotMatch(openPathButtonBody, /\bworkspace_roots\b|workspace_path\(/);
+  assert.doesNotMatch(
+    controls,
+    /for root in workspace_roots[\s\S]*PathBuf::from\(root\)\.join|workspace_roots\s*\.\s*first\(\)[\s\S]*join/,
+  );
 });

@@ -107,6 +107,7 @@ pub enum IconName {
     DxForgeProviderDropbox,
     DxForgeProviderGithub,
     DxForgeProviderGitlab,
+    DxForgeProviderSoundbox,
     DxForgeProviderSoundcloud,
     DxForgeProviderYoutube,
     EditorAtom,

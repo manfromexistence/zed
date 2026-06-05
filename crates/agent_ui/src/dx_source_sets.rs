@@ -71,6 +71,7 @@ pub(crate) struct DxSourceItem {
     pub label: String,
     pub detail: String,
     pub path: String,
+    pub open_path: String,
     pub kind: DxSourceKind,
     pub receipt_drilldowns: Vec<DxSourceReceiptDrilldown>,
     pub proofs: Vec<String>,
@@ -132,6 +133,7 @@ fn workspace_root_set(workspace_roots: &[PathBuf]) -> DxSourceSet {
             label: display_name(root),
             detail: "Workspace root".to_string(),
             path: root.display().to_string(),
+            open_path: root.display().to_string(),
             kind: DxSourceKind::WorkspaceRoot,
             receipt_drilldowns: Vec::new(),
             proofs: Vec::new(),
@@ -223,6 +225,7 @@ fn metasearch_source_from_receipt(receipt: &ReceiptCandidate) -> Option<DxSource
         label: format!("Search: {query}"),
         detail: format!("{item_count} items - ~{estimated_tokens} tokens"),
         path: receipt.label.clone(),
+        open_path: receipt.path.display().to_string(),
         kind: DxSourceKind::MetasearchSourcePack,
         receipt_drilldowns: vec![receipt_drilldown("Source-pack receipt", receipt)],
         proofs: Vec::new(),
@@ -250,7 +253,9 @@ fn media_sources_from_receipt(receipt: &ReceiptCandidate) -> Vec<DxSourceItem> {
         .iter()
         .filter_map(|file| {
             let path = string_at(file, &["path"])?;
-            let exists = bool_at(file, &["exists"]).unwrap_or_else(|| Path::new(&path).is_file());
+            let open_path = receipt_declared_open_path(&path, receipt);
+            let exists =
+                bool_at(file, &["exists"]).unwrap_or_else(|| Path::new(&open_path).is_file());
             if !exists {
                 return None;
             }
@@ -280,6 +285,7 @@ fn media_sources_from_receipt(receipt: &ReceiptCandidate) -> Vec<DxSourceItem> {
                 label,
                 detail: format!("{media_kind} - {format} - {}", format_bytes(size_bytes)),
                 path,
+                open_path,
                 kind: DxSourceKind::MediaOutput,
                 receipt_drilldowns: vec![receipt_drilldown("Execution receipt", receipt)],
                 proofs,
@@ -331,6 +337,7 @@ fn reduced_context_from_receipt(receipt: &ReceiptCandidate) -> Option<DxSourceIt
         label: format!("Reduced context: {reducer}"),
         detail: format!("{source_count} sources - ~{tokens} tokens - {status}"),
         path: receipt.label.clone(),
+        open_path: receipt.path.display().to_string(),
         kind: DxSourceKind::ReducedContextReceipt,
         receipt_drilldowns: vec![receipt_drilldown("Reduced-context receipt", receipt)],
         proofs: Vec::new(),
@@ -379,12 +386,28 @@ fn forge_restore_source_from_receipt(receipt: &ReceiptCandidate) -> Option<DxSou
             "{restored_file_count} restored files - {} - {safety}",
             format_bytes(restored_bytes),
         ),
+        open_path: receipt_declared_open_path(&restore_root, receipt),
         path: restore_root,
         kind: DxSourceKind::ForgeRestorePreview,
         receipt_drilldowns: vec![receipt_drilldown("Restore receipt", receipt)],
         proofs: Vec::new(),
         warnings,
     })
+}
+
+fn receipt_declared_open_path(path: &str, receipt: &ReceiptCandidate) -> String {
+    let path = PathBuf::from(path);
+    if path.is_absolute() {
+        return path.display().to_string();
+    }
+
+    receipt
+        .path
+        .parent()
+        .unwrap_or_else(|| Path::new(""))
+        .join(path)
+        .display()
+        .to_string()
 }
 
 fn receipt_drilldown(label: &'static str, receipt: &ReceiptCandidate) -> DxSourceReceiptDrilldown {

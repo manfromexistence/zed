@@ -88,6 +88,7 @@ fn dx_editor_toolchain_source(root: &PathBuf) -> Option<DxSourceItem> {
             if is_www { "www" } else { "dx" },
         ),
         path: config_path.display().to_string(),
+        open_path: config_path.display().to_string(),
         kind: DxSourceKind::DxToolchainConfig,
         receipt_drilldowns: Vec::new(),
         proofs,

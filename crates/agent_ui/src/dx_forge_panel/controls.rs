@@ -11,7 +11,10 @@ pub(super) fn toolbar(
     panel: &WeakEntity<DxForgePanel>,
     cx: &App,
 ) -> AnyElement {
-    let history_path = snapshot.history_root_path.clone().map(PathBuf::from);
+    let history_path = snapshot
+        .history_root_path
+        .as_deref()
+        .and_then(exact_abs_path);
     let history_enabled = history_path.as_ref().is_some_and(|path| path.exists());
 
     h_flex()
@@ -39,7 +42,7 @@ pub(super) fn toolbar(
                     let workspace = workspace.clone();
                     move |_, window, cx| {
                         if let Some(path) = history_path.clone().filter(|path| path.exists()) {
-                            open_workspace_path(workspace.clone(), path, window, cx);
+                            open_exact_abs_path(workspace.clone(), path, window, cx);
                         }
                     }
                 }),
@@ -61,14 +64,13 @@ pub(super) fn toolbar(
         .into_any_element()
 }
 
-pub(super) fn open_path_button(
+pub(super) fn open_exact_abs_path_button(
     id: impl Into<ElementId>,
     tooltip: &'static str,
     path: &str,
-    workspace_roots: &[String],
     workspace: &WeakEntity<Workspace>,
 ) -> AnyElement {
-    let path = workspace_path(path, workspace_roots);
+    let path = exact_abs_path(path);
     let enabled = path.as_ref().is_some_and(|path| path.exists());
 
     IconButton::new(id, IconName::ArrowUpRight)
@@ -85,42 +87,29 @@ pub(super) fn open_path_button(
             let workspace = workspace.clone();
             move |_, window, cx| {
                 if let Some(path) = path.clone().filter(|path| path.exists()) {
-                    open_workspace_path(workspace.clone(), path, window, cx);
+                    open_exact_abs_path(workspace.clone(), path, window, cx);
                 }
             }
         })
         .into_any_element()
 }
 
-pub(super) fn workspace_path(path: &str, workspace_roots: &[String]) -> Option<PathBuf> {
+pub(super) fn exact_abs_path(path: &str) -> Option<PathBuf> {
     if path.is_empty() {
         return None;
     }
 
-    let direct = PathBuf::from(path);
-    if direct.is_absolute() {
-        return Some(direct);
-    }
-
-    for root in workspace_roots {
-        let candidate = PathBuf::from(root).join(&direct);
-        if candidate.exists() {
-            return Some(candidate);
-        }
-    }
-
-    workspace_roots
-        .first()
-        .map(|root| PathBuf::from(root).join(direct))
+    let path = PathBuf::from(path);
+    path.is_absolute().then_some(path)
 }
 
-pub(super) fn open_workspace_path(
+pub(super) fn open_exact_abs_path(
     workspace: WeakEntity<Workspace>,
     path: PathBuf,
     window: &mut Window,
     cx: &mut App,
 ) {
-    if !path.exists() {
+    if !path.is_absolute() || !path.exists() {
         return;
     }
 

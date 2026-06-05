@@ -5,7 +5,7 @@ use ui::{WithScrollbar, prelude::*};
 use workspace::{Workspace, dock::side_panel_header_controls};
 
 use super::{
-    controls::{open_path_button, toolbar},
+    controls::{open_exact_abs_path_button, toolbar},
     panel::DxForgePanel,
     providers::remote_target_strip,
     rows::{empty_row, receipt_row, section_header, status_strip},
@@ -192,11 +192,10 @@ fn receipt_section(
             stack = stack.child(receipt_row(
                 ix,
                 receipt,
-                Some(open_path_button(
+                Some(open_exact_abs_path_button(
                     format!("dx-forge-open-receipt-{ix}"),
                     "Open receipt",
                     &receipt.source_path,
-                    &snapshot.workspace_roots,
                     workspace,
                 )),
                 cx,
