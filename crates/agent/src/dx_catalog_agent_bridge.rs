@@ -265,6 +265,7 @@ impl DxCatalogAgentBridge {
         let projection = build_agent_picker_projection(
             catalog,
             AgentPickerProjectionOptions::new()
+                .with_max_models_per_group(1024)
                 .include_provider_groups(true)
                 .include_unselectable_models(true),
         );

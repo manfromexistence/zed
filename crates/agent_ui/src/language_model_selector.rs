@@ -23,13 +23,13 @@ type OnModelChanged = Arc<dyn Fn(Arc<dyn LanguageModel>, &mut App) + 'static>;
 type GetActiveModel = Arc<dyn Fn(&App) -> Option<ConfiguredModel> + 'static>;
 type OnToggleFavorite = Arc<dyn Fn(Arc<dyn LanguageModel>, bool, &mut App) + 'static>;
 
-const MAX_SELECTOR_VISIBLE_PROVIDERS: usize = 128;
+const MAX_SELECTOR_VISIBLE_PROVIDERS: usize = 256;
 const MAX_SELECTOR_FAVORITE_SETTINGS: usize = 1024;
 const MAX_SELECTOR_FAVORITE_MODELS: usize = 1024;
 const MAX_SELECTOR_RECOMMENDED_MODELS_PER_PROVIDER: usize = 256;
 const MAX_SELECTOR_MODELS_PER_PROVIDER: usize = 1024;
 const MAX_SELECTOR_RECOMMENDED_MODELS: usize = 1024;
-const MAX_SELECTOR_MODELS: usize = 4096;
+const MAX_SELECTOR_MODELS: usize = 8192;
 const MAX_SELECTOR_MATCH_CANDIDATES: usize = MAX_SELECTOR_MODELS;
 const MAX_SELECTOR_EXACT_MATCHES: usize = MAX_SELECTOR_RECOMMENDED_MODELS;
 const MAX_SELECTOR_FUZZY_MATCHES: usize = 100;

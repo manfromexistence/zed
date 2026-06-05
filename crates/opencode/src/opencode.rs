@@ -221,10 +221,8 @@ impl Model {
             | Self::DeepSeekV4FlashFree
             | Self::MimoV2_5Free
             | Self::MiniMaxM3Free
+            | Self::Nemotron3SuperFree
             | Self::Nemotron3UltraFree => &[OpenCodeSubscription::Free],
-
-            // Deprecated free models kept for settings deserialization only.
-            Self::Nemotron3SuperFree => &[],
 
             // Custom models get their subscription from settings, not from here
             Self::Custom { .. } => &[],

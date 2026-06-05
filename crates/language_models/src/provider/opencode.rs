@@ -1156,6 +1156,7 @@ mod tests {
                 "deepseek-v4-flash-free",
                 "mimo-v2.5-free",
                 "minimax-m3-free",
+                "nemotron-3-super-free",
                 "nemotron-3-ultra-free",
             ]
         );

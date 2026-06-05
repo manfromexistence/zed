@@ -7,7 +7,7 @@ const source = readFileSync("crates/agent_ui/src/model_selector.rs", "utf8");
 test("model selector declares named source caps for grouped model materialization", () => {
   assert.match(source, /const MAX_MODEL_SELECTOR_MODELS: usize = 8192;/);
   assert.match(source, /const MAX_MODEL_SELECTOR_GROUPS: usize = 256;/);
-  assert.match(source, /const MAX_MODEL_SELECTOR_MODELS_PER_GROUP: usize = 512;/);
+  assert.match(source, /const MAX_MODEL_SELECTOR_MODELS_PER_GROUP: usize = 1024;/);
   assert.match(source, /const MAX_MODEL_SELECTOR_PICKER_ENTRIES: usize = 10_000;/);
   assert.match(source, /const MAX_MODEL_SELECTOR_FUZZY_CANDIDATES: usize = 8192;/);
   assert.match(source, /const MAX_MODEL_SELECTOR_FUZZY_MATCHES: usize = 100;/);
@@ -27,6 +27,11 @@ test("model selector caps can cover the copied dx provider archive", () => {
   assert.ok(groupCap >= 184, "must not hide copied DX provider groups");
   assert.ok(modelCap >= 6557, "must not hide copied DX provider models");
   assert.ok(fuzzyCap >= modelCap, "fuzzy search must cover the rendered model budget");
+  assert.match(
+    source,
+    /const MAX_MODEL_SELECTOR_MODELS_PER_GROUP: usize = 1024;/,
+    "must cover copied DX providers with more than 512 models",
+  );
 });
 
 test("favorites and picker rows are bounded before render materialization", () => {

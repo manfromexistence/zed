@@ -793,6 +793,25 @@ mod tests {
     }
 
     #[test]
+    fn reads_copied_g_drive_dx_providers_catalog_snapshot_counts_when_available() {
+        let path = std::path::PathBuf::from(r"G:\Dx\providers\data\providers.rkyv");
+        if !path.is_file() {
+            return;
+        }
+
+        let output = read_providers_catalog_file(
+            &path,
+            ProvidersCatalogReaderOptions::new().with_source_id("copied-g-drive-dx-providers"),
+        )
+        .expect("copied G-drive providers catalog should load");
+
+        assert_eq!(output.report.provider_count, 184);
+        assert_eq!(output.report.model_count, 6_557);
+        assert_eq!(output.input.providers.len(), 184);
+        assert_eq!(output.input.models.len(), 6_557);
+    }
+
+    #[test]
     fn providers_catalog_file_read_rejects_oversized_archive_before_mmap() {
         let path = unique_fixture_path("oversized-providers-catalog.rkyv");
         fs::write(&path, [0_u8, 1]).expect("fixture should write");

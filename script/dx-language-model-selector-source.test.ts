@@ -50,6 +50,18 @@ test("language model selector declares named candidate and render caps", () => {
   assert.match(source, /const MAX_SELECTOR_RENDER_ENTRIES: usize =/);
 });
 
+test("language model selector caps can cover the copied dx provider archive", () => {
+  const providerCap = Number(
+    /const MAX_SELECTOR_VISIBLE_PROVIDERS: usize = (\d+);/.exec(source)?.[1],
+  );
+  const modelCap = Number(
+    /const MAX_SELECTOR_MODELS: usize = (\d+);/.exec(source)?.[1],
+  );
+
+  assert.ok(providerCap >= 184, "must not hide copied DX provider groups");
+  assert.ok(modelCap >= 6557, "must not hide copied DX provider models");
+});
+
 test("all model discovery caps providers, favorites, and provider models before collection", () => {
   const allModels = sliceBetween(
     source,
