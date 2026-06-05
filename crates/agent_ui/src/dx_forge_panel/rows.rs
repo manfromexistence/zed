@@ -1,4 +1,4 @@
-use gpui::{AnyElement, App, InteractiveElement, SharedString, Stateful, px};
+use gpui::{AnyElement, App, Div, InteractiveElement, SharedString, Stateful, px};
 use ui::{IconName, Tooltip, prelude::*};
 
 use super::snapshot::{DxForgePanelState, DxForgeReceiptRow, DxForgeSourceRow};
