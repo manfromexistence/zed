@@ -59,6 +59,18 @@ const PROVIDER_NAME: LanguageModelProviderName = LanguageModelProviderName::new(
 const API_KEY_ENV_VAR_NAME: &str = "OPENCODE_API_KEY";
 static API_KEY_ENV_VAR: LazyLock<EnvVar> = env_var!(API_KEY_ENV_VAR_NAME);
 
+fn opencode_language_model_id(model: &opencode::Model) -> LanguageModelId {
+    LanguageModelId::from(model.id().to_string())
+}
+
+fn opencode_model_registry_key(model: &opencode::Model) -> String {
+    model.id().to_string()
+}
+
+fn opencode_external_model_id(model: &opencode::Model) -> String {
+    format!("opencode/{}", model.id())
+}
+
 #[derive(Default, Clone, Debug, PartialEq)]
 pub struct OpenCodeSettings {
     pub api_url: String,
@@ -140,9 +152,8 @@ impl OpenCodeLanguageModelProvider {
         model: opencode::Model,
         subscription: OpenCodeSubscription,
     ) -> Arc<dyn LanguageModel> {
-        let id_str = format!("{}/{}", subscription.id_prefix(), model.id());
         Arc::new(OpenCodeLanguageModel {
-            id: LanguageModelId::from(id_str),
+            id: opencode_language_model_id(&model),
             model,
             subscription,
             state: self.state.clone(),
@@ -250,7 +261,7 @@ impl LanguageModelProvider for OpenCodeLanguageModelProvider {
             }
             for &subscription in model.available_subscriptions() {
                 if Self::subscription_enabled(subscription, cx) {
-                    let key = format!("{}/{}", subscription.id_prefix(), model.id());
+                    let key = opencode_model_registry_key(&model);
                     models.insert(key, (model.clone(), subscription));
                 }
             }
@@ -282,7 +293,7 @@ impl LanguageModelProvider for OpenCodeLanguageModelProvider {
                 custom_model_api_url: model.custom_model_api_url.clone(),
                 interleaved_reasoning: model.interleaved_reasoning,
             };
-            let key = format!("{}/{}", subscription.id_prefix(), model.name);
+            let key = opencode_model_registry_key(&custom_model);
             models.insert(key, (custom_model, subscription));
         }
 
@@ -594,11 +605,7 @@ impl LanguageModel for OpenCodeLanguageModel {
     }
 
     fn telemetry_id(&self) -> String {
-        format!(
-            "opencode/{}/{}",
-            self.subscription.id_prefix(),
-            self.model.id()
-        )
+        opencode_external_model_id(&self.model)
     }
 
     fn max_token_count(&self) -> u64 {
@@ -942,5 +949,48 @@ impl Render for ConfigurationView {
                 .children(no_subscriptions_warning)
                 .into_any()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn opencode_free_model_ids_are_bare_for_registry_composition() {
+        let model = opencode::Model::default_free();
+
+        assert_eq!(
+            opencode_language_model_id(&model),
+            LanguageModelId::from("big-pickle".to_string())
+        );
+        assert_eq!(opencode_model_registry_key(&model), "big-pickle");
+    }
+
+    #[test]
+    fn opencode_external_model_id_omits_subscription_prefix() {
+        let model = opencode::Model::default_free_fast();
+
+        assert_eq!(
+            opencode_external_model_id(&model),
+            "opencode/nemotron-3-super-free"
+        );
+    }
+
+    #[test]
+    fn opencode_shared_model_registry_key_keeps_one_entry_preferring_later_subscription() {
+        let model = opencode::Model::KimiK2_5;
+        let mut models = BTreeMap::default();
+
+        for &subscription in model.available_subscriptions() {
+            models.insert(opencode_model_registry_key(&model), subscription);
+        }
+
+        assert_eq!(models.len(), 1);
+        assert_eq!(
+            models.get(model.id()),
+            Some(&OpenCodeSubscription::Go),
+            "Zen is inserted first and Go should replace it for shared model ids"
+        );
     }
 }
