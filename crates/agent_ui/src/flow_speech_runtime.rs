@@ -302,8 +302,16 @@ impl KokoroTtsRuntime {
         apply_tts_process_env(&mut command, &self.data_root);
         apply_windows_process_flags(&mut command);
 
-        let output = run_command_with_timeout(command, TTS_COMMAND_TIMEOUT, "Friday Kokoro TTS")?;
+        let output =
+            match run_command_with_timeout(command, TTS_COMMAND_TIMEOUT, "Friday Kokoro TTS") {
+                Ok(output) => output,
+                Err(error) => {
+                    let _ = fs::remove_file(&output_path);
+                    return Err(error);
+                }
+            };
         if !output.status.success() {
+            let _ = fs::remove_file(&output_path);
             return Err(command_error("Friday Kokoro TTS failed", output));
         }
         if !output_path.exists() {
@@ -312,10 +320,19 @@ impl KokoroTtsRuntime {
                 output_path.display()
             ));
         }
-        let audio_size = fs::metadata(&output_path)
-            .with_context(|| format!("Could not inspect {}", output_path.display()))?
-            .len();
+        let audio_size = match fs::metadata(&output_path) {
+            Ok(metadata) => metadata.len(),
+            Err(error) => {
+                let _ = fs::remove_file(&output_path);
+                return Err(anyhow!(
+                    "Could not inspect {}: {}",
+                    output_path.display(),
+                    error
+                ));
+            }
+        };
         if audio_size <= 44 {
+            let _ = fs::remove_file(&output_path);
             return Err(anyhow!(
                 "Friday Kokoro TTS wrote an empty WAV file at {}",
                 output_path.display()

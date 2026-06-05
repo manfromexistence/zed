@@ -3837,6 +3837,12 @@ impl ThreadView {
                                     cx.listener(|this, _event, _window, cx| {
                                         this.cancel_flow_voice_recording(cx);
                                     }),
+                                    cx.listener(|this, _event, window, cx| {
+                                        this.start_flow_voice_recording(window, cx);
+                                    }),
+                                    cx.listener(|this, _event, _window, cx| {
+                                        this.dismiss_flow_voice_error(cx);
+                                    }),
                                     cx,
                                 ),
                                 |this, panel| this.child(panel),
@@ -4266,6 +4272,14 @@ impl ThreadView {
                 .set_error("Flow voice recording was not active");
         }
         cx.notify();
+    }
+
+    fn dismiss_flow_voice_error(&mut self, cx: &mut Context<Self>) {
+        if self.composer_voice_state.phase() == ComposerVoicePhase::Error {
+            self.composer_voice_state
+                .set_ready("Flow voice error dismissed");
+            cx.notify();
+        }
     }
 
     fn speak_composer_text(&mut self, _window: &mut Window, cx: &mut Context<Self>) {

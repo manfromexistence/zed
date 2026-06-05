@@ -64,6 +64,8 @@ test("composer renders separate mic and read-aloud buttons before send", () => {
   assert.match(voiceControls, /IconName::Mic/);
   assert.match(voiceControls, /IconName::AudioOn/);
   assert.match(voiceControls, /IconName::Stop/);
+  assert.match(voiceButtons, /let voice_disabled = state\.phase == ComposerVoicePhase::Transcribing/);
+  assert.match(voiceButtons, /\.disabled\(voice_disabled\)/);
   assert.match(voiceButtons, /agent-composer-voice-input[\s\S]+\.on_click\(on_voice_click\)/);
   assert.match(
     voiceButtons,
@@ -95,9 +97,15 @@ test("voice recording UI exposes real recording and transcription states", () =>
   assert.match(voiceControls, /agent-composer-discard-voice-recording/);
   assert.match(voiceControls, /Discard voice recording/);
   assert.match(voiceControls, /agent-composer-stop-kokoro-read-aloud/);
+  assert.match(voiceControls, /agent-composer-retry-voice-input/);
+  assert.match(voiceControls, /Retry Flow voice input/);
+  assert.match(voiceControls, /agent-composer-dismiss-voice-error/);
+  assert.match(voiceControls, /Dismiss Flow voice error/);
   assert.match(threadView, /flow_recording_session[\s\S]+telemetry\(\)/);
   assert.match(threadView, /fn cancel_flow_voice_recording/);
   assert.match(threadView, /Flow voice recording discarded/);
+  assert.match(threadView, /fn dismiss_flow_voice_error/);
+  assert.match(threadView, /Flow voice error dismissed/);
   assert.match(
     threadView,
     /ComposerVoicePhase::Speaking => self\.stop_flow_voice_playback\(cx\)/,
@@ -208,6 +216,7 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(synthesize, /TTS_COMMAND_TIMEOUT/);
   assert.match(synthesize, /Friday Kokoro TTS/);
   assert.match(synthesize, /fs::metadata\(&output_path\)/);
+  assert.match(synthesize, /fs::remove_file\(&output_path\)/);
   assert.match(runtime, /STT_COMMAND_TIMEOUT/);
   assert.match(runtime, /TTS_COMMAND_TIMEOUT/);
   assert.match(timeoutHelper, /stdin\(Stdio::null\(\)\)/);
@@ -333,11 +342,11 @@ test("voice handoff keeps runtime readiness honest", () => {
   const voiceHandoff = sourceSlice(
     dxHandoff,
     "## Agent Composer Flow Speech",
-    "- Source-only verification:",
+    "- Verification:",
   );
 
-  assert.match(voiceHandoff, /flow-dictate\.exe` is still not present/);
-  assert.match(voiceHandoff, /live STT proof still needs the governed artifact\/build step/);
+  assert.match(voiceHandoff, /flow-dictate\.exe` now exists/);
+  assert.match(voiceHandoff, /silent-WAV Parakeet smoke test passed/);
   assert.match(voiceHandoff, /G:\\Flow\\data\\models\\tts\\kokoro_82m/);
   assert.match(voiceHandoff, /config\.json/);
   assert.match(voiceHandoff, /kokoro-v1_0\.pth/);

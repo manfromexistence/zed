@@ -149,6 +149,7 @@ pub(super) fn render_voice_buttons(
             | ComposerVoicePhase::Transcribing
             | ComposerVoicePhase::Speaking
     );
+    let voice_disabled = state.phase == ComposerVoicePhase::Transcribing;
     let speak_color = if state.phase == ComposerVoicePhase::Speaking {
         Color::Accent
     } else {
@@ -159,6 +160,7 @@ pub(super) fn render_voice_buttons(
         IconButton::new("agent-composer-voice-input", voice_icon)
             .icon_size(IconSize::Small)
             .icon_color(voice_color)
+            .disabled(voice_disabled)
             .tooltip(Tooltip::text(state.voice_tooltip()))
             .on_click(on_voice_click)
             .into_any_element(),
@@ -176,6 +178,8 @@ pub(super) fn render_voice_recording_panel(
     state: &ComposerVoiceState,
     on_stop_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     on_cancel_recording_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+    on_retry_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+    on_dismiss_error_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     cx: &App,
 ) -> Option<AnyElement> {
     if state.phase == ComposerVoicePhase::Ready {
@@ -296,7 +300,33 @@ pub(super) fn render_voice_recording_panel(
                                     }),
                             )
                         },
-                    ),
+                    )
+                    .when(state.phase == ComposerVoicePhase::Error, |this| {
+                        this.child(
+                            h_flex()
+                                .gap_1()
+                                .child(
+                                    IconButton::new(
+                                        "agent-composer-retry-voice-input",
+                                        IconName::RotateCw,
+                                    )
+                                    .icon_size(IconSize::XSmall)
+                                    .icon_color(tone)
+                                    .tooltip(Tooltip::text("Retry Flow voice input"))
+                                    .on_click(on_retry_click),
+                                )
+                                .child(
+                                    IconButton::new(
+                                        "agent-composer-dismiss-voice-error",
+                                        IconName::Close,
+                                    )
+                                    .icon_size(IconSize::XSmall)
+                                    .icon_color(Color::Muted)
+                                    .tooltip(Tooltip::text("Dismiss Flow voice error"))
+                                    .on_click(on_dismiss_error_click),
+                                ),
+                        )
+                    }),
             )
             .when(state.phase == ComposerVoicePhase::Recording, |this| {
                 this.child(render_voice_level_meter(state.input_level, tone, cx))

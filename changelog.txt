@@ -14290,6 +14290,24 @@ PASSED:
 NOTES:
 - This remains source-only. It does not run Cargo, run `just run`, start a server, perform WebView runtime proof, enable Apply, or mutate source.
 
+[2026-06-06] - Flow Dictation Host And Voice UI Recovery
+
+CHANGED:
+- `G:\Dx\flow\tools\flow-dictation-host\Cargo.toml` now provides a focused Flow dictation-host package that builds the existing `src\bin\flow-dictate.rs` with only its direct STT/audio dependencies, avoiding the full Flow runtime dependency graph that filled `G:`.
+- `G:\Dx\flow\target\debug\flow-dictate.exe` now exists and is discoverable by Zed's existing Flow speech runtime search path.
+- `crates\agent_ui\src\conversation_view\voice_controls.rs` now disables the toolbar mic while Parakeet transcription is already running and adds inline retry/dismiss actions for Flow voice errors.
+- `crates\agent_ui\src\conversation_view\thread_view.rs` wires the voice error retry action to the real Flow recording path and the dismiss action to a ready-state reset.
+- `crates\agent_ui\src\flow_speech_runtime.rs` now removes partial Kokoro output WAVs when the child process fails, times out, or writes an empty/invalid output.
+- `script\dx-agent-voice-controls-source.test.ts`, `DX.md`, and `todo.txt` now reflect that the Flow dictation binary is built while live Zed microphone/playback proof remains deferred.
+
+PASSED:
+- `cargo build --manifest-path tools\flow-dictation-host\Cargo.toml --target-dir G:\Dx\flow\target -j1` in `G:\Dx\flow`
+- `G:\Dx\flow\target\debug\flow-dictate.exe --file <silent 16k WAV>` loaded Parakeet and returned the expected empty transcript.
+
+NOTES:
+- The first direct Flow package release build failed because `G:` was full while MSVC `lib.exe` was writing `onig_sys` output. The focused dictation-host package fixes the oversized build graph for this helper without deleting any build artifacts.
+- Zed `just run`, Cargo checks/builds, live Agent composer microphone proof, and live audible Kokoro playback proof remain deferred under the repo policy.
+
 [2026-06-06] - Agent Composer Voice Cleanup Hardening
 
 CHANGED:
