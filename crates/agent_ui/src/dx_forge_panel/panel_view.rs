@@ -1,5 +1,6 @@
 use gpui::{
-    AnyElement, App, EntityId, IntoElement, ScrollHandle, SharedString, WeakEntity, Window,
+    AnyElement, App, EntityId, InteractiveElement, IntoElement, ScrollHandle, SharedString,
+    StatefulInteractiveElement, WeakEntity, Window,
 };
 use ui::{WithScrollbar, prelude::*};
 use workspace::{Workspace, dock::side_panel_header_controls};
@@ -38,6 +39,7 @@ pub(super) fn render_panel(
         .child(remote_target_strip(snapshot, cx))
         .child(
             v_flex()
+                .id("dx-forge-panel-content")
                 .flex_1()
                 .size_full()
                 .min_h_0()

@@ -4,7 +4,7 @@ use gpui::{
     ScrollHandle, Styled, WeakEntity, Window, div, px,
 };
 use theme::ActiveTheme;
-use ui::prelude::*;
+use ui::{WithScrollbar, prelude::*};
 use workspace::{
     Workspace,
     dock::{DockPosition, Panel, PanelEvent},
