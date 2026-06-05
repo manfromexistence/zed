@@ -1,5 +1,5 @@
-use gpui::{AnyElement, App, Div, InteractiveElement, SharedString, Stateful, px};
-use ui::{IconName, Tooltip, prelude::*};
+use gpui::{AnyElement, App, InteractiveElement, SharedString, px};
+use ui::{IconName, ListItem, ListItemSpacing, Tooltip, prelude::*};
 
 use super::snapshot::{DxForgePanelState, DxForgeReceiptRow, DxForgeSourceRow};
 
@@ -86,7 +86,7 @@ pub(super) fn receipt_row(
     ix: usize,
     receipt: &DxForgeReceiptRow,
     open_button: Option<AnyElement>,
-    cx: &App,
+    _cx: &App,
 ) -> AnyElement {
     let color = if receipt.blocker_count > 0 {
         Color::Warning
@@ -104,7 +104,6 @@ pub(super) fn receipt_row(
         receipt.detail.clone(),
         receipt.label.clone(),
         open_button,
-        cx,
     )
     .tooltip(move |_, cx| Tooltip::with_meta(tooltip_label.clone(), None, tooltip_meta.clone(), cx))
     .into_any_element()
@@ -115,7 +114,7 @@ pub(super) fn source_row(
     icon: IconName,
     source: &DxForgeSourceRow,
     open_button: Option<AnyElement>,
-    cx: &App,
+    _cx: &App,
 ) -> AnyElement {
     let color = if source.warnings.is_empty() {
         Color::Muted
@@ -133,26 +132,19 @@ pub(super) fn source_row(
         source.detail.clone(),
         source.path.clone(),
         open_button,
-        cx,
     )
     .tooltip(move |_, cx| Tooltip::with_meta(tooltip_label.clone(), None, tooltip_meta.clone(), cx))
     .into_any_element()
 }
 
 pub(super) fn empty_row(id: &'static str, label: &'static str, _cx: &App) -> AnyElement {
-    h_flex()
-        .id(id)
-        .h(px(28.0))
-        .w_full()
-        .min_w_0()
-        .gap_1()
-        .pl_3()
-        .pr_1()
-        .border_1()
-        .border_r_2()
-        .child(
+    ListItem::new(id)
+        .inset(true)
+        .spacing(ListItemSpacing::Sparse)
+        .selectable(false)
+        .start_slot(
             Icon::new(IconName::Info)
-                .size(IconSize::XSmall)
+                .size(IconSize::Small)
                 .color(Color::Muted),
         )
         .child(
@@ -182,24 +174,14 @@ fn row_shell(
     detail: String,
     path: String,
     open_button: Option<AnyElement>,
-    cx: &App,
-) -> Stateful<Div> {
-    let mut row = h_flex()
-        .id(id)
-        .w_full()
-        .min_w_0()
-        .gap_1p5()
-        .pl_3()
-        .pr_1()
-        .py_1()
-        .border_1()
-        .border_r_2()
-        .bg(cx.theme().colors().ghost_element_background)
-        .hover(|style| style.bg(cx.theme().colors().ghost_element_hover))
-        .active(|style| style.bg(cx.theme().colors().ghost_element_active))
-        .child(Icon::new(icon).size(IconSize::Small).color(icon_color))
+) -> ListItem {
+    let mut row = ListItem::new(id)
+        .inset(true)
+        .spacing(ListItemSpacing::Sparse)
+        .start_slot(Icon::new(icon).size(IconSize::Small).color(icon_color))
         .child(
             v_flex()
+                .w_full()
                 .min_w_0()
                 .flex_1()
                 .gap_0p5()
@@ -219,7 +201,7 @@ fn row_shell(
         );
 
     if let Some(open_button) = open_button {
-        row = row.child(open_button);
+        row = row.end_slot(open_button);
     }
 
     row

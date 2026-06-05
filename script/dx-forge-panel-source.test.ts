@@ -465,13 +465,33 @@ test("Forge panel renders real receipt, restore, and media states", () => {
 });
 
 test("Forge panel uses Git-style controls instead of metric cards", () => {
+  const rowShellBody =
+    rows.match(/fn row_shell\([\s\S]*?\r?\n}\r?\n\r?\nfn receipt_tooltip/)?.[0] ?? "";
+  const emptyRowBody =
+    rows.match(/pub\(super\) fn empty_row\([\s\S]*?\r?\n}\r?\n\r?\npub\(super\) fn state_presentation/)?.[0] ?? "";
+  const evidenceRowBodies = `${rowShellBody}\n${emptyRowBody}`;
+
   assert.match(moduleRoot, /mod controls;/);
   assert.match(panelView, /toolbar\(snapshot, workspace, panel, cx\)/);
   assert.match(panelView, /section_header\(/);
   assert.match(rows, /pub\(super\) fn section_header/);
-  assert.match(rows, /ghost_element_background/);
+  assert.match(rows, /ListItem/);
+  assert.match(rows, /ListItemSpacing/);
+  assert.match(rowShellBody, /\)\s*->\s*ListItem\s*\{/);
+  assert.match(rowShellBody, /ListItem::new\(id\)/);
+  assert.match(rowShellBody, /\.inset\(true\)/);
+  assert.match(rowShellBody, /\.spacing\(ListItemSpacing::Sparse\)/);
+  assert.match(rowShellBody, /\.start_slot\(/);
+  assert.match(rowShellBody, /\.end_slot\(open_button\)/);
+  assert.match(emptyRowBody, /ListItem::new\(id\)/);
+  assert.match(emptyRowBody, /\.inset\(true\)/);
+  assert.match(emptyRowBody, /\.spacing\(ListItemSpacing::Sparse\)/);
+  assert.match(emptyRowBody, /\.selectable\(false\)/);
+  assert.doesNotMatch(
+    evidenceRowBodies,
+    /\bh_flex\(\)|Stateful<Div>|\bDiv\b|\.border_1\(\)|ghost_element_(?:background|hover|active)/,
+  );
   assert.match(rows, /ghost_element_hover/);
-  assert.match(rows, /ghost_element_active/);
   assert.match(controls, /IconButton::new\("dx-forge-open-history", IconName::FolderOpen\)/);
   assert.match(controls, /IconButton::new\("dx-forge-refresh", IconName::RotateCw\)/);
   assert.match(controls, /IconButton::new\(id, IconName::ArrowUpRight\)/);
