@@ -201,6 +201,26 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
     "pub(crate) fn transcribe_recording",
     "pub(crate) fn speak_text",
   );
+  const missingSttModelMessage = sourceSlice(
+    runtime,
+    "fn missing_stt_model_message",
+    "fn append_stt_backend_args",
+  );
+  const appendSttBackendArgs = sourceSlice(
+    runtime,
+    "fn append_stt_backend_args",
+    "fn flow_host_env_file",
+  );
+  const flowHostEnvFile = sourceSlice(
+    runtime,
+    "fn flow_host_env_file",
+    "fn find_whisper_model_file",
+  );
+  const requestedWhisperLanguage = sourceSlice(
+    runtime,
+    "fn requested_whisper_language",
+    "impl KokoroTtsRuntime",
+  );
   const parseTranscriptOutput = sourceSlice(
     runtime,
     "fn parse_transcript_output",
@@ -288,8 +308,18 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(runtime, /FLOW_STT_MODEL/);
   assert.match(runtime, /selected_stt_model/);
   assert.match(runtime, /Unsupported Flow STT model/);
+  assert.match(runtime, /flow_host_env_file/);
   assert.match(runtime, /find_whisper_cpp_binary/);
-  assert.match(runtime, /FLOW_WHISPER_CPP_BINARY|DX_WHISPER_CPP_BINARY/);
+  assert.match(runtime, /FLOW_WHISPER_CPP_BINARY/);
+  assert.match(runtime, /DX_WHISPER_CPP_BINARY/);
+  assert.match(runtime, /FLOW_WHISPER_CPP_EXE/);
+  assert.match(runtime, /FLOW_WHISPER_CPP/);
+  assert.match(runtime, /find_whisper_model_file/);
+  assert.match(runtime, /FLOW_WHISPER_MODEL/);
+  assert.match(runtime, /DX_FLOW_WHISPER_MODEL/);
+  assert.match(runtime, /requested_whisper_language/);
+  assert.match(runtime, /FLOW_WHISPER_LANGUAGE/);
+  assert.match(runtime, /DX_FLOW_WHISPER_LANGUAGE/);
   assert.doesNotMatch(runtime, /parakeet_unified_en_int8/);
   assert.match(runtime, /flow-dictate/);
   assert.match(startRecording, /ensure_stt_ready\(\)\?/);
@@ -304,6 +334,25 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(transcribeRecording, /arg\(audio_file\.path\(\)\)/);
   assert.match(transcribeRecording, /arg\("--model"\)/);
   assert.match(transcribeRecording, /arg\(stt_model\.key\)/);
+  assert.match(transcribeRecording, /append_stt_backend_args\(&mut command, stt_model\)\?/);
+  assert.match(appendSttBackendArgs, /FlowSttArtifactShape::WhisperCpp/);
+  assert.match(appendSttBackendArgs, /find_whisper_cpp_binary\(\)/);
+  assert.match(appendSttBackendArgs, /find_whisper_model_file\(model_file\)/);
+  assert.match(appendSttBackendArgs, /arg\("--whisper-bin"\)/);
+  assert.match(appendSttBackendArgs, /arg\("--whisper-model"\)/);
+  assert.match(appendSttBackendArgs, /requested_whisper_language\(\)/);
+  assert.match(appendSttBackendArgs, /arg\("--whisper-language"\)/);
+  assert.match(flowHostEnvFile, /path\.is_absolute\(\)/);
+  assert.match(flowHostEnvFile, /self\.flow_root\.join\(path\)/);
+  assert.match(flowHostEnvFile, /file_is_nonempty\(&path\)/);
+  assert.match(missingSttModelMessage, /FLOW_WHISPER_MODEL/);
+  assert.match(missingSttModelMessage, /DX_FLOW_WHISPER_MODEL/);
+  assert.match(missingSttModelMessage, /FLOW_WHISPER_CPP_BINARY/);
+  assert.match(missingSttModelMessage, /DX_WHISPER_CPP_BINARY/);
+  assert.match(missingSttModelMessage, /FLOW_WHISPER_CPP_EXE/);
+  assert.match(missingSttModelMessage, /FLOW_WHISPER_CPP/);
+  assert.match(requestedWhisperLanguage, /FLOW_WHISPER_LANGUAGE/);
+  assert.match(requestedWhisperLanguage, /DX_FLOW_WHISPER_LANGUAGE/);
   assert.match(transcribeRecording, /STT_COMMAND_TIMEOUT/);
   assert.match(
     transcribeRecording,
@@ -402,6 +451,29 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.doesNotMatch(runtime, /mock|placeholder|dummy/i);
 });
 
+test("voice runtime status summary reports precise readiness blockers", () => {
+  const runtime = readFileSync(flowRuntimePath, "utf8");
+  const statusSummary = sourceSlice(
+    runtime,
+    "pub(crate) fn status_summary",
+    "pub(crate) fn stt_available",
+  );
+  const missingSttModelMessage = sourceSlice(
+    runtime,
+    "fn missing_stt_model_message",
+    "fn append_stt_backend_args",
+  );
+
+  assert.match(statusSummary, /Friday Kokoro ready/);
+  assert.match(statusSummary, /Friday Kokoro missing/);
+  assert.match(statusSummary, /Flow STT command ready/);
+  assert.match(statusSummary, /Flow STT command missing/);
+  assert.match(missingSttModelMessage, /Flow \{\} model files are missing or empty under/);
+  assert.match(missingSttModelMessage, /Flow \{\} requires a non-empty GGML model from FLOW_WHISPER_MODEL, DX_FLOW_WHISPER_MODEL/);
+  assert.match(missingSttModelMessage, /plus a whisper\.cpp binary from FLOW_WHISPER_CPP_BINARY, DX_WHISPER_CPP_BINARY, FLOW_WHISPER_CPP_EXE, or FLOW_WHISPER_CPP/);
+  assert.match(missingSttModelMessage, /Flow \{\} requires a whisper\.cpp binary from FLOW_WHISPER_CPP_BINARY, DX_WHISPER_CPP_BINARY, FLOW_WHISPER_CPP_EXE, or FLOW_WHISPER_CPP/);
+});
+
 test("Flow dictation host exposes focused STT model selection", () => {
   assert.match(flowDictate, /const DEFAULT_STT_MODEL_KEY: &str = "parakeet-tdt-0\.6b-v3-int8"/);
   assert.match(
@@ -424,7 +496,9 @@ test("Flow dictation host exposes focused STT model selection", () => {
   assert.match(flowDictate, /fn option_value/);
   assert.match(flowDictate, /--model/);
   assert.match(flowDictate, /--whisper-bin/);
+  assert.match(flowDictate, /--whisper-cpp/);
   assert.match(flowDictate, /--whisper-model/);
+  assert.match(flowDictate, /--whisper-language/);
   assert.match(flowDictate, /models\/stt\/parakeet-tdt-0\.6b-v3-int8/);
   assert.match(flowDictate, /models\/stt\/nemotron-speech-streaming-en-0\.6b-int8/);
   assert.match(flowDictate, /models\/stt\/ggml-tiny\.bin/);
@@ -435,7 +509,13 @@ test("Flow dictation host exposes focused STT model selection", () => {
   assert.match(flowDictate, /transcribe_with_whisper_cpp/);
   assert.match(flowDictate, /resolve_whisper_cpp_binary/);
   assert.match(flowDictate, /FLOW_WHISPER_CPP_BINARY/);
+  assert.match(flowDictate, /DX_WHISPER_CPP_BINARY/);
+  assert.match(flowDictate, /FLOW_WHISPER_CPP_EXE/);
+  assert.match(flowDictate, /FLOW_WHISPER_CPP/);
   assert.match(flowDictate, /FLOW_WHISPER_MODEL/);
+  assert.match(flowDictate, /DX_FLOW_WHISPER_MODEL/);
+  assert.match(flowDictate, /FLOW_WHISPER_LANGUAGE/);
+  assert.match(flowDictate, /DX_FLOW_WHISPER_LANGUAGE/);
   assert.match(flowDictate, /DictationSttRuntime::WhisperCpp/);
   assert.doesNotMatch(flowDictate, /let mut recognizer = load_sherpa_transducer\(selected_model\)\?/);
   assert.match(flowDictate, /selected_model\.label/);
@@ -575,6 +655,7 @@ test("voice handoff keeps runtime readiness honest", () => {
   assert.match(voiceHandoff, /focused `flow-dictate` host now exposes `whisper-tiny-ggml` through a whisper\.cpp subprocess boundary/);
   assert.match(voiceHandoff, /FLOW_WHISPER_CPP_BINARY/);
   assert.match(voiceHandoff, /FLOW_WHISPER_MODEL/);
+  assert.match(voiceHandoff, /DX_FLOW_WHISPER_MODEL/);
   assert.match(voiceHandoff, /silent-WAV Parakeet smoke test passed/);
   assert.match(voiceHandoff, /Nemotron smoke proof/);
   assert.match(voiceHandoff, /Whisper smoke proof/);

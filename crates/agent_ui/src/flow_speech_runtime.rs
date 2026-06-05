@@ -271,6 +271,7 @@ impl FlowSpeechRuntime {
             .arg(audio_file.path())
             .arg("--model")
             .arg(stt_model.key);
+        self.append_stt_backend_args(&mut command, stt_model)?;
         apply_windows_process_flags(&mut command);
         let output = run_command_with_timeout(
             command,
@@ -384,7 +385,7 @@ impl FlowSpeechRuntime {
                 .all(|file| file_is_nonempty(&root.join(file)))
             }
             FlowSttArtifactShape::WhisperCpp { model_file } => {
-                file_is_nonempty(&self.flow_root.join(model_file))
+                self.find_whisper_model_file(model_file).is_some()
                     && self.find_whisper_cpp_binary().is_some()
             }
         }
@@ -397,53 +398,125 @@ impl FlowSpeechRuntime {
                 stt_model.label,
                 self.flow_root.join(model_dir).display()
             ),
-            FlowSttArtifactShape::WhisperCpp { model_file } => format!(
-                "Flow {} requires a non-empty {} file and a whisper.cpp binary from FLOW_WHISPER_CPP_BINARY or DX_WHISPER_CPP_BINARY",
-                stt_model.label,
-                self.flow_root.join(model_file).display()
-            ),
+            FlowSttArtifactShape::WhisperCpp { model_file } => {
+                let model_ready = self.find_whisper_model_file(model_file).is_some();
+                let binary_ready = self.find_whisper_cpp_binary().is_some();
+                match (model_ready, binary_ready) {
+                    (false, false) => format!(
+                        "Flow {} requires a non-empty GGML model from FLOW_WHISPER_MODEL, DX_FLOW_WHISPER_MODEL, or {}, plus a whisper.cpp binary from FLOW_WHISPER_CPP_BINARY, DX_WHISPER_CPP_BINARY, FLOW_WHISPER_CPP_EXE, or FLOW_WHISPER_CPP",
+                        stt_model.label,
+                        self.flow_root.join(model_file).display()
+                    ),
+                    (false, true) => format!(
+                        "Flow {} requires a non-empty GGML model from FLOW_WHISPER_MODEL, DX_FLOW_WHISPER_MODEL, or {}",
+                        stt_model.label,
+                        self.flow_root.join(model_file).display()
+                    ),
+                    (true, false) => format!(
+                        "Flow {} requires a whisper.cpp binary from FLOW_WHISPER_CPP_BINARY, DX_WHISPER_CPP_BINARY, FLOW_WHISPER_CPP_EXE, or FLOW_WHISPER_CPP",
+                        stt_model.label
+                    ),
+                    (true, true) => format!("Flow {} is ready", stt_model.label),
+                }
+            }
         }
     }
 
-    fn find_whisper_cpp_binary(&self) -> Option<PathBuf> {
-        env::var_os("FLOW_WHISPER_CPP_BINARY")
-            .or_else(|| env::var_os("DX_WHISPER_CPP_BINARY"))
-            .or_else(|| env::var_os("FLOW_WHISPER_CPP_EXE"))
-            .or_else(|| env::var_os("FLOW_WHISPER_CPP"))
-            .map(PathBuf::from)
-            .filter(|path| file_is_nonempty(path))
+    fn append_stt_backend_args(
+        &self,
+        command: &mut Command,
+        stt_model: FlowSttModel,
+    ) -> Result<()> {
+        if let FlowSttArtifactShape::WhisperCpp { model_file } = stt_model.artifact_shape {
+            let binary = self.find_whisper_cpp_binary().context(
+                "Flow Whisper Tiny GGML whisper.cpp binary is missing during transcription",
+            )?;
+            let model = self
+                .find_whisper_model_file(model_file)
+                .context("Flow Whisper Tiny GGML model is missing during transcription")?;
+
+            command
+                .arg("--whisper-bin")
+                .arg(binary)
+                .arg("--whisper-model")
+                .arg(model);
+            if let Some(language) = requested_whisper_language() {
+                command.arg("--whisper-language").arg(language);
+            }
+        }
+
+        Ok(())
+    }
+
+    fn flow_host_env_file(&self, name: &str) -> Option<PathBuf> {
+        let path = env::var_os(name).map(PathBuf::from)?;
+        let path = if path.is_absolute() {
+            path
+        } else {
+            self.flow_root.join(path)
+        };
+        file_is_nonempty(&path).then_some(path)
+    }
+
+    fn find_whisper_model_file(&self, model_file: &'static str) -> Option<PathBuf> {
+        ["FLOW_WHISPER_MODEL", "DX_FLOW_WHISPER_MODEL"]
+            .into_iter()
+            .find_map(|name| self.flow_host_env_file(name))
             .or_else(|| {
-                let executable = if cfg!(windows) {
-                    "whisper-cli.exe"
-                } else {
-                    "whisper-cli"
-                };
-                [
-                    self.flow_root
-                        .join("tools")
-                        .join("whisper.cpp")
-                        .join("build")
-                        .join("bin")
-                        .join("Release")
-                        .join(executable),
-                    self.flow_root
-                        .join("tools")
-                        .join("whisper.cpp")
-                        .join("build")
-                        .join("bin")
-                        .join(executable),
-                    self.flow_root
-                        .join("runtime")
-                        .join("whisper.cpp")
-                        .join("build")
-                        .join("bin")
-                        .join("Release")
-                        .join(executable),
-                ]
-                .into_iter()
-                .find(|path| file_is_nonempty(path))
+                let path = self.flow_root.join(model_file);
+                file_is_nonempty(&path).then_some(path)
             })
     }
+
+    fn find_whisper_cpp_binary(&self) -> Option<PathBuf> {
+        [
+            "FLOW_WHISPER_CPP_BINARY",
+            "DX_WHISPER_CPP_BINARY",
+            "FLOW_WHISPER_CPP_EXE",
+            "FLOW_WHISPER_CPP",
+        ]
+        .into_iter()
+        .find_map(|name| self.flow_host_env_file(name))
+        .or_else(|| {
+            let executable = if cfg!(windows) {
+                "whisper-cli.exe"
+            } else {
+                "whisper-cli"
+            };
+            [
+                self.flow_root
+                    .join("tools")
+                    .join("whisper.cpp")
+                    .join("build")
+                    .join("bin")
+                    .join("Release")
+                    .join(executable),
+                self.flow_root
+                    .join("tools")
+                    .join("whisper.cpp")
+                    .join("build")
+                    .join("bin")
+                    .join(executable),
+                self.flow_root
+                    .join("runtime")
+                    .join("whisper.cpp")
+                    .join("build")
+                    .join("bin")
+                    .join("Release")
+                    .join(executable),
+            ]
+            .into_iter()
+            .find(|path| file_is_nonempty(path))
+        })
+    }
+}
+
+fn requested_whisper_language() -> Option<String> {
+    env::var("FLOW_WHISPER_LANGUAGE")
+        .or_else(|_| env::var("DX_FLOW_WHISPER_LANGUAGE"))
+        .ok()
+        .map(|language| language.trim().to_string())
+        .filter(|language| !language.is_empty())
 }
 
 impl KokoroTtsRuntime {
