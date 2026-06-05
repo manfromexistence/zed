@@ -611,6 +611,9 @@ pub struct ThreadView {
     pub message_editor: Entity<MessageEditor>,
     composer_voice_state: ComposerVoiceState,
     flow_recording_session: Option<FlowRecordingSession>,
+    #[cfg(feature = "audio")]
+    flow_playback_handle: Option<AudioPlaybackHandle>,
+    flow_playback_id: u64,
     _flow_speech_task: Option<Task<()>>,
     pub add_context_menu_handle: PopoverMenuHandle<ContextMenu>,
     pub thinking_effort_menu_handle: PopoverMenuHandle<ContextMenu>,
@@ -948,6 +951,9 @@ impl ThreadView {
             message_editor,
             composer_voice_state: ComposerVoiceState::default(),
             flow_recording_session: None,
+            #[cfg(feature = "audio")]
+            flow_playback_handle: None,
+            flow_playback_id: 0,
             _flow_speech_task: None,
             add_context_menu_handle: PopoverMenuHandle::default(),
             thinking_effort_menu_handle: PopoverMenuHandle::default(),
@@ -3826,7 +3832,10 @@ impl ThreadView {
                                 render_voice_recording_panel(
                                     &self.composer_voice_state,
                                     cx.listener(|this, _event, window, cx| {
-                                        this.stop_flow_voice_recording(window, cx);
+                                        this.stop_flow_voice_action(window, cx);
+                                    }),
+                                    cx.listener(|this, _event, _window, cx| {
+                                        this.cancel_flow_voice_recording(cx);
                                     }),
                                     cx,
                                 ),
@@ -4116,10 +4125,21 @@ impl ThreadView {
     fn toggle_flow_voice_recording(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         match self.composer_voice_state.phase() {
             ComposerVoicePhase::Recording => self.stop_flow_voice_recording(window, cx),
-            ComposerVoicePhase::Transcribing | ComposerVoicePhase::Speaking => {}
+            ComposerVoicePhase::Speaking => self.stop_flow_voice_playback(cx),
+            ComposerVoicePhase::Transcribing => {}
             ComposerVoicePhase::Ready | ComposerVoicePhase::Error => {
                 self.start_flow_voice_recording(window, cx)
             }
+        }
+    }
+
+    fn stop_flow_voice_action(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        match self.composer_voice_state.phase() {
+            ComposerVoicePhase::Recording => self.stop_flow_voice_recording(window, cx),
+            ComposerVoicePhase::Speaking => self.stop_flow_voice_playback(cx),
+            ComposerVoicePhase::Ready
+            | ComposerVoicePhase::Transcribing
+            | ComposerVoicePhase::Error => {}
         }
     }
 
@@ -4237,6 +4257,17 @@ impl ThreadView {
         }));
     }
 
+    fn cancel_flow_voice_recording(&mut self, cx: &mut Context<Self>) {
+        if self.flow_recording_session.take().is_some() {
+            self.composer_voice_state
+                .set_ready("Flow voice recording discarded");
+        } else {
+            self.composer_voice_state
+                .set_error("Flow voice recording was not active");
+        }
+        cx.notify();
+    }
+
     fn speak_composer_text(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
         if self.composer_voice_state.is_busy() {
             return;
@@ -4259,6 +4290,8 @@ impl ThreadView {
         let summary = runtime.status_summary();
         self.composer_voice_state
             .set_speaking(format!("Flow voice runtime: {summary}"));
+        self.flow_playback_id = self.flow_playback_id.wrapping_add(1);
+        let playback_id = self.flow_playback_id;
         cx.notify();
 
         self._flow_speech_task = Some(cx.spawn(async move |this, cx| {
@@ -4267,15 +4300,51 @@ impl ThreadView {
                 .spawn(async move { runtime.speak_text(&text) });
             let result = task.await;
             this.update(cx, |this, cx| {
+                if this.flow_playback_id != playback_id {
+                    if let Ok(audio_path) = result {
+                        let _ = std::fs::remove_file(audio_path);
+                    }
+                    return;
+                }
+
                 match result {
                     Ok(audio_path) => {
                         #[cfg(feature = "audio")]
                         {
-                            match Audio::play_wav_file(&audio_path, cx) {
-                                Ok(()) => {
+                            match Audio::play_wav_file_tracked(&audio_path, cx) {
+                                Ok(playback_handle) => {
                                     let _ = std::fs::remove_file(&audio_path);
+                                    this.flow_playback_handle = Some(playback_handle.clone());
                                     this.composer_voice_state
-                                        .set_ready("Kokoro finished reading the composer");
+                                        .set_speaking("Kokoro is reading the composer");
+                                    this._flow_speech_task =
+                                        Some(cx.spawn(async move |this, cx| {
+                                            loop {
+                                                cx.background_executor()
+                                                    .timer(Duration::from_millis(150))
+                                                    .await;
+                                                let Ok(is_current) = this.update(cx, |this, cx| {
+                                                    if this.flow_playback_id != playback_id {
+                                                        return false;
+                                                    }
+                                                    if playback_handle.is_complete() {
+                                                        this.flow_playback_handle = None;
+                                                        this.composer_voice_state.set_ready(
+                                                            "Kokoro finished reading the composer",
+                                                        );
+                                                        cx.notify();
+                                                        false
+                                                    } else {
+                                                        true
+                                                    }
+                                                }) else {
+                                                    break;
+                                                };
+                                                if !is_current {
+                                                    break;
+                                                }
+                                            }
+                                        }));
                                 }
                                 Err(error) => {
                                     let _ = std::fs::remove_file(&audio_path);
@@ -4306,6 +4375,19 @@ impl ThreadView {
             })
             .ok();
         }));
+    }
+
+    fn stop_flow_voice_playback(&mut self, cx: &mut Context<Self>) {
+        #[cfg(feature = "audio")]
+        {
+            if let Some(handle) = self.flow_playback_handle.take() {
+                handle.cancel();
+            }
+        }
+        self.flow_playback_id = self.flow_playback_id.wrapping_add(1);
+        self.composer_voice_state
+            .set_ready("Kokoro read-aloud stopped");
+        cx.notify();
     }
 
     fn report_flow_voice_error(

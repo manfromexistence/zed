@@ -14299,8 +14299,26 @@ CHANGED:
 - `script\dx-agent-voice-controls-source.test.ts` now guards the temp-file cleanup contract and transcript insertion helper.
 
 NOTES:
-- A playback lifecycle audit found that current Zed audio enqueues Kokoro WAVs into the mixer and returns immediately; it still needs a tracked/cancelable playback handle before the UI can prove actual read-aloud completion instead of queued playback.
-- A Kokoro readiness audit found the runtime Python and Hugging Face cache present, but the Friday app install model directory `G:\Flow\data\models\tts\kokoro_82m` is still missing. Zed should keep reporting TTS not ready until that directory is populated with the expected non-empty files or `DX_KOKORO_MODEL_DIR` points to a complete model directory.
+- A playback lifecycle audit found that the prior Zed audio path enqueued Kokoro WAVs into the mixer and returned immediately; the next same-day slice added source-level tracked playback while live audible proof remains deferred.
+- A Kokoro readiness audit found the runtime Python and Hugging Face cache present while the Friday app install model directory was missing; the next same-day slice materialized that directory from the local cache.
+
+[2026-06-06] - Agent Composer Tracked Kokoro Playback
+
+CHANGED:
+- `crates\audio\src\audio_pipeline.rs` now exposes `AudioPlaybackHandle` and `play_wav_file_tracked`, wrapping WAV playback in a small cancelable source that reports completion when the source ends, is canceled, or is dropped.
+- `crates\audio\src\audio.rs` now re-exports `AudioPlaybackHandle` for feature-gated Agent UI use.
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now stores a Kokoro playback handle and playback generation id so the Agent composer can remain in `Speaking` until tracked playback completion, ignore stale synthesis/playback monitor tasks, and remove temp WAV files immediately after successful tracked handoff.
+- `crates\agent_ui\src\conversation_view\voice_controls.rs` now exposes a stop affordance while Kokoro read-aloud is speaking and a separate discard action while recording, reusing the GPUI voice panel instead of adding dummy UI.
+- `crates\agent_ui\src\flow_speech_runtime.rs` now pins `HUGGINGFACE_HUB_CACHE` to Flow's data-local Hugging Face hub for Kokoro child processes, avoiding inherited cache drift.
+- `script\dx-agent-voice-controls-source.test.ts` now guards tracked playback, stop/cancel behavior, stronger STT runtime invariants, and no-dummy voice-control slices.
+
+PASSED:
+- `rustfmt --edition 2024 crates\audio\src\audio.rs crates\audio\src\audio_pipeline.rs crates\agent_ui\src\conversation_view.rs crates\agent_ui\src\conversation_view\voice_controls.rs crates\agent_ui\src\conversation_view\thread_view.rs`
+- `node --test script\dx-agent-voice-controls-source.test.ts`
+
+NOTES:
+- `G:\Flow\data\models\tts\kokoro_82m` was materialized from the existing local Hugging Face cache without downloading. The copied files matched the expected byte sizes: `config.json` 2,351 bytes, `kokoro-v1_0.pth` 327,212,226 bytes, `af_heart.pt` 523,425 bytes, and `af_bella.pt` 523,425 bytes.
+- This remains source-only. No Cargo, `just run`, Flow build, live microphone capture, live Zed launch, or live Kokoro playback proof was run.
 
 [2026-06-05] - Agent Composer Voice Telemetry And Friday Runtime Guards
 
@@ -14314,7 +14332,7 @@ CHANGED:
 NOTES:
 - Six GPT-5.5 extra-high subagents audited STT defaults, Kokoro runtime reliability, current Zed voice wiring, GPUI recording patterns, Flow build artifacts, and source-guard gaps.
 - `G:\Dx\flow` is now a real directory, not a junction. It has Parakeet model files but no `flow-dictate.exe`; current Flow policy still defers builds.
-- Friday Kokoro Python runtime discovery is stricter now. Local inspection found `G:\Flow\data\models\tts\kokoro_82m` missing and the HF snapshot entries zero-length reparse files, so live read-aloud proof still needs a complete non-empty Friday Kokoro model directory or an explicit `DX_KOKORO_MODEL_DIR`.
+- Friday Kokoro Python runtime discovery is stricter now. The later materialization pass populated `G:\Flow\data\models\tts\kokoro_82m` from the local Hugging Face cache, but live read-aloud proof still needs the governed validation window.
 
 [2026-06-05] - Agent Composer Friday Kokoro Playback
 

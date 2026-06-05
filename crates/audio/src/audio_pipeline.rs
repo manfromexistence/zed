@@ -10,7 +10,14 @@ pub(super) use cpal::Sample;
 
 use rodio::{Decoder, DeviceSinkBuilder, MixerDeviceSink, Source, mixer::Mixer, source::Buffered};
 use settings::Settings;
-use std::{io::Cursor, path::Path};
+use std::{
+    io::Cursor,
+    path::Path,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+};
 use util::ResultExt;
 
 mod echo_canceller;
@@ -57,6 +64,92 @@ pub struct Audio {
 
 impl Global for Audio {}
 
+#[derive(Clone, Debug)]
+pub struct AudioPlaybackHandle {
+    state: Arc<AudioPlaybackState>,
+}
+
+#[derive(Debug)]
+struct AudioPlaybackState {
+    canceled: AtomicBool,
+    completed: AtomicBool,
+}
+
+struct TrackedAudioSource<S> {
+    inner: S,
+    state: Arc<AudioPlaybackState>,
+}
+
+impl AudioPlaybackHandle {
+    pub fn cancel(&self) {
+        self.state.canceled.store(true, Ordering::Relaxed);
+    }
+
+    pub fn is_complete(&self) -> bool {
+        self.state.completed.load(Ordering::Relaxed)
+    }
+}
+
+impl AudioPlaybackState {
+    fn new() -> Arc<Self> {
+        Arc::new(Self {
+            canceled: AtomicBool::new(false),
+            completed: AtomicBool::new(false),
+        })
+    }
+}
+
+impl<S> Iterator for TrackedAudioSource<S>
+where
+    S: Source,
+{
+    type Item = rodio::Sample;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.state.canceled.load(Ordering::Relaxed) {
+            self.state.completed.store(true, Ordering::Relaxed);
+            return None;
+        }
+
+        let sample = self.inner.next();
+        if sample.is_none() {
+            self.state.completed.store(true, Ordering::Relaxed);
+        }
+        sample
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.inner.size_hint()
+    }
+}
+
+impl<S> Source for TrackedAudioSource<S>
+where
+    S: Source,
+{
+    fn current_span_len(&self) -> Option<usize> {
+        self.inner.current_span_len()
+    }
+
+    fn channels(&self) -> rodio::ChannelCount {
+        self.inner.channels()
+    }
+
+    fn sample_rate(&self) -> rodio::SampleRate {
+        self.inner.sample_rate()
+    }
+
+    fn total_duration(&self) -> Option<std::time::Duration> {
+        self.inner.total_duration()
+    }
+}
+
+impl<S> Drop for TrackedAudioSource<S> {
+    fn drop(&mut self) {
+        self.state.completed.store(true, Ordering::Relaxed);
+    }
+}
+
 impl Audio {
     fn ensure_output_exists(&mut self, output_audio_device: Option<DeviceId>) -> Result<&Mixer> {
         #[cfg(debug_assertions)]
@@ -92,18 +185,30 @@ impl Audio {
     }
 
     pub fn play_wav_file(path: &Path, cx: &mut App) -> Result<()> {
+        Self::play_wav_file_tracked(path, cx).map(|_| ())
+    }
+
+    pub fn play_wav_file_tracked(path: &Path, cx: &mut App) -> Result<AudioPlaybackHandle> {
         let output_audio_device = AudioSettings::get_global(cx).output_audio_device.clone();
         let bytes = std::fs::read(path)
             .with_context(|| format!("Could not read WAV file {}", path.display()))?;
 
         cx.update_default_global(|this: &mut Self, _cx| {
             let source = Decoder::new(Cursor::new(bytes))?;
+            let state = AudioPlaybackState::new();
+            let handle = AudioPlaybackHandle {
+                state: Arc::clone(&state),
+            };
+            let source = TrackedAudioSource {
+                inner: source,
+                state,
+            };
             let output_mixer = this
                 .ensure_output_exists(output_audio_device)
                 .context("Could not get output mixer")?;
 
             output_mixer.add(source);
-            Ok(())
+            Ok(handle)
         })
     }
 

@@ -16,7 +16,7 @@ use agent_servers::{AgentServer, GEMINI_TERMINAL_AUTH_METHOD_ID};
 use agent_settings::{AgentProfileId, AgentSettings};
 use anyhow::{Result, anyhow};
 #[cfg(feature = "audio")]
-use audio::{Audio, AudioSettings, Sound};
+use audio::{Audio, AudioPlaybackHandle, AudioSettings, Sound};
 use buffer_diff::BufferDiff;
 use client::zed_urls;
 use collections::{HashMap, HashSet, IndexMap};

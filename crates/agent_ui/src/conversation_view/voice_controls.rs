@@ -106,9 +106,9 @@ impl ComposerVoiceState {
 
     fn voice_tooltip(&self) -> &'static str {
         match self.phase {
-            ComposerVoicePhase::Recording => "Stop Flow voice recording",
+            ComposerVoicePhase::Recording => "Stop recording and transcribe with Flow",
             ComposerVoicePhase::Transcribing => "Flow is transcribing with Parakeet",
-            ComposerVoicePhase::Speaking => "Flow is reading the composer with Kokoro",
+            ComposerVoicePhase::Speaking => "Stop Kokoro read-aloud",
             ComposerVoicePhase::Error => "Retry Flow voice input",
             ComposerVoicePhase::Ready => "Record voice input with Flow",
         }
@@ -133,13 +133,13 @@ pub(super) fn render_voice_buttons(
     on_speak_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
 ) -> Vec<AnyElement> {
     let voice_icon = match state.phase {
-        ComposerVoicePhase::Recording => IconName::Stop,
+        ComposerVoicePhase::Recording | ComposerVoicePhase::Speaking => IconName::Stop,
         ComposerVoicePhase::Transcribing => IconName::LoadCircle,
         _ => IconName::Mic,
     };
     let voice_color = match state.phase {
         ComposerVoicePhase::Recording => Color::Error,
-        ComposerVoicePhase::Transcribing => Color::Accent,
+        ComposerVoicePhase::Transcribing | ComposerVoicePhase::Speaking => Color::Accent,
         ComposerVoicePhase::Error => Color::Warning,
         _ => Color::Muted,
     };
@@ -175,6 +175,7 @@ pub(super) fn render_voice_buttons(
 pub(super) fn render_voice_recording_panel(
     state: &ComposerVoiceState,
     on_stop_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+    on_cancel_recording_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     cx: &App,
 ) -> Option<AnyElement> {
     if state.phase == ComposerVoicePhase::Ready {
@@ -193,7 +194,7 @@ pub(super) fn render_voice_recording_panel(
         ComposerVoicePhase::Speaking => (
             "Reading with Kokoro",
             Color::Accent,
-            "Synthesizing composer text".into(),
+            "Playing generated audio".into(),
         ),
         ComposerVoicePhase::Error => (
             "Flow voice needs attention",
@@ -249,15 +250,53 @@ pub(super) fn render_voice_recording_panel(
                                     ),
                             ),
                     )
-                    .when(state.phase == ComposerVoicePhase::Recording, |this| {
-                        this.child(
-                            IconButton::new("agent-composer-stop-voice-recording", IconName::Stop)
-                                .icon_size(IconSize::XSmall)
-                                .icon_color(Color::Error)
-                                .tooltip(Tooltip::text("Stop recording and transcribe"))
-                                .on_click(on_stop_click),
-                        )
-                    }),
+                    .when(
+                        matches!(
+                            state.phase,
+                            ComposerVoicePhase::Recording | ComposerVoicePhase::Speaking
+                        ),
+                        |this| {
+                            this.child(
+                                h_flex()
+                                    .gap_1()
+                                    .child(
+                                        IconButton::new(
+                                            match state.phase {
+                                                ComposerVoicePhase::Speaking => {
+                                                    "agent-composer-stop-kokoro-read-aloud"
+                                                }
+                                                _ => "agent-composer-stop-voice-recording",
+                                            },
+                                            IconName::Stop,
+                                        )
+                                        .icon_size(IconSize::XSmall)
+                                        .icon_color(tone)
+                                        .tooltip(Tooltip::text(match state.phase {
+                                            ComposerVoicePhase::Recording => {
+                                                "Stop recording and transcribe"
+                                            }
+                                            ComposerVoicePhase::Speaking => {
+                                                "Stop Kokoro read-aloud"
+                                            }
+                                            _ => "Stop Flow voice action",
+                                        }))
+                                        .on_click(on_stop_click),
+                                    )
+                                    .when(state.phase == ComposerVoicePhase::Recording, |this| {
+                                        this.child(
+                                            IconButton::new(
+                                                "agent-composer-discard-voice-recording",
+                                                IconName::Close,
+                                            )
+                                            .icon_size(IconSize::XSmall)
+                                            .icon_color(Color::Muted)
+                                            .tooltip(Tooltip::text("Discard voice recording"))
+                                            .on_click(on_cancel_recording_click),
+                                        )
+                                    }),
+                            )
+                        },
+                    ),
             )
             .when(state.phase == ComposerVoicePhase::Recording, |this| {
                 this.child(render_voice_level_meter(state.input_level, tone, cx))

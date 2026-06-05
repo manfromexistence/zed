@@ -634,6 +634,7 @@ fn apply_tts_process_env(command: &mut Command, data_root: &Path) {
         .env("PYTHONUTF8", "1")
         .env("PYTHONNOUSERSITE", "1")
         .env("HF_HOME", &hf_home)
+        .env("HUGGINGFACE_HUB_CACHE", hf_home.join("hub"))
         .env("HF_HUB_DISABLE_TELEMETRY", "1")
         .env("HF_HUB_OFFLINE", "1")
         .env("TRANSFORMERS_OFFLINE", "1")
