@@ -50,6 +50,7 @@ mod dx_deploy_receipt_summary;
 mod dx_deploy_root_key;
 mod dx_deploy_target_detection;
 mod dx_deploy_targets;
+mod dx_forge_panel;
 mod dx_launch_audit;
 mod dx_launch_binary_cache;
 mod dx_launch_contracts;
@@ -612,6 +613,7 @@ pub fn init(
         init_language_model_settings(cx);
     }
     agent_panel::init(cx);
+    dx_forge_panel::panel::init(cx);
     dx_style_panel::panel::init(cx);
     context_server_configuration::init(language_registry.clone(), fs.clone(), cx);
     thread_metadata_store::init(cx);
