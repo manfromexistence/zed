@@ -92,25 +92,17 @@ impl FlowSpeechRuntime {
     pub(crate) fn transcribe_recording(&self, recording: RecordedSpeech) -> Result<String> {
         self.ensure_stt_ready()?;
         let audio_path = self.write_recording_wav(&recording)?;
-        let output = if let Some(binary) = &self.flow_dictate_binary {
-            Command::new(binary)
-                .current_dir(&self.flow_root)
-                .arg("--file")
-                .arg(&audio_path)
-                .stdin(Stdio::null())
-                .output()
-                .with_context(|| format!("Failed to start {}", binary.display()))?
-        } else if let Some(binary) = &self.flow_binary {
-            Command::new(binary)
-                .current_dir(&self.flow_root)
-                .arg("--transcribe")
-                .arg(&audio_path)
-                .stdin(Stdio::null())
-                .output()
-                .with_context(|| format!("Failed to start {}", binary.display()))?
-        } else {
-            unreachable!("ensure_stt_ready checked Flow STT command availability");
-        };
+        let binary = self
+            .flow_dictate_binary
+            .as_ref()
+            .context("Flow Parakeet dictation command is not available")?;
+        let output = Command::new(binary)
+            .current_dir(&self.flow_root)
+            .arg("--file")
+            .arg(&audio_path)
+            .stdin(Stdio::null())
+            .output()
+            .with_context(|| format!("Failed to start {}", binary.display()))?;
 
         let transcript = parse_transcript_output(output);
         let _ = fs::remove_file(audio_path);
@@ -152,10 +144,10 @@ impl FlowSpeechRuntime {
         } else {
             "Kokoro model missing"
         };
-        let stt_runtime = if self.flow_dictate_binary.is_some() || self.flow_binary.is_some() {
-            "STT command ready"
+        let stt_runtime = if self.flow_dictate_binary.is_some() {
+            "Parakeet command ready"
         } else {
-            "STT command missing"
+            "Parakeet command missing"
         };
         let tts_runtime = if self.flow_binary.is_some() {
             "TTS command ready"
@@ -190,11 +182,11 @@ impl FlowSpeechRuntime {
 
     fn ensure_stt_ready(&self) -> Result<()> {
         self.ensure_parakeet_ready()?;
-        if self.flow_dictate_binary.is_some() || self.flow_binary.is_some() {
+        if self.flow_dictate_binary.is_some() {
             Ok(())
         } else {
             Err(anyhow!(
-                "Flow Parakeet runtime is not built. Build flow-dictate in {} or set DX_FLOW_DICTATE_BINARY.",
+                "Flow Parakeet runtime is not built. Build flow-dictate with the sherpa-stt feature in {} or set DX_FLOW_DICTATE_BINARY.",
                 self.flow_root.display()
             ))
         }

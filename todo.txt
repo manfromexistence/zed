@@ -1553,7 +1553,7 @@ IN PROGRESS:
 - Wire the Agent composer mic and read-aloud controls to the copied `G:\Dx\flow` speech runtime: source modules and guards are in place for Parakeet STT recording, Kokoro composer read-aloud, and GPUI recording status, with live runtime proof still pending the governed validation window.
 
 PENDING:
-- Build or provide the Flow runtime executables (`flow-dictate` for STT and `flow` for TTS) before live microphone and Kokoro playback proof.
+- Build or provide `flow-dictate` with the `sherpa-stt` feature for Parakeet STT and `flow` for Kokoro TTS before live microphone and playback proof.
 - Run the governed Zed validation pass only when explicitly authorized for this large repo.
 
 COMPLETED:

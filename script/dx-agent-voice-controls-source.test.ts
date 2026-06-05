@@ -68,6 +68,7 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(runtime, /flow-dictate/);
   assert.match(runtime, /--file/);
   assert.match(runtime, /--speak/);
+  assert.doesNotMatch(runtime, /--transcribe/);
   assert.doesNotMatch(runtime, /mock|placeholder|dummy/i);
 });
 
