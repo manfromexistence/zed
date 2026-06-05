@@ -57,6 +57,7 @@ const PROVIDER_ID: LanguageModelProviderId = LanguageModelProviderId::new("openc
 const PROVIDER_NAME: LanguageModelProviderName = LanguageModelProviderName::new("OpenCode");
 
 const API_KEY_ENV_VAR_NAME: &str = "OPENCODE_API_KEY";
+const PUBLIC_API_KEY: &str = "public";
 static API_KEY_ENV_VAR: LazyLock<EnvVar> = env_var!(API_KEY_ENV_VAR_NAME);
 
 fn opencode_language_model_id(model: &opencode::Model) -> LanguageModelId {
@@ -69,6 +70,17 @@ fn opencode_model_registry_key(model: &opencode::Model) -> String {
 
 fn opencode_external_model_id(model: &opencode::Model) -> String {
     format!("opencode/{}", model.id())
+}
+
+fn is_default_api_url(api_url: &str) -> bool {
+    api_url.trim_end_matches('/') == OPENCODE_API_URL.trim_end_matches('/')
+}
+
+fn is_builtin_public_free_model(model: &opencode::Model) -> bool {
+    matches!(
+        model.available_subscriptions(),
+        [OpenCodeSubscription::Free]
+    )
 }
 
 #[derive(Default, Clone, Debug, PartialEq)]
@@ -175,6 +187,27 @@ impl OpenCodeLanguageModelProvider {
         }
     }
 
+    fn uses_default_api_url(cx: &App) -> bool {
+        is_default_api_url(Self::api_url(cx).as_ref())
+    }
+
+    fn public_free_mode_enabled(cx: &App) -> bool {
+        Self::subscription_enabled(OpenCodeSubscription::Free, cx) && Self::uses_default_api_url(cx)
+    }
+
+    fn subscription_available(
+        subscription: OpenCodeSubscription,
+        has_real_key: bool,
+        cx: &App,
+    ) -> bool {
+        if !Self::subscription_enabled(subscription, cx) {
+            return false;
+        }
+
+        has_real_key
+            || (subscription == OpenCodeSubscription::Free && Self::uses_default_api_url(cx))
+    }
+
     fn api_url(cx: &App) -> SharedString {
         let api_url = &Self::settings(cx).api_url;
         if api_url.is_empty() {
@@ -207,14 +240,15 @@ impl LanguageModelProvider for OpenCodeLanguageModelProvider {
     }
 
     fn default_model(&self, cx: &App) -> Option<Arc<dyn LanguageModel>> {
-        if Self::subscription_enabled(OpenCodeSubscription::Go, cx) {
+        let has_real_key = self.state.read(cx).is_authenticated();
+        if Self::subscription_available(OpenCodeSubscription::Go, has_real_key, cx) {
             // If both Go and Zen are enabled, prefer Go since it's not pay-as-you-go
             Some(
                 self.create_language_model(opencode::Model::default_go(), OpenCodeSubscription::Go),
             )
-        } else if Self::subscription_enabled(OpenCodeSubscription::Zen, cx) {
+        } else if Self::subscription_available(OpenCodeSubscription::Zen, has_real_key, cx) {
             Some(self.create_language_model(opencode::Model::default(), OpenCodeSubscription::Zen))
-        } else if Self::subscription_enabled(OpenCodeSubscription::Free, cx) {
+        } else if Self::subscription_available(OpenCodeSubscription::Free, has_real_key, cx) {
             Some(
                 self.create_language_model(
                     opencode::Model::default_free(),
@@ -227,20 +261,21 @@ impl LanguageModelProvider for OpenCodeLanguageModelProvider {
     }
 
     fn default_fast_model(&self, cx: &App) -> Option<Arc<dyn LanguageModel>> {
-        if Self::subscription_enabled(OpenCodeSubscription::Go, cx) {
+        let has_real_key = self.state.read(cx).is_authenticated();
+        if Self::subscription_available(OpenCodeSubscription::Go, has_real_key, cx) {
             // If both Go and Zen are enabled, prefer Go since it's not pay-as-you-go
             Some(self.create_language_model(
                 opencode::Model::default_go_fast(),
                 OpenCodeSubscription::Go,
             ))
-        } else if Self::subscription_enabled(OpenCodeSubscription::Zen, cx) {
+        } else if Self::subscription_available(OpenCodeSubscription::Zen, has_real_key, cx) {
             Some(
                 self.create_language_model(
                     opencode::Model::default_fast(),
                     OpenCodeSubscription::Zen,
                 ),
             )
-        } else if Self::subscription_enabled(OpenCodeSubscription::Free, cx) {
+        } else if Self::subscription_available(OpenCodeSubscription::Free, has_real_key, cx) {
             Some(self.create_language_model(
                 opencode::Model::default_free_fast(),
                 OpenCodeSubscription::Free,
@@ -254,47 +289,52 @@ impl LanguageModelProvider for OpenCodeLanguageModelProvider {
         let mut models: BTreeMap<String, (opencode::Model, OpenCodeSubscription)> =
             BTreeMap::default();
         let settings = Self::settings(cx);
+        let has_real_key = self.state.read(cx).is_authenticated();
 
         for model in opencode::Model::iter() {
             if matches!(model, opencode::Model::Custom { .. }) {
                 continue;
             }
             for &subscription in model.available_subscriptions() {
-                if Self::subscription_enabled(subscription, cx) {
+                if Self::subscription_available(subscription, has_real_key, cx) {
                     let key = opencode_model_registry_key(&model);
                     models.insert(key, (model.clone(), subscription));
                 }
             }
         }
 
-        for model in &settings.available_models {
-            let protocol = match model.protocol.as_str() {
-                "anthropic" => ApiProtocol::Anthropic,
-                "openai_responses" => ApiProtocol::OpenAiResponses,
-                "openai_chat" => ApiProtocol::OpenAiChat,
-                "google" => ApiProtocol::Google,
-                _ => ApiProtocol::OpenAiChat, // default fallback
-            };
-            let subscription = match model.subscription {
-                Some(settings::OpenCodeModelSubscription::Go) => OpenCodeSubscription::Go,
-                Some(settings::OpenCodeModelSubscription::Free) => OpenCodeSubscription::Free,
-                Some(settings::OpenCodeModelSubscription::Zen) | None => OpenCodeSubscription::Zen,
-            };
-            if !Self::subscription_enabled(subscription, cx) {
-                continue;
+        if has_real_key {
+            for model in &settings.available_models {
+                let protocol = match model.protocol.as_str() {
+                    "anthropic" => ApiProtocol::Anthropic,
+                    "openai_responses" => ApiProtocol::OpenAiResponses,
+                    "openai_chat" => ApiProtocol::OpenAiChat,
+                    "google" => ApiProtocol::Google,
+                    _ => ApiProtocol::OpenAiChat, // default fallback
+                };
+                let subscription = match model.subscription {
+                    Some(settings::OpenCodeModelSubscription::Go) => OpenCodeSubscription::Go,
+                    Some(settings::OpenCodeModelSubscription::Free) => OpenCodeSubscription::Free,
+                    Some(settings::OpenCodeModelSubscription::Zen) | None => {
+                        OpenCodeSubscription::Zen
+                    }
+                };
+                if !Self::subscription_enabled(subscription, cx) {
+                    continue;
+                }
+                let custom_model = opencode::Model::Custom {
+                    name: model.name.clone(),
+                    display_name: model.display_name.clone(),
+                    max_tokens: model.max_tokens,
+                    max_output_tokens: model.max_output_tokens,
+                    protocol,
+                    reasoning_effort_levels: model.reasoning_effort_levels.clone(),
+                    custom_model_api_url: model.custom_model_api_url.clone(),
+                    interleaved_reasoning: model.interleaved_reasoning,
+                };
+                let key = opencode_model_registry_key(&custom_model);
+                models.insert(key, (custom_model, subscription));
             }
-            let custom_model = opencode::Model::Custom {
-                name: model.name.clone(),
-                display_name: model.display_name.clone(),
-                max_tokens: model.max_tokens,
-                max_output_tokens: model.max_output_tokens,
-                protocol,
-                reasoning_effort_levels: model.reasoning_effort_levels.clone(),
-                custom_model_api_url: model.custom_model_api_url.clone(),
-                interleaved_reasoning: model.interleaved_reasoning,
-            };
-            let key = opencode_model_registry_key(&custom_model);
-            models.insert(key, (custom_model, subscription));
         }
 
         models
@@ -304,7 +344,7 @@ impl LanguageModelProvider for OpenCodeLanguageModelProvider {
     }
 
     fn is_authenticated(&self, cx: &App) -> bool {
-        self.state.read(cx).is_authenticated()
+        self.state.read(cx).is_authenticated() || Self::public_free_mode_enabled(cx)
     }
 
     fn authenticate(&self, cx: &mut App) -> Task<Result<(), AuthenticateError>> {
@@ -383,9 +423,21 @@ impl OpenCodeLanguageModel {
     }
 
     fn api_key(&self, cx: &AsyncApp) -> Option<Arc<str>> {
-        self.state.read_with(cx, |state, cx| {
+        let (api_url, api_key) = self.state.read_with(cx, |state, cx| {
             let api_url = OpenCodeLanguageModelProvider::api_url(cx);
-            state.api_key_state.key(&api_url)
+            let api_key = state.api_key_state.key(&api_url);
+            (api_url, api_key)
+        });
+
+        api_key.or_else(|| {
+            if self.subscription == OpenCodeSubscription::Free
+                && is_builtin_public_free_model(&self.model)
+                && is_default_api_url(api_url.as_ref())
+            {
+                Some(Arc::from(PUBLIC_API_KEY))
+            } else {
+                None
+            }
         })
     }
 
@@ -955,6 +1007,79 @@ impl Render for ConfigurationView {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use gpui::TestAppContext;
+    use http_client::{FakeHttpClient, Response};
+    use language_model::{LanguageModelRequestMessage, MessageContent, Role};
+    use parking_lot::Mutex;
+    use std::future::Future;
+    use std::pin::Pin;
+
+    struct FakeCredentialsProvider {
+        credentials: Mutex<Option<(String, Vec<u8>)>>,
+    }
+
+    impl FakeCredentialsProvider {
+        fn new() -> Self {
+            Self {
+                credentials: Mutex::new(None),
+            }
+        }
+    }
+
+    impl CredentialsProvider for FakeCredentialsProvider {
+        fn read_credentials<'a>(
+            &'a self,
+            _url: &'a str,
+            _cx: &'a AsyncApp,
+        ) -> Pin<Box<dyn Future<Output = Result<Option<(String, Vec<u8>)>>> + 'a>> {
+            Box::pin(async { Ok(self.credentials.lock().clone()) })
+        }
+
+        fn write_credentials<'a>(
+            &'a self,
+            _url: &'a str,
+            username: &'a str,
+            password: &'a [u8],
+            _cx: &'a AsyncApp,
+        ) -> Pin<Box<dyn Future<Output = Result<()>> + 'a>> {
+            self.credentials
+                .lock()
+                .replace((username.to_string(), password.to_vec()));
+            Box::pin(async { Ok(()) })
+        }
+
+        fn delete_credentials<'a>(
+            &'a self,
+            _url: &'a str,
+            _cx: &'a AsyncApp,
+        ) -> Pin<Box<dyn Future<Output = Result<()>> + 'a>> {
+            *self.credentials.lock() = None;
+            Box::pin(async { Ok(()) })
+        }
+    }
+
+    fn init_test(cx: &mut App) -> OpenCodeLanguageModelProvider {
+        let settings_store = SettingsStore::test(cx);
+        cx.set_global(settings_store);
+        crate::AllLanguageModelSettings::register(cx);
+        OpenCodeLanguageModelProvider::new(
+            FakeHttpClient::with_404_response(),
+            Arc::new(FakeCredentialsProvider::new()),
+            cx,
+        )
+    }
+
+    fn request_with_user_message(message: &str) -> LanguageModelRequest {
+        LanguageModelRequest {
+            messages: vec![LanguageModelRequestMessage {
+                role: Role::User,
+                content: vec![MessageContent::Text(message.to_string())],
+                cache: false,
+                reasoning_details: None,
+            }],
+            ..Default::default()
+        }
+    }
 
     #[test]
     fn opencode_free_model_ids_are_bare_for_registry_composition() {
@@ -991,6 +1116,81 @@ mod tests {
             models.get(model.id()),
             Some(&OpenCodeSubscription::Go),
             "Zen is inserted first and Go should replace it for shared model ids"
+        );
+    }
+
+    #[gpui::test]
+    async fn opencode_public_free_mode_authenticates_without_stored_key(cx: &mut TestAppContext) {
+        let provider = cx.update(init_test);
+
+        assert!(cx.read(|cx| provider.is_authenticated(cx)));
+    }
+
+    #[gpui::test]
+    async fn opencode_public_free_mode_lists_only_builtin_free_models_without_stored_key(
+        cx: &mut TestAppContext,
+    ) {
+        let provider = cx.update(init_test);
+
+        let (default_id, default_fast_id, provided_ids) = cx.read(|cx| {
+            let default_id = provider
+                .default_model(cx)
+                .map(|model| model.id().0.to_string());
+            let default_fast_id = provider
+                .default_fast_model(cx)
+                .map(|model| model.id().0.to_string());
+            let provided_ids = provider
+                .provided_models(cx)
+                .into_iter()
+                .map(|model| model.id().0.to_string())
+                .collect::<Vec<_>>();
+            (default_id, default_fast_id, provided_ids)
+        });
+
+        assert_eq!(default_id.as_deref(), Some("big-pickle"));
+        assert_eq!(default_fast_id.as_deref(), Some("nemotron-3-super-free"));
+        assert_eq!(provided_ids, ["big-pickle", "nemotron-3-super-free"]);
+    }
+
+    #[gpui::test]
+    async fn opencode_public_free_mode_uses_public_key_for_free_request(cx: &mut TestAppContext) {
+        let captured_authorization = Arc::new(Mutex::new(None));
+        let captured_authorization_clone = captured_authorization.clone();
+        let http_client = FakeHttpClient::create(move |request| {
+            let captured_authorization = captured_authorization_clone.clone();
+            async move {
+                let authorization = request
+                    .headers()
+                    .get("authorization")
+                    .and_then(|value| value.to_str().ok())
+                    .map(ToOwned::to_owned);
+                *captured_authorization.lock() = authorization;
+                Ok(Response::builder()
+                    .status(200)
+                    .body("data: [DONE]\n".into())
+                    .expect("failed to build fake OpenCode response"))
+            }
+        });
+        let provider = cx.update(|cx| {
+            let settings_store = SettingsStore::test(cx);
+            cx.set_global(settings_store);
+            crate::AllLanguageModelSettings::register(cx);
+            OpenCodeLanguageModelProvider::new(
+                http_client,
+                Arc::new(FakeCredentialsProvider::new()),
+                cx,
+            )
+        });
+
+        let model = provider
+            .create_language_model(opencode::Model::default_free(), OpenCodeSubscription::Free);
+        let request = request_with_user_message("Hello");
+        let result = model.stream_completion(request, &cx.to_async()).await;
+
+        assert!(result.is_ok());
+        assert_eq!(
+            captured_authorization.lock().as_deref(),
+            Some("Bearer public")
         );
     }
 }
