@@ -610,16 +610,50 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.match(providers, /ProviderGroup::Media/);
   assert.match(providersView, /providers_for\(group\)/);
   assert.match(providersView, /fn provider_target_button/);
+  assert.match(providersView, /fn provider_group_controls/);
   assert.match(providersView, /fn provider_buttons_for_group/);
-  assert.match(providersView, /fn remote_lane_row/);
   assert.match(providersView, /fn target_path_for_group/);
   assert.match(providers, /fn provider_tooltip_meta/);
   assert.match(providersView, /IconButton::new\(format!\("dx-forge-provider-\{\}", provider\.id\), provider\.icon\)/);
   assert.match(providersView, /provider_buttons_for_group\(group, snapshot, workspace, cx\)/);
+  const remoteTargetStripBody =
+    providersView.match(
+      /pub\(in crate::dx_forge_panel\) fn remote_target_strip\([\s\S]*?\r?\n}\r?\n\r?\nfn provider_target_button/,
+    )?.[0] ?? "";
+  const providerGroupControlsBody =
+    providersView.match(
+      /fn provider_group_controls\([\s\S]*?\r?\n}\r?\n\r?\nfn provider_buttons_for_group/,
+    )?.[0] ?? "";
+  const providerButtonsBody =
+    providersView.match(
+      /fn provider_buttons_for_group\([\s\S]*?\r?\n}\r?\n\r?\nfn target_path_for_group/,
+    )?.[0] ?? "";
+  assert.ok(remoteTargetStripBody, "remote_target_strip body should remain source-guarded");
+  assert.ok(providerGroupControlsBody, "provider_group_controls body should remain source-guarded");
+  assert.ok(providerButtonsBody, "provider_buttons_for_group body should remain source-guarded");
+  assert.match(remoteTargetStripBody, /v_flex\(\)/);
+  assert.doesNotMatch(remoteTargetStripBody, /\bRemote targets\b|\blanes\b|ProviderGroup::ALL\.len\(\)/i);
+  assert.match(providerGroupControlsBody, /ListItem::new/);
+  assert.match(providerGroupControlsBody, /\.inset\(true\)/);
+  assert.match(providerGroupControlsBody, /\.spacing\(ListItemSpacing::Dense\)/);
+  assert.match(providerGroupControlsBody, /\.start_slot\(/);
+  assert.match(providerGroupControlsBody, /\.end_slot\(open_button\)/);
+  assert.doesNotMatch(
+    providerGroupControlsBody,
+    /\.border_1\(\)|\.border_r_\d+\(\)|ghost_element_(?:background|hover|active)/,
+  );
+  assert.match(providerGroupControlsBody, /provider_buttons_for_group\(group, snapshot, workspace, cx\)/);
+  assert.match(providerGroupControlsBody, /Label::new\(group\.title\(\)\)/);
+  assert.match(providerGroupControlsBody, /Label::new\(state\.detail\.clone\(\)\)/);
+  assert.match(providerGroupControlsBody, /Icon::new\(state\.icon\)/);
+  assert.match(providerGroupControlsBody, /format!\("Open \{\}", group\.title\(\)\)/);
+  assert.match(
+    providerButtonsBody,
+    /providers_for\(group\)[\s\S]*provider_target_button\(provider, snapshot, workspace, cx\)/,
+  );
   assert.match(providersView, /IconButtonShape::Square/);
-  assert.match(providersView, /ButtonStyle::Subtle/);
-  assert.match(providersView, /ButtonStyle::Tinted\(TintColor::Warning\)/);
-  assert.match(providersView, /ButtonStyle::Tinted\(TintColor::Success\)/);
+  assert.match(providersView, /ButtonStyle::Transparent/);
+  assert.doesNotMatch(providersView, /ButtonStyle::Tinted|TintColor/);
   assert.match(providersView, /open_exact_abs_path\(/);
   assert.match(providersState, /fn code_target_state/);
   assert.match(providersState, /fn storage_target_state/);

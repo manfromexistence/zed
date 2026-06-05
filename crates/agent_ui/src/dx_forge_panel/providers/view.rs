@@ -1,5 +1,5 @@
-use gpui::{AnyElement, App, SharedString, WeakEntity, px};
-use ui::{ButtonStyle, IconButtonShape, IconName, TintColor, Tooltip, prelude::*};
+use gpui::{AnyElement, App, SharedString, WeakEntity};
+use ui::{ButtonStyle, IconButtonShape, IconName, ListItem, ListItemSpacing, Tooltip, prelude::*};
 use workspace::Workspace;
 
 use super::{
@@ -21,33 +21,11 @@ pub(in crate::dx_forge_panel) fn remote_target_strip(
         .id("dx-forge-remote-targets")
         .w_full()
         .min_w_0()
-        .gap_1()
-        .px_2()
-        .py_1()
         .border_b_1()
-        .border_color(cx.theme().colors().border)
-        .child(
-            h_flex()
-                .h(px(22.0))
-                .w_full()
-                .min_w_0()
-                .gap_1()
-                .child(Icon::new(IconName::CloudDownload).size(IconSize::XSmall))
-                .child(
-                    Label::new("Remote targets")
-                        .size(LabelSize::Small)
-                        .truncate(),
-                )
-                .child(div().flex_1())
-                .child(
-                    Label::new(format!("{} lanes", ProviderGroup::ALL.len()))
-                        .size(LabelSize::XSmall)
-                        .color(Color::Muted),
-                ),
-        );
+        .border_color(cx.theme().colors().border);
 
     for group in ProviderGroup::ALL {
-        strip = strip.child(remote_lane_row(group, snapshot, workspace, cx));
+        strip = strip.child(provider_group_controls(group, snapshot, workspace, cx));
     }
 
     strip.into_any_element()
@@ -87,7 +65,7 @@ fn provider_target_button(
         .into_any_element()
 }
 
-fn remote_lane_row(
+fn provider_group_controls(
     group: ProviderGroup,
     snapshot: &DxForgePanelSnapshot,
     workspace: &WeakEntity<Workspace>,
@@ -99,80 +77,68 @@ fn remote_lane_row(
     let enabled = local_path.as_ref().is_some_and(|path| path.exists());
     let tooltip_title = SharedString::from(group.title());
     let tooltip_meta = remote_target_tooltip(group, &state, target_path.as_deref(), enabled);
+    let open_title = SharedString::from(format!("Open {}", group.title()));
+    let open_button = IconButton::new(
+        format!("dx-forge-open-provider-group-{}", group.key()),
+        IconName::ArrowUpRight,
+    )
+    .shape(IconButtonShape::Square)
+    .icon_size(IconSize::XSmall)
+    .icon_color(Color::Muted)
+    .disabled(!enabled)
+    .tooltip({
+        let title = open_title.clone();
+        let meta = tooltip_meta.clone();
+        move |_, cx| Tooltip::with_meta(title.clone(), None, meta.clone(), cx)
+    })
+    .on_click({
+        let workspace = workspace.clone();
+        move |_, window, cx| {
+            if let Some(path) = local_path.clone().filter(|path| path.exists()) {
+                open_exact_abs_path(workspace.clone(), path, window, cx);
+            }
+        }
+    });
 
-    h_flex()
-        .id(SharedString::from(format!(
-            "dx-forge-remote-lane-{}",
-            group.key()
-        )))
-        .w_full()
-        .min_w_0()
-        .gap_2()
-        .pl_2()
-        .pr_1()
-        .py_1()
-        .border_1()
-        .border_r_2()
-        .bg(cx.theme().colors().ghost_element_background)
-        .hover(|style| style.bg(cx.theme().colors().ghost_element_hover))
-        .child(
-            Icon::new(group_icon(group))
-                .size(IconSize::Small)
-                .color(Color::Muted),
-        )
-        .child(provider_buttons_for_group(group, snapshot, workspace, cx))
-        .child(
-            v_flex()
-                .min_w_0()
-                .flex_1()
-                .gap_0p5()
-                .child(
-                    h_flex()
-                        .min_w_0()
-                        .gap_1()
-                        .child(Label::new(group.title()).size(LabelSize::Small).truncate()),
-                )
-                .child(
-                    Label::new(state.detail.clone())
-                        .size(LabelSize::XSmall)
-                        .color(Color::Muted)
-                        .truncate(),
-                ),
-        )
-        .child(
-            h_flex().gap_0p5().flex_none().child(
+    ListItem::new(SharedString::from(format!(
+        "dx-forge-provider-group-{}",
+        group.key()
+    )))
+    .inset(true)
+    .spacing(ListItemSpacing::Dense)
+    .start_slot(
+        Icon::new(group_icon(group))
+            .size(IconSize::Small)
+            .color(Color::Muted),
+    )
+    .child(
+        h_flex()
+            .w_full()
+            .min_w_0()
+            .gap_1p5()
+            .child(provider_buttons_for_group(group, snapshot, workspace, cx))
+            .child(
+                Label::new(group.title())
+                    .size(LabelSize::Small)
+                    .truncate()
+                    .flex_none(),
+            )
+            .child(
+                Label::new(state.detail.clone())
+                    .size(LabelSize::XSmall)
+                    .color(Color::Muted)
+                    .truncate()
+                    .flex_1(),
+            )
+            .child(
                 Icon::new(state.icon)
                     .size(IconSize::XSmall)
                     .color(state.color),
             ),
-        )
-        .child(
-            IconButton::new(
-                format!("dx-forge-open-lane-{}", group.key()),
-                IconName::ArrowUpRight,
-            )
-            .shape(IconButtonShape::Square)
-            .icon_size(IconSize::XSmall)
-            .icon_color(Color::Muted)
-            .disabled(!enabled)
-            .tooltip({
-                let title = tooltip_title.clone();
-                let meta = tooltip_meta.clone();
-                move |_, cx| Tooltip::with_meta(title.clone(), None, meta.clone(), cx)
-            })
-            .on_click({
-                let workspace = workspace.clone();
-                move |_, window, cx| {
-                    if let Some(path) = local_path.clone().filter(|path| path.exists()) {
-                        open_exact_abs_path(workspace.clone(), path, window, cx);
-                    }
-                }
-            }),
-        )
-        .tooltip(move |_, cx| {
-            Tooltip::with_meta(tooltip_title.clone(), None, tooltip_meta.clone(), cx)
-        })
-        .into_any_element()
+    )
+    .end_slot(open_button)
+    .tooltip(move |_, cx| Tooltip::with_meta(tooltip_title.clone(), None, tooltip_meta.clone(), cx))
+    .into_any_element()
 }
 
 fn provider_buttons_for_group(
@@ -247,17 +213,13 @@ fn target_open_path_for_provider<'a>(
         .map(|remote| remote.registry_open_path.as_str())
 }
 
-fn provider_button_style(state: &RemoteTargetState) -> ButtonStyle {
-    match state.color {
-        Color::Success => ButtonStyle::Tinted(TintColor::Success),
-        Color::Warning => ButtonStyle::Tinted(TintColor::Warning),
-        _ => ButtonStyle::Subtle,
-    }
+fn provider_button_style(_state: &RemoteTargetState) -> ButtonStyle {
+    ButtonStyle::Transparent
 }
 
 fn provider_icon_color(state: &RemoteTargetState) -> Color {
     match state.color {
-        Color::Success | Color::Warning => Color::Default,
+        Color::Success | Color::Warning => state.color,
         _ => Color::Muted,
     }
 }
