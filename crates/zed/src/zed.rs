@@ -16,7 +16,7 @@ pub mod visual_tests;
 pub(crate) mod windows_only_instance;
 
 use agent_settings::{UserAgentsMdState, init_user_agents_md};
-use agent_ui::AgentDiffToolbar;
+use agent_ui::{AgentDiffToolbar, DxCheckPanel};
 use anyhow::Context as _;
 pub use app_menus::*;
 use assets::Assets;
@@ -743,6 +743,7 @@ fn initialize_panels(window: &mut Window, cx: &mut Context<Workspace>) -> Task<a
         let font_panel = FontPanel::load(workspace_handle.clone(), cx.clone());
         let media_panel = MediaPanel::load(workspace_handle.clone(), cx.clone());
         let shadcn_ui_panel = ShadcnUiPanel::load(workspace_handle.clone(), cx.clone());
+        let dx_check_panel = DxCheckPanel::load(workspace_handle.clone(), cx.clone());
         let terminal_panel = TerminalPanel::load(workspace_handle.clone(), cx.clone());
         let git_panel = GitPanel::load(workspace_handle.clone(), cx.clone());
         let channels_panel =
@@ -771,6 +772,7 @@ fn initialize_panels(window: &mut Window, cx: &mut Context<Workspace>) -> Task<a
             add_panel_when_ready(font_panel, workspace_handle.clone(), cx.clone()),
             add_panel_when_ready(media_panel, workspace_handle.clone(), cx.clone()),
             add_panel_when_ready(shadcn_ui_panel, workspace_handle.clone(), cx.clone()),
+            add_panel_when_ready(dx_check_panel, workspace_handle.clone(), cx.clone()),
             add_panel_when_ready(terminal_panel, workspace_handle.clone(), cx.clone()),
             add_panel_when_ready(git_panel, workspace_handle.clone(), cx.clone()),
             add_panel_when_ready(channels_panel, workspace_handle.clone(), cx.clone()),

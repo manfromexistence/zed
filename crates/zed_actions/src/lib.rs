@@ -747,6 +747,19 @@ pub mod debug_panel {
     );
 }
 
+pub mod dx_check_panel {
+    use gpui::actions;
+    actions!(
+        dx_check_panel,
+        [
+            /// Toggles the DX Check panel.
+            Toggle,
+            /// Toggles focus on the DX Check panel.
+            ToggleFocus
+        ]
+    );
+}
+
 actions!(
     debugger,
     [

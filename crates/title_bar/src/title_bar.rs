@@ -1005,6 +1005,13 @@ impl TitleBar {
                 zed_actions::dx_style::TogglePanel.boxed_clone(),
                 active_right_panel == Some("Style"),
             ),
+            self.render_title_right_panel_button(
+                "titlebar-dx-check-panel",
+                IconName::Check,
+                "Check",
+                zed_actions::dx_check_panel::ToggleFocus.boxed_clone(),
+                active_right_panel == Some("Check"),
+            ),
             self.render_hidden_feature_menu(cx),
         ]
     }
@@ -1084,6 +1091,10 @@ impl TitleBar {
                         .action(
                             "Agent Panel",
                             zed_actions::assistant::ToggleFocus.boxed_clone(),
+                        )
+                        .action(
+                            "Check Panel",
+                            zed_actions::dx_check_panel::ToggleFocus.boxed_clone(),
                         )
                         .action("Documentation", zed_actions::OpenDocs.boxed_clone())
                         .action(

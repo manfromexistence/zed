@@ -14,6 +14,7 @@ mod diagnostics;
 pub mod draft_prompt_store;
 mod dx_agent_bridge;
 mod dx_check_panel;
+mod dx_check_panel_view;
 mod dx_check_score;
 mod dx_deploy_capabilities;
 mod dx_deploy_check_roots;
@@ -128,6 +129,7 @@ pub use crate::agent_panel::{
     AgentPanel, AgentPanelEvent, AgentPanelTerminalInfo, MaxIdleRetainedThreads, TerminalId,
 };
 use crate::agent_registry_ui::AgentRegistryPage;
+pub use crate::dx_check_panel_view::DxCheckPanel;
 pub use crate::inline_assistant::InlineAssistant;
 pub use crate::thread_metadata_store::ThreadId;
 pub use agent_diff::{AgentDiffPane, AgentDiffToolbar};
@@ -615,6 +617,7 @@ pub fn init(
     agent_panel::init(cx);
     dx_forge_panel::panel::init(cx);
     dx_style_panel::panel::init(cx);
+    dx_check_panel_view::init(cx);
     context_server_configuration::init(language_registry.clone(), fs.clone(), cx);
     thread_metadata_store::init(cx);
     terminal_thread_metadata_store::init(cx);
