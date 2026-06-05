@@ -58,6 +58,16 @@ test("composer renders separate mic and read-aloud buttons before send", () => {
     "pub(super) fn render_voice_buttons",
     "pub(super) fn render_voice_recording_panel",
   );
+  const voiceIcon = sourceSlice(
+    voiceButtons,
+    "let voice_icon = match state.phase",
+    "let voice_color = match state.phase",
+  );
+  const voiceDisabled = sourceSlice(
+    voiceButtons,
+    "let voice_disabled =",
+    "let speak_icon = match state.phase",
+  );
   const recordingPanel = sourceSlice(
     voiceControls,
     "pub(super) fn render_voice_recording_panel",
@@ -73,10 +83,14 @@ test("composer renders separate mic and read-aloud buttons before send", () => {
   assert.match(voiceControls, /IconName::Mic/);
   assert.match(voiceControls, /IconName::AudioOn/);
   assert.match(voiceControls, /IconName::Stop/);
+  assert.match(voiceIcon, /ComposerVoicePhase::Recording\s*\|\s*ComposerVoicePhase::Transcribing => IconName::Stop/);
+  assert.match(voiceIcon, /ComposerVoicePhase::Speaking => IconName::Mic/);
+  assert.doesNotMatch(voiceIcon, /ComposerVoicePhase::Speaking => IconName::Stop/);
   assert.match(voiceButtons, /let speak_icon = match state\.phase/);
   assert.match(voiceButtons, /ComposerVoicePhase::Speaking => IconName::Stop/);
   assert.match(voiceButtons, /!availability\.stt_ready/);
   assert.match(voiceButtons, /\.disabled\(voice_disabled\)/);
+  assert.match(voiceDisabled, /ComposerVoicePhase::Speaking => true/);
   assert.match(
     voiceButtons,
     /!availability\.has_composer_text/,
@@ -89,6 +103,7 @@ test("composer renders separate mic and read-aloud buttons before send", () => {
   assert.match(voiceControls, /Type text in the composer before reading aloud/);
   assert.match(voiceControls, /Kokoro runtime is not ready/);
   assert.match(voiceControls, /Flow STT is not ready/);
+  assert.match(voiceControls, /Kokoro read-aloud is active/);
   assert.match(voiceButtons, /agent-composer-voice-input[\s\S]+\.on_click\(on_voice_click\)/);
   assert.match(
     voiceButtons,
@@ -100,6 +115,16 @@ test("composer renders separate mic and read-aloud buttons before send", () => {
 
 test("voice recording UI exposes real recording and transcription states", () => {
   const voiceControls = readFileSync(voiceControlsPath, "utf8");
+  const recordingPanel = sourceSlice(
+    voiceControls,
+    "pub(super) fn render_voice_recording_panel",
+    "fn render_voice_level_meter",
+  );
+  const toggleVoiceRecording = sourceSlice(
+    threadView,
+    "fn toggle_flow_voice_recording",
+    "fn stop_flow_voice_action",
+  );
 
   assert.match(voiceControls, /enum ComposerVoicePhase/);
   assert.match(voiceControls, /Recording/);
@@ -122,7 +147,15 @@ test("voice recording UI exposes real recording and transcription states", () =>
   assert.match(voiceControls, /Stop Kokoro read-aloud/);
   assert.match(voiceControls, /agent-composer-discard-voice-recording/);
   assert.match(voiceControls, /Discard voice recording/);
-  assert.match(voiceControls, /agent-composer-stop-kokoro-read-aloud/);
+  assert.doesNotMatch(recordingPanel, /agent-composer-stop-kokoro-read-aloud/);
+  assert.match(
+    recordingPanel,
+    /ComposerVoicePhase::Recording \| ComposerVoicePhase::Transcribing/,
+  );
+  assert.doesNotMatch(
+    recordingPanel,
+    /ComposerVoicePhase::Recording\s*\|\s*ComposerVoicePhase::Transcribing\s*\|\s*ComposerVoicePhase::Speaking/,
+  );
   assert.match(voiceControls, /agent-composer-retry-voice-input/);
   assert.match(voiceControls, /Retry Flow voice input/);
   assert.match(voiceControls, /agent-composer-dismiss-voice-error/);
@@ -138,6 +171,11 @@ test("voice recording UI exposes real recording and transcription states", () =>
   assert.match(threadView, /Flow voice error dismissed/);
   assert.match(
     threadView,
+    /ComposerVoicePhase::Speaking => self\.stop_flow_voice_playback\(cx\)/,
+  );
+  assert.match(toggleVoiceRecording, /ComposerVoicePhase::Speaking => \{\}/);
+  assert.doesNotMatch(
+    toggleVoiceRecording,
     /ComposerVoicePhase::Speaking => self\.stop_flow_voice_playback\(cx\)/,
   );
   assert.match(
@@ -547,9 +585,12 @@ test("voice handoff keeps runtime readiness honest", () => {
   assert.match(voiceHandoff, /live Kokoro synthesis\/playback proof still remains deferred/);
   assert.match(voiceHandoff, /tracked\/cancelable WAV playback handle/);
   assert.match(voiceHandoff, /Live audible playback proof is still deferred/);
+  assert.match(voiceHandoff, /read-aloud toolbar button exposes the visible Kokoro stop path/);
+  assert.match(voiceHandoff, /inline panel stays status-only while Kokoro is speaking/);
+  assert.match(voiceHandoff, /toolbar mic stays disabled as Mic while Kokoro is speaking/);
   assert.doesNotMatch(
     voiceHandoff,
-    /runtime-green|production-ready|launch-ready|Nemotron live proof passed|Whisper live proof passed|Whisper smoke test passed/i,
+    /runtime-green|production-ready|launch-ready|Nemotron live proof passed|Whisper live proof passed|Whisper smoke test passed|Kokoro live proof passed|live audible playback proof passed|live Zed microphone proof passed/i,
   );
 });
 

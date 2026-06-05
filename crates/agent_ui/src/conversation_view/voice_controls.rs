@@ -116,7 +116,7 @@ impl ComposerVoiceState {
         match self.phase {
             ComposerVoicePhase::Recording => "Stop recording and transcribe with Flow",
             ComposerVoicePhase::Transcribing => "Cancel Flow transcription",
-            ComposerVoicePhase::Speaking => "Stop Kokoro read-aloud",
+            ComposerVoicePhase::Speaking => "Kokoro read-aloud is active",
             ComposerVoicePhase::Error if !availability.stt_ready => "Flow STT is not ready",
             ComposerVoicePhase::Error => "Retry Flow voice input",
             ComposerVoicePhase::Ready if !availability.stt_ready => "Flow STT is not ready",
@@ -152,16 +152,15 @@ pub(super) fn render_voice_buttons(
     on_speak_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
 ) -> Vec<AnyElement> {
     let voice_icon = match state.phase {
-        ComposerVoicePhase::Recording
-        | ComposerVoicePhase::Transcribing
-        | ComposerVoicePhase::Speaking => IconName::Stop,
-        _ => IconName::Mic,
+        ComposerVoicePhase::Recording | ComposerVoicePhase::Transcribing => IconName::Stop,
+        ComposerVoicePhase::Speaking => IconName::Mic,
+        ComposerVoicePhase::Ready | ComposerVoicePhase::Error => IconName::Mic,
     };
     let voice_color = match state.phase {
         ComposerVoicePhase::Recording => Color::Error,
-        ComposerVoicePhase::Transcribing | ComposerVoicePhase::Speaking => Color::Accent,
+        ComposerVoicePhase::Transcribing => Color::Accent,
         ComposerVoicePhase::Error => Color::Warning,
-        _ => Color::Muted,
+        ComposerVoicePhase::Speaking | ComposerVoicePhase::Ready => Color::Muted,
     };
     let speak_disabled = match state.phase {
         ComposerVoicePhase::Speaking => false,
@@ -170,10 +169,11 @@ pub(super) fn render_voice_buttons(
             !availability.has_composer_text || !availability.tts_ready
         }
     };
-    let voice_disabled = matches!(
-        state.phase,
-        ComposerVoicePhase::Ready | ComposerVoicePhase::Error
-    ) && !availability.stt_ready;
+    let voice_disabled = match state.phase {
+        ComposerVoicePhase::Speaking => true,
+        ComposerVoicePhase::Ready | ComposerVoicePhase::Error => !availability.stt_ready,
+        ComposerVoicePhase::Recording | ComposerVoicePhase::Transcribing => false,
+    };
     let speak_icon = match state.phase {
         ComposerVoicePhase::Speaking => IconName::Stop,
         _ => IconName::AudioOn,
@@ -285,9 +285,7 @@ pub(super) fn render_voice_recording_panel(
                     .when(
                         matches!(
                             state.phase,
-                            ComposerVoicePhase::Recording
-                                | ComposerVoicePhase::Transcribing
-                                | ComposerVoicePhase::Speaking
+                            ComposerVoicePhase::Recording | ComposerVoicePhase::Transcribing
                         ),
                         |this| {
                             this.child(
@@ -296,9 +294,6 @@ pub(super) fn render_voice_recording_panel(
                                     .child(
                                         IconButton::new(
                                             match state.phase {
-                                                ComposerVoicePhase::Speaking => {
-                                                    "agent-composer-stop-kokoro-read-aloud"
-                                                }
                                                 ComposerVoicePhase::Transcribing => {
                                                     "agent-composer-cancel-flow-transcription"
                                                 }
@@ -314,9 +309,6 @@ pub(super) fn render_voice_recording_panel(
                                             }
                                             ComposerVoicePhase::Transcribing => {
                                                 "Cancel Flow transcription"
-                                            }
-                                            ComposerVoicePhase::Speaking => {
-                                                "Stop Kokoro read-aloud"
                                             }
                                             _ => "Stop Flow voice action",
                                         }))

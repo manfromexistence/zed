@@ -4159,8 +4159,8 @@ impl ThreadView {
     fn toggle_flow_voice_recording(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         match self.composer_voice_state.phase() {
             ComposerVoicePhase::Recording => self.stop_flow_voice_recording(window, cx),
-            ComposerVoicePhase::Speaking => self.stop_flow_voice_playback(cx),
             ComposerVoicePhase::Transcribing => self.cancel_flow_speech_operation(cx),
+            ComposerVoicePhase::Speaking => {}
             ComposerVoicePhase::Ready | ComposerVoicePhase::Error => {
                 self.start_flow_voice_recording(window, cx)
             }
