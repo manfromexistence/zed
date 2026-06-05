@@ -1,5 +1,5 @@
 use gpui::{AnyElement, App, SharedString, px};
-use ui::{IconName, prelude::*};
+use ui::{IconName, Tooltip, prelude::*};
 
 use super::snapshot::{DxForgePanelState, DxForgeReceiptRow, DxForgeSourceRow};
 
@@ -12,6 +12,7 @@ pub(super) fn section(
 ) -> AnyElement {
     v_flex()
         .id(id)
+        .min_w_0()
         .gap_1()
         .rounded_sm()
         .border_1()
@@ -39,6 +40,7 @@ pub(super) fn receipt_row(ix: usize, receipt: &DxForgeReceiptRow, cx: &App) -> A
 
     let mut stack = v_flex()
         .id(SharedString::from(format!("dx-forge-receipt-{ix}")))
+        .min_w_0()
         .gap_0p5()
         .rounded_sm()
         .px_1()
@@ -71,6 +73,11 @@ pub(super) fn receipt_row(ix: usize, receipt: &DxForgeReceiptRow, cx: &App) -> A
                 .color(Color::Muted)
                 .truncate(),
         );
+    let tooltip_label = receipt.headline.clone();
+    let tooltip_meta = format!("{} - {}\n{}", receipt.kind, receipt.detail, receipt.label);
+    stack = stack.tooltip(move |_, cx| {
+        Tooltip::with_meta(tooltip_label.clone(), None, tooltip_meta.clone(), cx)
+    });
 
     if let Some(target_path) = receipt.target_path.as_ref() {
         stack = stack.child(detail_row(IconName::Folder, "Target", target_path.clone()));
@@ -94,6 +101,7 @@ pub(super) fn source_row(
 ) -> AnyElement {
     let mut stack = v_flex()
         .id(id)
+        .min_w_0()
         .gap_0p5()
         .rounded_sm()
         .px_1()
@@ -117,6 +125,11 @@ pub(super) fn source_row(
                 .truncate(),
         )
         .child(detail_row(IconName::Folder, "Path", source.path.clone()));
+    let tooltip_label = source.label.clone();
+    let tooltip_meta = format!("{}\n{}", source.detail, source.path);
+    stack = stack.tooltip(move |_, cx| {
+        Tooltip::with_meta(tooltip_label.clone(), None, tooltip_meta.clone(), cx)
+    });
 
     for receipt in source.receipts.iter().take(2) {
         stack = stack.child(detail_row(
@@ -178,6 +191,7 @@ pub(super) fn status_row(
 
 pub(super) fn empty_row(label: &'static str, cx: &App) -> AnyElement {
     h_flex()
+        .min_w_0()
         .gap_1()
         .rounded_sm()
         .px_1()
@@ -199,6 +213,7 @@ pub(super) fn empty_row(label: &'static str, cx: &App) -> AnyElement {
 
 pub(super) fn state_presentation(state: DxForgePanelState) -> (IconName, Color, &'static str) {
     match state {
+        DxForgePanelState::NoWorkspace => (IconName::Folder, Color::Muted, "No workspace"),
         DxForgePanelState::Ready => (IconName::Check, Color::Success, "Ready"),
         DxForgePanelState::Attention => (IconName::Warning, Color::Warning, "Needs attention"),
         DxForgePanelState::Empty => (IconName::Circle, Color::Muted, "Waiting for receipts"),
@@ -207,6 +222,7 @@ pub(super) fn state_presentation(state: DxForgePanelState) -> (IconName, Color, 
 }
 
 fn detail_row(icon: IconName, label: impl Into<String>, value: String) -> AnyElement {
+    let label = label.into();
     h_flex()
         .gap_1()
         .min_w_0()
@@ -217,10 +233,15 @@ fn detail_row(icon: IconName, label: impl Into<String>, value: String) -> AnyEle
                 .color(Color::Muted),
         )
         .child(
-            Label::new(format!("{}: {value}", label.into()))
+            Label::new(format!("{label}:"))
+                .size(LabelSize::XSmall)
+                .color(Color::Muted),
+        )
+        .child(
+            Label::new(value)
                 .size(LabelSize::XSmall)
                 .color(Color::Muted)
-                .truncate(),
+                .truncate_start(),
         )
         .into_any_element()
 }

@@ -1,7 +1,7 @@
 use gpui::{
     AnyElement, App, EntityId, IntoElement, ScrollHandle, SharedString, WeakEntity, Window,
 };
-use ui::{IconName, prelude::*};
+use ui::{IconName, WithScrollbar, prelude::*};
 use workspace::{Workspace, dock::side_panel_header_controls};
 
 use super::{
@@ -33,12 +33,11 @@ pub(super) fn render_panel(
                 .min_w_0()
                 .gap_2()
                 .p_2()
-                .overflow_y_scroll()
-                .track_scroll(scroll_handle)
                 .child(overview(snapshot, cx))
                 .child(receipt_section(snapshot, cx))
                 .child(restore_section(snapshot, cx))
-                .child(media_section(snapshot, cx)),
+                .child(media_section(snapshot, cx))
+                .vertical_scrollbar_for(scroll_handle, _window, cx),
         )
 }
 
@@ -83,22 +82,29 @@ fn overview(snapshot: &DxForgePanelSnapshot, cx: &App) -> AnyElement {
                 snapshot.state_detail.clone(),
             ))
             .child(metric_row(
-                "Workspace",
-                if snapshot.workspace_roots.is_empty() {
-                    "No roots".to_string()
-                } else {
-                    format!("{} root(s)", snapshot.workspace_roots.len())
-                },
+                "Workspace scope",
+                snapshot.workspace_scope.clone(),
+            ))
+            .child(metric_row(
+                "Forge roots",
+                snapshot.configured_root_scope.clone(),
             ))
             .child(metric_row(
                 "Receipt root",
                 snapshot.history_root_label.clone(),
             ))
             .child(metric_row("Receipts", snapshot.receipt_count.to_string()))
-            .child(metric_row("Blockers", snapshot.blocker_count.to_string()))
             .child(metric_row(
-                "Restore warnings",
-                snapshot.restore_warning_count.to_string(),
+                "Summaries",
+                snapshot.summarized_receipt_count.to_string(),
+            ))
+            .child(metric_row(
+                "Visible blockers",
+                snapshot.visible_blocker_count.to_string(),
+            ))
+            .child(metric_row(
+                "Visible restore warnings",
+                snapshot.visible_restore_warning_count.to_string(),
             ))
             .into_any_element(),
         cx,
@@ -110,7 +116,11 @@ fn receipt_section(snapshot: &DxForgePanelSnapshot, cx: &App) -> AnyElement {
 
     if snapshot.latest_receipts.is_empty() {
         stack = stack.child(empty_row(
-            if snapshot.history_root_exists {
+            if snapshot.workspace_roots.is_empty() {
+                "Open a workspace to read Forge receipts"
+            } else if snapshot.receipt_count > 0 {
+                "Forge receipts found, but no known summaries were readable"
+            } else if snapshot.history_root_exists {
                 "No Forge receipts found"
             } else {
                 "Forge receipt root is missing"
@@ -135,7 +145,9 @@ fn receipt_section(snapshot: &DxForgePanelSnapshot, cx: &App) -> AnyElement {
 fn restore_section(snapshot: &DxForgePanelSnapshot, cx: &App) -> AnyElement {
     let mut stack = v_flex().gap_1();
 
-    if snapshot.restore_previews.is_empty() {
+    if snapshot.workspace_roots.is_empty() {
+        stack = stack.child(empty_row("Open a workspace to read restore previews", cx));
+    } else if snapshot.restore_previews.is_empty() {
         stack = stack.child(empty_row("No restore previews found", cx));
     } else {
         for (ix, preview) in snapshot.restore_previews.iter().enumerate() {
@@ -160,7 +172,9 @@ fn restore_section(snapshot: &DxForgePanelSnapshot, cx: &App) -> AnyElement {
 fn media_section(snapshot: &DxForgePanelSnapshot, cx: &App) -> AnyElement {
     let mut stack = v_flex().gap_1();
 
-    if snapshot.media_outputs.is_empty() {
+    if snapshot.workspace_roots.is_empty() {
+        stack = stack.child(empty_row("Open a workspace to read media outputs", cx));
+    } else if snapshot.media_outputs.is_empty() {
         stack = stack.child(empty_row("No media outputs found", cx));
     } else {
         for (ix, output) in snapshot.media_outputs.iter().enumerate() {

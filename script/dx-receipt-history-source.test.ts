@@ -57,11 +57,12 @@ test("DX receipt history keeps bucket scanning, receipt IO, Forge summaries, and
   assert.doesNotMatch(forge, /fn forge_history_target_path/);
   assert.match(forgeFields, /pub\(super\) fn forge_history_kind/);
   assert.match(forgeFields, /pub\(super\) fn forge_history_target_path/);
-  assert.match(forgeFields, /use super::fields::\{bool_field, safe_string_field, string_field, usize_field\}/);
+  assert.match(forgeFields, /use super::fields::\{array_len_field, bool_field, safe_string_field, usize_field\}/);
   assert.match(forgeFields, /forge_history_status[\s\S]*safe_string_field/);
   assert.match(forgeFields, /forge_history_target_path[\s\S]*safe_string_field/);
   assert.match(forgeFields, /forge_history_restore_destination_root[\s\S]*safe_string_field/);
   assert.match(forgeFields, /restore_target_plan/);
+  assert.match(forgeFields, /array_len_field\(value, &\["restore_execution", "restore", "blockers"\]\)/);
   assert.match(receiptFiles, /pub\(super\) fn count_receipt_files/);
   assert.match(receiptFiles, /pub\(super\) fn push_latest_receipts/);
   assert.match(receiptFiles, /pub\(super\) fn root_label/);

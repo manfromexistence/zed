@@ -244,6 +244,7 @@ Current handoff and production-readiness guards:
 - `node --test script/dx-workspace-enumeration-source.test.ts` - workspace history and local discovery enumeration boundaries.
 - `node --test script/dx-source-quality.test.ts` - DX Studio source/edit manifest and bridge source contracts.
 - `node --test script/dx-style-panel-source.test.ts` - DX Style plan/read-model, Web Preview generator split modules, trusted source-apply session, CSS declaration dry-run review contracts, and Zed Style panel source-truth contracts.
+- `node --test script/dx-forge-panel-source.test.ts` - DX Forge dock panel registration, real receipt/restore/media read-model wiring, left-dock identity, edge-case states, and no Git-panel copy/process-call regressions.
 - `node G:\Dx\style\scripts\sync_zed_visual_generator_fixtures.mjs --check` - DX Style source fixture to Zed embedded visual-generator mirror freshness.
 - `node --test script/dx-studio-project-source.test.ts` - DX Studio project detection and source-edit bounded file-read contracts.
 - `node --test script/dx-buffer-codegen-source.test.ts` - inline assistant rewrite source-selection byte boundaries.

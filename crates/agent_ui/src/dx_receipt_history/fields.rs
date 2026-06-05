@@ -29,6 +29,12 @@ pub(super) fn usize_field(value: &Value, path: &[&str]) -> Option<usize> {
         .and_then(|value| usize::try_from(value).ok())
 }
 
+pub(super) fn array_len_field(value: &Value, path: &[&str]) -> Option<usize> {
+    value_at(value, path)
+        .and_then(Value::as_array)
+        .map(Vec::len)
+}
+
 fn value_at<'a>(value: &'a Value, path: &[&str]) -> Option<&'a Value> {
     let mut current = value;
     for segment in path {

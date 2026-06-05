@@ -1,6 +1,5 @@
-use super::fields::{bool_field, safe_string_field, usize_field};
+use super::fields::{array_len_field, bool_field, safe_string_field, usize_field};
 use serde_json::Value;
-
 pub(super) fn forge_history_kind(schema: &str, value: &Value) -> Option<&'static str> {
     if schema.contains(".restore_target_plan") || value.get("restore_target_plan").is_some() {
         Some("restore_target_plan")
@@ -109,5 +108,11 @@ pub(super) fn forge_history_blocker_count(value: &Value) -> Option<usize> {
         &["restore_target_plan", "validation", "blocker_count"],
     )
     .or_else(|| usize_field(value, &["restore_approval", "validation", "blocker_count"]))
+    .or_else(|| array_len_field(value, &["restore_target_plan", "validation", "blockers"]))
+    .or_else(|| array_len_field(value, &["restore_approval", "validation", "blockers"]))
+    .or_else(|| array_len_field(value, &["restore_execution", "restore", "blockers"]))
+    .or_else(|| array_len_field(value, &["backup_execution", "gate", "blockers"]))
+    .or_else(|| array_len_field(value, &["runner_gate", "validation", "blockers"]))
+    .or_else(|| array_len_field(value, &["blockers"]))
     .or_else(|| usize_field(value, &["blocker_count"]))
 }

@@ -1,21 +1,26 @@
 use crate::dx_receipt_history::{DxToolHistoryBucket, tool_history_snapshot};
 use crate::dx_source_sets::{DxSourceItem, source_set_snapshot};
+use std::path::Path;
 
 const FORGE_HISTORY_LABEL: &str = "Forge History";
 const RESTORE_PREVIEWS_LABEL: &str = "Restore Previews";
 const MEDIA_OUTPUTS_LABEL: &str = "Media Outputs";
+const MAX_WORKSPACE_ROOTS: usize = 4;
 const MAX_PANEL_ROWS: usize = 4;
 
 #[derive(Clone)]
 pub(super) struct DxForgePanelSnapshot {
     pub(super) workspace_roots: Vec<String>,
+    pub(super) workspace_scope: String,
+    pub(super) configured_root_scope: String,
     pub(super) state: DxForgePanelState,
     pub(super) state_detail: String,
     pub(super) history_root_label: String,
     pub(super) history_root_exists: bool,
     pub(super) receipt_count: usize,
-    pub(super) blocker_count: usize,
-    pub(super) restore_warning_count: usize,
+    pub(super) summarized_receipt_count: usize,
+    pub(super) visible_blocker_count: usize,
+    pub(super) visible_restore_warning_count: usize,
     pub(super) latest_receipts: Vec<DxForgeReceiptRow>,
     pub(super) restore_previews: Vec<DxForgeSourceRow>,
     pub(super) media_outputs: Vec<DxForgeSourceRow>,
@@ -23,6 +28,7 @@ pub(super) struct DxForgePanelSnapshot {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(super) enum DxForgePanelState {
+    NoWorkspace,
     Ready,
     Attention,
     Empty,
@@ -58,19 +64,21 @@ pub(super) struct DxForgeReceiptDrilldown {
 pub(super) fn forge_panel_snapshot(workspace_roots: &[String]) -> DxForgePanelSnapshot {
     let tool_history = tool_history_snapshot(workspace_roots);
     let source_sets = source_set_snapshot(workspace_roots);
+    let configured_root_count = configured_forge_root_count(workspace_roots);
     let history = tool_history
         .buckets
         .iter()
         .find(|bucket| bucket.label == FORGE_HISTORY_LABEL);
     let latest_receipts = history.map(receipt_rows).unwrap_or_default();
+    let summarized_receipt_count = latest_receipts.len();
     let receipt_count = history.map(|bucket| bucket.count).unwrap_or_default();
-    let blocker_count = latest_receipts
+    let visible_blocker_count = latest_receipts
         .iter()
         .map(|receipt| receipt.blocker_count)
         .sum();
     let restore_previews = source_rows_for_set(&source_sets.sets, RESTORE_PREVIEWS_LABEL);
     let media_outputs = source_rows_for_set(&source_sets.sets, MEDIA_OUTPUTS_LABEL);
-    let restore_warning_count = restore_previews
+    let visible_restore_warning_count = restore_previews
         .iter()
         .map(|preview| preview.warnings.len())
         .sum();
@@ -81,20 +89,25 @@ pub(super) fn forge_panel_snapshot(workspace_roots: &[String]) -> DxForgePanelSn
     let (state, state_detail) = forge_state(
         workspace_roots,
         history_root_exists,
+        configured_root_count,
         receipt_count,
-        blocker_count,
-        restore_warning_count,
+        summarized_receipt_count,
+        visible_blocker_count,
+        visible_restore_warning_count,
     );
 
     DxForgePanelSnapshot {
         workspace_roots: workspace_roots.to_vec(),
+        workspace_scope: workspace_scope(workspace_roots),
+        configured_root_scope: configured_root_scope(workspace_roots, configured_root_count),
         state,
         state_detail,
         history_root_label,
         history_root_exists,
         receipt_count,
-        blocker_count,
-        restore_warning_count,
+        summarized_receipt_count,
+        visible_blocker_count,
+        visible_restore_warning_count,
         latest_receipts,
         restore_previews,
         media_outputs,
@@ -154,13 +167,15 @@ fn source_row(source: &DxSourceItem) -> DxForgeSourceRow {
 fn forge_state(
     workspace_roots: &[String],
     history_root_exists: bool,
+    configured_root_count: usize,
     receipt_count: usize,
-    blocker_count: usize,
-    restore_warning_count: usize,
+    summarized_receipt_count: usize,
+    visible_blocker_count: usize,
+    visible_restore_warning_count: usize,
 ) -> (DxForgePanelState, String) {
     if workspace_roots.is_empty() {
         return (
-            DxForgePanelState::Missing,
+            DxForgePanelState::NoWorkspace,
             "Open a workspace to read Forge receipts".to_string(),
         );
     }
@@ -170,19 +185,32 @@ fn forge_state(
             "Missing tools/dx-forge receipt root".to_string(),
         );
     }
-    if blocker_count > 0 {
+    if receipt_count > 0 && summarized_receipt_count == 0 {
         return (
             DxForgePanelState::Attention,
-            format!("{blocker_count} Forge blocker(s) need review"),
+            "Forge receipts exist, but no known receipt summaries were readable".to_string(),
         );
     }
-    if restore_warning_count > 0 {
+    if visible_blocker_count > 0 {
         return (
             DxForgePanelState::Attention,
-            format!("{restore_warning_count} restore warning(s) need review"),
+            format!("{visible_blocker_count} visible Forge blocker(s) need review"),
+        );
+    }
+    if visible_restore_warning_count > 0 {
+        return (
+            DxForgePanelState::Attention,
+            format!("{visible_restore_warning_count} visible restore warning(s) need review"),
         );
     }
     if receipt_count == 0 {
+        if configured_root_count < workspace_roots.len() {
+            return (
+                DxForgePanelState::Attention,
+                configured_root_scope(workspace_roots, configured_root_count),
+            );
+        }
+
         return (
             DxForgePanelState::Empty,
             "Forge is configured, but no receipts were found".to_string(),
@@ -193,4 +221,30 @@ fn forge_state(
         DxForgePanelState::Ready,
         format!("{receipt_count} Forge receipt(s) available"),
     )
+}
+
+fn workspace_scope(workspace_roots: &[String]) -> String {
+    match workspace_roots.len() {
+        0 => "No roots".to_string(),
+        1 => "1 root scanned".to_string(),
+        count if count <= MAX_WORKSPACE_ROOTS => format!("{count} roots scanned"),
+        count => format!("first {MAX_WORKSPACE_ROOTS} of {count} roots scanned"),
+    }
+}
+
+fn configured_root_scope(workspace_roots: &[String], configured_root_count: usize) -> String {
+    if workspace_roots.is_empty() {
+        return "No workspace roots".to_string();
+    }
+
+    let scanned_roots = workspace_roots.len().min(MAX_WORKSPACE_ROOTS);
+    format!("{configured_root_count} of {scanned_roots} scanned roots configured")
+}
+
+fn configured_forge_root_count(workspace_roots: &[String]) -> usize {
+    workspace_roots
+        .iter()
+        .take(MAX_WORKSPACE_ROOTS)
+        .filter(|root| Path::new(root).join("tools").join("dx-forge").is_dir())
+        .count()
 }

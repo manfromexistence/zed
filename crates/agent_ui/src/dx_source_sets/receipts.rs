@@ -1,6 +1,6 @@
 use serde_json::Value;
 use std::{
-    cmp::Ordering,
+    cmp::Reverse,
     fs::{self, File},
     io::Read,
     path::{Path, PathBuf},
@@ -8,6 +8,7 @@ use std::{
 };
 
 const MAX_RECEIPT_BYTES: u64 = 1024 * 1024;
+const LATEST_RECEIPT_CANDIDATE_LIMIT: usize = 64;
 
 #[derive(Clone)]
 pub(super) struct ReceiptCandidate {
@@ -26,34 +27,42 @@ pub(super) fn latest_receipts(
     };
 
     let mut receipts = Vec::new();
-    for entry in entries.flatten().take(128) {
+    for entry in entries.flatten() {
         let path = entry.path();
         if path.is_file() && is_receipt_file(&path) {
-            let modified = path
-                .metadata()
-                .and_then(|metadata| metadata.modified())
-                .unwrap_or(SystemTime::UNIX_EPOCH);
-            let label = path
-                .strip_prefix(workspace_root)
-                .unwrap_or(path.as_path())
-                .display()
-                .to_string();
-            receipts.push(ReceiptCandidate {
-                path,
-                label,
-                modified,
-            });
+            push_latest_receipt_candidate(workspace_root, path, &mut receipts);
         }
     }
 
-    receipts.sort_by(|left, right| {
-        right
-            .modified
-            .partial_cmp(&left.modified)
-            .unwrap_or(Ordering::Equal)
-    });
+    receipts.sort_by_key(|receipt| Reverse(receipt.modified));
     receipts.truncate(limit);
     receipts
+}
+
+fn push_latest_receipt_candidate(
+    workspace_root: &Path,
+    path: PathBuf,
+    receipts: &mut Vec<ReceiptCandidate>,
+) {
+    let modified = path
+        .metadata()
+        .and_then(|metadata| metadata.modified())
+        .unwrap_or(SystemTime::UNIX_EPOCH);
+    let label = path
+        .strip_prefix(workspace_root)
+        .unwrap_or(path.as_path())
+        .display()
+        .to_string();
+    receipts.push(ReceiptCandidate {
+        path,
+        label,
+        modified,
+    });
+
+    if receipts.len() > LATEST_RECEIPT_CANDIDATE_LIMIT {
+        receipts.sort_by_key(|receipt| Reverse(receipt.modified));
+        receipts.truncate(LATEST_RECEIPT_CANDIDATE_LIMIT);
+    }
 }
 
 pub(super) fn read_receipt_json(path: &Path) -> Option<Value> {

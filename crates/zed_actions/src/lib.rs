@@ -869,6 +869,18 @@ pub mod dx_style {
     );
 }
 
+pub mod dx_forge {
+    use gpui::actions;
+
+    actions!(
+        dx_forge,
+        [
+            /// Toggles the DX Forge dock panel.
+            TogglePanel,
+        ]
+    );
+}
+
 pub mod agents_sidebar {
     use gpui::{Action, actions};
     use schemars::JsonSchema;

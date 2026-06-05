@@ -7,8 +7,9 @@ use workspace::{
     Workspace,
     dock::{DockPosition, Panel, PanelEvent},
 };
+use zed_actions::dx_forge::TogglePanel;
 
-use super::{TogglePanel, panel_view, snapshot};
+use super::{panel_view, snapshot};
 
 const DX_FORGE_PANEL_KEY: &str = "dx_forge_panel";
 const DEFAULT_PANEL_WIDTH: gpui::Pixels = px(360.0);
@@ -17,14 +18,14 @@ const MIN_PANEL_WIDTH: gpui::Pixels = px(280.0);
 pub(crate) fn init(cx: &mut App) {
     cx.observe_new(
         |workspace: &mut Workspace, window, cx: &mut Context<Workspace>| {
-            let Some(window) = window else {
-                return;
-            };
-
             workspace.register_action(|workspace, _: &TogglePanel, window, cx| {
                 ensure_panel(workspace, window, cx);
                 workspace.toggle_panel_focus::<DxForgePanel>(window, cx);
             });
+
+            let Some(window) = window else {
+                return;
+            };
 
             ensure_panel(workspace, window, cx);
         },

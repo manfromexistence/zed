@@ -6,8 +6,6 @@ use std::{
 
 const RECEIPT_HISTORY_ROOT_ENTRY_LIMIT: usize = 192;
 const RECEIPT_HISTORY_NESTED_ENTRY_LIMIT: usize = 64;
-const RECEIPT_HISTORY_LATEST_ROOT_ENTRY_LIMIT: usize = 64;
-const RECEIPT_HISTORY_LATEST_NESTED_ENTRY_LIMIT: usize = 64;
 const RECEIPT_HISTORY_LATEST_CANDIDATE_LIMIT: usize = 32;
 
 pub(super) type LatestReceipt = (SystemTime, PathBuf, String);
@@ -50,10 +48,7 @@ pub(super) fn push_latest_receipts(
         return;
     };
 
-    for entry in entries
-        .flatten()
-        .take(RECEIPT_HISTORY_LATEST_ROOT_ENTRY_LIMIT)
-    {
+    for entry in entries.flatten() {
         let path = entry.path();
         if path.is_file() {
             push_bounded_receipt_label(workspace_root, &path, receipts);
@@ -91,10 +86,7 @@ fn push_nested_receipt_labels(
     let Ok(children) = fs::read_dir(path) else {
         return;
     };
-    for child in children
-        .flatten()
-        .take(RECEIPT_HISTORY_LATEST_NESTED_ENTRY_LIMIT)
-    {
+    for child in children.flatten() {
         let path = child.path();
         if path.is_file() {
             push_bounded_receipt_label(workspace_root, &path, receipts);
