@@ -25,14 +25,10 @@ pub(super) fn toolbar(
         .border_b_1()
         .border_color(cx.theme().colors().border)
         .child(
-            Button::new("dx-forge-open-history", "History")
-                .label_size(LabelSize::Small)
-                .color(Color::Muted)
-                .start_icon(
-                    Icon::new(IconName::FolderOpen)
-                        .size(IconSize::Small)
-                        .color(Color::Muted),
-                )
+            IconButton::new("dx-forge-open-history", IconName::FolderOpen)
+                .shape(IconButtonShape::Square)
+                .icon_size(IconSize::Small)
+                .icon_color(Color::Muted)
                 .disabled(!history_enabled)
                 .tooltip(Tooltip::text(if history_enabled {
                     "Open Forge history root"
@@ -96,7 +92,7 @@ pub(super) fn open_path_button(
         .into_any_element()
 }
 
-fn workspace_path(path: &str, workspace_roots: &[String]) -> Option<PathBuf> {
+pub(super) fn workspace_path(path: &str, workspace_roots: &[String]) -> Option<PathBuf> {
     if path.is_empty() {
         return None;
     }
@@ -118,7 +114,7 @@ fn workspace_path(path: &str, workspace_roots: &[String]) -> Option<PathBuf> {
         .map(|root| PathBuf::from(root).join(direct))
 }
 
-fn open_workspace_path(
+pub(super) fn open_workspace_path(
     workspace: WeakEntity<Workspace>,
     path: PathBuf,
     window: &mut Window,

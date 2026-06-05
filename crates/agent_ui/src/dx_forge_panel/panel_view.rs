@@ -36,7 +36,7 @@ pub(super) fn render_panel(
             cx,
         ))
         .child(toolbar(snapshot, workspace, panel, cx))
-        .child(remote_target_strip(snapshot, cx))
+        .child(remote_target_strip(snapshot, workspace, cx))
         .child(
             v_flex()
                 .id("dx-forge-panel-content")
@@ -74,7 +74,7 @@ fn panel_header(
                 .gap_1()
                 .flex_1()
                 .min_w_0()
-                .child(Icon::new(IconName::Archive).size(IconSize::Small))
+                .child(Icon::new(IconName::Forgejo).size(IconSize::Small))
                 .child(Label::new("Forge").size(LabelSize::Small).truncate()),
         )
         .child(side_panel_header_controls(

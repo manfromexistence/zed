@@ -9,6 +9,7 @@ const panel = readFileSync("crates/agent_ui/src/dx_forge_panel/panel.rs", "utf8"
 const providersRootPath = "crates/agent_ui/src/dx_forge_panel/providers/mod.rs";
 const providersCatalogPath = "crates/agent_ui/src/dx_forge_panel/providers/catalog.rs";
 const providersStatePath = "crates/agent_ui/src/dx_forge_panel/providers/state.rs";
+const providersViewPath = "crates/agent_ui/src/dx_forge_panel/providers/view.rs";
 const providersRoot = existsSync(providersRootPath)
   ? readFileSync(providersRootPath, "utf8")
   : "";
@@ -17,6 +18,9 @@ const providersCatalog = existsSync(providersCatalogPath)
   : "";
 const providersState = existsSync(providersStatePath)
   ? readFileSync(providersStatePath, "utf8")
+  : "";
+const providersView = existsSync(providersViewPath)
+  ? readFileSync(providersViewPath, "utf8")
   : "";
 const snapshot = readFileSync("crates/agent_ui/src/dx_forge_panel/snapshot.rs", "utf8");
 const panelView = readFileSync("crates/agent_ui/src/dx_forge_panel/panel_view.rs", "utf8");
@@ -35,7 +39,7 @@ const receiptFields = readFileSync(
 );
 const sourceSets = readFileSync("crates/agent_ui/src/dx_source_sets.rs", "utf8");
 const sourceSetReceipts = readFileSync("crates/agent_ui/src/dx_source_sets/receipts.rs", "utf8");
-const providers = [providersRoot, providersCatalog, providersState].join("\n");
+const providers = [providersRoot, providersCatalog, providersState, providersView].join("\n");
 const forgeSources = [moduleRoot, controls, panel, providers, snapshot, panelView, rows].join("\n");
 const forgeReaderSources = [
   receiptBuckets,
@@ -75,7 +79,7 @@ test("Forge panel owns a stable local action and dock identity", () => {
   assert.match(panel, /fn persistent_name\(\) -> &'static str \{\s*"Forge"/);
   assert.match(panel, /DockPosition::Left/);
   assert.match(panel, /position == DockPosition::Left/);
-  assert.match(panel, /Some\(IconName::Archive\)/);
+  assert.match(panel, /Some\(IconName::Forgejo\)/);
   assert.match(panel, /fn activation_priority\(&self\) -> u32 \{\s*4\s*\}/);
   assert.match(panel, /fn starts_open\(&self, _:\s*&Window, _:\s*&App\) -> bool \{\s*false/);
   assert.doesNotMatch(panel, /DockPosition::Right|DockPosition::Bottom/);
@@ -135,7 +139,7 @@ test("Forge panel uses Git-style controls instead of metric cards", () => {
   assert.match(rows, /ghost_element_background/);
   assert.match(rows, /ghost_element_hover/);
   assert.match(rows, /ghost_element_active/);
-  assert.match(controls, /Button::new\("dx-forge-open-history", "History"\)/);
+  assert.match(controls, /IconButton::new\("dx-forge-open-history", IconName::FolderOpen\)/);
   assert.match(controls, /IconButton::new\("dx-forge-refresh", IconName::RotateCw\)/);
   assert.match(controls, /IconButton::new\(id, IconName::ArrowUpRight\)/);
   assert.match(controls, /open_abs_path\(/);
@@ -154,20 +158,24 @@ test("Forge panel uses Git-style controls instead of metric cards", () => {
 
 test("Forge panel renders DX icon provider targets with snapshot-driven readiness", () => {
   assert.match(moduleRoot, /mod providers;/);
-  assert.match(panelView, /remote_target_strip\(snapshot, cx\)/);
-  assert.ok(existsSync(providersRootPath), "Forge provider view must live in providers/mod.rs");
+  assert.match(panelView, /remote_target_strip\(snapshot, workspace, cx\)/);
+  assert.ok(existsSync(providersRootPath), "Forge provider module boundary must live in providers/mod.rs");
   assert.ok(existsSync(providersCatalogPath), "Forge provider metadata must live in catalog.rs");
   assert.ok(existsSync(providersStatePath), "Forge provider state must live in state.rs");
+  assert.ok(existsSync(providersViewPath), "Forge provider GPUI rendering must live in view.rs");
+  assert.match(providersRoot, /mod view;/);
+  assert.match(providersRoot, /pub\(super\) use self::view::remote_target_strip;/);
 
   const providerTargets = [
-    ["GitHub", "DxForgeProviderGithub", "dx_forge_provider_github", "ProviderGroup::Code", "svgl"],
-    ["GitLab", "DxForgeProviderGitlab", "dx_forge_provider_gitlab", "ProviderGroup::Code", "svgl"],
+    ["GitHub", "DxForgeProviderGithub", "dx_forge_provider_github", "ProviderGroup::Code", "svgl", "github_dark"],
+    ["GitLab", "DxForgeProviderGitlab", "dx_forge_provider_gitlab", "ProviderGroup::Code", "svgl", "gitlab"],
     [
       "Bitbucket",
       "DxForgeProviderBitbucket",
       "dx_forge_provider_bitbucket",
       "ProviderGroup::Code",
       "material-icon-theme",
+      "bitbucket",
     ],
     [
       "Google Drive",
@@ -175,6 +183,7 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
       "dx_forge_provider_drive",
       "ProviderGroup::Storage",
       "svgl",
+      "drive",
     ],
     [
       "Dropbox",
@@ -182,6 +191,7 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
       "dx_forge_provider_dropbox",
       "ProviderGroup::Storage",
       "svgl",
+      "dropbox",
     ],
     [
       "YouTube",
@@ -189,6 +199,7 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
       "dx_forge_provider_youtube",
       "ProviderGroup::Media",
       "svgl",
+      "youtube",
     ],
     [
       "SoundCloud",
@@ -196,6 +207,7 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
       "dx_forge_provider_soundcloud",
       "ProviderGroup::Media",
       "svgl",
+      "soundcloud-logo",
     ],
   ];
 
@@ -206,12 +218,13 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
     return providers.slice(start, end >= 0 ? end : undefined);
   };
 
-  for (const [label, iconName, fileName, group, sourcePack] of providerTargets) {
+  for (const [label, iconName, fileName, group, sourcePack, sourceSlug] of providerTargets) {
     const block = providerBlock(label);
     assert.match(icons, new RegExp(`\\b${iconName}\\b`));
     assert.match(block, new RegExp(`icon:\\s*IconName::${iconName}\\b`));
     assert.match(block, new RegExp(`group:\\s*${group}\\b`));
     assert.match(block, new RegExp(`source_pack:\\s*"${sourcePack}"`));
+    assert.match(block, new RegExp(`source_slug:\\s*"${sourceSlug}"`));
 
     const iconPath = `assets/icons/${fileName}.svg`;
     assert.ok(
@@ -231,17 +244,28 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.match(providers, /ProviderGroup::Code/);
   assert.match(providers, /ProviderGroup::Storage/);
   assert.match(providers, /ProviderGroup::Media/);
-  assert.match(providersRoot, /providers_for\(group\)/);
-  assert.match(providersRoot, /Icon::new\(provider\.icon\)/);
+  assert.match(providersView, /providers_for\(group\)/);
+  assert.match(providersView, /fn provider_target_deck/);
+  assert.match(providersView, /fn provider_target_button/);
+  assert.match(providersView, /fn remote_lane_row/);
+  assert.match(providersView, /fn target_path_for_group/);
+  assert.match(providersView, /fn provider_tooltip_meta/);
+  assert.match(providersView, /IconButton::new\(format!\("dx-forge-provider-\{\}", provider\.id\), provider\.icon\)/);
+  assert.match(providersView, /IconButtonShape::Square/);
+  assert.match(providersView, /ButtonStyle::Subtle/);
+  assert.match(providersView, /ButtonStyle::Tinted\(TintColor::Warning\)/);
+  assert.match(providersView, /ButtonStyle::Tinted\(TintColor::Success\)/);
+  assert.match(providersView, /workspace_path\(/);
+  assert.match(providersView, /open_workspace_path\(/);
   assert.match(providersState, /fn code_target_state/);
   assert.match(providersState, /fn storage_target_state/);
   assert.match(providersState, /fn media_target_state/);
   assert.match(providers, /source_pack: "svgl"/);
   assert.match(providers, /source_pack: "material-icon-theme"/);
+  assert.match(providers, /source_slug:/);
   assert.match(providers, /ProviderGroup::ALL/);
   assert.match(providers, /for group in ProviderGroup::ALL/);
   assert.match(providers, /fn remote_target_state/);
-  assert.match(providers, /fn provider_icon_stack/);
   assert.match(providers, /history_root_exists/);
   assert.match(providers, /receipt_count/);
   assert.match(providers, /summarized_receipt_count/);
@@ -251,10 +275,11 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.match(providers, /media_outputs\.len\(\)/);
   assert.match(providers, /Tooltip::with_meta/);
   assert.match(providers, /Icon::new\(state\.icon\)/);
-  assert.match(providers, /Label::new\(state\.label\)/);
-  assert.match(providers, /Label::new\(state\.detail\.clone\(\)\)/);
-  assert.match(providers, /h_flex\(\)[\s\S]*\.gap_0p5\(\)[\s\S]*\.flex_none\(\)[\s\S]*Icon::new\(state\.icon\)/);
-  assert.doesNotMatch(providers, /Button::new|IconButton::new/);
+  assert.doesNotMatch(providersView, /Label::new\(state\.label\)/);
+  assert.match(providers, /source_slug/);
+  assert.doesNotMatch(providers, /fn provider_icon_stack/);
+  assert.doesNotMatch(providers, /Label::new\(group\.providers_label\(\)\)/);
+  assert.doesNotMatch(providersView, /Icon source/);
   assert.doesNotMatch(
     providers,
     /ProviderStatus|ready_count|provider_status|provider_tooltip\(provider|Status:/,
@@ -280,6 +305,7 @@ test("Forge panel files stay small and professionally named", () => {
     ["providers/mod.rs", providersRoot],
     ["providers/catalog.rs", providersCatalog],
     ["providers/state.rs", providersState],
+    ["providers/view.rs", providersView],
     ["snapshot.rs", snapshot],
     ["panel_view.rs", panelView],
     ["rows.rs", rows],

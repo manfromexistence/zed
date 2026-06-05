@@ -21,6 +21,7 @@ pub(super) struct ForgeProvider {
     pub(super) icon: IconName,
     pub(super) group: ProviderGroup,
     pub(super) source_pack: &'static str,
+    pub(super) source_slug: &'static str,
 }
 
 pub(super) const PROVIDERS: &[ForgeProvider] = &[
@@ -30,6 +31,7 @@ pub(super) const PROVIDERS: &[ForgeProvider] = &[
         icon: IconName::DxForgeProviderGithub,
         group: ProviderGroup::Code,
         source_pack: "svgl",
+        source_slug: "github_dark",
     },
     ForgeProvider {
         id: "gitlab",
@@ -37,6 +39,7 @@ pub(super) const PROVIDERS: &[ForgeProvider] = &[
         icon: IconName::DxForgeProviderGitlab,
         group: ProviderGroup::Code,
         source_pack: "svgl",
+        source_slug: "gitlab",
     },
     ForgeProvider {
         id: "bitbucket",
@@ -44,6 +47,7 @@ pub(super) const PROVIDERS: &[ForgeProvider] = &[
         icon: IconName::DxForgeProviderBitbucket,
         group: ProviderGroup::Code,
         source_pack: "material-icon-theme",
+        source_slug: "bitbucket",
     },
     ForgeProvider {
         id: "drive",
@@ -51,6 +55,7 @@ pub(super) const PROVIDERS: &[ForgeProvider] = &[
         icon: IconName::DxForgeProviderDrive,
         group: ProviderGroup::Storage,
         source_pack: "svgl",
+        source_slug: "drive",
     },
     ForgeProvider {
         id: "dropbox",
@@ -58,6 +63,7 @@ pub(super) const PROVIDERS: &[ForgeProvider] = &[
         icon: IconName::DxForgeProviderDropbox,
         group: ProviderGroup::Storage,
         source_pack: "svgl",
+        source_slug: "dropbox",
     },
     ForgeProvider {
         id: "youtube",
@@ -65,6 +71,7 @@ pub(super) const PROVIDERS: &[ForgeProvider] = &[
         icon: IconName::DxForgeProviderYoutube,
         group: ProviderGroup::Media,
         source_pack: "svgl",
+        source_slug: "youtube",
     },
     ForgeProvider {
         id: "soundcloud",
@@ -72,6 +79,7 @@ pub(super) const PROVIDERS: &[ForgeProvider] = &[
         icon: IconName::DxForgeProviderSoundcloud,
         group: ProviderGroup::Media,
         source_pack: "svgl",
+        source_slug: "soundcloud-logo",
     },
 ];
 
@@ -92,16 +100,9 @@ impl ProviderGroup {
         }
     }
 
-    pub(super) fn providers_label(self) -> String {
+    pub(super) fn provider_labels(self) -> String {
         providers_for(self)
             .map(|provider| provider.label)
-            .collect::<Vec<_>>()
-            .join(", ")
-    }
-
-    pub(super) fn provider_sources(self) -> String {
-        providers_for(self)
-            .map(|provider| format!("{} ({})", provider.label, provider.source_pack))
             .collect::<Vec<_>>()
             .join(", ")
     }

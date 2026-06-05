@@ -120,7 +120,7 @@ impl Panel for DxForgePanel {
     }
 
     fn icon(&self, _: &Window, _: &App) -> Option<IconName> {
-        Some(IconName::Archive)
+        Some(IconName::Forgejo)
     }
 
     fn icon_tooltip(&self, _: &Window, _: &App) -> Option<&'static str> {
