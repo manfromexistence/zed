@@ -194,6 +194,10 @@ impl LanguageModels {
             .into_iter()
             .filter(|provider| provider.is_authenticated(cx))
             .collect::<Vec<_>>();
+        let native_provider_ids = providers
+            .iter()
+            .map(|provider| provider.id().0.to_string())
+            .collect::<HashSet<_>>();
 
         let mut language_model_list = IndexMap::default();
         let mut recommended_models = HashSet::default();
@@ -232,6 +236,11 @@ impl LanguageModels {
                     provider_models,
                 );
             }
+        }
+
+        if let Some(catalog_bridge) = &self.catalog_bridge {
+            catalog_bridge
+                .append_catalog_provider_groups(&mut language_model_list, &native_provider_ids);
         }
 
         self.models = models;

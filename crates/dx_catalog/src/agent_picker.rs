@@ -1,5 +1,6 @@
 use crate::{
-    DxCatalog, ModelCapabilities, ModelRecord, ProviderAuthKind, ProviderRecord, RoutingRole,
+    DxCatalog, ModelCapabilities, ModelRecord, ProviderAuthKind, ProviderKind, ProviderRecord,
+    RoutingRole,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
@@ -237,6 +238,10 @@ pub fn build_agent_picker_projection(
 
     if options.include_provider_groups {
         for provider in catalog.providers.iter() {
+            if !include_catalog_provider_group(provider) {
+                continue;
+            }
+
             push_group(
                 &mut groups,
                 format!("provider:{}", provider.id),
@@ -417,6 +422,13 @@ fn push_group(
     }
 }
 
+fn include_catalog_provider_group(provider: &ProviderRecord) -> bool {
+    !matches!(
+        (provider.kind, provider.auth),
+        (ProviderKind::NativeAccount, _) | (_, ProviderAuthKind::NativeAccount)
+    )
+}
+
 fn model_allowed(
     model: &ModelRecord,
     provider: &ProviderRecord,
@@ -580,5 +592,93 @@ impl ModelFreshness for ModelRecord {
         let id = self.id.to_ascii_lowercase();
         let name = self.display_name.to_ascii_lowercase();
         id.contains("latest") || name.contains("latest")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{DX_CATALOG_SCHEMA_VERSION, ProviderKind};
+
+    #[test]
+    fn catalog_provider_groups_include_catalog_only_and_skip_native_accounts() {
+        let catalog = DxCatalog {
+            schema_version: DX_CATALOG_SCHEMA_VERSION,
+            generated_unix_ms: 0,
+            source_revision: "agent-picker-test".to_string(),
+            sources: Vec::new(),
+            providers: vec![
+                provider("openai", "OpenAI", ProviderKind::NativeAccount),
+                provider("groq", "Groq", ProviderKind::OpenAiCompatible),
+            ],
+            models: vec![
+                model("openai/gpt-5.1", "openai", "GPT-5.1"),
+                model(
+                    "groq/llama-3.3-70b-versatile",
+                    "groq",
+                    "Llama 3.3 70B Versatile",
+                ),
+            ],
+            routing_rules: Vec::new(),
+        };
+
+        let projection =
+            build_agent_picker_projection(&catalog, AgentPickerProjectionOptions::new());
+        let group_ids = projection
+            .groups
+            .iter()
+            .map(|group| group.id.as_str())
+            .collect::<Vec<_>>();
+
+        assert!(group_ids.contains(&"provider:groq"));
+        assert!(!group_ids.contains(&"provider:openai"));
+    }
+
+    fn provider(id: &str, display_name: &str, kind: ProviderKind) -> ProviderRecord {
+        ProviderRecord {
+            id: id.to_string(),
+            display_name: display_name.to_string(),
+            kind,
+            auth: match kind {
+                ProviderKind::NativeAccount => ProviderAuthKind::NativeAccount,
+                _ => ProviderAuthKind::ApiKey,
+            },
+            auth_profile: None,
+            aliases: Vec::new(),
+            base_url: Some(format!("https://api.{id}.example")),
+            homepage_url: None,
+            supports_streaming: true,
+            supports_tools: true,
+            supports_free_tier: false,
+            supports_premium_account: true,
+            is_local: false,
+            is_enabled_by_default: true,
+            notes: None,
+        }
+    }
+
+    fn model(id: &str, provider_id: &str, display_name: &str) -> ModelRecord {
+        ModelRecord {
+            id: id.to_string(),
+            provider_id: provider_id.to_string(),
+            display_name: display_name.to_string(),
+            aliases: Vec::new(),
+            capabilities: ModelCapabilities {
+                chat: true,
+                tools: true,
+                coding: true,
+                streaming: true,
+                premium_account: true,
+                ..ModelCapabilities::default()
+            },
+            context_window_tokens: Some(128_000),
+            max_output_tokens: Some(8_192),
+            pricing: None,
+            local_runtime: None,
+            recommended_roles: vec![RoutingRole::Coding],
+            free_tier_hint: None,
+            premium_account_hint: Some("Test premium account".to_string()),
+            notes: None,
+        }
     }
 }

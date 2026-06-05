@@ -1,15 +1,18 @@
 use crate::dx_catalog_provider_settings_mutation::{
     apply_provider_settings_spec, can_write_provider_settings, catalog_base_url_matches_settings,
 };
-use acp_thread::AgentModelInfo;
-use collections::{HashMap, HashSet};
+use acp_thread::{AgentModelGroupName, AgentModelInfo};
+use agent_client_protocol::schema as acp;
+use collections::{HashMap, HashSet, IndexMap};
 use dx_catalog::{
-    AgentPickerAuthState, AgentPickerProjectionOptions, CatalogArtifactBuildOptions,
-    CatalogExecutionAdapterKind, CatalogExecutionPermission, CatalogExecutionPlan,
-    CatalogExecutionPlanRequest, CatalogProviderAdapterModelSpec,
-    CatalogProviderAdapterRegistrationSpec, DxCatalog, ModelRecord, ProviderRecord, RoutingRole,
-    build_agent_picker_projection, build_catalog_artifact_from_sources,
+    AgentPickerAuthState, AgentPickerGroup, AgentPickerModel, AgentPickerProjectionOptions,
+    CatalogArtifactBuildOptions, CatalogExecutionAdapterKind, CatalogExecutionPermission,
+    CatalogExecutionPlan, CatalogExecutionPlanRequest, CatalogGeneratorOptions,
+    CatalogProviderAdapterModelSpec, CatalogProviderAdapterRegistrationSpec,
+    CatalogSourceDiscoveryConfig, CatalogSourceReadOptions, DxCatalog, ModelRecord, ProviderRecord,
+    RoutingRole, build_agent_picker_projection, build_catalog, build_catalog_artifact_from_sources,
     build_catalog_execution_plan, build_catalog_provider_registration_specs, read_catalog_artifact,
+    read_discovered_catalog_sources,
 };
 use fs::Fs;
 use language_model::{LanguageModelProviderId, LanguageModelRegistry};
@@ -41,6 +44,7 @@ pub(crate) const DX_CATALOG_PROVIDER_SETTINGS_REGISTRATION_SCHEMA: &str =
 #[derive(Clone, Debug, Default)]
 pub struct DxCatalogAgentBridge {
     models: HashMap<String, CatalogModelPresentation>,
+    provider_groups: Vec<CatalogProviderModelGroup>,
     route_candidates: HashMap<String, Vec<String>>,
     execution_plans: HashMap<String, CatalogExecutionSummary>,
 }
@@ -49,6 +53,13 @@ pub struct DxCatalogAgentBridge {
 struct CatalogModelPresentation {
     description: Option<String>,
     cost_label: Option<String>,
+}
+
+#[derive(Clone, Debug)]
+struct CatalogProviderModelGroup {
+    provider_id: String,
+    name: String,
+    models: Vec<AgentModelInfo>,
 }
 
 #[derive(Clone, Debug)]
@@ -124,6 +135,31 @@ impl DxCatalogAgentBridge {
         ))
     }
 
+    pub fn append_catalog_provider_groups(
+        &self,
+        model_groups: &mut IndexMap<AgentModelGroupName, Vec<AgentModelInfo>>,
+        native_provider_ids: &HashSet<String>,
+    ) {
+        let mut existing_group_names = model_groups
+            .keys()
+            .map(|name| name.0.to_string())
+            .collect::<HashSet<_>>();
+
+        for group in &self.provider_groups {
+            if native_provider_ids.contains(group.provider_id.as_str()) {
+                continue;
+            }
+            if !existing_group_names.insert(group.name.clone()) {
+                continue;
+            }
+
+            model_groups.insert(
+                AgentModelGroupName(group.name.clone().into()),
+                group.models.clone(),
+            );
+        }
+    }
+
     fn load_uncached() -> Option<Self> {
         materialize_catalog_artifact_if_approved();
 
@@ -150,7 +186,56 @@ impl DxCatalogAgentBridge {
             }
         }
 
-        None
+        Self::load_from_discovered_sources()
+    }
+
+    fn load_from_discovered_sources() -> Option<Self> {
+        let generated_unix_ms = current_unix_ms();
+        let source_revision = env::var(DX_CATALOG_SOURCE_REVISION_ENV)
+            .ok()
+            .filter(|value| !value.trim().is_empty())
+            .unwrap_or_else(|| "catalog-source-fallback".to_string());
+        let discovery_config = catalog_source_discovery_config();
+        let discovery = discovery_config.discover();
+        if discovery.available_count == 0 {
+            return None;
+        }
+
+        let source_output = read_discovered_catalog_sources(
+            &discovery,
+            &CatalogSourceReadOptions::new()
+                .with_source_revision(source_revision.clone())
+                .with_generated_unix_ms(generated_unix_ms),
+        );
+        if source_output.inputs.is_empty() {
+            return None;
+        }
+
+        let output = build_catalog(
+            source_output.inputs,
+            CatalogGeneratorOptions::new(source_revision, generated_unix_ms),
+        );
+        let validation = output.catalog.validate_references();
+        if !validation.is_valid {
+            log::warn!(
+                "DX catalog source fallback produced an invalid catalog: providers={}, models={}, duplicate_providers={}, duplicate_models={}, missing_provider_models={}, missing_route_models={}",
+                validation.provider_count,
+                validation.model_count,
+                validation.duplicate_provider_ids.len(),
+                validation.duplicate_model_ids.len(),
+                validation.missing_provider_model_ids.len(),
+                validation.missing_route_model_ids.len(),
+            );
+            return None;
+        }
+
+        log::info!(
+            "DX catalog source fallback loaded providers={}, models={} from {} available source(s)",
+            output.catalog.providers.len(),
+            output.catalog.models.len(),
+            discovery.available_count
+        );
+        Some(Self::from_catalog(&output.catalog))
     }
 
     fn from_catalog(catalog: &DxCatalog) -> Self {
@@ -162,9 +247,10 @@ impl DxCatalogAgentBridge {
         let projection = build_agent_picker_projection(
             catalog,
             AgentPickerProjectionOptions::new()
-                .include_provider_groups(false)
+                .include_provider_groups(true)
                 .include_unselectable_models(true),
         );
+        let provider_groups = catalog_provider_model_groups(&projection.groups);
         let route_recommendations = projection.route_recommendations.clone();
         let picker_models = projection
             .groups
@@ -256,6 +342,7 @@ impl DxCatalogAgentBridge {
 
         Self {
             models,
+            provider_groups,
             route_candidates,
             execution_plans,
         }
@@ -738,6 +825,14 @@ fn catalog_artifact_candidate_preview() -> Vec<serde_json::Value> {
         .collect()
 }
 
+fn catalog_source_discovery_config() -> CatalogSourceDiscoveryConfig {
+    let mut config = CatalogSourceDiscoveryConfig::from_environment();
+    if cfg!(windows) {
+        config = config.with_candidate_root(r"G:\Dx");
+    }
+    config
+}
+
 fn provider_settings_live_validation(
     spec: &CatalogProviderAdapterRegistrationSpec,
     cx: &gpui::App,
@@ -1203,6 +1298,12 @@ fn provider_settings_registration_approved() -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use acp_thread::{AgentModelGroupName, AgentModelInfo};
+    use agent_client_protocol::schema as acp;
+    use collections::IndexMap;
+    use dx_catalog::{
+        DX_CATALOG_SCHEMA_VERSION, ModelCapabilities, ProviderAuthKind, ProviderKind,
+    };
 
     #[test]
     fn preview_next_action_routes_startup_registration_to_permissioned_tool() {
@@ -1222,6 +1323,106 @@ mod tests {
         assert!(next_action.contains("register_dx_catalog_provider_settings"));
         assert!(!next_action.contains("restart"));
         assert!(!next_action.contains("DX_CATALOG_REGISTER_PROVIDER_SETTINGS"));
+    }
+
+    #[test]
+    fn appends_catalog_provider_groups_without_shadowing_native_providers() {
+        let bridge = DxCatalogAgentBridge::from_catalog(&catalog_with_catalog_openai_and_groq());
+        let mut model_groups = IndexMap::from_iter([(
+            AgentModelGroupName("OpenAI".into()),
+            vec![agent_model_info("openai/gpt-5.1", "GPT-5.1")],
+        )]);
+        let native_provider_ids = HashSet::from_iter(["openai".to_string()]);
+
+        bridge.append_catalog_provider_groups(&mut model_groups, &native_provider_ids);
+
+        assert!(model_groups.contains_key(&AgentModelGroupName("OpenAI".into())));
+        assert!(!model_groups.contains_key(&AgentModelGroupName("OpenAI Catalog".into())));
+        assert_eq!(
+            model_groups
+                .get(&AgentModelGroupName("Groq".into()))
+                .and_then(|models| models.first())
+                .map(|model| model.id.0.as_ref()),
+            Some("groq/llama-3.3-70b-versatile")
+        );
+    }
+
+    fn catalog_with_catalog_openai_and_groq() -> DxCatalog {
+        DxCatalog {
+            schema_version: DX_CATALOG_SCHEMA_VERSION,
+            generated_unix_ms: 0,
+            source_revision: "catalog-bridge-test".to_string(),
+            sources: Vec::new(),
+            providers: vec![
+                provider("openai", "OpenAI Catalog"),
+                provider("groq", "Groq"),
+            ],
+            models: vec![
+                model("openai/gpt-5.1", "openai", "GPT-5.1"),
+                model(
+                    "groq/llama-3.3-70b-versatile",
+                    "groq",
+                    "Llama 3.3 70B Versatile",
+                ),
+            ],
+            routing_rules: Vec::new(),
+        }
+    }
+
+    fn provider(id: &str, display_name: &str) -> ProviderRecord {
+        ProviderRecord {
+            id: id.to_string(),
+            display_name: display_name.to_string(),
+            kind: ProviderKind::OpenAiCompatible,
+            auth: ProviderAuthKind::ApiKey,
+            auth_profile: None,
+            aliases: Vec::new(),
+            base_url: Some(format!("https://api.{id}.example")),
+            homepage_url: None,
+            supports_streaming: true,
+            supports_tools: true,
+            supports_free_tier: false,
+            supports_premium_account: true,
+            is_local: false,
+            is_enabled_by_default: true,
+            notes: None,
+        }
+    }
+
+    fn model(id: &str, provider_id: &str, display_name: &str) -> ModelRecord {
+        ModelRecord {
+            id: id.to_string(),
+            provider_id: provider_id.to_string(),
+            display_name: display_name.to_string(),
+            aliases: Vec::new(),
+            capabilities: ModelCapabilities {
+                chat: true,
+                tools: true,
+                coding: true,
+                streaming: true,
+                premium_account: true,
+                ..ModelCapabilities::default()
+            },
+            context_window_tokens: Some(128_000),
+            max_output_tokens: Some(8_192),
+            pricing: None,
+            local_runtime: None,
+            recommended_roles: vec![RoutingRole::Coding],
+            free_tier_hint: None,
+            premium_account_hint: Some("Test premium account".to_string()),
+            notes: None,
+        }
+    }
+
+    fn agent_model_info(id: &str, name: &str) -> AgentModelInfo {
+        AgentModelInfo {
+            id: acp::ModelId::new(id),
+            name: name.into(),
+            description: None,
+            icon: None,
+            is_latest: false,
+            cost: None,
+        }
     }
 }
 
@@ -1264,6 +1465,42 @@ fn current_unix_ms() -> u64 {
         .duration_since(UNIX_EPOCH)
         .map(|duration| duration.as_millis().min(u128::from(u64::MAX)) as u64)
         .unwrap_or_default()
+}
+
+fn catalog_provider_model_groups(groups: &[AgentPickerGroup]) -> Vec<CatalogProviderModelGroup> {
+    groups
+        .iter()
+        .filter_map(|group| {
+            let provider_id = group.id.strip_prefix("provider:")?;
+            let models = group
+                .models
+                .iter()
+                .map(catalog_picker_model_to_agent_model_info)
+                .collect::<Vec<_>>();
+
+            (!models.is_empty()).then(|| CatalogProviderModelGroup {
+                provider_id: provider_id.to_string(),
+                name: group.title.clone(),
+                models,
+            })
+        })
+        .collect()
+}
+
+fn catalog_picker_model_to_agent_model_info(model: &AgentPickerModel) -> AgentModelInfo {
+    AgentModelInfo {
+        id: acp::ModelId::new(model.model_id.clone()),
+        name: model.display_name.clone().into(),
+        description: catalog_model_description(
+            model.description.as_deref(),
+            &model.badges,
+            model.auth_state,
+        )
+        .map(Into::into),
+        icon: None,
+        is_latest: false,
+        cost: model.cost_label.clone().map(Into::into),
+    }
 }
 
 fn insert_route_candidates(
