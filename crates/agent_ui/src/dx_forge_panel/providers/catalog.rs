@@ -46,7 +46,7 @@ pub(super) const PROVIDERS: &[ForgeProvider] = &[
         label: "Bitbucket",
         icon: IconName::DxForgeProviderBitbucket,
         group: ProviderGroup::Code,
-        source_pack: "material-icon-theme",
+        source_pack: "simple-icons",
         source_slug: "bitbucket",
     },
     ForgeProvider {

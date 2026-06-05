@@ -6,6 +6,10 @@ const agentUi = readFileSync("crates/agent_ui/src/agent_ui.rs", "utf8");
 const moduleRoot = readFileSync("crates/agent_ui/src/dx_forge_panel.rs", "utf8");
 const controls = readFileSync("crates/agent_ui/src/dx_forge_panel/controls.rs", "utf8");
 const panel = readFileSync("crates/agent_ui/src/dx_forge_panel/panel.rs", "utf8");
+const packageStatusPath = "crates/agent_ui/src/dx_forge_panel/package_status.rs";
+const packageStatus = existsSync(packageStatusPath)
+  ? readFileSync(packageStatusPath, "utf8")
+  : "";
 const providersRootPath = "crates/agent_ui/src/dx_forge_panel/providers/mod.rs";
 const providersCatalogPath = "crates/agent_ui/src/dx_forge_panel/providers/catalog.rs";
 const providersStatePath = "crates/agent_ui/src/dx_forge_panel/providers/state.rs";
@@ -23,6 +27,10 @@ const providersView = existsSync(providersViewPath)
   ? readFileSync(providersViewPath, "utf8")
   : "";
 const snapshot = readFileSync("crates/agent_ui/src/dx_forge_panel/snapshot.rs", "utf8");
+const snapshotStatePath = "crates/agent_ui/src/dx_forge_panel/snapshot_state.rs";
+const snapshotState = existsSync(snapshotStatePath)
+  ? readFileSync(snapshotStatePath, "utf8")
+  : "";
 const panelView = readFileSync("crates/agent_ui/src/dx_forge_panel/panel_view.rs", "utf8");
 const rows = readFileSync("crates/agent_ui/src/dx_forge_panel/rows.rs", "utf8");
 const icons = readFileSync("crates/icons/src/icons.rs", "utf8");
@@ -40,8 +48,19 @@ const receiptFields = readFileSync(
 const sourceSets = readFileSync("crates/agent_ui/src/dx_source_sets.rs", "utf8");
 const sourceSetReceipts = readFileSync("crates/agent_ui/src/dx_source_sets/receipts.rs", "utf8");
 const providers = [providersRoot, providersCatalog, providersState, providersView].join("\n");
-const forgeSources = [moduleRoot, controls, panel, providers, snapshot, panelView, rows].join("\n");
+const forgeSources = [
+  moduleRoot,
+  controls,
+  packageStatus,
+  panel,
+  providers,
+  snapshot,
+  snapshotState,
+  panelView,
+  rows,
+].join("\n");
 const forgeReaderSources = [
+  packageStatus,
   receiptBuckets,
   receiptFiles,
   receiptFields,
@@ -91,7 +110,8 @@ test("Forge snapshot reuses existing bounded DX readers", () => {
   assert.match(snapshot, /"Forge History"/);
   assert.match(snapshot, /"Restore Previews"/);
   assert.match(snapshot, /"Media Outputs"/);
-  assert.match(snapshot, /const MAX_WORKSPACE_ROOTS: usize = 4;/);
+  assert.match(moduleRoot, /mod snapshot_state;/);
+  assert.match(snapshotState, /const MAX_WORKSPACE_ROOTS: usize = 4;/);
   assert.match(snapshot, /workspace_scope\(workspace_roots\)/);
   assert.match(snapshot, /configured_forge_root_count\(workspace_roots\)/);
   assert.match(receiptBuckets, /Path::new\("tools"\)\.join\("dx-forge"\)/);
@@ -108,6 +128,48 @@ test("Forge snapshot reuses existing bounded DX readers", () => {
   assert.doesNotMatch(
     `${forgeSources}\n${forgeReaderSources}`,
     /std::process|Command::new|powershell|cmd\.exe|\bshell\b|spawn/i,
+  );
+});
+
+test("Forge panel reads package-status without runtime overclaims", () => {
+  assert.ok(
+    existsSync(packageStatusPath),
+    "Forge package-status reader must live in a focused module",
+  );
+  assert.match(moduleRoot, /mod package_status;/);
+  assert.match(snapshot, /package_status_rows\(workspace_roots\)/);
+  assert.match(snapshot, /pub\(super\) package_statuses: Vec<DxForgeSourceRow>/);
+  assert.match(snapshot, /visible_package_status_warning_count/);
+  assert.match(snapshot, /PACKAGE_STATUS_LABEL/);
+  assert.match(panelView, /fn package_status_section/);
+  assert.ok(
+    panelView.indexOf("package_status_section(snapshot, workspace, cx)") <
+      panelView.indexOf("receipt_section(snapshot, workspace, cx)"),
+    "package status should be visible before raw receipts",
+  );
+  assert.match(panelView, /"Package Status"/);
+  assert.match(panelView, /No Forge package status found/);
+  assert.match(packageStatus, /const MAX_PACKAGE_STATUS_BYTES: u64 = 1024 \* 1024;/);
+  assert.match(packageStatus, /join\("\.dx"\)[\s\S]*\.join\("forge"\)[\s\S]*\.join\("package-status\.json"\)/);
+  assert.match(packageStatus, /file\.by_ref\(\)\s*\.take\(MAX_PACKAGE_STATUS_BYTES \+ 1\)/);
+  assert.match(packageStatus, /serde_json::from_slice/);
+  assert.match(packageStatus, /package_lane_visibility/);
+  assert.match(packageStatus, /receipt_hash_refresh/);
+  assert.match(packageStatus, /no_node_modules_required/);
+  assert.match(packageStatus, /runtime_execution/);
+  assert.match(packageStatus, /browser_proof/);
+  assert.match(packageStatus, /live_provider_proof/);
+  assert.match(packageStatus, /runtime\/provider proof pending/);
+  assert.match(packageStatus, /status_detail\(/);
+  assert.match(packageStatus, /warning_count\(/);
+  assert.doesNotMatch(packageStatus, /\.machine/);
+  assert.doesNotMatch(
+    packageStatus,
+    /std::process|Command::new|powershell|cmd\.exe|\bshell\b|spawn/i,
+  );
+  assert.doesNotMatch(
+    `${packageStatus}\n${panelView}`,
+    /connected|synced live|runtime proven|provider proven|browser verified/i,
   );
 });
 
@@ -174,7 +236,7 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
       "DxForgeProviderBitbucket",
       "dx_forge_provider_bitbucket",
       "ProviderGroup::Code",
-      "material-icon-theme",
+      "simple-icons",
       "bitbucket",
     ],
     [
@@ -245,12 +307,13 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.match(providers, /ProviderGroup::Storage/);
   assert.match(providers, /ProviderGroup::Media/);
   assert.match(providersView, /providers_for\(group\)/);
-  assert.match(providersView, /fn provider_target_deck/);
   assert.match(providersView, /fn provider_target_button/);
+  assert.match(providersView, /fn provider_buttons_for_group/);
   assert.match(providersView, /fn remote_lane_row/);
   assert.match(providersView, /fn target_path_for_group/);
   assert.match(providersView, /fn provider_tooltip_meta/);
   assert.match(providersView, /IconButton::new\(format!\("dx-forge-provider-\{\}", provider\.id\), provider\.icon\)/);
+  assert.match(providersView, /provider_buttons_for_group\(group, snapshot, workspace, cx\)/);
   assert.match(providersView, /IconButtonShape::Square/);
   assert.match(providersView, /ButtonStyle::Subtle/);
   assert.match(providersView, /ButtonStyle::Tinted\(TintColor::Warning\)/);
@@ -261,7 +324,7 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.match(providersState, /fn storage_target_state/);
   assert.match(providersState, /fn media_target_state/);
   assert.match(providers, /source_pack: "svgl"/);
-  assert.match(providers, /source_pack: "material-icon-theme"/);
+  assert.match(providers, /source_pack: "simple-icons"/);
   assert.match(providers, /source_slug:/);
   assert.match(providers, /ProviderGroup::ALL/);
   assert.match(providers, /for group in ProviderGroup::ALL/);
@@ -278,6 +341,7 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.doesNotMatch(providersView, /Label::new\(state\.label\)/);
   assert.match(providers, /source_slug/);
   assert.doesNotMatch(providers, /fn provider_icon_stack/);
+  assert.doesNotMatch(providers, /fn provider_target_deck/);
   assert.doesNotMatch(providers, /Label::new\(group\.providers_label\(\)\)/);
   assert.doesNotMatch(providersView, /Icon source/);
   assert.doesNotMatch(
@@ -301,12 +365,14 @@ test("Forge panel files stay small and professionally named", () => {
   const lineCounts = new Map([
     ["dx_forge_panel.rs", moduleRoot],
     ["controls.rs", controls],
+    ["package_status.rs", packageStatus],
     ["panel.rs", panel],
     ["providers/mod.rs", providersRoot],
     ["providers/catalog.rs", providersCatalog],
     ["providers/state.rs", providersState],
     ["providers/view.rs", providersView],
     ["snapshot.rs", snapshot],
+    ["snapshot_state.rs", snapshotState],
     ["panel_view.rs", panelView],
     ["rows.rs", rows],
   ]);

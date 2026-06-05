@@ -3,7 +3,7 @@ use ui::{ButtonStyle, IconButtonShape, IconName, TintColor, Tooltip, prelude::*}
 use workspace::Workspace;
 
 use super::{
-    catalog::{ForgeProvider, PROVIDERS, ProviderGroup, providers_for},
+    catalog::{ForgeProvider, ProviderGroup, providers_for},
     state::{RemoteTargetState, remote_target_state},
 };
 use crate::dx_forge_panel::{
@@ -11,7 +11,7 @@ use crate::dx_forge_panel::{
     snapshot::DxForgePanelSnapshot,
 };
 
-pub(super) fn remote_target_strip(
+pub(in crate::dx_forge_panel) fn remote_target_strip(
     snapshot: &DxForgePanelSnapshot,
     workspace: &WeakEntity<Workspace>,
     cx: &App,
@@ -45,8 +45,6 @@ pub(super) fn remote_target_strip(
                 ),
         );
 
-    strip = strip.child(provider_target_deck(snapshot, workspace, cx));
-
     for group in ProviderGroup::ALL {
         strip = strip.child(remote_lane_row(group, snapshot, workspace, cx));
     }
@@ -54,33 +52,15 @@ pub(super) fn remote_target_strip(
     strip.into_any_element()
 }
 
-fn provider_target_deck(
-    snapshot: &DxForgePanelSnapshot,
-    workspace: &WeakEntity<Workspace>,
-    cx: &App,
-) -> AnyElement {
-    h_flex()
-        .id("dx-forge-provider-target-deck")
-        .w_full()
-        .min_w_0()
-        .gap_1()
-        .flex_wrap()
-        .px_2()
-        .py_1()
-        .children(
-            PROVIDERS
-                .iter()
-                .map(|provider| provider_target_button(provider, snapshot, workspace, cx)),
-        )
-        .into_any_element()
-}
-
 fn provider_target_button(
     provider: &'static ForgeProvider,
     snapshot: &DxForgePanelSnapshot,
     workspace: &WeakEntity<Workspace>,
-    cx: &App,
+    _cx: &App,
 ) -> AnyElement {
+    debug_assert!(!provider.source_pack.is_empty());
+    debug_assert!(!provider.source_slug.is_empty());
+
     let state = remote_target_state(provider.group, snapshot);
     let target_path = target_path_for_group(provider.group, snapshot).map(String::from);
     let local_path = target_path
@@ -143,6 +123,7 @@ fn remote_lane_row(
                 .size(IconSize::Small)
                 .color(Color::Muted),
         )
+        .child(provider_buttons_for_group(group, snapshot, workspace, cx))
         .child(
             v_flex()
                 .min_w_0()
@@ -152,13 +133,7 @@ fn remote_lane_row(
                     h_flex()
                         .min_w_0()
                         .gap_1()
-                        .child(Label::new(group.title()).size(LabelSize::Small).truncate())
-                        .children(providers_for(group).map(|provider| {
-                            Icon::new(provider.icon)
-                                .size(IconSize::XSmall)
-                                .color(Color::Muted)
-                                .into_any_element()
-                        })),
+                        .child(Label::new(group.title()).size(LabelSize::Small).truncate()),
                 )
                 .child(
                     Label::new(state.detail.clone())
@@ -200,6 +175,26 @@ fn remote_lane_row(
         .tooltip(move |_, cx| {
             Tooltip::with_meta(tooltip_title.clone(), None, tooltip_meta.clone(), cx)
         })
+        .into_any_element()
+}
+
+fn provider_buttons_for_group(
+    group: ProviderGroup,
+    snapshot: &DxForgePanelSnapshot,
+    workspace: &WeakEntity<Workspace>,
+    cx: &App,
+) -> AnyElement {
+    h_flex()
+        .id(SharedString::from(format!(
+            "dx-forge-provider-targets-{}",
+            group.key()
+        )))
+        .flex_none()
+        .gap_0p5()
+        .children(
+            providers_for(group)
+                .map(|provider| provider_target_button(provider, snapshot, workspace, cx)),
+        )
         .into_any_element()
 }
 

@@ -1,11 +1,15 @@
+use crate::dx_forge_panel::package_status::package_status_rows;
+use crate::dx_forge_panel::snapshot_state::{
+    ForgeStateInputs, configured_forge_root_count, configured_root_scope, forge_history_root_path,
+    forge_state, workspace_scope,
+};
 use crate::dx_receipt_history::{DxToolHistoryBucket, tool_history_snapshot};
 use crate::dx_source_sets::{DxSourceItem, source_set_snapshot};
-use std::path::Path;
 
 const FORGE_HISTORY_LABEL: &str = "Forge History";
+const PACKAGE_STATUS_LABEL: &str = "Package Status";
 const RESTORE_PREVIEWS_LABEL: &str = "Restore Previews";
 const MEDIA_OUTPUTS_LABEL: &str = "Media Outputs";
-const MAX_WORKSPACE_ROOTS: usize = 4;
 const MAX_PANEL_ROWS: usize = 4;
 
 #[derive(Clone)]
@@ -21,7 +25,9 @@ pub(super) struct DxForgePanelSnapshot {
     pub(super) receipt_count: usize,
     pub(super) summarized_receipt_count: usize,
     pub(super) visible_blocker_count: usize,
+    pub(super) visible_package_status_warning_count: usize,
     pub(super) visible_restore_warning_count: usize,
+    pub(super) package_statuses: Vec<DxForgeSourceRow>,
     pub(super) latest_receipts: Vec<DxForgeReceiptRow>,
     pub(super) restore_previews: Vec<DxForgeSourceRow>,
     pub(super) media_outputs: Vec<DxForgeSourceRow>,
@@ -74,6 +80,11 @@ pub(super) fn forge_panel_snapshot(workspace_roots: &[String]) -> DxForgePanelSn
     let latest_receipts = history.map(receipt_rows).unwrap_or_default();
     let summarized_receipt_count = latest_receipts.len();
     let receipt_count = history.map(|bucket| bucket.count).unwrap_or_default();
+    let package_statuses = package_status_rows(workspace_roots);
+    let visible_package_status_warning_count = package_statuses
+        .iter()
+        .map(|status| status.warnings.len())
+        .sum();
     let visible_blocker_count = latest_receipts
         .iter()
         .map(|receipt| receipt.blocker_count)
@@ -89,15 +100,18 @@ pub(super) fn forge_panel_snapshot(workspace_roots: &[String]) -> DxForgePanelSn
         .map(|bucket| bucket.root_label.clone())
         .unwrap_or_else(|| "No workspace".to_string());
     let history_root_path = forge_history_root_path(workspace_roots, history_root_exists);
-    let (state, state_detail) = forge_state(
+    let (state, state_detail) = forge_state(ForgeStateInputs {
         workspace_roots,
         history_root_exists,
         configured_root_count,
+        package_status_label: PACKAGE_STATUS_LABEL,
+        package_status_count: package_statuses.len(),
         receipt_count,
         summarized_receipt_count,
         visible_blocker_count,
+        visible_package_status_warning_count,
         visible_restore_warning_count,
-    );
+    });
 
     DxForgePanelSnapshot {
         workspace_roots: workspace_roots.to_vec(),
@@ -111,7 +125,9 @@ pub(super) fn forge_panel_snapshot(workspace_roots: &[String]) -> DxForgePanelSn
         receipt_count,
         summarized_receipt_count,
         visible_blocker_count,
+        visible_package_status_warning_count,
         visible_restore_warning_count,
+        package_statuses,
         latest_receipts,
         restore_previews,
         media_outputs,
@@ -167,106 +183,4 @@ fn source_row(source: &DxSourceItem) -> DxForgeSourceRow {
             .collect(),
         warnings: source.warnings.clone(),
     }
-}
-
-fn forge_state(
-    workspace_roots: &[String],
-    history_root_exists: bool,
-    configured_root_count: usize,
-    receipt_count: usize,
-    summarized_receipt_count: usize,
-    visible_blocker_count: usize,
-    visible_restore_warning_count: usize,
-) -> (DxForgePanelState, String) {
-    if workspace_roots.is_empty() {
-        return (
-            DxForgePanelState::NoWorkspace,
-            "Open a workspace to read Forge receipts".to_string(),
-        );
-    }
-    if !history_root_exists {
-        return (
-            DxForgePanelState::Missing,
-            "Missing tools/dx-forge receipt root".to_string(),
-        );
-    }
-    if receipt_count > 0 && summarized_receipt_count == 0 {
-        return (
-            DxForgePanelState::Attention,
-            "Forge receipts exist, but no known receipt summaries were readable".to_string(),
-        );
-    }
-    if visible_blocker_count > 0 {
-        return (
-            DxForgePanelState::Attention,
-            format!("{visible_blocker_count} visible Forge blocker(s) need review"),
-        );
-    }
-    if visible_restore_warning_count > 0 {
-        return (
-            DxForgePanelState::Attention,
-            format!("{visible_restore_warning_count} visible restore warning(s) need review"),
-        );
-    }
-    if receipt_count == 0 {
-        if configured_root_count < workspace_roots.len() {
-            return (
-                DxForgePanelState::Attention,
-                configured_root_scope(workspace_roots, configured_root_count),
-            );
-        }
-
-        return (
-            DxForgePanelState::Empty,
-            "Forge is configured, but no receipts were found".to_string(),
-        );
-    }
-
-    (
-        DxForgePanelState::Ready,
-        format!("{receipt_count} Forge receipt(s) available"),
-    )
-}
-
-fn workspace_scope(workspace_roots: &[String]) -> String {
-    match workspace_roots.len() {
-        0 => "No roots".to_string(),
-        1 => "1 root scanned".to_string(),
-        count if count <= MAX_WORKSPACE_ROOTS => format!("{count} roots scanned"),
-        count => format!("first {MAX_WORKSPACE_ROOTS} of {count} roots scanned"),
-    }
-}
-
-fn configured_root_scope(workspace_roots: &[String], configured_root_count: usize) -> String {
-    if workspace_roots.is_empty() {
-        return "No workspace roots".to_string();
-    }
-
-    let scanned_roots = workspace_roots.len().min(MAX_WORKSPACE_ROOTS);
-    format!("{configured_root_count} of {scanned_roots} scanned roots configured")
-}
-
-fn configured_forge_root_count(workspace_roots: &[String]) -> usize {
-    workspace_roots
-        .iter()
-        .take(MAX_WORKSPACE_ROOTS)
-        .filter(|root| Path::new(root).join("tools").join("dx-forge").is_dir())
-        .count()
-}
-
-fn forge_history_root_path(
-    workspace_roots: &[String],
-    history_root_exists: bool,
-) -> Option<String> {
-    if !history_root_exists || workspace_roots.len() != 1 {
-        return None;
-    }
-
-    Some(
-        Path::new(&workspace_roots[0])
-            .join("tools")
-            .join("dx-forge")
-            .display()
-            .to_string(),
-    )
 }

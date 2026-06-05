@@ -51,6 +51,7 @@ pub(super) fn render_panel(
                         .min_h_0()
                         .min_w_0()
                         .py_1()
+                        .child(package_status_section(snapshot, workspace, cx))
                         .child(receipt_section(snapshot, workspace, cx))
                         .child(restore_section(snapshot, workspace, cx))
                         .child(media_section(snapshot, workspace, cx))
@@ -83,6 +84,52 @@ fn panel_header(
             panel_id,
             cx,
         ))
+}
+
+fn package_status_section(
+    snapshot: &DxForgePanelSnapshot,
+    workspace: &WeakEntity<Workspace>,
+    cx: &App,
+) -> AnyElement {
+    let mut stack = v_flex().w_full().min_w_0().child(section_header(
+        "dx-forge-package-status-header",
+        "Package Status",
+        IconName::Box,
+        snapshot.package_statuses.len(),
+        cx,
+    ));
+
+    if snapshot.workspace_roots.is_empty() {
+        stack = stack.child(empty_row(
+            "dx-forge-package-status-empty",
+            "Open a workspace to read Forge package status",
+            cx,
+        ));
+    } else if snapshot.package_statuses.is_empty() {
+        stack = stack.child(empty_row(
+            "dx-forge-package-status-empty",
+            "No Forge package status found",
+            cx,
+        ));
+    } else {
+        for (ix, status) in snapshot.package_statuses.iter().enumerate() {
+            stack = stack.child(source_row(
+                SharedString::from(format!("dx-forge-package-status-{ix}")),
+                IconName::Box,
+                status,
+                Some(open_path_button(
+                    format!("dx-forge-open-package-status-{ix}"),
+                    "Open package status",
+                    &status.path,
+                    &snapshot.workspace_roots,
+                    workspace,
+                )),
+                cx,
+            ));
+        }
+    }
+
+    stack.into_any_element()
 }
 
 fn receipt_section(
