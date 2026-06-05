@@ -1098,7 +1098,7 @@ mod tests {
 
         assert_eq!(
             opencode_external_model_id(&model),
-            "opencode/nemotron-3-super-free"
+            "opencode/deepseek-v4-flash-free"
         );
     }
 
@@ -1148,8 +1148,17 @@ mod tests {
         });
 
         assert_eq!(default_id.as_deref(), Some("big-pickle"));
-        assert_eq!(default_fast_id.as_deref(), Some("nemotron-3-super-free"));
-        assert_eq!(provided_ids, ["big-pickle", "nemotron-3-super-free"]);
+        assert_eq!(default_fast_id.as_deref(), Some("deepseek-v4-flash-free"));
+        assert_eq!(
+            provided_ids,
+            [
+                "big-pickle",
+                "deepseek-v4-flash-free",
+                "mimo-v2.5-free",
+                "minimax-m3-free",
+                "nemotron-3-ultra-free",
+            ]
+        );
     }
 
     #[gpui::test]

@@ -145,8 +145,16 @@ pub enum Model {
     MimoV2_5,
     #[serde(rename = "big-pickle")]
     BigPickle,
+    #[serde(rename = "deepseek-v4-flash-free")]
+    DeepSeekV4FlashFree,
+    #[serde(rename = "mimo-v2.5-free")]
+    MimoV2_5Free,
+    #[serde(rename = "minimax-m3-free")]
+    MiniMaxM3Free,
     #[serde(rename = "nemotron-3-super-free")]
     Nemotron3SuperFree,
+    #[serde(rename = "nemotron-3-ultra-free")]
+    Nemotron3UltraFree,
     #[serde(rename = "qwen3.5-plus")]
     Qwen3_5Plus,
     #[serde(rename = "qwen3.6-plus")]
@@ -186,7 +194,7 @@ impl Model {
     }
 
     pub fn default_free_fast() -> Self {
-        Self::Nemotron3SuperFree
+        Self::DeepSeekV4FlashFree
     }
 
     pub fn available_subscriptions(&self) -> &'static [OpenCodeSubscription] {
@@ -209,7 +217,14 @@ impl Model {
             | Self::Qwen3_7Max => &[OpenCodeSubscription::Go],
 
             // Free models
-            Self::Nemotron3SuperFree | Self::BigPickle => &[OpenCodeSubscription::Free],
+            Self::BigPickle
+            | Self::DeepSeekV4FlashFree
+            | Self::MimoV2_5Free
+            | Self::MiniMaxM3Free
+            | Self::Nemotron3UltraFree => &[OpenCodeSubscription::Free],
+
+            // Deprecated free models kept for settings deserialization only.
+            Self::Nemotron3SuperFree => &[],
 
             // Custom models get their subscription from settings, not from here
             Self::Custom { .. } => &[],
@@ -268,7 +283,11 @@ impl Model {
             Self::Qwen3_6Plus => "qwen3.6-plus",
             Self::Qwen3_7Max => "qwen3.7-max",
             Self::BigPickle => "big-pickle",
+            Self::DeepSeekV4FlashFree => "deepseek-v4-flash-free",
+            Self::MimoV2_5Free => "mimo-v2.5-free",
+            Self::MiniMaxM3Free => "minimax-m3-free",
             Self::Nemotron3SuperFree => "nemotron-3-super-free",
+            Self::Nemotron3UltraFree => "nemotron-3-ultra-free",
 
             Self::Custom { name, .. } => name,
         }
@@ -323,7 +342,11 @@ impl Model {
             Self::Qwen3_6Plus => "Qwen3.6 Plus",
             Self::Qwen3_7Max => "Qwen3.7 Max",
             Self::BigPickle => "Big Pickle",
+            Self::DeepSeekV4FlashFree => "DeepSeek V4 Flash Free",
+            Self::MimoV2_5Free => "MiMo V2.5 Free",
+            Self::MiniMaxM3Free => "MiniMax M3 Free",
             Self::Nemotron3SuperFree => "Nemotron 3 Super Free",
+            Self::Nemotron3UltraFree => "Nemotron 3 Ultra Free",
 
             Self::Custom {
                 name, display_name, ..
@@ -387,7 +410,11 @@ impl Model {
             | Self::DeepSeekV4Pro
             | Self::DeepSeekV4Flash
             | Self::BigPickle
-            | Self::Nemotron3SuperFree => ApiProtocol::OpenAiChat,
+            | Self::DeepSeekV4FlashFree
+            | Self::MimoV2_5Free
+            | Self::MiniMaxM3Free
+            | Self::Nemotron3SuperFree
+            | Self::Nemotron3UltraFree => ApiProtocol::OpenAiChat,
 
             Self::Custom { protocol, .. } => *protocol,
         }
@@ -404,6 +431,9 @@ impl Model {
             | Self::Glm5
             | Self::Glm5_1
             | Self::Nemotron3SuperFree
+            | Self::Nemotron3UltraFree
+            | Self::DeepSeekV4FlashFree
+            | Self::MimoV2_5Free
             | Self::BigPickle => true,
 
             Self::Custom {
@@ -459,7 +489,11 @@ impl Model {
             Self::Qwen3_5Plus | Self::Qwen3_6Plus => 262_144,
             Self::Qwen3_7Max => 1_000_000,
             Self::BigPickle => 200_000,
+            Self::DeepSeekV4FlashFree => 1_000_000,
+            Self::MimoV2_5Free => 1_000_000,
+            Self::MiniMaxM3Free => 1_000_000,
             Self::Nemotron3SuperFree => 204_800,
+            Self::Nemotron3UltraFree => 204_800,
             Self::DeepSeekV4Pro | Self::DeepSeekV4Flash => 1_000_000,
 
             Self::Custom { max_tokens, .. } => *max_tokens,
@@ -519,9 +553,13 @@ impl Model {
             Self::KimiK2_6 | Self::KimiK2_5 => Some(65_536),
             Self::GrokBuild0_1 => Some(256_000),
             Self::Qwen3_7Max | Self::Qwen3_6Plus | Self::Qwen3_5Plus => Some(65_536),
-            Self::DeepSeekV4Pro | Self::DeepSeekV4Flash => Some(384_000),
+            Self::DeepSeekV4Pro | Self::DeepSeekV4Flash | Self::DeepSeekV4FlashFree => {
+                Some(384_000)
+            }
             Self::Nemotron3SuperFree => Some(128_000),
-            Self::MimoV2_5Pro | Self::MimoV2_5 => Some(128_000),
+            Self::Nemotron3UltraFree => Some(128_000),
+            Self::MimoV2_5Pro | Self::MimoV2_5 | Self::MimoV2_5Free => Some(128_000),
+            Self::MiniMaxM3Free => Some(128_000),
 
             Self::Custom {
                 max_output_tokens, ..
@@ -588,7 +626,11 @@ impl Model {
             | Self::DeepSeekV4Flash
             | Self::Qwen3_7Max
             | Self::BigPickle
+            | Self::DeepSeekV4FlashFree
+            | Self::MimoV2_5Free
+            | Self::MiniMaxM3Free
             | Self::Nemotron3SuperFree => false,
+            Self::Nemotron3UltraFree => false,
 
             Self::Custom { protocol, .. } => matches!(
                 protocol,
@@ -615,7 +657,7 @@ impl Model {
                 ReasoningEffort::High,
             ]),
 
-            Self::DeepSeekV4Pro | Self::DeepSeekV4Flash => Some(vec![
+            Self::DeepSeekV4Pro | Self::DeepSeekV4Flash | Self::DeepSeekV4FlashFree => Some(vec![
                 ReasoningEffort::Low,
                 ReasoningEffort::Medium,
                 ReasoningEffort::High,
