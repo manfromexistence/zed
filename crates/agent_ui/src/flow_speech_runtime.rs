@@ -62,7 +62,7 @@ impl FlowSpeechRuntime {
     }
 
     pub(crate) fn start_recording(&self) -> Result<FlowRecordingSession> {
-        self.ensure_parakeet_ready()?;
+        self.ensure_stt_ready()?;
 
         let host = cpal::default_host();
         let device = host
@@ -90,7 +90,7 @@ impl FlowSpeechRuntime {
     }
 
     pub(crate) fn transcribe_recording(&self, recording: RecordedSpeech) -> Result<String> {
-        self.ensure_parakeet_ready()?;
+        self.ensure_stt_ready()?;
         let audio_path = self.write_recording_wav(&recording)?;
         let output = if let Some(binary) = &self.flow_dictate_binary {
             Command::new(binary)
@@ -109,10 +109,7 @@ impl FlowSpeechRuntime {
                 .output()
                 .with_context(|| format!("Failed to start {}", binary.display()))?
         } else {
-            return Err(anyhow!(
-                "Flow Parakeet runtime is not built. Build flow-dictate in {} or set DX_FLOW_DICTATE_BINARY.",
-                self.flow_root.display()
-            ));
+            unreachable!("ensure_stt_ready checked Flow STT command availability");
         };
 
         let transcript = parse_transcript_output(output);
@@ -155,13 +152,18 @@ impl FlowSpeechRuntime {
         } else {
             "Kokoro model missing"
         };
-        let runtime = if self.flow_binary.is_some() || self.flow_dictate_binary.is_some() {
-            "Flow runtime found"
+        let stt_runtime = if self.flow_dictate_binary.is_some() || self.flow_binary.is_some() {
+            "STT command ready"
         } else {
-            "Flow runtime executable missing"
+            "STT command missing"
+        };
+        let tts_runtime = if self.flow_binary.is_some() {
+            "TTS command ready"
+        } else {
+            "TTS command missing"
         };
 
-        format!("{stt}; {tts}; {runtime}")
+        format!("{stt}; {tts}; {stt_runtime}; {tts_runtime}")
     }
 
     fn write_recording_wav(&self, recording: &RecordedSpeech) -> Result<PathBuf> {
@@ -182,6 +184,18 @@ impl FlowSpeechRuntime {
             Err(anyhow!(
                 "Flow Parakeet model files are missing under {}",
                 self.flow_root.join(PARAKEET_MODEL_DIR).display()
+            ))
+        }
+    }
+
+    fn ensure_stt_ready(&self) -> Result<()> {
+        self.ensure_parakeet_ready()?;
+        if self.flow_dictate_binary.is_some() || self.flow_binary.is_some() {
+            Ok(())
+        } else {
+            Err(anyhow!(
+                "Flow Parakeet runtime is not built. Build flow-dictate in {} or set DX_FLOW_DICTATE_BINARY.",
+                self.flow_root.display()
             ))
         }
     }
