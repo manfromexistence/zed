@@ -4215,8 +4215,9 @@ impl ThreadView {
                                 .set_error("Flow STT returned an empty transcript");
                             this.show_flow_voice_toast("Flow STT returned an empty transcript", cx);
                         } else {
-                            this.message_editor.update(cx, |editor, cx| {
-                                editor.insert_text(&transcript, window, cx);
+                            let active_editor = this.active_editor(cx);
+                            active_editor.update(cx, |editor, cx| {
+                                editor.insert_transcript_text(&transcript, window, cx);
                             });
                             this.composer_voice_state
                                 .set_ready("Flow transcript inserted into the composer");
@@ -4277,6 +4278,7 @@ impl ThreadView {
                                         .set_ready("Kokoro finished reading the composer");
                                 }
                                 Err(error) => {
+                                    let _ = std::fs::remove_file(&audio_path);
                                     this.report_flow_voice_error(
                                         "Kokoro playback failed",
                                         error,
@@ -4287,7 +4289,7 @@ impl ThreadView {
                         }
                         #[cfg(not(feature = "audio"))]
                         {
-                            let _ = audio_path;
+                            let _ = std::fs::remove_file(&audio_path);
                             this.composer_voice_state
                                 .set_error("Zed audio playback is not available in this build");
                             this.show_flow_voice_toast(

@@ -64,6 +64,10 @@ pub(crate) struct FlowRecordingSession {
     started_at: Instant,
 }
 
+struct TemporarySpeechFile {
+    path: PathBuf,
+}
+
 impl RecordingTelemetry {
     pub(crate) fn captured_duration(&self) -> Duration {
         self.captured_duration
@@ -71,6 +75,22 @@ impl RecordingTelemetry {
 
     pub(crate) fn input_level(&self) -> f32 {
         self.input_level
+    }
+}
+
+impl TemporarySpeechFile {
+    fn new(path: PathBuf) -> Self {
+        Self { path }
+    }
+
+    fn path(&self) -> &Path {
+        &self.path
+    }
+}
+
+impl Drop for TemporarySpeechFile {
+    fn drop(&mut self) {
+        let _ = fs::remove_file(&self.path);
     }
 }
 
@@ -124,7 +144,7 @@ impl FlowSpeechRuntime {
 
     pub(crate) fn transcribe_recording(&self, recording: RecordedSpeech) -> Result<String> {
         self.ensure_stt_ready()?;
-        let audio_path = self.write_recording_wav(&recording)?;
+        let audio_file = TemporarySpeechFile::new(self.write_recording_wav(&recording)?);
         let binary = self
             .flow_dictate_binary
             .as_ref()
@@ -133,14 +153,12 @@ impl FlowSpeechRuntime {
         command
             .current_dir(&self.flow_root)
             .arg("--file")
-            .arg(&audio_path);
+            .arg(audio_file.path());
         apply_windows_process_flags(&mut command);
         let output =
             run_command_with_timeout(command, STT_COMMAND_TIMEOUT, "Flow Parakeet transcription")?;
 
-        let transcript = parse_transcript_output(output);
-        let _ = fs::remove_file(audio_path);
-        transcript
+        parse_transcript_output(output)
     }
 
     pub(crate) fn speak_text(&self, text: &str) -> Result<PathBuf> {

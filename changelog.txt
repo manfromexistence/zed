@@ -14290,6 +14290,18 @@ PASSED:
 NOTES:
 - This remains source-only. It does not run Cargo, run `just run`, start a server, perform WebView runtime proof, enable Apply, or mutate source.
 
+[2026-06-06] - Agent Composer Voice Cleanup Hardening
+
+CHANGED:
+- `crates\agent_ui\src\flow_speech_runtime.rs` now wraps STT recording WAVs in a drop-based temp-file guard so child start failures, timeouts, and parse errors do not leave `%TEMP%\zed-flow-stt` files behind.
+- `crates\agent_ui\src\message_editor.rs` now exposes `insert_transcript_text`, an STT insertion helper that trims transcripts, computes separator spaces from the active selection's neighboring characters, and brackets dictation inserts as their own undo transaction.
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now uses the transcript insertion helper on the active agent editor for Flow STT results.
+- `script\dx-agent-voice-controls-source.test.ts` now guards the temp-file cleanup contract and transcript insertion helper.
+
+NOTES:
+- A playback lifecycle audit found that current Zed audio enqueues Kokoro WAVs into the mixer and returns immediately; it still needs a tracked/cancelable playback handle before the UI can prove actual read-aloud completion instead of queued playback.
+- A Kokoro readiness audit found the runtime Python and Hugging Face cache present, but the Friday app install model directory `G:\Flow\data\models\tts\kokoro_82m` is still missing. Zed should keep reporting TTS not ready until that directory is populated with the expected non-empty files or `DX_KOKORO_MODEL_DIR` points to a complete model directory.
+
 [2026-06-05] - Agent Composer Voice Telemetry And Friday Runtime Guards
 
 CHANGED:

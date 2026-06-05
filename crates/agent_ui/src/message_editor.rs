@@ -1922,6 +1922,32 @@ impl MessageEditor {
         });
     }
 
+    pub fn insert_transcript_text(
+        &mut self,
+        transcript: &str,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let transcript = transcript.trim();
+        if transcript.is_empty() {
+            return;
+        }
+
+        self.editor.update(cx, |editor, cx| {
+            editor.finalize_last_transaction(cx);
+
+            let display_snapshot = editor.display_snapshot(cx);
+            let snapshot = editor.buffer().read(cx).snapshot(cx);
+            let selection = editor
+                .selections
+                .newest::<MultiBufferOffset>(&display_snapshot);
+            let insertion = transcript_insertion_text(&snapshot, selection.range(), transcript);
+
+            editor.insert(&insertion, window, cx);
+            editor.finalize_last_transaction(cx);
+        });
+    }
+
     pub fn set_placeholder_text(
         &mut self,
         placeholder: &str,
@@ -2024,6 +2050,85 @@ impl MessageEditor {
 
         has_mentions.then_some((text, ranges))
     }
+}
+
+fn transcript_insertion_text(
+    snapshot: &MultiBufferSnapshot,
+    replacement_range: Range<MultiBufferOffset>,
+    transcript: &str,
+) -> String {
+    let mut insertion = String::new();
+    if should_prefix_transcript_separator(
+        previous_transcript_neighbor(snapshot, replacement_range.start),
+        transcript,
+    ) {
+        insertion.push(' ');
+    }
+    insertion.push_str(transcript);
+    if should_suffix_transcript_separator(
+        transcript,
+        next_transcript_neighbor(snapshot, replacement_range.end),
+    ) {
+        insertion.push(' ');
+    }
+    insertion
+}
+
+fn previous_transcript_neighbor(
+    snapshot: &MultiBufferSnapshot,
+    offset: MultiBufferOffset,
+) -> Option<char> {
+    if offset == MultiBufferOffset(0) {
+        return None;
+    }
+
+    snapshot
+        .text_for_range(MultiBufferOffset(0)..offset)
+        .flat_map(|chunk| chunk.chars())
+        .last()
+}
+
+fn next_transcript_neighbor(
+    snapshot: &MultiBufferSnapshot,
+    offset: MultiBufferOffset,
+) -> Option<char> {
+    if offset >= snapshot.len() {
+        return None;
+    }
+
+    snapshot
+        .text_for_range(offset..snapshot.len())
+        .flat_map(|chunk| chunk.chars())
+        .next()
+}
+
+fn should_prefix_transcript_separator(previous: Option<char>, transcript: &str) -> bool {
+    previous.is_some_and(|previous| {
+        !previous.is_whitespace() && !is_opening_transcript_punctuation(previous)
+    }) && transcript
+        .chars()
+        .next()
+        .is_some_and(|first| !is_closing_transcript_punctuation(first))
+}
+
+fn should_suffix_transcript_separator(transcript: &str, next: Option<char>) -> bool {
+    transcript
+        .chars()
+        .next_back()
+        .is_some_and(|last| !last.is_whitespace() && !is_opening_transcript_punctuation(last))
+        && next
+            .is_some_and(|next| !next.is_whitespace() && !is_closing_transcript_punctuation(next))
+}
+
+fn is_opening_transcript_punctuation(character: char) -> bool {
+    matches!(character, '(' | '[' | '{')
+}
+
+fn is_closing_transcript_punctuation(character: char) -> bool {
+    matches!(
+        character,
+        '.' | ',' | ';' | ':' | '!' | '?' | ')' | ']' | '}'
+    )
 }
 
 impl Focusable for MessageEditor {

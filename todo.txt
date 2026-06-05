@@ -1554,10 +1554,12 @@ IN PROGRESS:
 
 PENDING:
 - Build or provide `flow-dictate` with the `sherpa-stt` feature for Parakeet STT before live microphone proof.
-- Populate `G:\Flow\data\models\tts\kokoro_82m` with non-empty Friday Kokoro files or set `DX_KOKORO_MODEL_DIR` to a complete model directory before live read-aloud proof.
+- Populate `G:\Flow\data\models\tts\kokoro_82m` with the four non-empty Friday Kokoro install files or set `DX_KOKORO_MODEL_DIR` to a complete model directory before live read-aloud proof. The Hugging Face cache exists but is not enough for the Friday runtime install contract.
+- Add a tracked/cancelable Zed WAV playback handle so Kokoro read-aloud can report actual playback completion instead of successful mixer enqueue.
 - Run live Friday Kokoro synthesis/playback proof through Zed once the governed validation window is explicitly opened.
 - Run the governed Zed validation pass only when explicitly authorized for this large repo.
 
 COMPLETED:
 - Added focused Agent composer voice-control source coverage and passed targeted source/format/diff checks for the initial Flow speech integration slice.
 - Added source-backed recording telemetry, selected microphone-device routing, stricter Friday Kokoro readiness checks, temp-WAV cleanup, and registered the voice guard in the lightweight source-guard registry.
+- Added drop-based STT temp WAV cleanup and an active-editor transcript insertion helper with cursor-local spacing and undo isolation.

@@ -78,13 +78,53 @@ test("voice recording UI exposes real recording and transcription states", () =>
 
 test("voice runtime uses Flow speech code instead of dummy text", () => {
   const runtime = readFileSync(flowRuntimePath, "utf8");
+  const startRecording = sourceSlice(
+    runtime,
+    "pub(crate) fn start_recording",
+    "pub(crate) fn transcribe_recording",
+  );
+  const transcribeRecording = sourceSlice(
+    runtime,
+    "pub(crate) fn transcribe_recording",
+    "pub(crate) fn speak_text",
+  );
+  const speakText = sourceSlice(
+    runtime,
+    "pub(crate) fn speak_text",
+    "pub(crate) fn status_summary",
+  );
+  const ensureSttReady = sourceSlice(
+    runtime,
+    "fn ensure_stt_ready",
+    "fn parakeet_ready",
+  );
+  const synthesize = sourceSlice(
+    runtime,
+    "fn synthesize(&self, text: &str) -> Result<PathBuf>",
+    "impl FlowRecordingSession",
+  );
+  const timeoutHelper = sourceSlice(
+    runtime,
+    "fn run_command_with_timeout",
+    "fn apply_tts_process_env",
+  );
 
   assert.match(runtime, /FlowSpeechRuntime/);
   assert.match(runtime, /G:\\\\Dx\\\\flow|DX_FLOW_ROOT|FLOW_ROOT/);
   assert.match(runtime, /parakeet_unified_en_int8/);
   assert.match(runtime, /parakeet-tdt-0\.6b-v3-int8/);
   assert.match(runtime, /flow-dictate/);
-  assert.match(runtime, /--file/);
+  assert.match(startRecording, /ensure_stt_ready\(\)\?/);
+  assert.match(transcribeRecording, /ensure_stt_ready\(\)\?/);
+  assert.match(transcribeRecording, /TemporarySpeechFile::new/);
+  assert.match(transcribeRecording, /write_recording_wav/);
+  assert.match(transcribeRecording, /arg\("--file"\)/);
+  assert.match(transcribeRecording, /arg\(audio_file\.path\(\)\)/);
+  assert.match(transcribeRecording, /STT_COMMAND_TIMEOUT/);
+  assert.match(transcribeRecording, /Flow Parakeet transcription/);
+  assert.doesNotMatch(transcribeRecording, /remove_file/);
+  assert.match(runtime, /TemporarySpeechFile/);
+  assert.match(runtime, /impl Drop for TemporarySpeechFile/);
   assert.match(runtime, /DeviceId/);
   assert.match(runtime, /resolve_input_device/);
   assert.match(runtime, /device_by_id/);
@@ -96,16 +136,26 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(runtime, /DX_FLOW_DATA_ROOT/);
   assert.match(runtime, /FLOW_DATA_DIR/);
   assert.match(runtime, /KokoroTtsRuntime|kokoro_82m/);
-  assert.match(runtime, /run_command_with_timeout/);
+  assert.match(speakText, /Friday Kokoro TTS runtime is not available/);
+  assert.match(ensureSttReady, /Flow Parakeet runtime is not built/);
+  assert.match(ensureSttReady, /DX_FLOW_DICTATE_BINARY/);
+  assert.match(synthesize, /Command::new\(&self\.python\)/);
+  assert.match(synthesize, /arg\(&self\.runner\)/);
+  assert.match(synthesize, /arg\("--model-kind"\)/);
+  assert.match(synthesize, /arg\("kokoro"\)/);
+  assert.match(synthesize, /apply_tts_process_env/);
+  assert.match(synthesize, /TTS_COMMAND_TIMEOUT/);
+  assert.match(synthesize, /Friday Kokoro TTS/);
+  assert.match(synthesize, /fs::metadata\(&output_path\)/);
   assert.match(runtime, /STT_COMMAND_TIMEOUT/);
   assert.match(runtime, /TTS_COMMAND_TIMEOUT/);
-  assert.match(runtime, /stdin\(Stdio::null\(\)\)/);
-  assert.match(runtime, /stdout\(Stdio::piped\(\)\)/);
-  assert.match(runtime, /stderr\(Stdio::piped\(\)\)/);
-  assert.match(runtime, /try_wait\(\)/);
-  assert.match(runtime, /child\.kill\(\)/);
-  assert.match(runtime, /child\.wait\(\)/);
-  assert.match(runtime, /timed out after/);
+  assert.match(timeoutHelper, /stdin\(Stdio::null\(\)\)/);
+  assert.match(timeoutHelper, /stdout\(Stdio::piped\(\)\)/);
+  assert.match(timeoutHelper, /stderr\(Stdio::piped\(\)\)/);
+  assert.match(timeoutHelper, /try_wait\(\)/);
+  assert.match(timeoutHelper, /child\.kill\(\)/);
+  assert.match(timeoutHelper, /child\.wait\(\)/);
+  assert.match(timeoutHelper, /timed out after/);
   assert.match(runtime, /RecordingTelemetry/);
   assert.match(runtime, /recent_input_level/);
   assert.match(runtime, /wrote an empty WAV file/);
@@ -126,10 +176,42 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
 });
 
 test("voice text paths use the real message editor contents and insert APIs", () => {
+  const transcriptHelper = sourceSlice(
+    messageEditor,
+    "pub fn insert_transcript_text",
+    "pub fn set_placeholder_text",
+  );
+  const transcriptSeparator = sourceSlice(
+    messageEditor,
+    "fn transcript_insertion_text",
+    "impl Focusable for MessageEditor",
+  );
+
   assert.match(messageEditor, /pub fn text\(&self, cx: &App\) -> String/);
   assert.match(messageEditor, /pub fn insert_text\(/);
+  assert.match(messageEditor, /pub fn insert_transcript_text\(/);
+  assert.match(messageEditor, /should_prefix_transcript_separator/);
+  assert.match(transcriptHelper, /let transcript = transcript\.trim\(\)/);
+  assert.match(transcriptHelper, /if transcript\.is_empty\(\)/);
+  assert.match(transcriptHelper, /finalize_last_transaction\(cx\)/);
+  assert.match(
+    transcriptHelper,
+    /selections\s*\.newest::<MultiBufferOffset>/,
+  );
+  assert.match(transcriptHelper, /selection\.range\(\)/);
+  assert.match(transcriptHelper, /transcript_insertion_text/);
+  assert.match(transcriptHelper, /editor\.insert\(&insertion/);
+  assert.match(transcriptSeparator, /previous_transcript_neighbor/);
+  assert.match(transcriptSeparator, /next_transcript_neighbor/);
+  assert.match(transcriptSeparator, /replacement_range\.start/);
+  assert.match(transcriptSeparator, /replacement_range\.end/);
+  assert.match(transcriptSeparator, /is_whitespace/);
+  assert.match(transcriptSeparator, /is_opening_transcript_punctuation/);
+  assert.match(transcriptSeparator, /is_closing_transcript_punctuation/);
+  assert.match(transcriptSeparator, /matches!\([\s\S]*character,[\s\S]*'\.'/);
   assert.match(threadView, /message_editor\.read\(cx\)\.text\(cx\)/);
-  assert.match(threadView, /insert_text\(&transcript/);
+  assert.match(threadView, /let active_editor = this\.active_editor\(cx\)/);
+  assert.match(threadView, /insert_transcript_text\(&transcript/);
   assert.match(threadView, /Audio::play_wav_file/);
   assert.match(threadView, /std::fs::remove_file\(&audio_path\)/);
   assert.match(conversationModule, /use audio::\{Audio, AudioSettings, Sound\}/);
