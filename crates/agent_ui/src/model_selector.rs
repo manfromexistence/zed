@@ -29,11 +29,11 @@ use crate::ui::{
 
 pub type ModelSelector = Picker<ModelPickerDelegate>;
 
-const MAX_MODEL_SELECTOR_MODELS: usize = 4096;
-const MAX_MODEL_SELECTOR_GROUPS: usize = 128;
+const MAX_MODEL_SELECTOR_MODELS: usize = 8192;
+const MAX_MODEL_SELECTOR_GROUPS: usize = 256;
 const MAX_MODEL_SELECTOR_MODELS_PER_GROUP: usize = 512;
 const MAX_MODEL_SELECTOR_PICKER_ENTRIES: usize = 10_000;
-const MAX_MODEL_SELECTOR_FUZZY_CANDIDATES: usize = 4096;
+const MAX_MODEL_SELECTOR_FUZZY_CANDIDATES: usize = 8192;
 const MAX_MODEL_SELECTOR_FUZZY_MATCHES: usize = 100;
 
 pub fn acp_model_selector(

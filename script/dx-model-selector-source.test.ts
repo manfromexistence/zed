@@ -5,12 +5,28 @@ import test from "node:test";
 const source = readFileSync("crates/agent_ui/src/model_selector.rs", "utf8");
 
 test("model selector declares named source caps for grouped model materialization", () => {
-  assert.match(source, /const MAX_MODEL_SELECTOR_MODELS: usize = 4096;/);
-  assert.match(source, /const MAX_MODEL_SELECTOR_GROUPS: usize = 128;/);
+  assert.match(source, /const MAX_MODEL_SELECTOR_MODELS: usize = 8192;/);
+  assert.match(source, /const MAX_MODEL_SELECTOR_GROUPS: usize = 256;/);
   assert.match(source, /const MAX_MODEL_SELECTOR_MODELS_PER_GROUP: usize = 512;/);
   assert.match(source, /const MAX_MODEL_SELECTOR_PICKER_ENTRIES: usize = 10_000;/);
-  assert.match(source, /const MAX_MODEL_SELECTOR_FUZZY_CANDIDATES: usize = 4096;/);
+  assert.match(source, /const MAX_MODEL_SELECTOR_FUZZY_CANDIDATES: usize = 8192;/);
   assert.match(source, /const MAX_MODEL_SELECTOR_FUZZY_MATCHES: usize = 100;/);
+});
+
+test("model selector caps can cover the copied dx provider archive", () => {
+  const modelCap = Number(
+    /const MAX_MODEL_SELECTOR_MODELS: usize = (\d+);/.exec(source)?.[1],
+  );
+  const groupCap = Number(
+    /const MAX_MODEL_SELECTOR_GROUPS: usize = (\d+);/.exec(source)?.[1],
+  );
+  const fuzzyCap = Number(
+    /const MAX_MODEL_SELECTOR_FUZZY_CANDIDATES: usize = (\d+);/.exec(source)?.[1],
+  );
+
+  assert.ok(groupCap >= 184, "must not hide copied DX provider groups");
+  assert.ok(modelCap >= 6557, "must not hide copied DX provider models");
+  assert.ok(fuzzyCap >= modelCap, "fuzzy search must cover the rendered model budget");
 });
 
 test("favorites and picker rows are bounded before render materialization", () => {
