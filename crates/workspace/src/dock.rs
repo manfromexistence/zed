@@ -565,7 +565,13 @@ impl Dock {
                     workspace.zoomed = Some(panel.to_any().downgrade());
                     workspace.zoomed_is_agent_panel = panel.is_agent_panel(cx);
                     workspace.zoomed_position = Some(position);
-                } else {
+                } else if !(workspace.zoomed_is_agent_panel()
+                    && workspace
+                        .zoomed_item()
+                        .and_then(|view| view.upgrade())
+                        .is_some()
+                    && !panel.is_agent_panel(cx))
+                {
                     workspace.zoomed = None;
                     workspace.zoomed_is_agent_panel = false;
                     workspace.zoomed_position = None;

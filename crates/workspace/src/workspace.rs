@@ -4375,6 +4375,30 @@ impl Workspace {
         did_change
     }
 
+    fn focus_zoomed_agent_panel(&mut self, window: &mut Window, cx: &mut Context<Self>) -> bool {
+        if !self.zoomed_is_agent_panel {
+            return false;
+        }
+
+        let Some(zoomed_panel_id) = self
+            .zoomed
+            .as_ref()
+            .and_then(|view| view.upgrade())
+            .map(|view| view.entity_id())
+        else {
+            return false;
+        };
+
+        for dock in self.all_docks() {
+            if let Some(panel) = dock.read(cx).panel_for_id(zoomed_panel_id).cloned() {
+                panel.panel_focus_handle(cx).focus(window, cx);
+                return true;
+            }
+        }
+
+        false
+    }
+
     pub fn close_side_panel_by_id(
         &mut self,
         panel_id: EntityId,
@@ -4611,8 +4635,10 @@ impl Workspace {
                 });
 
                 if focus_center {
-                    self.active_pane
-                        .update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx))
+                    if !self.focus_zoomed_agent_panel(window, cx) {
+                        self.active_pane
+                            .update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx))
+                    }
                 }
 
                 result_panel = panel;
@@ -5972,6 +5998,8 @@ impl Workspace {
             return false;
         }
 
+        self.dismiss_agent_fullscreen_for_screen_activation(window, cx);
+
         let target_pane = self.screen_host_pane();
         self.set_active_pane(&target_pane, window, cx);
 
@@ -6017,6 +6045,27 @@ impl Workspace {
             cx.notify();
             true
         }
+    }
+
+    fn dismiss_agent_fullscreen_for_screen_activation(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if !self.zoomed_is_agent_panel {
+            return;
+        }
+
+        if let Some(position) = self.zoomed_position {
+            self.dock_at_position(position)
+                .update(cx, |dock, cx| dock.zoom_out(window, cx));
+        }
+
+        self.zoomed = None;
+        self.zoomed_is_agent_panel = false;
+        self.zoomed_position = None;
+        cx.emit(Event::ZoomChanged);
+        cx.notify();
     }
 
     pub fn screen_host_pane(&self) -> Entity<Pane> {

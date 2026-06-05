@@ -1,3 +1,20 @@
+[2026-06-05] - Agent Screen Routing And Dock Preservation
+
+FIXED:
+- `crates\workspace\src\workspace.rs` now exits zoomed Agent fullscreen before routing Code, Browser, Terminal, or other normal screen-dock selections into the center screen.
+- `crates\workspace\src\dock.rs` now preserves a live zoomed Agent owner when Project, Git, Outline, or another non-Agent side panel receives focus, so opening real side panels from the Agent screen does not erase the Agent screen.
+- `crates\workspace\src\workspace.rs` now returns focus to the zoomed Agent panel when a side-panel toggle would otherwise focus the center pane and clear Agent fullscreen.
+- `script\dx-workspace-ui-state-source.test.ts` guards the screen-navigation and side-panel-focus split so Project remains a real dock panel while Agent fullscreen remains a center screen.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\workspace\src\workspace.rs crates\workspace\src\dock.rs`
+- `node --test script\dx-workspace-ui-state-source.test.ts` with 19/19 passing.
+- `git diff --check` on the Agent routing/docs files.
+
+NOTES:
+- No `just run` or Cargo build was run for this source fix.
+- Existing unrelated Forge-panel dirty work was left unstaged.
+
 [2026-06-04] - Onboarding Topbar Completion Action
 
 CHANGED:

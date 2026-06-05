@@ -421,8 +421,21 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
     "render",
   );
   const workspaceRenderCenterScreen = functionBody(workspace, "render_center_screen");
+  const workspaceActivateScreenKind = functionBody(workspace, "activate_screen_kind");
+  const workspaceFocusOrUnfocusPanel = sourceWindow(
+    workspace,
+    "fn focus_or_unfocus_panel",
+    0,
+    1800,
+  );
+  const workspaceFocusZoomedAgentPanel = functionBody(workspace, "focus_zoomed_agent_panel");
+  const workspaceDismissAgentFullscreen = functionBody(
+    workspace,
+    "dismiss_agent_fullscreen_for_screen_activation",
+  );
   const workspaceToggleDock = functionBody(workspace, "toggle_dock");
   const workspaceDismissZoomed = functionBody(workspace, "dismiss_zoomed_items_to_reveal");
+  const dockFocusIn = sourceWindow(dock, "cx.on_focus_in(&focus_handle", 0, 900);
   const profilesSupported = functionBody(conversationView, "profiles_supported");
   assert.match(agentPanel, /"agent-toolbar-toggle-sources-rail"/);
   assert.match(agentPanel, /"agent-toolbar-toggle-progress-rail"/);
@@ -484,6 +497,27 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(workspaceRenderCenterScreen, /"workspace-agent-screen-center"/);
   assert.match(workspaceRenderCenterScreen, /\.child\(zoomed_view\)/);
   assert.match(workspaceRenderCenterScreen, /self\.render_screen_carousel_center\(center, cx\)/);
+  assert.match(
+    workspaceActivateScreenKind,
+    /self\.dismiss_agent_fullscreen_for_screen_activation\(window, cx\);[\s\S]*?let target_pane = self\.screen_host_pane\(\);/s,
+    "screen-dock navigation must leave Agent fullscreen before activating Editor, Browser, or Terminal",
+  );
+  assert.match(workspaceDismissAgentFullscreen, /if !self\.zoomed_is_agent_panel/);
+  assert.match(workspaceDismissAgentFullscreen, /dock\.zoom_out\(window, cx\)/);
+  assert.match(workspaceDismissAgentFullscreen, /self\.zoomed_is_agent_panel = false/);
+  assert.match(workspaceDismissAgentFullscreen, /cx\.emit\(Event::ZoomChanged\)/);
+  assert.match(workspaceFocusZoomedAgentPanel, /panel_for_id\(zoomed_panel_id\)/);
+  assert.match(workspaceFocusZoomedAgentPanel, /panel\.panel_focus_handle\(cx\)\.focus\(window, cx\)/);
+  assert.match(
+    workspaceFocusOrUnfocusPanel,
+    /if !self\.focus_zoomed_agent_panel\(window, cx\) \{[\s\S]*?window\.focus\(&pane\.focus_handle\(cx\), cx\)/s,
+    "side-panel toggle-off should return focus to the Agent fullscreen panel instead of clearing it through center focus",
+  );
+  assert.match(
+    dockFocusIn,
+    /workspace\.zoomed_is_agent_panel\(\)[\s\S]*?workspace[\s\S]*?\.zoomed_item\(\)[\s\S]*?\.and_then\(\|view\| view\.upgrade\(\)\)[\s\S]*?!panel\.is_agent_panel\(cx\)/s,
+    "focusing Project/Git/Outline side panels should preserve a live Agent fullscreen zoom owner",
+  );
   assert.match(
     workspace,
     /let centered_layout = self\.centered_layout\s*&& !self\.zoomed_is_agent_panel\s*&& self\.center\.panes\(\)\.len\(\) == 1/s,
