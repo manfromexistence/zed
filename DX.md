@@ -935,3 +935,11 @@ Adjacent source guards:
 - CSS declaration hint provenance is now validated, not just preserved: DX Style source contracts name the required hint packet fields, Web Preview blocks mismatched CSS declaration review requests before IPC, and native source-apply review compares the packet schema, ordinal, property, match rule, value filters, token, generator, and source-edit safety against the active context.
 - DX Style source contracts now also own the expected `zed.dx_style.css_declaration_hint.v1` packet schema for CSS declaration hints. Web Preview and native review compare the source-apply and CSS dry-run schema values before trusting a hint packet, so stale/browser-only hint shapes fail closed.
 - Source-only verification so far: targeted `rustfmt`, `node --test script/dx-style-panel-source.test.ts script/dx-launch-workspace-source.test.ts script/dx-handoff-source-guard-registry.test.ts`, fixture mirror checks, `git diff --check`, and conflict-marker scans as recorded by the source-only lane. Cargo, `just run`, local servers, browser/WebView runtime proof, live Zed launch, and source mutation proof remain intentionally unrun by instruction. The current next step is governed runtime/WebView/build proof plus a mutation-capable editor write bridge.
+
+## Agent Composer Flow Speech - 2026-06-05
+
+- Zed Agent composer now has a source-wired Flow mic control and adjacent Kokoro read-aloud control, both rendered before send and backed by focused modules instead of disabled placeholder UI.
+- The speech runtime discovers `G:\Dx\flow` by default, also honoring `DX_FLOW_ROOT`, `FLOW_ROOT`, `DX_FLOW_BINARY`, and `DX_FLOW_DICTATE_BINARY` for machine-specific builds.
+- STT captures microphone input through `cpal`, writes bounded 16 kHz mono WAV files, and prefers `flow-dictate --file` with Parakeet model assets before falling back to `flow --transcribe`.
+- TTS reads the current composer text through Flow Kokoro by invoking `flow --speak` when the runtime binary and Kokoro assets are available.
+- Source-only verification: 11 focused Node source tests passed, targeted `rustfmt --check` passed, `git diff --check` passed, and the focused conflict scan returned no matches. Cargo, `just run`, live microphone proof, and live playback proof remain deferred by repo policy.

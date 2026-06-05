@@ -71,6 +71,7 @@ mod dx_www_launch_evidence;
 mod entry_view_state;
 mod external_source_prompt;
 mod favorite_models;
+mod flow_speech_runtime;
 mod inline_assistant;
 mod inline_prompt_editor;
 mod language_model_selector;

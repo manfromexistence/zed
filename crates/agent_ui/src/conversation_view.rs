@@ -108,6 +108,7 @@ pub(crate) const DRAFT_PROMPT_PERSIST_DEBOUNCE: Duration = Duration::from_millis
 
 mod composer_profile_options;
 mod thread_view;
+mod voice_controls;
 pub use thread_view::*;
 
 pub struct QueuedMessage {

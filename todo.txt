@@ -1546,3 +1546,15 @@ PENDING:
 
 COMPLETED:
 - Parked fullscreen onboarding WebPreview for now: first-open/manual onboarding now opens the normal editor path, onboarding is no longer registered as a restorable item, stale onboarding restore rows are guarded from restore, visible onboarding topbar/menu controls are hidden, and `just run` defaults to six-job incremental Zed builds.
+
+[2026-06-05] - Agent Composer Flow Speech Controls
+
+IN PROGRESS:
+- Wire the Agent composer mic and read-aloud controls to the copied `G:\Dx\flow` speech runtime: source modules and guards are in place for Parakeet STT recording, Kokoro composer read-aloud, and GPUI recording status, with live runtime proof still pending the governed validation window.
+
+PENDING:
+- Build or provide the Flow runtime executables (`flow-dictate` for STT and `flow` for TTS) before live microphone and Kokoro playback proof.
+- Run the governed Zed validation pass only when explicitly authorized for this large repo.
+
+COMPLETED:
+- Added focused Agent composer voice-control source coverage and passed targeted source/format/diff checks for the initial Flow speech integration slice.

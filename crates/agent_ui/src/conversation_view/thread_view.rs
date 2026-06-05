@@ -33,7 +33,11 @@ use workspace::notifications::NotificationId;
 use super::composer_profile_options::{
     ComposerOptionEntry, ComposerOptionSlot, ComposerProfileKind,
 };
+use super::voice_controls::{
+    ComposerVoicePhase, ComposerVoiceState, render_voice_buttons, render_voice_recording_panel,
+};
 use super::*;
+use crate::flow_speech_runtime::{FlowRecordingSession, FlowSpeechRuntime};
 
 #[derive(Default)]
 struct ThreadFeedbackState {
@@ -605,6 +609,9 @@ pub struct ThreadView {
     pub in_flight_prompt: Option<Vec<acp::ContentBlock>>,
     pub _subscriptions: Vec<Subscription>,
     pub message_editor: Entity<MessageEditor>,
+    composer_voice_state: ComposerVoiceState,
+    flow_recording_session: Option<FlowRecordingSession>,
+    _flow_speech_task: Option<Task<()>>,
     pub add_context_menu_handle: PopoverMenuHandle<ContextMenu>,
     pub thinking_effort_menu_handle: PopoverMenuHandle<ContextMenu>,
     pub fast_mode_menu_handle: PopoverMenuHandle<ContextMenu>,
@@ -939,6 +946,9 @@ impl ThreadView {
             hovered_edited_file_buttons: None,
             in_flight_prompt: None,
             message_editor,
+            composer_voice_state: ComposerVoiceState::default(),
+            flow_recording_session: None,
+            _flow_speech_task: None,
             add_context_menu_handle: PopoverMenuHandle::default(),
             thinking_effort_menu_handle: PopoverMenuHandle::default(),
             fast_mode_menu_handle: PopoverMenuHandle::default(),
@@ -3812,6 +3822,10 @@ impl ThreadView {
                             .pt_0p5()
                             .pr_2p5()
                             .child(self.message_editor.clone())
+                            .when_some(
+                                render_voice_recording_panel(&self.composer_voice_state, cx),
+                                |this, panel| this.child(panel),
+                            )
                             .when(has_messages, |this| {
                                 this.child(
                                     h_flex()
@@ -3881,7 +3895,7 @@ impl ThreadView {
                                             .children(self.mode_selector.clone())
                                             .children(self.model_selector.clone()),
                                     })
-                                    .child(self.render_voice_input_button())
+                                    .children(self.render_voice_controls(window, cx))
                                     .child(self.render_send_button(cx)),
                             ),
                     ),
@@ -4077,15 +4091,200 @@ impl ThreadView {
         shortcuts
     }
 
-    fn render_voice_input_button(&self) -> AnyElement {
-        IconButton::new("agent-composer-voice-input", IconName::Mic)
-            .icon_size(IconSize::Small)
-            .icon_color(Color::Muted)
-            .disabled(true)
-            .tooltip(Tooltip::text(
-                "Voice input will enable after the DX voice runtime is configured",
-            ))
-            .into_any_element()
+    fn render_voice_controls(
+        &self,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Vec<AnyElement> {
+        render_voice_buttons(
+            &self.composer_voice_state,
+            cx.listener(|this, _event, window, cx| {
+                this.toggle_flow_voice_recording(window, cx);
+            }),
+            cx.listener(|this, _event, window, cx| {
+                this.speak_composer_text(window, cx);
+            }),
+        )
+    }
+
+    fn toggle_flow_voice_recording(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        match self.composer_voice_state.phase() {
+            ComposerVoicePhase::Recording => self.stop_flow_voice_recording(window, cx),
+            ComposerVoicePhase::Transcribing | ComposerVoicePhase::Speaking => {}
+            ComposerVoicePhase::Ready | ComposerVoicePhase::Error => {
+                self.start_flow_voice_recording(window, cx)
+            }
+        }
+    }
+
+    fn start_flow_voice_recording(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let runtime = FlowSpeechRuntime::detect();
+        let summary = runtime.status_summary();
+        match runtime.start_recording() {
+            Ok(session) => {
+                self.flow_recording_session = Some(session);
+                self.composer_voice_state
+                    .set_recording(format!("Flow voice runtime: {summary}"));
+                self.message_editor
+                    .read(cx)
+                    .focus_handle(cx)
+                    .focus(window, cx);
+                self._flow_speech_task = Some(cx.spawn(async move |this, cx| {
+                    loop {
+                        cx.background_executor()
+                            .timer(Duration::from_millis(250))
+                            .await;
+                        let Ok(keep_recording) = this.update(cx, |this, cx| {
+                            let is_recording =
+                                this.composer_voice_state.phase() == ComposerVoicePhase::Recording;
+                            if is_recording {
+                                cx.notify();
+                            }
+                            is_recording
+                        }) else {
+                            break;
+                        };
+                        if !keep_recording {
+                            break;
+                        }
+                    }
+                }));
+                cx.notify();
+            }
+            Err(error) => {
+                self.report_flow_voice_error("Flow voice recording failed", error, cx);
+            }
+        }
+    }
+
+    fn stop_flow_voice_recording(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        let Some(session) = self.flow_recording_session.take() else {
+            self.composer_voice_state
+                .set_error("Flow voice recording was not active");
+            cx.notify();
+            return;
+        };
+
+        let elapsed = session.elapsed();
+        let (runtime, recording) = match session.finish() {
+            Ok(recording) => recording,
+            Err(error) => {
+                self.report_flow_voice_error("Flow voice recording failed", error, cx);
+                return;
+            }
+        };
+
+        self.composer_voice_state.set_transcribing(format!(
+            "Captured {:.1}s for Flow STT",
+            elapsed.as_secs_f32()
+        ));
+        cx.notify();
+
+        self._flow_speech_task = Some(cx.spawn_in(window, async move |this, cx| {
+            let task = cx
+                .background_executor()
+                .spawn(async move { runtime.transcribe_recording(recording) });
+            let result = task.await;
+            this.update_in(cx, |this, window, cx| {
+                match result {
+                    Ok(transcript) => {
+                        let transcript = transcript.trim().to_string();
+                        if transcript.is_empty() {
+                            this.composer_voice_state
+                                .set_error("Flow STT returned an empty transcript");
+                            this.show_flow_voice_toast("Flow STT returned an empty transcript", cx);
+                        } else {
+                            this.message_editor.update(cx, |editor, cx| {
+                                editor.insert_text(&transcript, window, cx);
+                            });
+                            this.composer_voice_state
+                                .set_ready("Flow transcript inserted into the composer");
+                        }
+                    }
+                    Err(error) => {
+                        this.report_flow_voice_error(
+                            "Flow Parakeet transcription failed",
+                            error,
+                            cx,
+                        );
+                    }
+                }
+                cx.notify();
+            })
+            .ok();
+        }));
+    }
+
+    fn speak_composer_text(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
+        if self.composer_voice_state.is_busy() {
+            return;
+        }
+
+        let text = self.message_editor.read(cx).text(cx);
+        let text = text.trim().to_string();
+        if text.is_empty() {
+            self.composer_voice_state
+                .set_error("Type text in the composer before using Kokoro read-aloud");
+            self.show_flow_voice_toast(
+                "Type text in the composer before using Kokoro read-aloud",
+                cx,
+            );
+            cx.notify();
+            return;
+        }
+
+        let runtime = FlowSpeechRuntime::detect();
+        let summary = runtime.status_summary();
+        self.composer_voice_state
+            .set_speaking(format!("Flow voice runtime: {summary}"));
+        cx.notify();
+
+        self._flow_speech_task = Some(cx.spawn(async move |this, cx| {
+            let task = cx
+                .background_executor()
+                .spawn(async move { runtime.speak_text(&text) });
+            let result = task.await;
+            this.update(cx, |this, cx| {
+                match result {
+                    Ok(()) => {
+                        this.composer_voice_state
+                            .set_ready("Kokoro finished reading the composer");
+                    }
+                    Err(error) => {
+                        this.report_flow_voice_error("Flow Kokoro read-aloud failed", error, cx);
+                    }
+                }
+                cx.notify();
+            })
+            .ok();
+        }));
+    }
+
+    fn report_flow_voice_error(
+        &mut self,
+        label: &'static str,
+        error: anyhow::Error,
+        cx: &mut Context<Self>,
+    ) {
+        let message = format!("{label}: {error}");
+        self.composer_voice_state.set_error(message.clone());
+        self.show_flow_voice_toast(message, cx);
+        cx.notify();
+    }
+
+    fn show_flow_voice_toast(&self, message: impl Into<String>, cx: &mut Context<Self>) {
+        if let Some(workspace) = self.workspace.upgrade() {
+            workspace.update(cx, |workspace, cx| {
+                workspace.show_toast(
+                    Toast::new(
+                        NotificationId::named("agent-composer-flow-voice".into()),
+                        message.into(),
+                    )
+                    .autohide(),
+                    cx,
+                );
+            });
+        }
     }
 
     fn render_message_queue_entries(

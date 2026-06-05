@@ -14290,6 +14290,27 @@ PASSED:
 NOTES:
 - This remains source-only. It does not run Cargo, run `just run`, start a server, perform WebView runtime proof, enable Apply, or mutate source.
 
+[2026-06-05] - Agent Composer Flow Speech Controls
+
+ADDED:
+- `crates\agent_ui\src\flow_speech_runtime.rs` detects the copied `G:\Dx\flow` runtime, validates Parakeet/Kokoro model assets, records microphone input with `cpal`, writes bounded 16 kHz mono WAV files, and invokes Flow STT/TTS commands when runtime binaries are available.
+- `crates\agent_ui\src\conversation_view\voice_controls.rs` renders focused GPUI composer voice controls and recording/transcribing/speaking status states.
+- `script\dx-agent-voice-controls-source.test.ts` guards the source wiring so the mic/read-aloud buttons stay connected to real editor text and Flow runtime paths.
+
+CHANGED:
+- The Agent composer now renders a real Flow mic control plus a separate Kokoro read-aloud button before send.
+- Voice recording inserts the returned transcript into the existing message editor instead of replacing or auto-sending composer text.
+- Read-aloud uses the existing composer text and reports honest unavailable states when Flow runtime binaries or model files are missing.
+
+PASSED:
+- `node --test script\dx-agent-voice-controls-source.test.ts script\dx-agent-thread-view-source.test.ts script\dx-message-editor-source.test.ts`
+- `rustfmt --edition 2024 --check crates\agent_ui\src\flow_speech_runtime.rs crates\agent_ui\src\conversation_view\voice_controls.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\conversation_view.rs crates\agent_ui\src\agent_ui.rs`
+- `git diff --check -- crates\agent_ui\Cargo.toml crates\agent_ui\src\agent_ui.rs crates\agent_ui\src\conversation_view.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\conversation_view\voice_controls.rs crates\agent_ui\src\flow_speech_runtime.rs script\dx-agent-voice-controls-source.test.ts`
+- Focused conflict-marker scan across the touched source and guard files returned no matches.
+
+NOTES:
+- This is source-only under current repo rules. Cargo, `just run`, live microphone capture, and live Kokoro playback proof remain intentionally unrun until the governed validation window.
+
 [2026-06-05] - Park Fullscreen Onboarding WebPreview
 
 CHANGED:
