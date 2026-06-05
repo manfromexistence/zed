@@ -14290,6 +14290,24 @@ PASSED:
 NOTES:
 - This remains source-only. It does not run Cargo, run `just run`, start a server, perform WebView runtime proof, enable Apply, or mutate source.
 
+[2026-06-06] - Flow Speech Path Discovery Hardening
+
+CHANGED:
+- `crates\agent_ui\src\flow_speech_runtime.rs` now normalizes Flow/Kokoro data root candidates, accepts both Flow homes such as `G:\Flow` and direct data roots such as `G:\Flow\data`, canonicalizes candidates before dedupe, and checks default Flow roots against the copied repo layout before selecting them.
+- `crates\agent_ui\src\conversation_view\voice_controls.rs` now uses a stable recovery hint for voice errors instead of showing the same failure text in both the detail line and the footer.
+- `script\dx-agent-voice-controls-source.test.ts` now guards Flow root readiness, data-root normalization, canonicalized dedupe, and the non-duplicated error hint.
+- `DX.md` and `todo.txt` now carry the 2026-06-06 Flow speech state after the successful `flow-dictate` helper build and path-hardening pass.
+
+PASSED:
+- `node --test script\dx-agent-voice-controls-source.test.ts`
+- `node --test script\dx-agent-voice-controls-source.test.ts script\dx-handoff-source-guard-registry.test.ts script\dx-agent-thread-view-source.test.ts script\dx-message-editor-source.test.ts`
+- `rustfmt --edition 2024 --check crates\agent_ui\src\flow_speech_runtime.rs crates\agent_ui\src\conversation_view\voice_controls.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\audio\src\audio.rs crates\audio\src\audio_pipeline.rs crates\agent_ui\src\conversation_view.rs crates\agent_ui\src\message_editor.rs`
+- `cargo build --manifest-path tools\flow-dictation-host\Cargo.toml --target-dir G:\Dx\flow\target --locked -j1` in `G:\Dx\flow`
+- `G:\Dx\flow\target\debug\flow-dictate.exe --file <silent 16k WAV>` loaded Parakeet and returned the expected empty transcript.
+
+NOTES:
+- Live Zed microphone STT proof and live Kokoro audible playback proof remain deferred under the governed validation window.
+
 [2026-06-06] - Flow Dictation Host And Voice UI Recovery
 
 CHANGED:
@@ -14349,7 +14367,7 @@ CHANGED:
 
 NOTES:
 - Six GPT-5.5 extra-high subagents audited STT defaults, Kokoro runtime reliability, current Zed voice wiring, GPUI recording patterns, Flow build artifacts, and source-guard gaps.
-- `G:\Dx\flow` is now a real directory, not a junction. It has Parakeet model files but no `flow-dictate.exe`; current Flow policy still defers builds.
+- At that checkpoint, `G:\Dx\flow` was a real directory with Parakeet model files but no `flow-dictate.exe`; the later 2026-06-06 Flow dictation-host pass built `G:\Dx\flow\target\debug\flow-dictate.exe` and passed the silent-WAV Parakeet smoke test.
 - Friday Kokoro Python runtime discovery is stricter now. The later materialization pass populated `G:\Flow\data\models\tts\kokoro_82m` from the local Hugging Face cache, but live read-aloud proof still needs the governed validation window.
 
 [2026-06-05] - Agent Composer Friday Kokoro Playback

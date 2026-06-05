@@ -679,23 +679,23 @@ fn apply_windows_process_flags(command: &mut Command) {
 
 fn candidate_flow_data_roots(flow_root: &Path) -> Vec<PathBuf> {
     let mut roots = Vec::new();
-    push_unique_path(
+    push_unique_data_root(
         &mut roots,
         env::var_os("DX_FLOW_DATA_ROOT").map(PathBuf::from),
     );
-    push_unique_path(&mut roots, env::var_os("FLOW_DATA_DIR").map(PathBuf::from));
-    push_unique_path(&mut roots, Some(flow_root.join("data")));
+    push_unique_data_root(&mut roots, env::var_os("FLOW_DATA_DIR").map(PathBuf::from));
+    push_unique_data_root(&mut roots, Some(flow_root.join("data")));
 
     #[cfg(target_os = "windows")]
     {
         if let Some(local_app_data) = env::var_os("LOCALAPPDATA").map(PathBuf::from) {
-            push_unique_path(&mut roots, Some(local_app_data.join("com.flow.data")));
+            push_unique_data_root(&mut roots, Some(local_app_data.join("com.flow.data")));
         }
 
         for drive in b'D'..=b'Z' {
-            let root = PathBuf::from(format!("{}:\\Flow\\data", drive as char));
-            if root.exists() {
-                push_unique_path(&mut roots, Some(root));
+            let root = PathBuf::from(format!("{}:\\Flow", drive as char));
+            if root.exists() || root.join("data").exists() {
+                push_unique_data_root(&mut roots, Some(root));
             }
         }
     }
@@ -703,11 +703,58 @@ fn candidate_flow_data_roots(flow_root: &Path) -> Vec<PathBuf> {
     roots
 }
 
+fn push_unique_data_root(paths: &mut Vec<PathBuf>, path: Option<PathBuf>) {
+    push_unique_path(paths, path.map(normalize_flow_data_root));
+}
+
+fn normalize_flow_data_root(path: PathBuf) -> PathBuf {
+    if path
+        .file_name()
+        .map(|name| name.to_string_lossy().eq_ignore_ascii_case("data"))
+        .unwrap_or(false)
+    {
+        return path;
+    }
+
+    let nested_data = path.join("data");
+    if nested_data.join(KOKORO_RUNNER_SCRIPT).is_file()
+        || nested_data.join("models").join("tts").exists()
+        || path
+            .file_name()
+            .map(|name| name.to_string_lossy().eq_ignore_ascii_case("Flow"))
+            .unwrap_or(false)
+    {
+        nested_data
+    } else {
+        path
+    }
+}
+
 fn push_unique_path(paths: &mut Vec<PathBuf>, path: Option<PathBuf>) {
-    if let Some(path) = path
-        && !paths.iter().any(|existing| existing == &path)
+    if let Some(path) = path.map(canonicalize_candidate_path)
+        && !paths
+            .iter()
+            .any(|existing| candidate_paths_equal(existing, &path))
     {
         paths.push(path);
+    }
+}
+
+fn canonicalize_candidate_path(path: PathBuf) -> PathBuf {
+    path.canonicalize().unwrap_or(path)
+}
+
+fn candidate_paths_equal(left: &Path, right: &Path) -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        left.as_os_str()
+            .to_string_lossy()
+            .eq_ignore_ascii_case(&right.as_os_str().to_string_lossy())
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        left == right
     }
 }
 
@@ -774,10 +821,36 @@ fn find_binary(flow_root: &Path, name: &str) -> Option<PathBuf> {
 
 fn default_flow_root() -> PathBuf {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    manifest_dir
-        .ancestors()
-        .nth(3)
-        .map(|dx_root| dx_root.join("flow"))
-        .filter(|path| path.exists())
-        .unwrap_or_else(|| PathBuf::from(r"G:\Dx\flow"))
+    let literal_flow_root = PathBuf::from(r"G:\Dx\flow");
+    let mut roots = Vec::new();
+
+    push_unique_flow_root(
+        &mut roots,
+        manifest_dir
+            .ancestors()
+            .nth(3)
+            .map(|dx_root| dx_root.join("flow")),
+    );
+    push_unique_flow_root(&mut roots, Some(literal_flow_root.clone()));
+
+    roots.into_iter().next().unwrap_or(literal_flow_root)
+}
+
+fn push_unique_flow_root(paths: &mut Vec<PathBuf>, path: Option<PathBuf>) {
+    if let Some(path) = path
+        && flow_root_ready(&path)
+    {
+        push_unique_path(paths, Some(path));
+    }
+}
+
+fn flow_root_ready(path: &Path) -> bool {
+    path.join("src")
+        .join("bin")
+        .join("flow-dictate.rs")
+        .is_file()
+        && path
+            .join(PARAKEET_MODEL_DIR)
+            .join("encoder.int8.onnx")
+            .is_file()
 }

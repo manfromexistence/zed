@@ -101,6 +101,7 @@ test("voice recording UI exposes real recording and transcription states", () =>
   assert.match(voiceControls, /Retry Flow voice input/);
   assert.match(voiceControls, /agent-composer-dismiss-voice-error/);
   assert.match(voiceControls, /Dismiss Flow voice error/);
+  assert.match(voiceControls, /Retry or dismiss to continue/);
   assert.match(threadView, /flow_recording_session[\s\S]+telemetry\(\)/);
   assert.match(threadView, /fn cancel_flow_voice_recording/);
   assert.match(threadView, /Flow voice recording discarded/);
@@ -155,6 +156,12 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
     "fn run_command_with_timeout",
     "fn apply_tts_process_env",
   );
+  const dataRootCandidates = sourceSlice(
+    runtime,
+    "fn candidate_flow_data_roots",
+    "fn find_kokoro_python",
+  );
+  const defaultFlowRoot = sourceTail(runtime, "fn default_flow_root");
 
   assert.match(runtime, /FlowSpeechRuntime/);
   assert.match(runtime, /G:\\\\Dx\\\\flow|DX_FLOW_ROOT|FLOW_ROOT/);
@@ -228,6 +235,16 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(timeoutHelper, /timed out after/);
   assert.match(runtime, /HUGGINGFACE_HUB_CACHE/);
   assert.match(runtime, /hf_home\.join\("hub"\)/);
+  assert.match(runtime, /fn normalize_flow_data_root/);
+  assert.match(runtime, /fn canonicalize_candidate_path/);
+  assert.match(runtime, /fn candidate_paths_equal/);
+  assert.match(dataRootCandidates, /normalize_flow_data_root/);
+  assert.match(dataRootCandidates, /FLOW_DATA_DIR/);
+  assert.match(dataRootCandidates, /path\.join\("data"\)/);
+  assert.match(dataRootCandidates, /push_unique_path/);
+  assert.match(defaultFlowRoot, /flow_root_ready/);
+  assert.match(defaultFlowRoot, /join\("src"\)[\s\S]+join\("bin"\)[\s\S]+join\("flow-dictate\.rs"\)/);
+  assert.match(defaultFlowRoot, /PARAKEET_MODEL_DIR/);
   assert.match(runtime, /RecordingTelemetry/);
   assert.match(runtime, /recent_input_level/);
   assertBefore(
@@ -362,6 +379,12 @@ function sourceSlice(source: string, startNeedle: string, endNeedle: string) {
   const end = source.indexOf(endNeedle, start + startNeedle.length);
   assert.notEqual(end, -1, `expected ${endNeedle} after ${startNeedle}`);
   return source.slice(start, end);
+}
+
+function sourceTail(source: string, startNeedle: string) {
+  const start = source.indexOf(startNeedle);
+  assert.notEqual(start, -1, `expected ${startNeedle}`);
+  return source.slice(start);
 }
 
 function assertBefore(

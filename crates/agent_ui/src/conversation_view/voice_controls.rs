@@ -203,7 +203,7 @@ pub(super) fn render_voice_recording_panel(
         ComposerVoicePhase::Error => (
             "Flow voice needs attention",
             Color::Warning,
-            state.message.clone(),
+            "Retry or dismiss to continue".into(),
         ),
         ComposerVoicePhase::Ready => unreachable!(),
     };
