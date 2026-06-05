@@ -13,6 +13,8 @@ const audioModulePath = "crates/audio/src/audio.rs";
 const dxHandoffPath = "DX.md";
 const agentUiCargoPath = "crates/agent_ui/Cargo.toml";
 const zedCargoPath = "crates/zed/Cargo.toml";
+const flowDictatePath = "../flow/src/bin/flow-dictate.rs";
+const flowDictationHostReadmePath = "../flow/tools/flow-dictation-host/README.md";
 
 const threadView = readFileSync(threadViewPath, "utf8");
 const conversationModule = readFileSync(conversationModulePath, "utf8");
@@ -22,6 +24,8 @@ const audioModule = readFileSync(audioModulePath, "utf8");
 const dxHandoff = readFileSync(dxHandoffPath, "utf8");
 const agentUiCargo = readFileSync(agentUiCargoPath, "utf8");
 const zedCargo = readFileSync(zedCargoPath, "utf8");
+const flowDictate = readFileSync(flowDictatePath, "utf8");
+const flowDictationHostReadme = readFileSync(flowDictationHostReadmePath, "utf8");
 
 test("agent composer voice controls live in focused modules", () => {
   assert.ok(existsSync(voiceControlsPath), "expected composer voice controls module");
@@ -64,12 +68,18 @@ test("composer renders separate mic and read-aloud buttons before send", () => {
   assert.match(voiceControls, /IconName::Mic/);
   assert.match(voiceControls, /IconName::AudioOn/);
   assert.match(voiceControls, /IconName::Stop/);
+  assert.match(voiceButtons, /let speak_icon = match state\.phase/);
+  assert.match(voiceButtons, /ComposerVoicePhase::Speaking => IconName::Stop/);
   assert.match(voiceButtons, /let voice_disabled = false/);
   assert.match(voiceButtons, /\.disabled\(voice_disabled\)/);
+  assert.match(
+    voiceButtons,
+    /let speak_disabled = matches!\(\s*state\.phase,\s*ComposerVoicePhase::Recording\s*\|\s*ComposerVoicePhase::Transcribing\s*\)/,
+  );
   assert.match(voiceButtons, /agent-composer-voice-input[\s\S]+\.on_click\(on_voice_click\)/);
   assert.match(
     voiceButtons,
-    /agent-composer-text-to-speech[\s\S]+\.on_click\(on_speak_click\)/,
+    /agent-composer-text-to-speech", speak_icon\)[\s\S]+\.on_click\(on_speak_click\)/,
   );
   assert.doesNotMatch(voiceButtons, /dummy|mock|placeholder|fake|demo/i);
   assert.doesNotMatch(recordingPanel, /dummy|mock|placeholder|fake|demo/i);
@@ -84,7 +94,7 @@ test("voice recording UI exposes real recording and transcription states", () =>
   assert.match(voiceControls, /Speaking/);
   assert.match(voiceControls, /render_voice_recording_panel/);
   assert.match(voiceControls, /Recording with Flow/);
-  assert.match(voiceControls, /Transcribing with Parakeet/);
+  assert.match(voiceControls, /Transcribing with Flow STT/);
   assert.match(voiceControls, /Reading with Kokoro/);
   assert.match(voiceControls, /90s max/);
   assert.match(voiceControls, /agent-composer-stop-voice-recording/);
@@ -119,6 +129,10 @@ test("voice recording UI exposes real recording and transcription states", () =>
     /ComposerVoicePhase::Transcribing => self\.cancel_flow_speech_operation\(cx\)/,
   );
   assert.match(threadView, /Flow STT canceled/);
+  assert.match(
+    threadView,
+    /MessageEditorEvent::Cancel if self\.composer_voice_state\.is_busy\(\) => \{\s*self\.stop_flow_voice_action\(window, cx\)\s*\}/,
+  );
 });
 
 test("voice runtime uses Flow speech code instead of dummy text", () => {
@@ -181,13 +195,25 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   );
   assert.match(
     runtime,
+    /FLOW_NEMOTRON_EXECUTION_MODEL_KEY: &str = "nemotron-speech-streaming-en-0\.6b-int8"/,
+  );
+  assert.match(
+    runtime,
     /PARAKEET_MODEL_DIR: &str = "models\/stt\/parakeet-tdt-0\.6b-v3-int8"/,
   );
   assert.match(
     runtime,
-    /FRIDAY_DEFAULT_STT_MODEL_KEY: &str = "parakeet-tdt-0\.6b-v3-int8"/,
+    /NEMOTRON_MODEL_DIR: &str = "models\/stt\/nemotron-speech-streaming-en-0\.6b-int8"/,
+  );
+  assert.match(
+    runtime,
+    /FLOW_DEFAULT_STT_MODEL_KEY: &str = "parakeet-tdt-0\.6b-v3-int8"/,
     "Zed must name the same Parakeet default as the copied Friday Flow runtime",
   );
+  assert.match(runtime, /DX_FLOW_STT_MODEL/);
+  assert.match(runtime, /FLOW_STT_MODEL/);
+  assert.match(runtime, /selected_stt_model/);
+  assert.match(runtime, /Unsupported Flow STT model/);
   assert.doesNotMatch(runtime, /parakeet_unified_en_int8/);
   assert.match(runtime, /flow-dictate/);
   assert.match(startRecording, /ensure_stt_ready\(\)\?/);
@@ -200,12 +226,14 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(transcribeRecording, /write_recording_wav/);
   assert.match(transcribeRecording, /arg\("--file"\)/);
   assert.match(transcribeRecording, /arg\(audio_file\.path\(\)\)/);
+  assert.match(transcribeRecording, /arg\("--model"\)/);
+  assert.match(transcribeRecording, /arg\(stt_model\.key\)/);
   assert.match(transcribeRecording, /STT_COMMAND_TIMEOUT/);
   assert.match(
     transcribeRecording,
     /run_command_with_timeout\([^,]+,[^,]+,[^,]+,\s*Some\(cancellation\)/,
   );
-  assert.match(transcribeRecording, /Flow Parakeet transcription/);
+  assert.match(transcribeRecording, /Flow STT transcription/);
   assert.doesNotMatch(transcribeRecording, /remove_file/);
   assert.match(runtime, /TemporarySpeechFile/);
   assert.match(runtime, /impl Drop for TemporarySpeechFile/);
@@ -222,10 +250,11 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(runtime, /KokoroTtsRuntime|kokoro_82m/);
   assert.match(speakText, /cancellation: &FlowSpeechCancellation/);
   assert.match(speakText, /Friday Kokoro TTS runtime is not available/);
-  assert.match(ensureSttReady, /Flow Parakeet runtime is not built/);
+  assert.match(ensureSttReady, /Flow STT runtime is not built/);
   assert.match(ensureSttReady, /DX_FLOW_DICTATE_BINARY/);
-  assert.match(ensureSttReady, /FRIDAY_DEFAULT_STT_MODEL_KEY/);
+  assert.match(ensureSttReady, /FLOW_DEFAULT_STT_MODEL_KEY/);
   assert.match(ensureSttReady, /FLOW_PARAKEET_EXECUTION_MODEL_KEY/);
+  assert.match(ensureSttReady, /FLOW_NEMOTRON_EXECUTION_MODEL_KEY/);
   assert.match(synthesize, /Command::new\(&self\.python\)/);
   assert.match(synthesize, /arg\(&self\.runner\)/);
   assert.match(synthesize, /arg\("--model-kind"\)/);
@@ -266,7 +295,7 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(dataRootCandidates, /push_unique_path/);
   assert.match(defaultFlowRoot, /flow_root_ready/);
   assert.match(defaultFlowRoot, /join\("src"\)[\s\S]+join\("bin"\)[\s\S]+join\("flow-dictate\.rs"\)/);
-  assert.match(defaultFlowRoot, /PARAKEET_MODEL_DIR/);
+  assert.doesNotMatch(defaultFlowRoot, /PARAKEET_MODEL_DIR/);
   assert.match(runtime, /RecordingTelemetry/);
   assert.match(runtime, /recent_input_level/);
   assertBefore(
@@ -294,7 +323,34 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.doesNotMatch(runtime, /mock|placeholder|dummy/i);
 });
 
+test("Flow dictation host exposes focused Sherpa STT model selection", () => {
+  assert.match(flowDictate, /const DEFAULT_STT_MODEL_KEY: &str = "parakeet-tdt-0\.6b-v3-int8"/);
+  assert.match(
+    flowDictate,
+    /const NEMOTRON_STT_MODEL_KEY: &str = "nemotron-speech-streaming-en-0\.6b-int8"/,
+  );
+  assert.match(flowDictate, /struct DictationSttModel/);
+  assert.match(flowDictate, /fn selected_stt_model/);
+  assert.match(flowDictate, /fn option_value/);
+  assert.match(flowDictate, /--model/);
+  assert.match(flowDictate, /models\/stt\/parakeet-tdt-0\.6b-v3-int8/);
+  assert.match(flowDictate, /models\/stt\/nemotron-speech-streaming-en-0\.6b-int8/);
+  assert.match(flowDictate, /Unsupported STT model/);
+  assert.match(flowDictate, /load_sherpa_transducer/);
+  assert.match(flowDictate, /selected_model\.root/);
+  assert.match(flowDictate, /selected_model\.label/);
+  assert.match(flowDictationHostReadme, /--model parakeet-tdt-0\.6b-v3-int8/);
+  assert.match(flowDictationHostReadme, /--model nemotron-speech-streaming-en-0\.6b-int8/);
+  assert.match(flowDictationHostReadme, /focused host supports Sherpa Parakeet and Nemotron/);
+  assert.doesNotMatch(flowDictationHostReadme, /Whisper.*focused host/i);
+});
+
 test("voice text paths use the real message editor contents and insert APIs", () => {
+  const interruptAndSend = sourceSlice(
+    threadView,
+    "pub fn interrupt_and_send",
+    "fn stop_current_and_send_new_message",
+  );
   const transcriptHelper = sourceSlice(
     messageEditor,
     "pub fn insert_transcript_text",
@@ -331,6 +387,8 @@ test("voice text paths use the real message editor contents and insert APIs", ()
   assert.match(threadView, /message_editor\.read\(cx\)\.text\(cx\)/);
   assert.match(threadView, /if self\.composer_voice_state\.is_busy\(\)/);
   assert.match(threadView, /Finish Flow voice action before sending/);
+  assert.match(interruptAndSend, /if self\.composer_voice_state\.is_busy\(\)/);
+  assert.match(interruptAndSend, /Finish Flow voice action before sending/);
   assert.match(
     threadView,
     /this\.message_editor\.update\(cx,\s*\|editor, cx\|[\s\S]+insert_transcript_text\(&transcript/,
@@ -377,6 +435,14 @@ test("voice playback keeps audio feature wiring and fallback states", () => {
   assert.match(audioPipeline, /completed\.store\(true, Ordering::Relaxed\)/);
   assert.match(audioPipeline, /play_wav_file_tracked/);
   assert.match(audioPipeline, /output_mixer\.add\(source\)/);
+  assert.match(
+    speakComposerText,
+    /ComposerVoicePhase::Speaking => \{\s*self\.stop_flow_voice_playback\(cx\);\s*return;\s*\}/,
+  );
+  assert.match(
+    speakComposerText,
+    /ComposerVoicePhase::Recording \| ComposerVoicePhase::Transcribing/,
+  );
   assert.match(speakComposerText, /flow_playback_handle = Some\(playback_handle\.clone\(\)\)/);
   assert.match(speakComposerText, /std::fs::remove_file\(&audio_path\)/);
   assert.match(speakComposerText, /flow_playback_id/);
@@ -395,7 +461,14 @@ test("voice handoff keeps runtime readiness honest", () => {
   );
 
   assert.match(voiceHandoff, /flow-dictate\.exe` now exists/);
+  assert.match(voiceHandoff, /flow-dictate --file <wav> --model <key>/);
+  assert.match(voiceHandoff, /Parakeet as the default/);
+  assert.match(voiceHandoff, /Nemotron as an explicit opt-in/);
+  assert.match(voiceHandoff, /DX_FLOW_STT_MODEL/);
+  assert.match(voiceHandoff, /FLOW_STT_MODEL/);
+  assert.match(voiceHandoff, /unsupported values fail closed/);
   assert.match(voiceHandoff, /silent-WAV Parakeet smoke test passed/);
+  assert.match(voiceHandoff, /Nemotron smoke proof/);
   assert.match(voiceHandoff, /live Zed microphone proof still needs the governed validation window/);
   assert.match(voiceHandoff, /G:\\Flow\\data\\models\\tts\\kokoro_82m/);
   assert.match(voiceHandoff, /config\.json/);
@@ -403,7 +476,10 @@ test("voice handoff keeps runtime readiness honest", () => {
   assert.match(voiceHandoff, /live Kokoro synthesis\/playback proof still remains deferred/);
   assert.match(voiceHandoff, /tracked\/cancelable WAV playback handle/);
   assert.match(voiceHandoff, /Live audible playback proof is still deferred/);
-  assert.doesNotMatch(voiceHandoff, /runtime-green|production-ready|launch-ready/i);
+  assert.doesNotMatch(
+    voiceHandoff,
+    /runtime-green|production-ready|launch-ready|Nemotron live proof passed/i,
+  );
 });
 
 function sourceSlice(source: string, startNeedle: string, endNeedle: string) {

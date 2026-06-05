@@ -1550,7 +1550,7 @@ COMPLETED:
 [2026-06-06] - Agent Composer Flow Speech Controls
 
 IN PROGRESS:
-- Wire the Agent composer mic and read-aloud controls to the copied `G:\Dx\flow` speech runtime plus the earlier Friday Kokoro app runtime: source modules and guards are in place for Parakeet STT recording, composer-targeted transcript insertion, Friday Kokoro composer read-aloud, Zed WAV playback, selected input-device routing, GPUI recording telemetry, inline voice-error recovery, cancellable STT/TTS subprocesses, normalized Flow/Kokoro path discovery, and the built Flow `flow-dictate` helper, with live Zed microphone/playback proof still pending the governed validation window.
+- Wire the Agent composer mic and read-aloud controls to the copied `G:\Dx\flow` speech runtime plus the earlier Friday Kokoro app runtime: source modules and guards are in place for Parakeet default plus Nemotron opt-in STT model selection, composer-targeted transcript insertion, Friday Kokoro composer read-aloud, Zed WAV playback, selected input-device routing, GPUI recording telemetry, inline voice-error recovery, cancellable STT/TTS subprocesses, normalized Flow/Kokoro path discovery, and the built Flow `flow-dictate` helper, with live Zed microphone/playback proof still pending the governed validation window.
 
 PENDING:
 - Run live Friday Kokoro synthesis/playback proof through Zed once the governed validation window is explicitly opened.
@@ -1566,3 +1566,5 @@ COMPLETED:
 - Built `G:\Dx\flow\target\debug\flow-dictate.exe` through the focused Flow dictation-host package and passed a non-microphone silent-WAV Parakeet smoke test.
 - Hardened Flow/Kokoro root discovery so default Flow roots are checked against the copied repo layout, candidate paths are canonicalized before dedupe, and TTS data-root envs can point at either `G:\Flow` or `G:\Flow\data`.
 - Hardened the Agent composer voice busy states so Parakeet transcription can be canceled, Kokoro synthesis can be stopped before playback, send is blocked while voice work is active, transcripts target the composer input directly, and the recording UI shows the `90s max` capture limit.
+- Added explicit Flow STT model selection through `DX_FLOW_STT_MODEL` / `FLOW_STT_MODEL`, keeping Parakeet as the default and Nemotron as an opt-in focused-host model while unsupported model keys fail closed before recording/transcription proceeds.
+- Hardened remaining voice UI edge paths so Send Immediately cannot bypass active voice work, editor cancel stops the active voice action first, and the read-aloud button becomes the Kokoro stop toggle while speaking.

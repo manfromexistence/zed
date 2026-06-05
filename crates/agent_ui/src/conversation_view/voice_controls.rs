@@ -117,7 +117,7 @@ impl ComposerVoiceState {
 
     fn speak_tooltip(&self) -> &'static str {
         match self.phase {
-            ComposerVoicePhase::Speaking => "Kokoro is reading the composer",
+            ComposerVoicePhase::Speaking => "Stop Kokoro read-aloud",
             ComposerVoicePhase::Recording | ComposerVoicePhase::Transcribing => {
                 "Finish voice recording before reading aloud"
             }
@@ -147,11 +147,13 @@ pub(super) fn render_voice_buttons(
     };
     let speak_disabled = matches!(
         state.phase,
-        ComposerVoicePhase::Recording
-            | ComposerVoicePhase::Transcribing
-            | ComposerVoicePhase::Speaking
+        ComposerVoicePhase::Recording | ComposerVoicePhase::Transcribing
     );
     let voice_disabled = false;
+    let speak_icon = match state.phase {
+        ComposerVoicePhase::Speaking => IconName::Stop,
+        _ => IconName::AudioOn,
+    };
     let speak_color = if state.phase == ComposerVoicePhase::Speaking {
         Color::Accent
     } else {
@@ -166,7 +168,7 @@ pub(super) fn render_voice_buttons(
             .tooltip(Tooltip::text(state.voice_tooltip()))
             .on_click(on_voice_click)
             .into_any_element(),
-        IconButton::new("agent-composer-text-to-speech", IconName::AudioOn)
+        IconButton::new("agent-composer-text-to-speech", speak_icon)
             .icon_size(IconSize::Small)
             .icon_color(speak_color)
             .disabled(speak_disabled)
@@ -193,7 +195,7 @@ pub(super) fn render_voice_recording_panel(
             ("Recording with Flow", Color::Error, recording_detail(state))
         }
         ComposerVoicePhase::Transcribing => (
-            "Transcribing with Parakeet",
+            "Transcribing with Flow STT",
             Color::Accent,
             "Preparing transcript".into(),
         ),

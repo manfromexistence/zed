@@ -1082,6 +1082,9 @@ impl ThreadView {
         match event {
             MessageEditorEvent::Send => self.send(window, cx),
             MessageEditorEvent::SendImmediately => self.interrupt_and_send(window, cx),
+            MessageEditorEvent::Cancel if self.composer_voice_state.is_busy() => {
+                self.stop_flow_voice_action(window, cx)
+            }
             MessageEditorEvent::Cancel => self.cancel_generation(cx),
             MessageEditorEvent::Focus => {
                 self.cancel_editing(&Default::default(), window, cx);
@@ -1653,6 +1656,11 @@ impl ThreadView {
         let thread = &self.thread;
 
         if self.is_loading_contents {
+            return;
+        }
+
+        if self.composer_voice_state.is_busy() {
+            self.show_flow_voice_toast("Finish Flow voice action before sending", cx);
             return;
         }
 
@@ -4269,11 +4277,7 @@ impl ThreadView {
                         }
                     }
                     Err(error) => {
-                        this.report_flow_voice_error(
-                            "Flow Parakeet transcription failed",
-                            error,
-                            cx,
-                        );
+                        this.report_flow_voice_error("Flow STT transcription failed", error, cx);
                     }
                 }
                 cx.notify();
@@ -4318,8 +4322,16 @@ impl ThreadView {
     }
 
     fn speak_composer_text(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
-        if self.composer_voice_state.is_busy() {
-            return;
+        match self.composer_voice_state.phase() {
+            ComposerVoicePhase::Speaking => {
+                self.stop_flow_voice_playback(cx);
+                return;
+            }
+            ComposerVoicePhase::Recording | ComposerVoicePhase::Transcribing => {
+                self.show_flow_voice_toast("Finish Flow voice action before reading aloud", cx);
+                return;
+            }
+            ComposerVoicePhase::Ready | ComposerVoicePhase::Error => {}
         }
 
         let text = self.message_editor.read(cx).text(cx);

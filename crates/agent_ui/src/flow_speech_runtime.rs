@@ -19,9 +19,11 @@ use uuid::Uuid;
 const TARGET_SAMPLE_RATE: u32 = 16_000;
 const MAX_RECORDING_SECONDS: usize = 90;
 const MIN_RECORDING_SAMPLES: usize = TARGET_SAMPLE_RATE as usize / 4;
-const FRIDAY_DEFAULT_STT_MODEL_KEY: &str = "parakeet-tdt-0.6b-v3-int8";
+const FLOW_DEFAULT_STT_MODEL_KEY: &str = "parakeet-tdt-0.6b-v3-int8";
 const FLOW_PARAKEET_EXECUTION_MODEL_KEY: &str = "parakeet-tdt-0.6b-v3-int8";
+const FLOW_NEMOTRON_EXECUTION_MODEL_KEY: &str = "nemotron-speech-streaming-en-0.6b-int8";
 const PARAKEET_MODEL_DIR: &str = "models/stt/parakeet-tdt-0.6b-v3-int8";
+const NEMOTRON_MODEL_DIR: &str = "models/stt/nemotron-speech-streaming-en-0.6b-int8";
 const KOKORO_MODEL_KEY: &str = "kokoro_82m";
 const KOKORO_RUNNER_SCRIPT: &str = "tools/qwen3_tts_runner.py";
 const DEFAULT_KOKORO_VOICE: &str = "af_bella";
@@ -38,7 +40,15 @@ const BELOW_NORMAL_PRIORITY_CLASS: u32 = 0x00004000;
 pub(crate) struct FlowSpeechRuntime {
     flow_root: PathBuf,
     flow_dictate_binary: Option<PathBuf>,
+    selected_stt_model: Result<FlowSttModel, String>,
     kokoro_tts_runtime: Option<KokoroTtsRuntime>,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct FlowSttModel {
+    key: &'static str,
+    label: &'static str,
+    model_dir: &'static str,
 }
 
 #[derive(Clone, Debug)]
@@ -116,6 +126,51 @@ impl Drop for TemporarySpeechFile {
     }
 }
 
+impl FlowSttModel {
+    fn parakeet() -> Self {
+        Self {
+            key: FLOW_PARAKEET_EXECUTION_MODEL_KEY,
+            label: "Parakeet",
+            model_dir: PARAKEET_MODEL_DIR,
+        }
+    }
+
+    fn nemotron() -> Self {
+        Self {
+            key: FLOW_NEMOTRON_EXECUTION_MODEL_KEY,
+            label: "Nemotron",
+            model_dir: NEMOTRON_MODEL_DIR,
+        }
+    }
+
+    fn from_key(key: &str) -> Option<Self> {
+        match key {
+            FLOW_PARAKEET_EXECUTION_MODEL_KEY => Some(Self::parakeet()),
+            FLOW_NEMOTRON_EXECUTION_MODEL_KEY => Some(Self::nemotron()),
+            _ => None,
+        }
+    }
+}
+
+fn selected_stt_model() -> Result<FlowSttModel, String> {
+    let requested = env::var("DX_FLOW_STT_MODEL")
+        .or_else(|_| env::var("FLOW_STT_MODEL"))
+        .unwrap_or_else(|_| FLOW_DEFAULT_STT_MODEL_KEY.to_string());
+    let requested = requested.trim();
+    let requested = if requested.is_empty() {
+        FLOW_DEFAULT_STT_MODEL_KEY
+    } else {
+        requested
+    };
+
+    FlowSttModel::from_key(requested).ok_or_else(|| {
+        format!(
+            "Unsupported Flow STT model '{}'. Supported: {}, {}.",
+            requested, FLOW_PARAKEET_EXECUTION_MODEL_KEY, FLOW_NEMOTRON_EXECUTION_MODEL_KEY
+        )
+    })
+}
+
 impl FlowSpeechRuntime {
     pub(crate) fn detect() -> Self {
         let flow_dictate_binary = env::var_os("DX_FLOW_DICTATE_BINARY")
@@ -133,11 +188,13 @@ impl FlowSpeechRuntime {
 
         let flow_dictate_binary =
             flow_dictate_binary.or_else(|| find_binary(&flow_root, "flow-dictate"));
+        let selected_stt_model = selected_stt_model();
         let kokoro_tts_runtime = KokoroTtsRuntime::detect(&flow_root);
 
         Self {
             flow_root,
             flow_dictate_binary,
+            selected_stt_model,
             kokoro_tts_runtime,
         }
     }
@@ -175,22 +232,24 @@ impl FlowSpeechRuntime {
         recording: RecordedSpeech,
         cancellation: &FlowSpeechCancellation,
     ) -> Result<String> {
-        self.ensure_stt_ready()?;
+        let stt_model = self.ensure_stt_ready()?;
         let audio_file = TemporarySpeechFile::new(self.write_recording_wav(&recording)?);
         let binary = self
             .flow_dictate_binary
             .as_ref()
-            .context("Flow Parakeet dictation command is not available")?;
+            .context("Flow STT dictation command is not available")?;
         let mut command = Command::new(binary);
         command
             .current_dir(&self.flow_root)
             .arg("--file")
-            .arg(audio_file.path());
+            .arg(audio_file.path())
+            .arg("--model")
+            .arg(stt_model.key);
         apply_windows_process_flags(&mut command);
         let output = run_command_with_timeout(
             command,
             STT_COMMAND_TIMEOUT,
-            "Flow Parakeet transcription",
+            "Flow STT transcription",
             Some(cancellation),
         )?;
 
@@ -209,10 +268,12 @@ impl FlowSpeechRuntime {
     }
 
     pub(crate) fn status_summary(&self) -> String {
-        let stt = if self.parakeet_ready() {
-            "Parakeet ready"
-        } else {
-            "Parakeet model missing"
+        let stt = match self.stt_model() {
+            Ok(stt_model) if self.stt_model_ready(stt_model) => {
+                format!("{} ready", stt_model.label)
+            }
+            Ok(stt_model) => format!("{} model missing", stt_model.label),
+            Err(error) => error.to_string(),
         };
         let tts = if self.kokoro_tts_runtime.is_some() {
             "Friday Kokoro ready"
@@ -220,9 +281,9 @@ impl FlowSpeechRuntime {
             "Friday Kokoro missing"
         };
         let stt_runtime = if self.flow_dictate_binary.is_some() {
-            "Parakeet command ready"
+            "Flow STT command ready"
         } else {
-            "Parakeet command missing"
+            "Flow STT command missing"
         };
 
         format!("{stt}; {tts}; {stt_runtime}")
@@ -239,33 +300,47 @@ impl FlowSpeechRuntime {
         Ok(path)
     }
 
-    fn ensure_parakeet_ready(&self) -> Result<()> {
-        if self.parakeet_ready() {
-            Ok(())
+    fn ensure_stt_model_ready(&self) -> Result<FlowSttModel> {
+        let stt_model = self.stt_model()?;
+        if self.stt_model_ready(stt_model) {
+            Ok(stt_model)
         } else {
             Err(anyhow!(
-                "Flow Parakeet model files are missing under {}",
-                self.flow_root.join(PARAKEET_MODEL_DIR).display()
+                "Flow {} model files are missing under {}",
+                stt_model.label,
+                self.flow_root.join(stt_model.model_dir).display()
             ))
         }
     }
 
-    fn ensure_stt_ready(&self) -> Result<()> {
-        self.ensure_parakeet_ready()?;
+    fn ensure_stt_ready(&self) -> Result<FlowSttModel> {
+        let stt_model = self.ensure_stt_model_ready()?;
         if self.flow_dictate_binary.is_some() {
-            Ok(())
+            Ok(stt_model)
         } else {
             Err(anyhow!(
-                "Flow Parakeet runtime is not built. Build flow-dictate with the sherpa-stt feature in {} or set DX_FLOW_DICTATE_BINARY. This maps Friday's default STT model {} to {}.",
+                "Flow STT runtime is not built. Build flow-dictate with the sherpa-stt feature in {} or set DX_FLOW_DICTATE_BINARY. This maps Flow's default STT model {} to {} and supports {} when DX_FLOW_STT_MODEL or FLOW_STT_MODEL selects it.",
                 self.flow_root.display(),
-                FRIDAY_DEFAULT_STT_MODEL_KEY,
-                FLOW_PARAKEET_EXECUTION_MODEL_KEY
+                FLOW_DEFAULT_STT_MODEL_KEY,
+                FLOW_PARAKEET_EXECUTION_MODEL_KEY,
+                FLOW_NEMOTRON_EXECUTION_MODEL_KEY
             ))
         }
     }
 
     fn parakeet_ready(&self) -> bool {
-        let root = self.flow_root.join(PARAKEET_MODEL_DIR);
+        self.stt_model_ready(FlowSttModel::parakeet())
+    }
+
+    fn stt_model(&self) -> Result<FlowSttModel> {
+        self.selected_stt_model
+            .as_ref()
+            .copied()
+            .map_err(|error| anyhow!(error.clone()))
+    }
+
+    fn stt_model_ready(&self, stt_model: FlowSttModel) -> bool {
+        let root = self.flow_root.join(stt_model.model_dir);
         [
             "encoder.int8.onnx",
             "decoder.int8.onnx",
@@ -911,8 +986,4 @@ fn flow_root_ready(path: &Path) -> bool {
         .join("bin")
         .join("flow-dictate.rs")
         .is_file()
-        && path
-            .join(PARAKEET_MODEL_DIR)
-            .join("encoder.int8.onnx")
-            .is_file()
 }
