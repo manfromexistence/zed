@@ -923,6 +923,9 @@ test("voice handoff keeps runtime readiness honest", () => {
   assert.match(voiceHandoff, /FLOW_WHISPER_MODEL/);
   assert.match(voiceHandoff, /DX_FLOW_WHISPER_MODEL/);
   assert.match(voiceHandoff, /silent-WAV Parakeet smoke test passed/);
+  assert.match(voiceHandoff, /direct Flow microphone capture proof now writes/);
+  assert.match(voiceHandoff, /zed-flow-mic-proof\\flow-mic-capture\.wav/);
+  assert.match(voiceHandoff, /non-empty 16 kHz mono WAV/);
   assert.match(voiceHandoff, /Nemotron smoke proof/);
   assert.match(voiceHandoff, /Whisper smoke proof/);
   assert.match(voiceHandoff, /live Zed microphone proof still needs? the governed validation window/);
