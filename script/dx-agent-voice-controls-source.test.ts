@@ -125,6 +125,21 @@ test("voice recording UI exposes real recording and transcription states", () =>
     "fn toggle_flow_voice_recording",
     "fn stop_flow_voice_action",
   );
+  const stopVoiceAction = sourceSlice(
+    threadView,
+    "fn stop_flow_voice_action",
+    "fn cancel_active_flow_voice_action",
+  );
+  const cancelActiveVoiceAction = sourceSlice(
+    threadView,
+    "fn cancel_active_flow_voice_action",
+    "fn start_flow_voice_recording",
+  );
+  const recordingPanelWiring = sourceSlice(
+    threadView,
+    "render_voice_recording_panel(",
+    "|this, panel| this.child(panel)",
+  );
 
   assert.match(voiceControls, /enum ComposerVoicePhase/);
   assert.match(voiceControls, /Recording/);
@@ -182,10 +197,29 @@ test("voice recording UI exposes real recording and transcription states", () =>
     threadView,
     /ComposerVoicePhase::Transcribing => self\.cancel_flow_speech_operation\(cx\)/,
   );
+  assert.match(
+    stopVoiceAction,
+    /ComposerVoicePhase::Recording => self\.stop_flow_voice_recording\(window, cx\)/,
+  );
+  assert.match(
+    cancelActiveVoiceAction,
+    /ComposerVoicePhase::Recording => self\.cancel_flow_voice_recording\(cx\)/,
+  );
+  assert.doesNotMatch(cancelActiveVoiceAction, /stop_flow_voice_recording/);
+  assert.doesNotMatch(cancelActiveVoiceAction, /finish\(/);
+  assert.doesNotMatch(cancelActiveVoiceAction, /transcribe_recording/);
   assert.match(threadView, /Flow STT canceled/);
   assert.match(
     threadView,
+    /MessageEditorEvent::Cancel if self\.composer_voice_state\.is_busy\(\) => \{\s*self\.cancel_active_flow_voice_action\(cx\)\s*\}/,
+  );
+  assert.doesNotMatch(
+    threadView,
     /MessageEditorEvent::Cancel if self\.composer_voice_state\.is_busy\(\) => \{\s*self\.stop_flow_voice_action\(window, cx\)\s*\}/,
+  );
+  assert.match(
+    recordingPanelWiring,
+    /cx\.listener\(\|this, _event, window, cx\| \{\s*this\.stop_flow_voice_action\(window, cx\);\s*\}\)/,
   );
 });
 

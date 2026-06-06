@@ -1086,7 +1086,7 @@ impl ThreadView {
             MessageEditorEvent::Send => self.send(window, cx),
             MessageEditorEvent::SendImmediately => self.interrupt_and_send(window, cx),
             MessageEditorEvent::Cancel if self.composer_voice_state.is_busy() => {
-                self.stop_flow_voice_action(window, cx)
+                self.cancel_active_flow_voice_action(cx)
             }
             MessageEditorEvent::Cancel => self.cancel_generation(cx),
             MessageEditorEvent::Focus => {
@@ -4170,6 +4170,15 @@ impl ThreadView {
     fn stop_flow_voice_action(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         match self.composer_voice_state.phase() {
             ComposerVoicePhase::Recording => self.stop_flow_voice_recording(window, cx),
+            ComposerVoicePhase::Transcribing => self.cancel_flow_speech_operation(cx),
+            ComposerVoicePhase::Speaking => self.stop_flow_voice_playback(cx),
+            ComposerVoicePhase::Ready | ComposerVoicePhase::Error => {}
+        }
+    }
+
+    fn cancel_active_flow_voice_action(&mut self, cx: &mut Context<Self>) {
+        match self.composer_voice_state.phase() {
+            ComposerVoicePhase::Recording => self.cancel_flow_voice_recording(cx),
             ComposerVoicePhase::Transcribing => self.cancel_flow_speech_operation(cx),
             ComposerVoicePhase::Speaking => self.stop_flow_voice_playback(cx),
             ComposerVoicePhase::Ready | ComposerVoicePhase::Error => {}
