@@ -231,6 +231,8 @@ fn convert_providers_catalog(
 }
 
 fn validate_providers_catalog(catalog: &ProvidersData) -> Result<()> {
+    validate_providers_catalog_metadata(catalog)?;
+
     let actual_provider_count = catalog.providers.len();
     let actual_model_count = catalog
         .providers
@@ -307,6 +309,78 @@ fn validate_providers_catalog(catalog: &ProvidersData) -> Result<()> {
     Ok(())
 }
 
+fn validate_providers_catalog_metadata(catalog: &ProvidersData) -> Result<()> {
+    let version = catalog.version.trim();
+    if version.is_empty() {
+        return Err(crate::DxCatalogError::InvalidCatalog {
+            reason: "DX providers archive contains a blank version".to_string(),
+        });
+    }
+    if !is_semver_like_version(version) {
+        return Err(crate::DxCatalogError::InvalidCatalog {
+            reason: format!("DX providers archive contains invalid version `{version}`"),
+        });
+    }
+
+    let generated_at = catalog.generated_at.trim();
+    if generated_at.is_empty() || !is_parseable_catalog_timestamp(generated_at) {
+        return Err(crate::DxCatalogError::InvalidCatalog {
+            reason: format!("DX providers archive contains invalid generated_at `{generated_at}`"),
+        });
+    }
+
+    Ok(())
+}
+
+fn is_semver_like_version(version: &str) -> bool {
+    let version = version
+        .strip_prefix('v')
+        .or_else(|| version.strip_prefix('V'))
+        .unwrap_or(version);
+    let parts = version.split('.').collect::<Vec<_>>();
+    parts.len() == 3
+        && parts
+            .iter()
+            .all(|part| !part.is_empty() && part.chars().all(|ch| ch.is_ascii_digit()))
+}
+
+fn is_parseable_catalog_timestamp(timestamp: &str) -> bool {
+    let Some((date, time)) = timestamp.split_once('T') else {
+        return false;
+    };
+    if !date_has_iso_shape(date) {
+        return false;
+    }
+
+    let time = time.trim_end_matches('Z');
+    let time = time
+        .find(['+', '-'])
+        .map_or(time, |offset_index| &time[..offset_index]);
+    time_has_iso_shape(time)
+}
+
+fn date_has_iso_shape(date: &str) -> bool {
+    date.len() == 10
+        && date.as_bytes().get(4) == Some(&b'-')
+        && date.as_bytes().get(7) == Some(&b'-')
+        && date
+            .chars()
+            .enumerate()
+            .all(|(index, ch)| matches!(index, 4 | 7) || ch.is_ascii_digit())
+}
+
+fn time_has_iso_shape(time: &str) -> bool {
+    let (clock, fraction) = time.split_once('.').unwrap_or((time, ""));
+    clock.len() == 8
+        && clock.as_bytes().get(2) == Some(&b':')
+        && clock.as_bytes().get(5) == Some(&b':')
+        && clock
+            .chars()
+            .enumerate()
+            .all(|(index, ch)| matches!(index, 2 | 5) || ch.is_ascii_digit())
+        && fraction.chars().all(|ch| ch.is_ascii_digit())
+}
+
 fn read_metadata_sidecar(
     catalog_path: &Path,
     options: &ProvidersCatalogReaderOptions,
@@ -359,8 +433,39 @@ fn read_metadata_sidecar(
         );
         return None;
     }
+    if sidecar.summary.provider_count != sidecar.providers.len()
+        || sidecar.summary.alias_count != sidecar.alias_index.len()
+    {
+        skip_metadata_sidecar(
+            skipped_entries,
+            &sidecar_path,
+            format!(
+                "metadata sidecar summary declares {} provider(s)/{} alias(es) but contains {} provider(s)/{} alias(es)",
+                sidecar.summary.provider_count,
+                sidecar.summary.alias_count,
+                sidecar.providers.len(),
+                sidecar.alias_index.len()
+            ),
+        );
+        return None;
+    }
+    if !is_valid_sha256_digest(&sidecar.summary.content_sha256) {
+        skip_metadata_sidecar(
+            skipped_entries,
+            &sidecar_path,
+            "metadata sidecar summary contains an invalid content_sha256".to_string(),
+        );
+        return None;
+    }
 
     Some(sidecar)
+}
+
+fn is_valid_sha256_digest(value: &str) -> bool {
+    let Some(hex) = value.strip_prefix("sha256:") else {
+        return false;
+    };
+    hex.len() == 64 && hex.chars().all(|ch| ch.is_ascii_hexdigit())
 }
 
 fn skip_metadata_sidecar(
@@ -466,12 +571,20 @@ fn model_matches_free_id(model: &ExternalModelInput, provider_id: &str, free_id:
 struct ProviderMetadataSidecar {
     schema: String,
     schema_version: u16,
+    summary: ProviderMetadataSummary,
     #[serde(default)]
     redaction: ProviderMetadataRedaction,
     #[serde(default)]
     providers: Vec<ProviderMetadataRow>,
     #[serde(default)]
     alias_index: BTreeMap<String, String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ProviderMetadataSummary {
+    provider_count: usize,
+    alias_count: usize,
+    content_sha256: String,
 }
 
 impl ProviderMetadataSidecar {
@@ -971,6 +1084,42 @@ mod tests {
     }
 
     #[test]
+    fn providers_catalog_file_read_rejects_blank_version() {
+        let path = unique_fixture_path("blank-version-providers-catalog.rkyv");
+        let mut catalog = fixture_catalog();
+        catalog.version = "  ".to_string();
+        write_catalog(&path, &catalog);
+
+        let error = read_providers_catalog_file(&path, ProvidersCatalogReaderOptions::new())
+            .expect_err("blank archive version should fail");
+
+        assert!(
+            error.to_string().contains("blank version"),
+            "unexpected error: {error}"
+        );
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn providers_catalog_file_read_rejects_invalid_generated_at() {
+        let path = unique_fixture_path("invalid-generated-at-providers-catalog.rkyv");
+        let mut catalog = fixture_catalog();
+        catalog.generated_at = "not-a-timestamp".to_string();
+        write_catalog(&path, &catalog);
+
+        let error = read_providers_catalog_file(&path, ProvidersCatalogReaderOptions::new())
+            .expect_err("invalid generated_at should fail");
+
+        assert!(
+            error.to_string().contains("invalid generated_at"),
+            "unexpected error: {error}"
+        );
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
     fn providers_catalog_file_read_rejects_mismatched_provider_model_count() {
         let path = unique_fixture_path("mismatched-provider-model-count-catalog.rkyv");
         let mut catalog = fixture_catalog();
@@ -1122,6 +1271,56 @@ mod tests {
     }
 
     #[test]
+    fn providers_metadata_sidecar_skips_mismatched_summary_counts() {
+        let path = unique_fixture_path("dx-providers-catalog.rkyv");
+        write_fixture_catalog(&path);
+        let sidecar_path = path.with_extension("metadata.json");
+        write_fixture_metadata_sidecar(
+            &sidecar_path,
+            "deepseek",
+            "DeepSeek Verified",
+            &["deepseek-platform"],
+            &["deepseek-chat"],
+        );
+        let mut sidecar: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&sidecar_path).unwrap()).unwrap();
+        sidecar["summary"]["provider_count"] = serde_json::json!(99);
+        fs::write(
+            &sidecar_path,
+            serde_json::to_string_pretty(&sidecar).unwrap(),
+        )
+        .unwrap();
+
+        let output = read_providers_catalog_file(
+            &path,
+            ProvidersCatalogReaderOptions::new()
+                .with_source_id("dx-providers-test")
+                .with_metadata_sidecar_path(&sidecar_path),
+        )
+        .expect("providers catalog should load without applying mismatched metadata sidecar");
+        let provider = output
+            .input
+            .providers
+            .iter()
+            .find(|provider| provider.id == "deepseek")
+            .expect("deepseek provider");
+
+        assert_eq!(provider.display_name, "DeepSeek");
+        assert!(
+            output
+                .report
+                .skipped_entries
+                .iter()
+                .any(|entry| entry.reason.contains("metadata sidecar summary declares")),
+            "expected skipped sidecar summary diagnostic: {:?}",
+            output.report.skipped_entries
+        );
+
+        let _ = fs::remove_file(sidecar_path);
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
     fn providers_metadata_sidecar_uses_alias_index_for_canonical_id_mismatches() {
         let path = unique_fixture_path("dx-providers-catalog.rkyv");
         write_fixture_catalog(&path);
@@ -1203,8 +1402,8 @@ mod tests {
 
     fn fixture_catalog() -> ProvidersData {
         ProvidersData {
-            version: "test-catalog".to_string(),
-            generated_at: "2026-06-04T00:00:00Z".to_string(),
+            version: "v1.0.0".to_string(),
+            generated_at: "2026-04-02T05:04:13.937112".to_string(),
             total_providers: 3,
             total_models: 4,
             providers: vec![
