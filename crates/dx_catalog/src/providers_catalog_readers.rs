@@ -806,9 +806,45 @@ mod tests {
         .expect("copied G-drive providers catalog should load");
 
         assert_eq!(output.report.provider_count, 184);
-        assert_eq!(output.report.model_count, 6_557);
+        assert_eq!(output.report.model_count, 6_567);
         assert_eq!(output.input.providers.len(), 184);
-        assert_eq!(output.input.models.len(), 6_557);
+        assert_eq!(output.input.models.len(), 6_567);
+    }
+
+    #[test]
+    fn copied_g_drive_dx_providers_catalog_includes_opencode_zen_free_models_when_available() {
+        let path = std::path::PathBuf::from(r"G:\Dx\providers\data\providers.rkyv");
+        if !path.is_file() {
+            return;
+        }
+
+        let output = read_providers_catalog_file(
+            &path,
+            ProvidersCatalogReaderOptions::new().with_source_id("copied-g-drive-dx-providers"),
+        )
+        .expect("copied G-drive providers catalog should load");
+        let expected_models = [
+            "big-pickle",
+            "deepseek-v4-flash-free",
+            "mimo-v2.5-free",
+            "minimax-m3-free",
+            "nemotron-3-super-free",
+            "nemotron-3-ultra-free",
+        ];
+
+        for provider_id in ["opencode", "opencode-go"] {
+            for model_id in expected_models {
+                let direct_id = direct_model_id(provider_id, model_id);
+                assert!(
+                    output.input.models.iter().any(|model| {
+                        model.provider_id == provider_id
+                            && (model.id == direct_id
+                                || model.aliases.iter().any(|alias| alias == model_id))
+                    }),
+                    "copied G-drive DX providers catalog is missing `{model_id}` for `{provider_id}`"
+                );
+            }
+        }
     }
 
     #[test]
