@@ -873,16 +873,68 @@ fn parse_transcript_output(output: Output) -> Result<String> {
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    for line in stdout.lines().rev() {
-        if let Some(value) = line.strip_prefix("[stt] ") {
-            let text = value.trim().trim_matches('"').trim();
-            if !text.is_empty() {
-                return Ok(text.to_string());
-            }
-        }
+    extract_stt_transcript(&stdout).with_context(|| "Flow STT finished without a transcript")
+}
+
+fn extract_stt_transcript(stdout: &str) -> Result<String> {
+    let marker = "[stt] \"";
+    let start = stdout
+        .rfind(marker)
+        .ok_or_else(|| anyhow!("Flow STT transcript marker is missing"))?
+        + marker.len();
+    let payload = &stdout[start..];
+    let end = payload
+        .rfind("\"\r\n")
+        .or_else(|| payload.rfind("\"\n"))
+        .or_else(|| payload.rfind('"'))
+        .ok_or_else(|| anyhow!("Flow STT transcript marker is missing a closing quote"))?;
+    let text = trim_stt_transcript_payload(&payload[..end]);
+
+    if text.is_empty() {
+        Err(anyhow!("Flow STT transcript marker is empty"))
+    } else {
+        Ok(text)
+    }
+}
+
+fn trim_stt_transcript_payload(payload: &str) -> String {
+    payload
+        .replace("\\r\\n", "\n")
+        .replace("\\n", "\n")
+        .replace("\\\"", "\"")
+        .trim()
+        .to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::extract_stt_transcript;
+
+    #[test]
+    fn extracts_multiline_stt_transcript_after_status_lines() {
+        let stdout =
+            "[stt] preloading Parakeet...\n[stt] Parakeet ready in 0.1s\n[stt] \"hello\nworld\"\n";
+
+        assert_eq!(extract_stt_transcript(stdout).unwrap(), "hello\nworld");
     }
 
-    Err(anyhow!("Flow STT finished without a transcript"))
+    #[test]
+    fn rejects_status_lines_without_transcript_marker() {
+        let stdout = "[stt] preloading Parakeet...\n[stt] Parakeet ready in 0.1s\n";
+
+        let error = extract_stt_transcript(stdout).unwrap_err().to_string();
+
+        assert!(error.contains("Flow STT transcript marker is missing"));
+    }
+
+    #[test]
+    fn rejects_empty_transcript_marker() {
+        let stdout = "[stt] Parakeet ready in 0.1s\n[stt] \"\"\n";
+
+        let error = extract_stt_transcript(stdout).unwrap_err().to_string();
+
+        assert!(error.contains("Flow STT transcript marker is empty"));
+    }
 }
 
 fn command_error(label: &str, output: Output) -> anyhow::Error {
