@@ -926,8 +926,10 @@ test("voice handoff keeps runtime readiness honest", () => {
   assert.match(voiceHandoff, /direct Flow microphone capture proof now writes/);
   assert.match(voiceHandoff, /zed-flow-mic-proof\\flow-mic-capture\.wav/);
   assert.match(voiceHandoff, /non-empty 16 kHz mono WAV/);
+  assert.match(voiceHandoff, /direct Whisper Tiny GGML file-mode proof now passes/);
+  assert.match(voiceHandoff, /flow-voice-status\.ps1` reports `\[ready\] Whisper Tiny GGML`/);
+  assert.match(voiceHandoff, /\[stt\] "\({0,1}coughs\){0,1}"/);
   assert.match(voiceHandoff, /Nemotron smoke proof/);
-  assert.match(voiceHandoff, /Whisper smoke proof/);
   assert.match(voiceHandoff, /live Zed microphone proof still needs? the governed validation window/);
   assert.match(voiceHandoff, /G:\\Flow\\data\\models\\tts\\kokoro_82m/);
   assert.match(voiceHandoff, /config\.json/);
