@@ -117,6 +117,7 @@ pub fn read_providers_catalog_file(
     let mmap = unsafe { MmapOptions::new().map(&file)? };
     let archive = rkyv::from_bytes::<ProvidersData>(&mmap)
         .map_err(|error| crate::DxCatalogError::Archive(format!("{error:?}")))?;
+    validate_providers_catalog(&archive)?;
     let (mut providers, mut models) = convert_providers_catalog(archive);
     let mut skipped_entries = Vec::new();
     if let Some(metadata) = read_metadata_sidecar(&path, &options, &mut skipped_entries) {
@@ -186,6 +187,7 @@ fn convert_providers_catalog(
 ) -> (Vec<ExternalProviderInput>, Vec<ExternalModelInput>) {
     let mut providers = Vec::with_capacity(catalog.providers.len());
     let mut models = Vec::new();
+    let mut model_ids = BTreeSet::new();
 
     for provider in catalog.providers {
         let provider_id = canonical_provider_id(&provider.id);
@@ -216,13 +218,93 @@ fn convert_providers_catalog(
             supports_audio: provider.supports_audio,
         };
         for model in provider.models {
-            models.push(convert_model(&provider_id, provider_capabilities, model));
+            let converted_model = convert_model(&provider_id, provider_capabilities, model);
+            if model_ids.insert(converted_model.id.clone()) {
+                models.push(converted_model);
+            }
         }
 
         providers.push(converted_provider);
     }
 
     (providers, models)
+}
+
+fn validate_providers_catalog(catalog: &ProvidersData) -> Result<()> {
+    let actual_provider_count = catalog.providers.len();
+    let actual_model_count = catalog
+        .providers
+        .iter()
+        .map(|provider| provider.models.len())
+        .sum::<usize>();
+
+    if catalog.total_providers != actual_provider_count
+        || catalog.total_models != actual_model_count
+    {
+        return Err(crate::DxCatalogError::InvalidCatalog {
+            reason: format!(
+                "DX providers archive declares {} providers/{} models but contains {} providers/{} models",
+                catalog.total_providers,
+                catalog.total_models,
+                actual_provider_count,
+                actual_model_count
+            ),
+        });
+    }
+
+    let mut provider_ids = BTreeSet::new();
+    for provider in &catalog.providers {
+        let provider_id = provider.id.trim();
+        if provider_id.is_empty() {
+            return Err(crate::DxCatalogError::InvalidCatalog {
+                reason: format!(
+                    "DX providers archive contains a blank provider id for `{}`",
+                    provider.name
+                ),
+            });
+        }
+        let raw_provider_key = slug(provider_id);
+        if !provider_ids.insert(raw_provider_key.clone()) {
+            return Err(crate::DxCatalogError::InvalidCatalog {
+                reason: format!(
+                    "DX providers archive contains duplicate provider id `{raw_provider_key}`"
+                ),
+            });
+        }
+        let canonical_provider_id = canonical_provider_id(provider_id);
+
+        if provider.model_count != provider.models.len() {
+            return Err(crate::DxCatalogError::InvalidCatalog {
+                reason: format!(
+                    "DX providers archive provider `{canonical_provider_id}` declares {} models but contains {}",
+                    provider.model_count,
+                    provider.models.len()
+                ),
+            });
+        }
+
+        let mut model_route_ids = BTreeSet::new();
+        for model in &provider.models {
+            let model_id = model.id.trim();
+            if model_id.is_empty() {
+                return Err(crate::DxCatalogError::InvalidCatalog {
+                    reason: format!(
+                        "DX providers archive provider `{canonical_provider_id}` contains a blank model id"
+                    ),
+                });
+            }
+            let route_id = direct_model_id(&canonical_provider_id, model_id);
+            if !model_route_ids.insert(route_id.clone()) {
+                return Err(crate::DxCatalogError::InvalidCatalog {
+                    reason: format!(
+                        "DX providers archive contains duplicate model id `{route_id}` while reading provider `{canonical_provider_id}`"
+                    ),
+                });
+            }
+        }
+    }
+
+    Ok(())
 }
 
 fn read_metadata_sidecar(
@@ -537,7 +619,11 @@ fn provider_auth(provider: &ExternalProviderInput) -> ProviderAuthKind {
 }
 
 fn direct_model_id(provider_id: &str, raw_model_id: &str) -> String {
-    if raw_model_id.contains('/') {
+    let raw_model_id = raw_model_id.trim();
+    if raw_model_id
+        .split_once('/')
+        .is_some_and(|(prefix, _)| prefix == provider_id)
+    {
         raw_model_id.to_string()
     } else {
         format!("{provider_id}/{raw_model_id}")
@@ -806,9 +892,9 @@ mod tests {
         .expect("copied G-drive providers catalog should load");
 
         assert_eq!(output.report.provider_count, 184);
-        assert_eq!(output.report.model_count, 6_567);
+        assert_eq!(output.report.model_count, 6_234);
         assert_eq!(output.input.providers.len(), 184);
-        assert_eq!(output.input.models.len(), 6_567);
+        assert_eq!(output.input.models.len(), 6_234);
     }
 
     #[test]
@@ -864,6 +950,125 @@ mod tests {
         );
 
         let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn providers_catalog_file_read_rejects_mismatched_declared_counts() {
+        let path = unique_fixture_path("mismatched-providers-catalog.rkyv");
+        let mut catalog = fixture_catalog();
+        catalog.total_models += 1;
+        write_catalog(&path, &catalog);
+
+        let error = read_providers_catalog_file(&path, ProvidersCatalogReaderOptions::new())
+            .expect_err("mismatched declared counts should fail");
+
+        assert!(
+            error.to_string().contains("declares"),
+            "unexpected error: {error}"
+        );
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn providers_catalog_file_read_rejects_mismatched_provider_model_count() {
+        let path = unique_fixture_path("mismatched-provider-model-count-catalog.rkyv");
+        let mut catalog = fixture_catalog();
+        catalog.providers[0].model_count += 1;
+        write_catalog(&path, &catalog);
+
+        let error = read_providers_catalog_file(&path, ProvidersCatalogReaderOptions::new())
+            .expect_err("mismatched provider model count should fail");
+
+        assert!(
+            error.to_string().contains("provider `deepseek` declares"),
+            "unexpected error: {error}"
+        );
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn providers_catalog_file_read_rejects_blank_provider_ids() {
+        let path = unique_fixture_path("blank-provider-catalog.rkyv");
+        let mut catalog = fixture_catalog();
+        catalog.providers[0].id = "  ".to_string();
+        write_catalog(&path, &catalog);
+
+        let error = read_providers_catalog_file(&path, ProvidersCatalogReaderOptions::new())
+            .expect_err("blank provider IDs should fail");
+
+        assert!(
+            error.to_string().contains("blank provider id"),
+            "unexpected error: {error}"
+        );
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn providers_catalog_file_read_rejects_blank_model_ids() {
+        let path = unique_fixture_path("blank-model-catalog.rkyv");
+        let mut catalog = fixture_catalog();
+        catalog.providers[0].models[0].id = "  ".to_string();
+        write_catalog(&path, &catalog);
+
+        let error = read_providers_catalog_file(&path, ProvidersCatalogReaderOptions::new())
+            .expect_err("blank model IDs should fail");
+
+        assert!(
+            error.to_string().contains("blank model id"),
+            "unexpected error: {error}"
+        );
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn providers_catalog_file_read_rejects_duplicate_provider_ids() {
+        let path = unique_fixture_path("duplicate-provider-catalog.rkyv");
+        let mut catalog = fixture_catalog();
+        catalog.providers[1].id = catalog.providers[0].id.clone();
+        write_catalog(&path, &catalog);
+
+        let error = read_providers_catalog_file(&path, ProvidersCatalogReaderOptions::new())
+            .expect_err("duplicate provider IDs should fail");
+
+        assert!(
+            error
+                .to_string()
+                .contains("duplicate provider id `deepseek`"),
+            "unexpected error: {error}"
+        );
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn providers_catalog_file_read_rejects_duplicate_model_ids() {
+        let path = unique_fixture_path("duplicate-model-catalog.rkyv");
+        let mut catalog = fixture_catalog();
+        catalog.providers[0].models[1].id = catalog.providers[0].models[0].id.clone();
+        write_catalog(&path, &catalog);
+
+        let error = read_providers_catalog_file(&path, ProvidersCatalogReaderOptions::new())
+            .expect_err("duplicate model IDs should fail");
+
+        assert!(
+            error.to_string().contains("duplicate model id"),
+            "unexpected error: {error}"
+        );
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn direct_model_ids_keep_foreign_slash_ids_provider_scoped() {
+        assert_eq!(direct_model_id("openai", "openai/sora-2"), "openai/sora-2");
+        assert_eq!(
+            direct_model_id("gateway", "openai/sora-2"),
+            "gateway/openai/sora-2"
+        );
     }
 
     #[test]
@@ -992,7 +1197,12 @@ mod tests {
     }
 
     fn write_fixture_catalog(path: &Path) {
-        let catalog = ProvidersData {
+        let catalog = fixture_catalog();
+        write_catalog(path, &catalog);
+    }
+
+    fn fixture_catalog() -> ProvidersData {
+        ProvidersData {
             version: "test-catalog".to_string(),
             generated_at: "2026-06-04T00:00:00Z".to_string(),
             total_providers: 3,
@@ -1069,10 +1279,12 @@ mod tests {
                     }],
                 },
             ],
-        };
+        }
+    }
 
+    fn write_catalog(path: &Path, catalog: &ProvidersData) {
         let mut serializer = AllocSerializer::<4096>::default();
-        serializer.serialize_value(&catalog).unwrap();
+        serializer.serialize_value(catalog).unwrap();
         fs::write(path, serializer.into_serializer().into_inner()).unwrap();
     }
 
