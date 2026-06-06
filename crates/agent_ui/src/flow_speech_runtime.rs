@@ -293,13 +293,7 @@ impl FlowSpeechRuntime {
     }
 
     pub(crate) fn status_summary(&self) -> String {
-        let stt = match self.stt_model() {
-            Ok(stt_model) if self.stt_model_ready(stt_model) => {
-                format!("{} ready", stt_model.label)
-            }
-            Ok(stt_model) => self.missing_stt_model_message(stt_model),
-            Err(error) => error.to_string(),
-        };
+        let stt = self.stt_readiness_summary();
         let tts = self.tts_readiness_summary();
         let stt_runtime = if self.flow_dictate_binary.is_some() {
             "Flow STT command ready"
@@ -308,6 +302,13 @@ impl FlowSpeechRuntime {
         };
 
         format!("{stt}; {tts}; {stt_runtime}")
+    }
+
+    pub(crate) fn stt_readiness_summary(&self) -> String {
+        match self.ensure_stt_ready() {
+            Ok(stt_model) => format!("{} ready", stt_model.label),
+            Err(error) => error.to_string(),
+        }
     }
 
     pub(crate) fn tts_readiness_summary(&self) -> &str {

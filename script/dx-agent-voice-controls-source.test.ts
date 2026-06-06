@@ -58,7 +58,7 @@ test("composer renders separate mic and read-aloud buttons before send", () => {
 
   assert.match(controls, /render_voice_controls\(window, cx\)/);
   assert.match(threadViewFields, /composer_voice_availability: ComposerVoiceAvailability/);
-  assert.match(renderVoiceControls, /let mut availability = self\.composer_voice_availability/);
+  assert.match(renderVoiceControls, /let mut availability = self\.composer_voice_availability\.clone\(\)/);
   assert.match(
     renderVoiceControls,
     /availability\.has_composer_text = !self\.message_editor\.read\(cx\)\.text\(cx\)\.trim\(\)\.is_empty\(\)/,
@@ -99,6 +99,8 @@ test("composer renders separate mic and read-aloud buttons before send", () => {
   assert.match(voiceControls, /has_composer_text: bool/);
   assert.match(voiceControls, /stt_ready: bool/);
   assert.match(voiceControls, /tts_ready: bool/);
+  assert.match(voiceControls, /stt_status: SharedString/);
+  assert.match(voiceControls, /tts_status: SharedString/);
   assert.match(voiceControls, /IconName::Mic/);
   assert.match(voiceControls, /IconName::AudioOn/);
   assert.match(voiceControls, /IconName::Stop/);
@@ -117,11 +119,11 @@ test("composer renders separate mic and read-aloud buttons before send", () => {
   assert.match(voiceButtons, /!availability\.tts_ready/);
   assert.match(
     voiceButtons,
-    /state\.speak_tooltip\(availability\)/,
+    /state\.speak_tooltip\(&availability\)/,
   );
   assert.match(voiceControls, /Type text in the composer before reading aloud/);
-  assert.match(voiceControls, /Kokoro runtime is not ready/);
-  assert.match(voiceControls, /Flow STT is not ready/);
+  assert.match(voiceControls, /availability\.tts_status\.clone\(\)/);
+  assert.match(voiceControls, /availability\.stt_status\.clone\(\)/);
   assert.match(voiceControls, /Kokoro read-aloud is active/);
   assert.match(voiceButtons, /agent-composer-voice-input[\s\S]+\.on_click\(on_voice_click\)/);
   assert.match(
@@ -158,6 +160,16 @@ test("voice recording UI exposes real recording and transcription states", () =>
     threadView,
     "render_voice_recording_panel(",
     "|this, panel| this.child(panel)",
+  );
+  const constructorAvailability = sourceSlice(
+    threadView,
+    "let composer_voice_availability = ComposerVoiceAvailability",
+    "let mut this = Self",
+  );
+  const refreshAvailability = sourceSlice(
+    threadView,
+    "fn refresh_flow_voice_runtime_availability",
+    "fn toggle_flow_voice_recording",
   );
 
   assert.match(voiceControls, /enum ComposerVoicePhase/);
@@ -218,6 +230,10 @@ test("voice recording UI exposes real recording and transcription states", () =>
   assert.match(threadView, /Flow voice recording discarded/);
   assert.match(threadView, /fn dismiss_flow_voice_error/);
   assert.match(threadView, /Flow voice error dismissed/);
+  assert.match(constructorAvailability, /stt_status: flow_voice_runtime\.stt_readiness_summary\(\)\.into\(\)/);
+  assert.match(constructorAvailability, /tts_status: flow_voice_runtime\.tts_readiness_summary\(\)\.into\(\)/);
+  assert.match(refreshAvailability, /stt_status = runtime\.stt_readiness_summary\(\)\.into\(\)/);
+  assert.match(refreshAvailability, /tts_status = runtime\.tts_readiness_summary\(\)\.into\(\)/);
   assert.match(
     threadView,
     /ComposerVoicePhase::Speaking => self\.stop_flow_voice_playback\(cx\)/,
@@ -591,6 +607,7 @@ test("voice runtime status summary reports precise readiness blockers", () => {
   );
 
   assert.match(statusSummary, /Friday Kokoro ready/);
+  assert.match(runtime, /pub\(crate\) fn stt_readiness_summary\(&self\) -> String/);
   assert.match(statusSummary, /let tts = self\.tts_readiness_summary\(\);/);
   assert.doesNotMatch(statusSummary, /\"Friday Kokoro missing\"/);
   assert.match(speakText, /let tts_runtime = self\.tts_runtime\(\)\?/);
@@ -775,6 +792,11 @@ test("voice playback keeps audio feature wiring and fallback states", () => {
     speakComposerText,
     /ComposerVoicePhase::Recording \| ComposerVoicePhase::Transcribing/,
   );
+  assert.match(speakComposerText, /let text = self\.message_editor\.read\(cx\)\.text\(cx\)/);
+  assert.match(speakComposerText, /let text = text\.trim\(\)\.to_string\(\)/);
+  assert.match(speakComposerText, /runtime\.speak_text\(&text, &cancellation\)/);
+  assert.doesNotMatch(speakComposerText, /active_editor\(cx\)/);
+  assert.doesNotMatch(speakComposerText, /editing_message|queued_message|draft_prompt/);
   assert.match(speakComposerText, /flow_playback_handle = Some\(playback_handle\.clone\(\)\)/);
   assert.match(speakComposerText, /std::fs::remove_file\(&audio_path\)/);
   assert.match(speakComposerText, /flow_playback_id/);

@@ -900,7 +900,9 @@ impl ThreadView {
         let composer_voice_availability = ComposerVoiceAvailability {
             has_composer_text: false,
             stt_ready: flow_voice_runtime.stt_available(),
+            stt_status: flow_voice_runtime.stt_readiness_summary().into(),
             tts_ready: flow_voice_runtime.tts_available(),
+            tts_status: flow_voice_runtime.tts_readiness_summary().into(),
         };
 
         let mut this = Self {
@@ -4146,7 +4148,7 @@ impl ThreadView {
         _window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Vec<AnyElement> {
-        let mut availability = self.composer_voice_availability;
+        let mut availability = self.composer_voice_availability.clone();
         availability.has_composer_text = !self.message_editor.read(cx).text(cx).trim().is_empty();
 
         render_voice_buttons(
@@ -4163,7 +4165,9 @@ impl ThreadView {
 
     fn refresh_flow_voice_runtime_availability(&mut self, runtime: &FlowSpeechRuntime) {
         self.composer_voice_availability.stt_ready = runtime.stt_available();
+        self.composer_voice_availability.stt_status = runtime.stt_readiness_summary().into();
         self.composer_voice_availability.tts_ready = runtime.tts_available();
+        self.composer_voice_availability.tts_status = runtime.tts_readiness_summary().into();
     }
 
     fn toggle_flow_voice_recording(&mut self, window: &mut Window, cx: &mut Context<Self>) {

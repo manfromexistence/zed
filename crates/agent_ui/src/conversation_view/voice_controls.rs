@@ -34,11 +34,13 @@ pub(super) struct ComposerVoiceState {
     input_level: f32,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub(super) struct ComposerVoiceAvailability {
     pub(super) has_composer_text: bool,
     pub(super) stt_ready: bool,
+    pub(super) stt_status: SharedString,
     pub(super) tts_ready: bool,
+    pub(super) tts_status: SharedString,
 }
 
 impl Default for ComposerVoiceState {
@@ -119,34 +121,35 @@ impl ComposerVoiceState {
         self.input_level = 0.0;
     }
 
-    fn voice_tooltip(&self, availability: ComposerVoiceAvailability) -> &'static str {
+    fn voice_tooltip(&self, availability: &ComposerVoiceAvailability) -> SharedString {
         match self.phase {
-            ComposerVoicePhase::Recording => VOICE_RECORDING_STOP_TRANSCRIBE_TOOLTIP,
-            ComposerVoicePhase::Transcribing => VOICE_TRANSCRIPTION_CANCEL_TOOLTIP,
-            ComposerVoicePhase::Speaking => "Kokoro read-aloud is active",
-            ComposerVoicePhase::Error if !availability.stt_ready => "Flow STT is not ready",
-            ComposerVoicePhase::Error => "Retry Flow voice input",
-            ComposerVoicePhase::Ready if !availability.stt_ready => "Flow STT is not ready",
-            ComposerVoicePhase::Ready => "Record voice input with Flow",
+            ComposerVoicePhase::Recording => VOICE_RECORDING_STOP_TRANSCRIBE_TOOLTIP.into(),
+            ComposerVoicePhase::Transcribing => VOICE_TRANSCRIPTION_CANCEL_TOOLTIP.into(),
+            ComposerVoicePhase::Speaking => "Kokoro read-aloud is active".into(),
+            ComposerVoicePhase::Error | ComposerVoicePhase::Ready if !availability.stt_ready => {
+                availability.stt_status.clone()
+            }
+            ComposerVoicePhase::Error => "Retry Flow voice input".into(),
+            ComposerVoicePhase::Ready => "Record voice input with Flow".into(),
         }
     }
 
-    fn speak_tooltip(&self, availability: ComposerVoiceAvailability) -> &'static str {
+    fn speak_tooltip(&self, availability: &ComposerVoiceAvailability) -> SharedString {
         match self.phase {
-            ComposerVoicePhase::Speaking => "Stop Kokoro read-aloud",
+            ComposerVoicePhase::Speaking => "Stop Kokoro read-aloud".into(),
             ComposerVoicePhase::Recording | ComposerVoicePhase::Transcribing => {
-                "Finish voice recording before reading aloud"
+                "Finish voice recording before reading aloud".into()
             }
             ComposerVoicePhase::Error | ComposerVoicePhase::Ready if !availability.tts_ready => {
-                "Kokoro runtime is not ready"
+                availability.tts_status.clone()
             }
             ComposerVoicePhase::Error | ComposerVoicePhase::Ready
                 if !availability.has_composer_text =>
             {
-                "Type text in the composer before reading aloud"
+                "Type text in the composer before reading aloud".into()
             }
             ComposerVoicePhase::Error | ComposerVoicePhase::Ready => {
-                "Read the composer aloud with Kokoro"
+                "Read the composer aloud with Kokoro".into()
             }
         }
     }
@@ -196,14 +199,14 @@ pub(super) fn render_voice_buttons(
             .icon_size(IconSize::Small)
             .icon_color(voice_color)
             .disabled(voice_disabled)
-            .tooltip(Tooltip::text(state.voice_tooltip(availability)))
+            .tooltip(Tooltip::text(state.voice_tooltip(&availability)))
             .on_click(on_voice_click)
             .into_any_element(),
         IconButton::new("agent-composer-text-to-speech", speak_icon)
             .icon_size(IconSize::Small)
             .icon_color(speak_color)
             .disabled(speak_disabled)
-            .tooltip(Tooltip::text(state.speak_tooltip(availability)))
+            .tooltip(Tooltip::text(state.speak_tooltip(&availability)))
             .on_click(on_speak_click)
             .into_any_element(),
     ]

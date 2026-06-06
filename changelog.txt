@@ -1,3 +1,16 @@
+[2026-06-06] - Composer Voice Cached Readiness Details
+
+CHANGED:
+- `crates\agent_ui\src\conversation_view\voice_controls.rs` now carries cached Flow STT and Kokoro TTS readiness strings alongside the availability booleans, so disabled mic/read-aloud tooltips can explain the current blocker.
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now clones cached voice availability during render and refreshes readiness detail only when Flow runtime detection already runs.
+- `crates\agent_ui\src\flow_speech_runtime.rs` now exposes `stt_readiness_summary()` to mirror the existing Kokoro readiness summary for UI status copy.
+
+PASSED:
+- `node --test script\dx-agent-voice-controls-source.test.ts`
+
+NOTES:
+- Cargo/Zed launch, live Agent composer microphone proof, and live Kokoro audible playback proof remain deferred until the governed runtime validation window.
+
 [2026-06-06] - Composer Flow Voice Kokoro Readiness Diagnostics
 
 CHANGED:
