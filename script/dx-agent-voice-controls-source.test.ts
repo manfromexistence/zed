@@ -523,8 +523,16 @@ test("Flow dictation host exposes focused STT model selection", () => {
   assert.match(flowDictationHostReadme, /--model nemotron-speech-streaming-en-0\.6b-int8/);
   assert.match(flowDictationHostReadme, new RegExp(`--model ${flowWhisperModelKey}`));
   assert.match(flowDictationHostReadme, /focused host supports Sherpa Parakeet, Sherpa Nemotron, and whisper\.cpp Whisper/);
+  assert.match(flowDictationHostReadme, /--whisper-cpp/);
+  assert.match(flowDictationHostReadme, /DX_WHISPER_CPP_BINARY/);
+  assert.match(flowDictationHostReadme, /FLOW_WHISPER_CPP_EXE/);
+  assert.match(flowDictationHostReadme, /FLOW_WHISPER_CPP/);
   assert.match(flowDictationHostReadme, /FLOW_WHISPER_CPP_BINARY/);
+  assert.match(flowDictationHostReadme, /DX_FLOW_WHISPER_MODEL/);
   assert.match(flowDictationHostReadme, /FLOW_WHISPER_MODEL/);
+  assert.match(flowDictationHostReadme, /--whisper-language/);
+  assert.match(flowDictationHostReadme, /FLOW_WHISPER_LANGUAGE/);
+  assert.match(flowDictationHostReadme, /DX_FLOW_WHISPER_LANGUAGE/);
 });
 
 test("voice text paths use the real message editor contents and insert APIs", () => {
