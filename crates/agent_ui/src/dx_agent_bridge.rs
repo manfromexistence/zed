@@ -334,7 +334,16 @@ static SNAPSHOT_CACHE: OnceLock<Mutex<Option<(Instant, String, DxAgentBridgeSnap
     OnceLock::new();
 
 pub(crate) fn dx_agent_bridge_snapshot(cx: &App) -> DxAgentBridgeSnapshot {
-    let settings = dx_agent_settings(cx);
+    dx_agent_bridge_snapshot_from_settings(dx_agent_bridge_settings_snapshot(cx))
+}
+
+pub(crate) fn dx_agent_bridge_settings_snapshot(cx: &App) -> DxAgentSettingsSnapshot {
+    dx_agent_settings(cx)
+}
+
+pub(crate) fn dx_agent_bridge_snapshot_from_settings(
+    settings: DxAgentSettingsSnapshot,
+) -> DxAgentBridgeSnapshot {
     let cache_key = format!(
         "{}|{}|{}|{}|{}|{}|{}",
         settings.enabled,
@@ -389,7 +398,7 @@ fn clear_snapshot_cache() {
 }
 
 #[derive(Clone)]
-struct DxAgentSettingsSnapshot {
+pub(crate) struct DxAgentSettingsSnapshot {
     enabled: bool,
     cli_actions_allowed: bool,
     cli_path: String,

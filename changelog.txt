@@ -1,3 +1,24 @@
+[2026-06-06] - Agent Fullscreen Render-Path Lag Fix
+
+FIXED:
+- `crates\agent_ui\src\agent_panel.rs` now keeps DX launch workspace status out of the Agent fullscreen render path by using a 30-second stale-while-refresh cache and a short post-paint refresh delay.
+- DX launch status refresh now captures only roots/counts/active status/settings on the app thread, then builds receipt/source/proof/style/check snapshots on the background executor before installing the finished cache.
+- Closed fullscreen source/progress rails now skip and cancel stale DX launch status refresh work, so closing the rails or leaving Agent fullscreen does not keep re-triggering receipt/source/proof/style/check snapshot scans.
+- Workspace-shape refresh now invalidates the cached DX launch status so rail data updates after roots or panes change without returning to per-frame filesystem work.
+
+CHANGED:
+- `crates\agent_ui\src\dx_agent_bridge.rs` now exposes a settings-captured bridge snapshot path so Agent fullscreen can build bridge receipt/model/social status away from the render/update hot path.
+- `script\dx-workspace-reentrant-source.test.ts` now guards the cached render path and remains tolerant of line-ending/layout shifts in the active-workspace subscriber marker.
+- `todo.txt` now records the lag fix and source-verification state for handoff continuity.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\dx_agent_bridge.rs`
+- `node --test script\dx-workspace-reentrant-source.test.ts`
+- `node --test script\dx-workspace-ui-state-source.test.ts`
+- `git diff --check -- crates/agent_ui/src/agent_panel.rs crates/agent_ui/src/dx_agent_bridge.rs script/dx-workspace-reentrant-source.test.ts todo.txt changelog.txt`
+
+NOTES:
+- `just run` was not run for this source-only lag fix pass; runtime validation remains available when explicitly requested.
 [2026-06-06] - Panel Header Close-Only Polish
 
 CHANGED:

@@ -22,20 +22,72 @@ test("Agent panel DX launch status reads the deferred workspace snapshot", () =>
   const source = read("crates/agent_ui/src/agent_panel.rs");
 
   assert.match(source, /dx_workspace_snapshot: DxWorkspaceSnapshot,/);
+  assert.match(source, /dx_launch_workspace_status_cache: Option<DxLaunchWorkspaceStatusCache>,/);
+  assert.match(source, /dx_launch_workspace_status_refresh_pending: bool,/);
+  assert.match(source, /dx_launch_workspace_status_refresh_generation: u64,/);
   assert.match(source, /struct DxWorkspaceSnapshot \{\s+roots: Vec<String>,\s+has_no_editor_file: bool,\s+has_editor_and_browser: bool,\s+\}/);
+  assert.match(source, /struct DxLaunchWorkspaceStatusCache \{\s+refreshed_at: Instant,\s+status: DxLaunchWorkspaceStatus,\s+\}/);
+  assert.match(source, /struct DxLaunchWorkspaceStatusInput \{/);
+  assert.match(source, /const DX_LAUNCH_WORKSPACE_STATUS_CACHE_TTL: Duration = Duration::from_secs\(30\);/);
+  assert.match(source, /const DX_LAUNCH_WORKSPACE_STATUS_REFRESH_DELAY: Duration = Duration::from_millis\(160\);/);
   assert.match(source, /let dx_workspace_snapshot = DxWorkspaceSnapshot::from_workspace\(workspace, cx\);/);
   assert.match(source, /this\.schedule_dx_workspace_snapshot_refresh\(cx\);/);
   assert.match(
     source,
     /cx\.defer\(move \|cx\| \{\s+let snapshot = \{\s+let workspace = workspace\.read\(cx\);\s+DxWorkspaceSnapshot::from_workspace\(workspace, cx\)\s+\};/,
   );
+  assert.match(source, /panel\.dx_launch_workspace_status_cache = None;/);
+  assert.match(
+    source,
+    /dx_launch_workspace_status_refresh_generation\s*=\s*panel\s*\.dx_launch_workspace_status_refresh_generation\s*\.wrapping_add\(1\)/,
+  );
+
+  const render = sliceBetween(
+    source,
+    "fn render_dx_launch_workspace(",
+    "fn default_collapsed_dx_launch_rail_sections(",
+  );
+  assert.match(render, /!self\.fullscreen_sources_rail_open && !self\.fullscreen_progress_rail_open/);
+  assert.match(render, /self\.cached_dx_launch_workspace_status\(cx\)/);
+  assert.ok(
+    render.indexOf("!self.fullscreen_sources_rail_open && !self.fullscreen_progress_rail_open") <
+      render.indexOf("self.cached_dx_launch_workspace_status(cx)"),
+    "closed rails must return before scheduling or reading DX launch status",
+  );
+  assert.doesNotMatch(render, /build_dx_launch_workspace_status\(cx\)/);
+  assert.doesNotMatch(render, /receipt_snapshot\(\)/);
+  assert.doesNotMatch(render, /source_set_snapshot\(/);
+
+  const cached = sliceBetween(
+    source,
+    "fn cached_dx_launch_workspace_status(",
+    "fn with_live_dx_launch_status(",
+  );
+  assert.match(cached, /self\.schedule_dx_launch_workspace_status_refresh\(cx\)/);
+  assert.doesNotMatch(cached, /build_dx_launch_workspace_status\(cx\)/);
+  assert.doesNotMatch(cached, /receipt_snapshot\(\)/);
+  assert.doesNotMatch(cached, /source_set_snapshot\(/);
+
+  const refresh = sliceBetween(
+    source,
+    "fn schedule_dx_launch_workspace_status_refresh(&mut self",
+    "fn build_dx_launch_workspace_status(&self",
+  );
+  assert.match(refresh, /dx_launch_workspace_status_refresh_pending = true/);
+  assert.match(refresh, /let generation = self\.dx_launch_workspace_status_refresh_generation/);
+  assert.match(refresh, /timer\(DX_LAUNCH_WORKSPACE_STATUS_REFRESH_DELAY\)/);
+  assert.match(refresh, /should_refresh_dx_launch_workspace_status\(generation, cx\)/);
+  assert.match(refresh, /panel\.dx_launch_workspace_status_input\(cx\)/);
+  assert.match(refresh, /background_spawn/);
+  assert.match(refresh, /build_dx_launch_workspace_status_from_input\(input\)/);
+  assert.doesNotMatch(refresh, /panel\.build_dx_launch_workspace_status\(cx\)/);
 
   const status = sliceBetween(
     source,
-    "fn dx_launch_workspace_status(&self",
+    "fn build_dx_launch_workspace_status(&self",
     "fn dx_active_status(&self",
   );
-  assert.match(status, /let workspace_roots = self\.dx_workspace_snapshot\.roots\.clone\(\);/);
+  assert.match(status, /Self::build_dx_launch_workspace_status_from_input\(self\.dx_launch_workspace_status_input\(cx\)\)/);
   assert.doesNotMatch(status, /self\.workspace\.upgrade\(\)/);
   assert.doesNotMatch(status, /workspace\.read\(cx\)/);
   assert.doesNotMatch(status, /DxWorkspaceSnapshot::from_workspace/);
@@ -274,10 +326,11 @@ test("Zed active workspace subscriber consumes the event payload", () => {
 
   const subscriber = sliceBetween(
     source,
-    "let window_handle = window.window_handle();\n        let multi_workspace_handle = cx.entity();",
+    "let window_handle = window.window_handle();",
     "cx.observe_new(move |workspace: &mut Workspace",
   );
 
+  assert.match(subscriber, /let multi_workspace_handle = cx\.entity\(\);/);
   assert.match(
     subscriber,
     /MultiWorkspaceEvent::ActiveWorkspaceChanged \{\s+active_workspace,\s+source_workspace,\s+\}/,

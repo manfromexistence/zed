@@ -6,7 +6,7 @@ use std::{
         Arc,
         atomic::{AtomicBool, Ordering},
     },
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use acp_thread::{AcpThread, AcpThreadEvent, MentionUri, ThreadStatus};
@@ -38,7 +38,10 @@ use crate::ExpandMessageEditor;
 use crate::ManageProfiles;
 use crate::agent_connection_store::AgentConnectionStore;
 use crate::completion_provider::AgentContextSource;
-use crate::dx_agent_bridge::dx_agent_bridge_snapshot;
+use crate::dx_agent_bridge::{
+    DxAgentSettingsSnapshot, dx_agent_bridge_settings_snapshot,
+    dx_agent_bridge_snapshot_from_settings,
+};
 use crate::dx_check_score::{DxCheckScoreInput, check_score_snapshot};
 use crate::dx_deploy_prompts::deploy_readiness_prompt;
 use crate::dx_deploy_targets::{DxDeployTargetSnapshot, deploy_target_snapshot};
@@ -138,6 +141,8 @@ const LAST_CREATED_ENTRY_KIND_KEY: &str = "agent_panel__last_created_entry_kind"
 const MAX_TOOLBAR_RESPONSE_INDICATORS: usize = 32;
 const TERMINAL_AGENT_TELEMETRY_ID: &str = "terminal";
 const MAX_LAST_USED_AGENT_JSON_BYTES: usize = 16 * 1024;
+const DX_LAUNCH_WORKSPACE_STATUS_CACHE_TTL: Duration = Duration::from_secs(30);
+const DX_LAUNCH_WORKSPACE_STATUS_REFRESH_DELAY: Duration = Duration::from_millis(160);
 const MAX_LAST_CREATED_ENTRY_KIND_JSON_BYTES: usize = 4 * 1024;
 const MAX_SERIALIZED_AGENT_PANEL_JSON_BYTES: usize = 256 * 1024;
 const MAX_THREAD_CLIPBOARD_DECODED_BYTES: usize = 16 * 1024 * 1024;
@@ -1153,6 +1158,9 @@ pub struct AgentPanel {
     _workspace_subscription: Option<Subscription>,
     _project_subscription: Subscription,
     dx_workspace_snapshot: DxWorkspaceSnapshot,
+    dx_launch_workspace_status_cache: Option<DxLaunchWorkspaceStatusCache>,
+    dx_launch_workspace_status_refresh_pending: bool,
+    dx_launch_workspace_status_refresh_generation: u64,
     zoomed: bool,
     manual_zoom_override: Option<bool>,
     pending_serialization: Option<Task<Result<()>>>,
@@ -1180,6 +1188,19 @@ struct DxWorkspaceSnapshot {
     roots: Vec<String>,
     has_no_editor_file: bool,
     has_editor_and_browser: bool,
+}
+
+struct DxLaunchWorkspaceStatusCache {
+    refreshed_at: Instant,
+    status: DxLaunchWorkspaceStatus,
+}
+
+struct DxLaunchWorkspaceStatusInput {
+    workspace_roots: Vec<String>,
+    visible_worktree_count: usize,
+    background_task_count: usize,
+    active_status: SharedString,
+    agent_settings: DxAgentSettingsSnapshot,
 }
 
 impl DxWorkspaceSnapshot {
@@ -1629,6 +1650,9 @@ impl AgentPanel {
             _workspace_subscription: workspace_subscription,
             _project_subscription,
             dx_workspace_snapshot,
+            dx_launch_workspace_status_cache: None,
+            dx_launch_workspace_status_refresh_pending: false,
+            dx_launch_workspace_status_refresh_generation: 0,
             zoomed: false,
             manual_zoom_override: None,
             pending_serialization: None,
@@ -6603,7 +6627,7 @@ impl AgentPanel {
     }
 
     fn render_dx_launch_workspace(
-        &self,
+        &mut self,
         center: AnyElement,
         window: &mut Window,
         cx: &mut Context<Self>,
@@ -6612,8 +6636,13 @@ impl AgentPanel {
             return center;
         }
         let center = self.render_fullscreen_agent_center(center, cx);
+        if !self.fullscreen_sources_rail_open && !self.fullscreen_progress_rail_open {
+            return center;
+        }
 
-        let status = self.dx_launch_workspace_status(cx);
+        let Some(status) = self.cached_dx_launch_workspace_status(cx) else {
+            return center;
+        };
         let sidebar_actions = self.render_dx_launch_sidebar_actions(&status, window, cx);
         let source_row_controls =
             self.render_dx_launch_source_row_controls(&status.source_sets, cx);
@@ -7249,7 +7278,7 @@ impl AgentPanel {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let status = self.dx_launch_workspace_status(cx);
+        let status = self.build_dx_launch_workspace_status(cx);
         let prompt = status
             .source_sets
             .sets
@@ -7277,7 +7306,7 @@ impl AgentPanel {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let status = self.dx_launch_workspace_status(cx);
+        let status = self.build_dx_launch_workspace_status(cx);
         let agent_bridge = &status.agent_bridge;
         let prompt = if let Some(automation) = agent_bridge.automations.first() {
             let actions = automation
@@ -7347,6 +7376,11 @@ impl AgentPanel {
                 panel.update(cx, |panel, cx| {
                     if panel.dx_workspace_snapshot != snapshot {
                         panel.dx_workspace_snapshot = snapshot;
+                        panel.dx_launch_workspace_status_cache = None;
+                        panel.dx_launch_workspace_status_refresh_pending = false;
+                        panel.dx_launch_workspace_status_refresh_generation = panel
+                            .dx_launch_workspace_status_refresh_generation
+                            .wrapping_add(1);
                         cx.notify();
                     }
                 });
@@ -7354,10 +7388,116 @@ impl AgentPanel {
         });
     }
 
-    fn dx_launch_workspace_status(&self, cx: &Context<Self>) -> DxLaunchWorkspaceStatus {
-        let workspace_roots = self.dx_workspace_snapshot.roots.clone();
+    fn cached_dx_launch_workspace_status(
+        &mut self,
+        cx: &mut Context<Self>,
+    ) -> Option<DxLaunchWorkspaceStatus> {
+        let is_fresh = self
+            .dx_launch_workspace_status_cache
+            .as_ref()
+            .is_some_and(|cache| {
+                cache.refreshed_at.elapsed() <= DX_LAUNCH_WORKSPACE_STATUS_CACHE_TTL
+            });
 
-        let visible_worktree_count = self.project.read(cx).visible_worktrees(cx).count();
+        if !is_fresh {
+            self.schedule_dx_launch_workspace_status_refresh(cx);
+        }
+
+        self.dx_launch_workspace_status_cache
+            .as_ref()
+            .map(|cache| self.with_live_dx_launch_status(cache.status.clone(), cx))
+    }
+
+    fn with_live_dx_launch_status(
+        &self,
+        mut status: DxLaunchWorkspaceStatus,
+        cx: &Context<Self>,
+    ) -> DxLaunchWorkspaceStatus {
+        status.active_status = self.dx_active_status(cx);
+        status
+    }
+
+    fn schedule_dx_launch_workspace_status_refresh(&mut self, cx: &mut Context<Self>) {
+        if self.dx_launch_workspace_status_refresh_pending {
+            return;
+        }
+
+        self.dx_launch_workspace_status_refresh_pending = true;
+        self.dx_launch_workspace_status_refresh_generation = self
+            .dx_launch_workspace_status_refresh_generation
+            .wrapping_add(1);
+        let generation = self.dx_launch_workspace_status_refresh_generation;
+
+        cx.spawn(async move |panel, cx| {
+            cx.background_executor()
+                .timer(DX_LAUNCH_WORKSPACE_STATUS_REFRESH_DELAY)
+                .await;
+            let Some(input) = panel
+                .update(cx, |panel, cx| {
+                    if !panel.should_refresh_dx_launch_workspace_status(generation, cx) {
+                        panel.dx_launch_workspace_status_refresh_pending = false;
+                        return None;
+                    }
+
+                    Some(panel.dx_launch_workspace_status_input(cx))
+                })
+                .ok()
+                .flatten()
+            else {
+                return;
+            };
+
+            let status = cx
+                .background_spawn(async move {
+                    AgentPanel::build_dx_launch_workspace_status_from_input(input)
+                })
+                .await;
+
+            panel
+                .update(cx, |panel, cx| {
+                    if !panel.should_refresh_dx_launch_workspace_status(generation, cx) {
+                        panel.dx_launch_workspace_status_refresh_pending = false;
+                        return;
+                    }
+
+                    panel.dx_launch_workspace_status_cache = Some(DxLaunchWorkspaceStatusCache {
+                        refreshed_at: Instant::now(),
+                        status,
+                    });
+                    panel.dx_launch_workspace_status_refresh_pending = false;
+                    cx.notify();
+                })
+                .ok();
+        })
+        .detach();
+    }
+
+    fn build_dx_launch_workspace_status(&self, cx: &Context<Self>) -> DxLaunchWorkspaceStatus {
+        Self::build_dx_launch_workspace_status_from_input(self.dx_launch_workspace_status_input(cx))
+    }
+
+    fn should_refresh_dx_launch_workspace_status(&self, generation: u64, cx: &App) -> bool {
+        self.dx_launch_workspace_status_refresh_generation == generation
+            && self.should_render_dx_launch_chrome(cx)
+            && (self.fullscreen_sources_rail_open || self.fullscreen_progress_rail_open)
+    }
+
+    fn dx_launch_workspace_status_input(&self, cx: &Context<Self>) -> DxLaunchWorkspaceStatusInput {
+        DxLaunchWorkspaceStatusInput {
+            workspace_roots: self.dx_workspace_snapshot.roots.clone(),
+            visible_worktree_count: self.project.read(cx).visible_worktrees(cx).count(),
+            background_task_count: self.retained_threads.len(),
+            active_status: self.dx_active_status(cx),
+            agent_settings: dx_agent_bridge_settings_snapshot(cx),
+        }
+    }
+
+    fn build_dx_launch_workspace_status_from_input(
+        input: DxLaunchWorkspaceStatusInput,
+    ) -> DxLaunchWorkspaceStatus {
+        let workspace_roots = input.workspace_roots;
+        let visible_worktree_count = input.visible_worktree_count;
+        let background_task_count = input.background_task_count;
 
         let receipt_snapshot = receipt_snapshot();
         let launch_status = launch_status_snapshot();
@@ -7367,7 +7507,7 @@ impl AgentPanel {
         let launch_audit = launch_audit_snapshot();
         let source_audit = launch_source_audit_snapshot();
         let www_evidence = www_launch_evidence_snapshot(&workspace_roots);
-        let agent_bridge = dx_agent_bridge_snapshot(cx);
+        let agent_bridge = dx_agent_bridge_snapshot_from_settings(input.agent_settings);
         let receipt_file_count = receipt_snapshot
             .buckets
             .iter()
@@ -7429,7 +7569,7 @@ impl AgentPanel {
             receipt_file_count,
             source_sets: &source_sets,
             tool_history: &tool_history,
-            background_task_count: self.retained_threads.len(),
+            background_task_count,
             visible_worktree_count,
             deploy_target_count: deploy_targets.targets.len(),
             deploy_readiness_receipt_count,
@@ -7448,7 +7588,7 @@ impl AgentPanel {
         });
 
         DxLaunchWorkspaceStatus {
-            active_status: self.dx_active_status(cx),
+            active_status: input.active_status,
             visible_worktree_count,
             agent_bridge,
             launch_status,
