@@ -613,6 +613,7 @@ pub struct ThreadView {
     pub _subscriptions: Vec<Subscription>,
     pub message_editor: Entity<MessageEditor>,
     composer_voice_state: ComposerVoiceState,
+    composer_voice_availability: ComposerVoiceAvailability,
     flow_recording_session: Option<FlowRecordingSession>,
     flow_speech_cancellation: Option<FlowSpeechCancellation>,
     #[cfg(feature = "audio")]
@@ -895,6 +896,13 @@ impl ThreadView {
             }));
         }));
 
+        let flow_voice_runtime = FlowSpeechRuntime::detect();
+        let composer_voice_availability = ComposerVoiceAvailability {
+            has_composer_text: false,
+            stt_ready: flow_voice_runtime.stt_available(),
+            tts_ready: flow_voice_runtime.tts_available(),
+        };
+
         let mut this = Self {
             root_thread_id,
             session_id,
@@ -955,6 +963,7 @@ impl ThreadView {
             in_flight_prompt: None,
             message_editor,
             composer_voice_state: ComposerVoiceState::default(),
+            composer_voice_availability,
             flow_recording_session: None,
             flow_speech_cancellation: None,
             #[cfg(feature = "audio")]
@@ -4137,12 +4146,8 @@ impl ThreadView {
         _window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Vec<AnyElement> {
-        let runtime = FlowSpeechRuntime::detect();
-        let availability = ComposerVoiceAvailability {
-            has_composer_text: !self.message_editor.read(cx).text(cx).trim().is_empty(),
-            stt_ready: runtime.stt_available(),
-            tts_ready: runtime.tts_available(),
-        };
+        let mut availability = self.composer_voice_availability;
+        availability.has_composer_text = !self.message_editor.read(cx).text(cx).trim().is_empty();
 
         render_voice_buttons(
             &self.composer_voice_state,
@@ -4154,6 +4159,11 @@ impl ThreadView {
                 this.speak_composer_text(window, cx);
             }),
         )
+    }
+
+    fn refresh_flow_voice_runtime_availability(&mut self, runtime: &FlowSpeechRuntime) {
+        self.composer_voice_availability.stt_ready = runtime.stt_available();
+        self.composer_voice_availability.tts_ready = runtime.tts_available();
     }
 
     fn toggle_flow_voice_recording(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -4187,6 +4197,7 @@ impl ThreadView {
 
     fn start_flow_voice_recording(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let runtime = FlowSpeechRuntime::detect();
+        self.refresh_flow_voice_runtime_availability(&runtime);
         let summary = runtime.status_summary();
         #[cfg(feature = "audio")]
         let input_audio_device = AudioSettings::get_global(cx).input_audio_device.clone();
@@ -4375,6 +4386,7 @@ impl ThreadView {
         }
 
         let runtime = FlowSpeechRuntime::detect();
+        self.refresh_flow_voice_runtime_availability(&runtime);
         let summary = runtime.status_summary();
         self.composer_voice_state
             .set_speaking(format!("Flow voice runtime: {summary}"));

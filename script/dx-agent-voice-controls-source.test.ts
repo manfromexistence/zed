@@ -43,8 +43,25 @@ test("composer renders separate mic and read-aloud buttons before send", () => {
     ".children(self.render_voice_controls(window, cx))",
     ".child(self.render_send_button(cx))",
   );
+  const renderVoiceControls = sourceSlice(
+    threadView,
+    "fn render_voice_controls",
+    "fn toggle_flow_voice_recording",
+  );
+  const threadViewFields = sourceSlice(
+    threadView,
+    "pub message_editor: Entity<MessageEditor>",
+    "pub add_context_menu_handle",
+  );
 
   assert.match(controls, /render_voice_controls\(window, cx\)/);
+  assert.match(threadViewFields, /composer_voice_availability: ComposerVoiceAvailability/);
+  assert.match(renderVoiceControls, /let mut availability = self\.composer_voice_availability/);
+  assert.match(
+    renderVoiceControls,
+    /availability\.has_composer_text = !self\.message_editor\.read\(cx\)\.text\(cx\)\.trim\(\)\.is_empty\(\)/,
+  );
+  assert.doesNotMatch(renderVoiceControls, /FlowSpeechRuntime::detect\(\)/);
   assertBefore(
     threadView,
     ".children(self.render_voice_controls(window, cx))",

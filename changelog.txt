@@ -1,3 +1,16 @@
+[2026-06-06] - Composer Flow Voice Render Readiness Cache
+
+CHANGED:
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now caches Flow STT/Kokoro readiness on ThreadView instead of running `FlowSpeechRuntime::detect()` from the composer voice button render path, while still computing current composer-text presence during render.
+- Voice record/read-aloud action starts still refresh runtime readiness from a fresh Flow detection before starting STT or TTS, so newly installed Flow/Kokoro material can be picked up without putting filesystem discovery in the hot paint path.
+- `script\dx-agent-voice-controls-source.test.ts`, `DX.md`, and `todo.txt` now guard and document the cached readiness boundary.
+
+PASSED:
+- `node --test script\dx-agent-voice-controls-source.test.ts`
+
+NOTES:
+- Broader source-only verification and live runtime proof remain pending for the next voice hardening slice.
+
 [2026-06-06] - Composer Flow Voice Parser And Recording Action Hardening
 
 CHANGED:
