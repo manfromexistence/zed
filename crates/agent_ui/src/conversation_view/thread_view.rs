@@ -4174,7 +4174,7 @@ impl ThreadView {
         match self.composer_voice_state.phase() {
             ComposerVoicePhase::Recording => self.stop_flow_voice_recording(window, cx),
             ComposerVoicePhase::Transcribing => self.cancel_flow_speech_operation(cx),
-            ComposerVoicePhase::Speaking => {}
+            ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking => {}
             ComposerVoicePhase::Ready | ComposerVoicePhase::Error => {
                 self.start_flow_voice_recording(window, cx)
             }
@@ -4185,7 +4185,9 @@ impl ThreadView {
         match self.composer_voice_state.phase() {
             ComposerVoicePhase::Recording => self.stop_flow_voice_recording(window, cx),
             ComposerVoicePhase::Transcribing => self.cancel_flow_speech_operation(cx),
-            ComposerVoicePhase::Speaking => self.stop_flow_voice_playback(cx),
+            ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking => {
+                self.stop_flow_voice_playback(cx)
+            }
             ComposerVoicePhase::Ready | ComposerVoicePhase::Error => {}
         }
     }
@@ -4194,7 +4196,9 @@ impl ThreadView {
         match self.composer_voice_state.phase() {
             ComposerVoicePhase::Recording => self.cancel_flow_voice_recording(cx),
             ComposerVoicePhase::Transcribing => self.cancel_flow_speech_operation(cx),
-            ComposerVoicePhase::Speaking => self.stop_flow_voice_playback(cx),
+            ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking => {
+                self.stop_flow_voice_playback(cx)
+            }
             ComposerVoicePhase::Ready | ComposerVoicePhase::Error => {}
         }
     }
@@ -4364,7 +4368,7 @@ impl ThreadView {
 
     fn speak_composer_text(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
         match self.composer_voice_state.phase() {
-            ComposerVoicePhase::Speaking => {
+            ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking => {
                 self.stop_flow_voice_playback(cx);
                 return;
             }
@@ -4399,7 +4403,7 @@ impl ThreadView {
         }
         let summary = runtime.status_summary();
         self.composer_voice_state
-            .set_speaking(format!("Flow voice runtime: {summary}"));
+            .set_synthesizing(format!("Flow voice runtime: {summary}"));
         self.flow_playback_id = self.flow_playback_id.wrapping_add(1);
         let playback_id = self.flow_playback_id;
         let cancellation = FlowSpeechCancellation::new();

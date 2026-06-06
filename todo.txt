@@ -1584,5 +1584,6 @@ COMPLETED:
 - Aligned the copied Flow host and Flow STT model readiness with Zed so Parakeet/Nemotron Sherpa bundles must contain non-empty encoder, decoder, joiner, and token files before readiness or transcription.
 - Aligned the copied Flow host `--file` path with Flow's live/capture STT pipeline so Zed-recorded WAVs are cleaned/prepared before transcription; rebuilt the focused host and passed the Parakeet silent-WAV smoke with prepared-audio telemetry.
 - Hardened Zed's Flow/Kokoro readiness discovery so zero-byte `flow-dictate`, Kokoro Python, or Kokoro runner files do not enable the composer mic/read-aloud starts.
+- Split Kokoro read-aloud progress into a `Generating Kokoro audio` state before playback and `Reading with Kokoro` only after the generated WAV is handed to Zed's tracked audio pipeline.
 - Preserved leading/trailing Flow STT payload whitespace through parsing and composer insertion while keeping all-whitespace transcripts rejected.
 - Documented the current Whisper truth boundary: real Keyless Whisper source exists outside `G:\Dx\flow`, and the focused `flow-dictate` host now exposes a `whisper-tiny-ggml` whisper.cpp subprocess path that still needs binary/model smoke proof.

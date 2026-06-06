@@ -1,3 +1,19 @@
+[2026-06-06] - Kokoro Read-Aloud Phase Split
+
+CHANGED:
+- `crates\agent_ui\src\conversation_view\voice_controls.rs` now exposes a distinct `Synthesizing` phase so the inline voice panel says `Generating Kokoro audio` while the WAV is being created.
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now enters `Synthesizing` before Kokoro generation and switches to `Speaking` only after `Audio::play_wav_file_tracked` accepts the generated WAV.
+- `script\dx-agent-voice-controls-source.test.ts`, `DX.md`, and `todo.txt` now guard and document the difference between Kokoro generation and actual playback.
+
+PASSED:
+- `node --test script\dx-agent-voice-controls-source.test.ts script\dx-handoff-source-guard-registry.test.ts script\dx-agent-thread-view-source.test.ts script\dx-message-editor-source.test.ts`
+- `rustfmt --edition 2024 --check crates\agent_ui\src\conversation_view\voice_controls.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\flow_speech_runtime.rs`
+- `git diff --check -- crates/agent_ui/src/conversation_view/voice_controls.rs crates/agent_ui/src/conversation_view/thread_view.rs crates/agent_ui/src/flow_speech_runtime.rs script/dx-agent-voice-controls-source.test.ts DX.md todo.txt changelog.txt`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" ...` across the touched Zed Kokoro phase files returned no matches.
+
+NOTES:
+- Live Zed microphone proof and live Kokoro audible playback proof remain deferred until the governed runtime validation window.
+
 [2026-06-06] - Flow File STT Preparation Alignment
 
 CHANGED:

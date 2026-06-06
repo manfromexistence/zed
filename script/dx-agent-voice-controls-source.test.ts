@@ -177,10 +177,13 @@ test("voice recording UI exposes real recording and transcription states", () =>
   assert.match(voiceControls, /enum ComposerVoicePhase/);
   assert.match(voiceControls, /Recording/);
   assert.match(voiceControls, /Transcribing/);
+  assert.match(voiceControls, /Synthesizing/);
   assert.match(voiceControls, /Speaking/);
+  assert.match(voiceControls, /set_synthesizing/);
   assert.match(voiceControls, /render_voice_recording_panel/);
   assert.match(voiceControls, /Recording with Flow/);
   assert.match(voiceControls, /Transcribing with Flow STT/);
+  assert.match(voiceControls, /Generating Kokoro audio/);
   assert.match(voiceControls, /Reading with Kokoro/);
   assert.match(voiceControls, /90s max/);
   assert.match(voiceControls, /agent-composer-stop-voice-recording/);
@@ -237,10 +240,10 @@ test("voice recording UI exposes real recording and transcription states", () =>
   assert.match(refreshAvailability, /stt_status = runtime\.stt_readiness_summary\(\)\.into\(\)/);
   assert.match(refreshAvailability, /tts_status = runtime\.tts_readiness_summary\(\)\.into\(\)/);
   assert.match(
-    threadView,
-    /ComposerVoicePhase::Speaking => self\.stop_flow_voice_playback\(cx\)/,
+    stopVoiceAction,
+    /ComposerVoicePhase::Synthesizing \| ComposerVoicePhase::Speaking => \{\s*self\.stop_flow_voice_playback\(cx\)\s*\}/,
   );
-  assert.match(toggleVoiceRecording, /ComposerVoicePhase::Speaking => \{\}/);
+  assert.match(toggleVoiceRecording, /ComposerVoicePhase::Synthesizing \| ComposerVoicePhase::Speaking => \{\}/);
   assert.doesNotMatch(
     toggleVoiceRecording,
     /ComposerVoicePhase::Speaking => self\.stop_flow_voice_playback\(cx\)/,
@@ -860,7 +863,7 @@ test("voice playback keeps audio feature wiring and fallback states", () => {
   assert.match(audioPipeline, /output_mixer\.add\(source\)/);
   assert.match(
     speakComposerText,
-    /ComposerVoicePhase::Speaking => \{\s*self\.stop_flow_voice_playback\(cx\);\s*return;\s*\}/,
+    /ComposerVoicePhase::Synthesizing \| ComposerVoicePhase::Speaking => \{\s*self\.stop_flow_voice_playback\(cx\);\s*return;\s*\}/,
   );
   assert.match(
     speakComposerText,
@@ -869,6 +872,8 @@ test("voice playback keeps audio feature wiring and fallback states", () => {
   assert.match(speakComposerText, /let text = self\.message_editor\.read\(cx\)\.text\(cx\)/);
   assert.match(speakComposerText, /let text = text\.trim\(\)\.to_string\(\)/);
   assert.match(speakComposerText, /runtime\.speak_text\(&text, &cancellation\)/);
+  assert.match(speakComposerText, /set_synthesizing\(format!\("Flow voice runtime: \{summary\}"\)\)/);
+  assert.match(speakComposerText, /set_speaking\("Kokoro is reading the composer"\)/);
   assert.doesNotMatch(speakComposerText, /active_editor\(cx\)/);
   assert.doesNotMatch(speakComposerText, /editing_message|queued_message|draft_prompt/);
   assert.match(speakComposerText, /flow_playback_handle = Some\(playback_handle\.clone\(\)\)/);
@@ -883,8 +888,8 @@ test("voice playback keeps audio feature wiring and fallback states", () => {
   assertBefore(
     speakComposerText,
     "if let Err(error) = runtime.ensure_tts_ready()",
-    ".set_speaking(format!(\"Flow voice runtime: {summary}\"))",
-    "Kokoro readiness must be checked before entering Speaking",
+    ".set_synthesizing(format!(\"Flow voice runtime: {summary}\"))",
+    "Kokoro readiness must be checked before entering Synthesizing",
   );
   assertBefore(
     speakComposerText,
@@ -930,7 +935,7 @@ test("voice handoff keeps runtime readiness honest", () => {
   assert.match(voiceHandoff, /tracked\/cancelable WAV playback handle/);
   assert.match(voiceHandoff, /Live audible playback proof is still deferred/);
   assert.match(voiceHandoff, /read-aloud toolbar button exposes the visible Kokoro stop path/);
-  assert.match(voiceHandoff, /inline panel stays status-only while Kokoro is speaking/);
+  assert.match(voiceHandoff, /inline panel stays status-only while Kokoro is generating or speaking/);
   assert.match(voiceHandoff, /toolbar mic stays disabled as Mic while Kokoro is speaking/);
   assert.doesNotMatch(
     voiceHandoff,

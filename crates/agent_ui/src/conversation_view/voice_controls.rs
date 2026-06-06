@@ -21,6 +21,7 @@ pub(super) enum ComposerVoicePhase {
     Ready,
     Recording,
     Transcribing,
+    Synthesizing,
     Speaking,
     Error,
 }
@@ -65,6 +66,7 @@ impl ComposerVoiceState {
             self.phase,
             ComposerVoicePhase::Recording
                 | ComposerVoicePhase::Transcribing
+                | ComposerVoicePhase::Synthesizing
                 | ComposerVoicePhase::Speaking
         )
     }
@@ -107,6 +109,13 @@ impl ComposerVoiceState {
         self.input_level = 0.0;
     }
 
+    pub(super) fn set_synthesizing(&mut self, message: impl Into<SharedString>) {
+        self.phase = ComposerVoicePhase::Synthesizing;
+        self.message = message.into();
+        self.started_at = None;
+        self.input_level = 0.0;
+    }
+
     pub(super) fn set_speaking(&mut self, message: impl Into<SharedString>) {
         self.phase = ComposerVoicePhase::Speaking;
         self.message = message.into();
@@ -125,6 +134,7 @@ impl ComposerVoiceState {
         match self.phase {
             ComposerVoicePhase::Recording => VOICE_RECORDING_STOP_TRANSCRIBE_TOOLTIP.into(),
             ComposerVoicePhase::Transcribing => VOICE_TRANSCRIPTION_CANCEL_TOOLTIP.into(),
+            ComposerVoicePhase::Synthesizing => "Kokoro is generating audio".into(),
             ComposerVoicePhase::Speaking => "Kokoro read-aloud is active".into(),
             ComposerVoicePhase::Error | ComposerVoicePhase::Ready if !availability.stt_ready => {
                 availability.stt_status.clone()
@@ -136,7 +146,9 @@ impl ComposerVoiceState {
 
     fn speak_tooltip(&self, availability: &ComposerVoiceAvailability) -> SharedString {
         match self.phase {
-            ComposerVoicePhase::Speaking => "Stop Kokoro read-aloud".into(),
+            ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking => {
+                "Stop Kokoro read-aloud".into()
+            }
             ComposerVoicePhase::Recording | ComposerVoicePhase::Transcribing => {
                 "Finish voice recording before reading aloud".into()
             }
@@ -163,32 +175,35 @@ pub(super) fn render_voice_buttons(
 ) -> Vec<AnyElement> {
     let voice_icon = match state.phase {
         ComposerVoicePhase::Recording | ComposerVoicePhase::Transcribing => IconName::Stop,
-        ComposerVoicePhase::Speaking => IconName::Mic,
+        ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking => IconName::Mic,
         ComposerVoicePhase::Ready | ComposerVoicePhase::Error => IconName::Mic,
     };
     let voice_color = match state.phase {
         ComposerVoicePhase::Recording => Color::Error,
-        ComposerVoicePhase::Transcribing => Color::Accent,
+        ComposerVoicePhase::Transcribing | ComposerVoicePhase::Synthesizing => Color::Accent,
         ComposerVoicePhase::Error => Color::Warning,
         ComposerVoicePhase::Speaking | ComposerVoicePhase::Ready => Color::Muted,
     };
     let speak_disabled = match state.phase {
-        ComposerVoicePhase::Speaking => false,
+        ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking => false,
         ComposerVoicePhase::Recording | ComposerVoicePhase::Transcribing => true,
         ComposerVoicePhase::Ready | ComposerVoicePhase::Error => {
             !availability.has_composer_text || !availability.tts_ready
         }
     };
     let voice_disabled = match state.phase {
-        ComposerVoicePhase::Speaking => true,
+        ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking => true,
         ComposerVoicePhase::Ready | ComposerVoicePhase::Error => !availability.stt_ready,
         ComposerVoicePhase::Recording | ComposerVoicePhase::Transcribing => false,
     };
     let speak_icon = match state.phase {
-        ComposerVoicePhase::Speaking => IconName::Stop,
+        ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking => IconName::Stop,
         _ => IconName::AudioOn,
     };
-    let speak_color = if state.phase == ComposerVoicePhase::Speaking {
+    let speak_color = if matches!(
+        state.phase,
+        ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking
+    ) {
         Color::Accent
     } else {
         Color::Muted
@@ -232,6 +247,11 @@ pub(super) fn render_voice_recording_panel(
             "Transcribing with Flow STT",
             Color::Accent,
             "Preparing transcript".into(),
+        ),
+        ComposerVoicePhase::Synthesizing => (
+            "Generating Kokoro audio",
+            Color::Accent,
+            "Preparing generated audio".into(),
         ),
         ComposerVoicePhase::Speaking => (
             "Reading with Kokoro",
@@ -435,7 +455,9 @@ fn format_captured_duration(duration: Duration) -> String {
 fn status_icon(phase: ComposerVoicePhase) -> IconName {
     match phase {
         ComposerVoicePhase::Recording => IconName::Mic,
-        ComposerVoicePhase::Transcribing | ComposerVoicePhase::Speaking => IconName::LoadCircle,
+        ComposerVoicePhase::Transcribing
+        | ComposerVoicePhase::Synthesizing
+        | ComposerVoicePhase::Speaking => IconName::LoadCircle,
         ComposerVoicePhase::Error => IconName::Warning,
         ComposerVoicePhase::Ready => IconName::Mic,
     }
