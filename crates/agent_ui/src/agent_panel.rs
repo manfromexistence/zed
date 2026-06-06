@@ -124,8 +124,8 @@ use ui::{
 use util::ResultExt as _;
 use workspace::{
     CloseActiveSidePanel, CollaboratorId, DraggedSelection, DraggedTab, MultiWorkspace, PathList,
-    SerializedPathList, SplitActiveSidePanel, ToggleWorkspaceSidebar, ToggleZoom, Workspace,
-    WorkspaceId, WorkspaceScreenKind,
+    SerializedPathList, ToggleWorkspaceSidebar, ToggleZoom, Workspace, WorkspaceId,
+    WorkspaceScreenKind,
     dock::{DockPosition, Panel, PanelEvent},
     item::ItemEvent,
 };
@@ -5990,13 +5990,6 @@ impl AgentPanel {
             this.fullscreen_progress_rail_open = !this.fullscreen_progress_rail_open;
             cx.notify();
         }));
-        let split_panel_button =
-            IconButton::new("agent-panel-split-side-panel", IconName::SplitAlt)
-                .icon_size(IconSize::Small)
-                .tooltip(Tooltip::text("Split Panel"))
-                .on_click(|_, window, cx| {
-                    window.dispatch_action(Box::new(SplitActiveSidePanel), cx);
-                });
         let close_panel_button = IconButton::new("agent-panel-close-side-panel", IconName::Close)
             .icon_size(IconSize::Small)
             .tooltip(Tooltip::text("Close Panel"))
@@ -6085,10 +6078,8 @@ impl AgentPanel {
                             this.child(agent_sources_rail_button)
                                 .child(agent_progress_rail_button)
                         })
-                        .when(!is_full_screen, |this| {
-                            this.child(split_panel_button).child(close_panel_button)
-                        })
-                        .child(self.render_panel_options_menu(window, cx)),
+                        .child(self.render_panel_options_menu(window, cx))
+                        .when(!is_full_screen, |this| this.child(close_panel_button)),
                 )
                 .into_any_element()
         } else {
@@ -6140,10 +6131,8 @@ impl AgentPanel {
                             this.child(agent_sources_rail_button)
                                 .child(agent_progress_rail_button)
                         })
-                        .when(!is_full_screen, |this| {
-                            this.child(split_panel_button).child(close_panel_button)
-                        })
-                        .child(self.render_panel_options_menu(window, cx)),
+                        .child(self.render_panel_options_menu(window, cx))
+                        .when(!is_full_screen, |this| this.child(close_panel_button)),
                 )
                 .into_any_element()
         };

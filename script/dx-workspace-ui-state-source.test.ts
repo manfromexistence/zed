@@ -271,7 +271,7 @@ test("side dock stack controls use real panel entries and preserve single-panel 
   assert.match(workspace, /CloseActiveSidePanel/);
   assert.match(workspace, /fn split_active_side_panel\(/);
   assert.match(workspace, /fn close_active_side_panel\(/);
-  assert.match(agentPanel, /"agent-panel-split-side-panel"/);
+  assert.doesNotMatch(agentPanel, /"agent-panel-split-side-panel"/);
   assert.match(agentPanel, /"agent-panel-close-side-panel"/);
   for (const [source, prefix, name] of [
     [iconPicker, "icon-picker", "Icon picker"],
@@ -285,7 +285,7 @@ test("side dock stack controls use real panel entries and preserve single-panel 
       new RegExp(
         `side_panel_header_controls\\(\\s*"${prefix}",[\\s\\S]*?(?:self\\.)?workspace\\.clone\\(\\)[\\s\\S]*?(?:cx\\.entity\\(\\)\\.entity_id\\(\\)|panel_id)`,
       ),
-      `${name} must target its own panel entity for split/close controls`,
+      `${name} must target its own panel entity for close controls`,
     );
     assert.doesNotMatch(
       source,
@@ -313,7 +313,7 @@ test("side dock stack controls use real panel entries and preserve single-panel 
   assert.match(workspace, /stacked_panels: right_stacked_panels/);
 });
 
-test("core side panels expose dock split and close controls in visible headers", () => {
+test("core side panels expose dock close controls in visible headers", () => {
   const sidePanelHeaderControls = functionBody(dock, "side_panel_header_controls");
   const projectSelectionToolbar = functionBody(
     projectPanel,
@@ -358,17 +358,17 @@ test("core side panels expose dock split and close controls in visible headers",
   assert.doesNotMatch(
     sidePanelHeaderControls,
     /\.disabled\(!can_split\)|\.disabled\(!panel_is_registered\)/,
-    "core side-panel split/close buttons must stay visible in narrow headers",
+    "core side-panel close buttons must stay visible in narrow headers",
   );
   assert.doesNotMatch(
     sidePanelHeaderControls,
     /ButtonStyle::Subtle/,
-    "core side-panel split/close buttons should use the same visible square treatment as tool panels",
+    "core side-panel close buttons should use the same visible square treatment as tool panels",
   );
   assert.match(
     sidePanelHeaderControls,
     /IconButtonShape::Square/,
-    "core side-panel split/close buttons should remain compact square header actions",
+    "core side-panel close buttons should remain compact square header actions",
   );
   assert.match(
     sidePanelHeaderControls,
@@ -1095,7 +1095,7 @@ test("agent layout preset keeps project, git, outline, and collab on the left", 
   assert.match(agentLayout, /git_panel_dock:\s*Some\(DockPosition::Left\)/);
 });
 
-test("core left panels expose split and close controls in native headers", () => {
+test("core left panels expose close controls in native headers", () => {
   const projectSelectionToolbar = functionBody(
     projectPanel,
     "render_selected_entries_toolbar",
@@ -1123,21 +1123,25 @@ test("core left panels expose split and close controls in native headers", () =>
   const collabSignedIn = functionBody(collabPanel, "render_signed_in");
 
   assert.ok(
-    dock.includes('format!("{id_prefix}-split-side-panel")'),
-    "shared dock helper must create a stable split-control id",
+    !dock.includes('format!("{id_prefix}-split-side-panel")'),
+    "shared dock helper must not expose a visible split-control id",
   );
   assert.ok(
     dock.includes('format!("{id_prefix}-close-side-panel")'),
     "shared dock helper must create a stable close-control id",
   );
-  assert.match(dock, /IconName::SplitAlt/);
   assert.match(dock, /IconName::Close/);
-  assert.match(dock, /let can_split = workspace[\s\S]*?\.upgrade\(\)[\s\S]*?\.is_some_and/);
-  assert.match(dock, /Open another panel to split/);
+  const sidePanelHeaderControls = functionBody(dock, "side_panel_header_controls");
+  assert.doesNotMatch(sidePanelHeaderControls, /IconName::SplitAlt/);
+  assert.doesNotMatch(sidePanelHeaderControls, /let can_split = workspace/);
+  assert.doesNotMatch(sidePanelHeaderControls, /Open another panel to split/);
   assert.match(dock, /let panel_is_registered = workspace[\s\S]*?\.upgrade\(\)[\s\S]*?\.is_some_and/);
   assert.doesNotMatch(dock, /\.disabled\(!can_split\)|\.disabled\(!panel_is_registered\)/);
   assert.match(dock, /Panel is not available/);
-  assert.match(dock, /workspace\.split_side_panel_by_id\(panel_id, window, cx\)/);
+  assert.doesNotMatch(
+    sidePanelHeaderControls,
+    /workspace\.split_side_panel_by_id\(panel_id, window, cx\)/,
+  );
   assert.match(dock, /workspace\.close_side_panel_by_id\(panel_id, window, cx\)/);
   assert.match(dock, /pub fn can_split_panel_by_id/);
   assert.match(dock, /pub fn contains_panel_id/);
@@ -1155,7 +1159,7 @@ test("core left panels expose split and close controls in native headers", () =>
     assert.match(
       source,
       /side_panel_header_controls[\s\S]*?self\.workspace\.clone\(\)[\s\S]*?cx\.entity\(\)\.entity_id\(\)[\s\S]*?cx,/,
-      `${name} must target its own panel entity for split/close controls`,
+      `${name} must target its own panel entity for close controls`,
     );
     assert.doesNotMatch(
       source,

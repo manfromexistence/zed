@@ -1,3 +1,19 @@
+[2026-06-06] - Panel Header Close-Only Polish
+
+CHANGED:
+- `crates\workspace\src\dock.rs` now renders shared side-panel header controls as a close/cancel action only, removing the visible split affordance from panels that use the shared dock helper.
+- `crates\agent_ui\src\agent_panel.rs` now removes the Agent panel split button and keeps the close/cancel button after the options menu so it remains the rightmost panel action.
+- `todo.txt` now records the panel header close-only polish for handoff continuity.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\workspace\src\dock.rs crates\agent_ui\src\agent_panel.rs`
+- `node --test script\dx-workspace-ui-state-source.test.ts`
+- `git diff --check -- crates/workspace/src/dock.rs crates/agent_ui/src/agent_panel.rs script/dx-workspace-ui-state-source.test.ts todo.txt changelog.txt`
+
+NOTES:
+- The underlying side-panel split command remains available internally; this change only removes the visible split action from panel headers as requested.
+- Runtime `just run` validation was not run because this prompt did not authorize it.
+
 [2026-06-06] - Kokoro Read-Aloud Phase Split
 
 CHANGED:

@@ -50,9 +50,6 @@ pub fn side_panel_header_controls(
     panel_id: EntityId,
     cx: &App,
 ) -> impl IntoElement {
-    let can_split = workspace
-        .upgrade()
-        .is_some_and(|workspace| workspace.read(cx).can_split_side_panel_by_id(panel_id, cx));
     let panel_is_registered = workspace
         .upgrade()
         .is_some_and(|workspace| workspace.read(cx).contains_side_panel_by_id(panel_id, cx));
@@ -63,26 +60,6 @@ pub fn side_panel_header_controls(
         .flex_none()
         .gap_0p5()
         .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-        .child(
-            IconButton::new(format!("{id_prefix}-split-side-panel"), IconName::SplitAlt)
-                .shape(IconButtonShape::Square)
-                .icon_size(IconSize::Small)
-                .tooltip(if can_split {
-                    Tooltip::text("Split Panel")
-                } else {
-                    Tooltip::text("Open another panel to split")
-                })
-                .on_click({
-                    let workspace = workspace.clone();
-                    move |_, window, cx| {
-                        if let Some(workspace) = workspace.upgrade() {
-                            workspace.update(cx, |workspace, cx| {
-                                workspace.split_side_panel_by_id(panel_id, window, cx);
-                            });
-                        }
-                    }
-                }),
-        )
         .child(
             IconButton::new(format!("{id_prefix}-close-side-panel"), IconName::Close)
                 .shape(IconButtonShape::Square)
