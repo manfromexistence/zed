@@ -234,7 +234,7 @@ impl FlowSpeechRuntime {
         let device = resolve_input_device(input_device_id)?;
         let config = device.default_input_config()?;
         let channels = config.channels() as usize;
-        let input_sample_rate = config.sample_rate().0;
+        let input_sample_rate = config.sample_rate();
         let samples = Arc::new(Mutex::new(Vec::new()));
         let stream = build_input_stream(
             &device,
