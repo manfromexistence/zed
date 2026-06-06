@@ -372,6 +372,7 @@ impl FlowSpeechRuntime {
         }
     }
 
+    #[allow(dead_code)]
     fn parakeet_ready(&self) -> bool {
         self.stt_model_ready(FlowSttModel::parakeet())
     }

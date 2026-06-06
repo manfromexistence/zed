@@ -510,7 +510,6 @@ impl WindowsWindowInner {
             webview_passthrough_target_for_point(&self.state, handle, client_point)
             && let Some(event_kind) = webview_mouse_button_down_kind(button)
         {
-            let _ = self.dispatch_gpui_mouse_down(button, x.into(), y.into(), click_count);
             self.state.webview_input_captured.set(true);
             focus_webview_controller(handle, &target);
             unsafe {
@@ -602,7 +601,6 @@ impl WindowsWindowInner {
             if button == MouseButton::Left {
                 focus_webview_controller(handle, &target);
             }
-            let _ = self.dispatch_gpui_mouse_up(button, client_point.x, client_point.y);
             return Some(0);
         }
 

@@ -2051,7 +2051,7 @@ impl Render for PanelButtons {
                     let tooltip: SharedString = if dock_position == DockPosition::Bottom {
                         format!("Close {} Dock", dock.position.label()).into()
                     } else {
-                        format!("Highlight {}", icon_tooltip).into()
+                        format!("Close {}", icon_tooltip).into()
                     };
 
                     (action, tooltip)
@@ -2248,10 +2248,9 @@ impl Render for PanelButtons {
                                             let did_change =
                                                 dock_for_button.update(cx, |dock, cx| {
                                                     if is_active_button {
-                                                        dock.flash_panel_highlight(
+                                                        dock.close_or_unstack_panel(
                                                             panel_id, window, cx,
-                                                        );
-                                                        true
+                                                        )
                                                     } else {
                                                         dock.stack_panel(panel_id, window, cx)
                                                     }

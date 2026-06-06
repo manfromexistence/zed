@@ -213,17 +213,34 @@ impl ApplicationMenu {
                     let handle = current_handle.clone();
                     window.defer(cx, move |window, cx| handle.show(window, cx));
                 } else if !*hover_enter {
-                    let handle = current_handle.clone();
-                    window.on_next_frame(move |window, _cx| {
-                        let handle = handle.clone();
-                        window.on_next_frame(move |window, cx| {
-                            if handle.is_deployed() && !handle.is_pointer_near(window, px(18.0)) {
-                                handle.hide(cx);
-                            }
-                        });
-                    });
+                    Self::schedule_hover_away_close(all_handles.clone(), window, cx);
                 }
             })
+    }
+
+    fn schedule_hover_away_close(
+        handles: Vec<PopoverMenuHandle<ContextMenu>>,
+        window: &mut Window,
+        _cx: &mut App,
+    ) {
+        window.on_next_frame(move |window, cx| {
+            if !handles.iter().any(|handle| handle.is_deployed()) {
+                return;
+            }
+
+            if handles
+                .iter()
+                .any(|handle| handle.is_deployed() && handle.is_pointer_near(window, px(18.0)))
+            {
+                Self::schedule_hover_away_close(handles, window, cx);
+            } else {
+                for handle in &handles {
+                    if handle.is_deployed() {
+                        handle.hide(cx);
+                    }
+                }
+            }
+        });
     }
 
     #[cfg(not(target_os = "macos"))]

@@ -131,10 +131,8 @@ pub struct AgentRegistryStore {
 impl AgentRegistryStore {
     /// Initialize the global AgentRegistryStore.
     ///
-    /// This loads the cached registry from disk. If the cache is empty but there
-    /// are registry agents configured in settings, it will trigger a network fetch.
-    /// Otherwise, call `refresh()` explicitly when you need fresh data
-    /// (e.g., when opening the Agent Registry page).
+    /// This loads the cached registry from disk. Network refreshes are kept
+    /// explicit so startup never waits on registry CDN availability.
     pub fn init_global(
         cx: &mut App,
         fs: Arc<dyn Fs>,
@@ -146,12 +144,6 @@ impl AgentRegistryStore {
 
         let store = cx.new(|cx| Self::new(fs, http_client, cx));
         cx.set_global(GlobalAgentRegistryStore(store.clone()));
-
-        store.update(cx, |store, cx| {
-            if store.agents.is_empty() {
-                store.refresh(cx);
-            }
-        });
 
         store
     }

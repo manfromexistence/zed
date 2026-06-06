@@ -24810,6 +24810,8 @@ impl WebPreviewView {
         }
 
         let scale_factor = window.scale_factor() as f64;
+        let webview_client_x = viewport_x * scale_factor;
+        let webview_client_y = viewport_y * scale_factor;
         let client_logical_x = bounds.origin.x.as_f32() as f64 + viewport_x;
         let client_logical_y = bounds.origin.y.as_f32() as f64 + viewport_y;
         let client_physical_x = client_logical_x * scale_factor;
@@ -24826,6 +24828,10 @@ impl WebPreviewView {
             "target_center_css_viewport": {
                 "x": viewport_x,
                 "y": viewport_y,
+            },
+            "target_center_webview_client": {
+                "x": webview_client_x,
+                "y": webview_client_y,
             },
             "host_bounds_logical": {
                 "x": bounds.origin.x.as_f32(),
@@ -25270,9 +25276,9 @@ impl WebPreviewView {
             self.native_input_trace_plan(window, config, &target_candidate);
         let viewport_point = coordinate_plan.as_ref().and_then(|plan| {
             Some((
-                plan.pointer("/target_center_css_viewport/x")
+                plan.pointer("/target_center_webview_client/x")
                     .and_then(Value::as_f64)?,
-                plan.pointer("/target_center_css_viewport/y")
+                plan.pointer("/target_center_webview_client/y")
                     .and_then(Value::as_f64)?,
             ))
         });
@@ -25534,9 +25540,9 @@ impl WebPreviewView {
             self.native_input_trace_plan(window, config, &target_candidate);
         let viewport_point = coordinate_plan.as_ref().and_then(|plan| {
             Some((
-                plan.pointer("/target_center_css_viewport/x")
+                plan.pointer("/target_center_webview_client/x")
                     .and_then(Value::as_f64)?,
-                plan.pointer("/target_center_css_viewport/y")
+                plan.pointer("/target_center_webview_client/y")
                     .and_then(Value::as_f64)?,
             ))
         });

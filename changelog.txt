@@ -19,6 +19,29 @@ PASSED:
 
 NOTES:
 - `just run` was not run for this source-only lag fix pass; runtime validation remains available when explicitly requested.
+
+[2026-06-06] - Topbar Web Preview Panel And Composer Polish
+
+CHANGED:
+- `crates\title_bar\src\application_menu.rs` now keeps hover-opened app menus on a re-armed pointer-away check so menus close after the cursor leaves the trigger/menu bounds instead of relying on one stale delayed check.
+- `crates\title_bar\src\title_bar.rs` and `crates\workspace\src\dock.rs` now close or unstack already-active side panels on a repeated panel-button click instead of flashing the visible panel.
+- `crates\agent_ui\src\agent_ui.rs` and `crates\title_bar\src\title_bar.rs` now park the Style panel registration/titlebar entry behind TODO comments while leaving the implementation source present.
+- `crates\agent_ui\src\dx_forge_panel\*.rs`, `crates\agent_ui\src\dx_check_panel_view*.rs`, and `crates\agent_ui\src\dx_check_panel\*.rs` now add real tabbed GPUI structure over existing Forge/Check snapshot data and keep Check receipt parsing split by ownership instead of showing one long badge/text report.
+- `crates\web_preview\src\web_preview_view.rs` and `crates\gpui_windows\src\events.rs` now use WebView client coordinates for native dispatch and avoid duplicate GPUI mouse delivery for native WebView clicks.
+- `crates\agent_ui\src\conversation_view\thread_view.rs`, `crates\agent_ui\src\message_editor.rs`, and `script\dx-agent-voice-controls-source.test.ts` now debounce expensive draft extraction, cache composer text availability for voice controls, and skip full slash-command parsing unless the composer starts with `/`.
+- `crates\agent_ui\src\flow_speech_runtime.rs` now keeps the private Parakeet readiness helper for source contracts while marking it intentionally unused to silence the previous Agent UI warning.
+- `justfile` now keeps the clean-build 18GB headroom guard while allowing normal incremental reruns once `target\debug\zed.exe` exists.
+
+PASSED:
+- `rustfmt --edition 2024 --check` on the touched Rust source files.
+- `node --test script\dx-title-bar-source.test.ts script\dx-style-panel-source.test.ts script\dx-forge-panel-source.test.ts script\dx-check-panel-source.test.ts script\dx-agent-voice-controls-source.test.ts script\dx-message-editor-source.test.ts`
+- `git diff --check`
+- `just run` with `CARGO_BUILD_JOBS=6` and `CARGO_INCREMENTAL=1` built the current Zed binary and launched Zed process `2324`.
+
+NOTES:
+- The final runtime pass still reports existing `G:\Dx\media` warnings, but the touched Zed source compiled and launched.
+- To make the post-clean incremental pass possible on a nearly full G: drive, the largest unrelated per-crate Cargo incremental cache folders were removed while keeping compiled artifacts in `G:\Zed\target\debug\deps`.
+
 [2026-06-06] - Panel Header Close-Only Polish
 
 CHANGED:

@@ -873,16 +873,16 @@ impl ThreadView {
         }
 
         subscriptions.push(cx.observe(&message_editor, |this, editor, cx| {
-            let is_empty = editor.read(cx).text(cx).is_empty();
-            let draft_contents_task = if is_empty {
-                None
-            } else {
-                Some(editor.update(cx, |editor, cx| editor.draft_contents(cx)))
-            };
+            let has_composer_text = editor.read(cx).text_byte_len(cx) > 0;
+            this.composer_voice_availability.has_composer_text = has_composer_text;
+            let editor = editor.clone();
             this._draft_resolve_task = Some(cx.spawn(async move |this, cx| {
-                let draft = if let Some(task) = draft_contents_task {
-                    let blocks = task.await.ok().filter(|b| !b.is_empty());
-                    blocks
+                cx.background_executor()
+                    .timer(std::time::Duration::from_millis(120))
+                    .await;
+                let draft = if has_composer_text {
+                    let task = editor.update(cx, |editor, cx| editor.draft_contents(cx));
+                    task.await.ok().filter(|blocks| !blocks.is_empty())
                 } else {
                     None
                 };
@@ -4148,12 +4148,9 @@ impl ThreadView {
         _window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Vec<AnyElement> {
-        let mut availability = self.composer_voice_availability.clone();
-        availability.has_composer_text = !self.message_editor.read(cx).text(cx).trim().is_empty();
-
         render_voice_buttons(
             &self.composer_voice_state,
-            availability,
+            self.composer_voice_availability.clone(),
             cx.listener(|this, _event, window, cx| {
                 this.toggle_flow_voice_recording(window, cx);
             }),

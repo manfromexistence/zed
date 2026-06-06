@@ -1323,7 +1323,7 @@ impl Panel for FontPanel {
     }
 
     fn activation_priority(&self) -> u32 {
-        9
+        10
     }
 }
 

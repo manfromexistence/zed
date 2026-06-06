@@ -6,11 +6,12 @@ use workspace::{Workspace, dock::side_panel_header_controls};
 
 use super::{
     controls::{open_exact_abs_path_button, toolbar},
-    panel::DxForgePanel,
+    panel::{DxForgePanel, DxForgePanelTab},
     providers::remote_target_strip,
     rows::{empty_row, receipt_row, section_header, status_strip},
     snapshot::DxForgePanelSnapshot,
     source_section::{SourceSection, source_section},
+    tabs::render_tab_bar,
 };
 
 pub(super) fn render_panel(
@@ -18,6 +19,7 @@ pub(super) fn render_panel(
     workspace: &WeakEntity<Workspace>,
     panel: &WeakEntity<DxForgePanel>,
     panel_id: EntityId,
+    active_tab: DxForgePanelTab,
     scroll_handle: &ScrollHandle,
     window: &mut Window,
     cx: &mut App,
@@ -36,7 +38,7 @@ pub(super) fn render_panel(
             cx,
         ))
         .child(toolbar(snapshot, workspace, panel, cx))
-        .child(remote_target_strip(snapshot, workspace, cx))
+        .child(render_tab_bar(snapshot, active_tab, panel, cx))
         .child(
             v_flex()
                 .id("dx-forge-panel-content")
@@ -51,12 +53,21 @@ pub(super) fn render_panel(
                         .min_h_0()
                         .min_w_0()
                         .py_1()
-                        .child(remote_registry_section(snapshot, workspace, cx))
-                        .child(package_status_section(snapshot, workspace, cx))
-                        .child(machine_cache_section(snapshot, workspace, cx))
-                        .child(receipt_section(snapshot, workspace, cx))
-                        .child(restore_section(snapshot, workspace, cx))
-                        .child(media_section(snapshot, workspace, cx))
+                        .children(match active_tab {
+                            DxForgePanelTab::Targets => vec![
+                                remote_target_strip(snapshot, workspace, cx).into_any_element(),
+                                remote_registry_section(snapshot, workspace, cx),
+                            ],
+                            DxForgePanelTab::Sources => vec![
+                                package_status_section(snapshot, workspace, cx),
+                                machine_cache_section(snapshot, workspace, cx),
+                                restore_section(snapshot, workspace, cx),
+                                media_section(snapshot, workspace, cx),
+                            ],
+                            DxForgePanelTab::Receipts => {
+                                vec![receipt_section(snapshot, workspace, cx)]
+                            }
+                        })
                         .vertical_scrollbar_for(scroll_handle, window, cx),
                 ),
         )

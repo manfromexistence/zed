@@ -998,13 +998,8 @@ impl TitleBar {
                 shadcn_ui_panel::ToggleFocus.boxed_clone(),
                 active_right_panel == Some("UI"),
             ),
-            self.render_title_right_panel_button(
-                "titlebar-dx-style-panel",
-                IconName::Sliders,
-                "Style",
-                zed_actions::dx_style::TogglePanel.boxed_clone(),
-                active_right_panel == Some("Style"),
-            ),
+            // TODO(dx-style-panel): Re-enable the Style panel button when its Web Preview
+            // workflow graduates from parked implementation to production UI.
             self.render_title_right_panel_button(
                 "titlebar-dx-check-panel",
                 IconName::Check,
@@ -1044,12 +1039,15 @@ impl TitleBar {
                         .read(cx)
                         .dock_at_position(DockPosition::Right)
                         .clone();
-                    right_dock.update(cx, |dock, cx| {
-                        let panel_id = dock.active_panel().map(|panel| panel.panel_id());
-                        if let Some(panel_id) = panel_id {
-                            dock.flash_panel_highlight(panel_id, window, cx);
-                        }
-                    });
+                    let panel_id = right_dock
+                        .read(cx)
+                        .active_panel()
+                        .map(|panel| panel.panel_id());
+                    if let Some(panel_id) = panel_id {
+                        workspace.update(cx, |workspace, cx| {
+                            workspace.close_side_panel_by_id(panel_id, window, cx);
+                        });
+                    }
                 } else {
                     window.dispatch_action(action.boxed_clone(), cx);
                 }

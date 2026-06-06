@@ -667,6 +667,14 @@ impl MessageEditor {
         if available_commands.is_empty() {
             return None;
         }
+        if snapshot.len().0 == 0
+            || !snapshot
+                .text_for_range(MultiBufferOffset(0)..MultiBufferOffset(1))
+                .next()
+                .is_some_and(|chunk| chunk.starts_with('/'))
+        {
+            return None;
+        }
 
         let parsed_command = SlashCommandCompletion::try_parse(&snapshot.text(), 0)?;
         if parsed_command.argument.is_some() {

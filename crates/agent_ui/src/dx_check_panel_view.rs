@@ -20,21 +20,24 @@ use crate::dx_check_panel_view::view_rows::{
     notice_title, outcome_label, quick_fix_row, section, section_row, status_color, web_audit_row,
 };
 
+mod tabs;
 mod view_rows;
+
+use tabs::{DxCheckPanelTab, render_tab_bar};
 
 const DX_CHECK_PANEL_KEY: &str = "DxCheckPanel";
 const MAX_SECTION_ROWS: usize = 8;
 const MAX_NOTICE_ROWS: usize = 4;
 const MAX_QUICK_FIX_ROWS: usize = 4;
-const MAX_ADAPTER_PLAN_ROWS: usize = 8;
+const MAX_ADAPTER_PLAN_ROWS: usize = 4;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 enum DxCheckPanelSectionKind {
     Run,
     Receipt,
     Sections,
-    AdapterPlans,
     WebAudit,
+    AdapterPlans,
     Notices,
     QuickFixes,
     Commands,
@@ -46,8 +49,8 @@ impl DxCheckPanelSectionKind {
             Self::Run => "dx-check-section-run",
             Self::Receipt => "dx-check-section-receipt",
             Self::Sections => "dx-check-section-sections",
-            Self::AdapterPlans => "dx-check-section-adapter-plans",
             Self::WebAudit => "dx-check-section-web-audit",
+            Self::AdapterPlans => "dx-check-section-adapter-plans",
             Self::Notices => "dx-check-section-notices",
             Self::QuickFixes => "dx-check-section-quick-fixes",
             Self::Commands => "dx-check-section-commands",
@@ -59,8 +62,8 @@ impl DxCheckPanelSectionKind {
             Self::Run => "Run",
             Self::Receipt => "Receipt",
             Self::Sections => "Sections",
-            Self::AdapterPlans => "Adapter Plans",
             Self::WebAudit => "Web Audit",
+            Self::AdapterPlans => "Adapter Plans",
             Self::Notices => "Notices",
             Self::QuickFixes => "Quick Fixes",
             Self::Commands => "Commands",
@@ -72,8 +75,8 @@ impl DxCheckPanelSectionKind {
             Self::Run => IconName::PlayOutlined,
             Self::Receipt => IconName::FileTextOutlined,
             Self::Sections => IconName::ListTodo,
-            Self::AdapterPlans => IconName::Terminal,
             Self::WebAudit => IconName::Public,
+            Self::AdapterPlans => IconName::Terminal,
             Self::Notices => IconName::Warning,
             Self::QuickFixes => IconName::Sparkle,
             Self::Commands => IconName::Terminal,
@@ -85,6 +88,7 @@ pub struct DxCheckPanel {
     workspace: WeakEntity<Workspace>,
     focus_handle: FocusHandle,
     scroll_handle: ScrollHandle,
+    active_tab: DxCheckPanelTab,
     collapsed_sections: HashSet<DxCheckPanelSectionKind>,
 }
 
@@ -121,6 +125,7 @@ impl DxCheckPanel {
             workspace,
             focus_handle: cx.focus_handle(),
             scroll_handle: ScrollHandle::new(),
+            active_tab: DxCheckPanelTab::Overview,
             collapsed_sections: [
                 DxCheckPanelSectionKind::Receipt,
                 DxCheckPanelSectionKind::Commands,
@@ -151,6 +156,13 @@ impl DxCheckPanel {
     fn refresh(&mut self, cx: &mut Context<Self>) {
         invalidate_dx_check_panel_snapshot_cache();
         cx.notify();
+    }
+
+    fn set_active_tab(&mut self, tab: DxCheckPanelTab, cx: &mut Context<Self>) {
+        if self.active_tab != tab {
+            self.active_tab = tab;
+            cx.notify();
+        }
     }
 
     fn section_is_open(&self, section: DxCheckPanelSectionKind) -> bool {
@@ -628,6 +640,12 @@ impl Render for DxCheckPanel {
             .child(self.render_header(&snapshot, panel_id, cx))
             .child(self.render_status_strip(&snapshot, cx))
             .child(self.render_toolbar(&snapshot, panel.clone(), cx))
+            .child(render_tab_bar(
+                &snapshot,
+                self.active_tab,
+                panel.clone(),
+                cx,
+            ))
             .child(
                 div()
                     .size_full()
@@ -642,17 +660,36 @@ impl Render for DxCheckPanel {
                             .gap_1()
                             .py_1()
                             .overflow_y_scroll()
-                            .child(self.render_summary(&snapshot, panel.clone(), cx))
-                            .child(self.render_sections(&snapshot, panel.clone(), cx))
-                            .child(self.render_adapter_plans(&snapshot, panel.clone(), cx))
-                            .child(self.render_web_audits(&snapshot, panel.clone(), cx))
-                            .child(self.render_notices(&snapshot, panel.clone(), cx))
-                            .child(self.render_quick_fixes(&snapshot, panel.clone(), cx))
-                            .child(self.render_receipt(&snapshot, panel.clone(), cx))
-                            .child(self.render_commands(&snapshot, panel, cx)),
+                            .children(self.render_active_tab_sections(&snapshot, panel, cx)),
                     )
                     .vertical_scrollbar_for(&self.scroll_handle, window, cx),
             )
+    }
+}
+
+impl DxCheckPanel {
+    fn render_active_tab_sections(
+        &self,
+        snapshot: &DxCheckPanelSnapshot,
+        panel: WeakEntity<DxCheckPanel>,
+        cx: &App,
+    ) -> Vec<AnyElement> {
+        match self.active_tab {
+            DxCheckPanelTab::Overview => vec![
+                self.render_summary(snapshot, panel.clone(), cx),
+                self.render_sections(snapshot, panel, cx),
+            ],
+            DxCheckPanelTab::Findings => vec![
+                self.render_web_audits(snapshot, panel.clone(), cx),
+                self.render_adapter_plans(snapshot, panel.clone(), cx),
+                self.render_notices(snapshot, panel.clone(), cx),
+                self.render_quick_fixes(snapshot, panel, cx),
+            ],
+            DxCheckPanelTab::Receipt => vec![
+                self.render_receipt(snapshot, panel.clone(), cx),
+                self.render_commands(snapshot, panel, cx),
+            ],
+        }
     }
 }
 

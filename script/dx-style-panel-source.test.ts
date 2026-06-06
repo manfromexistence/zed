@@ -4071,7 +4071,9 @@ test("DX Style has a real right-dock GPUI shell", () => {
   assert.match(root, /Reverse CSS Map/);
   assert.match(root, /Reverse CSS Delta/);
   assert.match(root, /review-only contract/);
-  assert.match(init, /dx_style_panel::panel::init\(cx\)/);
+  assert.match(init, /TODO\(dx-style-panel\): Re-enable once the Style Web Preview workflow is ready for production/);
+  assert.doesNotMatch(init, /^\s*dx_style_panel::panel::init\(cx\);/m);
+  assert.match(init, /\/\/ dx_style_panel::panel::init\(cx\);/);
   assert.match(panel, /impl Panel for DxStylePanel/);
   assert.match(panel, /DockPosition::Right/);
   assert.match(panel, /position_is_valid/);

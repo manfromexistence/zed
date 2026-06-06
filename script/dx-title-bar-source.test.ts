@@ -45,11 +45,15 @@ test("application menu hover closes deployed popovers after leaving the menu are
   assert.match(standardMenu, /\.on_hover\(move \|hover_enter, window, cx\| \{/);
   assert.match(standardMenu, /if \*hover_enter && !current_handle\.is_deployed\(\)/);
   assert.match(standardMenu, /else if !\*hover_enter/);
-  assert.match(standardMenu, /window\.on_next_frame\(move \|window, _cx\| \{/);
-  assert.match(standardMenu, /window\.on_next_frame\(move \|window, cx\| \{/);
-  assert.match(standardMenu, /handle\.is_deployed\(\) && !handle\.is_pointer_near\(window, px\(18\.0\)\)/);
-  assert.doesNotMatch(standardMenu, /handle\.is_deployed\(\) && !handle\.is_focused\(window, cx\)/);
-  assert.match(standardMenu, /handle\.hide\(cx\);/);
+  assert.match(
+    standardMenu,
+    /Self::schedule_hover_away_close\(all_handles\.clone\(\), window, cx\)/,
+  );
+  const hoverAwayClose = functionBody("schedule_hover_away_close");
+  assert.match(hoverAwayClose, /window\.on_next_frame\(move \|window, cx\| \{/);
+  assert.match(hoverAwayClose, /handle\.is_deployed\(\) && handle\.is_pointer_near\(window, px\(18\.0\)\)/);
+  assert.match(hoverAwayClose, /Self::schedule_hover_away_close\(handles, window, cx\)/);
+  assert.match(hoverAwayClose, /handle\.hide\(cx\);/);
   assert.match(popoverMenuSource, /pub fn is_pointer_near\(&self, window: &Window, padding: Pixels\) -> bool/);
   assert.match(popoverMenuSource, /trigger_bounds: Rc<Cell<Option<Bounds<Pixels>>>>/);
   assert.match(popoverMenuSource, /menu_bounds: Rc<Cell<Option<Bounds<Pixels>>>>/);
@@ -137,10 +141,10 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
     /"titlebar-shadcn-ui-panel",\s*IconName::Blocks,\s*"UI"/s,
     "UI panel titlebar button should use the component blocks icon",
   );
-  assert.match(
+  assert.doesNotMatch(
     titleBarSource,
     /"titlebar-dx-style-panel",\s*IconName::Sliders,\s*"Style"/s,
-    "Style panel titlebar button should use the controls/sliders icon",
+    "Style panel titlebar button is parked until the Web Preview workflow is production-ready",
   );
   assert.doesNotMatch(titleBarSource, /WorkspaceScreenKind::Browser => IconName::Public/);
 });

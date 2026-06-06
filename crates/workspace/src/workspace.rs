@@ -4616,6 +4616,7 @@ impl Workspace {
     ) -> Option<Arc<dyn PanelHandle>> {
         let mut result_panel = None;
         let mut serialize = false;
+        let mut focus_center_after_dock_loop = false;
         let docks = [
             self.left_dock.clone(),
             self.bottom_dock.clone(),
@@ -4640,15 +4641,19 @@ impl Workspace {
                 });
 
                 if focus_center {
-                    if !self.focus_zoomed_agent_panel(window, cx) {
-                        self.active_pane
-                            .update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx))
-                    }
+                    focus_center_after_dock_loop = true;
                 }
 
                 result_panel = panel;
                 serialize = true;
                 break;
+            }
+        }
+
+        if focus_center_after_dock_loop {
+            if !self.focus_zoomed_agent_panel(window, cx) {
+                self.active_pane
+                    .update(cx, |pane, cx| window.focus(&pane.focus_handle(cx), cx))
             }
         }
 

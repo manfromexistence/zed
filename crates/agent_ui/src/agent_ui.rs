@@ -617,7 +617,10 @@ pub fn init(
     }
     agent_panel::init(cx);
     dx_forge_panel::panel::init(cx);
-    dx_style_panel::panel::init(cx);
+    // TODO(dx-style-panel): Re-enable once the Style Web Preview workflow is ready for production.
+    // Keeping the module compiled preserves the implementation while preventing stale dock
+    // state from resurrecting the unfinished panel in normal editor sessions.
+    // dx_style_panel::panel::init(cx);
     dx_check_panel_view::init(cx);
     context_server_configuration::init(language_registry.clone(), fs.clone(), cx);
     thread_metadata_store::init(cx);

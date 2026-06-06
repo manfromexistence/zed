@@ -60,10 +60,15 @@ test("composer renders separate mic and read-aloud buttons before send", () => {
 
   assert.match(controls, /render_voice_controls\(window, cx\)/);
   assert.match(threadViewFields, /composer_voice_availability: ComposerVoiceAvailability/);
-  assert.match(renderVoiceControls, /let mut availability = self\.composer_voice_availability\.clone\(\)/);
   assert.match(
     renderVoiceControls,
-    /availability\.has_composer_text = !self\.message_editor\.read\(cx\)\.text\(cx\)\.trim\(\)\.is_empty\(\)/,
+    /self\.composer_voice_availability\.clone\(\)/,
+    "voice controls should render from cached composer availability",
+  );
+  assert.doesNotMatch(
+    renderVoiceControls,
+    /message_editor\.read\(cx\)\.text\(cx\)\.trim\(\)/,
+    "voice controls must not allocate and trim composer text during render",
   );
   assert.doesNotMatch(renderVoiceControls, /FlowSpeechRuntime::detect\(\)/);
   assertBefore(

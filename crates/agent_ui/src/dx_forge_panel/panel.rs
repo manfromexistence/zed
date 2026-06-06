@@ -52,6 +52,7 @@ pub(crate) struct DxForgePanel {
     workspace: WeakEntity<Workspace>,
     focus_handle: FocusHandle,
     scroll_handle: ScrollHandle,
+    active_tab: DxForgePanelTab,
 }
 
 impl DxForgePanel {
@@ -60,6 +61,7 @@ impl DxForgePanel {
             workspace,
             focus_handle: cx.focus_handle(),
             scroll_handle: ScrollHandle::new(),
+            active_tab: DxForgePanelTab::Targets,
         }
     }
 
@@ -83,6 +85,20 @@ impl DxForgePanel {
         invalidate_source_set_snapshot_cache();
         cx.notify();
     }
+
+    pub(super) fn set_active_tab(&mut self, tab: DxForgePanelTab, cx: &mut Context<Self>) {
+        if self.active_tab != tab {
+            self.active_tab = tab;
+            cx.notify();
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(super) enum DxForgePanelTab {
+    Targets,
+    Receipts,
+    Sources,
 }
 
 impl Focusable for DxForgePanel {
@@ -155,6 +171,7 @@ impl Render for DxForgePanel {
             &self.workspace,
             &cx.entity().downgrade(),
             cx.entity().entity_id(),
+            self.active_tab,
             &self.scroll_handle,
             window,
             cx,
