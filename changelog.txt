@@ -1,3 +1,24 @@
+[2026-06-06] - Flow File STT Preparation Alignment
+
+CHANGED:
+- `G:\Dx\flow\src\bin\flow-dictate.rs` now sends `--file` WAV input through Flow's `prepare_recording_for_stt` cleanup/gain path before transcription, matching the live/capture STT path used by the Friday Flow app.
+- `crates\agent_ui\src\flow_speech_runtime.rs` now treats empty `flow-dictate`, Kokoro Python, and Kokoro runner files as not ready instead of enabling the composer voice UI from a zero-byte executable/script.
+- `script\dx-agent-voice-controls-source.test.ts` now guards the copied Flow file-mode STT preparation path and non-empty runtime executable/script readiness.
+
+PASSED:
+- `node --test script\dx-agent-voice-controls-source.test.ts script\dx-handoff-source-guard-registry.test.ts script\dx-agent-thread-view-source.test.ts script\dx-message-editor-source.test.ts`
+- `rustfmt --edition 2024 --check G:\Dx\flow\src\bin\flow-dictate.rs G:\Dx\zed\crates\agent_ui\src\flow_speech_runtime.rs`
+- `cargo test --manifest-path tools\flow-dictation-host\Cargo.toml --target-dir G:\Dx\flow\target -j1 prepares_silent_recording_without_dropping_samples -- --nocapture`
+- `cargo build --manifest-path tools\flow-dictation-host\Cargo.toml --target-dir G:\Dx\flow\target -j1`
+- `$env:OMP_NUM_THREADS='2'; $env:MKL_NUM_THREADS='2'; $env:ORT_NUM_THREADS='2'; .\target\debug\flow-dictate.exe --file G:\Temp\UserTemp\flow-parakeet-silent-smoke.wav --model parakeet-tdt-0.6b-v3-int8`
+- `git -C G:\Dx\flow diff --check -- src/bin/flow-dictate.rs`
+- `git -C G:\Dx\zed diff --check -- crates/agent_ui/src/flow_speech_runtime.rs script/dx-agent-voice-controls-source.test.ts DX.md todo.txt changelog.txt`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" ...` across the touched Flow and Zed voice files returned no matches.
+
+NOTES:
+- The first focused Flow rebuild was blocked by a stale `flow-dictate.exe --help` process holding the binary; after stopping that stale process, the rebuild and Parakeet silent-WAV smoke passed.
+- Live Zed microphone proof, Nemotron smoke proof, Whisper smoke proof, and live Kokoro audible playback proof remain deferred until the governed runtime validation window.
+
 [2026-06-06] - Copied Flow Sherpa Readiness Alignment
 
 CHANGED:

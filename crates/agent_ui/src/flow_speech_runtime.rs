@@ -201,7 +201,7 @@ impl FlowSpeechRuntime {
     pub(crate) fn detect() -> Self {
         let flow_dictate_binary = env::var_os("DX_FLOW_DICTATE_BINARY")
             .map(PathBuf::from)
-            .filter(|path| path.is_file());
+            .filter(|path| file_is_nonempty(path));
         let flow_root = env::var_os("DX_FLOW_ROOT")
             .or_else(|| env::var_os("FLOW_ROOT"))
             .map(PathBuf::from)
@@ -543,10 +543,10 @@ fn missing_tts_readiness_message(flow_root: &Path, blockers: &[String]) -> Strin
     message
 }
 
-fn env_path_if_file(name: &str) -> Option<PathBuf> {
+fn env_path_if_nonempty_file(name: &str) -> Option<PathBuf> {
     env::var_os(name)
         .map(PathBuf::from)
-        .filter(|path| path.is_file())
+        .filter(|path| file_is_nonempty(path))
 }
 
 fn expected_kokoro_python_path(data_root: &Path) -> PathBuf {
@@ -604,8 +604,8 @@ impl KokoroTtsRuntime {
     }
 
     fn from_data_root(data_root: PathBuf) -> Result<Self, String> {
-        let python = env_path_if_file("FLOW_TTS_PYTHON")
-            .or_else(|| env_path_if_file("DX_KOKORO_TTS_PYTHON"))
+        let python = env_path_if_nonempty_file("FLOW_TTS_PYTHON")
+            .or_else(|| env_path_if_nonempty_file("DX_KOKORO_TTS_PYTHON"))
             .or_else(|| find_kokoro_python(&data_root))
             .ok_or_else(|| {
                 format!(
@@ -613,11 +613,11 @@ impl KokoroTtsRuntime {
                     expected_kokoro_python_path(&data_root).display()
                 )
             })?;
-        let runner = env_path_if_file("FLOW_TTS_RUNNER")
-            .or_else(|| env_path_if_file("DX_KOKORO_TTS_RUNNER"))
+        let runner = env_path_if_nonempty_file("FLOW_TTS_RUNNER")
+            .or_else(|| env_path_if_nonempty_file("DX_KOKORO_TTS_RUNNER"))
             .or_else(|| {
                 let path = data_root.join(KOKORO_RUNNER_SCRIPT);
-                path.is_file().then_some(path)
+                file_is_nonempty(&path).then_some(path)
             })
             .ok_or_else(|| {
                 format!(
@@ -1300,7 +1300,7 @@ fn candidate_paths_equal(left: &Path, right: &Path) -> bool {
 
 fn find_kokoro_python(data_root: &Path) -> Option<PathBuf> {
     let python = expected_kokoro_python_path(data_root);
-    python.is_file().then_some(python)
+    file_is_nonempty(&python).then_some(python)
 }
 
 fn find_kokoro_model_dir(data_root: &Path) -> Option<PathBuf> {
@@ -1342,7 +1342,7 @@ fn find_binary(flow_root: &Path, name: &str) -> Option<PathBuf> {
     ["release", "debug"]
         .iter()
         .map(|profile| flow_root.join("target").join(profile).join(&exe))
-        .find(|path| path.is_file())
+        .find(|path| file_is_nonempty(path))
 }
 
 fn flow_root_from_dictate_binary(binary: &Path) -> Option<PathBuf> {

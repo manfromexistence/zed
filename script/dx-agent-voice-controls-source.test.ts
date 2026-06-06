@@ -327,6 +327,11 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
     "pub(crate) fn speak_text",
     "pub(crate) fn status_summary",
   );
+  const detectRuntime = sourceSlice(
+    runtime,
+    "pub(crate) fn detect",
+    "pub(crate) fn start_recording",
+  );
   const ensureSttReady = sourceSlice(
     runtime,
     "fn ensure_stt_ready",
@@ -346,6 +351,26 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
     runtime,
     "fn candidate_flow_data_roots",
     "fn find_kokoro_python",
+  );
+  const envPathIfNonemptyFile = sourceSlice(
+    runtime,
+    "fn env_path_if_nonempty_file",
+    "fn expected_kokoro_python_path",
+  );
+  const kokoroFromDataRoot = sourceSlice(
+    runtime,
+    "fn from_data_root",
+    "fn synthesize(&self, text: &str, cancellation: &FlowSpeechCancellation) -> Result<PathBuf>",
+  );
+  const findKokoroPython = sourceSlice(
+    runtime,
+    "fn find_kokoro_python",
+    "fn find_kokoro_model_dir",
+  );
+  const findBinary = sourceSlice(
+    runtime,
+    "fn find_binary",
+    "fn flow_root_from_dictate_binary",
   );
   const defaultFlowRoot = sourceTail(runtime, "fn default_flow_root");
 
@@ -396,6 +421,7 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(runtime, /FLOW_STT_MODEL/);
   assert.match(runtime, /selected_stt_model/);
   assert.match(runtime, /Unsupported Flow STT model/);
+  assert.match(detectRuntime, /filter\(\|path\| file_is_nonempty\(path\)\)/);
   assert.match(runtime, /flow_host_env_file/);
   assert.match(runtime, /find_whisper_cpp_binary/);
   assert.match(runtime, /FLOW_WHISPER_CPP_BINARY/);
@@ -539,6 +565,10 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(dataRootCandidates, /DX_SCAN_FLOW_DRIVES/);
   assert.match(dataRootCandidates, /path\.join\("data"\)/);
   assert.match(dataRootCandidates, /push_unique_path/);
+  assert.match(envPathIfNonemptyFile, /filter\(\|path\| file_is_nonempty\(path\)\)/);
+  assert.match(kokoroFromDataRoot, /file_is_nonempty\(&path\)\.then_some\(path\)/);
+  assert.match(findKokoroPython, /file_is_nonempty\(&python\)\.then_some\(python\)/);
+  assert.match(findBinary, /find\(\|path\| file_is_nonempty\(path\)\)/);
   assert.match(defaultFlowRoot, /flow_root_ready/);
   assert.match(defaultFlowRoot, /join\("src"\)[\s\S]+join\("bin"\)[\s\S]+join\("flow-dictate\.rs"\)/);
   assert.doesNotMatch(defaultFlowRoot, /PARAKEET_MODEL_DIR/);
@@ -636,6 +666,11 @@ test("voice runtime status summary reports precise readiness blockers", () => {
 });
 
 test("Flow dictation host exposes focused STT model selection", () => {
+  const flowFileTranscription = sourceSlice(
+    flowDictate,
+    'if let Some(path) = option_value(&args, "--file").or_else(|| option_value(&args, "-f"))',
+    "let host = cpal::default_host();",
+  );
   const flowSherpaLoader = sourceSlice(
     flowDictate,
     "fn load_sherpa_transducer",
@@ -698,6 +733,14 @@ test("Flow dictation host exposes focused STT model selection", () => {
   assert.match(flowDictate, /FLOW_WHISPER_LANGUAGE/);
   assert.match(flowDictate, /DX_FLOW_WHISPER_LANGUAGE/);
   assert.match(flowDictate, /DictationSttRuntime::WhisperCpp/);
+  assert.match(flowFileTranscription, /prepare_recording_for_stt\(&samples\)/);
+  assert.match(flowFileTranscription, /transcribe_samples\(&mut stt_backend, &prepared\.samples\)/);
+  assert.doesNotMatch(flowFileTranscription, /transcribe_samples\(&mut stt_backend, &samples\)/);
+  assert.match(
+    flowDictate,
+    /#\[cfg\(test\)\][\s\S]+mod tests[\s\S]+prepares_silent_recording_without_dropping_samples[\s\S]+prepare_recording_for_stt\(&samples\)[\s\S]+assert_eq!\(prepared\.samples\.len\(\), samples\.len\(\)\)/,
+    "Flow audio prep must keep silent smoke WAVs non-empty so STT receives the same proof shape",
+  );
   assert.doesNotMatch(flowDictate, /let mut recognizer = load_sherpa_transducer\(selected_model\)\?/);
   assert.match(flowDictate, /selected_model\.label/);
   assert.match(flowDictationHostReadme, /--model parakeet-tdt-0\.6b-v3-int8/);
