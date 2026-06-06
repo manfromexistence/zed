@@ -15,6 +15,7 @@ const workspaceCargoPath = "Cargo.toml";
 const agentUiCargoPath = "crates/agent_ui/Cargo.toml";
 const zedCargoPath = "crates/zed/Cargo.toml";
 const flowDictatePath = "../flow/src/bin/flow-dictate.rs";
+const flowLocalSttPath = "../flow/src/models/stt.rs";
 const flowDictationHostReadmePath = "../flow/tools/flow-dictation-host/README.md";
 const flowWhisperModelKey = "whisper-tiny-ggml";
 
@@ -28,6 +29,7 @@ const workspaceCargo = readFileSync(workspaceCargoPath, "utf8");
 const agentUiCargo = readFileSync(agentUiCargoPath, "utf8");
 const zedCargo = readFileSync(zedCargoPath, "utf8");
 const flowDictate = readFileSync(flowDictatePath, "utf8");
+const flowLocalStt = readFileSync(flowLocalSttPath, "utf8");
 const flowDictationHostReadme = readFileSync(flowDictationHostReadmePath, "utf8");
 
 test("agent composer voice controls live in focused modules", () => {
@@ -634,6 +636,22 @@ test("voice runtime status summary reports precise readiness blockers", () => {
 });
 
 test("Flow dictation host exposes focused STT model selection", () => {
+  const flowSherpaLoader = sourceSlice(
+    flowDictate,
+    "fn load_sherpa_transducer",
+    "fn selected_stt_model",
+  );
+  const flowSherpaPaths = sourceSlice(
+    flowLocalStt,
+    "impl SherpaTransducerPaths",
+    "fn sherpa_model_root_from_local_path",
+  );
+  const flowSherpaReadiness = sourceSlice(
+    flowLocalStt,
+    "fn sherpa_transducer_files_ready",
+    "fn load_wav_mono_16k",
+  );
+
   assert.match(flowDictate, /const DEFAULT_STT_MODEL_KEY: &str = "parakeet-tdt-0\.6b-v3-int8"/);
   assert.match(
     flowDictate,
@@ -664,6 +682,10 @@ test("Flow dictation host exposes focused STT model selection", () => {
   assert.match(flowDictate, /Unsupported STT model/);
   assert.match(flowDictate, /supported_stt_models/);
   assert.match(flowDictate, /load_sherpa_transducer/);
+  assert.match(flowDictate, /fn file_is_nonempty/);
+  assert.match(flowSherpaLoader, /for path in \[&encoder, &decoder, &joiner, &tokens\]/);
+  assert.match(flowSherpaLoader, /!file_is_nonempty\(path\)/);
+  assert.match(flowSherpaLoader, /Missing or empty/);
   assert.match(flowDictate, /load_stt_backend/);
   assert.match(flowDictate, /transcribe_with_whisper_cpp/);
   assert.match(flowDictate, /resolve_whisper_cpp_binary/);
@@ -692,6 +714,15 @@ test("Flow dictation host exposes focused STT model selection", () => {
   assert.match(flowDictationHostReadme, /--whisper-language/);
   assert.match(flowDictationHostReadme, /FLOW_WHISPER_LANGUAGE/);
   assert.match(flowDictationHostReadme, /DX_FLOW_WHISPER_LANGUAGE/);
+  assert.match(flowDictationHostReadme, /non-empty/);
+  assert.match(flowLocalStt, /fn file_is_nonempty/);
+  assert.match(flowSherpaPaths, /find_first_nonempty/);
+  assert.match(flowSherpaPaths, /encoder: find_first_nonempty/);
+  assert.match(flowSherpaPaths, /tokens: find_first_nonempty/);
+  assert.match(flowSherpaReadiness, /file_is_nonempty\(&root\.join\("encoder\.int8\.onnx"\)\)/);
+  assert.match(flowSherpaReadiness, /file_is_nonempty\(&root\.join\("tokens\.txt"\)\)/);
+  assert.match(flowLocalStt, /empty_sherpa_model_bundle_is_not_ready/);
+  assert.doesNotMatch(flowSherpaReadiness, /tokens\.txt"\)\s*\.exists\(\)/);
 });
 
 test("voice text paths use the real message editor contents and insert APIs", () => {

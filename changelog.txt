@@ -1,3 +1,20 @@
+[2026-06-06] - Copied Flow Sherpa Readiness Alignment
+
+CHANGED:
+- `G:\Dx\flow\src\bin\flow-dictate.rs` now rejects missing or empty Sherpa encoder, decoder, joiner, and token files before loading Parakeet or Nemotron.
+- `G:\Dx\flow\src\models\stt.rs` now uses non-empty Sherpa artifact checks for readiness and includes a zero-byte bundle regression test.
+- `script\dx-agent-voice-controls-source.test.ts`, `DX.md`, and `todo.txt` now guard and document that Zed and copied Flow share the same non-empty Sherpa readiness contract.
+
+PASSED:
+- `node --test script\dx-agent-voice-controls-source.test.ts script\dx-handoff-source-guard-registry.test.ts script\dx-agent-thread-view-source.test.ts script\dx-message-editor-source.test.ts`
+- `rustfmt --edition 2024 --check G:\Dx\flow\src\bin\flow-dictate.rs G:\Dx\flow\src\models\stt.rs`
+- `git -C G:\Dx\flow diff --check -- src/bin/flow-dictate.rs src/models/stt.rs tools/flow-dictation-host/README.md`
+- `git -C G:\Dx\zed diff --check -- script/dx-agent-voice-controls-source.test.ts DX.md todo.txt changelog.txt`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" ...` across the touched Flow and Zed voice-readiness files returned no matches.
+
+NOTES:
+- Cargo/Zed launch, live Agent composer microphone proof, Nemotron smoke proof, Whisper smoke proof, and live Kokoro audible playback proof remain deferred until the governed runtime validation window.
+
 [2026-06-06] - Composer Voice Cached Readiness Details
 
 CHANGED:
