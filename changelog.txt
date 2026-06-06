@@ -1,3 +1,20 @@
+[2026-06-06] - Composer Flow Voice Parser And Recording Action Hardening
+
+CHANGED:
+- `crates\agent_ui\src\flow_speech_runtime.rs` now preserves raw Flow STT transcript payload text after trimming the wrapper whitespace, so dictated Windows paths and literal backslash sequences such as `C:\new` or `\n` are not converted into unintended composer newlines.
+- `crates\agent_ui\src\conversation_view\voice_controls.rs` now uses shared action-copy constants and labeled icon buttons for the in-panel recording actions: Stop and transcribe remains the explicit STT path, while Discard uses a trash affordance and drops capture without STT.
+- `script\dx-agent-voice-controls-source.test.ts`, `DX.md`, and `todo.txt` now guard and document raw transcript preservation plus the clearer recording Stop/Discard action split.
+
+PASSED:
+- `node --test script\dx-agent-voice-controls-source.test.ts script\dx-handoff-source-guard-registry.test.ts script\dx-agent-thread-view-source.test.ts script\dx-message-editor-source.test.ts`
+- `rustfmt --edition 2024 --check crates\agent_ui\src\flow_speech_runtime.rs crates\agent_ui\src\conversation_view\voice_controls.rs crates\agent_ui\src\conversation_view\thread_view.rs`
+- `git diff --check -- crates/agent_ui/src/flow_speech_runtime.rs crates/agent_ui/src/conversation_view/voice_controls.rs script/dx-agent-voice-controls-source.test.ts DX.md todo.txt changelog.txt`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" crates\agent_ui\src\flow_speech_runtime.rs crates\agent_ui\src\conversation_view\voice_controls.rs script\dx-agent-voice-controls-source.test.ts DX.md todo.txt changelog.txt` returned no matches.
+
+NOTES:
+- Zed Cargo builds, `just run`, governed Nemotron smoke proof, governed Whisper smoke proof, live Agent composer microphone proof, and live audible Kokoro playback proof remain deferred under the repo policy.
+- The parser hardening matches the current Flow host contract, where `flow-dictate` prints the transcript payload directly inside the final `[stt] "<transcript>"` line instead of emitting a JSON-escaped string.
+
 [2026-06-06] - Composer Flow Voice Model Selection And Busy-State Hardening
 
 CHANGED:

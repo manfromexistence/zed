@@ -898,12 +898,7 @@ fn extract_stt_transcript(stdout: &str) -> Result<String> {
 }
 
 fn trim_stt_transcript_payload(payload: &str) -> String {
-    payload
-        .replace("\\r\\n", "\n")
-        .replace("\\n", "\n")
-        .replace("\\\"", "\"")
-        .trim()
-        .to_string()
+    payload.trim().to_string()
 }
 
 #[cfg(test)]
@@ -916,6 +911,17 @@ mod tests {
             "[stt] preloading Parakeet...\n[stt] Parakeet ready in 0.1s\n[stt] \"hello\nworld\"\n";
 
         assert_eq!(extract_stt_transcript(stdout).unwrap(), "hello\nworld");
+    }
+
+    #[test]
+    fn preserves_raw_backslash_sequences_from_flow_output() {
+        let stdout = r#"[stt] "C:\new\notes literal \n and \"quote\""
+"#;
+
+        assert_eq!(
+            extract_stt_transcript(stdout).unwrap(),
+            r#"C:\new\notes literal \n and \"quote\""#
+        );
     }
 
     #[test]

@@ -157,11 +157,26 @@ test("voice recording UI exposes real recording and transcription states", () =>
   assert.match(voiceControls, /captured_duration: Duration/);
   assert.match(voiceControls, /input_level: f32/);
   assert.match(voiceControls, /Duration::ZERO/);
+  assert.match(voiceControls, /const VOICE_RECORDING_STOP_TRANSCRIBE_LABEL/);
+  assert.match(voiceControls, /const VOICE_RECORDING_STOP_TRANSCRIBE_TOOLTIP/);
+  assert.match(voiceControls, /const VOICE_RECORDING_DISCARD_LABEL/);
+  assert.match(voiceControls, /const VOICE_RECORDING_DISCARD_TOOLTIP/);
   assert.match(voiceControls, /Stop recording and transcribe/);
   assert.match(voiceControls, /Cancel Flow transcription/);
   assert.match(voiceControls, /Stop Kokoro read-aloud/);
   assert.match(voiceControls, /agent-composer-discard-voice-recording/);
-  assert.match(voiceControls, /Discard voice recording/);
+  assert.match(voiceControls, /Discard recording/);
+  assert.match(
+    recordingPanel,
+    /ComposerVoicePhase::Recording => \([\s\S]+VOICE_RECORDING_STOP_TRANSCRIBE_LABEL/,
+  );
+  assert.match(recordingPanel, /Button::new\(stop_button_id, stop_button_label\)/);
+  assert.match(recordingPanel, /Button::new\([\s\S]+VOICE_RECORDING_DISCARD_LABEL/);
+  assert.match(recordingPanel, /IconName::Trash/);
+  assert.doesNotMatch(
+    recordingPanel,
+    /agent-composer-discard-voice-recording",\s*IconName::Close/,
+  );
   assert.doesNotMatch(recordingPanel, /agent-composer-stop-kokoro-read-aloud/);
   assert.match(
     recordingPanel,
@@ -402,6 +417,10 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(runtime, /Flow STT transcript marker is missing/);
   assert.match(runtime, /Flow STT transcript marker is empty/);
   assert.match(runtime, /trim_stt_transcript_payload/);
+  assert.match(runtime, /preserves_raw_backslash_sequences_from_flow_output/);
+  assert.doesNotMatch(runtime, /replace\("\\\\r\\\\n",\s*"\\n"\)/);
+  assert.doesNotMatch(runtime, /replace\("\\\\n",\s*"\\n"\)/);
+  assert.doesNotMatch(runtime, /replace\("\\\\\\"",\s*"\\""\)/);
   assert.match(runtime, /extracts_multiline_stt_transcript_after_status_lines/);
   assert.match(runtime, /rejects_status_lines_without_transcript_marker/);
   assert.match(runtime, /rejects_empty_transcript_marker/);

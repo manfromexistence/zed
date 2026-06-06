@@ -2,12 +2,19 @@ use std::time::{Duration, Instant};
 
 use gpui::{AnyElement, App, ClickEvent, IntoElement, Window};
 use ui::{
-    ButtonCommon, Clickable, Color, Icon, IconButton, IconName, IconSize, Label, LabelSize, Tooltip,
+    Button, ButtonCommon, ButtonSize, Clickable, Color, Icon, IconButton, IconName, IconSize,
+    Label, LabelSize, Tooltip,
 };
 use ui::{h_flex, prelude::*, v_flex};
 
 const VOICE_LEVEL_BAR_COUNT: usize = 12;
 const MAX_RECORDING_DURATION_LABEL: &str = "90s max";
+const VOICE_RECORDING_STOP_TRANSCRIBE_LABEL: &str = "Stop and transcribe";
+const VOICE_RECORDING_STOP_TRANSCRIBE_TOOLTIP: &str = "Stop recording and transcribe with Flow";
+const VOICE_TRANSCRIPTION_CANCEL_LABEL: &str = "Cancel";
+const VOICE_TRANSCRIPTION_CANCEL_TOOLTIP: &str = "Cancel Flow transcription";
+const VOICE_RECORDING_DISCARD_LABEL: &str = "Discard";
+const VOICE_RECORDING_DISCARD_TOOLTIP: &str = "Discard recording";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum ComposerVoicePhase {
@@ -114,8 +121,8 @@ impl ComposerVoiceState {
 
     fn voice_tooltip(&self, availability: ComposerVoiceAvailability) -> &'static str {
         match self.phase {
-            ComposerVoicePhase::Recording => "Stop recording and transcribe with Flow",
-            ComposerVoicePhase::Transcribing => "Cancel Flow transcription",
+            ComposerVoicePhase::Recording => VOICE_RECORDING_STOP_TRANSCRIBE_TOOLTIP,
+            ComposerVoicePhase::Transcribing => VOICE_TRANSCRIPTION_CANCEL_TOOLTIP,
             ComposerVoicePhase::Speaking => "Kokoro read-aloud is active",
             ComposerVoicePhase::Error if !availability.stt_ready => "Flow STT is not ready",
             ComposerVoicePhase::Error => "Retry Flow voice input",
@@ -235,6 +242,23 @@ pub(super) fn render_voice_recording_panel(
         ),
         ComposerVoicePhase::Ready => unreachable!(),
     };
+    let (stop_button_id, stop_button_label, stop_button_tooltip) = match state.phase {
+        ComposerVoicePhase::Recording => (
+            "agent-composer-stop-voice-recording",
+            VOICE_RECORDING_STOP_TRANSCRIBE_LABEL,
+            VOICE_RECORDING_STOP_TRANSCRIBE_TOOLTIP,
+        ),
+        ComposerVoicePhase::Transcribing => (
+            "agent-composer-cancel-flow-transcription",
+            VOICE_TRANSCRIPTION_CANCEL_LABEL,
+            VOICE_TRANSCRIPTION_CANCEL_TOOLTIP,
+        ),
+        _ => (
+            "agent-composer-stop-flow-voice-action",
+            "Stop",
+            "Stop Flow voice action",
+        ),
+    };
 
     Some(
         v_flex()
@@ -290,39 +314,36 @@ pub(super) fn render_voice_recording_panel(
                         |this| {
                             this.child(
                                 h_flex()
+                                    .flex_wrap()
                                     .gap_1()
                                     .child(
-                                        IconButton::new(
-                                            match state.phase {
-                                                ComposerVoicePhase::Transcribing => {
-                                                    "agent-composer-cancel-flow-transcription"
-                                                }
-                                                _ => "agent-composer-stop-voice-recording",
-                                            },
-                                            IconName::Stop,
-                                        )
-                                        .icon_size(IconSize::XSmall)
-                                        .icon_color(tone)
-                                        .tooltip(Tooltip::text(match state.phase {
-                                            ComposerVoicePhase::Recording => {
-                                                "Stop recording and transcribe"
-                                            }
-                                            ComposerVoicePhase::Transcribing => {
-                                                "Cancel Flow transcription"
-                                            }
-                                            _ => "Stop Flow voice action",
-                                        }))
-                                        .on_click(on_stop_click),
+                                        Button::new(stop_button_id, stop_button_label)
+                                            .size(ButtonSize::Compact)
+                                            .label_size(LabelSize::XSmall)
+                                            .color(tone)
+                                            .start_icon(
+                                                Icon::new(IconName::Stop)
+                                                    .size(IconSize::XSmall)
+                                                    .color(tone),
+                                            )
+                                            .tooltip(Tooltip::text(stop_button_tooltip))
+                                            .on_click(on_stop_click),
                                     )
                                     .when(state.phase == ComposerVoicePhase::Recording, |this| {
                                         this.child(
-                                            IconButton::new(
+                                            Button::new(
                                                 "agent-composer-discard-voice-recording",
-                                                IconName::Close,
+                                                VOICE_RECORDING_DISCARD_LABEL,
                                             )
-                                            .icon_size(IconSize::XSmall)
-                                            .icon_color(Color::Muted)
-                                            .tooltip(Tooltip::text("Discard voice recording"))
+                                            .size(ButtonSize::Compact)
+                                            .label_size(LabelSize::XSmall)
+                                            .color(Color::Error)
+                                            .start_icon(
+                                                Icon::new(IconName::Trash)
+                                                    .size(IconSize::XSmall)
+                                                    .color(Color::Error),
+                                            )
+                                            .tooltip(Tooltip::text(VOICE_RECORDING_DISCARD_TOOLTIP))
                                             .on_click(on_cancel_recording_click),
                                         )
                                     }),
