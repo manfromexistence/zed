@@ -634,6 +634,62 @@ mod tests {
         assert!(!group_ids.contains(&"provider:openai"));
     }
 
+    #[test]
+    fn provider_group_model_cap_can_be_raised_for_agent_bridge_projection() {
+        let provider_id = "nano-gpt";
+        let models = (0..80)
+            .map(|index| {
+                model(
+                    &format!("{provider_id}/model-{index:03}"),
+                    provider_id,
+                    &format!("NanoGPT Model {index:03}"),
+                )
+            })
+            .collect::<Vec<_>>();
+        let catalog = DxCatalog {
+            schema_version: DX_CATALOG_SCHEMA_VERSION,
+            generated_unix_ms: 0,
+            source_revision: "agent-picker-large-provider-test".to_string(),
+            sources: Vec::new(),
+            providers: vec![provider(
+                provider_id,
+                "NanoGPT",
+                ProviderKind::OpenAiCompatible,
+            )],
+            models,
+            routing_rules: Vec::new(),
+        };
+
+        let default_projection =
+            build_agent_picker_projection(&catalog, AgentPickerProjectionOptions::new());
+        let bridge_projection = build_agent_picker_projection(
+            &catalog,
+            AgentPickerProjectionOptions::new().with_max_models_per_group(1024),
+        );
+
+        assert_eq!(
+            provider_group_model_count(&default_projection, provider_id),
+            Some(32),
+            "default picker projection should stay compact"
+        );
+        assert_eq!(
+            provider_group_model_count(&bridge_projection, provider_id),
+            Some(80),
+            "agent bridge projection should preserve large provider model groups"
+        );
+    }
+
+    fn provider_group_model_count(
+        projection: &AgentPickerProjection,
+        provider_id: &str,
+    ) -> Option<usize> {
+        projection
+            .groups
+            .iter()
+            .find(|group| group.id == format!("provider:{provider_id}"))
+            .map(|group| group.models.len())
+    }
+
     fn provider(id: &str, display_name: &str, kind: ProviderKind) -> ProviderRecord {
         ProviderRecord {
             id: id.to_string(),

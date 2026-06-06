@@ -1413,6 +1413,50 @@ mod tests {
     }
 
     #[test]
+    fn appends_large_catalog_provider_group_without_default_picker_cap() {
+        let provider_id = "nano-gpt";
+        let catalog = DxCatalog {
+            schema_version: DX_CATALOG_SCHEMA_VERSION,
+            generated_unix_ms: 0,
+            source_revision: "catalog-large-provider-bridge-test".to_string(),
+            sources: Vec::new(),
+            providers: vec![provider(provider_id, "NanoGPT")],
+            models: (0..80)
+                .map(|index| {
+                    model(
+                        &format!("{provider_id}/model-{index:03}"),
+                        provider_id,
+                        &format!("NanoGPT Model {index:03}"),
+                    )
+                })
+                .collect(),
+            routing_rules: Vec::new(),
+        };
+        let bridge = DxCatalogAgentBridge::from_catalog(&catalog);
+        let mut model_groups = IndexMap::default();
+        let native_provider_ids = HashSet::default();
+
+        bridge.append_catalog_provider_groups(&mut model_groups, &native_provider_ids);
+
+        let models = model_groups
+            .get(&AgentModelGroupName("NanoGPT".into()))
+            .expect("large catalog provider group should be appended");
+        assert_eq!(
+            models.len(),
+            80,
+            "agent bridge should preserve full provider groups for large copied catalogs"
+        );
+        assert_eq!(
+            models.first().map(|model| model.id.0.as_ref()),
+            Some("nano-gpt/model-000")
+        );
+        assert_eq!(
+            models.last().map(|model| model.id.0.as_ref()),
+            Some("nano-gpt/model-079")
+        );
+    }
+
+    #[test]
     fn provider_settings_live_validation_matches_api_model_ids_not_catalog_route_ids() {
         let spec = registration_spec(
             "groq",
