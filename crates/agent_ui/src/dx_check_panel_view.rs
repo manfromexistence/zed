@@ -16,8 +16,8 @@ use crate::dx_check_panel::{
     DxCheckPanelSnapshot, dx_check_panel_snapshot, invalidate_dx_check_panel_snapshot_cache,
 };
 use crate::dx_check_panel_view::view_rows::{
-    config_label, count_label, detail_row, duration_label, empty_row, notice_row, notice_title,
-    outcome_label, quick_fix_row, section, section_row, status_color, web_audit_row,
+    adapter_plan_row, config_label, count_label, detail_row, duration_label, empty_row, notice_row,
+    notice_title, outcome_label, quick_fix_row, section, section_row, status_color, web_audit_row,
 };
 
 mod view_rows;
@@ -26,12 +26,14 @@ const DX_CHECK_PANEL_KEY: &str = "DxCheckPanel";
 const MAX_SECTION_ROWS: usize = 8;
 const MAX_NOTICE_ROWS: usize = 4;
 const MAX_QUICK_FIX_ROWS: usize = 4;
+const MAX_ADAPTER_PLAN_ROWS: usize = 8;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 enum DxCheckPanelSectionKind {
     Run,
     Receipt,
     Sections,
+    AdapterPlans,
     WebAudit,
     Notices,
     QuickFixes,
@@ -44,6 +46,7 @@ impl DxCheckPanelSectionKind {
             Self::Run => "dx-check-section-run",
             Self::Receipt => "dx-check-section-receipt",
             Self::Sections => "dx-check-section-sections",
+            Self::AdapterPlans => "dx-check-section-adapter-plans",
             Self::WebAudit => "dx-check-section-web-audit",
             Self::Notices => "dx-check-section-notices",
             Self::QuickFixes => "dx-check-section-quick-fixes",
@@ -56,6 +59,7 @@ impl DxCheckPanelSectionKind {
             Self::Run => "Run",
             Self::Receipt => "Receipt",
             Self::Sections => "Sections",
+            Self::AdapterPlans => "Adapter Plans",
             Self::WebAudit => "Web Audit",
             Self::Notices => "Notices",
             Self::QuickFixes => "Quick Fixes",
@@ -68,6 +72,7 @@ impl DxCheckPanelSectionKind {
             Self::Run => IconName::PlayOutlined,
             Self::Receipt => IconName::FileTextOutlined,
             Self::Sections => IconName::ListTodo,
+            Self::AdapterPlans => IconName::Terminal,
             Self::WebAudit => IconName::Public,
             Self::Notices => IconName::Warning,
             Self::QuickFixes => IconName::Sparkle,
@@ -423,6 +428,31 @@ impl DxCheckPanel {
         stack.into_any_element()
     }
 
+    fn render_adapter_plans(
+        &self,
+        snapshot: &DxCheckPanelSnapshot,
+        panel: WeakEntity<DxCheckPanel>,
+        cx: &App,
+    ) -> AnyElement {
+        let section_kind = DxCheckPanelSectionKind::AdapterPlans;
+        let mut stack = self.render_section_shell(section_kind, panel, cx);
+        if self.section_is_open(section_kind) {
+            if snapshot.adapter_plans.is_empty() {
+                stack = stack.child(empty_row("No adapter plans in the latest receipt."));
+            } else {
+                for (index, plan) in snapshot
+                    .adapter_plans
+                    .iter()
+                    .take(MAX_ADAPTER_PLAN_ROWS)
+                    .enumerate()
+                {
+                    stack = stack.child(adapter_plan_row(index, plan));
+                }
+            }
+        }
+        stack.into_any_element()
+    }
+
     fn render_notices(
         &self,
         snapshot: &DxCheckPanelSnapshot,
@@ -614,6 +644,7 @@ impl Render for DxCheckPanel {
                             .overflow_y_scroll()
                             .child(self.render_summary(&snapshot, panel.clone(), cx))
                             .child(self.render_sections(&snapshot, panel.clone(), cx))
+                            .child(self.render_adapter_plans(&snapshot, panel.clone(), cx))
                             .child(self.render_web_audits(&snapshot, panel.clone(), cx))
                             .child(self.render_notices(&snapshot, panel.clone(), cx))
                             .child(self.render_quick_fixes(&snapshot, panel.clone(), cx))

@@ -3,8 +3,9 @@ use std::path::PathBuf;
 use serde_json::Value;
 
 use super::{
-    CHECK_RECEIPT_SCHEMA, DxCheckPanelNotice, DxCheckPanelQuickFix, DxCheckPanelSection,
-    DxCheckPanelSnapshot, DxCheckPanelWebAudit, VIEW_MODEL_SCHEMA, ZED_PANEL_SCHEMA,
+    CHECK_RECEIPT_SCHEMA, DxCheckPanelAdapterPlan, DxCheckPanelNotice, DxCheckPanelQuickFix,
+    DxCheckPanelSection, DxCheckPanelSnapshot, DxCheckPanelWebAudit, VIEW_MODEL_SCHEMA,
+    ZED_PANEL_SCHEMA,
 };
 
 const MAX_PANEL_TEXT_CHARS: usize = 320;
@@ -138,6 +139,7 @@ fn panel_from_zed_value(path: PathBuf, receipt: &Value, zed: &Value) -> DxCheckP
         blockers: notice_rows(zed.get("blockers")),
         warnings: notice_rows(zed.get("warnings")),
         quick_fixes: quick_fix_rows(zed.get("quick_fixes")),
+        adapter_plans: adapter_plan_rows(zed.get("adapter_plans")),
         web_audits: web_audit_rows(receipt),
         next_action,
         source_schema: ZED_PANEL_SCHEMA.to_string(),
@@ -246,6 +248,7 @@ fn panel_from_view_model_value(
         blockers: notice_rows(view_model.get("blocker_rows")),
         warnings,
         quick_fixes: quick_fix_rows(view_model.get("quick_fix_rows")),
+        adapter_plans: Vec::new(),
         web_audits: web_audit_rows(receipt),
         next_action,
         source_schema: VIEW_MODEL_SCHEMA.to_string(),
@@ -307,6 +310,7 @@ pub(super) fn missing_snapshot(path: PathBuf) -> DxCheckPanelSnapshot {
         blockers: Vec::new(),
         warnings: Vec::new(),
         quick_fixes: Vec::new(),
+        adapter_plans: Vec::new(),
         web_audits: Vec::new(),
         next_action: "Run dx check --json from the DX project root.".to_string(),
         source_schema: "missing".to_string(),
@@ -350,6 +354,7 @@ pub(super) fn malformed_snapshot(path: PathBuf, message: String) -> DxCheckPanel
         }],
         warnings: Vec::new(),
         quick_fixes: Vec::new(),
+        adapter_plans: Vec::new(),
         web_audits: Vec::new(),
         next_action: "Rerun dx check --json with the current DX CLI.".to_string(),
         source_schema: "malformed".to_string(),
@@ -436,6 +441,31 @@ fn quick_fix_rows(value: Option<&Value>) -> Vec<DxCheckPanelQuickFix> {
                 writes_receipts: bool_from(fix.get("writes_receipts"))
                     .unwrap_or_else(|| quick_fix_writes_receipts(raw_command)),
                 command,
+            })
+        })
+        .collect()
+}
+
+fn adapter_plan_rows(value: Option<&Value>) -> Vec<DxCheckPanelAdapterPlan> {
+    value
+        .and_then(Value::as_array)
+        .into_iter()
+        .flatten()
+        .take(8)
+        .filter_map(|plan| {
+            let label = bounded_string_from(plan.get("label"))
+                .or_else(|| bounded_string_from(plan.get("id")))?;
+            let target =
+                bounded_string_from(plan.get("target")).unwrap_or_else(|| "unknown".to_string());
+            let command = bounded_string_from(plan.get("command"))?;
+            Some(DxCheckPanelAdapterPlan {
+                label,
+                target,
+                command,
+                parser: bounded_string_from(plan.get("parser"))
+                    .unwrap_or_else(|| "unknown".to_string()),
+                configured_from: string_array(plan.get("configured_from")),
+                run_command: bounded_string_from(plan.get("run_command")),
             })
         })
         .collect()

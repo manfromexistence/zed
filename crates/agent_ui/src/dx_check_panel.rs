@@ -45,6 +45,7 @@ pub(crate) struct DxCheckPanelSnapshot {
     pub blockers: Vec<DxCheckPanelNotice>,
     pub warnings: Vec<DxCheckPanelNotice>,
     pub quick_fixes: Vec<DxCheckPanelQuickFix>,
+    pub adapter_plans: Vec<DxCheckPanelAdapterPlan>,
     pub web_audits: Vec<DxCheckPanelWebAudit>,
     pub next_action: String,
     pub source_schema: String,
@@ -74,6 +75,16 @@ pub(crate) struct DxCheckPanelQuickFix {
     pub requires_user_approval: bool,
     pub writes_receipts: bool,
     pub command: Option<String>,
+}
+
+#[derive(Clone)]
+pub(crate) struct DxCheckPanelAdapterPlan {
+    pub label: String,
+    pub target: String,
+    pub command: String,
+    pub parser: String,
+    pub configured_from: Vec<String>,
+    pub run_command: Option<String>,
 }
 
 #[derive(Clone)]
@@ -253,6 +264,51 @@ mod tests {
         assert!(!snapshot.quick_fixes[0].requires_user_approval);
         assert!(!snapshot.quick_fixes[0].writes_receipts);
         assert!(snapshot.web_audits.is_empty());
+    }
+
+    #[test]
+    fn zed_receipt_adapter_plans_render_as_panel_rows() {
+        let receipt = json!({
+            "schema_version": "dx.check.receipt.v1",
+            "next_actions": ["Run `dx check lint --json` before launch approval."],
+            "zed": {
+                "schema_version": "dx.check.zed_panel.v1",
+                "status": "warning",
+                "score_value": 430,
+                "score_max": 500,
+                "score_percent": 86,
+                "score_estimated": false,
+                "weight_profile": "dx-check.launch-default.v1",
+                "generated_at_unix_ms": 1779400000000_u64,
+                "refresh_command": "dx check --json",
+                "adapter_plans": [
+                    {
+                        "id": "cpp-clang-tidy",
+                        "label": "C++ clang-tidy",
+                        "target": "lint",
+                        "command": "clang-tidy -p . --quiet --warnings-as-errors=* src/main.cpp",
+                        "parser": "clang-tidy",
+                        "configured_from": ["compile_commands.json", ".clang-tidy"],
+                        "run_command": "dx check lint --json"
+                    }
+                ],
+                "sections": []
+            }
+        });
+
+        let snapshot = panel_from_receipt_value(PathBuf::from("check-latest.json"), &receipt);
+
+        assert_eq!(snapshot.adapter_plans.len(), 1);
+        let plan = &snapshot.adapter_plans[0];
+        assert_eq!(plan.label, "C++ clang-tidy");
+        assert_eq!(plan.target, "lint");
+        assert_eq!(plan.parser, "clang-tidy");
+        assert_eq!(
+            plan.configured_from,
+            ["compile_commands.json", ".clang-tidy"]
+        );
+        assert_eq!(plan.run_command.as_deref(), Some("dx check lint --json"));
+        assert!(plan.command.contains("clang-tidy -p ."));
     }
 
     #[test]

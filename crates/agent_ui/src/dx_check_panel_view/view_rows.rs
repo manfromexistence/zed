@@ -2,8 +2,8 @@ use gpui::{AnyElement, App, ClickEvent, IntoElement, ParentElement, SharedString
 use ui::{ListHeader, ListItem, ListItemSpacing, prelude::*};
 
 use crate::dx_check_panel::{
-    DxCheckPanelNotice, DxCheckPanelQuickFix, DxCheckPanelSection, DxCheckPanelSnapshot,
-    DxCheckPanelWebAudit,
+    DxCheckPanelAdapterPlan, DxCheckPanelNotice, DxCheckPanelQuickFix, DxCheckPanelSection,
+    DxCheckPanelSnapshot, DxCheckPanelWebAudit,
 };
 
 pub(super) fn section(
@@ -151,6 +151,71 @@ pub(super) fn quick_fix_row(index: usize, fix: &DxCheckPanelQuickFix) -> AnyElem
         .spacing(ListItemSpacing::Sparse)
         .start_slot(
             Icon::new(IconName::ListTodo)
+                .size(IconSize::XSmall)
+                .color(Color::Muted),
+        )
+        .child(content)
+        .into_any_element()
+}
+
+pub(super) fn adapter_plan_row(index: usize, plan: &DxCheckPanelAdapterPlan) -> AnyElement {
+    let configured_from = if plan.configured_from.is_empty() {
+        "no config source".to_string()
+    } else {
+        plan.configured_from.join(", ")
+    };
+    let detail = format!(
+        "{} parser, configured from {}",
+        plan.parser, configured_from
+    );
+
+    let mut content = v_flex()
+        .min_w_0()
+        .gap_0p5()
+        .child(
+            h_flex()
+                .min_w_0()
+                .gap_2()
+                .justify_between()
+                .child(
+                    Label::new(plan.label.clone())
+                        .size(LabelSize::Small)
+                        .truncate(),
+                )
+                .child(
+                    Label::new(plan.target.clone())
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted)
+                        .truncate(),
+                ),
+        )
+        .child(
+            Label::new(detail)
+                .size(LabelSize::XSmall)
+                .color(Color::Muted)
+                .truncate(),
+        )
+        .child(
+            Label::new(plan.command.clone())
+                .size(LabelSize::XSmall)
+                .color(Color::Accent)
+                .truncate_start(),
+        );
+
+    if let Some(run_command) = plan.run_command.as_ref() {
+        content = content.child(
+            Label::new(run_command.clone())
+                .size(LabelSize::XSmall)
+                .color(Color::Muted)
+                .truncate_start(),
+        );
+    }
+
+    ListItem::new(SharedString::from(format!("dx-check-adapter-plan-{index}")))
+        .inset(true)
+        .spacing(ListItemSpacing::Sparse)
+        .start_slot(
+            Icon::new(IconName::Terminal)
                 .size(IconSize::XSmall)
                 .color(Color::Muted),
         )
