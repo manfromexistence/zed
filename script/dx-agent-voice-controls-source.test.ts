@@ -931,8 +931,10 @@ test("voice handoff keeps runtime readiness honest", () => {
   assert.match(voiceHandoff, /kokoro-v1_0\.pth/);
   assert.match(voiceHandoff, /Missing Kokoro readiness now reports the specific blocker class/);
   assert.match(voiceHandoff, /Read-aloud now aborts before entering Speaking/);
-  assert.match(voiceHandoff, /live Kokoro synthesis\/playback proof still remains deferred/);
+  assert.match(voiceHandoff, /exact Friday Kokoro runner\/`af_bella` voice path now has direct synthesis proof/);
   assert.match(voiceHandoff, /tracked\/cancelable WAV playback handle/);
+  assert.match(voiceHandoff, /zed-kokoro-runtime-smoke-af-bella\.wav/);
+  assert.match(voiceHandoff, /183,644 bytes, mono, 24 kHz, 16-bit/);
   assert.match(voiceHandoff, /Live audible playback proof is still deferred/);
   assert.match(voiceHandoff, /read-aloud toolbar button exposes the visible Kokoro stop path/);
   assert.match(voiceHandoff, /inline panel stays status-only while Kokoro is generating or speaking/);
