@@ -6,7 +6,7 @@ use cpal::{
 use std::{
     env, fs,
     path::{Path, PathBuf},
-    process::{Command, Output, Stdio},
+    process::{Child, Command, Output, Stdio},
     sync::{
         Arc, Mutex,
         atomic::{AtomicBool, Ordering},
@@ -970,12 +970,15 @@ fn run_command_with_timeout(
     let mut child = command
         .spawn()
         .with_context(|| format!("Failed to start {label}"))?;
+    let process_tree = create_flow_speech_process_tree_guard(&child)
+        .with_context(|| format!("Failed to protect {label} process tree"))?;
     let started_at = Instant::now();
 
     loop {
         if let Some(cancellation) = cancellation
             && cancellation.is_cancelled()
         {
+            process_tree.terminate();
             let _ = child.kill();
             let _ = child.wait();
             return Err(anyhow!("{label} was canceled"));
@@ -988,6 +991,7 @@ fn run_command_with_timeout(
         }
 
         if started_at.elapsed() >= timeout {
+            process_tree.terminate();
             let _ = child.kill();
             let _ = child.wait();
             return Err(anyhow!("{label} timed out after {}s", timeout.as_secs()));
@@ -995,6 +999,77 @@ fn run_command_with_timeout(
 
         thread::sleep(COMMAND_POLL_INTERVAL);
     }
+}
+
+#[cfg(target_os = "windows")]
+struct FlowSpeechProcessTreeGuard {
+    job: windows::Win32::Foundation::HANDLE,
+}
+
+#[cfg(not(target_os = "windows"))]
+struct FlowSpeechProcessTreeGuard;
+
+#[cfg(target_os = "windows")]
+impl FlowSpeechProcessTreeGuard {
+    fn terminate(&self) {
+        use windows::Win32::System::JobObjects::TerminateJobObject;
+
+        let _ = unsafe { TerminateJobObject(self.job, 1) };
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+impl FlowSpeechProcessTreeGuard {
+    fn terminate(&self) {}
+}
+
+#[cfg(target_os = "windows")]
+impl Drop for FlowSpeechProcessTreeGuard {
+    fn drop(&mut self) {
+        use windows::Win32::Foundation::CloseHandle;
+
+        let _ = unsafe { CloseHandle(self.job) };
+    }
+}
+
+fn create_flow_speech_process_tree_guard(child: &Child) -> Result<FlowSpeechProcessTreeGuard> {
+    create_platform_process_tree_guard(child)
+}
+
+#[cfg(target_os = "windows")]
+fn create_platform_process_tree_guard(child: &Child) -> Result<FlowSpeechProcessTreeGuard> {
+    use std::os::windows::io::AsRawHandle;
+    use windows::Win32::{
+        Foundation::HANDLE,
+        System::JobObjects::{
+            AssignProcessToJobObject, CreateJobObjectW, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE,
+            JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JobObjectExtendedLimitInformation,
+            SetInformationJobObject,
+        },
+    };
+
+    let job = unsafe { CreateJobObjectW(None, None)? };
+    let guard = FlowSpeechProcessTreeGuard { job };
+    let mut job_info = JOBOBJECT_EXTENDED_LIMIT_INFORMATION::default();
+    job_info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+
+    unsafe {
+        SetInformationJobObject(
+            guard.job,
+            JobObjectExtendedLimitInformation,
+            &job_info as *const _ as *const _,
+            std::mem::size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32,
+        )?;
+
+        AssignProcessToJobObject(guard.job, HANDLE(child.as_raw_handle() as _))?;
+    }
+
+    Ok(guard)
+}
+
+#[cfg(not(target_os = "windows"))]
+fn create_platform_process_tree_guard(_child: &Child) -> Result<FlowSpeechProcessTreeGuard> {
+    Ok(FlowSpeechProcessTreeGuard)
 }
 
 fn apply_tts_process_env(command: &mut Command, data_root: &Path) {

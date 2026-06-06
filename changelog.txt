@@ -1,3 +1,16 @@
+[2026-06-06] - Composer Flow Speech Process Tree Cancellation
+
+CHANGED:
+- `crates\agent_ui\src\flow_speech_runtime.rs` now wraps Flow STT and Kokoro TTS child processes in a Windows kill-on-close job guard, then terminates that process tree on cancellation or timeout before falling back to direct child kill/wait.
+- The guard protects the Whisper Tiny GGML path where `flow-dictate` can spawn nested whisper.cpp work, so Zed cancellation is source-wired to stop the speech subprocess tree instead of only the direct Flow host child.
+- `Cargo.toml`, `crates\agent_ui\Cargo.toml`, `script\dx-agent-voice-controls-source.test.ts`, `DX.md`, and `todo.txt` now guard and document the Windows job-object dependency and process-tree cancellation boundary.
+
+PASSED:
+- `node --test script\dx-agent-voice-controls-source.test.ts`
+
+NOTES:
+- Cargo/Zed runtime proof is still deferred by repo policy; this is a source-wired Windows process-tree guard.
+
 [2026-06-06] - Composer Flow Voice Render Readiness Cache
 
 CHANGED:

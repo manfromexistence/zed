@@ -1577,4 +1577,5 @@ COMPLETED:
 - Preserved raw Flow STT transcript payload text after wrapper trimming so dictated Windows paths and literal backslash sequences are not converted into unintended composer newlines.
 - Promoted the in-panel recording actions from icon-only controls to labeled icon buttons: Stop and transcribe keeps the STT path, while Discard uses a trash affordance and drops capture without STT.
 - Cached Flow STT/Kokoro readiness on ThreadView so the composer voice button render path does not repeatedly run Flow filesystem discovery, while record/read-aloud starts still refresh readiness from the current runtime.
+- Added a Windows kill-on-close process-tree guard around Flow STT and Kokoro TTS child commands so cancellation/timeout can terminate nested speech subprocesses such as whisper.cpp instead of only killing the direct `flow-dictate` child.
 - Documented the current Whisper truth boundary: real Keyless Whisper source exists outside `G:\Dx\flow`, and the focused `flow-dictate` host now exposes a `whisper-tiny-ggml` whisper.cpp subprocess path that still needs binary/model smoke proof.
