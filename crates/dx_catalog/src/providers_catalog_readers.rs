@@ -10,7 +10,8 @@ use crate::{
 };
 use memmap2::MmapOptions;
 use rkyv::{Archive, Deserialize as RkyvDeserialize, Serialize as RkyvSerialize};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use sha2::Digest;
 use std::collections::{BTreeMap, BTreeSet};
 use std::{
     fs::File,
@@ -457,6 +458,18 @@ fn read_metadata_sidecar(
         );
         return None;
     }
+    let expected_content_sha256 = metadata_sidecar_content_sha256(&sidecar);
+    if sidecar.summary.content_sha256 != expected_content_sha256 {
+        skip_metadata_sidecar(
+            skipped_entries,
+            &sidecar_path,
+            format!(
+                "metadata sidecar content_sha256 mismatch: expected {expected_content_sha256}, found {}",
+                sidecar.summary.content_sha256
+            ),
+        );
+        return None;
+    }
 
     Some(sidecar)
 }
@@ -466,6 +479,32 @@ fn is_valid_sha256_digest(value: &str) -> bool {
         return false;
     };
     hex.len() == 64 && hex.chars().all(|ch| ch.is_ascii_hexdigit())
+}
+
+fn metadata_sidecar_content_sha256(sidecar: &ProviderMetadataSidecar) -> String {
+    #[derive(Serialize)]
+    struct DigestPayload<'a> {
+        schema: &'a str,
+        schema_version: u16,
+        providers: &'a [ProviderMetadataRow],
+        alias_index: &'a BTreeMap<String, String>,
+    }
+
+    let bytes = serde_json::to_vec(&DigestPayload {
+        schema: &sidecar.schema,
+        schema_version: sidecar.schema_version,
+        providers: &sidecar.providers,
+        alias_index: &sidecar.alias_index,
+    })
+    .expect("provider metadata sidecar digest payload should serialize");
+    let digest = sha2::Sha256::digest(bytes);
+    let mut hash = String::with_capacity("sha256:".len() + 64);
+    hash.push_str("sha256:");
+    for byte in digest {
+        use std::fmt::Write as _;
+        write!(&mut hash, "{byte:02x}").expect("writing to String cannot fail");
+    }
+    hash
 }
 
 fn skip_metadata_sidecar(
@@ -619,13 +658,13 @@ struct ProviderMetadataRedaction {
     secrets_included: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct ProviderMetadataRow {
     identity: ProviderMetadataIdentity,
     freemium: ProviderMetadataFreemium,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct ProviderMetadataIdentity {
     canonical_id: String,
     display_name: String,
@@ -639,8 +678,16 @@ struct ProviderMetadataIdentity {
     exposure_status: Option<String>,
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, Serialize)]
 struct ProviderMetadataFreemium {
+    #[serde(default)]
+    access: String,
+    #[serde(default)]
+    auth: Vec<String>,
+    #[serde(default)]
+    env_vars: Vec<String>,
+    #[serde(default)]
+    note: String,
     #[serde(default)]
     free_model_ids: Vec<String>,
 }
@@ -1321,6 +1368,69 @@ mod tests {
     }
 
     #[test]
+    fn providers_metadata_sidecar_skips_content_sha256_mismatch() {
+        let path = unique_fixture_path("dx-providers-catalog.rkyv");
+        write_fixture_catalog(&path);
+        let sidecar_path = path.with_extension("metadata.json");
+        write_fixture_metadata_sidecar(
+            &sidecar_path,
+            "deepseek",
+            "DeepSeek Verified",
+            &["deepseek-platform"],
+            &["deepseek-chat"],
+        );
+        let mut sidecar: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(&sidecar_path).unwrap()).unwrap();
+        sidecar["providers"][0]["identity"]["display_name"] =
+            serde_json::json!("DeepSeek Tampered");
+        fs::write(
+            &sidecar_path,
+            serde_json::to_string_pretty(&sidecar).unwrap(),
+        )
+        .unwrap();
+
+        let output = read_providers_catalog_file(
+            &path,
+            ProvidersCatalogReaderOptions::new()
+                .with_source_id("dx-providers-test")
+                .with_metadata_sidecar_path(&sidecar_path),
+        )
+        .expect("providers catalog should load without applying stale metadata sidecar");
+        let provider = output
+            .input
+            .providers
+            .iter()
+            .find(|provider| provider.id == "deepseek")
+            .expect("deepseek provider");
+        let free_model = output
+            .input
+            .models
+            .iter()
+            .find(|model| model.id == "deepseek/deepseek-chat")
+            .expect("deepseek chat model");
+
+        assert_eq!(provider.display_name, "DeepSeek");
+        assert!(!provider.aliases.contains(&"deepseek-platform".to_string()));
+        assert!(!provider.supports_free_tier);
+        assert!(!free_model.capabilities.free_tier);
+        assert!(free_model.free_tier_hint.is_none());
+        let skipped_sidecar = output
+            .report
+            .skipped_entries
+            .iter()
+            .find(|entry| entry.location == sidecar_path.display().to_string())
+            .expect("expected skipped metadata sidecar diagnostic");
+        assert!(
+            skipped_sidecar.reason.contains("content_sha256 mismatch"),
+            "expected skipped sidecar hash diagnostic: {:?}",
+            output.report.skipped_entries
+        );
+
+        let _ = fs::remove_file(sidecar_path);
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
     fn providers_metadata_sidecar_uses_alias_index_for_canonical_id_mismatches() {
         let path = unique_fixture_path("dx-providers-catalog.rkyv");
         write_fixture_catalog(&path);
@@ -1506,7 +1616,7 @@ mod tests {
             );
         }
 
-        let content = serde_json::json!({
+        let mut content = serde_json::json!({
             "schema": "dx.providers.metadata.v1",
             "schema_version": 1,
             "source": {
@@ -1542,6 +1652,10 @@ mod tests {
             }],
             "alias_index": alias_index
         });
+        let sidecar: ProviderMetadataSidecar =
+            serde_json::from_value(content.clone()).expect("fixture sidecar should parse");
+        content["summary"]["content_sha256"] =
+            serde_json::json!(metadata_sidecar_content_sha256(&sidecar));
 
         fs::write(path, serde_json::to_string_pretty(&content).unwrap()).unwrap();
     }
