@@ -1,3 +1,16 @@
+[2026-06-06] - Composer Flow Voice Kokoro Readiness Diagnostics
+
+CHANGED:
+- `crates\agent_ui\src\flow_speech_runtime.rs` now keeps Kokoro TTS readiness as a detailed result instead of a lossy optional runtime, so missing states name data-root candidates, Python, runner, and required Kokoro model/voice file blockers.
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now refuses read-aloud before entering Speaking or allocating playback cancellation state when the freshly detected Kokoro runtime is not ready.
+- `script\dx-agent-voice-controls-source.test.ts`, `DX.md`, and `todo.txt` now guard and document the detailed Kokoro readiness and pre-Speaking refusal boundary.
+
+PASSED:
+- `node --test script\dx-agent-voice-controls-source.test.ts`
+
+NOTES:
+- Cargo/Zed launch, live Kokoro synthesis/playback proof, and live Agent composer microphone proof remain deferred until the governed runtime validation window.
+
 [2026-06-06] - Composer Flow Voice Kokoro Discovery And Raw Transcript Preservation
 
 CHANGED:

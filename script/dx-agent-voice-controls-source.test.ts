@@ -334,6 +334,8 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(runtime, /FlowSpeechRuntime/);
   assert.match(runtime, /pub\(crate\) fn stt_available/);
   assert.match(runtime, /pub\(crate\) fn tts_available/);
+  assert.match(runtime, /kokoro_tts_runtime: Result<KokoroTtsRuntime, String>/);
+  assert.doesNotMatch(runtime, /kokoro_tts_runtime: Option<KokoroTtsRuntime>/);
   assert.match(runtime, /FlowSpeechCancellation/);
   assert.match(runtime, /AtomicBool/);
   assert.match(runtime, /Ordering/);
@@ -463,7 +465,7 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(runtime, /FLOW_DATA_DIR/);
   assert.match(runtime, /KokoroTtsRuntime|kokoro_82m/);
   assert.match(speakText, /cancellation: &FlowSpeechCancellation/);
-  assert.match(speakText, /Friday Kokoro TTS runtime is not available/);
+  assert.match(speakText, /let tts_runtime = self\.tts_runtime\(\)\?/);
   assert.match(ensureSttReady, /Flow STT runtime is not built/);
   assert.match(ensureSttReady, /DX_FLOW_DICTATE_BINARY/);
   assert.match(ensureSttReady, /FLOW_DEFAULT_STT_MODEL_KEY/);
@@ -552,10 +554,35 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
 
 test("voice runtime status summary reports precise readiness blockers", () => {
   const runtime = readFileSync(flowRuntimePath, "utf8");
+  const speakText = sourceSlice(
+    runtime,
+    "pub(crate) fn speak_text",
+    "pub(crate) fn status_summary",
+  );
   const statusSummary = sourceSlice(
     runtime,
     "pub(crate) fn status_summary",
     "pub(crate) fn stt_available",
+  );
+  const ttsAvailable = sourceSlice(
+    runtime,
+    "pub(crate) fn tts_available",
+    "fn write_recording_wav",
+  );
+  const ensureTtsReady = sourceSlice(
+    runtime,
+    "pub(crate) fn ensure_tts_ready",
+    "fn tts_runtime",
+  );
+  const ttsRuntime = sourceSlice(
+    runtime,
+    "fn tts_runtime",
+    "fn write_recording_wav",
+  );
+  const missingTtsReadiness = sourceSlice(
+    runtime,
+    "fn missing_tts_readiness_message",
+    "impl KokoroTtsRuntime",
   );
   const missingSttModelMessage = sourceSlice(
     runtime,
@@ -564,7 +591,23 @@ test("voice runtime status summary reports precise readiness blockers", () => {
   );
 
   assert.match(statusSummary, /Friday Kokoro ready/);
-  assert.match(statusSummary, /Friday Kokoro missing/);
+  assert.match(statusSummary, /let tts = self\.tts_readiness_summary\(\);/);
+  assert.doesNotMatch(statusSummary, /\"Friday Kokoro missing\"/);
+  assert.match(speakText, /let tts_runtime = self\.tts_runtime\(\)\?/);
+  assert.doesNotMatch(speakText, /context\("Friday Kokoro TTS runtime is not available"\)\?/);
+  assert.match(ttsAvailable, /self\.ensure_tts_ready\(\)\.is_ok\(\)/);
+  assert.doesNotMatch(ttsAvailable, /kokoro_tts_runtime\.is_some\(\)/);
+  assert.match(ensureTtsReady, /self\.tts_runtime\(\)\.map\(\|_\| \(\)\)/);
+  assert.match(ttsRuntime, /map_err\(\|message\| anyhow!\("\{\}", message\)\)/);
+  assert.match(missingTtsReadiness, /FLOW_TTS_PYTHON/);
+  assert.match(missingTtsReadiness, /DX_KOKORO_TTS_PYTHON/);
+  assert.match(missingTtsReadiness, /FLOW_TTS_RUNNER/);
+  assert.match(missingTtsReadiness, /DX_KOKORO_TTS_RUNNER/);
+  assert.match(missingTtsReadiness, /DX_KOKORO_MODEL_DIR/);
+  assert.match(missingTtsReadiness, /config\.json/);
+  assert.match(missingTtsReadiness, /kokoro-v1_0\.pth/);
+  assert.match(missingTtsReadiness, /voices\/af_heart\.pt/);
+  assert.match(missingTtsReadiness, /voices\/af_bella\.pt/);
   assert.match(statusSummary, /Flow STT command ready/);
   assert.match(statusSummary, /Flow STT command missing/);
   assert.match(missingSttModelMessage, /Flow \{\} model files are missing or empty under/);
@@ -738,6 +781,21 @@ test("voice playback keeps audio feature wiring and fallback states", () => {
   assert.match(speakComposerText, /if this\.flow_playback_id != playback_id/);
   assert.match(speakComposerText, /playback_handle\.is_complete\(\)/);
   assert.match(speakComposerText, /Kokoro finished reading the composer/);
+  assert.match(speakComposerText, /if let Err\(error\) = runtime\.ensure_tts_ready\(\)/);
+  assert.match(speakComposerText, /Friday Kokoro TTS is not ready/);
+  assert.match(speakComposerText, /show_flow_voice_toast\(message, cx\)/);
+  assertBefore(
+    speakComposerText,
+    "if let Err(error) = runtime.ensure_tts_ready()",
+    ".set_speaking(format!(\"Flow voice runtime: {summary}\"))",
+    "Kokoro readiness must be checked before entering Speaking",
+  );
+  assertBefore(
+    speakComposerText,
+    "if let Err(error) = runtime.ensure_tts_ready()",
+    "let cancellation = FlowSpeechCancellation::new();",
+    "Kokoro readiness must be checked before playback cancellation state is allocated",
+  );
   assert.match(stopPlayback, /handle\.cancel\(\)/);
   assert.match(stopPlayback, /Kokoro read-aloud stopped/);
 });
@@ -770,6 +828,8 @@ test("voice handoff keeps runtime readiness honest", () => {
   assert.match(voiceHandoff, /G:\\Flow\\data\\models\\tts\\kokoro_82m/);
   assert.match(voiceHandoff, /config\.json/);
   assert.match(voiceHandoff, /kokoro-v1_0\.pth/);
+  assert.match(voiceHandoff, /Missing Kokoro readiness now reports the specific blocker class/);
+  assert.match(voiceHandoff, /Read-aloud now aborts before entering Speaking/);
   assert.match(voiceHandoff, /live Kokoro synthesis\/playback proof still remains deferred/);
   assert.match(voiceHandoff, /tracked\/cancelable WAV playback handle/);
   assert.match(voiceHandoff, /Live audible playback proof is still deferred/);

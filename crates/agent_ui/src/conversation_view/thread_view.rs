@@ -4386,6 +4386,13 @@ impl ThreadView {
 
         let runtime = FlowSpeechRuntime::detect();
         self.refresh_flow_voice_runtime_availability(&runtime);
+        if let Err(error) = runtime.ensure_tts_ready() {
+            let message = format!("Friday Kokoro TTS is not ready: {error}");
+            self.composer_voice_state.set_error(message.clone());
+            self.show_flow_voice_toast(message, cx);
+            cx.notify();
+            return;
+        }
         let summary = runtime.status_summary();
         self.composer_voice_state
             .set_speaking(format!("Flow voice runtime: {summary}"));

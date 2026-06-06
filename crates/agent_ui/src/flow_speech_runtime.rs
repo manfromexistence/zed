@@ -43,7 +43,7 @@ pub(crate) struct FlowSpeechRuntime {
     flow_root: PathBuf,
     flow_dictate_binary: Option<PathBuf>,
     selected_stt_model: Result<FlowSttModel, String>,
-    kokoro_tts_runtime: Option<KokoroTtsRuntime>,
+    kokoro_tts_runtime: Result<KokoroTtsRuntime, String>,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -288,10 +288,8 @@ impl FlowSpeechRuntime {
         text: &str,
         cancellation: &FlowSpeechCancellation,
     ) -> Result<PathBuf> {
-        self.kokoro_tts_runtime
-            .as_ref()
-            .context("Friday Kokoro TTS runtime is not available")?
-            .synthesize(text, cancellation)
+        let tts_runtime = self.tts_runtime()?;
+        tts_runtime.synthesize(text, cancellation)
     }
 
     pub(crate) fn status_summary(&self) -> String {
@@ -302,11 +300,7 @@ impl FlowSpeechRuntime {
             Ok(stt_model) => self.missing_stt_model_message(stt_model),
             Err(error) => error.to_string(),
         };
-        let tts = if self.kokoro_tts_runtime.is_some() {
-            "Friday Kokoro ready"
-        } else {
-            "Friday Kokoro missing"
-        };
+        let tts = self.tts_readiness_summary();
         let stt_runtime = if self.flow_dictate_binary.is_some() {
             "Flow STT command ready"
         } else {
@@ -316,12 +310,29 @@ impl FlowSpeechRuntime {
         format!("{stt}; {tts}; {stt_runtime}")
     }
 
+    pub(crate) fn tts_readiness_summary(&self) -> &str {
+        match &self.kokoro_tts_runtime {
+            Ok(_) => "Friday Kokoro ready",
+            Err(message) => message,
+        }
+    }
+
     pub(crate) fn stt_available(&self) -> bool {
         self.ensure_stt_ready().is_ok()
     }
 
     pub(crate) fn tts_available(&self) -> bool {
-        self.kokoro_tts_runtime.is_some()
+        self.ensure_tts_ready().is_ok()
+    }
+
+    pub(crate) fn ensure_tts_ready(&self) -> Result<()> {
+        self.tts_runtime().map(|_| ())
+    }
+
+    fn tts_runtime(&self) -> Result<&KokoroTtsRuntime> {
+        self.kokoro_tts_runtime
+            .as_ref()
+            .map_err(|message| anyhow!("{}", message))
     }
 
     fn write_recording_wav(&self, recording: &RecordedSpeech) -> Result<PathBuf> {
@@ -519,34 +530,115 @@ fn requested_whisper_language() -> Option<String> {
         .filter(|language| !language.is_empty())
 }
 
+fn missing_tts_readiness_message(flow_root: &Path, blockers: &[String]) -> String {
+    let mut message = format!(
+        "Friday Kokoro missing: no ready data root was found for {}. Checked data roots from DX_FLOW_DATA_ROOT, FLOW_DATA_DIR, copied Flow data, same-drive Flow data, LOCALAPPDATA, and DX_SCAN_FLOW_DRIVES; Python from FLOW_TTS_PYTHON or DX_KOKORO_TTS_PYTHON; runner from FLOW_TTS_RUNNER or DX_KOKORO_TTS_RUNNER; model files from DX_KOKORO_MODEL_DIR or models/tts/{KOKORO_MODEL_KEY} including config.json, kokoro-v1_0.pth, voices/af_heart.pt, and voices/af_bella.pt.",
+        flow_root.display()
+    );
+    if !blockers.is_empty() {
+        message.push_str(" Blockers: ");
+        message.push_str(&blockers.join("; "));
+    }
+    message
+}
+
+fn env_path_if_file(name: &str) -> Option<PathBuf> {
+    env::var_os(name)
+        .map(PathBuf::from)
+        .filter(|path| path.is_file())
+}
+
+fn expected_kokoro_python_path(data_root: &Path) -> PathBuf {
+    let flow_home = data_root.parent().unwrap_or(data_root);
+    flow_home
+        .join("runtime")
+        .join("kokoro-tts")
+        .join(".venv")
+        .join(if cfg!(target_os = "windows") {
+            "Scripts/python.exe"
+        } else {
+            "bin/python"
+        })
+}
+
+fn missing_kokoro_model_artifacts(model_dir: &Path) -> Vec<String> {
+    kokoro_model_required_artifacts(model_dir)
+        .into_iter()
+        .filter(|(_, path)| !file_is_nonempty(path))
+        .map(|(label, path)| format!("{label} at {}", path.display()))
+        .collect()
+}
+
+fn kokoro_model_required_artifacts(model_dir: &Path) -> [(&'static str, PathBuf); 4] {
+    [
+        ("config.json", model_dir.join("config.json")),
+        ("kokoro-v1_0.pth", model_dir.join("kokoro-v1_0.pth")),
+        (
+            "voices/af_heart.pt",
+            model_dir.join("voices").join("af_heart.pt"),
+        ),
+        (
+            "voices/af_bella.pt",
+            model_dir.join("voices").join("af_bella.pt"),
+        ),
+    ]
+}
+
 impl KokoroTtsRuntime {
-    fn detect(flow_root: &Path) -> Option<Self> {
-        candidate_flow_data_roots(flow_root)
-            .into_iter()
-            .filter(|root| root.exists())
-            .find_map(Self::from_data_root)
+    fn detect(flow_root: &Path) -> Result<Self, String> {
+        let mut blockers = Vec::new();
+        for data_root in candidate_flow_data_roots(flow_root) {
+            if !data_root.exists() {
+                blockers.push(format!("{} is missing", data_root.display()));
+                continue;
+            }
+
+            match Self::from_data_root(data_root.clone()) {
+                Ok(runtime) => return Ok(runtime),
+                Err(error) => blockers.push(format!("{}: {}", data_root.display(), error)),
+            }
+        }
+
+        Err(missing_tts_readiness_message(flow_root, &blockers))
     }
 
-    fn from_data_root(data_root: PathBuf) -> Option<Self> {
-        let python = env::var_os("FLOW_TTS_PYTHON")
-            .or_else(|| env::var_os("DX_KOKORO_TTS_PYTHON"))
-            .map(PathBuf::from)
-            .filter(|path| path.is_file())
-            .or_else(|| find_kokoro_python(&data_root))?;
-        let runner = env::var_os("FLOW_TTS_RUNNER")
-            .or_else(|| env::var_os("DX_KOKORO_TTS_RUNNER"))
-            .map(PathBuf::from)
-            .filter(|path| path.is_file())
+    fn from_data_root(data_root: PathBuf) -> Result<Self, String> {
+        let python = env_path_if_file("FLOW_TTS_PYTHON")
+            .or_else(|| env_path_if_file("DX_KOKORO_TTS_PYTHON"))
+            .or_else(|| find_kokoro_python(&data_root))
+            .ok_or_else(|| {
+                format!(
+                    "Python is missing. Set FLOW_TTS_PYTHON or DX_KOKORO_TTS_PYTHON, or install {}",
+                    expected_kokoro_python_path(&data_root).display()
+                )
+            })?;
+        let runner = env_path_if_file("FLOW_TTS_RUNNER")
+            .or_else(|| env_path_if_file("DX_KOKORO_TTS_RUNNER"))
             .or_else(|| {
                 let path = data_root.join(KOKORO_RUNNER_SCRIPT);
                 path.is_file().then_some(path)
+            })
+            .ok_or_else(|| {
+                format!(
+                    "runner is missing. Set FLOW_TTS_RUNNER or DX_KOKORO_TTS_RUNNER, or provide {}",
+                    data_root.join(KOKORO_RUNNER_SCRIPT).display()
+                )
             })?;
         let model_dir = env::var_os("DX_KOKORO_MODEL_DIR")
             .map(PathBuf::from)
             .filter(|path| kokoro_model_dir_ready(path))
-            .or_else(|| find_kokoro_model_dir(&data_root))?;
+            .or_else(|| find_kokoro_model_dir(&data_root))
+            .ok_or_else(|| {
+                let model_dir = data_root.join("models").join("tts").join(KOKORO_MODEL_KEY);
+                let missing = missing_kokoro_model_artifacts(&model_dir).join(", ");
+                format!(
+                    "model directory is missing required Kokoro files from DX_KOKORO_MODEL_DIR or {}: {}",
+                    model_dir.display(),
+                    missing
+                )
+            })?;
 
-        Some(Self {
+        Ok(Self {
             data_root,
             python,
             runner,
@@ -1206,16 +1298,7 @@ fn candidate_paths_equal(left: &Path, right: &Path) -> bool {
 }
 
 fn find_kokoro_python(data_root: &Path) -> Option<PathBuf> {
-    let flow_home = data_root.parent()?;
-    let python = flow_home
-        .join("runtime")
-        .join("kokoro-tts")
-        .join(".venv")
-        .join(if cfg!(target_os = "windows") {
-            "Scripts/python.exe"
-        } else {
-            "bin/python"
-        });
+    let python = expected_kokoro_python_path(data_root);
     python.is_file().then_some(python)
 }
 
@@ -1238,14 +1321,9 @@ fn find_kokoro_model_dir(data_root: &Path) -> Option<PathBuf> {
 }
 
 fn kokoro_model_dir_ready(path: &Path) -> bool {
-    [
-        path.join("config.json"),
-        path.join("kokoro-v1_0.pth"),
-        path.join("voices").join("af_heart.pt"),
-        path.join("voices").join("af_bella.pt"),
-    ]
-    .iter()
-    .all(|path| file_is_nonempty(path))
+    kokoro_model_required_artifacts(path)
+        .iter()
+        .all(|(_, path)| file_is_nonempty(path))
 }
 
 fn file_is_nonempty(path: &Path) -> bool {
