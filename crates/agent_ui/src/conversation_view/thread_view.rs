@@ -4297,8 +4297,7 @@ impl ThreadView {
                 this.flow_speech_cancellation = None;
                 match result {
                     Ok(transcript) => {
-                        let transcript = transcript.trim().to_string();
-                        if transcript.is_empty() {
+                        if transcript.trim().is_empty() {
                             this.composer_voice_state
                                 .set_error("Flow STT returned an empty transcript");
                             this.show_flow_voice_toast("Flow STT returned an empty transcript", cx);

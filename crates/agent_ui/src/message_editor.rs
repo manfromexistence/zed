@@ -1928,8 +1928,7 @@ impl MessageEditor {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let transcript = transcript.trim();
-        if transcript.is_empty() {
+        if transcript.trim().is_empty() {
             return;
         }
 

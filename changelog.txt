@@ -1,3 +1,16 @@
+[2026-06-06] - Composer Flow Voice Kokoro Discovery And Raw Transcript Preservation
+
+CHANGED:
+- `crates\agent_ui\src\flow_speech_runtime.rs` now considers the same-drive `Flow\data` root when resolving Kokoro material, so a copied repo at `G:\Dx\flow` can discover the existing Friday/Kokoro assets under `G:\Flow\data` without requiring env vars or broad drive scans.
+- Flow STT transcript parsing and composer insertion now preserve leading/trailing payload whitespace while still rejecting all-whitespace transcripts, which keeps dictated indentation and spacing intact for code-oriented composer input.
+- `script\dx-agent-voice-controls-source.test.ts`, `DX.md`, and `todo.txt` now guard and document the same-drive Kokoro data-root candidate and raw transcript whitespace boundary.
+
+PASSED:
+- `node --test script\dx-agent-voice-controls-source.test.ts`
+
+NOTES:
+- Live Kokoro synthesis/playback proof remains deferred until the governed runtime validation window.
+
 [2026-06-06] - Composer Flow Speech Process Tree Cancellation
 
 CHANGED:

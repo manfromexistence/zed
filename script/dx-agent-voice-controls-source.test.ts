@@ -437,9 +437,11 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(runtime, /Flow STT transcript marker is empty/);
   assert.match(runtime, /trim_stt_transcript_payload/);
   assert.match(runtime, /preserves_raw_backslash_sequences_from_flow_output/);
+  assert.match(runtime, /preserves_raw_edge_whitespace_from_flow_output/);
   assert.doesNotMatch(runtime, /replace\("\\\\r\\\\n",\s*"\\n"\)/);
   assert.doesNotMatch(runtime, /replace\("\\\\n",\s*"\\n"\)/);
   assert.doesNotMatch(runtime, /replace\("\\\\\\"",\s*"\\""\)/);
+  assert.doesNotMatch(runtime, /payload\.trim\(\)\.to_string\(\)/);
   assert.match(runtime, /extracts_multiline_stt_transcript_after_status_lines/);
   assert.match(runtime, /rejects_status_lines_without_transcript_marker/);
   assert.match(runtime, /rejects_empty_transcript_marker/);
@@ -511,6 +513,9 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(runtime, /fn flow_root_from_dictate_binary/);
   assert.match(dataRootCandidates, /normalize_flow_data_root/);
   assert.match(dataRootCandidates, /FLOW_DATA_DIR/);
+  assert.match(dataRootCandidates, /same_drive_flow_data_root\(flow_root\)/);
+  assert.match(runtime, /fn same_drive_flow_data_root/);
+  assert.match(runtime, /drive_root\.join\("Flow"\)/);
   assert.match(dataRootCandidates, /DX_SCAN_FLOW_DRIVES/);
   assert.match(dataRootCandidates, /path\.join\("data"\)/);
   assert.match(dataRootCandidates, /push_unique_path/);
@@ -650,8 +655,8 @@ test("voice text paths use the real message editor contents and insert APIs", ()
   assert.match(messageEditor, /pub fn insert_text\(/);
   assert.match(messageEditor, /pub fn insert_transcript_text\(/);
   assert.match(messageEditor, /should_prefix_transcript_separator/);
-  assert.match(transcriptHelper, /let transcript = transcript\.trim\(\)/);
-  assert.match(transcriptHelper, /if transcript\.is_empty\(\)/);
+  assert.match(transcriptHelper, /if transcript\.trim\(\)\.is_empty\(\)/);
+  assert.doesNotMatch(transcriptHelper, /let transcript = transcript\.trim\(\)/);
   assert.match(transcriptHelper, /finalize_last_transaction\(cx\)/);
   assert.match(
     transcriptHelper,

@@ -890,7 +890,7 @@ fn extract_stt_transcript(stdout: &str) -> Result<String> {
         .ok_or_else(|| anyhow!("Flow STT transcript marker is missing a closing quote"))?;
     let text = trim_stt_transcript_payload(&payload[..end]);
 
-    if text.is_empty() {
+    if text.trim().is_empty() {
         Err(anyhow!("Flow STT transcript marker is empty"))
     } else {
         Ok(text)
@@ -898,7 +898,7 @@ fn extract_stt_transcript(stdout: &str) -> Result<String> {
 }
 
 fn trim_stt_transcript_payload(payload: &str) -> String {
-    payload.trim().to_string()
+    payload.to_string()
 }
 
 #[cfg(test)]
@@ -922,6 +922,13 @@ mod tests {
             extract_stt_transcript(stdout).unwrap(),
             r#"C:\new\notes literal \n and \"quote\""#
         );
+    }
+
+    #[test]
+    fn preserves_raw_edge_whitespace_from_flow_output() {
+        let stdout = "[stt] \"  indented code  \"\n";
+
+        assert_eq!(extract_stt_transcript(stdout).unwrap(), "  indented code  ");
     }
 
     #[test]
@@ -1116,6 +1123,8 @@ fn candidate_flow_data_roots(flow_root: &Path) -> Vec<PathBuf> {
 
     #[cfg(target_os = "windows")]
     {
+        push_unique_data_root(&mut roots, same_drive_flow_data_root(flow_root));
+
         if let Some(local_app_data) = env::var_os("LOCALAPPDATA").map(PathBuf::from) {
             push_unique_data_root(&mut roots, Some(local_app_data.join("com.flow.data")));
         }
@@ -1131,6 +1140,14 @@ fn candidate_flow_data_roots(flow_root: &Path) -> Vec<PathBuf> {
     }
 
     roots
+}
+
+#[cfg(target_os = "windows")]
+fn same_drive_flow_data_root(flow_root: &Path) -> Option<PathBuf> {
+    flow_root
+        .ancestors()
+        .find(|path| path.parent().is_none())
+        .map(|drive_root| drive_root.join("Flow"))
 }
 
 fn push_unique_data_root(paths: &mut Vec<PathBuf>, path: Option<PathBuf>) {
