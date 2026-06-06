@@ -12,13 +12,18 @@ pub(in super::super) fn dx_agent_provider_state(
     snapshot: &DxAgentBridgeSnapshot,
     cx: &App,
 ) -> AnyElement {
+    let model_count = if snapshot.catalog.model_count == 0 {
+        snapshot.models.len()
+    } else {
+        snapshot.catalog.model_count
+    };
     let mut stack = v_flex()
         .gap_1()
         .child(metric_row(
             "Providers",
             snapshot.providers.len().to_string(),
         ))
-        .child(metric_row("Models", snapshot.models.len().to_string()))
+        .child(metric_row("Models", model_count.to_string()))
         .child(metric_row(
             "Catalog path",
             snapshot.catalog.path.display().to_string(),
@@ -40,6 +45,9 @@ pub(in super::super) fn dx_agent_provider_state(
 
     if let Some(source_hash) = snapshot.catalog.source_hash.as_ref() {
         stack = stack.child(metric_row("Source hash", source_hash.clone()));
+    }
+    if let Some(error) = snapshot.catalog.error.as_ref() {
+        stack = stack.child(metric_row("Catalog error", error.clone()));
     }
 
     if snapshot.providers.is_empty() {

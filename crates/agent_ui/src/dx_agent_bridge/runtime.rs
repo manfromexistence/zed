@@ -1,12 +1,20 @@
-use std::path::PathBuf;
-
 use serde_json::Value;
 
 use super::{
-    DxAgentAutomation, DxAgentCatalogSummary, DxAgentModel, DxAgentProvider, DxAgentRowAction,
-    DxAgentSocialAccount, DxAgentSocialActionSummary, DxConnectedAccountsSummary, array_field,
-    bool_field, is_dx_agents_command, is_public_dx_agents_command, is_safe_platform_arg,
-    is_secret_like_arg, public_command_for_runtime, string_array_field, string_field, usize_field,
+    DxAgentAutomation, DxAgentRowAction, DxAgentSocialAccount, DxAgentSocialActionSummary,
+    DxConnectedAccountsSummary, array_field, bool_field, is_dx_agents_command,
+    is_public_dx_agents_command, is_safe_platform_arg, is_secret_like_arg,
+    public_command_for_runtime, string_field, usize_field,
+};
+
+#[path = "runtime_catalog.rs"]
+mod runtime_catalog;
+#[path = "runtime_provider_models.rs"]
+mod runtime_provider_models;
+
+pub(super) use self::{
+    runtime_catalog::catalog_summary,
+    runtime_provider_models::{models, providers},
 };
 
 pub(super) fn connected_accounts_summary(value: &Value) -> DxConnectedAccountsSummary {
@@ -268,80 +276,6 @@ fn social_action_command_matches_prefix(command: &str, prefix: &str) -> bool {
         .is_some_and(|platform| is_safe_platform_arg(platform))
 }
 
-pub(super) fn providers(value: &Value) -> Vec<DxAgentProvider> {
-    array_field(value, &["providers"])
-        .map(|providers| {
-            providers
-                .iter()
-                .take(24)
-                .map(|provider| DxAgentProvider {
-                    id: string_field(provider, &["id"]).unwrap_or_else(|| "provider".to_string()),
-                    display_name: string_field(provider, &["display_name"])
-                        .unwrap_or_else(|| "Provider".to_string()),
-                    status: string_field(provider, &["status"])
-                        .unwrap_or_else(|| "unknown".to_string()),
-                    configured: bool_field(provider, &["configured"]).unwrap_or(false),
-                    active: bool_field(provider, &["active"]).unwrap_or(false),
-                    local: bool_field(provider, &["local"]).unwrap_or(false),
-                    compatibility: string_array_field(provider, &["compatibility"]),
-                })
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
-pub(super) fn models(value: &Value) -> Vec<DxAgentModel> {
-    array_field(value, &["models"])
-        .map(|models| {
-            models
-                .iter()
-                .take(24)
-                .map(|model| DxAgentModel {
-                    id: string_field(model, &["id"]).unwrap_or_else(|| "model".to_string()),
-                    provider_id: string_field(model, &["provider_id"])
-                        .unwrap_or_else(|| "provider".to_string()),
-                    model_id: string_field(model, &["model_id"])
-                        .unwrap_or_else(|| "model".to_string()),
-                    status: string_field(model, &["status"])
-                        .unwrap_or_else(|| "unknown".to_string()),
-                    active: bool_field(model, &["active"]).unwrap_or(false),
-                    compatibility: string_array_field(model, &["compatibility"]),
-                })
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
-pub(super) fn catalog_summary(
-    provider_value: Option<&Value>,
-    model_value: Option<&Value>,
-    default_path: PathBuf,
-) -> DxAgentCatalogSummary {
-    let catalog = provider_value
-        .and_then(|value| value.get("catalog"))
-        .or_else(|| model_value.and_then(|value| value.get("catalog")));
-    let path = catalog
-        .and_then(|catalog| string_field(catalog, &["binary_cache_path"]))
-        .filter(|path| !path.trim().is_empty())
-        .map(PathBuf::from)
-        .unwrap_or(default_path);
-    DxAgentCatalogSummary {
-        present: catalog
-            .and_then(|catalog| bool_field(catalog, &["binary_cache_present"]))
-            .unwrap_or_else(|| path.is_file()),
-        stale: catalog
-            .and_then(|catalog| bool_field(catalog, &["binary_cache_stale"]))
-            .unwrap_or(true),
-        provider_count: catalog
-            .and_then(|catalog| usize_field(catalog, &["provider_count"]))
-            .unwrap_or_default(),
-        model_count: catalog
-            .and_then(|catalog| usize_field(catalog, &["model_count"]))
-            .unwrap_or_default(),
-        source_hash: catalog.and_then(|catalog| string_field(catalog, &["source_hash"])),
-        safe_regeneration_command: catalog
-            .and_then(|catalog| string_field(catalog, &["safe_regeneration_command"]))
-            .unwrap_or_else(|| "dx agents providers catalog regenerate --json".to_string()),
-        path,
-    }
-}
+#[cfg(test)]
+#[path = "runtime_tests.rs"]
+mod runtime_tests;

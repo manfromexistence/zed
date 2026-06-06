@@ -15,7 +15,10 @@ test("DX Agent bridge stays split by command, runtime, and receipt ownership", (
     "crates/agent_ui/src/dx_agent_bridge/local_files.rs",
     "crates/agent_ui/src/dx_agent_bridge/receipts.rs",
     "crates/agent_ui/src/dx_agent_bridge/receipts/receipt_strings.rs",
+    "crates/agent_ui/src/dx_agent_bridge/runtime_catalog.rs",
+    "crates/agent_ui/src/dx_agent_bridge/runtime_provider_models.rs",
     "crates/agent_ui/src/dx_agent_bridge/runtime.rs",
+    "crates/agent_ui/src/dx_agent_bridge/runtime_tests.rs",
   ];
 
   for (const module of expectedModules) {
@@ -43,7 +46,12 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   const localFiles = read("crates/agent_ui/src/dx_agent_bridge/local_files.rs");
   const receipts = read("crates/agent_ui/src/dx_agent_bridge/receipts.rs");
   const receiptStrings = read("crates/agent_ui/src/dx_agent_bridge/receipts/receipt_strings.rs");
+  const runtimeCatalog = read("crates/agent_ui/src/dx_agent_bridge/runtime_catalog.rs");
+  const runtimeProviderModels = read(
+    "crates/agent_ui/src/dx_agent_bridge/runtime_provider_models.rs",
+  );
   const runtime = read("crates/agent_ui/src/dx_agent_bridge/runtime.rs");
+  const runtimeTests = read("crates/agent_ui/src/dx_agent_bridge/runtime_tests.rs");
 
   assert.doesNotMatch(parent, /fn run_bridge_command/);
   assert.doesNotMatch(parent, /fn contract_summary/);
@@ -84,7 +92,19 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.match(receiptStrings, /pub\(super\) fn receipt_string_array_field/);
   assert.match(receiptStrings, /pub\(super\) fn receipt_string_values_field/);
   assert.match(runtime, /pub\(super\) fn social_accounts/);
-  assert.match(runtime, /pub\(super\) fn catalog_summary/);
+  assert.match(runtime, /runtime_catalog::catalog_summary/);
+  assert.match(runtime, /runtime_provider_models::\{models, providers\}/);
+  assert.match(runtimeCatalog, /pub\(super\) fn catalog_summary/);
+  assert.match(runtimeCatalog, /binary_cache_path/);
+  assert.match(runtimeCatalog, /bool_field\(catalog, &\["loaded"\]\)/);
+  assert.match(runtimeProviderModels, /pub\(super\) fn providers/);
+  assert.match(runtimeProviderModels, /pub\(super\) fn models/);
+  assert.match(runtimeProviderModels, /fn grouped_model_rows/);
+  assert.match(runtime, /#\[path = "runtime_tests\.rs"\]/);
+  assert.match(runtimeTests, /provider_rows_read_agent_cli_provider_receipts/);
+  assert.match(runtimeTests, /model_rows_flatten_agent_cli_provider_model_groups/);
+  assert.match(runtimeTests, /legacy_flat_model_rows_still_parse/);
+  assert.match(runtimeTests, /catalog_summary_reads_agent_cli_catalog_diagnostics/);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/command_safety.rs") < 120);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/command_safety_tests.rs") < 130);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/commands.rs") < 330);
@@ -92,7 +112,10 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/local_files.rs") < 110);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/receipts.rs") < 560);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/receipts/receipt_strings.rs") < 75);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_catalog.rs") < 90);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_provider_models.rs") < 190);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime.rs") < 420);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_tests.rs") < 170);
 });
 
 test("DX Agent bridge local receipt reads reject post-metadata growth before parsing", () => {

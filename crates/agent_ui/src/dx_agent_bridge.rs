@@ -171,6 +171,7 @@ pub(crate) struct DxAgentCatalogSummary {
     pub provider_count: usize,
     pub model_count: usize,
     pub source_hash: Option<String>,
+    pub error: Option<String>,
     pub safe_regeneration_command: String,
 }
 
