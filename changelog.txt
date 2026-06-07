@@ -1,3 +1,22 @@
+[2026-06-07] - DX AI Profiles Production Hardening Follow-up
+
+CHANGED:
+- `assets\settings\default.json` now keeps Media provider execution, demo recipe execution, and generic Agent plugin runtime preparation out of default Media/Search/Study profile grants while Search keeps read-only Agent plugin runtime inspection.
+- `crates\agent_settings\src\agent_profile.rs` now normalizes legacy Minimal to Ask only when Ask exists, and Study/Media metadata uses source/workflow language without implying unavailable generation.
+- `crates\agent_ui\src\conversation_view\composer_profile_options.rs` and `thread_view.rs` now present profile slot rows as display-only guidance or provider-pending controls without stale selectable-language promises.
+- `crates\agent_ui\src\agent_configuration\tool_picker.rs` now fails closed when a stale Configure Tools modal tries to mutate a deleted profile, and Manage Profiles headers use canonical built-in display names.
+- `script\dx-agent-configuration-modal-source.test.ts` and `script\dx-ai-search-profile-source.test.ts` now guard the stale-profile write path, canonical configure headers, and the exact Search evidence tool allowlist.
+
+PASSED:
+- `node --test script\dx-agent-configuration-modal-source.test.ts script\dx-ai-search-profile-source.test.ts script\dx-workspace-ui-state-source.test.ts script\dx-profile-selector-source.test.ts script\dx-settings-profile-selector-source.test.ts script\dx-agent-composer-liquid-glass-source.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_settings\src\agent_profile.rs crates\agent_ui\src\agent_configuration\manage_profiles_modal.rs crates\agent_ui\src\agent_configuration\tool_picker.rs crates\agent_ui\src\conversation_view\composer_profile_options.rs crates\agent_ui\src\conversation_view\thread_view.rs`
+- `git diff --cached --check`
+- Focused conflict-marker and old-profile-assumption scans returned no matches for the touched profile source, settings, and guard files.
+
+NOTES:
+- This remains source-only by instruction. `just run`, Cargo build/check/test/clippy, local servers, browser/WebView proof, native Zed launch, live DX MetaSearch execution, live Study source execution, and live Media provider generation remain skipped.
+- Exactly six GPT-5.5 extra-high subagents were used for metadata/defaults, composer contracts, selector/modal behavior, Search/Study/Web Preview evidence, Study/Media provider gaps, and verification/staging risk.
+
 [2026-06-07] - DX Automations Workspace Tab
 
 ADDED:

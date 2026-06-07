@@ -14,6 +14,10 @@ const profilesModal = readFileSync(
   "crates/agent_ui/src/agent_configuration/manage_profiles_modal.rs",
   "utf8",
 );
+const toolPicker = readFileSync(
+  "crates/agent_ui/src/agent_configuration/tool_picker.rs",
+  "utf8",
+);
 const agentProfileSettings = readFileSync(
   "crates/agent_settings/src/agent_profile.rs",
   "utf8",
@@ -325,4 +329,20 @@ test("profile names are capped before profile creation", () => {
   );
   assert.match(renderNewProfile, /when_some\(mode\.new_profile_error/);
   assert.match(renderNewProfile, /IconName::Warning/);
+
+  assert.match(
+    toolPicker,
+    /let Some\(profile\) = profiles\.get_mut\(&profile_id\.0\) else \{\s*return;\s*\};/s,
+    "tool picker settings writes should fail closed if the configured profile was deleted",
+  );
+  assert.doesNotMatch(
+    toolPicker,
+    /\.entry\(profile_id\.0\)\s*\.or_insert_with/,
+    "tool picker must not recreate deleted profiles from stale configure state",
+  );
+  assert.match(
+    profilesModal,
+    /AgentProfile::display_name\(profile_id, &profile\.name\)/,
+    "configure profile headers should use canonical built-in display names",
+  );
 });

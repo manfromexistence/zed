@@ -1079,7 +1079,7 @@ impl Render for ManageProfilesModal {
                     let profile_name = settings
                         .profiles
                         .get(profile_id)
-                        .map(|profile| profile.name.clone())
+                        .map(|profile| AgentProfile::display_name(profile_id, &profile.name))
                         .unwrap_or_else(|| "Unknown".into());
 
                     v_flex()
@@ -1102,7 +1102,7 @@ impl Render for ManageProfilesModal {
                     let profile_name = settings
                         .profiles
                         .get(profile_id)
-                        .map(|profile| profile.name.clone())
+                        .map(|profile| AgentProfile::display_name(profile_id, &profile.name))
                         .unwrap_or_else(|| "Unknown".into());
 
                     v_flex()
@@ -1125,7 +1125,7 @@ impl Render for ManageProfilesModal {
                     let profile_name = settings
                         .profiles
                         .get(profile_id)
-                        .map(|profile| profile.name.clone())
+                        .map(|profile| AgentProfile::display_name(profile_id, &profile.name))
                         .unwrap_or_else(|| "Unknown".into());
 
                     v_flex()

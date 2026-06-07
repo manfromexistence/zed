@@ -11166,7 +11166,7 @@ fn composer_slot_contract_row(slot: ComposerOptionSlot) -> AnyElement {
             IconName::Info,
             Color::Muted,
             format!(
-                "Backed by {}. Choices are request guidance until session metadata wiring is available.",
+                "Backed by {}. Choices are informational until profile preferences can be saved with the request.",
                 slot.contract.backing
             ),
         ),
@@ -11199,7 +11199,7 @@ fn composer_option_menu_row(slot: ComposerOptionSlot, option: ComposerOptionEntr
     let detail = match slot.contract.control_state {
         super::composer_profile_options::ComposerSlotControlState::DisplayOnly => option.detail,
         super::composer_profile_options::ComposerSlotControlState::BackendPending => {
-            "Backend pending; use approved receipts or provider setup before generation."
+            "Provider setup is required before this choice can start generation."
         }
     };
 

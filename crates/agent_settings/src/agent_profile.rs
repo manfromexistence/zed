@@ -79,8 +79,11 @@ impl AgentProfile {
         profile_id: AgentProfileId,
         profiles: &IndexMap<AgentProfileId, AgentProfileSettings>,
     ) -> AgentProfileId {
-        if profile_id.as_str() == builtin_profiles::LEGACY_MINIMAL {
-            return AgentProfileId(builtin_profiles::ASK.into());
+        let ask_profile = AgentProfileId(builtin_profiles::ASK.into());
+        if profile_id.as_str() == builtin_profiles::LEGACY_MINIMAL
+            && profiles.contains_key(&ask_profile)
+        {
+            return ask_profile;
         }
 
         if profiles.contains_key(&profile_id) {
@@ -92,7 +95,6 @@ impl AgentProfile {
             return write_profile;
         }
 
-        let ask_profile = AgentProfileId(builtin_profiles::ASK.into());
         if profiles.contains_key(&ask_profile) {
             return ask_profile;
         }
@@ -139,14 +141,14 @@ impl AgentProfile {
                 id: builtin_profiles::STUDY,
                 kind: DxAiProfileKind::Study,
                 display_name: "Study",
-                summary: "Organizes attached sources and study rails without inventing notebook results.",
+                summary: "Organizes attached sources, receipts, and study rails without inventing results.",
                 backend_state: DxAiProfileBackendState::ReceiptBacked,
             }),
             builtin_profiles::MEDIA => Some(DxAiProfileMetadata {
                 id: builtin_profiles::MEDIA,
                 kind: DxAiProfileKind::Media,
                 display_name: "Media",
-                summary: "Controls image, video, audio, music, 3D, and document generation providers through approved media receipts.",
+                summary: "Plans and gates image, video, audio, music, 3D, and document providers while execution setup is pending.",
                 backend_state: DxAiProfileBackendState::ProviderPending,
             }),
             _ => None,
