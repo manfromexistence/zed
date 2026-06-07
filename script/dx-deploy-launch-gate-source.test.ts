@@ -14,10 +14,15 @@ test("launch gate reader prefers launch-specific check receipts", () => {
   assert.match(roots, /pub\(crate\) struct DxDeployCheckReceiptRoot/);
   assert.match(roots, /pub root_rank: u8/);
   assert.match(roots, /pub\(crate\) fn check_receipt_roots/);
-  assert.match(roots, /workspace_roots\.iter\(\)\.take\(4\)/);
+  assert.match(roots, /use crate::dx_project_context::DxProjectContext;/);
+  assert.match(
+    roots,
+    /DxProjectContext::workspace_receipt_roots\(workspace_roots, "check"\)/,
+  );
+  assert.match(roots, /DxProjectContext::receipt_root_for\(root\.as_ref\(\), "check"\)/);
   assert.match(roots, /dx_hub_root\(\)/);
   assert.match(roots, /\.join\("www"\)/);
-  assert.match(roots, /\.join\("receipts"\)\.join\("check"\)/);
+  assert.match(roots, /\.join\("receipts"\)[\s\S]*\.join\("check"\)/);
   assert.match(roots, /use crate::dx_deploy_root_key::deploy_root_key;/);
   assert.match(roots, /let path_key = deploy_root_key\(&path\);/);
   assert.match(roots, /deploy_root_key\(&root\.path\) == path_key/);

@@ -47,12 +47,16 @@ test("DX project context centralizes bounded local-first paths", () => {
   const detect = functionBody(source, "detect");
   const checkCandidates = functionBody(source, "check_receipt_candidates");
   const sourceScopedRoots = functionBody(source, "source_scoped_receipt_roots");
+  const receiptRoot = functionBody(source, "receipt_root");
+  const receiptRootFor = functionBody(source, "receipt_root_for");
+  const workspaceReceiptRoots = functionBody(source, "workspace_receipt_roots");
   const normalizeProjectRoot = functionBody(source, "normalize_project_root");
   const projectRootKey = functionBody(source, "project_root_key");
   const pathIsSameOrChild = functionBody(source, "path_is_same_or_child");
 
   assert.match(source, /use crate::dx_deploy_root_key::deploy_root_key;/);
   assert.match(source, /pub const DX_PROJECT_CONTEXT_ANCESTOR_LIMIT: usize = 8;/);
+  assert.match(source, /pub const DX_PROJECT_CONTEXT_WORKSPACE_ROOT_LIMIT: usize = 4;/);
   assert.match(source, /pub const DX_SHARED_FALLBACK_ROOT: &str = r"G:\\Dx";/);
   assert.match(source, /pub struct DxProjectContext/);
   assert.match(source, /pub workspace_root: PathBuf/);
@@ -78,6 +82,14 @@ test("DX project context centralizes bounded local-first paths", () => {
   assert.match(sourceScopedRoots, /\.take\(DX_PROJECT_CONTEXT_ANCESTOR_LIMIT\)/);
   assert.match(sourceScopedRoots, /\.join\("receipts"\)[\s\S]*\.join\(receipt_kind\)/);
   assert.doesNotMatch(sourceScopedRoots, /DX_SHARED_FALLBACK_ROOT/);
+  assert.match(receiptRoot, /self\.dx_metadata_root\.join\("receipts"\)\.join\(receipt_kind\)/);
+  assert.match(
+    receiptRootFor,
+    /Self::detect\(root\)\.map\(\|context\| context\.receipt_root\(receipt_kind\)\)/,
+  );
+  assert.match(workspaceReceiptRoots, /\.take\(DX_PROJECT_CONTEXT_WORKSPACE_ROOT_LIMIT\)/);
+  assert.match(workspaceReceiptRoots, /\.filter_map\(\|root\| Self::detect\(root\)\)/);
+  assert.match(workspaceReceiptRoots, /context\.receipt_root\(receipt_kind\)/);
 
   assert.match(normalizeProjectRoot, /for component in path\.components\(\)/);
   assert.match(
@@ -93,10 +105,13 @@ test("DX project context centralizes bounded local-first paths", () => {
   assert.match(pathIsSameOrChild, /path_key\.starts_with\(&child_prefix\)/);
 });
 
-test("DX project context is wired into Check, Style, and Web Preview DX Studio", () => {
+test("DX project context is wired into Check, Style, Deploy, and Web Preview DX Studio", () => {
   const agentRoot = read("crates/agent_ui/src/agent_ui.rs");
   const checkReader = read("crates/agent_ui/src/dx_check_panel/reader.rs");
   const styleRoots = read("crates/agent_ui/src/dx_style_panel/receipt_roots.rs");
+  const deployRoots = read("crates/agent_ui/src/dx_deploy_receipt_roots.rs");
+  const deployCheckRoots = read("crates/agent_ui/src/dx_deploy_check_roots.rs");
+  const deployHubRoots = read("crates/agent_ui/src/dx_deploy_hub_roots.rs");
   const dxStudioProject = read("crates/web_preview/src/dx_studio/project.rs");
 
   assert.match(agentRoot, /pub mod dx_project_context;/);
@@ -111,6 +126,20 @@ test("DX project context is wired into Check, Style, and Web Preview DX Studio",
     /flat_map\(Path::ancestors\)|starts_with\(workspace_root\)|replace\('\\\\', "\/"\)/,
     "style receipt root path logic should be delegated to the shared project context",
   );
+  assert.match(deployRoots, /use crate::dx_project_context::DxProjectContext;/);
+  assert.match(
+    deployRoots,
+    /DxProjectContext::workspace_receipt_roots\(workspace_roots, "deploy"\)/,
+  );
+  assert.match(deployCheckRoots, /use crate::dx_project_context::DxProjectContext;/);
+  assert.match(
+    deployCheckRoots,
+    /DxProjectContext::workspace_receipt_roots\(workspace_roots, "check"\)/,
+  );
+  assert.match(deployCheckRoots, /DxProjectContext::receipt_root_for\(root\.as_ref\(\), "check"\)/);
+  assert.match(deployHubRoots, /use crate::dx_project_context::DxProjectContext;/);
+  assert.match(deployHubRoots, /DxProjectContext::shared_fallback_root/);
+  assert.match(deployHubRoots, /DxProjectContext::receipt_root_for\(root, "deploy"\)/);
   assert.match(dxStudioProject, /use agent_ui::dx_project_context::DxProjectContext;/);
   assert.match(dxStudioProject, /let project_context = DxProjectContext::detect\(root\);/);
   assert.match(dxStudioProject, /context\.dx_config_path/);
@@ -130,12 +159,12 @@ test("DX project context keeps IO out of render paths", () => {
   const agentPanelRender = functionBody(agentPanel, "render");
   assert.doesNotMatch(
     agentPanelRender,
-    /DxProjectContext|check_receipt_candidates|source_scoped_receipt_roots/,
+    /DxProjectContext|check_receipt_candidates|source_scoped_receipt_roots|workspace_receipt_roots/,
   );
 
   const projectPanelRender = functionBody(projectPanel, "render");
   assert.doesNotMatch(
     projectPanelRender,
-    /DxProjectContext|check_receipt_candidates|source_scoped_receipt_roots/,
+    /DxProjectContext|check_receipt_candidates|source_scoped_receipt_roots|workspace_receipt_roots/,
   );
 });

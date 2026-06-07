@@ -2,7 +2,7 @@ IN PROGRESS:
 - None. Runtime proof remains deferred until an explicit authorized validation pass allows `just run`/Cargo.
 
 COMPLETED:
-- Shared DX project context spine is wired through Check, Style receipt roots, and Web Preview DX Studio with local-first `.dx` paths and source guards.
+- Shared DX project context spine is wired through Check, Style receipt roots, Deploy receipt roots, launch-check gate roots, DX hub fallback selection, and Web Preview DX Studio with local-first `.dx` paths and source guards.
 - DX icon rebrand now has semantic `DxUiIcon` aliases, `dx_loader`/`dx_cog` assets, and shell chrome mappings guarded by a source test.
 - DX semantic icon rollout now covers the rotating loader helper, button/thread/sidebar/agent loading indicators, sidebar plugin/extension/automation/settings chrome, Agent launch actions, launch diagnostics, Check sections, source helpers, and screen carousel browser icon.
 - Project Panel folder hover badges now use a bounded background direct-child storage summary cache, showing cached file count plus byte size without render-path filesystem scans.

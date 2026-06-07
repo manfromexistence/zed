@@ -6,6 +6,7 @@ use std::{
 use crate::dx_deploy_root_key::deploy_root_key;
 
 pub const DX_PROJECT_CONTEXT_ANCESTOR_LIMIT: usize = 8;
+pub const DX_PROJECT_CONTEXT_WORKSPACE_ROOT_LIMIT: usize = 4;
 pub const DX_SHARED_FALLBACK_ROOT: &str = r"G:\Dx";
 
 const DX_CONFIG_FILE_NAME: &str = "dx";
@@ -124,6 +125,32 @@ impl DxProjectContext {
             if same_path_key(ancestor, &workspace_root) {
                 break;
             }
+        }
+
+        roots
+    }
+
+    pub fn receipt_root(&self, receipt_kind: &str) -> PathBuf {
+        self.dx_metadata_root.join("receipts").join(receipt_kind)
+    }
+
+    pub fn receipt_root_for(root: impl AsRef<Path>, receipt_kind: &str) -> Option<PathBuf> {
+        Self::detect(root).map(|context| context.receipt_root(receipt_kind))
+    }
+
+    pub fn workspace_receipt_roots(
+        workspace_roots: &[PathBuf],
+        receipt_kind: &str,
+    ) -> Vec<PathBuf> {
+        let mut seen = HashSet::new();
+        let mut roots = Vec::new();
+
+        for context in workspace_roots
+            .iter()
+            .take(DX_PROJECT_CONTEXT_WORKSPACE_ROOT_LIMIT)
+            .filter_map(|root| Self::detect(root))
+        {
+            push_unique_path(&mut roots, &mut seen, context.receipt_root(receipt_kind));
         }
 
         roots

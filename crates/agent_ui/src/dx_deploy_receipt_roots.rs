@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use crate::dx_deploy_hub_roots::deploy_hub_receipt_roots;
 use crate::dx_deploy_receipt_rank::DxDeployReceiptSourceKind;
 use crate::dx_deploy_root_key::deploy_root_key;
+use crate::dx_project_context::DxProjectContext;
 
 pub(crate) struct DxDeployReceiptRoot {
     pub path: PathBuf,
@@ -13,11 +14,12 @@ pub(crate) struct DxDeployReceiptRoot {
 pub(crate) fn deploy_receipt_roots(workspace_roots: &[PathBuf]) -> Vec<DxDeployReceiptRoot> {
     let mut roots = Vec::new();
 
-    for root in workspace_roots.iter().take(4) {
+    for path in DxProjectContext::workspace_receipt_roots(workspace_roots, "deploy") {
+        let label = path.display().to_string();
         push_receipt_root(
             &mut roots,
-            root.join(".dx").join("receipts").join("deploy"),
-            format!("{}\\.dx\\receipts\\deploy", root.display()),
+            path,
+            label,
             DxDeployReceiptSourceKind::Workspace,
         );
     }

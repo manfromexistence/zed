@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::dx_deploy_receipt_rank::DxDeployReceiptSourceKind;
+use crate::dx_project_context::DxProjectContext;
 
 const DX_HOME_ENV: &str = "DX_HOME";
 const DX_ROOT_ENV: &str = "DX_ROOT";
@@ -29,7 +30,7 @@ pub(crate) fn deploy_hub_receipt_roots() -> Vec<DxDeployHubReceiptRoot> {
 fn configured_dx_hub_root() -> PathBuf {
     env_dx_hub_root()
         .or_else(existing_dx_hub_root)
-        .unwrap_or_else(|| PathBuf::from(DX_HUB_ROOT_CANDIDATES[1]))
+        .unwrap_or_else(DxProjectContext::shared_fallback_root)
 }
 
 fn env_dx_hub_root() -> Option<PathBuf> {
@@ -59,7 +60,8 @@ fn child_receipt_root(
 }
 
 fn receipt_root(root: &Path, source_kind: DxDeployReceiptSourceKind) -> DxDeployHubReceiptRoot {
-    let path = root.join(".dx").join("receipts").join("deploy");
+    let path = DxProjectContext::receipt_root_for(root, "deploy")
+        .unwrap_or_else(|| root.join(".dx").join("receipts").join("deploy"));
 
     DxDeployHubReceiptRoot {
         label: path.display().to_string(),

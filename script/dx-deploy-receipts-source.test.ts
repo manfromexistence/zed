@@ -59,6 +59,9 @@ test("deploy capability receipt roots stay in a focused module", () => {
   assert.match(hubRoots, /DX_HUB_ROOT_CANDIDATES/);
   assert.match(hubRoots, /r"D:\\Dx"/);
   assert.match(hubRoots, /r"G:\\Dx"/);
+  assert.match(hubRoots, /use crate::dx_project_context::DxProjectContext;/);
+  assert.match(hubRoots, /DxProjectContext::shared_fallback_root/);
+  assert.match(hubRoots, /DxProjectContext::receipt_root_for\(root, "deploy"\)/);
   assert.match(hubRoots, /pub\(crate\) fn deploy_hub_receipt_roots/);
   assert.match(hubRoots, /fn configured_dx_hub_root/);
   assert.match(hubRoots, /std::env::var_os/);
@@ -74,7 +77,11 @@ test("deploy capability receipt roots stay in a focused module", () => {
     roots,
     /pub\(crate\) fn deploy_receipt_roots\(workspace_roots: &\[PathBuf\]\) -> Vec<DxDeployReceiptRoot>/,
   );
-  assert.match(roots, /workspace_roots\.iter\(\)\.take\(4\)/);
+  assert.match(roots, /use crate::dx_project_context::DxProjectContext;/);
+  assert.match(
+    roots,
+    /DxProjectContext::workspace_receipt_roots\(workspace_roots, "deploy"\)/,
+  );
   assert.match(roots, /deploy_hub_receipt_roots\(\)/);
   assert.match(roots, /use crate::dx_deploy_root_key::deploy_root_key;/);
   assert.match(roots, /path\.as_os_str\(\)\.is_empty\(\)/);

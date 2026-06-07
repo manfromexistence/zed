@@ -27,6 +27,7 @@ This checkout is the Zed/DX editor surface. Worker chats here should focus on GP
 
 ## Current Verification Lane
 
+- Current DX/Zed ecosystem source slice: the shared `DxProjectContext` now also owns bounded project-local deploy/check receipt roots and the shared `G:\Dx` fallback used by deploy hub roots. Deploy capability and launch-gate scanners preserve workspace-first, then DX hub/www ordering; runtime proof remains deferred until the governed validation window.
 - Final source-only polish for the active DX Style/Zed goal was completed on 2026-05-31 without `just run`, Cargo, servers, WebView automation, or source mutation. The final proof set is fixture mirror sync, targeted Style panel/handoff/launch source guards, focused rustfmt, `git diff --check`, and conflict-marker scanning.
 - This production-readiness pass is no-`just run` and no-Cargo by direct instruction.
 - Allowed proof for this pass is release-hygiene inspection with `git status`, targeted `rg`, and `git diff --check`.

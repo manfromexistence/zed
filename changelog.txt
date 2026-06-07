@@ -1,3 +1,19 @@
+[2026-06-07] - DX Project Context Deploy Receipt Root Reuse
+
+CHANGED:
+- `crates\agent_ui\src\dx_project_context.rs` now exposes bounded workspace receipt-root helpers and a shared receipt-root constructor for `.dx\receipts\<kind>` paths.
+- `crates\agent_ui\src\dx_deploy_receipt_roots.rs`, `crates\agent_ui\src\dx_deploy_check_roots.rs`, and `crates\agent_ui\src\dx_deploy_hub_roots.rs` now reuse the shared project context for project-local deploy/check roots and the shared DX hub fallback while preserving existing ordering and de-duplication.
+- `script\dx-project-context-source.test.ts`, `script\dx-deploy-receipts-source.test.ts`, `script\dx-deploy-launch-gate-source.test.ts`, `DX.md`, and `todo.txt` now guard and document the expanded context spine.
+
+PASSED:
+- `node --test script\dx-project-context-source.test.ts script\dx-deploy-receipts-source.test.ts script\dx-deploy-launch-gate-source.test.ts script\dx-deploy-panel-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_ui\src\dx_project_context.rs crates\agent_ui\src\dx_deploy_check_roots.rs crates\agent_ui\src\dx_deploy_receipt_roots.rs crates\agent_ui\src\dx_deploy_hub_roots.rs`
+- `git diff --check -- crates/agent_ui/src/dx_project_context.rs crates/agent_ui/src/dx_deploy_check_roots.rs crates/agent_ui/src/dx_deploy_receipt_roots.rs crates/agent_ui/src/dx_deploy_hub_roots.rs script/dx-project-context-source.test.ts script/dx-deploy-receipts-source.test.ts script/dx-deploy-launch-gate-source.test.ts DX.md todo.txt changelog.txt`
+- Conflict-marker scan over the touched lane files.
+
+NOTES:
+- This checkpoint remains source-only. Runtime launch, browser proof, broad Cargo, and `just run` remain skipped by instruction.
+
 [2026-06-07] - DX Explorer Folder Storage Summaries
 
 CHANGED:
