@@ -11,7 +11,7 @@ const MAX_RUNTIME_CANDIDATES: usize = 256;
 const MAX_PROVIDER_ALIASES: usize = 4;
 const MAX_PROVIDER_TAGS: usize = 8;
 
-pub(super) fn providers(value: &Value) -> Vec<DxAgentProvider> {
+pub(in super::super) fn providers(value: &Value) -> Vec<DxAgentProvider> {
     let root_status = display_string_field(value, &["status"]);
     array_field(value, &["providers"])
         .map(|providers| {
@@ -27,7 +27,7 @@ pub(super) fn providers(value: &Value) -> Vec<DxAgentProvider> {
         .unwrap_or_default()
 }
 
-pub(super) fn models(value: &Value) -> Vec<DxAgentModel> {
+pub(in super::super) fn models(value: &Value) -> Vec<DxAgentModel> {
     let flat_models = flat_model_rows(value);
     if !flat_models.is_empty() {
         return flat_models;

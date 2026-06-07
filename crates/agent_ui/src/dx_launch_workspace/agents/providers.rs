@@ -4,9 +4,11 @@ use ui::prelude::*;
 use crate::dx_agent_bridge::DxAgentBridgeSnapshot;
 
 use self::rows::{dx_agent_model_row, dx_agent_provider_row};
+use self::summary::dx_agent_provider_summary_rows;
 use super::super::{metric_row, muted_card};
 
 mod rows;
+mod summary;
 
 pub(in super::super) fn dx_agent_provider_state(
     snapshot: &DxAgentBridgeSnapshot,
@@ -19,23 +21,7 @@ pub(in super::super) fn dx_agent_provider_state(
     };
     let mut stack = v_flex()
         .gap_1()
-        .child(metric_row(
-            "Providers",
-            snapshot.providers.len().to_string(),
-        ))
-        .child(metric_row("Models", model_count.to_string()))
-        .child(metric_row(
-            "Catalog path",
-            snapshot.catalog.path.display().to_string(),
-        ))
-        .child(metric_row(
-            "Fast cache",
-            if snapshot.catalog.present && !snapshot.catalog.stale {
-                "ready"
-            } else {
-                "stale/missing"
-            },
-        ));
+        .children(dx_agent_provider_summary_rows(snapshot, model_count));
 
     if !snapshot.show_managed_providers {
         return stack

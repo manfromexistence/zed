@@ -14,6 +14,7 @@ const DEFAULT_PROVIDER_CATALOG_PATH: &str = r"G:\Dx\.dx\catalog\agents\provider-
 const SNAPSHOT_CACHE_TTL: Duration = Duration::from_secs(5);
 const MAX_RECEIPT_BYTES: u64 = 128 * 1024;
 
+mod catalog_labels;
 mod command_receipts;
 mod command_safety;
 mod commands;
@@ -28,6 +29,9 @@ use self::command_safety::{
 };
 use self::local_files::{dx_home_from_receipt_root, latest_receipts, read_first_json, read_json};
 
+pub(crate) use self::catalog_labels::{
+    catalog_active_provider_label, catalog_cache_state_label, catalog_detail_label,
+};
 pub(crate) use self::commands::{
     DxAgentMetadataCommand, DxAgentPublicCommand, run_dx_agent_metadata_command,
     run_dx_agent_public_command,
@@ -171,6 +175,11 @@ pub(crate) struct DxAgentCatalogSummary {
     pub stale: bool,
     pub provider_count: usize,
     pub model_count: usize,
+    pub generated_at: Option<String>,
+    pub receipt_status: String,
+    pub configured_provider_count: usize,
+    pub enabled_provider_count: usize,
+    pub active_provider_id: Option<String>,
     pub source_hash: Option<String>,
     pub error: Option<String>,
     pub safe_regeneration_command: String,
@@ -563,6 +572,7 @@ fn read_bridge_snapshot(settings: DxAgentSettingsSnapshot) -> DxAgentBridgeSnaps
             provider_value.as_ref(),
             model_value.as_ref(),
             settings.provider_catalog_path.clone(),
+            root_exists,
         ),
         contract_summary: contract_summary(contract_value.as_ref(), root_exists),
         import_summary: import_summary(import_summary_value.as_ref(), root_exists),

@@ -3,24 +3,33 @@ use std::path::PathBuf;
 use serde_json::Value;
 
 use super::super::DxAgentCatalogSummary;
-use super::{bool_field, string_field, usize_field};
+use super::runtime_catalog_fields::catalog_honesty_fields;
+use super::runtime_display::display_string_field;
+use super::{bool_field, usize_field};
 
-pub(super) fn catalog_summary(
+pub(in super::super) fn catalog_summary(
     provider_value: Option<&Value>,
     model_value: Option<&Value>,
     default_path: PathBuf,
+    root_exists: bool,
 ) -> DxAgentCatalogSummary {
     let catalog = provider_value
         .and_then(|value| value.get("catalog"))
         .or_else(|| model_value.and_then(|value| value.get("catalog")));
     let path = catalog_path(catalog, default_path);
     let error = catalog.and_then(|catalog| nonblank_string_field(catalog, &["error"]));
+    let honesty = catalog_honesty_fields(provider_value, model_value, catalog, root_exists);
 
     DxAgentCatalogSummary {
         present: catalog_present(catalog, &path),
         stale: catalog_stale(catalog, error.is_some()),
         provider_count: count_field(catalog, provider_value, model_value, "provider_count"),
         model_count: count_field(catalog, model_value, provider_value, "model_count"),
+        generated_at: honesty.generated_at,
+        receipt_status: honesty.receipt_status,
+        configured_provider_count: honesty.configured_provider_count,
+        enabled_provider_count: honesty.enabled_provider_count,
+        active_provider_id: honesty.active_provider_id,
         source_hash: catalog.and_then(|catalog| nonblank_string_field(catalog, &["source_hash"])),
         error,
         safe_regeneration_command: catalog
@@ -74,7 +83,5 @@ fn catalog_stale(catalog: Option<&Value>, has_error: bool) -> bool {
 }
 
 fn nonblank_string_field(value: &Value, path: &[&str]) -> Option<String> {
-    string_field(value, path)
-        .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty())
+    display_string_field(value, path)
 }

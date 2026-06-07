@@ -9,6 +9,8 @@ use super::{
 
 #[path = "runtime_catalog.rs"]
 mod runtime_catalog;
+#[path = "runtime_catalog_fields.rs"]
+mod runtime_catalog_fields;
 #[path = "runtime_display.rs"]
 mod runtime_display;
 #[path = "runtime_provider_models.rs"]
