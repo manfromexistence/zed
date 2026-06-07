@@ -2,6 +2,7 @@ IN PROGRESS:
 - None. Runtime proof remains deferred until an explicit authorized validation pass allows `just run`/Cargo.
 
 COMPLETED:
+- DX-WWW launch evidence now dedupes workspace/fallback project roots with the shared DX project root key and derives the shared `G:\Dx\www\examples\launch-template` fallback from `DxProjectContext` instead of a second hardcoded hub literal.
 - Project Panel DX Explorer now has a bounded cached storage drilldown strip that ranks the largest visible cached folders, shows heat levels, and clicks through to select/expand the real folder without render-path filesystem scans.
 - Launch Status and Launch Receipt Review now use workspace-root-aware, shared-context launch receipt roots: project-local `.dx\receipts\launch` wins when present, then `G:\Dx\.dx\receipts\launch` remains the fallback.
 - Shared DX project context spine is wired through Check, Style receipt roots, Deploy receipt roots, Launch status/receipt roots, launch-check gate roots, DX hub fallback selection, and Web Preview DX Studio with local-first `.dx` paths and source guards.

@@ -166,6 +166,7 @@ test("DX project context is wired into Check, Style, Deploy, and Web Preview DX 
   const receiptBuckets = read("crates/agent_ui/src/dx_receipts.rs");
   const launchReceiptRoots = read("crates/agent_ui/src/dx_launch_receipt_roots.rs");
   const launchSourceAuditPaths = read("crates/agent_ui/src/dx_launch_source_audit/paths.rs");
+  const wwwLaunchEvidence = read("crates/agent_ui/src/dx_www_launch_evidence.rs");
   const dxStudioProject = read("crates/web_preview/src/dx_studio/project.rs");
 
   assert.match(agentRoot, /pub mod dx_project_context;/);
@@ -236,6 +237,12 @@ test("DX project context is wired into Check, Style, Deploy, and Web Preview DX 
   assert.match(launchSourceAuditPaths, /use crate::dx_project_context::DxProjectContext;/);
   assert.match(launchSourceAuditPaths, /DxProjectContext::audit_root_candidates/);
   assert.match(launchSourceAuditPaths, /DxProjectContext::shared_fallback_root/);
+  assert.match(
+    wwwLaunchEvidence,
+    /use crate::dx_project_context::\{DxProjectContext, project_root_key\};/,
+  );
+  assert.match(wwwLaunchEvidence, /DxProjectContext::shared_fallback_root\(\)/);
+  assert.match(wwwLaunchEvidence, /seen\.insert\(project_root_key\(path\)\)/);
   assert.match(dxStudioProject, /use agent_ui::dx_project_context::DxProjectContext;/);
   assert.match(dxStudioProject, /let project_context = DxProjectContext::detect\(root\);/);
   assert.match(dxStudioProject, /context\.dx_config_path/);

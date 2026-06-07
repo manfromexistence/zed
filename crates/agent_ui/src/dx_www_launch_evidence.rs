@@ -1,11 +1,14 @@
 use serde_json::Value;
 use std::{
+    collections::HashSet,
     fs::File,
     io::Read,
     path::{Path, PathBuf},
     sync::{Mutex, OnceLock},
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
+
+use crate::dx_project_context::{DxProjectContext, project_root_key};
 
 mod evidence_labels;
 mod evidence_status;
@@ -18,7 +21,6 @@ use expected_artifacts::{
 };
 
 const DEFAULT_DX_WWW_PROJECT: &str = r"G:\WWW\www";
-const FALLBACK_DX_WWW_TEMPLATE: &str = r"G:\Dx\www\examples\launch-template";
 const RELEASE_ROOT: &str = ".dx/forge/release";
 const WWW_EVIDENCE_CACHE_TTL: Duration = Duration::from_secs(5);
 const MAX_EVIDENCE_BYTES: u64 = 256 * 1024;
@@ -195,21 +197,50 @@ fn scan_www_launch_evidence(workspace_roots: &[String]) -> DxWwwLaunchEvidenceSn
 }
 
 fn select_www_project_root(workspace_roots: &[String]) -> PathBuf {
+    let mut seen = HashSet::new();
     for root in workspace_roots {
+        let root = root.trim();
+        if root.is_empty() {
+            continue;
+        }
         let path = PathBuf::from(root);
+        if !push_unique_www_project_root(&mut seen, &path) {
+            continue;
+        }
         if is_dx_www_project_candidate(&path) {
             return path;
         }
     }
 
-    for candidate in [DEFAULT_DX_WWW_PROJECT, FALLBACK_DX_WWW_TEMPLATE] {
-        let path = PathBuf::from(candidate);
+    for path in fallback_www_project_roots() {
+        if !push_unique_www_project_root(&mut seen, &path) {
+            continue;
+        }
         if path.is_dir() {
             return path;
         }
     }
 
+    default_www_project_root()
+}
+
+fn fallback_www_project_roots() -> Vec<PathBuf> {
+    vec![default_www_project_root(), fallback_www_template_root()]
+}
+
+fn default_www_project_root() -> PathBuf {
     PathBuf::from(DEFAULT_DX_WWW_PROJECT)
+}
+
+fn fallback_www_template_root() -> PathBuf {
+    DxProjectContext::shared_fallback_root()
+        .join("www")
+        .join("examples")
+        .join("launch-template")
+}
+
+fn push_unique_www_project_root(seen: &mut HashSet<String>, path: &Path) -> bool {
+    seen.insert(project_root_key(path))
 }
 
 fn is_dx_www_project_candidate(path: &Path) -> bool {

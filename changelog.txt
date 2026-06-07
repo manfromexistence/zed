@@ -1,3 +1,18 @@
+[2026-06-07] - DX-WWW Launch Evidence Project Context Fallback
+
+CHANGED:
+- `crates\agent_ui\src\dx_www_launch_evidence.rs` now trims and dedupes workspace/fallback DX-WWW project candidates through the shared project root key, keeps active workspace roots first, and derives the shared `G:\Dx\www\examples\launch-template` fallback from `DxProjectContext`.
+- `script\dx-www-launch-evidence-source.test.ts` and `script\dx-project-context-source.test.ts` now guard the shared-context fallback and dedupe boundary.
+- `todo.txt` and `DX.md` now record this source-only DX-WWW evidence fallback slice.
+
+PASSED:
+- `node --test script\dx-www-launch-evidence-source.test.ts script\dx-project-context-source.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_ui\src\dx_www_launch_evidence.rs`
+- `git diff --check -- crates/agent_ui/src/dx_www_launch_evidence.rs script/dx-www-launch-evidence-source.test.ts script/dx-project-context-source.test.ts`
+
+NOTES:
+- This remains source-only. Cargo, `just run`, local servers, browser/WebView proof, native Zed launch, and live DX-WWW release evidence proof remain skipped by instruction.
+
 [2026-06-07] - DX Launch Receipt Roots Use Project Context
 
 CHANGED:

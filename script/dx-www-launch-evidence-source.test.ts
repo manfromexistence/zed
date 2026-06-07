@@ -27,9 +27,11 @@ test("DX-WWW launch evidence keeps artifact catalog out of scanner", () => {
   assert.match(parent, /^mod evidence_labels;$/m);
   assert.match(parent, /^mod evidence_status;$/m);
   assert.match(parent, /^mod expected_artifacts;$/m);
+  assert.match(parent, /use crate::dx_project_context::\{DxProjectContext, project_root_key\};/);
   assert.match(parent, /use evidence_labels::evidence_score_label/);
   assert.match(parent, /use evidence_status::evidence_status_label/);
   assert.match(parent, /use expected_artifacts::\{/);
+  assert.doesNotMatch(parent, /FALLBACK_DX_WWW_TEMPLATE|r"G:\\Dx\\www/);
   assert.doesNotMatch(parent, /const EXPECTED_EVIDENCE_ARTIFACTS/);
   assert.doesNotMatch(parent, /struct ExpectedWwwEvidenceArtifact/);
   assert.doesNotMatch(parent, /enum EvidenceFormat/);
@@ -37,6 +39,11 @@ test("DX-WWW launch evidence keeps artifact catalog out of scanner", () => {
   assert.doesNotMatch(parent, /let status = match passed/);
   assert.match(parent, /pub\(crate\) fn www_launch_evidence_snapshot/);
   assert.match(parent, /fn scan_www_launch_evidence/);
+  assert.match(parent, /fn fallback_www_template_root\(\) -> PathBuf/);
+  assert.match(parent, /DxProjectContext::shared_fallback_root\(\)/);
+  assert.match(parent, /\.join\("www"\)\s*\.join\("examples"\)\s*\.join\("launch-template"\)/);
+  assert.match(parent, /fn push_unique_www_project_root\(seen: &mut HashSet<String>, path: &Path\) -> bool/);
+  assert.match(parent, /seen\.insert\(project_root_key\(path\)\)/);
   assert.match(parent, /fn inspect_expected_artifact/);
   const readJsonPacket = functionBody(parent, "read_json_packet");
   assert.match(
