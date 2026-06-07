@@ -137,6 +137,10 @@ test("DX loading and tool surfaces use semantic icon helpers", () => {
   assert.doesNotMatch(agentConfiguration, /IconButton::new\("context-server-config-menu", IconName::Settings\)/);
   assert.match(agentConfiguration, /Icon::new\(dx_icon\(DxUiIcon::Gateway\)\)/);
   assert.doesNotMatch(agentConfiguration, /Icon::new\(IconName::Sliders\)/);
+  assert.match(manageProfilesModal, /builtin_profiles::MEDIA => dx_icon\(DxUiIcon::Media\)/);
+  assert.match(manageProfilesModal, /builtin_profiles::SEARCH => dx_icon\(DxUiIcon::Search\)/);
+  assert.doesNotMatch(manageProfilesModal, /builtin_profiles::MEDIA => IconName::Image/);
+  assert.doesNotMatch(manageProfilesModal, /builtin_profiles::SEARCH => IconName::ToolSearch/);
   assert.match(manageProfilesModal, /Icon::new\(dx_icon\(DxUiIcon::Settings\)\)/);
   assert.match(manageProfilesModal, /Some\(dx_icon\(DxUiIcon::Settings\)\)/);
   assert.match(aiSettingItem, /IconButton::new\("menu", dx_icon\(DxUiIcon::Settings\)\)/);

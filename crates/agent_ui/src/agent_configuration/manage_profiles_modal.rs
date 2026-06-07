@@ -51,8 +51,8 @@ fn profile_icon(profile_id: &AgentProfileId) -> IconName {
     match profile_id.as_str() {
         builtin_profiles::WRITE => IconName::ZedAgent,
         builtin_profiles::ASK | builtin_profiles::LEGACY_MINIMAL => IconName::Chat,
-        builtin_profiles::MEDIA => IconName::Image,
-        builtin_profiles::SEARCH => IconName::ToolSearch,
+        builtin_profiles::MEDIA => dx_icon(DxUiIcon::Media),
+        builtin_profiles::SEARCH => dx_icon(DxUiIcon::Search),
         builtin_profiles::STUDY => IconName::Book,
         _ => IconName::UserRoundPen,
     }
