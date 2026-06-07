@@ -11,16 +11,6 @@ pub(super) fn dx_agent_social_row(
     account: &DxAgentSocialAccount,
     cx: &App,
 ) -> AnyElement {
-    let state = if account.connected {
-        "Connected".to_string()
-    } else if account.qr_connect_supported {
-        "QR ready".to_string()
-    } else if account.configured {
-        "Configured".to_string()
-    } else {
-        "Needs setup".to_string()
-    };
-
     v_flex()
         .id(id)
         .gap_0p5()
@@ -29,13 +19,64 @@ pub(super) fn dx_agent_social_row(
         .px_1()
         .py_0p5()
         .bg(cx.theme().colors().element_background)
-        .child(metric_row(account.platform.clone(), state))
+        .child(metric_row(
+            account.label.clone(),
+            account.account_state.clone(),
+        ))
         .child(
-            Label::new(format!("{} - {}", account.label, account.status))
+            Label::new(format!(
+                "{} / {} - {}",
+                account.provider_id, account.platform, account.status
+            ))
+            .size(LabelSize::XSmall)
+            .color(Color::Muted)
+            .truncate(),
+        )
+        .child(
+            Label::new(format!(
+                "Auth {}, QR {}, credential {}",
+                account.auth_method, account.qr_capability, account.credential_health
+            ))
+            .size(LabelSize::XSmall)
+            .color(Color::Muted)
+            .truncate(),
+        )
+        .when_some(
+            account.credential_expires_at.as_ref(),
+            |this, expires_at| {
+                this.child(
+                    Label::new(format!("Credential expires {expires_at}"))
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted)
+                        .truncate(),
+                )
+            },
+        )
+        .when_some(account.credential_error.as_ref(), |this, error| {
+            this.child(
+                Label::new(format!("Credential issue: {error}"))
+                    .size(LabelSize::XSmall)
+                    .color(Color::Muted)
+                    .truncate(),
+            )
+        })
+        .when(!account.receipt_history.is_empty(), |this| {
+            this.child(
+                Label::new(format!(
+                    "Receipts {}",
+                    account
+                        .receipt_history
+                        .iter()
+                        .take(3)
+                        .map(String::as_str)
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ))
                 .size(LabelSize::XSmall)
                 .color(Color::Muted)
                 .truncate(),
-        )
+            )
+        })
         .when(!account.next_action.is_empty(), |this| {
             this.child(
                 Label::new(account.next_action.clone())

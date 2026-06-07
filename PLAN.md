@@ -87,6 +87,55 @@ This checkpoint defines the next Zed DX editor feature batch. It is a planning-o
 - Keep the rail connected to real DX/Codex status data where available, and show honest empty or missing states where data is not available.
 - Preserve normal editor and project behavior once a project is opened.
 
+### 6. DX Plugins, Workflow Nodes, And Agent Integrations
+
+- Treat the Zed-facing product surface as `Plugins`, backed only by DX-owned plugin packages, DX workflows, and DX Agent tools.
+- Build the plugin and workflow model around DX concepts:
+  - Workflows are DX-owned node graphs.
+  - Plugins expose triggers, actions, transforms, credentials, permissions, execution metadata, and receipts.
+  - Visual or multi-step plugins should normalize their capabilities into a DX plugin manifest before Zed or DX Agents can use them.
+- Run plugin and workflow execution through `G:\Dx\js` / DXJS where practical, so TypeScript and JavaScript plugins can run through the DX-owned Bun fork instead of a generic Node runtime.
+- Keep the first milestone fully DX-native:
+  - Do not include external inspiration projects as plugin sources.
+  - Do not expose upstream project labels in Zed UI or DX plugin metadata.
+  - Zed UI copy should say `Plugins`, `Workflows`, `Nodes`, `Credentials`, and `Receipts`.
+- Use only DX-owned source roots and explicitly approved permissive packages when expanding the plugin catalog.
+- Build a DX plugin registry bridge before building large UI:
+  - Scan DX-owned plugin and node sources.
+  - Normalize name, category, description, inputs, outputs, credentials, permissions, runtime, source path, and trust status.
+  - Cache the catalog outside render paths.
+  - Expose only enabled/trusted plugins to the AI tool layer.
+  - Record plugin enablement, execution, errors, and credential status as DX receipts.
+- Connect enabled plugins to DX Agents and the Zed AI profiles through a narrow tool bridge:
+  - `Ask` can reference read-only plugin data when explicitly used.
+  - `Agents` can run approved workflow/tool plugins.
+  - `Search`, `Study`, and `Media` should prefer Web Preview-backed plugin UIs where the interaction is visual or workflow-heavy.
+- Create these DX-native first-party plugins:
+  - `Browser`: agent control of the in-app browser, including navigation, click/type, DOM inspection, screenshots, and page-state summaries.
+  - `Computer`: agent control of the user's Chrome/desktop browser path with action recording; show recordings as Agent-screen thumbnails and open them in the Zed Web Preview video player when clicked.
+  - `Driven`: DX-native agent workflow plugin inspired by Superpowers, but wired to DX lanes, worker prompts, goals, checkpoints, receipts, source guards, and verification policy.
+- Improve the DX Agents integration as part of the plugin work:
+  - Surface social/account connections with real status, QR-code login flows where providers support it, credential health, and receipt-backed connection history.
+  - Keep connection UI visually polished in GPUI with clear account/provider cards, not raw command output.
+  - Avoid fake connected states; missing auth, expired credentials, and unavailable providers must be visible and actionable.
+- Preferred implementation order:
+  1. Define the DX plugin manifest and source catalog scanner.
+  2. Index DX-owned plugin and node sources.
+  3. Add the Zed Plugins panel catalog view with trust/enable controls.
+  4. Add the DXJS execution adapter with permissions, cancellation, receipts, and error reporting.
+  5. Wire enabled plugins into DX Agents as approved AI tools.
+  6. Build the `Browser`, `Computer`, and `Driven` first-party plugins.
+  7. Add social connection cards and QR login UX for DX Agents integrations.
+
+### 7. DX Automations Foundation
+
+- Treat Automations as a DX Agents receipt-backed surface first, not a native Zed scheduler.
+- Automation records should carry typed fields for name, prompt, schedule, status, destination, last run, next run, receipts, and history.
+- The composer surface should expose the backend contract and draft fields, but `Save Draft`, `Enable`, and run controls must stay disabled or unavailable until DX Agents emits an explicit composer/runtime receipt.
+- Launch rail Automations should remain read-only status/handoff UI.
+- Settings/Agent Configuration is the correct home for interactive automation composition because it already owns workspace roots, receipt roots, and public DX Agents action gating.
+- Future runtime work should add a typed DX Agents create/update/run contract before enabling scheduled execution.
+
 ## Constraints
 
 - Do not run `just run` unless the user explicitly authorizes it.

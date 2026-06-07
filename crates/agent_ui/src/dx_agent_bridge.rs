@@ -12,6 +12,7 @@ const DEFAULT_DX_CLI: &str = "dx";
 const SNAPSHOT_CACHE_TTL: Duration = Duration::from_secs(5);
 const MAX_RECEIPT_BYTES: u64 = 128 * 1024;
 
+mod automation_contract;
 mod command_safety;
 mod commands;
 mod local_file_labels;
@@ -30,19 +31,25 @@ use self::paths::{
     default_provider_catalog_path,
 };
 
+pub(crate) use self::automation_contract::{
+    DxAgentAutomation, DxAgentAutomationComposer, DxAgentAutomationComposerField,
+    DxAgentAutomationDestination, DxAgentAutomationHistoryEntry, DxAgentAutomationReceiptRef,
+    DxAgentAutomationSchedule, DxAgentAutomationStatus,
+};
 pub(crate) use self::commands::{
     DxAgentMetadataCommand, DxAgentPublicCommand, run_dx_agent_metadata_command,
     run_dx_agent_public_command,
 };
 
 use self::{
+    automation_contract::{automation_composer, automations},
     receipts::{
         action_error, contract_summary, import_summary, receipt_inbox, receipt_index_summary,
-        receipts, release_gate,
+        receipts, release_gate, trusted_tool_bridge_summary,
     },
     runtime::{
-        DxAgentSocialActionKind, automations, catalog_summary, connected_accounts_summary, models,
-        providers, social_accounts, social_action_summary,
+        DxAgentSocialActionKind, catalog_summary, connected_accounts_summary, models, providers,
+        social_accounts, social_action_summary,
     },
 };
 
@@ -62,10 +69,12 @@ pub(crate) struct DxAgentBridgeSnapshot {
     pub social_accounts: Vec<DxAgentSocialAccount>,
     pub social_connect: DxAgentSocialActionSummary,
     pub social_disconnect: DxAgentSocialActionSummary,
+    pub automation_composer: DxAgentAutomationComposer,
     pub automations: Vec<DxAgentAutomation>,
     pub providers: Vec<DxAgentProvider>,
     pub models: Vec<DxAgentModel>,
     pub catalog: DxAgentCatalogSummary,
+    pub trusted_tool_bridge: DxAgentTrustedToolBridgeSummary,
     pub contract_summary: DxAgentContractSummary,
     pub import_summary: DxAgentImportSummary,
     pub release_gate: DxAgentReleaseGateSummary,
@@ -90,9 +99,17 @@ pub(crate) struct DxConnectedAccountsSummary {
 
 #[derive(Clone)]
 pub(crate) struct DxAgentSocialAccount {
+    pub provider_id: String,
     pub platform: String,
     pub label: String,
     pub status: String,
+    pub account_state: String,
+    pub auth_method: String,
+    pub qr_capability: String,
+    pub credential_health: String,
+    pub credential_expires_at: Option<String>,
+    pub credential_error: Option<String>,
+    pub receipt_history: Vec<String>,
     pub configured: bool,
     pub connected: bool,
     pub qr_connect_supported: bool,
@@ -135,21 +152,16 @@ pub(crate) struct DxAgentSocialActionSummary {
 }
 
 #[derive(Clone)]
-pub(crate) struct DxAgentAutomation {
-    pub id: String,
-    pub status: String,
-    pub enabled: bool,
-    pub schedule_kind: String,
-    pub source: String,
-    pub actions: Vec<DxAgentRowAction>,
-    pub next_action: String,
-}
-
-#[derive(Clone)]
 pub(crate) struct DxAgentProvider {
     pub id: String,
     pub display_name: String,
     pub status: String,
+    pub account_state: String,
+    pub auth_method: String,
+    pub credential_health: String,
+    pub credential_expires_at: Option<String>,
+    pub credential_error: Option<String>,
+    pub qr_connect_supported: bool,
     pub configured: bool,
     pub active: bool,
     pub local: bool,
@@ -176,6 +188,20 @@ pub(crate) struct DxAgentCatalogSummary {
     pub source_hash: Option<String>,
     pub error: Option<String>,
     pub safe_regeneration_command: String,
+}
+
+#[derive(Clone)]
+pub(crate) struct DxAgentTrustedToolBridgeSummary {
+    pub present: bool,
+    pub status: String,
+    pub trust_policy: String,
+    pub approved_plugin_tool_count: usize,
+    pub approved_automation_tool_count: usize,
+    pub blocked_tool_count: usize,
+    pub receipt_count: usize,
+    pub bridge_contract_id: String,
+    pub next_action: String,
+    pub trusted_tool_ids: Vec<String>,
 }
 
 #[derive(Clone)]
@@ -503,6 +529,13 @@ fn read_bridge_snapshot(settings: DxAgentSettingsSnapshot) -> DxAgentBridgeSnaps
     let social_connect_value = read_json(&settings.receipt_root.join("social-connect-latest.json"));
     let social_disconnect_value =
         read_json(&settings.receipt_root.join("social-disconnect-latest.json"));
+    let automation_composer_value = read_first_json(
+        &settings.receipt_root,
+        &[
+            "automate-composer-latest.json",
+            "automation-composer-latest.json",
+        ],
+    );
     let automation_value = read_json(&settings.receipt_root.join("automate-list-latest.json"));
     let provider_value = read_json(&settings.receipt_root.join("providers-list-latest.json"));
     let model_value = read_json(&settings.receipt_root.join("models-list-latest.json"));
@@ -603,6 +636,7 @@ fn read_bridge_snapshot(settings: DxAgentSettingsSnapshot) -> DxAgentBridgeSnaps
             root_exists,
             DxAgentSocialActionKind::Disconnect,
         ),
+        automation_composer: automation_composer(automation_composer_value.as_ref(), root_exists),
         automations: automation_value
             .as_ref()
             .map(automations)
@@ -613,6 +647,13 @@ fn read_bridge_snapshot(settings: DxAgentSettingsSnapshot) -> DxAgentBridgeSnaps
             provider_value.as_ref(),
             model_value.as_ref(),
             settings.provider_catalog_path.clone(),
+        ),
+        trusted_tool_bridge: trusted_tool_bridge_summary(
+            status_value.as_ref(),
+            contract_value.as_ref(),
+            import_summary_value.as_ref(),
+            release_gate_value.as_ref(),
+            root_exists,
         ),
         contract_summary: contract_summary(contract_value.as_ref(), root_exists),
         import_summary: import_summary(import_summary_value.as_ref(), root_exists),

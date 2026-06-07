@@ -3,9 +3,11 @@ use ui::prelude::*;
 
 use crate::dx_agent_bridge::DxAgentBridgeSnapshot;
 
-use self::rows::dx_agent_automation_row;
+use self::{composer::dx_agent_automation_composer_contract, rows::dx_agent_automation_row};
 use super::super::{metric_row, muted_card};
 
+mod composer;
+mod labels;
 mod rows;
 
 pub(in super::super) fn dx_agent_automation_state(
@@ -19,6 +21,26 @@ pub(in super::super) fn dx_agent_automation_state(
         .child(metric_row(
             "Command",
             "dx agents automate list --json".to_string(),
+        ))
+        .child(metric_row(
+            "Trusted bridge",
+            snapshot.trusted_tool_bridge.status.clone(),
+        ))
+        .child(metric_row(
+            "Approved tools",
+            format!(
+                "{} plugin / {} automation",
+                snapshot.trusted_tool_bridge.approved_plugin_tool_count,
+                snapshot.trusted_tool_bridge.approved_automation_tool_count
+            ),
+        ))
+        .child(metric_row(
+            "Blocked tools",
+            snapshot.trusted_tool_bridge.blocked_tool_count.to_string(),
+        ))
+        .child(dx_agent_automation_composer_contract(
+            &snapshot.automation_composer,
+            cx,
         ));
 
     if snapshot.automations.is_empty() {

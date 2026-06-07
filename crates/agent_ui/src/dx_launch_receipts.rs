@@ -36,6 +36,7 @@ pub(crate) struct DxLaunchReceiptReviewSnapshot {
     pub latest: Option<DxLaunchReceiptSummary>,
     pub snapshots: Vec<DxLaunchReceiptSummary>,
     pub snapshot_count: usize,
+    pub snapshot_scan_truncated: bool,
     pub malformed_count: usize,
     pub stale_count: usize,
     pub expired_count: usize,
@@ -105,7 +106,10 @@ fn scan_launch_receipts(root: PathBuf) -> DxLaunchReceiptReviewSnapshot {
     let latest = latest_path
         .is_file()
         .then(|| DxLaunchReceiptSummary::from_path("latest", &latest_path, generated_at_ms));
-    let mut snapshots = launch_snapshot_paths(&root)
+    let snapshot_paths = launch_snapshot_paths(&root);
+    let snapshot_scan_truncated = snapshot_paths.scan_truncated;
+    let mut snapshots = snapshot_paths
+        .paths
         .into_iter()
         .map(|path| DxLaunchReceiptSummary::from_path("snapshot", &path, generated_at_ms))
         .collect::<Vec<_>>();
@@ -148,6 +152,12 @@ fn scan_launch_receipts(root: PathBuf) -> DxLaunchReceiptReviewSnapshot {
             .chain(snapshots.iter())
             .find_map(|entry| entry.last_error.clone())
             .or_else(|| {
+                snapshot_scan_truncated.then(|| {
+                    "launch receipt snapshot scan capped before all files were inspected"
+                        .to_string()
+                })
+            })
+            .or_else(|| {
                 (!latest_schema_matches)
                     .then(|| "launch latest receipt has unexpected schema version".to_string())
             })
@@ -172,6 +182,7 @@ fn scan_launch_receipts(root: PathBuf) -> DxLaunchReceiptReviewSnapshot {
         malformed_count,
         latest_present,
         snapshots.len(),
+        snapshot_scan_truncated,
         latest_freshness,
     );
 
@@ -185,6 +196,7 @@ fn scan_launch_receipts(root: PathBuf) -> DxLaunchReceiptReviewSnapshot {
         status: status.to_string(),
         operator_summary,
         snapshot_count: snapshots.len(),
+        snapshot_scan_truncated: snapshot_scan_truncated,
         malformed_count,
         stale_count,
         expired_count,
@@ -217,6 +229,7 @@ fn empty_snapshot(
         latest: None,
         snapshots: Vec::new(),
         snapshot_count: 0,
+        snapshot_scan_truncated: false,
         malformed_count: 0,
         stale_count: 0,
         expired_count: 0,

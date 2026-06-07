@@ -36,6 +36,22 @@ fn provider_row(provider: &Value, root_status: Option<&str>) -> DxAgentProvider 
         status: nonblank_string_field(provider, &["status"])
             .or_else(|| root_status.map(ToString::to_string))
             .unwrap_or_else(|| "unknown".to_string()),
+        account_state: nonblank_string_field(provider, &["account_state"]).unwrap_or_else(|| {
+            if bool_field(provider, &["configured"]).unwrap_or(false) {
+                "configured".to_string()
+            } else {
+                "missing_auth".to_string()
+            }
+        }),
+        auth_method: nonblank_string_field(provider, &["auth_method"])
+            .or_else(|| nonblank_string_field(provider, &["auth"]))
+            .unwrap_or_else(|| "unknown".to_string()),
+        credential_health: nonblank_string_field(provider, &["credential_health"])
+            .unwrap_or_else(|| "unknown".to_string()),
+        credential_expires_at: nonblank_string_field(provider, &["credential_expires_at"]),
+        credential_error: nonblank_string_field(provider, &["credential_error"])
+            .or_else(|| nonblank_string_field(provider, &["catalog_error"])),
+        qr_connect_supported: bool_field(provider, &["qr_connect_supported"]).unwrap_or(false),
         configured: bool_field(provider, &["configured"]).unwrap_or(false),
         active: bool_field(provider, &["active"]).unwrap_or(false),
         local: bool_field(provider, &["local"]).unwrap_or(false),

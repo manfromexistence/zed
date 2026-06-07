@@ -1,10 +1,10 @@
 use serde_json::Value;
 
 use super::{
-    DxAgentAutomation, DxAgentRowAction, DxAgentSocialAccount, DxAgentSocialActionSummary,
-    DxConnectedAccountsSummary, array_field, bool_field, is_dx_agents_command,
-    is_public_dx_agents_command, is_safe_platform_arg, is_secret_like_arg,
-    public_command_for_runtime, string_field, usize_field,
+    DxAgentRowAction, DxAgentSocialAccount, DxAgentSocialActionSummary, DxConnectedAccountsSummary,
+    array_field, bool_field, is_dx_agents_command, is_public_dx_agents_command,
+    is_safe_platform_arg, is_secret_like_arg, public_command_for_runtime, string_array_field,
+    string_field, usize_field,
 };
 
 #[path = "runtime_catalog.rs"]
@@ -36,12 +36,41 @@ pub(super) fn social_accounts(value: &Value) -> Vec<DxAgentSocialAccount> {
                 .iter()
                 .take(12)
                 .map(|account| DxAgentSocialAccount {
+                    provider_id: string_field(account, &["provider_id"])
+                        .or_else(|| string_field(account, &["provider"]))
+                        .or_else(|| string_field(account, &["platform"]))
+                        .unwrap_or_else(|| "unknown-provider".to_string()),
                     platform: string_field(account, &["platform"])
                         .unwrap_or_else(|| "unknown".to_string()),
                     label: string_field(account, &["label"])
                         .unwrap_or_else(|| "Account".to_string()),
                     status: string_field(account, &["status"])
                         .unwrap_or_else(|| "unknown".to_string()),
+                    account_state: string_field(account, &["account_state"]).unwrap_or_else(|| {
+                        if bool_field(account, &["connected"]).unwrap_or(false) {
+                            "connected".to_string()
+                        } else if bool_field(account, &["configured"]).unwrap_or(false) {
+                            "configured".to_string()
+                        } else {
+                            "missing_auth".to_string()
+                        }
+                    }),
+                    auth_method: string_field(account, &["auth_method"])
+                        .or_else(|| string_field(account, &["connect_method"]))
+                        .unwrap_or_else(|| "unknown".to_string()),
+                    qr_capability: string_field(account, &["qr_capability"]).unwrap_or_else(|| {
+                        if bool_field(account, &["qr_connect_supported"]).unwrap_or(false) {
+                            "available".to_string()
+                        } else {
+                            "unavailable".to_string()
+                        }
+                    }),
+                    credential_health: string_field(account, &["credential_health"])
+                        .unwrap_or_else(|| "unknown".to_string()),
+                    credential_expires_at: string_field(account, &["credential_expires_at"]),
+                    credential_error: string_field(account, &["credential_error"])
+                        .or_else(|| string_field(account, &["last_error"])),
+                    receipt_history: string_array_field(account, &["receipt_history"]),
                     configured: bool_field(account, &["configured"]).unwrap_or(false),
                     connected: bool_field(account, &["connected"]).unwrap_or(false),
                     qr_connect_supported: bool_field(account, &["qr_connect_supported"])
@@ -129,30 +158,6 @@ pub(super) fn social_action_summary(
     }
 }
 
-pub(super) fn automations(value: &Value) -> Vec<DxAgentAutomation> {
-    array_field(value, &["automations"])
-        .map(|automations| {
-            automations
-                .iter()
-                .take(12)
-                .map(|automation| DxAgentAutomation {
-                    id: string_field(automation, &["id"])
-                        .unwrap_or_else(|| "automation".to_string()),
-                    status: string_field(automation, &["status"])
-                        .unwrap_or_else(|| "unknown".to_string()),
-                    enabled: bool_field(automation, &["enabled"]).unwrap_or(false),
-                    schedule_kind: string_field(automation, &["schedule_kind"])
-                        .unwrap_or_else(|| "unknown".to_string()),
-                    source: string_field(automation, &["source"])
-                        .unwrap_or_else(|| "unknown".to_string()),
-                    actions: automation_row_actions(automation),
-                    next_action: string_field(automation, &["next_action"]).unwrap_or_default(),
-                })
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
 fn social_row_actions(value: &Value) -> Vec<DxAgentRowAction> {
     row_actions(value, |id, command, receipt_filename, refresh_command| {
         is_dx_agents_command(refresh_command, "social list --json")
@@ -168,23 +173,6 @@ fn social_row_actions(value: &Value) -> Vec<DxAgentRowAction> {
                 "refresh" => {
                     receipt_filename == "social-list-latest.json"
                         && is_dx_agents_command(command, "social list --json")
-                }
-                _ => false,
-            }
-    })
-}
-
-fn automation_row_actions(value: &Value) -> Vec<DxAgentRowAction> {
-    row_actions(value, |id, command, receipt_filename, refresh_command| {
-        is_dx_agents_command(refresh_command, "automate list --json")
-            && match id {
-                "run" => {
-                    receipt_filename == "run-latest.json"
-                        && is_dx_agents_command(command, "run --json")
-                }
-                "refresh" => {
-                    receipt_filename == "automate-list-latest.json"
-                        && is_dx_agents_command(command, "automate list --json")
                 }
                 _ => false,
             }
@@ -276,6 +264,9 @@ fn social_action_command_matches_prefix(command: &str, prefix: &str) -> bool {
         .is_some_and(|platform| is_safe_platform_arg(platform))
 }
 
+#[cfg(test)]
+#[path = "runtime_connection_tests.rs"]
+mod runtime_connection_tests;
 #[cfg(test)]
 #[path = "runtime_tests.rs"]
 mod runtime_tests;

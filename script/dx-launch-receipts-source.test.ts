@@ -4,6 +4,28 @@ import test from "node:test";
 
 const read = (path: string) => readFileSync(path, "utf8");
 const lineCount = (path: string) => read(path).split(/\r?\n/).length;
+const functionBody = (source: string, name: string) => {
+  const start = source.search(new RegExp(`fn\\s+${name}(?:<[^>]+>)?\\s*\\(`));
+  assert.ok(start >= 0, `expected ${name}`);
+
+  const bodyStart = source.indexOf("{", start);
+  assert.ok(bodyStart > start, `expected ${name} body`);
+
+  let depth = 0;
+  for (let index = bodyStart; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === "{") {
+      depth += 1;
+    } else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return source.slice(start, index + 1);
+      }
+    }
+  }
+
+  assert.fail(`expected ${name} body to close`);
+};
 
 test("DX launch receipts keep IO, paths, fields, freshness, and summaries focused", () => {
   const parentPath = "crates/agent_ui/src/dx_launch_receipts.rs";
@@ -25,6 +47,8 @@ test("DX launch receipts keep IO, paths, fields, freshness, and summaries focuse
   const paths = read(pathsPath);
   const receiptIo = read(receiptIoPath);
   const summary = read(summaryPath);
+  const launchSnapshotPaths = functionBody(paths, "launch_snapshot_paths");
+  const scanLaunchReceipts = functionBody(parent, "scan_launch_receipts");
 
   assert.match(parent, /^mod fields;$/m);
   assert.match(parent, /^mod freshness;$/m);
@@ -47,7 +71,36 @@ test("DX launch receipts keep IO, paths, fields, freshness, and summaries focuse
   assert.match(fields, /fn render_safe_string/);
   assert.match(freshness, /pub\(super\) fn freshness_state/);
   assert.match(freshness, /pub\(super\) fn launch_receipt_operator_summary/);
+  assert.match(paths, /const MAX_LAUNCH_SNAPSHOT_DIR_ENTRIES: usize = 512;/);
+  assert.match(paths, /const MAX_LAUNCH_SNAPSHOT_PATHS: usize = 128;/);
+  assert.match(paths, /pub\(super\) struct LaunchSnapshotPaths/);
   assert.match(paths, /pub\(super\) fn launch_snapshot_paths/);
+  assert.match(
+    launchSnapshotPaths,
+    /receipt_order_ms\(&path\)[\s\S]*candidates\.push\(\(order_ms, path\)\)[\s\S]*candidates\.sort_by/,
+    "launch snapshot candidates must be timestamp-ranked before retaining the bounded newest set",
+  );
+  assert.doesNotMatch(
+    launchSnapshotPaths,
+    /\.take\(\s*MAX_LAUNCH_SNAPSHOT_PATHS\s*\)[\s\S]*sort_by/,
+    "launch receipt enumeration must not truncate the arbitrary read_dir order before freshness ordering",
+  );
+  assert.match(
+    launchSnapshotPaths,
+    /scan_truncated = true/,
+    "launch receipt enumeration must expose when a directory or retained-candidate cap was hit",
+  );
+  assert.match(parent, /snapshot_scan_truncated: bool/);
+  assert.match(
+    scanLaunchReceipts,
+    /let snapshot_paths = launch_snapshot_paths\(&root\);[\s\S]*let snapshot_scan_truncated = snapshot_paths\.scan_truncated;[\s\S]*snapshot_paths[\s\S]*\.paths[\s\S]*snapshot_scan_truncated:/,
+    "launch receipt review snapshots must preserve scan-cap visibility",
+  );
+  assert.match(
+    freshness,
+    /snapshot_scan_truncated: bool[\s\S]*Launch receipts warning: snapshot scan capped/,
+    "operator summaries must not present capped receipt scans as complete truth",
+  );
   assert.match(paths, /pub\(super\) fn now_ms/);
   assert.match(receiptIo, /pub\(super\) fn read_json_receipt/);
   assert.match(receiptIo, /MAX_RECEIPT_BYTES/);
@@ -61,7 +114,7 @@ test("DX launch receipts keep IO, paths, fields, freshness, and summaries focuse
   assert.ok(lineCount(parentPath) < 250, "dx_launch_receipts.rs should stay focused on snapshot assembly");
   assert.ok(lineCount(fieldsPath) < 45, "launch-receipts field module should stay small");
   assert.ok(lineCount(freshnessPath) < 60, "launch-receipts freshness module should stay small");
-  assert.ok(lineCount(pathsPath) < 70, "launch-receipts path module should stay small");
+  assert.ok(lineCount(pathsPath) < 95, "launch-receipts path module should stay small");
   assert.ok(lineCount(receiptIoPath) < 55, "launch-receipts IO module should stay small");
   assert.ok(lineCount(summaryPath) < 95, "launch-receipts summary module should stay small");
 });

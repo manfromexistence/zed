@@ -1,3 +1,88 @@
+[2026-06-07] - DX Agents Connection Cards And Trusted Tool Bridge
+
+ADDED:
+- `crates\agent_ui\src\dx_agent_bridge\receipts\trusted_tool_bridge.rs` derives a fail-closed trusted tool bridge summary from DX Agents receipts, including bridge status, trust policy, approved plugin/automation counts, blocked count, contract id, next action, receipt count, and bounded trusted tool ids.
+- `crates\agent_ui\src\dx_agent_bridge\runtime_connection_tests.rs` adds focused Rust fixtures for social connection-card parsing and trusted bridge receipt summaries.
+- `script\dx-agent-bridge-source.test.ts` and `script\dx-launch-workspace-source.test.ts` guard the connection-card data contract, QR readiness fields, credential health visibility, provider rows, and trusted bridge metrics.
+
+CHANGED:
+- `crates\agent_ui\src\dx_agent_bridge.rs`, `runtime.rs`, and `runtime_provider_models.rs` now expose provider id, account state, auth method, QR capability/support, credential health, expiry/error state, and receipt history without inventing connected or healthy states when receipts are missing.
+- `crates\agent_ui\src\dx_launch_workspace\agents\social\rows.rs` and `providers\rows.rs` now render real account/auth/QR/credential fields and explicit unavailable or blocked states instead of status-only rows.
+- `crates\agent_ui\src\dx_launch_workspace\agents\automations.rs` now surfaces the trusted tool bridge beside the automation composer so DX Agents can consume approved DX Plugins and Automations through a narrow receipt-backed contract.
+- `crates\agent_ui\src\agent_configuration.rs` and `crates\agent_ui\src\agent_panel.rs` were aligned with the nested automation contract fields used by the bridge.
+
+PASSED:
+- `node --test script\dx-agent-bridge-source.test.ts script\dx-launch-workspace-source.test.ts script\dx-plugin-catalog-source.test.ts script\dx-automations-source.test.ts script\dx-launch-receipts-source.test.ts script\dx-launch-contracts-source.test.ts script\dx-launch-readiness-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true ...` across the touched DX Agents bridge, launch workspace, plugin catalog, automation, and receipt modules.
+- `git diff --check`
+- Focused conflict-marker scan across touched source, guard, and handoff files returned no matches.
+- Source-only forbidden scan across the implementation files returned no `n8n`, `OpenClaw`, or `ZeroClaw` matches.
+
+NOTES:
+- This remains source-only by instruction. Cargo, `just run`, local servers, browser/WebView proof, native Zed launch, live DX Agents command proof, and live QR-login proof remain skipped.
+- Exactly six GPT-5.5 extra-high subagents were used for bridge/contracts, provider/auth, GPUI surfaces, receipts, plugin bridge, and source guards.
+- QR login is modeled as readiness/capability metadata until a provider emits a real QR flow receipt; Zed does not fabricate QR payloads or connected states.
+
+[2026-06-07] - DX Automations Foundation
+
+ADDED:
+- `crates\agent_ui\src\dx_agent_bridge\automation_contract.rs` defines typed automation records, composer fields, schedules, status, destinations, receipt refs, and history entries for DX Agents handoff.
+- `crates\agent_ui\src\dx_agent_bridge\automation_contract_tests.rs` and `script\dx-automations-source.test.ts` guard the schema, receipt-only actions, pending composer fallback, and UI contract.
+- `crates\agent_ui\src\dx_launch_workspace\agents\automations\composer.rs` and `crates\agent_ui\src\dx_launch_workspace\agents\automations\labels.rs` split the launch rail composer and label rendering out of the row module.
+
+CHANGED:
+- `crates\agent_ui\src\dx_agent_bridge.rs` now reads `automate-composer-latest.json` / `automation-composer-latest.json` and exposes `automation_composer` beside receipt-backed automation rows.
+- `crates\agent_ui\src\dx_agent_bridge\runtime.rs` no longer owns automation parsing; automation actions now live with the automation contract and require safe public DX Agents receipt commands.
+- `crates\agent_ui\src\agent_configuration.rs` now shows a real Composer Contract surface with disabled `Save Draft` and `Enable` controls until DX Agents exposes the backend contract, and automation rows show prompt, schedule, destination, last/next run, receipts, history, and runtime availability.
+- `crates\agent_ui\src\dx_launch_workspace\agents\automations.rs`, `crates\agent_ui\src\dx_launch_workspace\agents\automations\rows.rs`, `script\dx-launch-workspace-source.test.ts`, `script\dx-handoff-source-guard-registry.test.ts`, `DX.md`, `PLAN.md`, and `todo.txt` now document and guard the DX Automations source slice.
+
+PASSED:
+- `node --test script\dx-automations-source.test.ts script\dx-agent-bridge-source.test.ts script\dx-launch-workspace-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_ui\src\dx_agent_bridge.rs crates\agent_ui\src\dx_agent_bridge\automation_contract.rs crates\agent_ui\src\dx_agent_bridge\automation_contract_tests.rs crates\agent_ui\src\dx_agent_bridge\runtime.rs crates\agent_ui\src\agent_configuration.rs crates\agent_ui\src\dx_launch_workspace\agents\automations.rs crates\agent_ui\src\dx_launch_workspace\agents\automations\composer.rs crates\agent_ui\src\dx_launch_workspace\agents\automations\labels.rs crates\agent_ui\src\dx_launch_workspace\agents\automations\rows.rs`
+- `git diff --check -- crates/agent_ui/src/dx_agent_bridge.rs crates/agent_ui/src/dx_agent_bridge/automation_contract.rs crates/agent_ui/src/dx_agent_bridge/automation_contract_tests.rs crates/agent_ui/src/dx_agent_bridge/runtime.rs crates/agent_ui/src/agent_configuration.rs crates/agent_ui/src/dx_launch_workspace/agents/automations.rs crates/agent_ui/src/dx_launch_workspace/agents/automations/composer.rs crates/agent_ui/src/dx_launch_workspace/agents/automations/labels.rs crates/agent_ui/src/dx_launch_workspace/agents/automations/rows.rs script/dx-automations-source.test.ts script/dx-handoff-source-guard-registry.test.ts script/dx-launch-workspace-source.test.ts DX.md PLAN.md todo.txt changelog.txt`
+- Focused conflict-marker scan returned no matches for the touched automation source, guard, and docs files.
+
+NOTES:
+- This remains source-only by instruction. Cargo, `just run`, local servers, browser/WebView proof, native Zed launch, and fake scheduler execution remain skipped.
+- Exactly six GPT-5.5 extra-high subagents were used for schema/model, UI entry points, composer patterns, receipts/history, source guards, and docs/staging risk.
+- Runtime scheduling is pending DX Agents backend support; Zed now shows pending/unavailable states instead of pretending scheduled execution is wired.
+
+[2026-06-07] - Launch Receipt Snapshot Freshness Ordering
+
+CHANGED:
+- `crates\agent_ui\src\dx_launch_receipts\paths.rs` now ranks `launch-status-*.json` candidates by receipt timestamp before retaining the bounded newest snapshot set instead of truncating arbitrary directory order first.
+- `crates\agent_ui\src\dx_launch_receipts.rs` now carries `snapshot_scan_truncated` through the review snapshot, and operator summaries warn when the directory or retained-candidate cap was hit.
+- `script\dx-launch-receipts-source.test.ts` now guards timestamp-before-retention ordering and scan-cap visibility.
+
+PASSED:
+- `node --test script\dx-launch-receipts-source.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_ui\src\dx_launch_receipts.rs crates\agent_ui\src\dx_launch_receipts\paths.rs crates\agent_ui\src\dx_launch_receipts\freshness.rs`
+
+NOTES:
+- This remains source-only by instruction. Cargo, `just run`, local servers, browser automation, runtime Launch Receipt proof, and native Zed launch remain skipped.
+
+[2026-06-07] - DX AI Profiles Production Contracts
+
+ADDED:
+- `crates\agent_settings\src\agent_profile.rs` now defines typed DX AI profile metadata, backend states, and the canonical Ask, Agents, Search, Study, Media order while preserving stored `write` and legacy `minimal` compatibility.
+- `crates\agent_ui\src\conversation_view\composer_profile_options.rs` now gives every profile slot an explicit contract so controls can state whether they are display-only guidance or backend-pending provider controls.
+
+CHANGED:
+- `crates\agent_ui\src\profile_selector.rs` and `crates\agent_ui\src\agent_configuration\manage_profiles_modal.rs` now sort built-in profiles by the DX profile order and source built-in descriptions from typed metadata.
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now delegates profile-kind mapping to the typed metadata path and shows honest contract rows in composer option popovers instead of implying unavailable Media generation can start from the menu.
+- `assets\settings\default.json` now keeps Ask lightweight, keeps Agents as the builder/worker profile, keeps Search evidence-first, and gives Study source attachment/context tools without `spawn_agent`.
+- `script\dx-profile-selector-source.test.ts`, `script\dx-ai-search-profile-source.test.ts`, and `script\dx-workspace-ui-state-source.test.ts` now guard the profile order, exact Search tools, Study/Ask defaults, metadata delegation, and backend-pending Media controls.
+
+PASSED:
+- `node --test script\dx-profile-selector-source.test.ts script\dx-settings-profile-selector-source.test.ts script\dx-ai-search-profile-source.test.ts script\dx-workspace-ui-state-source.test.ts script\dx-agent-composer-liquid-glass-source.test.ts script\dx-agent-configuration-modal-source.test.ts script\dx-search-ui-source.test.ts script\dx-project-search-source.test.ts script\dx-editor-search-source.test.ts script\web-preview-platform-lifecycle.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_settings\src\agent_profile.rs crates\agent_ui\src\profile_selector.rs crates\agent_ui\src\agent_configuration\manage_profiles_modal.rs crates\agent_ui\src\conversation_view\composer_profile_options.rs crates\agent_ui\src\conversation_view\thread_view.rs`
+- `git diff --check -- crates/agent_settings/src/agent_profile.rs crates/agent_ui/src/profile_selector.rs crates/agent_ui/src/agent_configuration/manage_profiles_modal.rs crates/agent_ui/src/conversation_view/composer_profile_options.rs crates/agent_ui/src/conversation_view/thread_view.rs assets/settings/default.json script/dx-profile-selector-source.test.ts script/dx-ai-search-profile-source.test.ts script/dx-workspace-ui-state-source.test.ts`
+- Focused conflict-marker scan returned no matches for the touched AI Profile source, settings, and guard files.
+
+NOTES:
+- This remains source-only by instruction. `just run`, Cargo build/check/test/clippy, local servers, browser/WebView proof, native Zed launch, live DX MetaSearch execution, live Study notebook execution, and live Media provider generation remain skipped.
+- Exactly six GPT-5.5 extra-high subagents were used for profile metadata, composer contracts, screen/panel separation, Search/Web Preview evidence, Study/Media gaps, and verification/staging review.
+
 [2026-06-07] - Project Panel Media Metadata Path Provenance
 
 CHANGED:
@@ -11,6 +96,27 @@ PASSED:
 
 NOTES:
 - This remains source-only by instruction. Cargo, `just run`, local servers, browser automation, runtime Project Panel visual proof, and native Zed launch remain skipped.
+
+[2026-06-07] - DX Plugin Manifest Catalog
+
+ADDED:
+- `crates\agent\src\tools\dx_plugin_manifest.rs` and `crates\agent\src\tools\dx_plugin_manifest\entries.rs` define the typed DX first-party plugin manifest/catalog foundation for Browser, Computer, and Driven.
+- `script\dx-plugin-catalog-source.test.ts` guards manifest fields, DX-owned source-root discovery, Plugins/DX Agents bridge readiness, and forbidden upstream plugin-source references.
+
+CHANGED:
+- `crates\agent\src\tools\agent_plugin_catalog_tool.rs` now includes `dx_plugin_catalog` and `dx_plugin_catalog_summary` alongside the existing Agent plugin catalog.
+- `crates\agent\src\tools.rs`, `script\dx-handoff-source-guard-registry.test.ts`, `DX.md`, and `todo.txt` now register/document the source-only plugin catalog slice.
+
+PASSED:
+- `node --test script\dx-plugin-catalog-source.test.ts`
+- `node --test script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\agent\src\tools\dx_plugin_manifest.rs crates\agent\src\tools\dx_plugin_manifest\entries.rs crates\agent\src\tools\agent_plugin_catalog_tool.rs crates\agent\src\tools.rs`
+- `git diff --check -- crates/agent/src/tools/dx_plugin_manifest.rs crates/agent/src/tools/dx_plugin_manifest/entries.rs crates/agent/src/tools/agent_plugin_catalog_tool.rs crates/agent/src/tools.rs script/dx-plugin-catalog-source.test.ts script/dx-handoff-source-guard-registry.test.ts DX.md todo.txt changelog.txt`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" crates/agent/src/tools/dx_plugin_manifest.rs crates/agent/src/tools/dx_plugin_manifest/entries.rs crates/agent/src/tools/agent_plugin_catalog_tool.rs crates/agent/src/tools.rs script/dx-plugin-catalog-source.test.ts script/dx-handoff-source-guard-registry.test.ts DX.md todo.txt changelog.txt` returned no matches.
+
+NOTES:
+- This remains source-only by instruction. Cargo, `just run`, local servers, browser/WebView proof, native Zed launch, and live DXJS/plugin execution proof remain skipped.
+- Existing Chrome/PC-use Agent plugin tools remain compatibility channels; the product-facing DX manifest ids are `dx.browser`, `dx.computer`, and `dx.driven`.
 
 [2026-06-07] - Project Panel Generated Video Frame Cache Freshness
 
@@ -90,8 +196,7 @@ CHANGED:
 - `todo.txt` and `DX.md` now record this source-only AI Search profile checkpoint.
 
 PASSED:
-- `node --test script\dx-ai-search-profile-source.test.ts script\dx-handoff-source-guard-registry.test.ts script\dx-workspace-ui-state-source.test.ts`
-- `git diff --check -- assets\settings\default.json script\dx-ai-search-profile-source.test.ts script\dx-handoff-source-guard-registry.test.ts DX.md todo.txt changelog.txt`
+- `node --test script\dx-ai-search-profile-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
 
 NOTES:
 - This remains source-only by instruction. Cargo, `just run`, local servers, browser/WebView proof, native Zed launch, and live Agent tool execution proof remain skipped.
@@ -126,193 +231,20 @@ PASSED:
 NOTES:
 - This remains source-only by instruction. Cargo, `just run`, local servers, browser/WebView proof, native Zed launch, and live Forge panel runtime proof remain skipped.
 
-[2026-06-07] - Semantic Icon Hotspot Source Cleanup
-
-CHANGED:
-- `crates\project_panel\src\project_panel.rs`, `crates\sidebar\src\sidebar.rs`, `crates\agent_ui\src\agent_configuration.rs`, and `crates\agent_ui\src\conversation_view\voice_controls.rs` now use semantic DX icon helpers for Project Panel dock chrome, Search/Agents activity buttons, MCP settings controls, and Flow voice busy state.
-- `script\dx-icon-system-source.test.ts`, `DX.md`, and `todo.txt` now guard and document these semantic icon hotspots.
-
-PASSED:
-- `node --test script\dx-icon-system-source.test.ts`
-- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_ui\src\conversation_view\voice_controls.rs crates\project_panel\src\project_panel.rs crates\sidebar\src\sidebar.rs crates\agent_ui\src\agent_configuration.rs`
-- `git diff --cached --check -- crates/agent_ui/src/agent_configuration.rs crates/agent_ui/src/conversation_view/voice_controls.rs crates/project_panel/src/project_panel.rs crates/sidebar/src/sidebar.rs script/dx-icon-system-source.test.ts DX.md todo.txt changelog.txt`
-- `git grep --cached -n -E "^<<<<<<<|^=======|^>>>>>>>" -- ...` across the touched semantic icon source, guard, DX, todo, and changelog files returned no matches.
-
-NOTES:
-- This remains source-only by instruction. Cargo, `just run`, local servers, browser/WebView proof, and runtime visual validation were not run.
-[2026-06-07] - Bounded Receipt Latest Scan Guards
-
-ADDED:
-- `crates\agent_ui\src\dx_source_sets\attachment_summary.rs` moves source-set attachment summary projection out of the coordinator file while preserving the public read model.
-
-CHANGED:
-- `crates\agent_ui\src\dx_style_panel\apply_gate.rs`, `crates\agent_ui\src\dx_source_sets\receipts.rs`, and `crates\agent_ui\src\dx_receipt_history\receipt_files.rs` now cap root and nested latest-receipt directory iteration before metadata reads, candidate collection, or newest-first sorting.
-- `script\dx-style-panel-source.test.ts`, `script\dx-source-sets-source.test.ts`, and `script\dx-forge-panel-source.test.ts` now guard the bounded latest-scan contracts and reject the old unbounded receipt-history loop shape.
-- `DX.md` and `todo.txt` document the bounded receipt latest-scan source checkpoint.
-
-PASSED:
-- `node --test script\dx-receipt-directory-source.test.ts script\dx-forge-panel-source.test.ts script\dx-source-sets-source.test.ts script\dx-style-panel-source.test.ts`
-- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_ui\src\dx_style_panel\apply_gate.rs crates\agent_ui\src\dx_source_sets.rs crates\agent_ui\src\dx_source_sets\attachment_summary.rs crates\agent_ui\src\dx_source_sets\receipts.rs crates\agent_ui\src\dx_receipt_history\receipt_files.rs`
-- `git diff --cached --check -- crates/agent_ui/src/dx_style_panel/apply_gate.rs crates/agent_ui/src/dx_source_sets.rs crates/agent_ui/src/dx_source_sets/attachment_summary.rs crates/agent_ui/src/dx_source_sets/receipts.rs crates/agent_ui/src/dx_receipt_history/receipt_files.rs script/dx-style-panel-source.test.ts script/dx-source-sets-source.test.ts script/dx-forge-panel-source.test.ts DX.md todo.txt changelog.txt`
-- `git grep --cached -n -E "^<<<<<<<|^=======|^>>>>>>>" -- ...` across the touched receipt-scan source, guards, DX, todo, and changelog files returned no matches.
-
-NOTES:
-- This remains source-only by instruction. Cargo, `just run`, local servers, browser/WebView proof, and runtime visual validation were not run.
-[2026-06-07] - Agent Screen Item Source Routing
-
-ADDED:
-- `crates\agent_ui\src\agent_screen.rs` adds a real center-pane AgentScreen item that owns a builder-workspace AgentPanel, exposes AI tab metadata, disables split/toolbar behavior, and reuses existing Agent screen items before creating a new one.
-
-CHANGED:
-- `crates\agent_ui\src\agent_panel.rs` and `crates\agent_ui\src\agent_ui.rs` route FocusAgentFullscreen through AgentScreen instead of zooming the side-panel entity directly, with builder-workspace rails pinned/open from initialization.
-- `crates\workspace\src\item.rs`, `crates\workspace\src\workspace.rs`, `crates\workspace\src\pane.rs`, `crates\workspace\src\screen_carousel.rs`, `crates\title_bar\src\title_bar.rs`, `crates\sidebar\src\sidebar.rs`, and `crates\onboarding\src\onboarding.rs` now treat WorkspaceScreenKind::Agent as a first-class screen with AI labels/icons, no split/clone chrome, project/editor grid behavior, and non-editor post-onboarding handling.
-- `script\dx-workspace-ui-state-source.test.ts`, `script\dx-title-bar-source.test.ts`, `script\web-preview-platform-lifecycle.test.ts`, `DX.md`, and `todo.txt` now guard and document the Agent Screen item path.
-
-PASSED:
-- `node --test script\dx-workspace-ui-state-source.test.ts script\dx-title-bar-source.test.ts script\web-preview-platform-lifecycle.test.ts script\dx-handoff-source-guard-registry.test.ts`
-- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\agent_ui.rs crates\agent_ui\src\agent_screen.rs crates\onboarding\src\onboarding.rs crates\sidebar\src\sidebar.rs crates\title_bar\src\title_bar.rs crates\workspace\src\item.rs crates\workspace\src\pane.rs crates\workspace\src\screen_carousel.rs crates\workspace\src\workspace.rs`
-- `git diff --cached --check -- crates/agent_ui/src/agent_panel.rs crates/agent_ui/src/agent_ui.rs crates/agent_ui/src/agent_screen.rs crates/onboarding/src/onboarding.rs crates/sidebar/src/sidebar.rs crates/title_bar/src/title_bar.rs crates/workspace/src/item.rs crates/workspace/src/pane.rs crates/workspace/src/screen_carousel.rs crates/workspace/src/workspace.rs script/dx-title-bar-source.test.ts script/dx-workspace-ui-state-source.test.ts script/web-preview-platform-lifecycle.test.ts DX.md todo.txt changelog.txt`
-- `git grep --cached -n -E "^<<<<<<<|^=======|^>>>>>>>" -- ...` across the touched Agent Screen source, guards, DX, todo, and changelog files returned no matches.
-
-NOTES:
-- This remains source-only by instruction. Cargo, `just run`, local servers, browser/WebView proof, and runtime visual validation were not run.
-[2026-06-07] - Editor Power Mode And Rainbow Caret Source Guards
-
-ADDED:
-- `crates\ui\src\components\dx_rainbow_glow.rs` adds a reusable GPUI DX rainbow glow and caret-glow helper with animated and reduced-motion modes.
-- `script\dx-editor-power-rainbow-source.test.ts` guards the default-off Power Mode setting, bounded committed-input typing effects, paint-only shake, restored layout origin, and rainbow caret/glow source boundaries.
-
-CHANGED:
-- `assets\settings\default.json`, `crates\editor\src\editor_settings.rs`, `crates\settings_content\src\editor.rs`, and `crates\settings\src\vscode_import.rs` now define the default-off `power_mode.enabled` editor setting.
-- `crates\editor\src\input.rs`, `crates\editor\src\editor.rs`, and `crates\editor\src\element.rs` now queue bounded Power Mode particles only for committed non-bulk typing, keep IME/no-op/bulk paths quiet, paint particles and shake without mutating layout state permanently, and request animation frames only while effects are alive.
-- `crates\ui\src\components.rs`, `DX.md`, and `todo.txt` now export, register, and document the editor Power Mode/rainbow source guard.
-
-PASSED:
-- `node --test script\dx-editor-power-rainbow-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
-- `rustfmt --edition 2024 --check --config skip_children=true crates\editor\src\editor.rs crates\editor\src\editor_settings.rs crates\editor\src\element.rs crates\editor\src\input.rs crates\settings\src\vscode_import.rs crates\settings_content\src\editor.rs crates\ui\src\components.rs crates\ui\src\components\dx_rainbow_glow.rs`
-- `git diff --cached --check -- assets/settings/default.json crates/editor/src/editor.rs crates/editor/src/editor_settings.rs crates/editor/src/element.rs crates/editor/src/input.rs crates/settings/src/vscode_import.rs crates/settings_content/src/editor.rs crates/ui/src/components.rs crates/ui/src/components/dx_rainbow_glow.rs script/dx-editor-power-rainbow-source.test.ts script/dx-handoff-source-guard-registry.test.ts DX.md todo.txt changelog.txt`
-- `git grep --cached -n -E "^<<<<<<<|^=======|^>>>>>>>" -- ...` across the touched editor visual-effects source, guards, DX, todo, and changelog files returned no matches.
-
-NOTES:
-- This remains source-only by instruction. Cargo, `just run`, local servers, browser/WebView proof, and runtime visual validation were not run.
-[2026-06-07] - Agent Composer Liquid Glass Source Shell
-
-ADDED:
-- `script\dx-agent-composer-liquid-glass-source.test.ts` guards the shared Liquid Glass composer shell, real composer control preservation, transparent MessageEditor background, and discoverability in the handoff registry.
-
-CHANGED:
-- `crates\agent_ui\Cargo.toml`, `crates\agent_ui\src\conversation_view\thread_view.rs`, `crates\agent_ui\src\message_editor.rs`, and `crates\liquid_glass\src\lib.rs` now wire the Agent composer through the shared liquid_glass painter with bounded fallback/readability layers instead of replacing the composer with a dummy surface.
-- `script\dx-handoff-source-guard-registry.test.ts`, `DX.md`, and `todo.txt` now register and document the Agent composer liquid-glass source guard.
-
-PASSED:
-- `node --test script\dx-agent-composer-liquid-glass-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
-- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\message_editor.rs crates\liquid_glass\src\lib.rs`
-- `git diff --cached --check -- crates/agent_ui/Cargo.toml crates/agent_ui/src/conversation_view/thread_view.rs crates/agent_ui/src/message_editor.rs crates/liquid_glass/src/lib.rs script/dx-agent-composer-liquid-glass-source.test.ts script/dx-handoff-source-guard-registry.test.ts DX.md todo.txt changelog.txt`
-- `git grep --cached -n -E "^<<<<<<<|^=======|^>>>>>>>" -- ...` across the touched composer source, guards, DX, todo, and changelog files returned no matches.
-
-NOTES:
-- This remains source-only by instruction. Cargo, `just run`, local servers, browser/WebView proof, and runtime visual validation were not run.
 [2026-06-07] - Agent Screen And Sidechat Route Separation
 
 CHANGED:
-- `crates\agent_ui\src\agent_panel.rs` now records sidechat intent for Agent panel focus/toggle actions before zoom-out handling, so sidechat opens do not retain fullscreen-builder intent.
-- `crates\workspace\src\dock.rs` now dispatches the Agent sidechat action when the Agent dock button is clicked while fullscreen AI is active instead of stacking the zoomed Agent panel entity.
-- `script\dx-workspace-ui-state-source.test.ts`, `DX.md`, and `todo.txt` now guard and document the topbar fullscreen AI route versus dock sidechat route separation.
+- `crates\agent_ui\src\agent_panel.rs` now records sidechat intent for Agent panel focus/toggle actions even when the panel is not currently zoomed, preventing empty-workspace fallback chrome from turning a sidechat open into fullscreen builder chrome.
+- `crates\workspace\src\dock.rs` now dispatches the Agent panel sidechat action when the bottom/side Agent button is clicked while fullscreen AI is active, instead of stacking the zoomed Agent entity through the generic dock-stack path.
+- `script\dx-workspace-ui-state-source.test.ts` now guards the topbar fullscreen AI route versus bottom dock sidechat route and the sidechat intent override.
 
 PASSED:
 - `node --test script\dx-workspace-ui-state-source.test.ts`
-- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_ui\src\agent_panel.rs crates\workspace\src\dock.rs`
-- `git diff --cached --check -- crates/agent_ui/src/agent_panel.rs crates/workspace/src/dock.rs script/dx-workspace-ui-state-source.test.ts DX.md todo.txt changelog.txt`
-- `git grep --cached -n -E "^<<<<<<<|^=======|^>>>>>>>" -- ...` across the touched routing source, guard, DX, todo, and changelog files returned no matches.
+- `git diff --check -- crates/agent_ui/src/agent_panel.rs crates/workspace/src/dock.rs script/dx-workspace-ui-state-source.test.ts`
 
 NOTES:
 - This remains source-only by instruction. `just run`, Cargo, local servers, browser/WebView proof, and runtime UI validation were not run.
 - True simultaneous Builder Workspace plus an independent sidechat would require a separate sidechat panel/entity; this slice fixes the existing single-entity route separation without adding dummy UI.
-[2026-06-07] - Source-Only Icon Hover Microinteractions
-
-ADDED:
-- `script\dx-icon-hover-source.test.ts` guards the keyed hover-animation helper, reduced-motion path, Icon/IconButton hover primitives, ButtonLike hover callback gating, and GPUI transform composition.
-
-CHANGED:
-- `crates\gpui\src\elements\svg.rs`, `crates\ui\src\traits\animation_ext.rs`, `crates\ui\src\components\icon.rs`, `crates\ui\src\components\button\button_like.rs`, `crates\ui\src\components\button\icon_button.rs`, and `crates\ui\src\prelude.rs` now provide source-only hover microinteraction primitives for icons and icon buttons.
-- `script\dx-handoff-source-guard-registry.test.ts`, `DX.md`, and `todo.txt` now register and document the icon-hover source guard.
-
-PASSED:
-- `node --test script\dx-icon-hover-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
-- `rustfmt --edition 2024 --check --config skip_children=true crates\gpui\src\elements\svg.rs crates\ui\src\traits\animation_ext.rs crates\ui\src\components\icon.rs crates\ui\src\components\button\button_like.rs crates\ui\src\components\button\icon_button.rs crates\ui\src\prelude.rs`
-- `git diff --cached --check -- crates/gpui/src/elements/svg.rs crates/ui/src/traits/animation_ext.rs crates/ui/src/components/icon.rs crates/ui/src/components/button/button_like.rs crates/ui/src/components/button/icon_button.rs crates/ui/src/prelude.rs script/dx-icon-hover-source.test.ts script/dx-handoff-source-guard-registry.test.ts DX.md todo.txt changelog.txt`
-- `git grep --cached -n -E "^<<<<<<<|^=======|^>>>>>>>" -- ...` across the touched icon hover source, guards, DX, todo, and changelog files returned no matches.
-
-NOTES:
-- This checkpoint is source-only. Cargo, `just run`, local servers, browser automation, and runtime visual proof remain skipped by instruction.
-[2026-06-07] - Web Preview Favicon Cache And Tab Icons
-
-CHANGED:
-- `crates\web_preview\src\web_preview_view.rs` now accepts page-scoped favicon URI updates from native browser events and bridge IPC, validates http/https favicon URIs plus `file:` favicons only for local file pages, caches bounded image bytes under the preview profile off render paths, clears/clones favicon state across navigation/split flows, and renders cached favicons for browser tabs before `ToolWeb`.
-- `crates\web_preview\src\windows_visual_webview.rs` now snapshots favicon URIs after Windows WebView2 navigation completion and refuses page-provided `file:` favicon reads unless the page itself is local.
-- `script\web-preview-platform-lifecycle.test.ts`, `DX.md`, and `todo.txt` now guard and document the favicon cache/tab-icon source contract.
-
-PASSED:
-- `node --test script\web-preview-platform-lifecycle.test.ts script\web-preview-payload-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
-- `rustfmt --edition 2024 --check --config skip_children=true crates\web_preview\src\web_preview_view.rs crates\web_preview\src\windows_visual_webview.rs`
-- `git diff --check -- crates/web_preview/src/web_preview_view.rs crates/web_preview/src/windows_visual_webview.rs script/web-preview-platform-lifecycle.test.ts DX.md todo.txt changelog.txt`
-- `rg -n "^<<<<<<<|^=======|^>>>>>>>" ...` across the touched Web Preview source, guard, DX, todo, and changelog files returned no matches.
-
-NOTES:
-- This checkpoint is source-only. Cargo, `just run`, local servers, browser automation, live WebView proof, and runtime tab-icon proof remain skipped by instruction.
-[2026-06-07] - Live Agent Subagent Rail Status
-
-CHANGED:
-- `crates\agent_ui\src\agent_panel.rs` now derives Agent fullscreen subagent rows from real ACP subagent tool calls and connected thread views, using non-idle root agent rows only as a real fallback.
-- `crates\agent_ui\src\dx_launch_workspace.rs` now renders running, queued, blocked, failed, and idle subagent rows with compact GPUI status badges and the semantic DX loader icon for running state instead of treating DX Agents automation receipts as subagents.
-- `script\dx-workspace-ui-state-source.test.ts`, `DX.md`, and `todo.txt` now guard and document the live subagent status contract.
-
-PASSED:
-- `node --test script\dx-workspace-ui-state-source.test.ts script\dx-icon-system-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
-- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\dx_launch_workspace.rs`
-- `git diff --check`
-- `rg -n "^<<<<<<<|^=======|^>>>>>>>" ...` across the touched subagent rail source, guard, DX, todo, and changelog files returned no matches.
-
-NOTES:
-- This checkpoint is source-only. Cargo, `just run`, local servers, browser/WebView proof, and runtime visual proof remain skipped by instruction.
-
-[2026-06-07] - Shared DX Icon Data Resolver
-
-ADDED:
-- `crates\ui\src\dx_icon_paths.rs` centralizes DX icon data directory resolution for Iconify pack JSON, preferring `DX_ICON_INDEX`, `DX_ICON_DATA`, `DX_ICON_ROOT`, legacy `DX_ICONS_DATA_DIR`, `DX_HOME\icon`, `G:\Dx\icon`, then `%USERPROFILE%\.dx\icon`.
-
-CHANGED:
-- `crates\icon_picker\src\icon_picker.rs` and `crates\editor\src\items.rs` now use the shared resolver instead of the old hardcoded `G:/Assets/icon/data` fallback.
-- `script\dx-icon-picker-source.test.ts`, `DX.md`, and `todo.txt` now guard and document the shared DX icon source-order boundary.
-
-PASSED:
-- `node --test script\dx-icon-picker-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
-- `rustfmt --edition 2024 --check --config skip_children=true crates\ui\src\dx_icon_paths.rs crates\ui\src\ui.rs crates\icon_picker\src\icon_picker.rs crates\editor\src\items.rs`
-- `git diff --check`
-- `rg -n "^<<<<<<<|^=======|^>>>>>>>" ...` across the touched icon resolver source, guard, DX, todo, and changelog files returned no matches.
-
-NOTES:
-- This checkpoint is source-only. Cargo, `just run`, local servers, browser/WebView proof, icon picker runtime proof, and editor insertion runtime proof remain skipped by instruction.
-
-[2026-06-07] - Safe GPUI Gradient Helpers
-
-ADDED:
-- `crates\ui\src\styles\gradient.rs` exposes clamped two-stop GPUI linear gradient helpers that use `linear_gradient`, `linear_color_stop`, and `ColorSpace::Oklab`.
-- `script\dx-gpui-gradient-source.test.ts` guards the shared helper, theme-aware surface patterns, shared UI consumers, Oklab example default, and no GPUI mesh/noise/radial generator boundary.
-
-CHANGED:
-- `crates\ui\src\components\gradient_fade.rs` and `crates\ui\src\components\ai\skills_illustration.rs` now consume the shared Oklab helpers instead of hand-building raw GPUI gradients.
-- `crates\gpui\examples\gradient.rs` now opens with Oklab interpolation selected by default while preserving the sRGB/Oklab toggle.
-- `crates\ui\src\styles.rs`, `crates\ui\src\prelude.rs`, `script\dx-handoff-source-guard-registry.test.ts`, `DX.md`, and `todo.txt` now export, register, and document the safe GPUI gradient slice.
-
-PASSED:
-- `node --test script\dx-gpui-gradient-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
-- `rustfmt --edition 2024 --check --config skip_children=true crates\ui\src\styles\gradient.rs crates\ui\src\styles.rs crates\ui\src\prelude.rs crates\ui\src\components\gradient_fade.rs crates\ui\src\components\ai\skills_illustration.rs crates\gpui\examples\gradient.rs`
-- `git diff --check`
-- `rg -n "^<<<<<<<|^=======|^>>>>>>>" ...` across the touched gradient source, guard, DX, todo, and changelog files returned no matches.
-
-NOTES:
-- This checkpoint is source-only. Cargo, `just run`, local servers, browser/WebView proof, and runtime visual proof remain skipped by instruction.
 
 [2026-06-07] - Agent Configuration Uses Workspace Agent Bridge Roots
 
@@ -374,6 +306,119 @@ PASSED:
 
 NOTES:
 - This remains source-only. Cargo, `just run`, local servers, browser/WebView proof, native Zed launch, and live DX-WWW release evidence proof remain skipped by instruction.
+
+[2026-06-07] - Web Preview Favicon And Brand Icon Rendering
+
+CHANGED:
+- `crates\web_preview\src\web_preview_view.rs` now stores bounded favicon URI/cache state, accepts favicon URI updates from native events and bridge IPC only when they match the active page URL, caches image bytes under the Web Preview profile, and renders cached favicons before falling back to the existing browser icon.
+- `crates\web_preview\src\web_preview_view.rs` now also reattaches an existing cached favicon path, or retries the bounded background cache, when the active page reports the same favicon URI while no image path is available yet.
+- `crates\web_preview\src\windows_visual_webview.rs` now snapshots the page favicon URI after WebView2 navigation completion and forwards it through the existing browser event queue.
+- `crates\ui\src\components\icon.rs` now renders external SVG icon assets through the image/raw-color path, preserving colored brand/SVGL icons while leaving built-in `IconName` glyph theming unchanged.
+- `todo.txt` and `DX.md` now record this source-only favicon/icon slice.
+
+PASSED:
+- `git diff --check`
+
+NOTES:
+- No Cargo, `just run`, local server, browser automation, or runtime/WebView proof was run by instruction.
+- The local `webview2-com` bindings available in this checkout did not expose `FaviconChanged`, `FaviconUri`, or `GetFavicon`; the Windows host uses a WebView2 script snapshot after navigation and the page bridge covers mutation-time favicon URI changes.
+
+[2026-06-07] - SVG Icon Hover Microinteractions
+
+ADDED:
+- `crates\ui\src\traits\animation_ext.rs` now provides `IconHoverEffect` plus a keyed target-driven hover animation element for subtle scale, rotate, translate, and opacity transitions.
+
+CHANGED:
+- `crates\ui\src\components\icon.rs` now applies hover effects through GPUI icon transforms/opacity and preserves external SVG rendering through the SVG path rather than relying on animated SVG file internals.
+- `crates\ui\src\components\button\icon_button.rs` now supports explicit hover state, hover asset swaps, keyed hover effects, and hover callbacks for list/repeated item owners.
+- `crates\ui\src\components\button\button_like.rs`, `crates\ui\src\prelude.rs`, and `crates\gpui\src\elements\svg.rs` now expose the small callback/export/transform-composition support needed by the icon hover API.
+- `todo.txt` now records this source-only hover microinteraction slice.
+
+PASSED:
+- `git diff --check`
+
+NOTES:
+- This checkpoint is source-only. Cargo, `just run`, local servers, browser/WebView proof, and runtime visual proof remain skipped by instruction.
+
+[2026-06-07] - Real Subagent Pixel Status Rail
+
+CHANGED:
+- `crates\agent_ui\src\agent_panel.rs` now snapshots live ACP subagent state from parent subagent tool calls and connected thread views, with non-idle root agent rows used only as a real fallback when no subagent rows exist and row labels sourced from thread titles, tool-call labels, or ACP session ids.
+- `crates\agent_ui\src\dx_launch_workspace.rs` now renders compact GPUI pixel badges/rows from the real `running`, `queued`, `blocked`, `failed`, and `idle` mapping instead of treating DX Agents automation receipts as fake subagent rows.
+- `script\dx-workspace-ui-state-source.test.ts` now guards the live `subagent_rows` contract, rejects the old automation-backed pseudo-row path, and requires the explicit five-state thread/tool mapping.
+- `todo.txt` now records this source-only Agent fullscreen Subagents rail slice.
+
+PASSED:
+- `git diff --check`
+
+NOTES:
+- This checkpoint is source-only. Cargo, `just run`, local servers, browser/WebView proof, and runtime visual proof remain skipped by instruction.
+
+[2026-06-07] - DX Rainbow Glow And Caret
+
+ADDED:
+- `crates\ui\src\components\dx_rainbow_glow.rs` exposes a reusable GPUI `DxRainbowGlow` helper plus shared Hsla rainbow phase/color helpers and a cheap layered caret glow painter.
+
+CHANGED:
+- `crates\ui\src\components.rs` exports the rainbow helper from the UI component surface.
+- `crates\editor\src\element.rs` now renders local editor cursors with a time-cycled rainbow Hsla caret color and layered glow while leaving remote, drag, and active leader-follow cursors on their existing player colors.
+- Rainbow caret motion freezes when editor cursor blinking is disabled, and animated caret refresh is requested once per cursor paint pass rather than once per visible cursor.
+- `todo.txt` now records this source-only rainbow/caret slice.
+
+PASSED:
+- `git diff --check`
+
+NOTES:
+- This checkpoint is source-only. Cargo, `just run`, local servers, browser/WebView proof, and runtime visual proof remain skipped by instruction.
+
+[2026-06-07] - Safe GPUI Gradient Helpers
+
+ADDED:
+- `crates\ui\src\styles\gradient.rs` exposes clamped two-stop GPUI linear gradient helpers that use `linear_gradient`, `linear_color_stop`, and `ColorSpace::Oklab`.
+- `script\dx-gpui-gradient-source.test.ts` guards the shared helper, theme-aware surface patterns, shared UI consumers, Oklab example default, and no GPUI mesh/noise/radial generator boundary.
+
+CHANGED:
+- `crates\ui\src\components\gradient_fade.rs` and `crates\ui\src\components\ai\skills_illustration.rs` now consume the shared Oklab helpers instead of hand-building raw GPUI gradients.
+- `crates\gpui\examples\gradient.rs` now opens with Oklab interpolation selected by default while preserving the sRGB/Oklab toggle.
+- `crates\ui\src\styles.rs`, `crates\ui\src\prelude.rs`, `script\dx-handoff-source-guard-registry.test.ts`, `DX.md`, and `todo.txt` now export, register, and document the safe GPUI gradient slice.
+
+PASSED:
+- `node --test script\dx-gpui-gradient-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\ui\src\styles\gradient.rs crates\ui\src\styles.rs crates\ui\src\prelude.rs crates\ui\src\components\gradient_fade.rs crates\ui\src\components\ai\skills_illustration.rs crates\gpui\examples\gradient.rs`
+- `git diff --check`
+- `rg -n "^<<<<<<<|^=======|^>>>>>>>" ...` across the touched gradient source, guard, DX, todo, and changelog files returned no matches.
+
+NOTES:
+- This checkpoint is source-only. Cargo, `just run`, local servers, browser/WebView proof, and runtime visual proof remain skipped by instruction.
+
+[2026-06-07] - Editor Power Mode Typing Effects
+
+CHANGED:
+- `crates\editor\src\input.rs` now queues typing effects only after a successful non-bulk committed input transaction, while read-only, no-op, paste/bulk, and IME composition paths stay quiet.
+- `crates\editor\src\editor.rs` now owns bounded Power Mode state with capped pending bursts, 48 max particles, 360 ms particle lifetimes, and 90 ms paint-only shake.
+- `crates\editor\src\element.rs` now flushes pending bursts at the post-edit caret, paints cheap clipped quads near the caret, applies subtle shake only through paint coordinates, and requests animation frames only while effects are alive.
+- `crates\editor\src\editor_settings.rs`, `crates\settings_content\src\editor.rs`, `crates\settings\src\vscode_import.rs`, and `assets\settings\default.json` add the default-off `power_mode.enabled` editor setting.
+
+PASSED:
+- `git diff --check`
+
+NOTES:
+- This checkpoint is source-only by instruction. No Cargo, `just run`, runtime launch, or browser proof was run.
+
+[2026-06-07] - AI Composer Liquid Glass Surface
+
+CHANGED:
+- `crates\liquid_glass\src\lib.rs` now exposes the existing transparent glass surface loader and default liquid-glass style for non-preview surfaces.
+- `crates\agent_ui\Cargo.toml` now depends on the workspace `liquid_glass` crate.
+- `crates\agent_ui\src\message_editor.rs` now renders the AI message editor with a transparent editor background so it does not hide its parent glass surface.
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now wraps the shared AI composer editor and controls in one bounded, clipped liquid-glass surface with theme-aware readability/fallback tinting while preserving the existing send, provider/model, voice, profile-slot, focus, and layout control paths.
+
+PASSED:
+- `git diff --check`
+
+NOTES:
+- `git diff --check` emitted only CRLF normalization warnings for existing working-copy paths.
+- This checkpoint is source-only by instruction. Cargo, `just run`, runtime launch, and browser proof remain skipped.
 
 [2026-06-07] - DX Launch Receipt Roots Use Project Context
 

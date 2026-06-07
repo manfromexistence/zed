@@ -7375,9 +7375,9 @@ impl AgentPanel {
                 "Review DX Agents automation `{id}` from `{source}`. Status `{status}`, enabled={enabled}, schedule `{schedule}`. {actions} Next action: {next_action}. Use only the fixed public DX Agents automation receipt contracts such as `dx agents automate list --json` or `dx agents run --json` when explicitly approved. Do not run builds, local servers, browser input, shell commands, provider calls, secret import, social login, or unmanaged automation runners.",
                 id = automation.id.as_str(),
                 source = automation.source.as_str(),
-                status = automation.status.as_str(),
-                enabled = automation.enabled,
-                schedule = automation.schedule_kind.as_str(),
+                status = automation.status.state.as_str(),
+                enabled = automation.status.enabled,
+                schedule = automation.schedule.summary.as_str(),
                 next_action = if automation.next_action.is_empty() {
                     "review latest automation receipt metadata"
                 } else {

@@ -911,6 +911,72 @@ impl AgentConfiguration {
         let mut stack = v_flex()
             .gap_1()
             .child(Label::new("Automations").size(LabelSize::Small));
+        let composer = &snapshot.automation_composer;
+        let composer_fields = composer
+            .fields
+            .iter()
+            .take(4)
+            .map(|field| {
+                if field.required {
+                    format!("{}*", field.label)
+                } else {
+                    field.label.clone()
+                }
+            })
+            .join(", ");
+
+        stack = stack
+            .child(
+                AiSettingItem::new(
+                    "dx-agent-automation-composer",
+                    "Composer Contract",
+                    if composer.runtime_available {
+                        AiSettingItemStatus::Running
+                    } else {
+                        AiSettingItemStatus::Stopped
+                    },
+                    AiSettingItemSource::Custom,
+                )
+                .icon(
+                    Icon::new(IconName::ListTodo)
+                        .size(IconSize::Small)
+                        .color(Color::Muted),
+                )
+                .detail_label(format!(
+                    "{} - {} - receipt {}",
+                    composer.status, composer.next_action, composer.receipt_filename
+                ))
+                .action(
+                    Button::new("dx-agent-automation-save-draft", "Save Draft")
+                        .style(ButtonStyle::Outlined)
+                        .label_size(LabelSize::Small)
+                        .disabled(!composer.save_draft_available)
+                        .tooltip(Tooltip::text(if composer.save_draft_available {
+                            "Save an automation draft through the DX Agents composer contract"
+                        } else {
+                            "Save Draft unavailable until DX Agents emits a composer contract"
+                        })),
+                )
+                .action(
+                    Button::new("dx-agent-automation-enable", "Enable")
+                        .style(ButtonStyle::Outlined)
+                        .label_size(LabelSize::Small)
+                        .disabled(!composer.enable_available)
+                        .tooltip(Tooltip::text(if composer.enable_available {
+                            "Enable the automation through the DX Agents runtime contract"
+                        } else {
+                            "Enable unavailable until the automation runtime is wired"
+                        })),
+                ),
+            )
+            .child(
+                Label::new(format!(
+                    "Fields: {composer_fields}; runtime: {}",
+                    composer.unavailable_reason
+                ))
+                .size(LabelSize::Small)
+                .color(Color::Muted),
+            );
 
         if snapshot.automations.is_empty() {
             stack = stack.child(
@@ -928,17 +994,18 @@ impl AgentConfiguration {
                     .filter(|action| action.enabled)
                     .count();
                 let detail = format!(
-                    "{} - {} - {} - {} ready action(s) - {}",
+                    "{} - {} - {} -> {} - {} ready action(s) - {}",
                     automation.source,
-                    automation.schedule_kind,
-                    automation.status,
+                    automation.schedule.summary,
+                    automation.status.state,
+                    automation.destination.label,
                     ready_action_count,
                     automation.next_action
                 );
                 let mut item = AiSettingItem::new(
                     format!("dx-agent-automation-{}", automation.id),
-                    automation.id.clone(),
-                    if automation.enabled {
+                    automation.name.clone(),
+                    if automation.status.enabled {
                         AiSettingItemStatus::Running
                     } else {
                         AiSettingItemStatus::Stopped
@@ -977,11 +1044,11 @@ impl AgentConfiguration {
                     );
 
                     let run_action = dx_agent_row_action(&automation.actions, "run");
-                    let run_enabled =
-                        run_action.map_or(automation.enabled, |action| action.enabled);
+                    let run_enabled = run_action.map_or(false, |action| action.enabled)
+                        && automation.status.runtime_available;
                     let run_tooltip = dx_agent_action_tooltip(
                         run_action,
-                        "Write redacted automation run receipt",
+                        "Write redacted automation run receipt when runtime is available",
                     );
                     item = item.action(
                         IconButton::new(
@@ -999,6 +1066,54 @@ impl AgentConfiguration {
                 }
 
                 stack = stack.child(item);
+                if !automation.prompt.is_empty() {
+                    stack = stack.child(
+                        Label::new(format!("Prompt: {}", automation.prompt))
+                            .size(LabelSize::Small)
+                            .color(Color::Muted),
+                    );
+                }
+                stack = stack.child(
+                    Label::new(format!(
+                        "Schedule {} ({}) | destination {} | last {} | next {}",
+                        automation.schedule.kind,
+                        automation.schedule.timezone,
+                        automation.destination.kind,
+                        automation.last_run,
+                        automation.next_run
+                    ))
+                    .size(LabelSize::Small)
+                    .color(Color::Muted),
+                );
+                if let Some(receipt) = automation.receipts.first() {
+                    stack = stack.child(
+                        Label::new(format!(
+                            "Latest receipt: {} {} {}",
+                            receipt.kind, receipt.status, receipt.path
+                        ))
+                        .size(LabelSize::Small)
+                        .color(Color::Muted),
+                    );
+                }
+                if let Some(history) = automation.history.first() {
+                    stack = stack.child(
+                        Label::new(format!(
+                            "Latest run: {} {} {}",
+                            history.run_id, history.status, history.receipt_path
+                        ))
+                        .size(LabelSize::Small)
+                        .color(Color::Muted),
+                    );
+                }
+                if !automation.status.runtime_available
+                    && !automation.status.unavailable_reason.is_empty()
+                {
+                    stack = stack.child(
+                        Label::new(format!("Runtime: {}", automation.status.unavailable_reason))
+                            .size(LabelSize::Small)
+                            .color(Color::Muted),
+                    );
+                }
                 if let Some(action_summary) = dx_agent_action_summary(&automation.actions) {
                     stack = stack.child(
                         Label::new(action_summary)

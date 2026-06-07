@@ -5,8 +5,15 @@ pub(super) fn launch_receipt_operator_summary(
     malformed_count: usize,
     latest_present: bool,
     snapshot_count: usize,
+    snapshot_scan_truncated: bool,
     latest_freshness: Option<&str>,
 ) -> String {
+    if snapshot_scan_truncated {
+        return format!(
+            "Launch receipts warning: snapshot scan capped, {snapshot_count} newest snapshots retained."
+        );
+    }
+
     if status == "ready" {
         return format!(
             "Launch receipts ready: latest present, {snapshot_count} snapshots retained."

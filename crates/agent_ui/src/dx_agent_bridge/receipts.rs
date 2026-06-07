@@ -1,10 +1,12 @@
 use serde_json::Value;
 
 mod receipt_strings;
+mod trusted_tool_bridge;
 
 use self::receipt_strings::{
     receipt_string_array_field, receipt_string_field, receipt_string_values_field,
 };
+pub(super) use self::trusted_tool_bridge::trusted_tool_bridge_summary;
 use super::{
     DxAgentActionErrorSummary, DxAgentContractSummary, DxAgentImportSummary, DxAgentReceipt,
     DxAgentReceiptInboxSummary, DxAgentReceiptIndexSummary, DxAgentRecoveryControlCounts,

@@ -5,11 +5,11 @@ use super::super::{array_field, safe_string_field, value_at};
 const MAX_RECEIPT_DISPLAY_CHARS: usize = 180;
 const MAX_RECEIPT_STRING_VALUES: usize = 8;
 
-pub(super) fn receipt_string_field(value: &Value, path: &[&str]) -> Option<String> {
+pub(in super::super) fn receipt_string_field(value: &Value, path: &[&str]) -> Option<String> {
     safe_string_field(value, path).and_then(bound_receipt_string)
 }
 
-pub(super) fn receipt_string_array_field(value: &Value, path: &[&str]) -> Vec<String> {
+pub(in super::super) fn receipt_string_array_field(value: &Value, path: &[&str]) -> Vec<String> {
     array_field(value, path)
         .into_iter()
         .flatten()
@@ -18,7 +18,7 @@ pub(super) fn receipt_string_array_field(value: &Value, path: &[&str]) -> Vec<St
         .collect()
 }
 
-pub(super) fn receipt_string_values_field(value: &Value, path: &[&str]) -> Vec<String> {
+pub(in super::super) fn receipt_string_values_field(value: &Value, path: &[&str]) -> Vec<String> {
     value_at(value, path)
         .and_then(|value| value.as_object())
         .into_iter()
