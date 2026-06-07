@@ -6809,8 +6809,6 @@ impl AgentPanel {
     fn default_collapsed_dx_launch_rail_sections() -> HashSet<DxLaunchRailSection> {
         let mut collapsed = HashSet::default();
         collapsed.insert(DxLaunchRailSection::SourceTools);
-        collapsed.insert(DxLaunchRailSection::WorkspaceState);
-        collapsed.insert(DxLaunchRailSection::Readiness);
         collapsed
     }
 
@@ -6820,12 +6818,11 @@ impl AgentPanel {
             source_commands_open: is_open(DxLaunchRailSection::SourceCommands),
             source_stack_open: is_open(DxLaunchRailSection::SourceStack),
             source_tools_open: is_open(DxLaunchRailSection::SourceTools),
-            workspace_state_open: is_open(DxLaunchRailSection::WorkspaceState),
-            progress_open: is_open(DxLaunchRailSection::Progress),
-            environment_open: is_open(DxLaunchRailSection::Environment),
-            subagents_open: is_open(DxLaunchRailSection::Subagents),
-            source_summary_open: is_open(DxLaunchRailSection::SourceSummary),
-            readiness_open: is_open(DxLaunchRailSection::Readiness),
+            agent_overview_open: is_open(DxLaunchRailSection::AgentOverview),
+            agent_threads_open: is_open(DxLaunchRailSection::AgentThreads),
+            agent_tasks_open: is_open(DxLaunchRailSection::AgentTasks),
+            agent_subagents_open: is_open(DxLaunchRailSection::AgentSubagents),
+            agent_approvals_open: is_open(DxLaunchRailSection::AgentApprovals),
         }
     }
 
@@ -7531,6 +7528,7 @@ impl AgentPanel {
         cx: &Context<Self>,
     ) -> DxLaunchWorkspaceStatus {
         status.active_status = self.dx_active_status(cx);
+        status.background_thread_count = self.retained_threads.len();
         status.subagent_rows = self.dx_subagent_status_rows(cx);
         status
     }
@@ -7721,6 +7719,7 @@ impl AgentPanel {
         DxLaunchWorkspaceStatus {
             active_status: input.active_status,
             visible_worktree_count,
+            background_thread_count,
             subagent_rows,
             agent_bridge,
             launch_status,

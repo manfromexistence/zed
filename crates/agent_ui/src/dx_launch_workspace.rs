@@ -8,7 +8,6 @@ use ui::{Disclosure, IconName, PopoverMenu, Tooltip, prelude::*};
 
 use crate::dx_agent_bridge::DxAgentBridgeSnapshot;
 use crate::dx_check_score::DxCheckScoreSnapshot;
-use crate::dx_deploy_rail::deploy_target_state;
 use crate::dx_deploy_targets::DxDeployTargetSnapshot;
 use crate::dx_evidence_basket::DxEvidenceBasket;
 use crate::dx_launch_audit::DxLaunchAuditSnapshot;
@@ -26,6 +25,7 @@ use crate::dx_source_sets::DxSourceSetSnapshot;
 use crate::dx_style_panel::DxStylePanelSnapshot;
 use crate::dx_www_launch_evidence::DxWwwLaunchEvidenceSnapshot;
 
+mod agent_workspace;
 mod agents;
 mod audit;
 mod automation_screen;
@@ -58,6 +58,7 @@ pub(crate) use tools_screen::render_tools_screen;
 pub(crate) struct DxLaunchWorkspaceStatus {
     pub active_status: SharedString,
     pub visible_worktree_count: usize,
+    pub background_thread_count: usize,
     pub subagent_rows: Vec<DxSubagentStatusRow>,
     pub agent_bridge: DxAgentBridgeSnapshot,
     pub launch_status: DxLaunchStatusSnapshot,
@@ -127,12 +128,11 @@ pub(crate) enum DxLaunchRailSection {
     SourceCommands,
     SourceStack,
     SourceTools,
-    WorkspaceState,
-    Progress,
-    Environment,
-    Subagents,
-    SourceSummary,
-    Readiness,
+    AgentOverview,
+    AgentThreads,
+    AgentTasks,
+    AgentSubagents,
+    AgentApprovals,
 }
 
 #[derive(Clone, Copy)]
@@ -140,12 +140,11 @@ pub(crate) struct DxLaunchRailState {
     pub source_commands_open: bool,
     pub source_stack_open: bool,
     pub source_tools_open: bool,
-    pub workspace_state_open: bool,
-    pub progress_open: bool,
-    pub environment_open: bool,
-    pub subagents_open: bool,
-    pub source_summary_open: bool,
-    pub readiness_open: bool,
+    pub agent_overview_open: bool,
+    pub agent_threads_open: bool,
+    pub agent_tasks_open: bool,
+    pub agent_subagents_open: bool,
+    pub agent_approvals_open: bool,
 }
 
 impl DxLaunchRailState {
@@ -154,12 +153,11 @@ impl DxLaunchRailState {
             DxLaunchRailSection::SourceCommands => self.source_commands_open,
             DxLaunchRailSection::SourceStack => self.source_stack_open,
             DxLaunchRailSection::SourceTools => self.source_tools_open,
-            DxLaunchRailSection::WorkspaceState => self.workspace_state_open,
-            DxLaunchRailSection::Progress => self.progress_open,
-            DxLaunchRailSection::Environment => self.environment_open,
-            DxLaunchRailSection::Subagents => self.subagents_open,
-            DxLaunchRailSection::SourceSummary => self.source_summary_open,
-            DxLaunchRailSection::Readiness => self.readiness_open,
+            DxLaunchRailSection::AgentOverview => self.agent_overview_open,
+            DxLaunchRailSection::AgentThreads => self.agent_threads_open,
+            DxLaunchRailSection::AgentTasks => self.agent_tasks_open,
+            DxLaunchRailSection::AgentSubagents => self.agent_subagents_open,
+            DxLaunchRailSection::AgentApprovals => self.agent_approvals_open,
         }
     }
 }
@@ -397,59 +395,59 @@ fn render_right_rail(
         .occlude()
         .child(rail_pin_header(
             "dx-progress-rail-pin",
-            "Progress",
+            "Agents",
             rail_controls.progress_pinned,
             DxLaunchRailSide::Progress,
             rail_controls,
         ))
         .child(diagnostics_menu(status.clone()))
         .child(rail_section(
-            "dx-progress-summary-section",
-            "Progress",
+            "dx-agent-overview-section",
+            "Overview",
+            IconName::ZedAgent,
+            DxLaunchRailSection::AgentOverview,
+            rail_controls,
+            agent_workspace::agent_overview_section(status, guided_cards, cx),
+            true,
+            cx,
+        ))
+        .child(rail_section(
+            "dx-agent-threads-section",
+            "Threads",
+            IconName::HistoryRerun,
+            DxLaunchRailSection::AgentThreads,
+            rail_controls,
+            agent_workspace::agent_threads_section(status, cx),
+            true,
+            cx,
+        ))
+        .child(rail_section(
+            "dx-agent-tasks-section",
+            "Tasks",
             IconName::TodoProgress,
-            DxLaunchRailSection::Progress,
+            DxLaunchRailSection::AgentTasks,
             rail_controls,
-            progress_summary(status, cx),
+            agent_workspace::agent_tasks_section(status, cx),
             true,
             cx,
         ))
         .child(rail_section(
-            "dx-environment-section",
-            "Environment",
-            dx_icon(DxUiIcon::Settings),
-            DxLaunchRailSection::Environment,
-            rail_controls,
-            environment_summary(status, cx),
-            true,
-            cx,
-        ))
-        .child(rail_section(
-            "dx-subagents-section",
+            "dx-agent-subagents-section",
             "Subagents",
             IconName::ZedAgent,
-            DxLaunchRailSection::Subagents,
+            DxLaunchRailSection::AgentSubagents,
             rail_controls,
-            subagent_summary(status, cx),
+            agent_workspace::agent_subagents_section(status, cx),
             true,
             cx,
         ))
         .child(rail_section(
-            "dx-source-summary-section",
-            "Sources",
-            IconName::Book,
-            DxLaunchRailSection::SourceSummary,
+            "dx-agent-approvals-section",
+            "Approvals",
+            dx_icon(DxUiIcon::Permissions),
+            DxLaunchRailSection::AgentApprovals,
             rail_controls,
-            source_summary(status, cx),
-            true,
-            cx,
-        ))
-        .child(rail_section(
-            "dx-readiness-section",
-            "Readiness",
-            IconName::Check,
-            DxLaunchRailSection::Readiness,
-            rail_controls,
-            readiness_summary(status, guided_cards, cx),
+            agent_workspace::agent_approvals_section(status, cx),
             false,
             cx,
         ))
@@ -549,94 +547,6 @@ fn diagnostics_menu(status: DxLaunchWorkspaceStatus) -> AnyElement {
         .into_any_element()
 }
 
-fn progress_summary(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {
-    let source_summary = status.source_sets.attachment_summary();
-    v_flex()
-        .gap_1()
-        .child(progress_step_row(
-            "dx-progress-thread",
-            status.active_status.as_ref() != "Idle",
-            "Thread",
-            status.active_status.clone(),
-            cx,
-        ))
-        .child(progress_step_row(
-            "dx-progress-sources",
-            source_summary.attachable_sources > 0,
-            "Sources",
-            format!("{} available", source_summary.attachable_sources),
-            cx,
-        ))
-        .child(progress_step_row(
-            "dx-progress-style",
-            status.style_panel.web_preview_bridge_ready,
-            "Preview Bridge",
-            if status.style_panel.web_preview_bridge_ready {
-                "Ready"
-            } else {
-                "Missing"
-            },
-            cx,
-        ))
-        .child(progress_step_row(
-            "dx-progress-check",
-            status.check_score.score >= 80,
-            "Quality Gate",
-            format!("{}/100", status.check_score.score),
-            cx,
-        ))
-        .child(progress_step_row(
-            "dx-progress-runtime",
-            status.runtime_proof_status.runtime_green_candidate(),
-            "Runtime",
-            status.runtime_proof_status.claim_state.clone(),
-            cx,
-        ))
-        .into_any_element()
-}
-
-fn environment_summary(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {
-    v_flex()
-        .gap_1()
-        .child(compact_status_row(
-            "dx-env-workspace",
-            IconName::Library,
-            "Worktrees",
-            status.visible_worktree_count.to_string(),
-            cx,
-        ))
-        .child(compact_status_row(
-            "dx-env-local",
-            IconName::Terminal,
-            "Receipts",
-            if status.receipt_snapshot.root_exists {
-                "present"
-            } else {
-                "missing"
-            },
-            cx,
-        ))
-        .child(compact_status_row(
-            "dx-env-agent",
-            IconName::ZedAgent,
-            "Agent",
-            if status.agent_bridge.enabled {
-                status.agent_bridge.status.clone()
-            } else {
-                "disabled".to_string()
-            },
-            cx,
-        ))
-        .child(compact_status_row(
-            "dx-env-commit",
-            IconName::GitBranch,
-            "Fresh Receipts",
-            status.proof_freshness.fresh_receipt_count().to_string(),
-            cx,
-        ))
-        .into_any_element()
-}
-
 fn subagent_summary(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {
     let mut stack = v_flex().gap_1().child(compact_status_row(
         "dx-subagents-active",
@@ -672,105 +582,6 @@ fn subagent_summary(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {
     }
 
     stack.into_any_element()
-}
-
-fn source_summary(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {
-    let source_summary = status.source_sets.attachment_summary();
-    v_flex()
-        .gap_1()
-        .child(compact_status_row(
-            "dx-source-summary-roots",
-            IconName::Folder,
-            "Roots",
-            source_summary.workspace_roots.to_string(),
-            cx,
-        ))
-        .child(compact_status_row(
-            "dx-source-summary-attach",
-            IconName::Attach,
-            "Attachable",
-            source_summary.attachable_sources.to_string(),
-            cx,
-        ))
-        .child(compact_status_row(
-            "dx-source-summary-receipts",
-            IconName::FileTextOutlined,
-            "Receipts",
-            source_summary.managed_receipts.to_string(),
-            cx,
-        ))
-        .into_any_element()
-}
-
-fn readiness_summary(
-    status: &DxLaunchWorkspaceStatus,
-    guided_cards: AnyElement,
-    cx: &App,
-) -> AnyElement {
-    v_flex()
-        .gap_1()
-        .child(guided_cards)
-        .child(style_panel::dx_style_panel_state(&status.style_panel, cx))
-        .child(check::check_score_state(&status.check_score, cx))
-        .child(deploy_target_state(&status.deploy_targets, cx))
-        .when(status.agent_bridge.show_in_agent_rail, |this| {
-            this.child(agents::dx_agent_bridge_state(&status.agent_bridge, cx))
-                .child(agents::dx_agent_automation_state(&status.agent_bridge, cx))
-        })
-        .child(proof::proof_freshness_state(&status.proof_freshness, cx))
-        .child(proof::runtime_proof_status_state(
-            &status.runtime_proof_status,
-            cx,
-        ))
-        .into_any_element()
-}
-
-fn progress_step_row(
-    id: &'static str,
-    complete: bool,
-    label: impl Into<SharedString>,
-    detail: impl Into<SharedString>,
-    cx: &App,
-) -> AnyElement {
-    let icon = if complete {
-        IconName::TodoComplete
-    } else {
-        IconName::Circle
-    };
-    let color = if complete {
-        Color::Success
-    } else {
-        Color::Muted
-    };
-
-    h_flex()
-        .id(id)
-        .items_start()
-        .gap_2()
-        .min_w_0()
-        .rounded_sm()
-        .px_1()
-        .py_0p5()
-        .hover(|this| this.bg(cx.theme().colors().element_hover))
-        .child(Icon::new(icon).size(IconSize::Small).color(color))
-        .child(
-            v_flex()
-                .min_w_0()
-                .gap_0p5()
-                .child(
-                    Label::new(label.into())
-                        .size(LabelSize::Small)
-                        .color(Color::Default)
-                        .truncate(),
-                )
-                .child(
-                    Label::new(detail.into())
-                        .size(LabelSize::XSmall)
-                        .color(Color::Muted)
-                        .truncate(),
-                ),
-        )
-        .into_any_element()
 }
 
 fn compact_status_row(

@@ -8,6 +8,7 @@ PENDING:
 - Continue the DX/Zed ecosystem integration with bounded source-only slices for remaining receipt scans, semantic icon hotspots, and governed runtime proof when explicitly authorized.
 
 COMPLETED:
+- DX Agents clean workspace taxonomy is source-verified: the fullscreen Agents rail now filters to Overview, Threads, Tasks, Subagents, and Approvals from live/cached Zed and DX Agents bridge state, while the Automations workspace renders Drafts, Schedules, Runs, History, and Failures through split GPUI section/row modules with no fake scheduled execution.
 - DX Deploy provider semantic icons are source-verified: deploy target rows and capability matrix provider rows now use `dx_icon(DxUiIcon::Gateway)` for Cloudflare Workers and S3/R2 instead of the generic server glyph, guarded by the focused deploy source test. Runtime visual proof, Cargo, and `just run` remain deferred.
 - DX Automations backend receipt actions are wired in the root CLI for `dx agents automate composer/list/save-draft/enable/run --json`, with governed temp-root proof showing composer/list receipts plus honest blocked save/enable/run receipts and no fake scheduled execution. Zed source guards cover the Automations tab section split and backend action contract.
 - Integrated the four remote `origin/dev` provider-catalog commits into `dev`, preserved Agent UI/Panel separation, and opened the governed proof window for MetaSearch, Study, Media, and Web Preview. Live proof remains backend-pending because no MetaSearch listener, proof tooling, or matching proof receipts were available.

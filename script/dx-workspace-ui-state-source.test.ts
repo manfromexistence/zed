@@ -26,6 +26,7 @@ const composerProfileOptions = read(
 const profileSelector = read("crates/agent_ui/src/profile_selector.rs");
 const manageProfilesModal = read("crates/agent_ui/src/agent_configuration/manage_profiles_modal.rs");
 const dxLaunchWorkspace = read("crates/agent_ui/src/dx_launch_workspace.rs");
+const dxAgentWorkspace = read("crates/agent_ui/src/dx_launch_workspace/agent_workspace.rs");
 const dxLaunchAuditSummary = read("crates/agent_ui/src/dx_launch_workspace/audit/summary.rs");
 const dxLaunchAuditStatus = read("crates/agent_ui/src/dx_launch_workspace/audit/status.rs");
 const dxLaunchAuditWarnings = read("crates/agent_ui/src/dx_launch_workspace/audit/warnings.rs");
@@ -944,8 +945,8 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(agentProfileSettings, /DxAiProfileKind::Media[\s\S]*?DxAiProfileBackendState::ProviderPending/);
   assert.match(manageProfilesModal, /fn profile_icon\(profile_id: &AgentProfileId\) -> IconName/);
   assert.match(manageProfilesModal, /builtin_profiles::WRITE => IconName::ZedAgent/);
-  assert.match(manageProfilesModal, /builtin_profiles::MEDIA => IconName::Image/);
-  assert.match(manageProfilesModal, /builtin_profiles::SEARCH => IconName::ToolSearch/);
+  assert.match(manageProfilesModal, /builtin_profiles::MEDIA => dx_icon\(DxUiIcon::Media\)/);
+  assert.match(manageProfilesModal, /builtin_profiles::SEARCH => dx_icon\(DxUiIcon::Search\)/);
   assert.match(manageProfilesModal, /builtin_profiles::STUDY => IconName::Book/);
   assert.match(manageProfilesModal, /AgentProfile::available_profiles\(cx\)/);
   assert.match(manageProfilesModal, /AgentProfile::display_name\(&mode\.profile_id, &profile\.name\)/);
@@ -1047,10 +1048,14 @@ test("agent rails and project badges keep compact production layout", () => {
   const diagnosticsMenu = functionBody(dxLaunchWorkspace, "diagnostics_menu");
   const railSection = functionBody(dxLaunchWorkspace, "rail_section");
   const subagentSummary = functionBody(dxLaunchWorkspace, "subagent_summary");
+  const agentOverview = functionBody(dxAgentWorkspace, "agent_overview_section");
+  const agentThreads = functionBody(dxAgentWorkspace, "agent_threads_section");
+  const agentTasks = functionBody(dxAgentWorkspace, "agent_tasks_section");
   const sourceRow = functionBody(dxLaunchSourceRows, "source_item_row");
   const sourceRowControls = functionBody(agentPanel, "render_dx_launch_source_row_controls");
   const toolbar = functionBody(agentPanel, "render_toolbar");
-  assert.match(dxLaunchWorkspace, /fn progress_summary\(/);
+  assert.match(dxLaunchWorkspace, /^mod agent_workspace;$/m);
+  assert.match(dxAgentWorkspace, /fn agent_overview_section\(/);
   assert.doesNotMatch(dxLaunchWorkspace, /fn render_response_controller\(/);
   assert.doesNotMatch(dxLaunchWorkspace, /fn response_indicator_segment\(/);
   assert.doesNotMatch(dxLaunchWorkspace, /fn response_controller_pill\(/);
@@ -1063,11 +1068,15 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(railSection, /\.on_click\(move \|event, window, cx\| \{/);
   assert.match(railSection, /on_toggle\(section, event, window, cx\)/);
   assert.doesNotMatch(railSection, /Disclosure::new\(format!\("\{id\}-disclosure"\), is_open\)\.on_click/);
-  assert.match(dxLaunchWorkspace, /"dx-progress-summary-section"/);
-  assert.match(dxLaunchWorkspace, /"dx-environment-section"/);
-  assert.match(dxLaunchWorkspace, /"dx-subagents-section"/);
-  assert.match(dxLaunchWorkspace, /"dx-source-summary-section"/);
-  assert.match(dxLaunchWorkspace, /"dx-readiness-section"/);
+  assert.match(dxLaunchWorkspace, /"dx-agent-overview-section"/);
+  assert.match(dxLaunchWorkspace, /"dx-agent-threads-section"/);
+  assert.match(dxLaunchWorkspace, /"dx-agent-tasks-section"/);
+  assert.match(dxLaunchWorkspace, /"dx-agent-subagents-section"/);
+  assert.match(dxLaunchWorkspace, /"dx-agent-approvals-section"/);
+  assert.match(agentOverview, /"Quality"/);
+  assert.match(agentOverview, /"Receipts"/);
+  assert.match(agentThreads, /"Parked threads"/);
+  assert.match(agentTasks, /"Recovery controls"/);
   assert.match(dxLaunchWorkspace, /fn subagent_pixel_icon/);
   assert.match(dxLaunchWorkspace, /gpui::hsla\(210\.0 \/ 360\.0/);
   assert.match(dxLaunchWorkspace, /status\.subagent_rows\.iter\(\)\.take\(6\)/);
@@ -1100,8 +1109,11 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(agentPanel, /fullscreen_progress_rail_pinned: true/);
   assert.match(agentPanel, /default_collapsed_dx_launch_rail_sections/);
   assert.match(agentPanel, /DxLaunchRailSection::SourceTools/);
-  assert.match(agentPanel, /DxLaunchRailSection::WorkspaceState/);
-  assert.match(agentPanel, /DxLaunchRailSection::Readiness/);
+  assert.match(agentPanel, /DxLaunchRailSection::AgentOverview/);
+  assert.match(agentPanel, /DxLaunchRailSection::AgentThreads/);
+  assert.match(agentPanel, /DxLaunchRailSection::AgentTasks/);
+  assert.match(agentPanel, /DxLaunchRailSection::AgentSubagents/);
+  assert.match(agentPanel, /DxLaunchRailSection::AgentApprovals/);
   assert.match(agentPanel, /toggle_dx_launch_rail_section/);
   assert.match(toolbar, /"Hide sources rail"/);
   assert.match(toolbar, /"Show sources rail"/);
@@ -1179,13 +1191,13 @@ test("agent rails and project badges keep compact production layout", () => {
   );
   assert.match(dxLaunchCheckPanel, /"Readiness score"/);
   assert.doesNotMatch(dxLaunchCheckPanel, /"Rail score"/);
-  assert.match(dxLaunchWorkspace, /"Quality Gate"/);
-  assert.match(dxLaunchWorkspace, /"Worktrees"/);
-  assert.match(dxLaunchWorkspace, /"Fresh Receipts"/);
+  assert.match(dxAgentWorkspace, /"Quality"/);
+  assert.match(dxAgentWorkspace, /"Accounts"/);
+  assert.match(dxAgentWorkspace, /"Trusted bridge"/);
+  assert.match(dxAgentWorkspace, /"Recovery controls"/);
   assert.doesNotMatch(dxLaunchWorkspace, /No active subagents|Show \{\} more|is working/);
   assert.doesNotMatch(dxLaunchWorkspace, /source bridge wired|source bridge missing|No automation receipts|Fresh proof|worktree\(s\)|task\(s\)/);
-  assert.match(dxLaunchWorkspace, /"Preview Bridge"/);
-  assert.match(dxLaunchWorkspace, /"Attachable"/);
+  assert.match(dxLaunchWorkspace, /"Attach"/);
   assert.match(dxLaunchAuditSummary, /"Scenario"/);
   assert.match(dxLaunchAuditSummary, /"Scenario Agents"/);
   assert.match(dxLaunchReadinessExamples, /format!\("Scenario \{\}", ix \+ 1\)/);
@@ -1233,10 +1245,11 @@ test("agent launch rails use professional operator-facing copy", () => {
   const sidebarActions = functionBody(agentPanel, "render_dx_launch_sidebar_actions");
   const sourceActions = functionBody(agentPanel, "render_dx_launch_source_actions");
   const guidedCards = functionBody(agentPanel, "render_dx_launch_guided_cards");
-  const progressSummary = functionBody(dxLaunchWorkspace, "progress_summary");
-  const environmentSummary = functionBody(dxLaunchWorkspace, "environment_summary");
+  const agentOverview = functionBody(dxAgentWorkspace, "agent_overview_section");
+  const agentThreads = functionBody(dxAgentWorkspace, "agent_threads_section");
+  const agentTasks = functionBody(dxAgentWorkspace, "agent_tasks_section");
+  const agentApprovals = functionBody(dxAgentWorkspace, "agent_approvals_section");
   const subagentSummary = functionBody(dxLaunchWorkspace, "subagent_summary");
-  const sourceSummary = functionBody(dxLaunchWorkspace, "source_summary");
   const styleState = functionBody(dxLaunchStylePanel, "dx_style_panel_state");
   const webPreviewState = functionBody(dxStylePanelCards, "web_preview_state");
   const sourceSetStatus = functionBody(dxSourceSetFormatting, "source_set_status");
@@ -1260,12 +1273,18 @@ test("agent launch rails use professional operator-facing copy", () => {
     /"Draft Action"|"Draft Check"|"Draft Handoff"|"Draft Gate"|"Draft Audit"|"Draft Source"|"Draft WWW"|"Draft Proof"|"Draft Import"|"Draft Form"|"Draft Approval"|"Draft Guard"|"No source actions available"/,
   );
 
-  assert.match(progressSummary, /"Preview Bridge"/);
-  assert.match(progressSummary, /"Quality Gate"/);
-  assert.match(environmentSummary, /"Fresh Receipts"/);
+  assert.match(agentOverview, /"Bridge"/);
+  assert.match(agentOverview, /"Accounts"/);
+  assert.match(agentOverview, /"Receipts"/);
+  assert.match(agentOverview, /"Quality"/);
+  assert.match(agentThreads, /"Parked threads"/);
+  assert.match(agentThreads, /"No active Agent thread state"/);
+  assert.match(agentTasks, /"Recovery controls"/);
+  assert.match(agentTasks, /"Release gate"/);
+  assert.match(agentApprovals, /"Trusted bridge"/);
+  assert.match(agentApprovals, /"Blocked tools"/);
   assert.match(subagentSummary, /"Active Tasks"/);
   assert.match(subagentSummary, /"No live subagent state"/);
-  assert.match(sourceSummary, /"Attachable"/);
   assert.doesNotMatch(
     dxLaunchWorkspace,
     /source bridge wired|source bridge missing|No automation receipts|Fresh proof|worktree\(s\)|task\(s\)/,

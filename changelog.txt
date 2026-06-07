@@ -1,3 +1,26 @@
+[2026-06-08] - DX Agents Clean Workspace Taxonomy
+
+ADDED:
+- `crates\agent_ui\src\dx_launch_workspace\agent_workspace.rs` adds the filtered Agents rail sections for Overview, Threads, Tasks, Subagents, and Approvals.
+- `crates\agent_ui\src\dx_launch_workspace\automation_screen\sections.rs` and `sections\rows.rs` add focused Automations workspace rendering for Drafts, Schedules, Runs, History, and Failures.
+
+CHANGED:
+- `crates\agent_ui\src\dx_launch_workspace.rs` now labels the right rail as Agents and removes the old generic Progress, Environment, Sources, and Readiness rail sections from the visible rail.
+- `crates\agent_ui\src\agent_panel.rs` carries live parked thread counts into the DX launch status cache and maps rail open state to the new agent section taxonomy.
+- `crates\agent_ui\src\dx_launch_workspace\automation_screen.rs` now delegates to receipt-backed lifecycle sections instead of mixing runtime, composer, and receipt rows in one surface.
+- Source guards now pin the clean workspace taxonomy and current GPUI component split for Agents, Connections, Tools, and Automations.
+
+PASSED:
+- `rustfmt --edition 2024 crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\dx_launch_workspace.rs crates\agent_ui\src\dx_launch_workspace\agent_workspace.rs crates\agent_ui\src\dx_launch_workspace\automation_screen.rs crates\agent_ui\src\dx_launch_workspace\automation_screen\sections.rs crates\agent_ui\src\dx_launch_workspace\automation_screen\sections\rows.rs`
+- `rustfmt --edition 2024 --check crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\dx_launch_workspace.rs crates\agent_ui\src\dx_launch_workspace\agent_workspace.rs crates\agent_ui\src\dx_launch_workspace\automation_screen.rs crates\agent_ui\src\dx_launch_workspace\automation_screen\sections.rs crates\agent_ui\src\dx_launch_workspace\automation_screen\sections\rows.rs`
+- `node --test script\dx-agent-workspaces-source.test.ts script\dx-automations-source.test.ts script\dx-workspace-ui-state-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- `git diff --check`
+- Focused conflict-marker scan on touched source and guard files
+
+NOTES:
+- Source-only by instruction. Cargo, `just run`, local servers, browser automation, native Zed launch, live provider login, QR payload proof, live trusted tool approval proof, and live scheduled automation execution remain skipped.
+- Exactly six GPT-5.5 extra-high subagents were used across the goal; this continuation did not spawn extra subagents.
+
 [2026-06-07] - DX Automations Backend Receipt Bridge
 
 ADDED:

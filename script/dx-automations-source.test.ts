@@ -75,6 +75,12 @@ test("DX Automations remain receipt-backed and do not fake scheduled execution",
   const automationScreenView = read(
     "crates/agent_ui/src/dx_launch_workspace/automation_screen.rs",
   );
+  const automationScreenSections = read(
+    "crates/agent_ui/src/dx_launch_workspace/automation_screen/sections.rs",
+  );
+  const automationScreenRows = read(
+    "crates/agent_ui/src/dx_launch_workspace/automation_screen/sections/rows.rs",
+  );
   const rail = read("crates/agent_ui/src/dx_launch_workspace/agents/automations.rs");
   const composer = read("crates/agent_ui/src/dx_launch_workspace/agents/automations/composer.rs");
   const labels = read("crates/agent_ui/src/dx_launch_workspace/agents/automations/labels.rs");
@@ -117,9 +123,32 @@ test("DX Automations remain receipt-backed and do not fake scheduled execution",
   );
   assert.match(launchWorkspace, /pub\(crate\) use automation_screen::render_automation_screen;/);
   assert.doesNotMatch(launchWorkspace, /pub\(crate\) fn render_automation_screen/);
-  assert.match(automationScreenView, /"pending DX Agents runtime"/);
-  assert.match(automationScreenView, /agents::dx_agent_automation_state/);
-  assert.match(automationScreenView, /agents::dx_agent_receipt_state/);
+  for (const section of ["Drafts", "Schedules", "Runs", "History", "Failures"]) {
+    assert.match(automationScreenView, new RegExp(`section_title\\("${section}"`));
+  }
+  for (const state of [
+    "drafts_state",
+    "schedules_state",
+    "runs_state",
+    "history_state",
+    "failures_state",
+  ]) {
+    assert.match(automationScreenView, new RegExp(`sections::${state}`));
+  }
+  assert.doesNotMatch(automationScreenView, /agents::dx_agent_automation_state/);
+  assert.doesNotMatch(automationScreenView, /agents::dx_agent_receipt_state/);
+  assert.match(automationScreenSections, /"pending DX Agents runtime"/);
+  assert.match(automationScreenSections, /"dx agents automate list --json"/);
+  assert.match(automationScreenSections, /No automation schedule rows from DX Agents/);
+  assert.match(automationScreenSections, /No automation history rows in the current DX Agents receipt list/);
+  assert.match(automationScreenSections, /No failed automation run receipts in the current list/);
+  assert.match(automationScreenSections, /has_successful_execution_proof\(\)/);
+  assert.match(automationScreenSections, /has_failed_execution_proof\(\)/);
+  assert.match(automationScreenSections, /AiSettingItem::new/);
+  assert.match(automationScreenRows, /has_successful_execution_proof\(\)/);
+  assert.match(automationScreenRows, /has_failed_execution_proof\(\)/);
+  assert.match(automationScreenRows, /AiSettingItem::new/);
+  assert.match(automationScreenRows, /ListItem::new/);
   assert.match(composer, /"pending runtime"/);
   assert.match(composer, /composer\.receipt_filename/);
   assert.match(composer, /composer\.unavailable_reason/);
@@ -229,6 +258,8 @@ test("DX Automation source stays split into focused files", () => {
     "crates/agent_ui/src/dx_agent_bridge/automation_contract_tests.rs",
     "crates/agent_ui/src/dx_agent_bridge/command_args_tests.rs",
     "crates/agent_ui/src/dx_launch_workspace/automation_screen.rs",
+    "crates/agent_ui/src/dx_launch_workspace/automation_screen/sections.rs",
+    "crates/agent_ui/src/dx_launch_workspace/automation_screen/sections/rows.rs",
     "crates/agent_ui/src/dx_launch_workspace/agents/automations/composer.rs",
     "crates/agent_ui/src/dx_launch_workspace/agents/automations/labels.rs",
     "crates/agent_ui/src/dx_launch_workspace/agents/automations/rows.rs",
@@ -239,6 +270,10 @@ test("DX Automation source stays split into focused files", () => {
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge.rs") < 880);
   assert.ok(lineCount("crates/agent_ui/src/automation_screen.rs") < 115);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/automation_screen.rs") < 120);
+  assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/automation_screen/sections.rs") < 230);
+  assert.ok(
+    lineCount("crates/agent_ui/src/dx_launch_workspace/automation_screen/sections/rows.rs") < 260,
+  );
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_actions.rs") < 230);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_actions_safety_tests.rs") < 80);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_actions_tests.rs") < 110);

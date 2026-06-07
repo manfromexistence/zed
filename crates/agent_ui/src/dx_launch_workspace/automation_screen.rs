@@ -1,7 +1,9 @@
 use gpui::{AnyElement, App, IntoElement};
 use ui::{IconName, prelude::*};
 
-use super::{DxLaunchWorkspaceStatus, agents, metric_row, muted_card, section_title};
+use super::{DxLaunchWorkspaceStatus, muted_card, section_title};
+
+mod sections;
 
 pub(crate) fn render_automation_screen(
     status: Option<&DxLaunchWorkspaceStatus>,
@@ -10,35 +12,16 @@ pub(crate) fn render_automation_screen(
     let body = if let Some(status) = status {
         v_flex()
             .gap_2()
-            .child(section_title("Runtime", IconName::Server))
-            .child(
-                v_flex()
-                    .gap_1()
-                    .child(metric_row(
-                        "Bridge",
-                        if status.agent_bridge.enabled {
-                            status.agent_bridge.status.clone()
-                        } else {
-                            "disabled".to_string()
-                        },
-                    ))
-                    .child(metric_row(
-                        "Scheduled execution",
-                        "pending DX Agents runtime".to_string(),
-                    ))
-                    .child(metric_row(
-                        "Automation source",
-                        "dx agents automate list --json".to_string(),
-                    ))
-                    .child(metric_row(
-                        "Receipts",
-                        status.agent_bridge.receipts.len().to_string(),
-                    )),
-            )
-            .child(section_title("Composer", dx_icon(DxUiIcon::Automations)))
-            .child(agents::dx_agent_automation_state(&status.agent_bridge, cx))
-            .child(section_title("Receipts", IconName::FileTextOutlined))
-            .child(agents::dx_agent_receipt_state(&status.agent_bridge, cx))
+            .child(section_title("Drafts", dx_icon(DxUiIcon::Automations)))
+            .child(sections::drafts_state(&status.agent_bridge, cx))
+            .child(section_title("Schedules", IconName::Clock))
+            .child(sections::schedules_state(&status.agent_bridge, cx))
+            .child(section_title("Runs", IconName::TodoProgress))
+            .child(sections::runs_state(&status.agent_bridge, cx))
+            .child(section_title("History", IconName::HistoryRerun))
+            .child(sections::history_state(&status.agent_bridge, cx))
+            .child(section_title("Failures", IconName::Warning))
+            .child(sections::failures_state(&status.agent_bridge, cx))
             .into_any_element()
     } else {
         muted_card("Loading automation receipts and composer contract", cx)

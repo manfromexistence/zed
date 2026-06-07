@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const read = (path: string) => readFileSync(path, "utf8");
+const lineCount = (path: string) => read(path).split(/\r?\n/).length;
 const enumBody = (source: string, name: string) =>
   source.match(new RegExp(`enum ${name} \\{[\\s\\S]*?\\}`))?.[0] ?? "";
 
@@ -17,8 +18,14 @@ test("DX agent workspace taxonomy has first-class Zed screens", () => {
   const titleBar = read("crates/title_bar/src/title_bar.rs");
   const sidebar = read("crates/sidebar/src/sidebar.rs");
   const carousel = read("crates/workspace/src/screen_carousel.rs");
+  const dxWorkspace = read("crates/agent_ui/src/dx_launch_workspace.rs");
+  const agentWorkspace = read(
+    "crates/agent_ui/src/dx_launch_workspace/agent_workspace.rs",
+  );
   const screenKinds = enumBody(item, "WorkspaceScreenKind");
 
+  assert.ok(existsSync("crates/agent_ui/src/dx_launch_workspace/agent_workspace.rs"));
+  assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agent_workspace.rs") < 260);
   for (const kind of ["Agent", "Automations", "Connections", "Tools", "Editor"]) {
     assert.match(screenKinds, new RegExp(`\\b${kind}\\b`));
   }
@@ -58,6 +65,41 @@ test("DX agent workspace taxonomy has first-class Zed screens", () => {
   assert.match(sidebar, /"sidebar-activity-connections"[\s\S]*?zed_actions::assistant::OpenConnections/);
   assert.match(sidebar, /"sidebar-toolbar-plugins"[\s\S]*?zed_actions::assistant::OpenTools/);
   assert.match(sidebar, /"sidebar-activity-plugins"[\s\S]*?zed_actions::assistant::OpenTools/);
+
+  assert.match(dxWorkspace, /^mod agent_workspace;$/m);
+  assert.match(dxWorkspace, /pub background_thread_count: usize/);
+  assert.match(agentPanel, /background_thread_count,/);
+
+  for (const [id, label, section] of [
+    ["dx-agent-overview-section", "Overview", "AgentOverview"],
+    ["dx-agent-threads-section", "Threads", "AgentThreads"],
+    ["dx-agent-tasks-section", "Tasks", "AgentTasks"],
+    ["dx-agent-subagents-section", "Subagents", "AgentSubagents"],
+    ["dx-agent-approvals-section", "Approvals", "AgentApprovals"],
+  ] as const) {
+    assert.match(dxWorkspace, new RegExp(`"${id}"`));
+    assert.match(dxWorkspace, new RegExp(`"${label}"`));
+    assert.match(dxWorkspace, new RegExp(`DxLaunchRailSection::${section}`));
+  }
+
+  for (const fnName of [
+    "agent_overview_section",
+    "agent_threads_section",
+    "agent_tasks_section",
+    "agent_subagents_section",
+    "agent_approvals_section",
+  ]) {
+    assert.match(agentWorkspace, new RegExp(`fn ${fnName}\\(`));
+  }
+
+  assert.match(agentWorkspace, /status\.active_status/);
+  assert.match(agentWorkspace, /status\.background_thread_count/);
+  assert.match(agentWorkspace, /status\.agent_bridge\.active_task_count/);
+  assert.match(agentWorkspace, /status\.agent_bridge\.trusted_tool_bridge/);
+  assert.match(agentWorkspace, /subagent_summary\(status, cx\)/);
+  assert.match(agentWorkspace, /No active Agent thread state/);
+  assert.match(agentWorkspace, /No active DX Agents task receipts/);
+  assert.match(agentWorkspace, /Blocked trusted tool approval receipts need review/);
 });
 
 test("Connections workspace is wired to provider, channel, social, gateway, and credential state", () => {
