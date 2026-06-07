@@ -1,3 +1,17 @@
+[2026-06-07] - Web Preview Semantic Loading Icons
+
+CHANGED:
+- `crates\web_preview\src\web_preview_view.rs`, `crates\web_preview_macos\src\web_preview_view.rs`, and `crates\web_preview_linux\src\web_preview_view.rs` now render Web Preview loading overlays through `dx_loading_icon(IconSize::Small, Color::Muted, 2)`.
+- `crates\web_preview\src\web_preview_view.rs` now uses `dx_icon(DxUiIcon::Loading)` for the Copy Readiness Probe menu action instead of the legacy `LoadCircle` literal.
+- `script\dx-icon-system-source.test.ts` now includes Web Preview in the semantic loader guard, and `script\web-preview-platform-lifecycle.test.ts` now expects the shared DX loading helper across all desktop Web Preview entry points.
+
+PASSED:
+- `node --test script\dx-icon-system-source.test.ts script\web-preview-platform-lifecycle.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\web_preview\src\web_preview_view.rs crates\web_preview_macos\src\web_preview_view.rs crates\web_preview_linux\src\web_preview_view.rs`
+
+NOTES:
+- This remains source-only by instruction. Cargo, `just run`, local servers, browser/WebView proof, and native Zed launch remain skipped.
+
 [2026-06-07] - DX Project Context PathBuf Receipt Roots
 
 CHANGED:

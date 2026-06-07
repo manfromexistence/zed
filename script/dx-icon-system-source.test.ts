@@ -174,6 +174,7 @@ test("legacy loader/settings names do not leak into the DX icon contract", () =>
     "crates/agent_ui/src/dx_launch_prompts/source.rs",
     "crates/agent_ui/src/dx_launch_workspace/sources/kinds.rs",
     "crates/workspace/src/screen_carousel.rs",
+    "crates/web_preview/src/web_preview_view.rs",
   ].map(read).join("\n");
 
   assert.doesNotMatch(guardedSources, /loader-circle|IconName::LoadCircle/);

@@ -2,6 +2,7 @@ IN PROGRESS:
 - None. Runtime proof remains deferred until an explicit authorized validation pass allows `just run`/Cargo.
 
 COMPLETED:
+- Web Preview loading chrome now uses the DX semantic loading helper on Windows, macOS, and Linux, and the icon-system guard covers Web Preview against legacy LoadCircle literals.
 - DX project context PathBuf receipt roots now normalize, absolute-filter, dedupe, and cap workspace roots before detect, and the launch audit source guard now tracks bool_label ownership in status summaries instead of the parent module.
 - Agent launch diagnostics now builds and renders a source-only DX Evidence Basket from cached source-set snapshots, tool-history buckets, and Flow readiness facts without direct filesystem scans, live audio capture, command execution, Cargo, or `just run`.
 - Built-in Search profile now enables the DX metasearch/source-pack evidence tools while keeping serializer/media/restore execution tools out of the default Search profile.

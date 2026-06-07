@@ -698,8 +698,8 @@ for (const [name, path] of desktopOnboardingPreviewViews) {
     assert.match(source, /PreviewLoadState::Loading\s*=>\s*None/);
     assert.match(source, /let show_loading_placeholder =/);
     assert.match(source, /let loading_placeholder = show_loading_placeholder\.then/);
-    assert.match(source, /IconName::LoadCircle/);
-    assert.match(source, /\.with_rotate_animation\(2\)/);
+    assert.match(source, /dx_loading_icon\(IconSize::Small,\s*Color::Muted,\s*2\)/);
+    assert.doesNotMatch(source, /IconName::LoadCircle/);
     assert.match(source, /Label::new\("Loading Web Preview"\)/);
     assert.match(
       source,

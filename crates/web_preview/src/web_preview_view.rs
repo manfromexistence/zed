@@ -32788,7 +32788,7 @@ impl WebPreviewView {
                         )
                         .item(
                             ContextMenuEntry::new("Copy Readiness Probe")
-                                .icon(IconName::LoadCircle)
+                                .icon(dx_icon(DxUiIcon::Loading))
                                 .handler({
                                     let entity = entity.clone();
                                     move |_, cx| {
@@ -36365,12 +36365,7 @@ impl Render for WebPreviewView {
                         .border_1()
                         .border_color(cx.theme().colors().border_variant)
                         .bg(cx.theme().colors().surface_background)
-                        .child(
-                            ui::Icon::new(IconName::LoadCircle)
-                                .size(IconSize::Small)
-                                .color(Color::Muted)
-                                .with_rotate_animation(2),
-                        )
+                        .child(dx_loading_icon(IconSize::Small, Color::Muted, 2))
                         .child(
                             Label::new("Loading Web Preview")
                                 .size(LabelSize::Small)
