@@ -2,7 +2,7 @@ use std::{
     collections::HashMap,
     fs,
     io::Read as _,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
 };
 
 use project::Entry;
@@ -10,7 +10,8 @@ use serde_json::Value;
 
 use super::{
     MediaPreviewKind, VideoFramePreview, VideoFramePreviewKind, child_absolute_path,
-    media_preview_kind_for_path, media_stem_key,
+    generated_video_frame::PROJECT_PANEL_GENERATED_VIDEO_FRAME_DIR, media_preview_kind_for_path,
+    media_stem_key,
 };
 
 pub(super) const MAX_PROJECT_PANEL_MEDIA_METADATA_MANIFEST_BYTES: u64 = 256 * 1024;
@@ -105,7 +106,7 @@ impl MediaMetadataIndex {
 
     pub(super) fn merge_generated_media_metadata(
         &mut self,
-        parent_abs_path: &Path,
+        _parent_abs_path: &Path,
         generated: &GeneratedMediaMetadataIndex,
     ) {
         for record in generated
@@ -133,20 +134,10 @@ impl MediaMetadataIndex {
             let frame_preview = record
                 .center_frame_path
                 .as_ref()
-                .and_then(|path| {
-                    generated_video_frame_preview(
-                        parent_abs_path,
-                        path,
-                        VideoFramePreviewKind::Center,
-                    )
-                })
+                .and_then(|path| generated_video_frame_preview(path, VideoFramePreviewKind::Center))
                 .or_else(|| {
                     record.preview_frame_path.as_ref().and_then(|path| {
-                        generated_video_frame_preview(
-                            parent_abs_path,
-                            path,
-                            VideoFramePreviewKind::Preview,
-                        )
+                        generated_video_frame_preview(path, VideoFramePreviewKind::Preview)
                     })
                 });
 
@@ -375,15 +366,39 @@ fn resolve_metadata_media_path(parent_abs_path: &Path, path: &str) -> Option<Pat
         return None;
     }
 
-    Some(if candidate.is_absolute() {
-        candidate
+    confined_media_preview_path(parent_abs_path, &candidate)
+}
+
+fn confined_media_preview_path(parent_abs_path: &Path, candidate: &Path) -> Option<PathBuf> {
+    let parent_abs_path = normalize_media_preview_path(parent_abs_path)?;
+    let candidate = if candidate.is_absolute() {
+        normalize_media_preview_path(candidate)?
     } else {
-        parent_abs_path.join(candidate)
-    })
+        normalize_media_preview_path(&parent_abs_path.join(candidate))?
+    };
+
+    candidate.starts_with(&parent_abs_path).then_some(candidate)
+}
+
+fn normalize_media_preview_path(path: &Path) -> Option<PathBuf> {
+    let mut normalized = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::Prefix(prefix) => normalized.push(prefix.as_os_str()),
+            Component::RootDir => normalized.push(component.as_os_str()),
+            Component::CurDir => {}
+            Component::ParentDir => {
+                if !normalized.pop() {
+                    return None;
+                }
+            }
+            Component::Normal(part) => normalized.push(part),
+        }
+    }
+    Some(normalized)
 }
 
 fn generated_video_frame_preview(
-    parent_abs_path: &Path,
     path: &Path,
     kind: VideoFramePreviewKind,
 ) -> Option<VideoFramePreview> {
@@ -392,13 +407,19 @@ fn generated_video_frame_preview(
     }
 
     Some(VideoFramePreview {
-        path: if path.is_absolute() {
-            path.to_path_buf()
-        } else {
-            parent_abs_path.join(path)
-        },
+        path: resolve_generated_video_frame_path(path)?,
         kind,
     })
+}
+
+fn resolve_generated_video_frame_path(path: &Path) -> Option<PathBuf> {
+    let path = normalize_media_preview_path(path)?;
+    let cache_root = generated_video_frame_cache_root()?;
+    path.starts_with(&cache_root).then_some(path)
+}
+
+fn generated_video_frame_cache_root() -> Option<PathBuf> {
+    normalize_media_preview_path(&paths::temp_dir().join(PROJECT_PANEL_GENERATED_VIDEO_FRAME_DIR))
 }
 
 fn media_metadata_lookup_keys(path: &Path) -> impl Iterator<Item = String> {

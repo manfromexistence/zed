@@ -1,3 +1,17 @@
+[2026-06-07] - Project Panel Media Metadata Path Provenance
+
+CHANGED:
+- `crates\project_panel\src\media_preview\metadata.rs` now confines manifest-provided video frame image paths to the manifest folder and rejects absolute paths outside that folder before they can become renderable previews.
+- Generated video frame metadata now accepts frame paths only under the managed Project Panel frame cache, reusing the source-owned generated-frame cache directory.
+- `script\dx-project-panel-source.test.ts` now guards manifest path confinement, parent traversal handling, and generated-frame cache provenance.
+
+PASSED:
+- `node --test script\dx-project-panel-source.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\project_panel\src\media_preview\metadata.rs crates\project_panel\src\media_preview\generated_video_frame.rs`
+
+NOTES:
+- This remains source-only by instruction. Cargo, `just run`, local servers, browser automation, runtime Project Panel visual proof, and native Zed launch remain skipped.
+
 [2026-06-07] - Project Panel Generated Video Frame Cache Freshness
 
 CHANGED:

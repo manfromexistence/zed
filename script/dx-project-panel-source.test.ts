@@ -902,6 +902,14 @@ test("project panel media preview renders direct image previews and video frames
   const collectMediaMetadataManifest = functionBody(metadata, "collect_media_metadata_manifest");
   const collectMediaMetadataRecord = functionBody(metadata, "collect_media_metadata_record");
   const mediaDurationLabelFromRecord = functionBody(metadata, "media_duration_label_from_record");
+  const resolveMetadataMediaPath = functionBody(metadata, "resolve_metadata_media_path");
+  const confinedMediaPreviewPath = functionBody(metadata, "confined_media_preview_path");
+  const normalizeMediaPreviewPath = functionBody(metadata, "normalize_media_preview_path");
+  const generatedVideoFramePreview = functionBody(metadata, "generated_video_frame_preview");
+  const resolveGeneratedVideoFramePath = functionBody(
+    metadata,
+    "resolve_generated_video_frame_path",
+  );
   const videoPreviewFrame = functionBody(media, "video_preview_frame");
   const videoFramePreviewLabel = functionBody(media, "video_frame_preview_label");
   const videoFrameCandidateRank = functionBody(media, "video_frame_candidate_rank");
@@ -1473,6 +1481,41 @@ test("project panel media preview renders direct image previews and video frames
     collectMediaMetadataRecord,
     /first_string_field\(\s*object,\s*MEDIA_METADATA_PATH_FIELDS\s*\)[\s\S]*media_duration_label_from_record[\s\S]*MEDIA_METADATA_CENTER_FRAME_FIELDS[\s\S]*MEDIA_METADATA_PREVIEW_FRAME_FIELDS/,
     "media metadata records must route path, duration, and frame aliases through named contracts",
+  );
+  assert.match(
+    resolveMetadataMediaPath,
+    /confined_media_preview_path\(parent_abs_path, &candidate\)/,
+    "manifest-provided media paths must be confined before becoming renderable image paths",
+  );
+  assert.doesNotMatch(
+    resolveMetadataMediaPath,
+    /candidate\.is_absolute\(\)\s*\{[\s\S]*candidate[\s\S]*\}/,
+    "manifest-provided absolute paths must not be accepted as-is",
+  );
+  assert.match(
+    confinedMediaPreviewPath,
+    /normalize_media_preview_path\(parent_abs_path\)[\s\S]*normalize_media_preview_path\(&parent_abs_path\.join\(candidate\)\)[\s\S]*candidate\.starts_with\(&parent_abs_path\)/,
+    "metadata frame paths must stay inside the folder that owns the manifest",
+  );
+  assert.match(
+    normalizeMediaPreviewPath,
+    /Component::ParentDir[\s\S]*if !normalized\.pop\(\) \{[\s\S]*return None;/,
+    "metadata path normalization must reject parent traversal past the root",
+  );
+  assert.match(
+    generatedVideoFramePreview,
+    /resolve_generated_video_frame_path\(path\)/,
+    "generated video frame metadata must use the managed-cache provenance check",
+  );
+  assert.match(
+    resolveGeneratedVideoFramePath,
+    /generated_video_frame_cache_root\(\)\?[\s\S]*path\.starts_with\(&cache_root\)/,
+    "generated video frame paths must stay under the Project Panel managed frame cache",
+  );
+  assert.match(
+    metadata,
+    /paths::temp_dir\(\)[\s\S]*PROJECT_PANEL_GENERATED_VIDEO_FRAME_DIR/,
+    "generated frame cache provenance must share the named managed frame directory",
   );
   assert.match(
     mediaDurationLabelFromRecord,

@@ -11,7 +11,7 @@ use futures::future::{Either, select};
 use gpui::BackgroundExecutor;
 use util::command::Stdio;
 
-const PROJECT_PANEL_GENERATED_VIDEO_FRAME_DIR: &str = "project-panel-media-frames";
+pub(super) const PROJECT_PANEL_GENERATED_VIDEO_FRAME_DIR: &str = "project-panel-media-frames";
 const DX_FFMPEG_PATH_ENV: &str = "DX_FFMPEG_PATH";
 const DX_FFPROBE_PATH_ENV: &str = "DX_FFPROBE_PATH";
 const GENERATED_VIDEO_DURATION_PROBE_TIMEOUT: Duration = Duration::from_secs(3);
