@@ -1,3 +1,18 @@
+[2026-06-07] - AI Search Profile Evidence Tools
+
+CHANGED:
+- `assets\settings\default.json` now enables DX metasearch/source-pack evidence tools for the built-in Search profile without granting serializer, media, or restore execution tools.
+- `script\dx-ai-search-profile-source.test.ts` now guards the Search profile id, composer slot presence, evidence tool defaults, native Agent tool registrations, and execution-tool exclusions.
+- `script\dx-handoff-source-guard-registry.test.ts` and `DX.md` now register the new lightweight Search profile guard.
+- `todo.txt` and `DX.md` now record this source-only AI Search profile checkpoint.
+
+PASSED:
+- `node --test script\dx-ai-search-profile-source.test.ts script\dx-handoff-source-guard-registry.test.ts script\dx-workspace-ui-state-source.test.ts`
+- `git diff --check -- assets\settings\default.json script\dx-ai-search-profile-source.test.ts script\dx-handoff-source-guard-registry.test.ts DX.md todo.txt changelog.txt`
+
+NOTES:
+- This remains source-only by instruction. Cargo, `just run`, local servers, browser/WebView proof, native Zed launch, and live Agent tool execution proof remain skipped.
+
 [2026-06-07] - Project Panel DX Explorer Typed Source Evidence
 
 CHANGED:

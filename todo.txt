@@ -2,6 +2,7 @@ IN PROGRESS:
 - None. Runtime proof remains deferred until an explicit authorized validation pass allows `just run`/Cargo.
 
 COMPLETED:
+- Built-in Search profile now enables the DX metasearch/source-pack evidence tools while keeping serializer/media/restore execution tools out of the default Search profile.
 - Project Panel DX Explorer now carries typed Project-derived source-kind evidence plus cached skipped-entry counts, with source guards covering local/WSL/remote/read-only labels and render-path scan avoidance.
 - Forge filesystem readers now share a `DxProjectContext`-backed root helper for package-status, remote registry, machine-cache, and configured-root detection, with shared fallback roots kept out of the workspace configured count.
 - Semantic icon hotspot cleanup is source-verified: Project Panel dock chrome, sidebar Search/Agents activity buttons, Agent Configuration MCP settings control, and Flow voice busy state now route through `DxUiIcon`/`dx_icon`, and `script\dx-icon-system-source.test.ts` guards those hotspots against raw generic literals.
