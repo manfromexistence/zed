@@ -89,6 +89,11 @@ test("composer renders separate mic and read-aloud buttons before send", () => {
     "let voice_icon = match state.phase",
     "let voice_color = match state.phase",
   );
+  const speakDisabled = sourceSlice(
+    voiceButtons,
+    "let speak_disabled =",
+    "let voice_disabled =",
+  );
   const voiceDisabled = sourceSlice(
     voiceButtons,
     "let voice_disabled =",
@@ -114,16 +119,20 @@ test("composer renders separate mic and read-aloud buttons before send", () => {
   assert.match(voiceIcon, /ComposerVoicePhase::Recording\s*\|\s*ComposerVoicePhase::Transcribing => IconName::Stop/);
   assert.match(voiceIcon, /ComposerVoicePhase::Speaking => IconName::Mic/);
   assert.doesNotMatch(voiceIcon, /ComposerVoicePhase::Speaking => IconName::Stop/);
+  assert.match(voiceButtons, /ComposerVoicePhase::Ready if !availability\.stt_ready => Color::Warning/);
   assert.match(voiceButtons, /let speak_icon = match state\.phase/);
   assert.match(voiceButtons, /ComposerVoicePhase::Speaking => IconName::Stop/);
-  assert.match(voiceButtons, /!availability\.stt_ready/);
+  assert.match(voiceControls, /availability\.stt_status\.clone\(\)/);
   assert.match(voiceButtons, /\.disabled\(voice_disabled\)/);
+  assert.match(speakDisabled, /!availability\.has_composer_text/);
+  assert.doesNotMatch(speakDisabled, /!availability\.tts_ready/);
   assert.match(voiceDisabled, /ComposerVoicePhase::Speaking => true/);
   assert.match(
-    voiceButtons,
-    /!availability\.has_composer_text/,
+    voiceDisabled,
+    /ComposerVoicePhase::Ready \| ComposerVoicePhase::Error => false/,
   );
-  assert.match(voiceButtons, /!availability\.tts_ready/);
+  assert.doesNotMatch(voiceDisabled, /!availability\.stt_ready/);
+  assert.match(voiceButtons, /availability\.has_composer_text && !availability\.tts_ready/);
   assert.match(
     voiceButtons,
     /state\.speak_tooltip\(&availability\)/,
@@ -197,6 +206,11 @@ test("voice recording UI exposes real recording and transcription states", () =>
   assert.match(voiceControls, /update_recording_telemetry/);
   assert.match(voiceControls, /captured_duration: Duration/);
   assert.match(voiceControls, /input_level: f32/);
+  assert.match(voiceControls, /fn voice_level_bar_count/);
+  assert.match(
+    voiceControls,
+    /pub\(super\) fn update_recording_telemetry[\s\S]+-> bool/,
+  );
   assert.match(voiceControls, /Duration::ZERO/);
   assert.match(voiceControls, /const VOICE_RECORDING_STOP_TRANSCRIBE_LABEL/);
   assert.match(voiceControls, /const VOICE_RECORDING_STOP_TRANSCRIBE_TOOLTIP/);
@@ -234,6 +248,12 @@ test("voice recording UI exposes real recording and transcription states", () =>
   assert.match(voiceControls, /Retry or dismiss to continue/);
   assert.match(threadView, /flow_recording_session[\s\S]+telemetry\(\)/);
   assert.match(threadView, /MAX_RECORDING_SECONDS/);
+  assert.match(threadView, /Duration::from_millis\(500\)/);
+  assert.match(
+    threadView,
+    /let telemetry_changed =[\s\S]*?(?:this|self)\.composer_voice_state\.update_recording_telemetry/,
+  );
+  assert.match(threadView, /if telemetry_changed \{/);
   assert.match(threadView, /captured_duration\s*>=\s*Duration::from_secs\(MAX_RECORDING_SECONDS as u64\)/);
   assert.match(threadView, /stop_flow_voice_recording\(window, cx\)/);
   assert.match(threadView, /fn cancel_flow_voice_recording/);
@@ -289,6 +309,16 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
     runtime,
     "pub(crate) fn start_recording",
     "pub(crate) fn transcribe_recording",
+  );
+  const resolveInputDevice = sourceSlice(
+    runtime,
+    "fn resolve_input_device",
+    "fn build_input_stream_typed",
+  );
+  const inputDeviceScore = sourceSlice(
+    runtime,
+    "fn input_device_score",
+    "fn build_input_stream_typed",
   );
   const transcribeRecording = sourceSlice(
     runtime,
@@ -552,6 +582,12 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(timeoutHelper, /child\.wait\(\)/);
   assert.match(timeoutHelper, /was canceled/);
   assert.match(timeoutHelper, /timed out after/);
+  assert.match(runtime, /fn tts_thread_count/);
+  assert.match(runtime, /DX_FLOW_TTS_TORCH_THREADS/);
+  assert.match(runtime, /FLOW_TTS_TORCH_THREADS/);
+  assert.match(runtime, /OMP_NUM_THREADS/);
+  assert.match(runtime, /unwrap_or_else\(\|\| "2"\.to_string\(\)\)/);
+  assert.doesNotMatch(runtime, /env\("OMP_NUM_THREADS", "4"\)/);
   assert.match(runtime, /struct FlowSpeechProcessTreeGuard/);
   assert.match(runtime, /fn create_flow_speech_process_tree_guard/);
   assert.match(runtime, /JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE/);
@@ -564,7 +600,14 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(runtime, /fn normalize_flow_data_root/);
   assert.match(runtime, /fn canonicalize_candidate_path/);
   assert.match(runtime, /fn candidate_paths_equal/);
+  assert.match(runtime, /fn env_flow_root/);
+  assert.match(runtime, /fn resolve_flow_root/);
   assert.match(runtime, /fn flow_root_from_dictate_binary/);
+  assert.match(detectRuntime, /let env_flow_root = env_flow_root\(\)/);
+  assert.match(detectRuntime, /let binary_flow_root = flow_dictate_binary/);
+  assert.match(detectRuntime, /resolve_flow_root\(env_flow_root, binary_flow_root\)/);
+  assert.match(runtime, /candidate_paths_equal\(&env_root, &binary_root\)/);
+  assert.match(runtime, /using the Flow root inferred from DX_FLOW_DICTATE_BINARY/);
   assert.match(dataRootCandidates, /normalize_flow_data_root/);
   assert.match(dataRootCandidates, /FLOW_DATA_DIR/);
   assert.match(dataRootCandidates, /same_drive_flow_data_root\(flow_root\)/);
@@ -576,13 +619,36 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(envPathIfNonemptyFile, /filter\(\|path\| file_is_nonempty\(path\)\)/);
   assert.match(kokoroFromDataRoot, /file_is_nonempty\(&path\)\.then_some\(path\)/);
   assert.match(findKokoroPython, /file_is_nonempty\(&python\)\.then_some\(python\)/);
-  assert.match(findBinary, /find\(\|path\| file_is_nonempty\(path\)\)/);
+  assert.match(findBinary, /filter\(\|path\| file_is_nonempty\(path\)\)/);
+  assert.match(findBinary, /binary_modified_at/);
+  assert.match(findBinary, /max_by_key/);
   assert.match(defaultFlowRoot, /flow_root_ready/);
   assert.match(defaultFlowRoot, /join\("src"\)[\s\S]+join\("bin"\)[\s\S]+join\("flow-dictate\.rs"\)/);
   assert.doesNotMatch(defaultFlowRoot, /PARAKEET_MODEL_DIR/);
   assert.match(runtime, /RecordingTelemetry/);
+  assert.match(runtime, /struct RecordingTelemetryState/);
+  assert.match(runtime, /sample_count: AtomicUsize/);
+  assert.match(runtime, /input_level_bits: AtomicU32/);
+  assert.match(runtime, /telemetry: Arc<RecordingTelemetryState>/);
+  assert.match(runtime, /self\.telemetry\.snapshot\(\)/);
+  assert.match(runtime, /telemetry\.update\(buffer\.len\(\), input_level\)/);
+  assert.match(typedInputStream, /downmix_and_resample\(data, channels, input_sample_rate\)/);
+  assert.doesNotMatch(typedInputStream, /collect::<Vec<_>>/);
   assert.match(runtime, /pub\(crate\) const MAX_RECORDING_SECONDS: usize = 90/);
   assert.match(runtime, /recent_input_level/);
+  assert.match(runtime, /DX_FLOW_INPUT_DEVICE/);
+  assert.match(runtime, /FLOW_INPUT_DEVICE/);
+  assert.match(runtime, /fn input_device_score/);
+  assert.match(resolveInputDevice, /host[\s\S]+\.input_devices\(\)/);
+  assert.match(resolveInputDevice, /requested_input_device_name/);
+  assert.match(resolveInputDevice, /default_score/);
+  assert.match(resolveInputDevice, /best_score > default_score/);
+  assert.match(resolveInputDevice, /selected microphone-like Flow input/);
+  assert.match(inputDeviceScore, /microphone/);
+  assert.match(inputDeviceScore, /loopback/);
+  assert.match(inputDeviceScore, /voicemeeter/);
+  assert.match(startRecording, /let selection = resolve_input_device\(input_device_id\)\?/);
+  assert.match(startRecording, /input_device_name: selection\.name/);
   assertBefore(
     finishRecording,
     "drop(_stream);",

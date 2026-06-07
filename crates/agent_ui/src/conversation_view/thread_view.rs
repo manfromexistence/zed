@@ -4211,9 +4211,11 @@ impl ThreadView {
 
         match runtime.start_recording(input_audio_device.as_ref()) {
             Ok(session) => {
+                let input_device_label = session.input_device_label().to_string();
                 self.flow_recording_session = Some(session);
-                self.composer_voice_state
-                    .set_recording(format!("Flow voice runtime: {summary}"));
+                self.composer_voice_state.set_recording(format!(
+                    "Listening on {input_device_label}. Flow voice runtime: {summary}"
+                ));
                 self.message_editor
                     .read(cx)
                     .focus_handle(cx)
@@ -4221,7 +4223,7 @@ impl ThreadView {
                 self._flow_speech_task = Some(cx.spawn_in(window, async move |this, cx| {
                     loop {
                         cx.background_executor()
-                            .timer(Duration::from_millis(250))
+                            .timer(Duration::from_millis(500))
                             .await;
                         let Ok(keep_recording) = this.update_in(cx, |this, window, cx| {
                             let is_recording =
@@ -4233,18 +4235,21 @@ impl ThreadView {
                                     .and_then(|session| session.telemetry().ok())
                                 {
                                     let captured_duration = telemetry.captured_duration();
-                                    this.composer_voice_state.update_recording_telemetry(
-                                        captured_duration,
-                                        telemetry.input_level(),
-                                    );
+                                    let telemetry_changed =
+                                        this.composer_voice_state.update_recording_telemetry(
+                                            captured_duration,
+                                            telemetry.input_level(),
+                                        );
                                     if captured_duration
                                         >= Duration::from_secs(MAX_RECORDING_SECONDS as u64)
                                     {
                                         this.stop_flow_voice_recording(window, cx);
                                         return false;
                                     }
+                                    if telemetry_changed {
+                                        cx.notify();
+                                    }
                                 }
-                                cx.notify();
                             }
                             is_recording
                         }) else {

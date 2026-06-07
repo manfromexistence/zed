@@ -9,10 +9,10 @@ use std::{
     process::{Child, Command, Output, Stdio},
     sync::{
         Arc, Mutex,
-        atomic::{AtomicBool, Ordering},
+        atomic::{AtomicBool, AtomicU32, AtomicUsize, Ordering},
     },
     thread,
-    time::{Duration, Instant},
+    time::{Duration, Instant, SystemTime},
 };
 use uuid::Uuid;
 
@@ -32,6 +32,8 @@ const DEFAULT_KOKORO_VOICE: &str = "af_bella";
 const STT_COMMAND_TIMEOUT: Duration = Duration::from_secs(120);
 const TTS_COMMAND_TIMEOUT: Duration = Duration::from_secs(180);
 const COMMAND_POLL_INTERVAL: Duration = Duration::from_millis(50);
+const DX_FLOW_INPUT_DEVICE_ENV: &str = "DX_FLOW_INPUT_DEVICE";
+const FLOW_INPUT_DEVICE_ENV: &str = "FLOW_INPUT_DEVICE";
 
 #[cfg(target_os = "windows")]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
@@ -86,8 +88,21 @@ pub(crate) struct RecordingTelemetry {
 pub(crate) struct FlowRecordingSession {
     runtime: FlowSpeechRuntime,
     samples: Arc<Mutex<Vec<f32>>>,
+    telemetry: Arc<RecordingTelemetryState>,
     _stream: cpal::Stream,
     started_at: Instant,
+    input_device_name: Option<String>,
+}
+
+#[derive(Debug, Default)]
+struct RecordingTelemetryState {
+    sample_count: AtomicUsize,
+    input_level_bits: AtomicU32,
+}
+
+struct InputDeviceSelection {
+    device: cpal::Device,
+    name: Option<String>,
 }
 
 struct TemporarySpeechFile {
@@ -101,6 +116,25 @@ impl RecordingTelemetry {
 
     pub(crate) fn input_level(&self) -> f32 {
         self.input_level
+    }
+}
+
+impl RecordingTelemetryState {
+    fn update(&self, sample_count: usize, input_level: f32) {
+        self.sample_count.store(sample_count, Ordering::Relaxed);
+        self.input_level_bits
+            .store(input_level.clamp(0.0, 1.0).to_bits(), Ordering::Relaxed);
+    }
+
+    fn snapshot(&self) -> RecordingTelemetry {
+        let sample_count = self.sample_count.load(Ordering::Relaxed);
+        let input_level = f32::from_bits(self.input_level_bits.load(Ordering::Relaxed));
+        RecordingTelemetry {
+            captured_duration: Duration::from_secs_f32(
+                sample_count as f32 / TARGET_SAMPLE_RATE as f32,
+            ),
+            input_level,
+        }
     }
 }
 
@@ -202,15 +236,12 @@ impl FlowSpeechRuntime {
         let flow_dictate_binary = env::var_os("DX_FLOW_DICTATE_BINARY")
             .map(PathBuf::from)
             .filter(|path| file_is_nonempty(path));
-        let flow_root = env::var_os("DX_FLOW_ROOT")
-            .or_else(|| env::var_os("FLOW_ROOT"))
-            .map(PathBuf::from)
-            .or_else(|| {
-                flow_dictate_binary
-                    .as_ref()
-                    .and_then(|path| flow_root_from_dictate_binary(path))
-            })
-            .unwrap_or_else(default_flow_root);
+        let env_flow_root = env_flow_root();
+        let binary_flow_root = flow_dictate_binary
+            .as_ref()
+            .and_then(|path| flow_root_from_dictate_binary(path));
+        let flow_root =
+            resolve_flow_root(env_flow_root, binary_flow_root).unwrap_or_else(default_flow_root);
 
         let flow_dictate_binary =
             flow_dictate_binary.or_else(|| find_binary(&flow_root, "flow-dictate"));
@@ -231,25 +262,29 @@ impl FlowSpeechRuntime {
     ) -> Result<FlowRecordingSession> {
         self.ensure_stt_ready()?;
 
-        let device = resolve_input_device(input_device_id)?;
-        let config = device.default_input_config()?;
+        let selection = resolve_input_device(input_device_id)?;
+        let config = selection.device.default_input_config()?;
         let channels = config.channels() as usize;
         let input_sample_rate = config.sample_rate();
         let samples = Arc::new(Mutex::new(Vec::new()));
+        let telemetry = Arc::new(RecordingTelemetryState::default());
         let stream = build_input_stream(
-            &device,
+            &selection.device,
             &config,
             channels,
             input_sample_rate,
             Arc::clone(&samples),
+            Arc::clone(&telemetry),
         )?;
         stream.play()?;
 
         Ok(FlowRecordingSession {
             runtime: self.clone(),
             samples,
+            telemetry,
             _stream: stream,
             started_at: Instant::now(),
+            input_device_name: selection.name,
         })
     }
 
@@ -728,27 +763,24 @@ impl FlowRecordingSession {
         self.started_at.elapsed()
     }
 
-    pub(crate) fn telemetry(&self) -> Result<RecordingTelemetry> {
-        let samples = self
-            .samples
-            .lock()
-            .map_err(|_| anyhow!("Microphone recording buffer was poisoned"))?;
-        let captured_duration =
-            Duration::from_secs_f32(samples.len() as f32 / TARGET_SAMPLE_RATE as f32);
-        let input_level = recent_input_level(&samples);
+    pub(crate) fn input_device_label(&self) -> &str {
+        self.input_device_name
+            .as_deref()
+            .unwrap_or("selected microphone")
+    }
 
-        Ok(RecordingTelemetry {
-            captured_duration,
-            input_level,
-        })
+    pub(crate) fn telemetry(&self) -> Result<RecordingTelemetry> {
+        Ok(self.telemetry.snapshot())
     }
 
     pub(crate) fn finish(self) -> Result<(FlowSpeechRuntime, RecordedSpeech)> {
         let Self {
             runtime,
             samples,
+            telemetry: _,
             _stream,
             started_at: _,
+            input_device_name: _,
         } = self;
 
         drop(_stream);
@@ -771,6 +803,7 @@ fn build_input_stream(
     channels: usize,
     input_sample_rate: u32,
     samples: Arc<Mutex<Vec<f32>>>,
+    telemetry: Arc<RecordingTelemetryState>,
 ) -> Result<cpal::Stream> {
     let stream_config = config.clone().into();
     match config.sample_format() {
@@ -780,6 +813,7 @@ fn build_input_stream(
             channels,
             input_sample_rate,
             samples,
+            Arc::clone(&telemetry),
         ),
         SampleFormat::F64 => build_input_stream_typed::<f64>(
             device,
@@ -787,6 +821,7 @@ fn build_input_stream(
             channels,
             input_sample_rate,
             samples,
+            Arc::clone(&telemetry),
         ),
         SampleFormat::I8 => build_input_stream_typed::<i8>(
             device,
@@ -794,6 +829,7 @@ fn build_input_stream(
             channels,
             input_sample_rate,
             samples,
+            Arc::clone(&telemetry),
         ),
         SampleFormat::I16 => build_input_stream_typed::<i16>(
             device,
@@ -801,6 +837,7 @@ fn build_input_stream(
             channels,
             input_sample_rate,
             samples,
+            Arc::clone(&telemetry),
         ),
         SampleFormat::I24 => build_input_stream_typed::<cpal::I24>(
             device,
@@ -808,6 +845,7 @@ fn build_input_stream(
             channels,
             input_sample_rate,
             samples,
+            Arc::clone(&telemetry),
         ),
         SampleFormat::I32 => build_input_stream_typed::<i32>(
             device,
@@ -815,6 +853,7 @@ fn build_input_stream(
             channels,
             input_sample_rate,
             samples,
+            Arc::clone(&telemetry),
         ),
         SampleFormat::I64 => build_input_stream_typed::<i64>(
             device,
@@ -822,6 +861,7 @@ fn build_input_stream(
             channels,
             input_sample_rate,
             samples,
+            Arc::clone(&telemetry),
         ),
         SampleFormat::U8 => build_input_stream_typed::<u8>(
             device,
@@ -829,6 +869,7 @@ fn build_input_stream(
             channels,
             input_sample_rate,
             samples,
+            Arc::clone(&telemetry),
         ),
         SampleFormat::U16 => build_input_stream_typed::<u16>(
             device,
@@ -836,6 +877,7 @@ fn build_input_stream(
             channels,
             input_sample_rate,
             samples,
+            Arc::clone(&telemetry),
         ),
         SampleFormat::U32 => build_input_stream_typed::<u32>(
             device,
@@ -843,6 +885,7 @@ fn build_input_stream(
             channels,
             input_sample_rate,
             samples,
+            Arc::clone(&telemetry),
         ),
         SampleFormat::U64 => build_input_stream_typed::<u64>(
             device,
@@ -850,22 +893,129 @@ fn build_input_stream(
             channels,
             input_sample_rate,
             samples,
+            Arc::clone(&telemetry),
         ),
         other => Err(anyhow!("Unsupported microphone sample format: {other:?}")),
     }
 }
 
-fn resolve_input_device(input_device_id: Option<&DeviceId>) -> Result<cpal::Device> {
+fn resolve_input_device(input_device_id: Option<&DeviceId>) -> Result<InputDeviceSelection> {
     let host = cpal::default_host();
     if let Some(device_id) = input_device_id {
         if let Some(device) = host.device_by_id(device_id) {
-            return Ok(device);
+            return Ok(InputDeviceSelection {
+                name: input_device_name(&device),
+                device,
+            });
         }
         log::warn!("Selected Flow microphone device was not found; falling back to default input");
     }
 
-    host.default_input_device()
-        .context("No microphone input device is available")
+    let devices = host
+        .input_devices()
+        .context("Failed to enumerate microphone input devices")?
+        .collect::<Vec<_>>();
+    if devices.is_empty() {
+        return Err(anyhow!(
+            "No microphone input devices were found. Check Windows microphone permission and input device settings."
+        ));
+    }
+
+    if let Some(requested) = requested_input_device_name() {
+        let requested_lower = requested.to_ascii_lowercase();
+        if let Some(device) = devices.iter().find(|device| {
+            input_device_name(device)
+                .map(|name| name.to_ascii_lowercase().contains(&requested_lower))
+                .unwrap_or(false)
+        }) {
+            return Ok(InputDeviceSelection {
+                name: input_device_name(device),
+                device: device.clone(),
+            });
+        }
+        log::warn!(
+            "Requested Flow input device '{requested}' did not match any microphone; using auto-selection"
+        );
+    }
+
+    let default = host.default_input_device();
+    let default_score = default
+        .as_ref()
+        .and_then(input_device_name)
+        .map(|name| input_device_score(&name))
+        .unwrap_or(i32::MIN);
+
+    let best = devices
+        .iter()
+        .filter_map(|device| {
+            let name = input_device_name(device)?;
+            Some((input_device_score(&name), name, device))
+        })
+        .max_by_key(|(score, _, _)| *score);
+
+    if let Some((best_score, name, device)) = best {
+        if best_score > default_score || default.is_none() {
+            log::info!(
+                "selected microphone-like Flow input '{name}' over default input (score {best_score} > {default_score})"
+            );
+            return Ok(InputDeviceSelection {
+                name: Some(name),
+                device: device.clone(),
+            });
+        }
+    }
+
+    default
+        .or_else(|| devices.first().cloned())
+        .map(|device| InputDeviceSelection {
+            name: input_device_name(&device),
+            device,
+        })
+        .context("No usable microphone input device found")
+}
+
+fn requested_input_device_name() -> Option<String> {
+    env::var(DX_FLOW_INPUT_DEVICE_ENV)
+        .or_else(|_| env::var(FLOW_INPUT_DEVICE_ENV))
+        .ok()
+        .map(|name| name.trim().to_string())
+        .filter(|name| !name.is_empty())
+}
+
+fn input_device_name(device: &cpal::Device) -> Option<String> {
+    device
+        .description()
+        .map(|description| description.name().to_string())
+        .ok()
+}
+
+fn input_device_score(name: &str) -> i32 {
+    let lower = name.to_ascii_lowercase();
+    let mut score = 0;
+
+    for keyword in ["microphone", "mic", "array", "headset", "realtek", "usb"] {
+        if lower.contains(keyword) {
+            score += 40;
+        }
+    }
+
+    for keyword in [
+        "stereo mix",
+        "speaker",
+        "output",
+        "monitor",
+        "loopback",
+        "virtual",
+        "cable",
+        "voicemeeter",
+        "what u hear",
+    ] {
+        if lower.contains(keyword) {
+            score -= 120;
+        }
+    }
+
+    score
 }
 
 fn build_input_stream_typed<T>(
@@ -874,6 +1024,7 @@ fn build_input_stream_typed<T>(
     channels: usize,
     input_sample_rate: u32,
     samples: Arc<Mutex<Vec<f32>>>,
+    telemetry: Arc<RecordingTelemetryState>,
 ) -> Result<cpal::Stream>
 where
     T: Sample + SizedSample + Send + Copy + 'static,
@@ -882,15 +1033,13 @@ where
     let stream = device.build_input_stream(
         &config,
         move |data: &[T], _| {
-            let converted = data
-                .iter()
-                .map(|sample| sample.to_sample::<f32>())
-                .collect::<Vec<_>>();
-            let processed = downmix_and_resample(&converted, channels, input_sample_rate);
+            let processed = downmix_and_resample(data, channels, input_sample_rate);
             if let Ok(mut buffer) = samples.try_lock() {
                 let limit = TARGET_SAMPLE_RATE as usize * MAX_RECORDING_SECONDS;
                 let remaining = limit.saturating_sub(buffer.len());
+                let input_level = recent_input_level(&processed);
                 buffer.extend(processed.into_iter().take(remaining));
+                telemetry.update(buffer.len(), input_level);
             }
         },
         |error| log::warn!("Flow microphone input stream error: {error}"),
@@ -899,12 +1048,19 @@ where
     Ok(stream)
 }
 
-fn downmix_and_resample(input: &[f32], channels: usize, input_sample_rate: u32) -> Vec<f32> {
+fn downmix_and_resample<T>(input: &[T], channels: usize, input_sample_rate: u32) -> Vec<f32>
+where
+    T: Sample + Copy,
+    f32: FromSample<T>,
+{
     let channels = channels.max(1);
     let frame_count = input.len() / channels;
     let mut mono = Vec::with_capacity(frame_count);
     for frame in input.chunks(channels) {
-        let sum = frame.iter().copied().sum::<f32>();
+        let sum = frame
+            .iter()
+            .map(|sample| (*sample).to_sample::<f32>())
+            .sum::<f32>();
         mono.push(sum / frame.len() as f32);
     }
 
@@ -1176,6 +1332,7 @@ fn create_platform_process_tree_guard(_child: &Child) -> Result<FlowSpeechProces
 fn apply_tts_process_env(command: &mut Command, data_root: &Path) {
     let hf_home = data_root.join("huggingface");
     let torch_home = data_root.join("torch");
+    let tts_threads = tts_thread_count();
     command
         .env("PYTHONUTF8", "1")
         .env("PYTHONNOUSERSITE", "1")
@@ -1187,10 +1344,30 @@ fn apply_tts_process_env(command: &mut Command, data_root: &Path) {
         .env("TRANSFORMERS_CACHE", hf_home.join("transformers"))
         .env("TORCH_HOME", torch_home)
         .env("TOKENIZERS_PARALLELISM", "false")
-        .env("OMP_NUM_THREADS", "4")
-        .env("MKL_NUM_THREADS", "4")
-        .env("NUMEXPR_NUM_THREADS", "4")
-        .env("FLOW_TTS_TORCH_THREADS", "4");
+        .env("OMP_NUM_THREADS", &tts_threads)
+        .env("MKL_NUM_THREADS", &tts_threads)
+        .env("NUMEXPR_NUM_THREADS", &tts_threads)
+        .env("FLOW_TTS_TORCH_THREADS", &tts_threads);
+}
+
+fn tts_thread_count() -> String {
+    [
+        "DX_FLOW_TTS_TORCH_THREADS",
+        "FLOW_TTS_TORCH_THREADS",
+        "OMP_NUM_THREADS",
+    ]
+    .into_iter()
+    .find_map(|name| {
+        env::var(name)
+            .ok()
+            .map(|value| value.trim().to_string())
+            .filter(|value| {
+                value
+                    .parse::<usize>()
+                    .is_ok_and(|count| (1..=8).contains(&count))
+            })
+    })
+    .unwrap_or_else(|| "2".to_string())
 }
 
 fn apply_windows_process_flags(command: &mut Command) {
@@ -1343,7 +1520,14 @@ fn find_binary(flow_root: &Path, name: &str) -> Option<PathBuf> {
     ["release", "debug"]
         .iter()
         .map(|profile| flow_root.join("target").join(profile).join(&exe))
-        .find(|path| file_is_nonempty(path))
+        .filter(|path| file_is_nonempty(path))
+        .max_by_key(|path| binary_modified_at(path))
+}
+
+fn binary_modified_at(path: &Path) -> SystemTime {
+    path.metadata()
+        .and_then(|metadata| metadata.modified())
+        .unwrap_or(SystemTime::UNIX_EPOCH)
 }
 
 fn flow_root_from_dictate_binary(binary: &Path) -> Option<PathBuf> {
@@ -1351,6 +1535,30 @@ fn flow_root_from_dictate_binary(binary: &Path) -> Option<PathBuf> {
         .ancestors()
         .find(|candidate| flow_root_ready(candidate))
         .map(Path::to_path_buf)
+}
+
+fn env_flow_root() -> Option<PathBuf> {
+    [env::var_os("DX_FLOW_ROOT"), env::var_os("FLOW_ROOT")]
+        .into_iter()
+        .flatten()
+        .map(PathBuf::from)
+        .find(|path| flow_root_ready(path))
+}
+
+fn resolve_flow_root(env_root: Option<PathBuf>, binary_root: Option<PathBuf>) -> Option<PathBuf> {
+    match (env_root, binary_root) {
+        (Some(env_root), Some(binary_root)) if !candidate_paths_equal(&env_root, &binary_root) => {
+            log::warn!(
+                "Configured Flow root {} does not match DX_FLOW_DICTATE_BINARY root {}; using the Flow root inferred from DX_FLOW_DICTATE_BINARY",
+                env_root.display(),
+                binary_root.display()
+            );
+            Some(binary_root)
+        }
+        (Some(env_root), _) => Some(env_root),
+        (_, Some(binary_root)) => Some(binary_root),
+        (None, None) => None,
+    }
 }
 
 fn default_flow_root() -> PathBuf {

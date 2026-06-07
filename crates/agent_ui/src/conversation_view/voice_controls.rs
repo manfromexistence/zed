@@ -79,11 +79,21 @@ impl ComposerVoiceState {
         &mut self,
         captured_duration: Duration,
         input_level: f32,
-    ) {
-        if self.phase == ComposerVoicePhase::Recording {
-            self.captured_duration = captured_duration;
-            self.input_level = input_level.clamp(0.0, 1.0);
+    ) -> bool {
+        if self.phase != ComposerVoicePhase::Recording {
+            return false;
         }
+
+        let input_level = input_level.clamp(0.0, 1.0);
+        let previous_duration_tick = recording_duration_tick(self.captured_duration);
+        let next_duration_tick = recording_duration_tick(captured_duration);
+        let previous_level_bars = voice_level_bar_count(self.input_level);
+        let next_level_bars = voice_level_bar_count(input_level);
+
+        self.captured_duration = captured_duration;
+        self.input_level = input_level;
+
+        previous_duration_tick != next_duration_tick || previous_level_bars != next_level_bars
     }
 
     pub(super) fn set_ready(&mut self, message: impl Into<SharedString>) {
@@ -182,31 +192,31 @@ pub(super) fn render_voice_buttons(
         ComposerVoicePhase::Recording => Color::Error,
         ComposerVoicePhase::Transcribing | ComposerVoicePhase::Synthesizing => Color::Accent,
         ComposerVoicePhase::Error => Color::Warning,
+        ComposerVoicePhase::Ready if !availability.stt_ready => Color::Warning,
         ComposerVoicePhase::Speaking | ComposerVoicePhase::Ready => Color::Muted,
     };
     let speak_disabled = match state.phase {
         ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking => false,
         ComposerVoicePhase::Recording | ComposerVoicePhase::Transcribing => true,
-        ComposerVoicePhase::Ready | ComposerVoicePhase::Error => {
-            !availability.has_composer_text || !availability.tts_ready
-        }
+        ComposerVoicePhase::Ready | ComposerVoicePhase::Error => !availability.has_composer_text,
     };
     let voice_disabled = match state.phase {
         ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking => true,
-        ComposerVoicePhase::Ready | ComposerVoicePhase::Error => !availability.stt_ready,
+        ComposerVoicePhase::Ready | ComposerVoicePhase::Error => false,
         ComposerVoicePhase::Recording | ComposerVoicePhase::Transcribing => false,
     };
     let speak_icon = match state.phase {
         ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking => IconName::Stop,
         _ => IconName::AudioOn,
     };
-    let speak_color = if matches!(
-        state.phase,
-        ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking
-    ) {
-        Color::Accent
-    } else {
-        Color::Muted
+    let speak_color = match state.phase {
+        ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking => Color::Accent,
+        ComposerVoicePhase::Ready | ComposerVoicePhase::Error
+            if availability.has_composer_text && !availability.tts_ready =>
+        {
+            Color::Warning
+        }
+        _ => Color::Muted,
     };
 
     vec![
@@ -414,7 +424,7 @@ pub(super) fn render_voice_recording_panel(
 }
 
 fn render_voice_level_meter(level: f32, tone: Color, cx: &App) -> AnyElement {
-    let active_bars = (level.clamp(0.0, 1.0) * VOICE_LEVEL_BAR_COUNT as f32).ceil() as usize;
+    let active_bars = voice_level_bar_count(level);
 
     h_flex()
         .id("agent-composer-voice-level-meter")
@@ -432,6 +442,14 @@ fn render_voice_level_meter(level: f32, tone: Color, cx: &App) -> AnyElement {
             })
         }))
         .into_any_element()
+}
+
+fn voice_level_bar_count(level: f32) -> usize {
+    (level.clamp(0.0, 1.0) * VOICE_LEVEL_BAR_COUNT as f32).ceil() as usize
+}
+
+fn recording_duration_tick(duration: Duration) -> u128 {
+    duration.as_millis() / 500
 }
 
 fn recording_detail(state: &ComposerVoiceState) -> SharedString {
