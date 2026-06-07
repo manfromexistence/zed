@@ -14,6 +14,7 @@ const DEFAULT_PROVIDER_CATALOG_PATH: &str = r"G:\Dx\.dx\catalog\agents\provider-
 const SNAPSHOT_CACHE_TTL: Duration = Duration::from_secs(5);
 const MAX_RECEIPT_BYTES: u64 = 128 * 1024;
 
+mod command_receipts;
 mod command_safety;
 mod commands;
 mod local_file_labels;

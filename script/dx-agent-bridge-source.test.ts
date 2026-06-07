@@ -10,6 +10,7 @@ test("DX Agent bridge stays split by command, runtime, and receipt ownership", (
   const expectedModules = [
     "crates/agent_ui/src/dx_agent_bridge/command_safety.rs",
     "crates/agent_ui/src/dx_agent_bridge/command_safety_tests.rs",
+    "crates/agent_ui/src/dx_agent_bridge/command_receipts.rs",
     "crates/agent_ui/src/dx_agent_bridge/commands.rs",
     "crates/agent_ui/src/dx_agent_bridge/local_file_labels.rs",
     "crates/agent_ui/src/dx_agent_bridge/local_files.rs",
@@ -25,6 +26,7 @@ test("DX Agent bridge stays split by command, runtime, and receipt ownership", (
     assert.ok(existsSync(module), `expected focused DX Agent bridge module ${module}`);
   }
 
+  assert.match(parent, /^mod command_receipts;$/m);
   assert.match(parent, /^mod command_safety;$/m);
   assert.match(parent, /^mod commands;$/m);
   assert.match(parent, /^mod local_file_labels;$/m);
@@ -41,6 +43,7 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   const parent = read("crates/agent_ui/src/dx_agent_bridge.rs");
   const safety = read("crates/agent_ui/src/dx_agent_bridge/command_safety.rs");
   const safetyTests = read("crates/agent_ui/src/dx_agent_bridge/command_safety_tests.rs");
+  const commandReceipts = read("crates/agent_ui/src/dx_agent_bridge/command_receipts.rs");
   const commands = read("crates/agent_ui/src/dx_agent_bridge/commands.rs");
   const localFileLabels = read("crates/agent_ui/src/dx_agent_bridge/local_file_labels.rs");
   const localFiles = read("crates/agent_ui/src/dx_agent_bridge/local_files.rs");
@@ -73,6 +76,9 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.match(safetyTests, /public_command_for_runtime_maps_legacy_dx_agents_commands/);
   assert.match(safetyTests, /bridge_command_label_redacts_secret_like_args/);
   assert.match(safetyTests, /bridge_command_label_redacts_secret_key_value_args/);
+  assert.match(commandReceipts, /pub\(super\) fn write_json_receipt/);
+  assert.match(commandReceipts, /pub\(super\) fn write_action_error_receipt/);
+  assert.match(commandReceipts, /pub\(super\) fn clear_action_error_receipt/);
   assert.match(commands, /pub\(crate\) fn run_dx_agent_public_command/);
   assert.match(commands, /pub\(crate\) enum DxAgentPublicCommand/);
   assert.match(localFiles, /pub\(super\) fn read_json/);
@@ -107,7 +113,8 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.match(runtimeTests, /catalog_summary_reads_agent_cli_catalog_diagnostics/);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/command_safety.rs") < 120);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/command_safety_tests.rs") < 130);
-  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/commands.rs") < 330);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/command_receipts.rs") < 210);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/commands.rs") < 240);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/local_file_labels.rs") < 110);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/local_files.rs") < 110);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/receipts.rs") < 560);
@@ -116,6 +123,40 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_provider_models.rs") < 190);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime.rs") < 420);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_tests.rs") < 170);
+});
+
+test("DX Agent provider and model public commands persist JSON receipts", () => {
+  const commands = read("crates/agent_ui/src/dx_agent_bridge/commands.rs");
+  const publicRunnerStart = commands.indexOf("pub(crate) fn run_dx_agent_public_command");
+  const metadataRunnerStart = commands.indexOf("pub(crate) fn run_dx_agent_metadata_command");
+  const captureStart = commands.indexOf("fn receipt_capture(&self)");
+
+  assert.ok(publicRunnerStart >= 0, "expected public command runner");
+  assert.ok(metadataRunnerStart > publicRunnerStart, "expected metadata runner after public runner");
+  assert.ok(captureStart >= 0, "expected public receipt capture mapping");
+
+  const publicRunner = commands.slice(publicRunnerStart, metadataRunnerStart);
+  const captureMapping = commands.slice(captureStart, publicRunnerStart);
+
+  assert.match(commands, /struct DxAgentPublicReceiptCapture/);
+  assert.match(commands, /use super::command_receipts::\{/);
+  assert.match(captureMapping, /Self::ProvidersList => Some\(DxAgentPublicReceiptCapture \{/);
+  assert.match(captureMapping, /receipt_filename: "providers-list-latest\.json"/);
+  assert.match(captureMapping, /expected_schema: "dx\.agents\.zed\.providers_list\.v1"/);
+  assert.match(captureMapping, /Self::ModelsList => Some\(DxAgentPublicReceiptCapture \{/);
+  assert.match(captureMapping, /receipt_filename: "models-list-latest\.json"/);
+  assert.match(captureMapping, /expected_schema: "dx\.agents\.zed\.models_list\.v1"/);
+  assert.match(captureMapping, /Self::ProviderCatalogRegenerate => None/);
+  assert.match(publicRunner, /let output = match run_bridge_command/);
+  assert.match(publicRunner, /if let Some\(capture\) = command\.receipt_capture\(\) \{/);
+  assert.match(
+    publicRunner,
+    /write_json_receipt\(\s*&receipt_root\.join\(capture\.receipt_filename\),\s*&output\.stdout,\s*capture\.expected_schema,\s*\)/,
+  );
+  assert.match(
+    publicRunner,
+    /write_action_error_receipt\(&receipt_root, &command_label, &error\)/,
+  );
 });
 
 test("DX Agent bridge local receipt reads reject post-metadata growth before parsing", () => {
@@ -143,21 +184,22 @@ test("DX Agent bridge local receipt reads reject post-metadata growth before par
 
 test("DX Agent bridge failed command stderr is compacted before error display", () => {
   const commands = read("crates/agent_ui/src/dx_agent_bridge/commands.rs");
+  const commandReceipts = read("crates/agent_ui/src/dx_agent_bridge/command_receipts.rs");
   const runStart = commands.indexOf("fn run_bridge_command");
-  const runEnd = commands.indexOf("\nfn write_json_receipt");
-  const helperStart = commands.indexOf("fn failed_command_stderr_display");
-  const helperEnd = commands.indexOf("\nfn write_json_receipt");
+  const runEnd = commands.length;
+  const helperStart = commandReceipts.indexOf("fn failed_command_stderr_display");
+  const helperEnd = commandReceipts.indexOf("\npub(super) fn write_json_receipt");
 
   assert.ok(runStart >= 0, "expected run_bridge_command helper");
-  assert.ok(runEnd > runStart, "expected run_bridge_command to stay before receipt writer");
-  assert.ok(helperStart > runStart, "expected focused failed-command stderr display helper");
+  assert.ok(runEnd > runStart, "expected run_bridge_command helper");
+  assert.ok(helperStart >= 0, "expected focused failed-command stderr display helper");
   assert.ok(helperEnd > helperStart, "expected helper before receipt writer");
 
   const runBridgeCommand = commands.slice(runStart, runEnd);
-  const stderrHelper = commands.slice(helperStart, helperEnd);
+  const stderrHelper = commandReceipts.slice(helperStart, helperEnd);
 
-  assert.match(commands, /const MAX_FAILED_COMMAND_STDERR_BYTES: usize = 2048;/);
-  assert.match(commands, /const MAX_FAILED_COMMAND_STDERR_CHARS: usize = 500;/);
+  assert.match(commandReceipts, /const MAX_FAILED_COMMAND_STDERR_BYTES: usize = 2048;/);
+  assert.match(commandReceipts, /const MAX_FAILED_COMMAND_STDERR_CHARS: usize = 500;/);
   assert.match(runBridgeCommand, /is_secret_like_arg\(arg\)/);
   assert.match(
     runBridgeCommand,
@@ -183,25 +225,33 @@ test("DX Agent bridge failed command stderr is compacted before error display", 
 });
 
 test("DX Agent bridge checks serialized receipt bytes before writing", () => {
-  const commands = read("crates/agent_ui/src/dx_agent_bridge/commands.rs");
-  const writeJsonStart = commands.indexOf("fn write_json_receipt");
-  const writeActionErrorStart = commands.indexOf("fn write_action_error_receipt");
-  const clearActionErrorStart = commands.indexOf("\nfn clear_action_error_receipt");
-  const serializerStart = commands.indexOf("fn serialized_pretty_receipt");
-  const limitStart = commands.indexOf("fn ensure_serialized_receipt_bytes");
+  const commandReceipts = read("crates/agent_ui/src/dx_agent_bridge/command_receipts.rs");
+  const writeJsonStart = commandReceipts.indexOf("fn write_json_receipt");
+  const writeActionErrorStart = commandReceipts.indexOf("fn write_action_error_receipt");
+  const clearActionErrorStart = commandReceipts.indexOf("fn clear_action_error_receipt");
+  const actionErrorDisplayStart = commandReceipts.indexOf("fn action_error_display_field");
+  const serializerStart = commandReceipts.indexOf("fn serialized_pretty_receipt");
+  const writeBytesStart = commandReceipts.indexOf("fn write_receipt_bytes");
+  const tempPathStart = commandReceipts.indexOf("fn temp_receipt_path");
+  const limitStart = commandReceipts.indexOf("fn ensure_serialized_receipt_bytes");
 
   assert.ok(writeJsonStart >= 0, "expected metadata receipt writer");
   assert.ok(writeActionErrorStart > writeJsonStart, "expected action-error receipt writer");
   assert.ok(clearActionErrorStart > writeActionErrorStart, "expected clear helper after writes");
-  assert.ok(serializerStart > writeActionErrorStart, "expected shared serializer helper");
-  assert.ok(limitStart > serializerStart, "expected serialized-byte limit helper");
+  assert.ok(actionErrorDisplayStart > clearActionErrorStart, "expected action-error display helper");
+  assert.ok(serializerStart > actionErrorDisplayStart, "expected shared serializer helper");
+  assert.ok(writeBytesStart > serializerStart, "expected staged receipt writer helper");
+  assert.ok(tempPathStart > writeBytesStart, "expected temporary receipt path helper");
+  assert.ok(limitStart > tempPathStart, "expected serialized-byte limit helper");
 
-  const writeJson = commands.slice(writeJsonStart, writeActionErrorStart);
-  const writeActionError = commands.slice(writeActionErrorStart, clearActionErrorStart);
-  const serializer = commands.slice(serializerStart, limitStart);
-  const limit = commands.slice(limitStart, clearActionErrorStart);
+  const writeJson = commandReceipts.slice(writeJsonStart, writeActionErrorStart);
+  const writeActionError = commandReceipts.slice(writeActionErrorStart, clearActionErrorStart);
+  const serializer = commandReceipts.slice(serializerStart, writeBytesStart);
+  const writeBytes = commandReceipts.slice(writeBytesStart, tempPathStart);
+  const tempPath = commandReceipts.slice(tempPathStart, limitStart);
+  const limit = commandReceipts.slice(limitStart);
 
-  assert.match(commands, /const MAX_ACTION_ERROR_DISPLAY_CHARS: usize = 500;/);
+  assert.match(commandReceipts, /const MAX_ACTION_ERROR_DISPLAY_CHARS: usize = 500;/);
   assert.match(writeJson, /let bytes = serialized_pretty_receipt\(&value, "metadata"\)\?;/);
   assert.match(
     writeActionError,
@@ -217,9 +267,16 @@ test("DX Agent bridge checks serialized receipt bytes before writing", () => {
     writeActionError,
     /let bytes = serialized_pretty_receipt\(&value, "action error"\)\?;/,
   );
+  assert.match(writeJson, /write_receipt_bytes\(path, bytes, "metadata"\)\?;/);
+  assert.match(writeActionError, /write_receipt_bytes\(&path, bytes, "action error"\)\?;/);
   assert.match(serializer, /serde_json::to_vec_pretty\(value\)/);
   assert.match(serializer, /bytes\.push\(b'\\n'\);/);
   assert.match(serializer, /ensure_serialized_receipt_bytes\(receipt_kind, &bytes\)\?;/);
+  assert.match(writeBytes, /let temp_path = temp_receipt_path\(path\)\?;/);
+  assert.match(writeBytes, /fs::write\(&temp_path, bytes\)/);
+  assert.match(writeBytes, /fs::rename\(&temp_path, path\)/);
+  assert.match(writeBytes, /fs::remove_file\(path\)/);
+  assert.match(tempPath, /path\.with_file_name\(format!\(/);
   assert.ok(
     serializer.indexOf("bytes.push(b'\\n');") <
       serializer.indexOf("ensure_serialized_receipt_bytes(receipt_kind, &bytes)?"),
@@ -230,12 +287,13 @@ test("DX Agent bridge checks serialized receipt bytes before writing", () => {
     /u64::try_from\(bytes\.len\(\)\)\.unwrap_or\(u64::MAX\) > MAX_RECEIPT_BYTES/,
   );
   assert.ok(
-    writeJson.indexOf("serialized_pretty_receipt") < writeJson.indexOf("fs::write"),
-    "metadata receipts must be serialized and bounded before file write",
+    writeJson.indexOf("serialized_pretty_receipt") < writeJson.indexOf("write_receipt_bytes"),
+    "metadata receipts must be serialized and bounded before staged write",
   );
   assert.ok(
-    writeActionError.indexOf("serialized_pretty_receipt") < writeActionError.indexOf("fs::write"),
-    "action-error receipts must be serialized and bounded before file write",
+    writeActionError.indexOf("serialized_pretty_receipt") <
+      writeActionError.indexOf("write_receipt_bytes"),
+    "action-error receipts must be serialized and bounded before staged write",
   );
 });
 
