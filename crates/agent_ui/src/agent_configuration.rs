@@ -1017,10 +1017,13 @@ impl AgentConfiguration {
                     .count();
                 let execution_ready =
                     automation.status.enabled && automation.status.runtime_available;
-                let execution_proven = execution_ready
-                    && (!automation.receipts.is_empty() || !automation.history.is_empty());
+                let execution_proven =
+                    execution_ready && automation.has_successful_execution_proof();
+                let execution_failed = automation.has_failed_execution_proof();
                 let execution_proof = if execution_proven {
-                    "Execution proof present"
+                    "Execution proof passed"
+                } else if execution_failed {
+                    "Execution proof failed"
                 } else {
                     "Execution proof pending"
                 };
@@ -1037,7 +1040,9 @@ impl AgentConfiguration {
                 let mut item = AiSettingItem::new(
                     format!("dx-agent-automation-{}", automation.id),
                     automation.name.clone(),
-                    if execution_proven {
+                    if execution_failed {
+                        AiSettingItemStatus::Error
+                    } else if execution_proven {
                         AiSettingItemStatus::Running
                     } else if automation.status.enabled {
                         AiSettingItemStatus::Starting

@@ -150,9 +150,12 @@ pub(super) fn dx_agent_automation_row(
 fn automation_status(automation: &DxAgentAutomation) -> AiSettingItemStatus {
     let execution_proven = automation.status.enabled
         && automation.status.runtime_available
-        && (!automation.receipts.is_empty() || !automation.history.is_empty());
+        && automation.has_successful_execution_proof();
+    let execution_failed = automation.has_failed_execution_proof();
 
-    if execution_proven {
+    if execution_failed {
+        AiSettingItemStatus::Error
+    } else if execution_proven {
         AiSettingItemStatus::Running
     } else if automation.status.enabled {
         AiSettingItemStatus::Starting

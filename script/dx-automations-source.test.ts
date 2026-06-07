@@ -11,8 +11,14 @@ test("DX Automations expose typed bridge schema and pending composer contract", 
   const actionTests = read(
     "crates/agent_ui/src/dx_agent_bridge/automation_actions_tests.rs",
   );
+  const actionSafetyTests = read(
+    "crates/agent_ui/src/dx_agent_bridge/automation_actions_safety_tests.rs",
+  );
   const contractTests = read(
     "crates/agent_ui/src/dx_agent_bridge/automation_contract_tests.rs",
+  );
+  const contractSafetyTests = read(
+    "crates/agent_ui/src/dx_agent_bridge/automation_contract_safety_tests.rs",
   );
 
   assert.match(bridge, /^mod automation_contract;$/m);
@@ -42,13 +48,20 @@ test("DX Automations expose typed bridge schema and pending composer contract", 
   assert.match(contract, /struct DxAgentAutomationDestination \{/);
   assert.match(contract, /struct DxAgentAutomationReceiptRef \{/);
   assert.match(contract, /struct DxAgentAutomationHistoryEntry \{/);
+  assert.match(contract, /pub\(crate\) fn has_successful_execution_proof/);
+  assert.match(contract, /pub\(crate\) fn has_failed_execution_proof/);
   assert.match(contract, /waiting_for_automation_composer_contract/);
   assert.match(contract, /pending_backend_contract/);
   assert.doesNotMatch(contract, /HashMap<String,\s*Value>/);
   assert.match(actionTests, /automation_run_action_requires_typed_backend_target/);
   assert.match(actionTests, /automation_composer_actions_parse_backend_contract/);
+  assert.match(actionSafetyTests, /automation_row_actions_reject_mismatched_row_targets/);
+  assert.match(actionSafetyTests, /automation_row_actions_reject_generic_or_mismatched_public_commands/);
   assert.match(contractTests, /automation_rows_parse_composer_ready_contract_fields/);
   assert.match(contractTests, /automation_composer_falls_back_to_pending_backend_contract/);
+  assert.match(contractSafetyTests, /automation_execution_proof_requires_successful_run_receipt/);
+  assert.match(contractSafetyTests, /automation_execution_proof_flags_failed_run_receipt/);
+  assert.match(contractSafetyTests, /automation_text_fields_are_redacted_cleaned_and_bounded/);
 });
 
 test("DX Automations remain receipt-backed and do not fake scheduled execution", () => {
@@ -119,6 +132,19 @@ test("DX Automations remain receipt-backed and do not fake scheduled execution",
   assert.match(labels, /Execution proof pending/);
   assert.match(labels, /automation\.receipts/);
   assert.match(labels, /automation\.history/);
+  assert.match(configuration, /automation\.has_successful_execution_proof\(\)/);
+  assert.match(configuration, /automation\.has_failed_execution_proof\(\)/);
+  assert.match(configuration, /Execution proof failed/);
+  assert.match(rows, /automation\.has_successful_execution_proof\(\)/);
+  assert.match(rows, /automation\.has_failed_execution_proof\(\)/);
+  assert.doesNotMatch(
+    configuration,
+    /!\s*automation\.receipts\.is_empty\(\)\s*\|\|\s*!\s*automation\.history\.is_empty\(\)/,
+  );
+  assert.doesNotMatch(
+    rows,
+    /!\s*automation\.receipts\.is_empty\(\)\s*\|\|\s*!\s*automation\.history\.is_empty\(\)/,
+  );
   assert.match(configuration, /Button::new\("dx-agent-automation-save-draft", "Save Draft"\)/);
   assert.match(configuration, /Button::new\("dx-agent-automation-enable", "Enable"\)/);
   assert.match(configuration, /let save_draft_action = dx_agent_row_action\(&composer\.actions, "save_draft"\)/);
@@ -152,10 +178,13 @@ test("DX Automations have a first-class workspace tab contract", () => {
   const titleBar = read("crates/title_bar/src/title_bar.rs");
   const zedActions = read("crates/zed_actions/src/lib.rs");
   const zed = read("crates/zed/src/zed.rs");
+  const workspaceScreenKind = item.match(/pub enum WorkspaceScreenKind \{[\s\S]*?\}/)?.[0] ?? "";
 
   assert.match(agentUi, /^mod automation_screen;$/m);
   assert.match(agentUi, /pub use crate::automation_screen::AutomationScreen;/);
-  assert.match(item, /pub enum WorkspaceScreenKind \{[\s\S]*Agent,\s*Automations,\s*Editor,/);
+  assert.match(workspaceScreenKind, /Agent/);
+  assert.match(workspaceScreenKind, /Automations/);
+  assert.match(workspaceScreenKind, /Editor/);
   assert.match(zedActions, /OpenAutomations/);
   assert.match(zed, /register_action\(agent_ui::AutomationScreen::open\)/);
 
@@ -193,9 +222,12 @@ test("DX Automation source stays split into focused files", () => {
   for (const file of [
     "crates/agent_ui/src/automation_screen.rs",
     "crates/agent_ui/src/dx_agent_bridge/automation_actions.rs",
+    "crates/agent_ui/src/dx_agent_bridge/automation_actions_safety_tests.rs",
     "crates/agent_ui/src/dx_agent_bridge/automation_actions_tests.rs",
     "crates/agent_ui/src/dx_agent_bridge/automation_contract.rs",
+    "crates/agent_ui/src/dx_agent_bridge/automation_contract_safety_tests.rs",
     "crates/agent_ui/src/dx_agent_bridge/automation_contract_tests.rs",
+    "crates/agent_ui/src/dx_agent_bridge/command_args_tests.rs",
     "crates/agent_ui/src/dx_launch_workspace/automation_screen.rs",
     "crates/agent_ui/src/dx_launch_workspace/agents/automations/composer.rs",
     "crates/agent_ui/src/dx_launch_workspace/agents/automations/labels.rs",
@@ -208,9 +240,12 @@ test("DX Automation source stays split into focused files", () => {
   assert.ok(lineCount("crates/agent_ui/src/automation_screen.rs") < 115);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/automation_screen.rs") < 120);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_actions.rs") < 230);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_actions_safety_tests.rs") < 80);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_actions_tests.rs") < 110);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_contract.rs") < 520);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_contract_safety_tests.rs") < 130);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_contract_tests.rs") < 150);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/command_args_tests.rs") < 50);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/automations.rs") < 70);
   assert.ok(
     lineCount("crates/agent_ui/src/dx_launch_workspace/agents/automations/composer.rs") < 65,

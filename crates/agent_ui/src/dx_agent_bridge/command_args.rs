@@ -27,3 +27,7 @@ pub(super) fn dx_agents_automation_args(action: &str, automation_id: &str) -> Ve
         "--json".to_string(),
     ]
 }
+
+#[cfg(test)]
+#[path = "command_args_tests.rs"]
+mod tests;

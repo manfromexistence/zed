@@ -1,3 +1,24 @@
+[2026-06-07] - DX Automations Execution Proof Status
+
+ADDED:
+- `crates\agent_ui\src\dx_agent_bridge\automation_contract_safety_tests.rs` covers successful/failed automation execution proof and redacted bounded automation text fields.
+- `crates\agent_ui\src\dx_agent_bridge\automation_actions_safety_tests.rs` covers row-id mismatches and mismatched public automation commands.
+- `crates\agent_ui\src\dx_agent_bridge\command_args_tests.rs` pins the `dx agents automate run/enable --id <automation_id> --json` argv contract.
+
+CHANGED:
+- Automation settings and launch rows now show Running only from successful automation-run receipts or receipted successful history, show Error from failed run proof, and keep enabled-but-unproven automations pending instead of treating any receipt/history as execution proof.
+- Focused source guards now block the old receipt/history-presence proof shortcut and keep the automation safety tests registered as first-class bridge files.
+
+PASSED:
+- `node --test script\dx-automations-source.test.ts script\dx-agent-bridge-source.test.ts script\dx-launch-workspace-source.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true` on touched automation proof/status Rust files
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. Cargo, `just run`, native Zed launch, browser automation, live DX Agents CLI action proof, and actual scheduled execution remain skipped.
+- Actual scheduled execution is still not wired in Zed; runtime execution remains pending DX Agents backend and governed receipt actions.
+- Exactly six GPT-5.5 extra-high subagents were used for command/contract safety, UI gating, source guards, docs/status hygiene, git sync risk, and final code review.
+
 [2026-06-07] - DX Agents Connections UI Integration
 
 ADDED:

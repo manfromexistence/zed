@@ -189,3 +189,7 @@ fn is_composer_refresh_command(command: &str) -> bool {
 #[cfg(test)]
 #[path = "automation_actions_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "automation_actions_safety_tests.rs"]
+mod safety_tests;

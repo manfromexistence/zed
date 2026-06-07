@@ -89,6 +89,66 @@ pub(crate) struct DxAgentAutomationHistoryEntry {
     pub receipt_path: String,
 }
 
+impl DxAgentAutomation {
+    pub(crate) fn has_successful_execution_proof(&self) -> bool {
+        self.receipts
+            .iter()
+            .any(|receipt| receipt.has_automation_run_status(is_success_status))
+            || self
+                .history
+                .iter()
+                .any(|entry| entry.has_receipted_status(is_success_status))
+    }
+
+    pub(crate) fn has_failed_execution_proof(&self) -> bool {
+        self.receipts
+            .iter()
+            .any(|receipt| receipt.has_automation_run_status(is_failed_status))
+            || self
+                .history
+                .iter()
+                .any(|entry| entry.has_receipted_status(is_failed_status))
+    }
+}
+
+impl DxAgentAutomationReceiptRef {
+    fn has_automation_run_status(&self, predicate: fn(&str) -> bool) -> bool {
+        !self.path.is_empty() && self.is_automation_run_receipt() && predicate(&self.status)
+    }
+
+    fn is_automation_run_receipt(&self) -> bool {
+        self.kind.eq_ignore_ascii_case("automation_run")
+            || self
+                .schema_version
+                .to_ascii_lowercase()
+                .starts_with("dx.agents.zed.automation_run.")
+    }
+}
+
+impl DxAgentAutomationHistoryEntry {
+    fn has_receipted_status(&self, predicate: fn(&str) -> bool) -> bool {
+        !self.receipt_path.is_empty() && predicate(&self.status)
+    }
+}
+
+fn is_success_status(status: &str) -> bool {
+    matches!(
+        normalized_status(status).as_str(),
+        "passed" | "pass" | "success" | "succeeded" | "complete" | "completed" | "ok"
+    )
+}
+
+fn is_failed_status(status: &str) -> bool {
+    matches!(
+        normalized_status(status).as_str(),
+        "failed" | "failure" | "error" | "errored" | "blocked" | "cancelled" | "canceled"
+    )
+}
+
+fn normalized_status(status: &str) -> String {
+    status.trim().to_ascii_lowercase()
+}
+
 pub(super) fn automation_composer(
     value: Option<&Value>,
     root_exists: bool,
@@ -389,3 +449,7 @@ fn bound_automation_text(value: String) -> Option<String> {
 #[cfg(test)]
 #[path = "automation_contract_tests.rs"]
 mod automation_contract_tests;
+
+#[cfg(test)]
+#[path = "automation_contract_safety_tests.rs"]
+mod automation_contract_safety_tests;

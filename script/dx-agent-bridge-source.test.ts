@@ -9,10 +9,13 @@ test("DX Agent bridge stays split by command, runtime, and receipt ownership", (
   const parent = read("crates/agent_ui/src/dx_agent_bridge.rs");
   const expectedModules = [
     "crates/agent_ui/src/dx_agent_bridge/automation_actions.rs",
+    "crates/agent_ui/src/dx_agent_bridge/automation_actions_safety_tests.rs",
     "crates/agent_ui/src/dx_agent_bridge/automation_actions_tests.rs",
     "crates/agent_ui/src/dx_agent_bridge/automation_contract.rs",
+    "crates/agent_ui/src/dx_agent_bridge/automation_contract_safety_tests.rs",
     "crates/agent_ui/src/dx_agent_bridge/automation_contract_tests.rs",
     "crates/agent_ui/src/dx_agent_bridge/command_args.rs",
+    "crates/agent_ui/src/dx_agent_bridge/command_args_tests.rs",
     "crates/agent_ui/src/dx_agent_bridge/command_safety.rs",
     "crates/agent_ui/src/dx_agent_bridge/command_safety_tests.rs",
     "crates/agent_ui/src/dx_agent_bridge/commands.rs",
@@ -54,6 +57,7 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   const agentConfiguration = read("crates/agent_ui/src/agent_configuration.rs");
   const safety = read("crates/agent_ui/src/dx_agent_bridge/command_safety.rs");
   const commandArgs = read("crates/agent_ui/src/dx_agent_bridge/command_args.rs");
+  const commandArgsTests = read("crates/agent_ui/src/dx_agent_bridge/command_args_tests.rs");
   const safetyTests = read("crates/agent_ui/src/dx_agent_bridge/command_safety_tests.rs");
   const commands = read("crates/agent_ui/src/dx_agent_bridge/commands.rs");
   const localFileLabels = read("crates/agent_ui/src/dx_agent_bridge/local_file_labels.rs");
@@ -109,6 +113,9 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.match(commandArgs, /pub\(super\) fn dx_agents_args/);
   assert.match(commandArgs, /pub\(super\) fn dx_agents_automation_args/);
   assert.match(commandArgs, /pub\(super\) fn dx_agents_platform_args/);
+  assert.match(commandArgs, /#\[path = "command_args_tests\.rs"\]/);
+  assert.match(commandArgsTests, /automation_run_args_match_dx_agents_contract/);
+  assert.match(commandArgsTests, /automation_enable_args_match_dx_agents_contract/);
   assert.match(safetyTests, /bridge_command_label_redacts_secret_key_value_args/);
   assert.match(commands, /pub\(crate\) fn run_dx_agent_public_command/);
   assert.match(commands, /pub\(crate\) enum DxAgentPublicCommand/);
@@ -168,8 +175,13 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.match(runtimeTests, /legacy_flat_model_rows_still_parse/);
   assert.match(runtimeTests, /catalog_summary_reads_agent_cli_catalog_diagnostics/);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_actions.rs") < 230);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_actions_safety_tests.rs") < 80);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_actions_tests.rs") < 110);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_contract.rs") < 520);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_contract_safety_tests.rs") < 130);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_contract_tests.rs") < 150);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/command_args.rs") < 45);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/command_args_tests.rs") < 50);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/command_safety.rs") < 130);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/command_safety_tests.rs") < 130);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/commands.rs") < 330);
