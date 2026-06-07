@@ -1073,8 +1073,8 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     collectGeneratedMediaMetadata,
-    /batch\.safe_jobs\(\)[\s\S]*audio_duration_seconds_for_path[\s\S]*GeneratedMediaMetadataRecord[\s\S]*duration_seconds: Some\(duration_seconds\)[\s\S]*GeneratedMediaMetadataIndex::from_records/,
-    "generated metadata collection must turn successful background audio duration reads into generated metadata records",
+    /batch\.safe_jobs\(\)[\s\S]*audio_duration_seconds_for_path\(&job\.path, &executor\)[\s\S]*\.await[\s\S]*GeneratedMediaMetadataRecord[\s\S]*duration_seconds: Some\(duration_seconds\)[\s\S]*GeneratedMediaMetadataIndex::from_records/,
+    "generated metadata collection must turn successful timeout-backed audio duration reads into generated metadata records",
   );
   assert.match(
     collectGeneratedMediaMetadata,
@@ -1088,12 +1088,22 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     audioDurationSecondsForPath,
-    /File::open\(path\)[\s\S]*BufReader::new\(file\)[\s\S]*Decoder::new\(reader\)[\s\S]*total_duration\(\)[\s\S]*as_secs_f64\(\)/,
-    "audio duration extraction must use bounded Rust decoder metadata off the render path",
+    /executor\.spawn\(async move[\s\S]*audio_duration_seconds_for_path_sync\(&path\)[\s\S]*executor\.timer\(GENERATED_AUDIO_DURATION_PROBE_TIMEOUT\)[\s\S]*select\(duration_task, timeout\)\.await[\s\S]*Either::Left\(\(duration_seconds, _\)\) => duration_seconds[\s\S]*Either::Right\(\(_, _\)\) => None/,
+    "audio duration extraction must use a timeout-backed background task rather than blocking the generated metadata collector indefinitely",
+  );
+  assert.match(
+    generatedMetadata,
+    /const GENERATED_AUDIO_DURATION_PROBE_TIMEOUT: Duration = Duration::from_secs\(3\);/,
+    "automatic audio duration generation must have a named wall-clock timeout",
+  );
+  assert.match(
+    generatedMetadata,
+    /fn audio_duration_seconds_for_path_sync\(path: &Path\) -> Option<f64>[\s\S]*File::open\(path\)[\s\S]*BufReader::new\(file\)[\s\S]*Decoder::new\(reader\)[\s\S]*total_duration\(\)[\s\S]*as_secs_f64\(\)/,
+    "audio duration extraction must keep the existing bounded Rust decoder metadata path rather than shelling out",
   );
   assert.doesNotMatch(
     generatedMetadata,
-    /std::process|Command::new|\.status\(|\.output\(|\.spawn\(|ffmpeg|ffprobe|fs::write|File::create|create_dir_all|remove_file|rename\(|copy\(/,
+    /std::process|process::Command|Command::new|\.status\(|\.output\(|ffmpeg|ffprobe|fs::write|File::create|create_dir_all|remove_file|rename\(|copy\(/,
     "generated metadata job coordinator must delegate managed video extraction instead of embedding process or write logic",
   );
   assert.match(
@@ -1509,8 +1519,13 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     ensureGeneratedMediaMetadata,
-    /this\.media_preview_cache_generation\.get\(\) != media_preview_cache_generation[\s\S]*return;[\s\S]*generated_media_metadata[\s\S]*borrow_mut\(\)[\s\S]*\.insert\(cache_key, generated_metadata\)/,
-    "generated metadata results must update the ProjectPanel generated metadata cache only if the cache generation is still current",
+    /this\.media_preview_cache_generation\.get\(\) != media_preview_cache_generation[\s\S]*return;[\s\S]*let generated_metadata_has_records = !generated_metadata\.is_empty\(\);[\s\S]*if !generated_metadata_has_records \{[\s\S]*return;[\s\S]*\}[\s\S]*generated_media_metadata[\s\S]*borrow_mut\(\)[\s\S]*\.insert\(cache_key, generated_metadata\)/,
+    "generated metadata results must update the ProjectPanel generated metadata cache only when the cache generation is current and generated records exist",
+  );
+  assert.doesNotMatch(
+    ensureGeneratedMediaMetadata,
+    /let generated_metadata_has_records = !generated_metadata\.is_empty\(\);[\s\S]*generated_media_metadata[\s\S]*\.insert\(cache_key, generated_metadata\);[\s\S]*if generated_metadata_has_records/,
+    "empty generated metadata results must not be cached as terminal success because transient decoder/tool failures need a future retry",
   );
   assert.match(
     ensureGeneratedMediaMetadata,

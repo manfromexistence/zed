@@ -7899,14 +7899,15 @@ impl ProjectPanel {
                     return;
                 }
                 let generated_metadata_has_records = !generated_metadata.is_empty();
+                if !generated_metadata_has_records {
+                    return;
+                }
                 this.generated_media_metadata
                     .borrow_mut()
                     .insert(cache_key, generated_metadata);
-                if generated_metadata_has_records {
-                    this.folder_media_previews.borrow_mut().remove(&cache_key);
-                    this.update_visible_entries(None, false, false, window, cx);
-                    cx.notify();
-                }
+                this.folder_media_previews.borrow_mut().remove(&cache_key);
+                this.update_visible_entries(None, false, false, window, cx);
+                cx.notify();
             })
             .ok();
         });

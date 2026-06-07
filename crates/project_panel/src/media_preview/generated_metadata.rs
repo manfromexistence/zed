@@ -2,8 +2,10 @@ use std::{
     fs::File,
     io::BufReader,
     path::{Path, PathBuf},
+    time::Duration,
 };
 
+use futures::future::{Either, select};
 use gpui::BackgroundExecutor;
 use rodio::{Decoder, Source};
 
@@ -18,6 +20,7 @@ pub(crate) const GENERATED_MEDIA_METADATA_RUNNER_SCHEMA: &str =
 const MAX_GENERATED_MEDIA_METADATA_JOBS: usize = 8;
 const MAX_GENERATED_MEDIA_METADATA_FILE_BYTES: u64 = 64 * 1024 * 1024;
 const MAX_GENERATED_MEDIA_METADATA_PATH_TEXT_BYTES: usize = 4096;
+const GENERATED_AUDIO_DURATION_PROBE_TIMEOUT: Duration = Duration::from_secs(3);
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GeneratedMediaMetadataJobBatch {
@@ -110,7 +113,9 @@ pub(crate) async fn collect_generated_media_metadata(
     for job in batch.safe_jobs() {
         match job.kind {
             MediaPreviewKind::Audio => {
-                if let Some(duration_seconds) = audio_duration_seconds_for_path(&job.path) {
+                if let Some(duration_seconds) =
+                    audio_duration_seconds_for_path(&job.path, &executor).await
+                {
                     records.push(GeneratedMediaMetadataRecord {
                         path_text: job.path_text,
                         duration_label: None,
@@ -141,7 +146,23 @@ pub(crate) async fn collect_generated_media_metadata(
     GeneratedMediaMetadataIndex::from_records(records)
 }
 
-fn audio_duration_seconds_for_path(path: &Path) -> Option<f64> {
+async fn audio_duration_seconds_for_path(
+    path: &Path,
+    executor: &BackgroundExecutor,
+) -> Option<f64> {
+    let path = path.to_path_buf();
+    let duration_task = executor.spawn(async move { audio_duration_seconds_for_path_sync(&path) });
+    let timeout = executor.timer(GENERATED_AUDIO_DURATION_PROBE_TIMEOUT);
+    futures::pin_mut!(duration_task);
+    futures::pin_mut!(timeout);
+
+    match select(duration_task, timeout).await {
+        Either::Left((duration_seconds, _)) => duration_seconds,
+        Either::Right((_, _)) => None,
+    }
+}
+
+fn audio_duration_seconds_for_path_sync(path: &Path) -> Option<f64> {
     let file = File::open(path).ok()?;
     let reader = BufReader::new(file);
     let source = Decoder::new(reader).ok()?;
