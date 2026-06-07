@@ -4324,6 +4324,13 @@ test("DX Style has a real right-dock GPUI shell", () => {
   assert.match(editorWriteBridge, /preflight_source/);
   assert.match(editorWriteBridge, /preflight_source_label/);
   assert.match(editorWriteBridge, /preflight_source_detail/);
+  assert.match(editorWriteBridge, /use crate::dx_project_context::DxProjectContext;/);
+  assert.match(editorWriteBridge, /fn grouped_class_editor_write_bridge_preflight_fixture\(\) -> PathBuf/);
+  assert.match(
+    editorWriteBridge,
+    /DxProjectContext::shared_fallback_root\(\)\s*\.join\("style"\)\s*\.join\("fixtures"\)\s*\.join\("grouped-class-editor-write-bridge-preflight\.json"\)/,
+  );
+  assert.doesNotMatch(editorWriteBridge, /r"G:\\Dx\\style|G:\\\\Dx\\\\style/);
   assert.match(editorWriteBridge, /live_style_fixture/);
   assert.match(editorWriteBridge, /Live DX Style fixture/);
   assert.match(editorWriteBridge, /generated_zed_mirror/);

@@ -4,6 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use crate::dx_project_context::DxProjectContext;
 use serde_json::{Value, json};
 
 #[derive(Clone)]
@@ -65,8 +66,6 @@ impl StyleEditorWriteBridgeSnapshot {
 
 const GROUPED_CLASS_EDITOR_WRITE_BRIDGE_PREFLIGHT_SCHEMA: &str =
     "dx.style.grouped-class-editor-write-bridge-preflight";
-const GROUPED_CLASS_EDITOR_WRITE_BRIDGE_PREFLIGHT_FIXTURE: &str =
-    r"G:\Dx\style\fixtures\grouped-class-editor-write-bridge-preflight.json";
 const GENERATED_EDITOR_WRITE_BRIDGE_PREFLIGHT_PATH: &str =
     "crates/agent_ui/src/dx_style_panel/editor-write-bridge-preflight.generated.json";
 const GENERATED_EDITOR_WRITE_BRIDGE_PREFLIGHT_JSON: &str =
@@ -75,7 +74,7 @@ const MAX_EDITOR_WRITE_BRIDGE_PREFLIGHT_BYTES: u64 = 64 * 1024;
 const PREFLIGHT_LIST_LIMIT: usize = 32;
 
 pub(super) fn style_editor_write_bridge_snapshot() -> StyleEditorWriteBridgeSnapshot {
-    let preflight_path = PathBuf::from(GROUPED_CLASS_EDITOR_WRITE_BRIDGE_PREFLIGHT_FIXTURE);
+    let preflight_path = grouped_class_editor_write_bridge_preflight_fixture();
     let ResolvedEditorWriteBridgePreflight {
         preflight,
         source,
@@ -154,6 +153,13 @@ pub(super) fn style_editor_write_bridge_snapshot() -> StyleEditorWriteBridgeSnap
         runtime_validation_required: preflight.runtime_validation_required,
         can_apply: false,
     }
+}
+
+fn grouped_class_editor_write_bridge_preflight_fixture() -> PathBuf {
+    DxProjectContext::shared_fallback_root()
+        .join("style")
+        .join("fixtures")
+        .join("grouped-class-editor-write-bridge-preflight.json")
 }
 
 struct ResolvedEditorWriteBridgePreflight {
