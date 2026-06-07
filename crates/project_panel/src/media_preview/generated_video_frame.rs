@@ -4,7 +4,7 @@ use std::{
     fs,
     path::{Path, PathBuf},
     process::{self, Output},
-    time::Duration,
+    time::{Duration, UNIX_EPOCH},
 };
 
 use futures::future::{Either, select};
@@ -31,7 +31,8 @@ pub(super) async fn generate_video_center_frame(
     size: u64,
     executor: &BackgroundExecutor,
 ) -> Option<GeneratedVideoFrameMetadata> {
-    let output_path = managed_video_frame_cache_path(path_text, size);
+    let modified_at = video_frame_cache_modified_at(source_path);
+    let output_path = managed_video_frame_cache_path(path_text, size, modified_at);
     let duration_seconds = probe_video_duration_seconds(source_path, executor).await;
     if output_path.is_file() {
         return Some(GeneratedVideoFrameMetadata {
@@ -92,13 +93,27 @@ pub(super) async fn generate_video_center_frame(
     }
 }
 
-fn managed_video_frame_cache_path(path_text: &str, size: u64) -> PathBuf {
+fn managed_video_frame_cache_path(path_text: &str, size: u64, modified_at: u64) -> PathBuf {
     paths::temp_dir()
         .join(PROJECT_PANEL_GENERATED_VIDEO_FRAME_DIR)
         .join(format!(
             "{:016x}.jpg",
-            stable_video_frame_cache_key(path_text, size)
+            stable_video_frame_cache_key(path_text, size, modified_at)
         ))
+}
+
+fn video_frame_cache_modified_at(source_path: &Path) -> u64 {
+    fs::metadata(source_path)
+        .ok()
+        .and_then(|metadata| metadata.modified().ok())
+        .and_then(|modified_at| modified_at.duration_since(UNIX_EPOCH).ok())
+        .map(|duration| {
+            duration
+                .as_secs()
+                .saturating_mul(1_000_000_000)
+                .saturating_add(u64::from(duration.subsec_nanos()))
+        })
+        .unwrap_or_default()
 }
 
 async fn probe_video_duration_seconds(
@@ -229,12 +244,19 @@ fn format_video_timestamp(seconds: f64) -> String {
     format!("{:.3}", seconds.max(0.))
 }
 
-fn stable_video_frame_cache_key(path_text: &str, size: u64) -> u64 {
+fn stable_video_frame_cache_key(path_text: &str, size: u64, modified_at: u64) -> u64 {
     const FNV_OFFSET_BASIS: u64 = 0xcbf29ce484222325;
     const FNV_PRIME: u64 = 0x100000001b3;
 
     let mut hash = FNV_OFFSET_BASIS;
-    for byte in path_text.as_bytes().iter().chain(size.to_le_bytes().iter()) {
+    let size_bytes = size.to_le_bytes();
+    let modified_at_bytes = modified_at.to_le_bytes();
+    for byte in path_text
+        .as_bytes()
+        .iter()
+        .chain(size_bytes.iter())
+        .chain(modified_at_bytes.iter())
+    {
         hash ^= u64::from(*byte);
         hash = hash.wrapping_mul(FNV_PRIME);
     }

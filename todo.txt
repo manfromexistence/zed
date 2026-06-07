@@ -2,6 +2,7 @@ IN PROGRESS:
 - None. Runtime proof remains deferred until an explicit authorized validation pass allows `just run`/Cargo.
 
 COMPLETED:
+- Project Panel generated video frame cache keys now include source modified-time fingerprints, so same-path/same-size video replacements do not reuse stale extracted center-frame thumbnails when metadata generation reruns.
 - Project Panel generated media metadata completion now invalidates stale folder media previews and schedules the existing visible-entry refresh path so active media shelves rebuild from generated metadata without changing selection.
 - Web Preview loading chrome now uses the DX semantic loading helper on Windows, macOS, and Linux, and the icon-system guard covers Web Preview against legacy LoadCircle literals.
 - DX project context PathBuf receipt roots now normalize, absolute-filter, dedupe, and cap workspace roots before detect, and the launch audit source guard now tracks bool_label ownership in status summaries instead of the parent module.

@@ -1,3 +1,16 @@
+[2026-06-07] - Project Panel Generated Video Frame Cache Freshness
+
+CHANGED:
+- `crates\project_panel\src\media_preview\generated_video_frame.rs` now includes a source modified-time fingerprint in generated video center-frame cache keys alongside path text and size.
+- `script\dx-project-panel-source.test.ts` now guards that generated video frame cache paths depend on the source modification fingerprint before cache lookup.
+
+PASSED:
+- `node --test script\dx-project-panel-source.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\project_panel\src\media_preview\generated_video_frame.rs`
+
+NOTES:
+- This remains source-only by instruction. Cargo, `just run`, local servers, browser automation, runtime Project Panel visual proof, and native Zed launch remain skipped.
+
 [2026-06-07] - Project Panel Generated Media Refresh
 
 CHANGED:

@@ -858,6 +858,10 @@ test("project panel media preview renders direct image previews and video frames
     generatedVideoFrame,
     "managed_video_frame_cache_path",
   );
+  const stableVideoFrameCacheKey = functionBody(
+    generatedVideoFrame,
+    "stable_video_frame_cache_key",
+  );
   const probeVideoDurationSeconds = functionBody(
     generatedVideoFrame,
     "probe_video_duration_seconds",
@@ -1064,9 +1068,15 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     generateVideoCenterFrame,
-    /managed_video_frame_cache_path\(path_text, size\)[\s\S]*probe_video_duration_seconds\(source_path, executor\)\.await[\s\S]*extract_video_center_frame\([\s\S]*source_path,[\s\S]*&temporary_output_path,[\s\S]*center_seconds,[\s\S]*executor,[\s\S]*\)[\s\S]*\.await/,
+    /let modified_at = video_frame_cache_modified_at\(source_path\);[\s\S]*managed_video_frame_cache_path\(path_text, size, modified_at\)[\s\S]*probe_video_duration_seconds\(source_path, executor\)\.await[\s\S]*extract_video_center_frame\([\s\S]*source_path,[\s\S]*&temporary_output_path,[\s\S]*center_seconds,[\s\S]*executor,[\s\S]*\)[\s\S]*\.await/,
     "video center-frame generation must derive a managed cache path, probe duration, then extract the center timestamp",
   );
+  assertBefore({
+    body: generateVideoCenterFrame,
+    before: /video_frame_cache_modified_at\(source_path\)/,
+    after: /managed_video_frame_cache_path\(path_text, size, modified_at\)/,
+    message: "generated video frame cache keys must include source freshness before cache lookup",
+  });
   assert.match(
     generateVideoCenterFrame,
     /let duration_seconds = probe_video_duration_seconds\(source_path, executor\)\.await;[\s\S]*if output_path\.is_file\(\) \{[\s\S]*duration_seconds,[\s\S]*\}[\s\S]*let duration_seconds = duration_seconds\?;/,
@@ -1074,8 +1084,18 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     managedVideoFrameCachePath,
-    /paths::temp_dir\(\)[\s\S]*PROJECT_PANEL_GENERATED_VIDEO_FRAME_DIR[\s\S]*stable_video_frame_cache_key\(path_text, size\)/,
+    /modified_at: u64[\s\S]*paths::temp_dir\(\)[\s\S]*PROJECT_PANEL_GENERATED_VIDEO_FRAME_DIR[\s\S]*stable_video_frame_cache_key\(path_text, size, modified_at\)/,
     "video frame cache paths must be app-owned and stable from source identity rather than written beside user files",
+  );
+  assert.match(
+    stableVideoFrameCacheKey,
+    /modified_at: u64[\s\S]*let size_bytes = size\.to_le_bytes\(\);[\s\S]*let modified_at_bytes = modified_at\.to_le_bytes\(\);[\s\S]*path_text[\s\S]*\.as_bytes\(\)[\s\S]*\.chain\(size_bytes\.iter\(\)\)[\s\S]*\.chain\(modified_at_bytes\.iter\(\)\)/,
+    "video frame cache keys must include modified-time freshness so same-path same-size replacements do not reuse stale frames",
+  );
+  assert.match(
+    generatedVideoFrame,
+    /fn video_frame_cache_modified_at\(source_path: &Path\) -> u64 \{[\s\S]*fs::metadata\(source_path\)[\s\S]*\.modified\(\)[\s\S]*duration_since\(UNIX_EPOCH\)[\s\S]*unwrap_or_default\(\)[\s\S]*\}/,
+    "video frame cache freshness must come from a bounded source metadata fingerprint",
   );
   assert.match(
     probeVideoDurationSeconds,
