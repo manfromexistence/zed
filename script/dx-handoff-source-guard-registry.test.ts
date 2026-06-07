@@ -104,6 +104,7 @@ const registeredGuardScripts = [
   "script/dx-inline-prompt-source.test.ts",
   "script/dx-agent-panel-clipboard-source.test.ts",
   "script/dx-agent-panel-input-source.test.ts",
+  "script/dx-agent-composer-liquid-glass-source.test.ts",
   "script/dx-agent-voice-controls-source.test.ts",
   "script/dx-agent-thread-view-source.test.ts",
   "script/dx-agent-configuration-source.test.ts",

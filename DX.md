@@ -27,6 +27,7 @@ This checkout is the Zed/DX editor surface. Worker chats here should focus on GP
 
 ## Current Verification Lane
 
+- Current Agent composer liquid-glass source slice: the shared ThreadView composer shell now uses the checked-in liquid_glass surface painter with bounded fallback/readability layers, keeps the real MessageEditor and existing context/profile/model/voice/send controls, and makes the editor background transparent for the composer path. Runtime visual proof, Cargo, and `just run` remain deferred.
 - Current Agent Screen vs sidechat route slice: Agent panel focus/toggle actions now record sidechat intent before zoom-out, and dock Agent sidechat clicks dispatch the Agent sidechat action while fullscreen AI is zoomed instead of stacking the zoomed Agent panel entity. Runtime UI proof, Cargo, and `just run` remain deferred.
 - Current icon hover microinteraction source slice: shared UI now exposes keyed hover animation helpers, bounded `IconHoverEffect` transforms/opacity, reduced-motion static presentation, IconButton hover-icon/effect/callback wiring, and a source guard for the GPUI transform composition path. Runtime visual proof, Cargo, and `just run` remain deferred.
 - Current Web Preview favicon source slice: Web Preview now accepts favicon URI updates from the Windows WebView2 host snapshot and page bridge IPC, rejects stale page events and non-local `file:` favicon reads, caches bounded favicon image bytes under the preview profile off render paths, renders cached favicons in browser tabs before falling back to `ToolWeb`, and clears/clones favicon state across navigation and split flows. Runtime/WebView proof, Cargo, and `just run` remain deferred.
@@ -266,6 +267,7 @@ Current handoff and production-readiness guards:
 - `node --test script/dx-buffer-codegen-source.test.ts` - inline assistant rewrite source-selection byte boundaries.
 - `node --test script/dx-inline-prompt-source.test.ts` - inline assistant prompt materialization, linked-group byte, and prompt-history navigation boundaries.
 - `node --test script/dx-agent-panel-input-source.test.ts` - Agent Panel editor text and draft materialization byte boundaries.
+- `node --test script/dx-agent-composer-liquid-glass-source.test.ts` - Agent composer shared liquid-glass shell and control-preservation checks.
 - `node --test script/dx-agent-panel-clipboard-source.test.ts` - native-agent thread clipboard payload size boundaries.
 - `node --test script/dx-agent-configuration-source.test.ts` - Agent Configuration settings editor insertion boundaries.
 - `node --test script/dx-agent-configuration-modal-source.test.ts` - Agent Configuration modal text-input byte boundaries.

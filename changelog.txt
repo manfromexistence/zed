@@ -1,3 +1,20 @@
+[2026-06-07] - Agent Composer Liquid Glass Source Shell
+
+ADDED:
+- `script\dx-agent-composer-liquid-glass-source.test.ts` guards the shared Liquid Glass composer shell, real composer control preservation, transparent MessageEditor background, and discoverability in the handoff registry.
+
+CHANGED:
+- `crates\agent_ui\Cargo.toml`, `crates\agent_ui\src\conversation_view\thread_view.rs`, `crates\agent_ui\src\message_editor.rs`, and `crates\liquid_glass\src\lib.rs` now wire the Agent composer through the shared liquid_glass painter with bounded fallback/readability layers instead of replacing the composer with a dummy surface.
+- `script\dx-handoff-source-guard-registry.test.ts`, `DX.md`, and `todo.txt` now register and document the Agent composer liquid-glass source guard.
+
+PASSED:
+- `node --test script\dx-agent-composer-liquid-glass-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\message_editor.rs crates\liquid_glass\src\lib.rs`
+- `git diff --cached --check -- crates/agent_ui/Cargo.toml crates/agent_ui/src/conversation_view/thread_view.rs crates/agent_ui/src/message_editor.rs crates/liquid_glass/src/lib.rs script/dx-agent-composer-liquid-glass-source.test.ts script/dx-handoff-source-guard-registry.test.ts DX.md todo.txt changelog.txt`
+- `git grep --cached -n -E "^<<<<<<<|^=======|^>>>>>>>" -- ...` across the touched composer source, guards, DX, todo, and changelog files returned no matches.
+
+NOTES:
+- This remains source-only by instruction. Cargo, `just run`, local servers, browser/WebView proof, and runtime visual validation were not run.
 [2026-06-07] - Agent Screen And Sidechat Route Separation
 
 CHANGED:

@@ -18,15 +18,18 @@ use crate::completion_provider::AvailableSkill;
 use crate::message_editor::SharedSessionCapabilities;
 
 use db::kvp::KeyValueStore;
-use gpui::List;
-use gpui::TaskExt;
+use gpui::{List, RenderImage, TaskExt, canvas};
 use heapless::Vec as ArrayVec;
 use language_model::{
     FastModeConfirmation, LanguageModelEffortLevel, LanguageModelId, LanguageModelProviderId,
     LanguageModelRegistry, Speed,
 };
+use liquid_glass::{default_liquid_glass_style, load_glass_surface, paint_liquid_glass_layer};
 use settings::update_settings_file;
-use ui::{ButtonLike, SpinnerLabel, SpinnerVariant, SplitButton, SplitButtonStyle, Tab};
+use ui::{
+    ButtonLike, SpinnerLabel, SpinnerVariant, SplitButton, SplitButtonStyle, Tab,
+    theme_is_transparent,
+};
 use workspace::SERIALIZATION_THROTTLE_TIME;
 use workspace::notifications::NotificationId;
 
@@ -224,6 +227,55 @@ impl RenderOnce for GeneratingSpinnerElement {
         window.with_id(id, |window| {
             window.use_state(cx, |_, _| GeneratingSpinner::new(self.variant))
         })
+    }
+}
+
+fn render_composer_liquid_glass_layer(source_image: Arc<RenderImage>) -> AnyElement {
+    let style = default_liquid_glass_style();
+
+    canvas(
+        move |bounds, _, _| bounds,
+        move |bounds, _, window, _cx| {
+            paint_liquid_glass_layer(window, bounds, bounds, source_image.clone(), &style);
+        },
+    )
+    .absolute()
+    .inset_0()
+    .size_full()
+    .into_any_element()
+}
+
+fn composer_glass_readability_background(cx: &mut App) -> Hsla {
+    let colors = cx.theme().colors();
+    let base = colors
+        .panel_background
+        .blend(colors.editor_background.opacity(0.72));
+
+    if theme_is_transparent(cx) {
+        base.opacity(0.82)
+    } else {
+        base.opacity(0.48)
+    }
+}
+
+fn composer_glass_fallback_background(cx: &mut App) -> Hsla {
+    let colors = cx.theme().colors();
+    let base = colors
+        .panel_background
+        .blend(colors.editor_background.opacity(0.86));
+
+    if theme_is_transparent(cx) {
+        base.opacity(0.92)
+    } else {
+        base.opacity(0.38)
+    }
+}
+
+fn composer_glass_border_color(cx: &mut App) -> Hsla {
+    if theme_is_transparent(cx) {
+        cx.theme().colors().border.opacity(0.9)
+    } else {
+        cx.theme().colors().border.opacity(0.68)
     }
 }
 
@@ -3801,7 +3853,6 @@ impl ThreadView {
         }
 
         let focus_handle = self.message_editor.focus_handle(cx);
-        let editor_bg_color = cx.theme().colors().editor_background;
 
         let editor_expanded = self.editor_expanded;
         let (expand_icon, expand_tooltip) = if editor_expanded {
@@ -3812,7 +3863,21 @@ impl ThreadView {
 
         let max_content_width = AgentSettings::get_global(cx).max_content_width;
         let has_messages = self.list_state.item_count() > 0;
-        let fills_container = !has_messages || editor_expanded;
+        let expands_editor_area = editor_expanded;
+        let glass_source = window
+            .use_keyed_state(
+                (
+                    "agent-composer-liquid-glass-source",
+                    cx.entity_id().as_u64(),
+                ),
+                cx,
+                |_, _| load_glass_surface(),
+            )
+            .read(cx)
+            .clone();
+        let fallback_background = composer_glass_fallback_background(cx);
+        let readability_background = composer_glass_readability_background(cx);
+        let border_color = composer_glass_border_color(cx);
 
         h_flex()
             .px_2()
@@ -3825,6 +3890,7 @@ impl ThreadView {
                 this.bg(cx.theme().colors().panel_background)
             })
             .justify_center()
+            .items_end()
             .map(|this| {
                 if has_messages {
                     this.on_action(cx.listener(Self::expand_message_editor))
@@ -3837,118 +3903,135 @@ impl ThreadView {
                 v_flex()
                     .when_some(max_content_width, |this, max_w| this.flex_basis(max_w))
                     .when(max_content_width.is_none(), |this| this.w_full())
-                    .when(fills_container, |this| this.h_full())
-                    .when(has_messages, |this| {
-                        this.rounded_md()
-                            .border_1()
-                            .border_color(cx.theme().colors().border)
-                            .bg(editor_bg_color)
-                            .p_1p5()
-                            .shadow_sm()
-                    })
+                    .relative()
+                    .overflow_hidden()
+                    .rounded_md()
+                    .border_1()
+                    .border_color(border_color)
+                    .bg(fallback_background)
+                    .p_1p5()
+                    .shadow_sm()
                     .flex_shrink_1()
                     .flex_grow_0()
+                    .when(expands_editor_area, |this| this.h_full())
                     .justify_between()
                     .gap_1()
+                    .child(render_composer_liquid_glass_layer(glass_source))
+                    .child(
+                        div()
+                            .absolute()
+                            .inset_0()
+                            .size_full()
+                            .bg(readability_background),
+                    )
                     .child(
                         v_flex()
                             .relative()
                             .w_full()
                             .min_h_0()
-                            .when(fills_container, |this| this.flex_1())
-                            .pt_0p5()
-                            .pr_2p5()
-                            .child(self.message_editor.clone())
-                            .when_some(
-                                render_voice_recording_panel(
-                                    &self.composer_voice_state,
-                                    cx.listener(|this, _event, window, cx| {
-                                        this.stop_flow_voice_action(window, cx);
-                                    }),
-                                    cx.listener(|this, _event, _window, cx| {
-                                        this.cancel_flow_voice_recording(cx);
-                                    }),
-                                    cx.listener(|this, _event, window, cx| {
-                                        this.start_flow_voice_recording(window, cx);
-                                    }),
-                                    cx.listener(|this, _event, _window, cx| {
-                                        this.dismiss_flow_voice_error(cx);
-                                    }),
-                                    cx,
-                                ),
-                                |this, panel| this.child(panel),
-                            )
-                            .when(has_messages, |this| {
-                                this.child(
-                                    h_flex()
-                                        .absolute()
-                                        .top_0()
-                                        .right_0()
-                                        .opacity(0.5)
-                                        .hover(|s| s.opacity(1.0))
-                                        .child(
-                                            IconButton::new("toggle-height", expand_icon)
-                                                .icon_size(IconSize::Small)
-                                                .icon_color(Color::Muted)
-                                                .tooltip({
-                                                    move |_window, cx| {
-                                                        Tooltip::for_action_in(
-                                                            expand_tooltip,
-                                                            &ExpandMessageEditor,
-                                                            &focus_handle,
-                                                            cx,
-                                                        )
-                                                    }
-                                                })
-                                                .on_click(cx.listener(|this, _, window, cx| {
-                                                    this.expand_message_editor(
-                                                        &ExpandMessageEditor,
-                                                        window,
-                                                        cx,
-                                                    );
-                                                })),
-                                        ),
-                                )
-                            }),
-                    )
-                    .child(
-                        h_flex()
-                            .w_full()
-                            .flex_none()
-                            .flex_wrap()
+                            .when(expands_editor_area, |this| this.flex_1())
                             .gap_1()
                             .justify_between()
                             .child(
-                                h_flex()
-                                    .gap_0p5()
-                                    .flex_wrap()
-                                    .child(self.render_add_context_button(cx))
-                                    .children(self.profile_selector.clone())
-                                    .children(self.render_profile_option_slots(cx))
-                                    .child(
-                                        div()
-                                            .h_5()
-                                            .child(Divider::vertical().color(DividerColor::Border)),
+                                v_flex()
+                                    .relative()
+                                    .w_full()
+                                    .min_h_0()
+                                    .when(expands_editor_area, |this| this.flex_1())
+                                    .pt_0p5()
+                                    .pr_2p5()
+                                    .child(self.message_editor.clone())
+                                    .when_some(
+                                        render_voice_recording_panel(
+                                            &self.composer_voice_state,
+                                            cx.listener(|this, _event, window, cx| {
+                                                this.stop_flow_voice_action(window, cx);
+                                            }),
+                                            cx.listener(|this, _event, _window, cx| {
+                                                this.cancel_flow_voice_recording(cx);
+                                            }),
+                                            cx.listener(|this, _event, window, cx| {
+                                                this.start_flow_voice_recording(window, cx);
+                                            }),
+                                            cx.listener(|this, _event, _window, cx| {
+                                                this.dismiss_flow_voice_error(cx);
+                                            }),
+                                            cx,
+                                        ),
+                                        |this, panel| this.child(panel),
                                     )
-                                    .children(self.render_mode_shortcuts(cx))
-                                    .child(self.render_follow_toggle(cx)),
+                                    .when(has_messages, |this| {
+                                        this.child(
+                                            h_flex()
+                                                .absolute()
+                                                .top_0()
+                                                .right_0()
+                                                .opacity(0.5)
+                                                .hover(|s| s.opacity(1.0))
+                                                .child(
+                                                    IconButton::new("toggle-height", expand_icon)
+                                                        .icon_size(IconSize::Small)
+                                                        .icon_color(Color::Muted)
+                                                        .tooltip({
+                                                            move |_window, cx| {
+                                                                Tooltip::for_action_in(
+                                                                    expand_tooltip,
+                                                                    &ExpandMessageEditor,
+                                                                    &focus_handle,
+                                                                    cx,
+                                                                )
+                                                            }
+                                                        })
+                                                        .on_click(cx.listener(
+                                                            |this, _, window, cx| {
+                                                                this.expand_message_editor(
+                                                                    &ExpandMessageEditor,
+                                                                    window,
+                                                                    cx,
+                                                                );
+                                                            },
+                                                        )),
+                                                ),
+                                        )
+                                    }),
                             )
                             .child(
                                 h_flex()
+                                    .w_full()
+                                    .flex_none()
                                     .flex_wrap()
-                                    .items_center()
                                     .gap_1()
-                                    .children(self.render_token_usage(cx))
-                                    .children(self.render_fast_mode_control(cx))
-                                    .children(self.render_thinking_control(cx))
-                                    .map(|this| match self.config_options_view.clone() {
-                                        Some(config_view) => this.child(config_view),
-                                        None => this
-                                            .children(self.mode_selector.clone())
-                                            .children(self.model_selector.clone()),
-                                    })
-                                    .children(self.render_voice_controls(window, cx))
-                                    .child(self.render_send_button(cx)),
+                                    .justify_between()
+                                    .child(
+                                        h_flex()
+                                            .gap_0p5()
+                                            .flex_wrap()
+                                            .child(self.render_add_context_button(cx))
+                                            .children(self.profile_selector.clone())
+                                            .children(self.render_profile_option_slots(cx))
+                                            .child(div().h_5().child(
+                                                Divider::vertical().color(DividerColor::Border),
+                                            ))
+                                            .children(self.render_mode_shortcuts(cx))
+                                            .child(self.render_follow_toggle(cx)),
+                                    )
+                                    .child(
+                                        h_flex()
+                                            .flex_wrap()
+                                            .items_center()
+                                            .gap_1()
+                                            .children(self.render_token_usage(cx))
+                                            .children(self.render_fast_mode_control(cx))
+                                            .children(self.render_thinking_control(cx))
+                                            .map(|this| match self.config_options_view.clone() {
+                                                Some(config_view) => this.child(config_view),
+                                                None => this
+                                                    .children(self.mode_selector.clone())
+                                                    .children(self.model_selector.clone()),
+                                            })
+                                            .children(self.render_voice_controls(window, cx))
+                                            .child(self.render_send_button(cx)),
+                                    ),
                             ),
                     ),
             )
