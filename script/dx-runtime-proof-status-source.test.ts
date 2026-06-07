@@ -8,6 +8,10 @@ const lineCount = (path: string) => read(path).split(/\r?\n/).length;
 test("DX runtime proof plan owns backend proof lanes before runtime-green import", () => {
   const plan = read("crates/agent/src/dx_runtime_proof_plan.rs");
   const planTool = read("crates/agent/src/tools/dx_runtime_proof_plan_tool.rs");
+  const importModel = read("crates/agent/src/dx_runtime_proof_import.rs");
+  const importTool = read("crates/agent/src/tools/dx_runtime_proof_import_tool.rs");
+  const statusModel = read("crates/agent_ui/src/dx_runtime_proof_status.rs");
+  const summaries = read("crates/agent_ui/src/dx_runtime_proof_status/summaries.rs");
   const runtimePrompt = read("crates/agent_ui/src/dx_launch_prompts/runtime_proof.rs");
 
   assert.match(plan, /pub\(crate\) struct DxRuntimeProofProfileBackendLane/);
@@ -35,7 +39,34 @@ test("DX runtime proof plan owns backend proof lanes before runtime-green import
   assert.match(planTool, /pub require_profile_backend_proofs: bool/);
   assert.match(planTool, /require_profile_backend_proofs: true/);
   assert.match(planTool, /format!\(\s*"require_profile_backend_proofs=\{\}"/);
+
+  assert.match(importModel, /pub struct DxRuntimeProofProfileBackendEvidence/);
+  assert.match(importModel, /pub enum DxRuntimeProofProfileBackendStatus/);
+  assert.match(importModel, /pub profile_backend_evidence:\s*Vec<DxRuntimeProofProfileBackendEvidence>/);
+  assert.match(importModel, /validate_profile_backend_evidence\(/);
+  assert.match(importModel, /missing_required_lanes/);
+  assert.match(importModel, /all_required_lanes_passed/);
+  assert.match(importModel, /runtime_green_candidate = request\.operator_status == DxRuntimeProofOperatorStatus::Passed[\s\S]*profile_backend_validation\.all_required_lanes_passed/);
+
+  assert.match(importTool, /pub require_profile_backend_proofs: bool/);
+  assert.match(importTool, /pub profile_backend_evidence:\s*Vec<dx_runtime_proof_import::DxRuntimeProofProfileBackendEvidence>/);
+  assert.match(importTool, /require_profile_backend_proofs: true/);
+  assert.match(importTool, /format!\(\s*"profile_backend_evidence_count=\{\}"/);
+  assert.match(importTool, /profile_backend_evidence: input\.profile_backend_evidence/);
+
+  assert.match(statusModel, /pub profile_backend_lane_count: usize/);
+  assert.match(statusModel, /pub profile_backend_passed_lane_count: usize/);
+  assert.match(statusModel, /pub profile_backend_blocker_count: usize/);
+  assert.match(importModel, /Missing profile backend proof lane evidence/);
+  assert.match(summaries, /let profile_backend_validation = validation\s*\.get\("profile_backend_validation"\)/);
+  assert.match(summaries, /profile_backend_passed_lane_count: usize_at\(\s*profile_backend_validation,\s*"passed_lane_count",?\s*\)/);
+
   assert.match(runtimePrompt, /profile_backend_proofs/);
+  assert.match(runtimePrompt, /profile_backend_evidence/);
+  assert.match(runtimePrompt, /dx-metasearch-live-proof/);
+  assert.match(runtimePrompt, /study-source-workspace-execution/);
+  assert.match(runtimePrompt, /media-provider-readiness-proof/);
+  assert.match(runtimePrompt, /web-preview-runtime-proof/);
   assert.match(runtimePrompt, /backend lanes/);
 });
 
@@ -113,5 +144,5 @@ test("DX runtime proof status keeps receipt IO and JSON helpers focused", () => 
   assert.ok(lineCount(parentPath) < 280, "dx_runtime_proof_status.rs should stay focused on snapshot assembly");
   assert.ok(lineCount(receiptsPath) < 95, "runtime-proof receipt IO module should stay small");
   assert.ok(lineCount(fieldsPath) < 95, "runtime-proof JSON field module should stay small");
-  assert.ok(lineCount(summariesPath) < 150, "runtime-proof summary parser module should stay small");
+  assert.ok(lineCount(summariesPath) < 170, "runtime-proof summary parser module should stay small");
 });

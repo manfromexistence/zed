@@ -46,11 +46,16 @@ test("DX receipt history keeps bucket scanning, receipt IO, Forge summaries, and
   assert.match(buckets, /fn scan_bucket/);
   assert.match(buckets, /Forge History/);
   assert.match(buckets, /Metasearch Source Packs/);
+  assert.match(buckets, /Metasearch Status/);
   assert.match(buckets, /Metasearch Context/);
   assert.match(buckets, /Source Attachments/);
   assert.match(
     buckets,
     /Path::new\("tools"\)[\s\S]*?\.join\("dx-metasearch"\)[\s\S]*?\.join\("source-packs"\)/,
+  );
+  assert.match(
+    buckets,
+    /Path::new\("tools"\)[\s\S]*?\.join\("dx-metasearch"\)[\s\S]*?\.join\("status"\)/,
   );
   assert.match(
     buckets,

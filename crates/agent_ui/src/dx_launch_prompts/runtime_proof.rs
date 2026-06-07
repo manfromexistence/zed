@@ -117,7 +117,7 @@ pub(crate) fn runtime_proof_import_prompt(
     let runtime_status = runtime_proof_status_prompt_context(runtime_proof_status);
 
     format!(
-        "Prepare the DX runtime proof import handoff for this workspace. Current Check score: {score}/100 ({state}). Check blockers: {check_blockers}. Proof freshness rows: {proof_rows}. Deploy targets: {deploy_target_rows}. Runtime proof status: {runtime_status}. Operator evidence from the governed validation window is required before calling import_dx_runtime_proof. If I have not provided that evidence yet, draft the exact fields I need to provide and stop. When evidence is provided, use import_dx_runtime_proof with operator_status set to passed, blocked, or failed; include proof_summary, evidence lines, blockers, final_command, source, write_runtime_proof_receipt=true, and receipt_root_mode=workspace. Do not run just run, cargo, builds, local servers, browser automation, shell commands, deploys, external serializer/RLM code, model calls, or restore-to-target actions.",
+        "Prepare the DX runtime proof import handoff for this workspace. Current Check score: {score}/100 ({state}). Check blockers: {check_blockers}. Proof freshness rows: {proof_rows}. Deploy targets: {deploy_target_rows}. Runtime proof status: {runtime_status}. Operator evidence from the governed validation window is required before calling import_dx_runtime_proof. If I have not provided that evidence yet, draft the exact fields I need to provide and stop. When evidence is provided, use import_dx_runtime_proof with operator_status set to passed, blocked, or failed; include proof_summary, evidence lines, blockers, require_profile_backend_proofs=true, profile_backend_evidence, final_command, source, write_runtime_proof_receipt=true, and receipt_root_mode=workspace. Do not run just run, cargo, builds, local servers, browser automation, shell commands, deploys, external serializer/RLM code, model calls, or restore-to-target actions.",
         score = check_score.score,
         state = check_score.state,
     )
@@ -227,12 +227,15 @@ fn runtime_proof_receipt_prompt_context(
     let evidence_sample = bounded_join(&receipt.evidence_samples, 1, "no evidence sample");
 
     format!(
-        "latest {kind} {} status {} operator {} claim_ready {} evidence {} blockers {} summary {} command {} source {} sample {}",
+        "latest {kind} {} status {} operator {} claim_ready {} evidence {} backend_lanes {}/{} backend_blockers {} blockers {} summary {} command {} source {} sample {}",
         receipt.label,
         receipt.validation_status,
         receipt.operator_status,
         receipt.can_claim_runtime_green,
         receipt.evidence_count,
+        receipt.profile_backend_passed_lane_count,
+        receipt.profile_backend_lane_count,
+        receipt.profile_backend_blocker_count,
         receipt.blocker_count,
         summary,
         command,
@@ -268,7 +271,7 @@ fn runtime_proof_evidence_template(snapshot: &DxRuntimeProofStatusSnapshot) -> S
         });
 
     format!(
-        "operator_status=<passed|blocked|failed>; proof_summary=<one sentence>; final_command={final_command}; source=<governed validation window>; evidence=<at least {minimum_evidence} line(s): {accepted_examples}>; blockers=<empty when passed, otherwise blocker lines>; write_runtime_proof_receipt=true; receipt_root_mode=workspace"
+        "operator_status=<passed|blocked|failed>; proof_summary=<one sentence>; final_command={final_command}; source=<governed validation window>; evidence=<at least {minimum_evidence} line(s): {accepted_examples}>; require_profile_backend_proofs=true; profile_backend_evidence=<backend lanes: dx-metasearch-live-proof=<status receipt or blocker>, study-source-workspace-execution=<attachment/context/execution-preview receipt or blocker>, media-provider-readiness-proof=<plan/gate/produced-file receipt or blocker>, web-preview-runtime-proof=<final validation/import receipt or blocker>>; blockers=<empty when passed, otherwise blocker lines>; write_runtime_proof_receipt=true; receipt_root_mode=workspace"
     )
 }
 

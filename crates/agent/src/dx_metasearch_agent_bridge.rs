@@ -33,6 +33,7 @@ const MAX_SOURCE_EXTRACT_FETCH_BYTES: usize = MAX_METASEARCH_RESPONSE_BYTES;
 
 pub(crate) const DX_METASEARCH_RESULT_SCHEMA: &str = "zed.dx.metasearch.result.v1";
 pub(crate) const DX_METASEARCH_STATUS_SCHEMA: &str = "zed.dx.metasearch.status.v1";
+pub(crate) const DX_METASEARCH_STATUS_RECEIPT_SCHEMA: &str = "zed.dx.metasearch.status_receipt.v1";
 pub(crate) const DX_METASEARCH_SOURCE_PACK_SCHEMA: &str = "zed.dx.metasearch.source_pack.v1";
 pub(crate) const DX_METASEARCH_SOURCE_PACK_RECEIPT_SCHEMA: &str =
     "zed.dx.metasearch.source_pack_receipt.v1";
@@ -91,6 +92,7 @@ pub(crate) struct DxMetasearchStatusResponse {
     pub service: DxMetasearchServiceStatus,
     pub engine_summary: DxMetasearchEngineSummary,
     pub engines: Vec<DxMetasearchEngineInfo>,
+    pub status_receipt: Option<DxMetasearchStatusReceipt>,
     pub next_action: String,
 }
 
@@ -144,6 +146,21 @@ pub(crate) struct DxMetasearchSourceExtractCompression {
     pub serializer_ready: bool,
     pub rlm_ready: bool,
     pub loss_policy: &'static str,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub(crate) struct DxMetasearchStatusReceipt {
+    pub schema: &'static str,
+    pub status: &'static str,
+    pub root_mode: String,
+    pub receipt_dir: String,
+    pub latest_path: String,
+    pub archive_path: String,
+    pub written_bytes: usize,
+    pub service_status: String,
+    pub engine_count: usize,
+    pub warning_count: usize,
+    pub next_action: String,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -401,6 +418,60 @@ pub(crate) async fn inspect_metasearch_status(
         status_json,
         engines_json,
     ))
+}
+
+pub(crate) fn unavailable_metasearch_status(
+    request: DxMetasearchStatusRequest,
+    error: String,
+) -> DxMetasearchStatusResponse {
+    let base_url = resolve_base_url(request.base_url);
+    let status_endpoint = build_endpoint(&base_url, "/api/v1/status")
+        .unwrap_or_else(|_| format!("{}/api/v1/status", base_url.trim_end_matches('/')));
+    let engines_endpoint = build_endpoint(&base_url, "/api/v1/engines")
+        .unwrap_or_else(|_| format!("{}/api/v1/engines", base_url.trim_end_matches('/')));
+    let engine_limit = request
+        .engine_limit
+        .unwrap_or(DEFAULT_ENGINE_STATUS_LIMIT)
+        .clamp(1, MAX_ENGINE_STATUS_LIMIT);
+
+    DxMetasearchStatusResponse {
+        schema: DX_METASEARCH_STATUS_SCHEMA,
+        generated_at_ms: current_unix_ms(),
+        source: metasearch_source(),
+        request: DxMetasearchStatusRequestSummary {
+            base_url,
+            status_endpoint,
+            engines_endpoint,
+            include_engines: request.include_engines,
+            engine_limit,
+        },
+        service: DxMetasearchServiceStatus {
+            status: "unavailable".to_string(),
+            version: None,
+            engine_count: 0,
+            tracked_engine_count: 0,
+            unhealthy_engine_count: 0,
+            unhealthy_engines: Vec::new(),
+            warning_count: 1,
+            warnings: vec![error],
+            asset_warning_count: 0,
+            runtime: serde_json::Value::Null,
+        },
+        engine_summary: DxMetasearchEngineSummary {
+            catalog_count: 0,
+            returned_count: 0,
+            truncated_count: 0,
+            enabled_count: 0,
+            disabled_count: 0,
+            category_count: 0,
+            categories: Vec::new(),
+        },
+        engines: Vec::new(),
+        status_receipt: None,
+        next_action:
+            "DX metasearch is unavailable; keep Search backend proof blocked until service health is inspected successfully."
+                .to_string(),
+    }
 }
 
 pub(crate) async fn extract_metasearch_source(
@@ -725,6 +796,7 @@ fn compact_status_response(
             categories,
         },
         engines: returned_engines,
+        status_receipt: None,
         next_action,
     }
 }

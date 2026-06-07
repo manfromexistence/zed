@@ -1792,6 +1792,7 @@ impl Thread {
         ));
         self.add_tool(DxSourceAttachmentTool::new(self.project.clone()));
         self.add_tool(DxMetasearchStatusTool::new(
+            self.project.clone(),
             self.project.read(cx).client().http_client(),
         ));
         self.add_tool(DxMediaToolPlanTool::new(self.project.clone()));

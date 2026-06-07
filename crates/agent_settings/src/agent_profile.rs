@@ -53,6 +53,7 @@ pub struct DxAiProfileMetadata {
     pub display_name: &'static str,
     pub summary: &'static str,
     pub backend_state: DxAiProfileBackendState,
+    pub runtime_proof_backend_lane_id: Option<&'static str>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -122,6 +123,7 @@ impl AgentProfile {
                 display_name: "Ask",
                 summary: "Answers questions with lightweight local and web sources.",
                 backend_state: DxAiProfileBackendState::Wired,
+                runtime_proof_backend_lane_id: None,
             }),
             builtin_profiles::WRITE => Some(DxAiProfileMetadata {
                 id: builtin_profiles::WRITE,
@@ -129,6 +131,7 @@ impl AgentProfile {
                 display_name: "Agents",
                 summary: "Runs builder and worker flows for code, tools, goals, plans, and multitask work.",
                 backend_state: DxAiProfileBackendState::Wired,
+                runtime_proof_backend_lane_id: None,
             }),
             builtin_profiles::SEARCH => Some(DxAiProfileMetadata {
                 id: builtin_profiles::SEARCH,
@@ -136,6 +139,7 @@ impl AgentProfile {
                 display_name: "Search",
                 summary: "Uses DX MetaSearch, source-pack evidence, and Web Preview inspection where available.",
                 backend_state: DxAiProfileBackendState::EvidenceBacked,
+                runtime_proof_backend_lane_id: Some("dx-metasearch-live-proof"),
             }),
             builtin_profiles::STUDY => Some(DxAiProfileMetadata {
                 id: builtin_profiles::STUDY,
@@ -143,6 +147,7 @@ impl AgentProfile {
                 display_name: "Study",
                 summary: "Organizes attached sources, receipts, and study rails without inventing results.",
                 backend_state: DxAiProfileBackendState::ReceiptBacked,
+                runtime_proof_backend_lane_id: Some("study-source-workspace-execution"),
             }),
             builtin_profiles::MEDIA => Some(DxAiProfileMetadata {
                 id: builtin_profiles::MEDIA,
@@ -150,6 +155,7 @@ impl AgentProfile {
                 display_name: "Media",
                 summary: "Plans and gates image, video, audio, music, 3D, and document providers while execution setup is pending.",
                 backend_state: DxAiProfileBackendState::ProviderPending,
+                runtime_proof_backend_lane_id: Some("media-provider-readiness-proof"),
             }),
             _ => None,
         }

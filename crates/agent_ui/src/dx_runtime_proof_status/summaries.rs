@@ -80,6 +80,9 @@ pub(super) fn parse_import_summary(
     let proof = value.get("runtime_proof").unwrap_or(&value);
     let request = proof.get("request").unwrap_or(proof);
     let validation = proof.get("validation").unwrap_or(&Value::Null);
+    let profile_backend_validation = validation
+        .get("profile_backend_validation")
+        .unwrap_or(&Value::Null);
     let operator_status_copy = proof.get("operator_status_copy").unwrap_or(&Value::Null);
 
     Some(DxRuntimeProofReceiptSummary {
@@ -93,6 +96,16 @@ pub(super) fn parse_import_summary(
         can_claim_runtime_green: bool_at(operator_status_copy, "can_claim_runtime_green"),
         evidence_count: usize_at(validation, "evidence_count"),
         blocker_count: usize_at(validation, "blocker_count"),
+        profile_backend_lane_count: usize_at(profile_backend_validation, "required_lane_count"),
+        profile_backend_passed_lane_count: usize_at(
+            profile_backend_validation,
+            "passed_lane_count",
+        ),
+        profile_backend_blocker_count: usize_at(profile_backend_validation, "blocker_count"),
+        missing_profile_backend_lanes: string_array_at(
+            profile_backend_validation,
+            "missing_required_lanes",
+        ),
         headline: compact_string_at(operator_status_copy, "headline"),
         proof_summary: compact_string_at(request, "proof_summary"),
         final_command: compact_string_at(request, "final_command"),
@@ -109,6 +122,9 @@ pub(super) fn parse_status_summary(
     let value = read_json(path)?;
     let status_copy = value.get("operator_status_copy").unwrap_or(&Value::Null);
     let validation = value.get("validation").unwrap_or(&Value::Null);
+    let profile_backend_validation = validation
+        .get("profile_backend_validation")
+        .unwrap_or(&Value::Null);
     let request = value.get("request").unwrap_or(&Value::Null);
 
     Some(DxRuntimeProofReceiptSummary {
@@ -122,6 +138,16 @@ pub(super) fn parse_status_summary(
         can_claim_runtime_green: bool_at(status_copy, "can_claim_runtime_green"),
         evidence_count: usize_at(validation, "evidence_count"),
         blocker_count: usize_at(validation, "blocker_count"),
+        profile_backend_lane_count: usize_at(profile_backend_validation, "required_lane_count"),
+        profile_backend_passed_lane_count: usize_at(
+            profile_backend_validation,
+            "passed_lane_count",
+        ),
+        profile_backend_blocker_count: usize_at(profile_backend_validation, "blocker_count"),
+        missing_profile_backend_lanes: string_array_at(
+            profile_backend_validation,
+            "missing_required_lanes",
+        ),
         headline: compact_string_at(status_copy, "headline"),
         proof_summary: compact_string_at(request, "proof_summary"),
         final_command: compact_string_at(request, "final_command"),

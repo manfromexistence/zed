@@ -12,7 +12,6 @@ use std::{
 };
 
 const RUNTIME_PROOF_STATUS_CACHE_TTL: Duration = Duration::from_secs(5);
-
 #[derive(Clone)]
 pub(crate) struct DxRuntimeProofStatusSnapshot {
     pub workspace_root_count: usize,
@@ -59,6 +58,10 @@ pub(crate) struct DxRuntimeProofReceiptSummary {
     pub can_claim_runtime_green: bool,
     pub evidence_count: usize,
     pub blocker_count: usize,
+    pub profile_backend_lane_count: usize,
+    pub profile_backend_passed_lane_count: usize,
+    pub profile_backend_blocker_count: usize,
+    pub missing_profile_backend_lanes: Vec<String>,
     pub headline: Option<String>,
     pub proof_summary: Option<String>,
     pub final_command: Option<String>,
@@ -71,13 +74,11 @@ impl DxRuntimeProofStatusSnapshot {
     pub(crate) fn runtime_green_candidate(&self) -> bool {
         self.latest_import
             .as_ref()
-            .map(|receipt| receipt.runtime_green_candidate)
-            .unwrap_or(false)
+            .is_some_and(|receipt| receipt.runtime_green_candidate)
             && self
                 .latest_status
                 .as_ref()
-                .map(|receipt| receipt.can_claim_runtime_green)
-                .unwrap_or(false)
+                .is_some_and(|receipt| receipt.can_claim_runtime_green)
     }
 }
 
@@ -249,6 +250,16 @@ fn claim_state(
     if let Some(receipt) = latest_import {
         if receipt.evidence_count == 0 {
             blockers.push("Latest runtime import has no evidence lines.".to_string());
+        }
+        if receipt.profile_backend_blocker_count > 0 {
+            blockers.push(format!(
+                "{} backend proof blocker(s).",
+                receipt.profile_backend_blocker_count
+            ));
+        }
+        if !receipt.missing_profile_backend_lanes.is_empty() {
+            let missing = receipt.missing_profile_backend_lanes.join(", ");
+            blockers.push(format!("Missing backend proof lanes: {missing}."));
         }
         blockers.extend(receipt.blockers.iter().take(3).cloned());
         if receipt.validation_status == "blocked" {

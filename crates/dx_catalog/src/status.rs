@@ -113,7 +113,7 @@ pub fn current_launch_status() -> DxLaunchStatus {
                 "Media tool bridge",
                 42,
                 "Agent threads can plan safe ffprobe/ffmpeg inspect, audio extraction, and frame extraction work, then validate approved no-shell runner readiness with managed output paths, no-overwrite arguments, source checks, and receipts before any native runner executes.",
-                "Add the actual no-shell media runner and produced-file receipts after gate review.",
+                "Import provider readiness proof before generation claims; keep native runner execution behind explicit approval and produced-file receipts.",
             ),
         ],
     }

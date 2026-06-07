@@ -105,6 +105,22 @@ test("Search profile exposes only evidence-first DX metasearch tools", () => {
   }
 });
 
+test("AI profile metadata declares backend proof lane ids", () => {
+  assert.match(agentProfileSettings, /pub runtime_proof_backend_lane_id: Option<&'static str>/);
+  assert.match(
+    agentProfileSettings,
+    /runtime_proof_backend_lane_id: Some\("dx-metasearch-live-proof"\)/,
+  );
+  assert.match(
+    agentProfileSettings,
+    /runtime_proof_backend_lane_id: Some\("study-source-workspace-execution"\)/,
+  );
+  assert.match(
+    agentProfileSettings,
+    /runtime_proof_backend_lane_id: Some\("media-provider-readiness-proof"\)/,
+  );
+});
+
 test("Search profile tools are backed by registered native Agent tools", () => {
   assert.match(metasearchStatusTool, /const NAME: &'static str = "inspect_dx_metasearch"/);
   assert.match(metasearchTool, /const NAME: &'static str = "search_dx_metasearch"/);
@@ -139,9 +155,13 @@ test("Study and Media profiles stay evidence-first while backends are pending", 
   assert.match(studyTools, /"extract_dx_metasearch_source": true/);
   assert.match(studyTools, /"prepare_dx_source_attachment": true/);
   assert.match(studyTools, /"prepare_dx_metasearch_context": true/);
+  assert.match(studyTools, /"plan_dx_serializer_rlm_execution": true/);
+  assert.match(studyTools, /"gate_dx_serializer_rlm_runner": true/);
+  assert.match(studyTools, /"write_dx_serializer_rlm_reduced_context": true/);
+  assert.match(studyTools, /"preview_dx_serializer_rlm_reducer_execution": true/);
   assert.doesNotMatch(
     studyTools,
-    /"spawn_agent": true|"prepare_agent_plugin_runtime": true|"execute_dx_media_tool": true|"plan_dx_runtime_proof": true/,
+    /"spawn_agent": true|"prepare_agent_plugin_runtime": true|"execute_dx_media_tool": true|"execute_dx_serializer_rlm_reducer": true|"plan_dx_runtime_proof": true/,
   );
 
   assert.deepEqual(
@@ -174,4 +194,29 @@ test("DX metasearch bridge keeps live proof reads bounded", () => {
   assert.match(metasearchBridge, /\.take\(\(MAX_METASEARCH_RESPONSE_BYTES \+ 1\) as u64\)/);
   assert.match(metasearchBridge, /buffer\.len\(\) > MAX_METASEARCH_RESPONSE_BYTES/);
   assert.doesNotMatch(metasearchBridge, /\.read_to_end\(&mut body\)\s*\.await/);
+});
+
+test("DX metasearch live proof can persist honest status receipts", () => {
+  const receiptHistory = read("crates/agent_ui/src/dx_receipt_history/buckets.rs");
+
+  assert.match(metasearchBridge, /DX_METASEARCH_STATUS_RECEIPT_SCHEMA/);
+  assert.match(metasearchBridge, /zed\.dx\.metasearch\.status_receipt\.v1/);
+  assert.match(metasearchBridge, /pub\(crate\) struct DxMetasearchStatusReceipt/);
+  assert.match(metasearchBridge, /pub\(crate\) fn unavailable_metasearch_status/);
+  assert.match(metasearchBridge, /status: "unavailable"\.to_string\(\)/);
+
+  assert.match(metasearchStatusTool, /pub write_status_receipt: bool/);
+  assert.match(metasearchStatusTool, /DxMetasearchStatusReceiptTarget/);
+  assert.match(metasearchStatusTool, /unavailable_metasearch_status/);
+  assert.match(metasearchStatusTool, /\.join\("dx-metasearch"\)\.join\("status"\)/);
+  assert.match(metasearchStatusTool, /DX_METASEARCH_STATUS_LATEST_FILE_NAME/);
+  assert.match(metasearchStatusTool, /starts_metasearch_server": false/);
+  assert.match(metasearchStatusTool, /dispatches_browser_input": false/);
+  assert.match(metasearchStatusTool, /status_receipt\s*=\s*Some/);
+
+  assert.match(receiptHistory, /Metasearch Status/);
+  assert.match(
+    receiptHistory,
+    /Path::new\("tools"\)[\s\S]*?\.join\("dx-metasearch"\)[\s\S]*?\.join\("status"\)/,
+  );
 });

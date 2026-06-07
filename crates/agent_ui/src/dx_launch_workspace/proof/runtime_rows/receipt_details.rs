@@ -24,6 +24,22 @@ pub(super) fn runtime_proof_receipt_detail_rows(
         rows.push(detail_label(format!("Source {source}")));
     }
 
+    if receipt.profile_backend_lane_count > 0 {
+        rows.push(detail_label(format!(
+            "Backend lanes {}/{} - {} blocker(s)",
+            receipt.profile_backend_passed_lane_count,
+            receipt.profile_backend_lane_count,
+            receipt.profile_backend_blocker_count
+        )));
+    }
+
+    if !receipt.missing_profile_backend_lanes.is_empty() {
+        rows.push(detail_label(format!(
+            "Missing backend {}",
+            receipt.missing_profile_backend_lanes.join(", ")
+        )));
+    }
+
     if let Some(evidence) = receipt.evidence_samples.first() {
         rows.push(detail_label(format!("Evidence {evidence}")));
     }

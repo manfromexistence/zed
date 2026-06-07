@@ -22,6 +22,16 @@ pub(super) fn runtime_proof_plan_detail_rows(plan: &DxRuntimeProofPlanSummary) -
         ));
     }
 
+    if plan.requires_profile_backend_proofs {
+        rows.push(detail_label(
+            format!(
+                "Backend proof pending {} lane(s)",
+                plan.profile_backend_lane_count
+            ),
+            Color::Warning,
+        ));
+    }
+
     if plan.blocker_count > 0 {
         rows.push(detail_label(
             format!("{} blocker(s)", plan.blocker_count),

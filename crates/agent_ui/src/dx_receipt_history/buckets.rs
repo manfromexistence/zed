@@ -27,6 +27,10 @@ pub(super) fn scan_tool_history(workspace_roots: &[String]) -> DxToolHistorySnap
                 .join("source-packs"),
         ),
         (
+            "Metasearch Status",
+            Path::new("tools").join("dx-metasearch").join("status"),
+        ),
+        (
             "Metasearch Context",
             Path::new("tools").join("dx-metasearch").join("context"),
         ),

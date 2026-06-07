@@ -38,6 +38,11 @@ pub struct DxRuntimeProofImportToolInput {
     pub evidence: Vec<String>,
     /// Known blockers that should prevent runtime-green claims.
     pub blockers: Vec<String>,
+    /// Require Search, Study, Media, and Web Preview backend proof lanes before runtime-green.
+    pub require_profile_backend_proofs: bool,
+    /// Structured backend evidence for the required profile/runtime proof lanes.
+    pub profile_backend_evidence:
+        Vec<dx_runtime_proof_import::DxRuntimeProofProfileBackendEvidence>,
     /// The manual command or validation action that produced the proof.
     pub final_command: Option<String>,
     /// Optional source label for the imported proof.
@@ -55,6 +60,8 @@ impl Default for DxRuntimeProofImportToolInput {
             proof_summary: String::new(),
             evidence: Vec::new(),
             blockers: Vec::new(),
+            require_profile_backend_proofs: true,
+            profile_backend_evidence: Vec::new(),
             final_command: None,
             source: None,
             write_runtime_proof_receipt: true,
@@ -127,6 +134,14 @@ impl AgentTool for DxRuntimeProofImportTool {
                     format!("operator_status={}", input.operator_status.as_str()),
                     format!("evidence_count={}", input.evidence.len()),
                     format!("blocker_count={}", input.blockers.len()),
+                    format!(
+                        "require_profile_backend_proofs={}",
+                        input.require_profile_backend_proofs
+                    ),
+                    format!(
+                        "profile_backend_evidence_count={}",
+                        input.profile_backend_evidence.len()
+                    ),
                 ];
                 if let Some(command) = input.final_command.as_deref() {
                     permission_values.push(format!("final_command={}", command.trim()));
@@ -151,6 +166,8 @@ impl AgentTool for DxRuntimeProofImportTool {
                     proof_summary: input.proof_summary,
                     evidence: input.evidence,
                     blockers: input.blockers,
+                    require_profile_backend_proofs: input.require_profile_backend_proofs,
+                    profile_backend_evidence: input.profile_backend_evidence,
                     final_command: input.final_command,
                     source: input.source,
                     root_mode,
@@ -268,6 +285,7 @@ impl DxRuntimeProofImportReceiptTarget {
             "latest_path": path_string(&self.status_latest_path),
             "archive_path": path_string(&self.status_archive_path),
             "operator_status_copy": &response.operator_status_copy,
+            "request": &response.request,
             "validation": &response.validation,
         });
         let import_json = serde_json::to_vec_pretty(&import_receipt).map_err(|error| {
