@@ -27,6 +27,7 @@ This checkout is the Zed/DX editor surface. Worker chats here should focus on GP
 
 ## Current Verification Lane
 
+- Current Agent Screen vs sidechat route slice: Agent panel focus/toggle actions now record sidechat intent before zoom-out, and dock Agent sidechat clicks dispatch the Agent sidechat action while fullscreen AI is zoomed instead of stacking the zoomed Agent panel entity. Runtime UI proof, Cargo, and `just run` remain deferred.
 - Current icon hover microinteraction source slice: shared UI now exposes keyed hover animation helpers, bounded `IconHoverEffect` transforms/opacity, reduced-motion static presentation, IconButton hover-icon/effect/callback wiring, and a source guard for the GPUI transform composition path. Runtime visual proof, Cargo, and `just run` remain deferred.
 - Current Web Preview favicon source slice: Web Preview now accepts favicon URI updates from the Windows WebView2 host snapshot and page bridge IPC, rejects stale page events and non-local `file:` favicon reads, caches bounded favicon image bytes under the preview profile off render paths, renders cached favicons in browser tabs before falling back to `ToolWeb`, and clears/clones favicon state across navigation and split flows. Runtime/WebView proof, Cargo, and `just run` remain deferred.
 - Current Agent fullscreen subagent rail slice: the right rail Subagents section now reads live ACP subagent/tool-call state and non-idle root agent fallback rows instead of DX Agents automation receipts, maps only running/queued/blocked/failed/idle into compact GPUI badges, and uses the semantic DX loader icon for running rows. Runtime visual proof, Cargo, and `just run` remain deferred.
@@ -203,7 +204,7 @@ Current handoff and production-readiness guards:
 - `node --test script/dx-editor-navigation-source.test.ts` - editor navigation, signature-help, linked-editing, and LSP extension fanout boundaries.
 - `node --test script/dx-editor-inlay-semantic-source.test.ts` - editor inlay hint and semantic-token request/result materialization boundaries.
 - `node --test script/dx-editor-input-source.test.ts` - editor newline cursor remap stale-row boundaries.
-- `node --test script/dx-workspace-ui-state-source.test.ts` - workspace dock, history, jump-list, item project-handle, Agent fullscreen rail, and live subagent status materialization boundaries.
+- `node --test script/dx-workspace-ui-state-source.test.ts` - workspace dock, history, jump-list, item project-handle, Agent fullscreen rail, Agent sidechat/fullscreen route separation, and live subagent status materialization boundaries.
 - `node --test script/dx-title-bar-source.test.ts` - title-bar application menu stale entry activation boundaries.
 - `node --test script/dx-project-panel-source.test.ts` - project panel DX Explorer source/filter/view/edit chrome, visible file/folder/storage/media summary counts, direct-child folder storage summaries, tree, selection, visible-range, edit-state, drag/drop, sticky-row, undo, and lazy inline media-preview materialization boundaries.
 - `node --test script/dx-diagnostics-ui-source.test.ts` - diagnostics grouping, excerpt, markdown, hint, copy, and status-label materialization boundaries.

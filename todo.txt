@@ -2,6 +2,7 @@ IN PROGRESS:
 - None. Runtime proof remains deferred until an explicit authorized validation pass allows `just run`/Cargo.
 
 COMPLETED:
+- Agent Screen vs Sidechat routing is source-verified: Agent focus/toggle actions now record sidechat intent before zooming out, and Agent dock button clicks dispatch the sidechat action while fullscreen AI is active instead of stacking the zoomed Agent entity.
 - Source-only icon hover microinteraction support now exposes keyed GPUI hover animation state, bounded transform/opacity hover effects, reduced-motion static presentation, hover asset swap, and IconButton hover callbacks without relying on SVG CSS/SMIL animation.
 - Web Preview favicon support now accepts native/bridge favicon URI updates, validates page URL ownership, rejects non-local `file:` favicon reads, caches bounded favicon image bytes under the preview profile off render paths, renders cached favicons in browser tabs before falling back to `ToolWeb`, and keeps favicon state consistent across navigation and split flows.
 - Agent fullscreen Subagents rail now uses real ACP subagent/agent status rows from connected thread state and parent subagent tool calls, maps only running/queued/blocked/failed/idle into compact GPUI badges, and uses the shared DX loader icon for running rows instead of the legacy LoadCircle literal.

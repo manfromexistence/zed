@@ -1,3 +1,19 @@
+[2026-06-07] - Agent Screen And Sidechat Route Separation
+
+CHANGED:
+- `crates\agent_ui\src\agent_panel.rs` now records sidechat intent for Agent panel focus/toggle actions before zoom-out handling, so sidechat opens do not retain fullscreen-builder intent.
+- `crates\workspace\src\dock.rs` now dispatches the Agent sidechat action when the Agent dock button is clicked while fullscreen AI is active instead of stacking the zoomed Agent panel entity.
+- `script\dx-workspace-ui-state-source.test.ts`, `DX.md`, and `todo.txt` now guard and document the topbar fullscreen AI route versus dock sidechat route separation.
+
+PASSED:
+- `node --test script\dx-workspace-ui-state-source.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_ui\src\agent_panel.rs crates\workspace\src\dock.rs`
+- `git diff --cached --check -- crates/agent_ui/src/agent_panel.rs crates/workspace/src/dock.rs script/dx-workspace-ui-state-source.test.ts DX.md todo.txt changelog.txt`
+- `git grep --cached -n -E "^<<<<<<<|^=======|^>>>>>>>" -- ...` across the touched routing source, guard, DX, todo, and changelog files returned no matches.
+
+NOTES:
+- This remains source-only by instruction. `just run`, Cargo, local servers, browser/WebView proof, and runtime UI validation were not run.
+- True simultaneous Builder Workspace plus an independent sidechat would require a separate sidechat panel/entity; this slice fixes the existing single-entity route separation without adding dummy UI.
 [2026-06-07] - Source-Only Icon Hover Microinteractions
 
 ADDED:
