@@ -5,6 +5,7 @@ use crate::dx_agent_bridge::DxAgentBridgeSnapshot;
 
 use self::rows::dx_agent_social_row;
 use super::super::{metric_row, muted_card};
+use super::connection_rows::connection_unavailable_rows;
 use super::social_actions::dx_agent_social_action_row;
 
 mod rows;
@@ -29,7 +30,8 @@ pub(in super::super) fn dx_agent_social_state(
                 .connected_accounts_summary
                 .qr_connect_supported
                 .to_string(),
-        ));
+        ))
+        .children(connection_unavailable_rows());
 
     if snapshot.social_accounts.is_empty() {
         stack = stack.child(muted_card("Run social list receipt", cx));

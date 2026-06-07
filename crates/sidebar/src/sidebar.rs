@@ -7724,6 +7724,14 @@ impl Sidebar {
                         },
                     ))
                     .child(button(
+                        "sidebar-toolbar-connections",
+                        dx_icon(DxUiIcon::Connections),
+                        "Connections",
+                        |_this, _, window, cx| {
+                            window.dispatch_action(Box::new(zed_actions::agent::OpenSettings), cx);
+                        },
+                    ))
+                    .child(button(
                         "sidebar-toolbar-extensions",
                         dx_icon(DxUiIcon::Extensions),
                         "Extensions",
@@ -7888,6 +7896,16 @@ impl Sidebar {
                 "Plugins",
                 |_this, _, window, cx| {
                     window.dispatch_action(Box::new(zed_actions::AcpRegistry), cx);
+                },
+            )
+            .into_any_element(),
+            button(
+                cx,
+                "sidebar-activity-connections",
+                dx_icon(DxUiIcon::Connections),
+                "Connections",
+                |_this, _, window, cx| {
+                    window.dispatch_action(Box::new(zed_actions::agent::OpenSettings), cx);
                 },
             )
             .into_any_element(),

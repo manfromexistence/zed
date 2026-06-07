@@ -1,14 +1,14 @@
-use gpui::{AnyElement, App, SharedString, prelude::*};
-use ui::{Color, prelude::*};
+use gpui::{AnyElement, App, SharedString};
+use ui::{AiSettingItem, AiSettingItemSource, AiSettingItemStatus, Color, prelude::*};
 
 use crate::dx_agent_bridge::DxAgentSocialActionSummary;
 
-use super::super::metric_row;
+use super::connection_rows::{connection_detail_row, connection_detail_stack};
 
 pub(super) fn dx_agent_social_action_row(
     id: SharedString,
     receipt: &DxAgentSocialActionSummary,
-    cx: &App,
+    _cx: &App,
 ) -> AnyElement {
     let connected = if receipt.connected.unwrap_or(false) {
         "connected"
@@ -52,29 +52,48 @@ pub(super) fn dx_agent_social_action_row(
         )
     };
 
-    v_flex()
-        .id(id)
-        .gap_0p5()
-        .min_w_0()
-        .rounded_sm()
-        .px_1()
-        .py_0p5()
-        .bg(cx.theme().colors().element_background)
-        .child(metric_row(
-            format!("Last {}", receipt.action),
-            receipt.status.clone(),
-        ))
-        .child(
-            Label::new(detail)
-                .size(LabelSize::XSmall)
-                .color(Color::Muted)
-                .truncate(),
+    AiSettingItem::new(
+        id.clone(),
+        format!("Last {}", receipt.action),
+        social_action_status(receipt),
+        AiSettingItemSource::Custom,
+    )
+    .icon(
+        Icon::new(dx_icon(DxUiIcon::Connections))
+            .size(IconSize::Small)
+            .color(Color::Muted),
+    )
+    .detail_label(receipt.status.clone())
+    .details(connection_detail_stack(vec![
+        connection_detail_row(
+            format!("{}-detail", id).into(),
+            dx_icon(DxUiIcon::Gateway),
+            "Receipt",
+            detail,
         )
-        .child(
-            Label::new(receipt.next_action.clone())
-                .size(LabelSize::XSmall)
-                .color(Color::Muted)
-                .truncate(),
+        .into_any_element(),
+        connection_detail_row(
+            format!("{}-next-action", id).into(),
+            dx_icon(DxUiIcon::Commands),
+            "Next",
+            receipt.next_action.clone(),
         )
-        .into_any_element()
+        .into_any_element(),
+    ]))
+    .into_any_element()
+}
+
+fn social_action_status(receipt: &DxAgentSocialActionSummary) -> AiSettingItemStatus {
+    if receipt.status.eq_ignore_ascii_case("error") {
+        AiSettingItemStatus::Error
+    } else if receipt.connected.unwrap_or(false) {
+        AiSettingItemStatus::Running
+    } else if receipt.explicit_user_action_required
+        || receipt.qr_supported
+        || receipt.link_supported
+    {
+        AiSettingItemStatus::AuthRequired
+    } else {
+        AiSettingItemStatus::Stopped
+    }
 }

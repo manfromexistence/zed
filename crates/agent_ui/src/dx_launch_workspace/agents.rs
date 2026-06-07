@@ -1,6 +1,7 @@
 mod actions;
 mod automations;
 mod bridge;
+mod connection_rows;
 mod provider_labels;
 mod providers;
 mod receipts;

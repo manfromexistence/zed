@@ -1,3 +1,24 @@
+[2026-06-07] - DX Agents Connections UI Integration
+
+ADDED:
+- `crates\agent_ui\src\dx_launch_workspace\agents\connection_rows.rs` adds shared Zed component rows for DX Agents connection detail and explicit unavailable capability states.
+- `script\dx-agent-connections-ui-source.test.ts` guards semantic connection icons, main sidebar Connections routes, component-backed connection rows, and explicit Channels/Gateway unavailable states.
+
+CHANGED:
+- `crates\ui\src\dx_icons.rs` now has semantic DX connection/tool bridge icons for Connections, Channels, Gateway, Credentials, Permissions, Computer, and MCP.
+- `crates\sidebar\src\sidebar.rs` and `crates\agent_ui\src\agent_panel.rs` now route Connections entry points to the real Agent Configuration/DX Agents state instead of adding a duplicate dummy surface.
+- DX launch Agent social/provider/automation rows now render with `AiSettingItem`/`ListItem` over receipt-backed bridge fields, including QR readiness, credential health, expiry/error, receipt history, next actions, and unavailable runtime/schema states.
+- `DX.md` and `script\dx-handoff-source-guard-registry.test.ts` now list the focused connections UI guard.
+
+PASSED:
+- `node --test script\dx-agent-connections-ui-source.test.ts script\dx-handoff-source-guard-registry.test.ts script\dx-icon-system-source.test.ts script\dx-launch-workspace-source.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\ui\src\dx_icons.rs crates\agent_ui\src\dx_launch_workspace.rs crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\dx_launch_workspace\agents.rs crates\agent_ui\src\dx_launch_workspace\agents\connection_rows.rs crates\agent_ui\src\dx_launch_workspace\agents\social.rs crates\agent_ui\src\dx_launch_workspace\agents\social\rows.rs crates\agent_ui\src\dx_launch_workspace\agents\social_actions.rs crates\agent_ui\src\dx_launch_workspace\agents\providers\rows.rs crates\agent_ui\src\dx_launch_workspace\agents\automations\rows.rs crates\sidebar\src\sidebar.rs`
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. Cargo, `just run`, local servers, browser/WebView proof, native Zed launch, live provider login, QR payload proof, and live DX Agents command proof remain skipped.
+- Exactly six GPT-5.5 extra-high subagents were used for sidebar/workspace routing, Agent UI merge boundaries, provider/social contracts, plugin/tool bridge contracts, Automations merge guidance, and GPUI component choices.
+
 [2026-06-07] - DX Automations Typed Action Wiring
 
 ADDED:

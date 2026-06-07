@@ -241,14 +241,17 @@ impl Render for DxLaunchDiagnosticsMenu {
                 &self.status.binary_cache,
                 cx,
             ))
-            .child(section_title("Agent Social", IconName::Link))
+            .child(section_title(
+                "Agent Connections",
+                dx_icon(DxUiIcon::Connections),
+            ))
             .child(agents::dx_agent_social_state(&self.status.agent_bridge, cx))
             .child(section_title("Agent Receipts", IconName::FileTextOutlined))
             .child(agents::dx_agent_receipt_state(
                 &self.status.agent_bridge,
                 cx,
             ))
-            .child(section_title("Agent Providers", IconName::Server))
+            .child(section_title("Agent Providers", dx_icon(DxUiIcon::Gateway)))
             .child(agents::dx_agent_provider_state(
                 &self.status.agent_bridge,
                 cx,

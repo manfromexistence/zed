@@ -1,10 +1,10 @@
-use gpui::{AnyElement, App, SharedString, prelude::*};
-use ui::{Color, prelude::*};
+use gpui::{AnyElement, App, SharedString};
+use ui::{AiSettingItem, AiSettingItemSource, AiSettingItemStatus, Color, prelude::*};
 
 use crate::dx_agent_bridge::DxAgentAutomation;
 
-use super::super::super::metric_row;
 use super::super::actions::dx_agent_action_line;
+use super::super::connection_rows::{connection_detail_row, connection_detail_stack};
 use super::labels::{
     automation_destination_label, automation_history_label, automation_receipt_label,
     automation_schedule_label,
@@ -13,7 +13,7 @@ use super::labels::{
 pub(super) fn dx_agent_automation_row(
     id: SharedString,
     automation: &DxAgentAutomation,
-    cx: &App,
+    _cx: &App,
 ) -> AnyElement {
     let state = if automation.status.enabled && automation.status.runtime_available {
         automation.status.state.clone()
@@ -35,78 +35,128 @@ pub(super) fn dx_agent_automation_row(
     );
     let receipt_summary = automation_receipt_label(automation);
     let history_summary = automation_history_label(automation);
+    let mut details = vec![
+        connection_detail_row(
+            format!("{}-schedule", id).into(),
+            dx_icon(DxUiIcon::Automations),
+            "Schedule",
+            schedule,
+        )
+        .into_any_element(),
+        connection_detail_row(
+            format!("{}-destination", id).into(),
+            dx_icon(DxUiIcon::Channels),
+            "Destination",
+            destination,
+        )
+        .into_any_element(),
+        connection_detail_row(
+            format!("{}-run-window", id).into(),
+            IconName::Clock,
+            "Run window",
+            run_window,
+        )
+        .into_any_element(),
+    ];
 
-    v_flex()
-        .id(id)
-        .gap_0p5()
-        .min_w_0()
-        .rounded_sm()
-        .px_1()
-        .py_0p5()
-        .bg(cx.theme().colors().element_background)
-        .child(metric_row(automation.name.clone(), state))
-        .child(
-            Label::new(format!("{schedule} -> {destination}"))
-                .size(LabelSize::XSmall)
-                .color(Color::Muted)
-                .truncate(),
-        )
-        .when(!automation.prompt.is_empty(), |this| {
-            this.child(
-                Label::new(format!("Prompt: {}", automation.prompt))
-                    .size(LabelSize::XSmall)
-                    .color(Color::Muted)
-                    .truncate(),
+    if !automation.prompt.is_empty() {
+        details.push(
+            connection_detail_row(
+                format!("{}-prompt", id).into(),
+                IconName::TextSnippet,
+                "Prompt",
+                automation.prompt.clone(),
             )
-        })
-        .child(
-            Label::new(run_window)
-                .size(LabelSize::XSmall)
-                .color(Color::Muted)
-                .truncate(),
-        )
-        .when(!automation.status.runtime_available, |this| {
-            this.child(
-                Label::new(format!("Runtime: {}", automation.status.unavailable_reason))
-                    .size(LabelSize::XSmall)
-                    .color(Color::Muted)
-                    .truncate(),
+            .into_any_element(),
+        );
+    }
+
+    if !automation.status.runtime_available {
+        details.push(
+            connection_detail_row(
+                format!("{}-runtime", id).into(),
+                IconName::Warning,
+                "Runtime",
+                automation.status.unavailable_reason.clone(),
             )
-        })
-        .when(!receipt_summary.is_empty(), |this| {
-            this.child(
-                Label::new(receipt_summary)
-                    .size(LabelSize::XSmall)
-                    .color(Color::Muted)
-                    .truncate(),
+            .into_any_element(),
+        );
+    }
+
+    if !receipt_summary.is_empty() {
+        details.push(
+            connection_detail_row(
+                format!("{}-receipt", id).into(),
+                dx_icon(DxUiIcon::Receipts),
+                "Receipt",
+                receipt_summary,
             )
-        })
-        .when(!history_summary.is_empty(), |this| {
-            this.child(
-                Label::new(history_summary)
-                    .size(LabelSize::XSmall)
-                    .color(Color::Muted)
-                    .truncate(),
+            .into_any_element(),
+        );
+    }
+
+    if !history_summary.is_empty() {
+        details.push(
+            connection_detail_row(
+                format!("{}-history", id).into(),
+                IconName::HistoryRerun,
+                "History",
+                history_summary,
             )
-        })
-        .when(!automation.next_action.is_empty(), |this| {
-            this.child(
-                Label::new(automation.next_action.clone())
-                    .size(LabelSize::XSmall)
-                    .color(Color::Muted)
-                    .truncate(),
+            .into_any_element(),
+        );
+    }
+
+    if !automation.next_action.is_empty() {
+        details.push(
+            connection_detail_row(
+                format!("{}-next-action", id).into(),
+                dx_icon(DxUiIcon::Commands),
+                "Next",
+                automation.next_action.clone(),
             )
-        })
-        .when_some(
-            dx_agent_action_line(&automation.actions),
-            |this, action_line| {
-                this.child(
-                    Label::new(action_line)
-                        .size(LabelSize::XSmall)
-                        .color(Color::Muted)
-                        .truncate(),
-                )
-            },
-        )
-        .into_any_element()
+            .into_any_element(),
+        );
+    }
+
+    if let Some(action_line) = dx_agent_action_line(&automation.actions) {
+        details.push(
+            connection_detail_row(
+                format!("{}-actions", id).into(),
+                dx_icon(DxUiIcon::Permissions),
+                "Actions",
+                action_line,
+            )
+            .into_any_element(),
+        );
+    }
+
+    AiSettingItem::new(
+        id,
+        automation.name.clone(),
+        automation_status(automation),
+        AiSettingItemSource::Custom,
+    )
+    .icon(
+        Icon::new(dx_icon(DxUiIcon::Automations))
+            .size(IconSize::Small)
+            .color(Color::Muted),
+    )
+    .detail_label(state)
+    .details(connection_detail_stack(details))
+    .into_any_element()
+}
+
+fn automation_status(automation: &DxAgentAutomation) -> AiSettingItemStatus {
+    let execution_proven = automation.status.enabled
+        && automation.status.runtime_available
+        && (!automation.receipts.is_empty() || !automation.history.is_empty());
+
+    if execution_proven {
+        AiSettingItemStatus::Running
+    } else if automation.status.enabled {
+        AiSettingItemStatus::Starting
+    } else {
+        AiSettingItemStatus::Stopped
+    }
 }
