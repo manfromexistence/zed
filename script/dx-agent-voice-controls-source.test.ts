@@ -140,6 +140,10 @@ test("composer renders separate mic and read-aloud buttons before send", () => {
   assert.match(voiceControls, /Type text in the composer before reading aloud/);
   assert.match(voiceControls, /availability\.tts_status\.clone\(\)/);
   assert.match(voiceControls, /availability\.stt_status\.clone\(\)/);
+  assert.match(
+    threadView,
+    /let has_composer_text = !editor\.read\(cx\)\.text\(cx\)\.trim\(\)\.is_empty\(\)/,
+  );
   assert.match(voiceControls, /Kokoro read-aloud is active/);
   assert.match(voiceButtons, /agent-composer-voice-input[\s\S]+\.on_click\(on_voice_click\)/);
   assert.match(
@@ -235,12 +239,10 @@ test("voice recording UI exposes real recording and transcription states", () =>
   assert.doesNotMatch(recordingPanel, /agent-composer-stop-kokoro-read-aloud/);
   assert.match(
     recordingPanel,
-    /ComposerVoicePhase::Recording \| ComposerVoicePhase::Transcribing/,
+    /ComposerVoicePhase::Recording[\s\S]+\| ComposerVoicePhase::Transcribing[\s\S]+\| ComposerVoicePhase::Synthesizing[\s\S]+\| ComposerVoicePhase::Speaking/,
   );
-  assert.doesNotMatch(
-    recordingPanel,
-    /ComposerVoicePhase::Recording\s*\|\s*ComposerVoicePhase::Transcribing\s*\|\s*ComposerVoicePhase::Speaking/,
-  );
+  assert.match(recordingPanel, /Button::new\("agent-composer-retry-voice-input", "Retry"\)/);
+  assert.match(recordingPanel, /Button::new\("agent-composer-dismiss-voice-error", "Dismiss"\)/);
   assert.match(voiceControls, /agent-composer-retry-voice-input/);
   assert.match(voiceControls, /Retry Flow voice input/);
   assert.match(voiceControls, /agent-composer-dismiss-voice-error/);
@@ -908,12 +910,37 @@ test("voice playback keeps audio feature wiring and fallback states", () => {
   const speakComposerText = sourceSlice(
     threadView,
     "fn speak_composer_text",
+    "fn speak_agent_response_text",
+  );
+  const speakAgentResponseText = sourceSlice(
+    threadView,
+    "fn speak_agent_response_text",
+    "fn speak_flow_text",
+  );
+  const speakFlowText = sourceSlice(
+    threadView,
+    "fn speak_flow_text",
     "fn stop_flow_voice_playback",
   );
   const stopPlayback = sourceSlice(
     threadView,
     "fn stop_flow_voice_playback",
     "fn report_flow_voice_error",
+  );
+  const renderThreadControls = sourceSlice(
+    threadView,
+    "fn render_thread_controls",
+    "pub(crate) fn scroll_to_most_recent_user_prompt",
+  );
+  const getAgentMessageContent = sourceSlice(
+    threadView,
+    "fn get_agent_message_content",
+    "fn latest_agent_response_content",
+  );
+  const latestAgentResponseContent = sourceSlice(
+    threadView,
+    "fn latest_agent_response_content",
+    "fn is_blocked_on_terminal_command",
   );
 
   assert.match(agentUiCargo, /audio = \["dep:audio"\]/);
@@ -933,37 +960,67 @@ test("voice playback keeps audio feature wiring and fallback states", () => {
   assert.match(audioPipeline, /play_wav_file_tracked/);
   assert.match(audioPipeline, /output_mixer\.add\(source\)/);
   assert.match(
-    speakComposerText,
+    speakFlowText,
     /ComposerVoicePhase::Synthesizing \| ComposerVoicePhase::Speaking => \{\s*self\.stop_flow_voice_playback\(cx\);\s*return;\s*\}/,
   );
   assert.match(
-    speakComposerText,
+    speakFlowText,
     /ComposerVoicePhase::Recording \| ComposerVoicePhase::Transcribing/,
   );
   assert.match(speakComposerText, /let text = self\.message_editor\.read\(cx\)\.text\(cx\)/);
-  assert.match(speakComposerText, /let text = text\.trim\(\)\.to_string\(\)/);
-  assert.match(speakComposerText, /runtime\.speak_text\(&text, &cancellation\)/);
-  assert.match(speakComposerText, /set_synthesizing\(format!\("Flow voice runtime: \{summary\}"\)\)/);
-  assert.match(speakComposerText, /set_speaking\("Kokoro is reading the composer"\)/);
-  assert.doesNotMatch(speakComposerText, /active_editor\(cx\)/);
-  assert.doesNotMatch(speakComposerText, /editing_message|queued_message|draft_prompt/);
-  assert.match(speakComposerText, /flow_playback_handle = Some\(playback_handle\.clone\(\)\)/);
-  assert.match(speakComposerText, /std::fs::remove_file\(&audio_path\)/);
-  assert.match(speakComposerText, /flow_playback_id/);
-  assert.match(speakComposerText, /if this\.flow_playback_id != playback_id/);
-  assert.match(speakComposerText, /playback_handle\.is_complete\(\)/);
-  assert.match(speakComposerText, /Kokoro finished reading the composer/);
-  assert.match(speakComposerText, /if let Err\(error\) = runtime\.ensure_tts_ready\(\)/);
-  assert.match(speakComposerText, /Friday Kokoro TTS is not ready/);
-  assert.match(speakComposerText, /show_flow_voice_toast\(message, cx\)/);
+  assert.match(speakComposerText, /FlowTextToSpeechRequest::composer\(text\)/);
+  assert.match(speakAgentResponseText, /FlowTextToSpeechRequest::agent_response\(text\)/);
+  assert.doesNotMatch(speakAgentResponseText, /message_editor|active_editor\(cx\)|thread\.read|latest_agent_response_content/);
+  assert.match(speakFlowText, /let text = request\.text\.trim\(\)\.to_string\(\)/);
+  assert.match(speakFlowText, /runtime\.speak_text\(&text, &cancellation\)/);
+  assert.match(speakFlowText, /request\.synthesizing_message\(&summary\)/);
+  assert.match(speakFlowText, /request\.speaking_message/);
+  assert.match(speakFlowText, /request\.finished_message/);
+  assert.doesNotMatch(speakFlowText, /active_editor\(cx\)/);
+  assert.doesNotMatch(speakFlowText, /editing_message|queued_message|draft_prompt/);
+  assert.match(speakFlowText, /flow_playback_handle = Some\(playback_handle\.clone\(\)\)/);
+  assert.match(speakFlowText, /std::fs::remove_file\(&audio_path\)/);
+  assert.match(speakFlowText, /flow_playback_id/);
+  assert.match(speakFlowText, /if this\.flow_playback_id != playback_id/);
+  assert.match(speakFlowText, /playback_handle\.is_complete\(\)/);
+  assert.match(speakFlowText, /if let Err\(error\) = runtime\.ensure_tts_ready\(\)/);
+  assert.match(speakFlowText, /Friday Kokoro TTS is not ready/);
+  assert.match(speakFlowText, /show_flow_voice_toast\(message, cx\)/);
+  assert.match(threadView, /struct FlowTextToSpeechRequest/);
+  assert.match(threadView, /fn latest_agent_response_content/);
+  assert.match(renderThreadControls, /agent-response-text-to-speech/);
+  assert.match(renderThreadControls, /IconName::AudioOn/);
+  assert.match(renderThreadControls, /IconName::Stop/);
+  assert.match(renderThreadControls, /Read latest agent response aloud with Kokoro/);
+  assert.match(renderThreadControls, /latest_agent_response_content\(thread\.read\(cx\)\.entries\(\), cx\)/);
+  assert.match(renderThreadControls, /this\.speak_agent_response_text\(agent_response_text\.clone\(\), cx\)/);
+  assert.match(latestAgentResponseContent, /Self::get_agent_message_content\(entries, entry_index, cx\)/);
+  assert.match(getAgentMessageContent, /AssistantMessageChunk::Message \{ block \}[\s\S]+block\.to_markdown\(cx\)/);
+  assert.match(getAgentMessageContent, /AssistantMessageChunk::Thought \{ \.\. \} => None/);
+  assert.doesNotMatch(renderThreadControls, /toggle_flow_voice_recording|start_flow_voice_recording|transcribe_recording|insert_transcript_text/);
+  assert.doesNotMatch(renderThreadControls, /agent-response-voice-input|IconName::Mic/);
+  assert.doesNotMatch(speakComposerText + speakAgentResponseText, /runtime\.speak_text|Audio::play_wav_file_tracked|FlowSpeechCancellation::new/);
+  assert.equal([...speakFlowText.matchAll(/runtime\.speak_text\(&text, &cancellation\)/g)].length, 1);
+  assert.equal([...speakFlowText.matchAll(/Audio::play_wav_file_tracked/g)].length, 1);
+  assert.equal([...speakFlowText.matchAll(/FlowSpeechCancellation::new\(\)/g)].length, 1);
+  assert.doesNotMatch(
+    speakComposerText + speakAgentResponseText + speakFlowText + renderThreadControls + latestAgentResponseContent,
+    /dummy|mock|placeholder|fake|demo/i,
+  );
   assertBefore(
-    speakComposerText,
+    renderThreadControls,
+    'IconButton::new("agent-response-text-to-speech"',
+    'IconButton::new("feedback-thumbs-up"',
+    "Read-aloud should sit beside response actions before feedback buttons",
+  );
+  assertBefore(
+    speakFlowText,
     "if let Err(error) = runtime.ensure_tts_ready()",
-    ".set_synthesizing(format!(\"Flow voice runtime: {summary}\"))",
+    "request.synthesizing_message(&summary)",
     "Kokoro readiness must be checked before entering Synthesizing",
   );
   assertBefore(
-    speakComposerText,
+    speakFlowText,
     "if let Err(error) = runtime.ensure_tts_ready()",
     "let cancellation = FlowSpeechCancellation::new();",
     "Kokoro readiness must be checked before playback cancellation state is allocated",

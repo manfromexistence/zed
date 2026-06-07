@@ -51,6 +51,43 @@ struct ThreadFeedbackState {
     comments_editor: Option<Entity<Editor>>,
 }
 
+struct FlowTextToSpeechRequest {
+    text: String,
+    source_label: &'static str,
+    empty_message: &'static str,
+    speaking_message: &'static str,
+    finished_message: &'static str,
+}
+
+impl FlowTextToSpeechRequest {
+    fn composer(text: String) -> Self {
+        Self {
+            text,
+            source_label: "composer",
+            empty_message: "Type text in the composer before using Kokoro read-aloud",
+            speaking_message: "Kokoro is reading the composer",
+            finished_message: "Kokoro finished reading the composer",
+        }
+    }
+
+    fn agent_response(text: String) -> Self {
+        Self {
+            text,
+            source_label: "latest agent response",
+            empty_message: "No agent response is available for Kokoro read-aloud",
+            speaking_message: "Kokoro is reading the latest agent response",
+            finished_message: "Kokoro finished reading the latest agent response",
+        }
+    }
+
+    fn synthesizing_message(&self, summary: &str) -> String {
+        format!(
+            "Generating Kokoro audio for {}. Flow voice runtime: {summary}",
+            self.source_label
+        )
+    }
+}
+
 impl ThreadFeedbackState {
     pub fn submit(
         &mut self,
@@ -925,7 +962,7 @@ impl ThreadView {
         }
 
         subscriptions.push(cx.observe(&message_editor, |this, editor, cx| {
-            let has_composer_text = editor.read(cx).text_byte_len(cx) > 0;
+            let has_composer_text = !editor.read(cx).text(cx).trim().is_empty();
             this.composer_voice_availability.has_composer_text = has_composer_text;
             let editor = editor.clone();
             this._draft_resolve_task = Some(cx.spawn(async move |this, cx| {
@@ -4452,6 +4489,15 @@ impl ThreadView {
     }
 
     fn speak_composer_text(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
+        let text = self.message_editor.read(cx).text(cx);
+        self.speak_flow_text(FlowTextToSpeechRequest::composer(text), cx);
+    }
+
+    fn speak_agent_response_text(&mut self, text: String, cx: &mut Context<Self>) {
+        self.speak_flow_text(FlowTextToSpeechRequest::agent_response(text), cx);
+    }
+
+    fn speak_flow_text(&mut self, request: FlowTextToSpeechRequest, cx: &mut Context<Self>) {
         match self.composer_voice_state.phase() {
             ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking => {
                 self.stop_flow_voice_playback(cx);
@@ -4464,15 +4510,10 @@ impl ThreadView {
             ComposerVoicePhase::Ready | ComposerVoicePhase::Error => {}
         }
 
-        let text = self.message_editor.read(cx).text(cx);
-        let text = text.trim().to_string();
+        let text = request.text.trim().to_string();
         if text.is_empty() {
-            self.composer_voice_state
-                .set_error("Type text in the composer before using Kokoro read-aloud");
-            self.show_flow_voice_toast(
-                "Type text in the composer before using Kokoro read-aloud",
-                cx,
-            );
+            self.composer_voice_state.set_error(request.empty_message);
+            self.show_flow_voice_toast(request.empty_message, cx);
             cx.notify();
             return;
         }
@@ -4488,11 +4529,13 @@ impl ThreadView {
         }
         let summary = runtime.status_summary();
         self.composer_voice_state
-            .set_synthesizing(format!("Flow voice runtime: {summary}"));
+            .set_synthesizing(request.synthesizing_message(&summary));
         self.flow_playback_id = self.flow_playback_id.wrapping_add(1);
         let playback_id = self.flow_playback_id;
         let cancellation = FlowSpeechCancellation::new();
         self.flow_speech_cancellation = Some(cancellation.clone());
+        let speaking_message = request.speaking_message;
+        let finished_message = request.finished_message;
         cx.notify();
 
         self._flow_speech_task = Some(cx.spawn(async move |this, cx| {
@@ -4520,8 +4563,7 @@ impl ThreadView {
                                 Ok(playback_handle) => {
                                     let _ = std::fs::remove_file(&audio_path);
                                     this.flow_playback_handle = Some(playback_handle.clone());
-                                    this.composer_voice_state
-                                        .set_speaking("Kokoro is reading the composer");
+                                    this.composer_voice_state.set_speaking(speaking_message);
                                     this._flow_speech_task =
                                         Some(cx.spawn(async move |this, cx| {
                                             loop {
@@ -4534,9 +4576,8 @@ impl ThreadView {
                                                     }
                                                     if playback_handle.is_complete() {
                                                         this.flow_playback_handle = None;
-                                                        this.composer_voice_state.set_ready(
-                                                            "Kokoro finished reading the composer",
-                                                        );
+                                                        this.composer_voice_state
+                                                            .set_ready(finished_message);
                                                         cx.notify();
                                                         false
                                                     } else {
@@ -6486,6 +6527,55 @@ impl ThreadView {
                 },
             );
 
+        let agent_response_text =
+            Self::latest_agent_response_content(thread.read(cx).entries(), cx);
+        if let Some(agent_response_text) = agent_response_text {
+            let voice_phase = self.composer_voice_state.phase();
+            let read_aloud_disabled = matches!(
+                voice_phase,
+                ComposerVoicePhase::Recording | ComposerVoicePhase::Transcribing
+            );
+            let read_aloud_icon = if matches!(
+                voice_phase,
+                ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking
+            ) {
+                IconName::Stop
+            } else {
+                IconName::AudioOn
+            };
+            let read_aloud_color = if matches!(
+                voice_phase,
+                ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking
+            ) {
+                Color::Accent
+            } else if !self.composer_voice_availability.tts_ready {
+                Color::Warning
+            } else {
+                Color::Ignored
+            };
+
+            container = container.child(
+                IconButton::new("agent-response-text-to-speech", read_aloud_icon)
+                    .shape(ui::IconButtonShape::Square)
+                    .icon_size(IconSize::Small)
+                    .icon_color(read_aloud_color)
+                    .disabled(read_aloud_disabled)
+                    .tooltip(Tooltip::text(
+                        if matches!(
+                            voice_phase,
+                            ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking
+                        ) {
+                            "Stop Kokoro read-aloud"
+                        } else {
+                            "Read latest agent response aloud with Kokoro"
+                        },
+                    ))
+                    .on_click(cx.listener(move |this, _, _window, cx| {
+                        this.speak_agent_response_text(agent_response_text.clone(), cx);
+                    })),
+            );
+        }
+
         let enable_thread_feedback = util::maybe!({
             let project = thread.read(cx).project().read(cx);
             let user_store = project.user_store();
@@ -7598,6 +7688,18 @@ impl ThreadView {
 
         let text = parts.join("\n\n");
         if text.is_empty() { None } else { Some(text) }
+    }
+
+    fn latest_agent_response_content(entries: &[AgentThreadEntry], cx: &App) -> Option<String> {
+        let entry_index = entries
+            .iter()
+            .enumerate()
+            .rev()
+            .find_map(|(index, entry)| {
+                matches!(entry, AgentThreadEntry::AssistantMessage(_)).then_some(index)
+            })?;
+
+        Self::get_agent_message_content(entries, entry_index, cx)
     }
 
     fn is_blocked_on_terminal_command(&self, cx: &App) -> bool {

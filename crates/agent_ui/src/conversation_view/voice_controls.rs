@@ -342,22 +342,34 @@ pub(super) fn render_voice_recording_panel(
                     .when(
                         matches!(
                             state.phase,
-                            ComposerVoicePhase::Recording | ComposerVoicePhase::Transcribing
+                            ComposerVoicePhase::Recording
+                                | ComposerVoicePhase::Transcribing
+                                | ComposerVoicePhase::Synthesizing
+                                | ComposerVoicePhase::Speaking
                         ),
                         |this| {
                             this.child(
                                 h_flex()
+                                    .flex_shrink_0()
                                     .flex_wrap()
                                     .gap_1()
                                     .child(
                                         Button::new(stop_button_id, stop_button_label)
                                             .size(ButtonSize::Compact)
                                             .label_size(LabelSize::XSmall)
-                                            .color(tone)
+                                            .color(match state.phase {
+                                                ComposerVoicePhase::Recording => Color::Accent,
+                                                _ => tone,
+                                            })
                                             .start_icon(
                                                 Icon::new(IconName::Stop)
                                                     .size(IconSize::XSmall)
-                                                    .color(tone),
+                                                    .color(match state.phase {
+                                                        ComposerVoicePhase::Recording => {
+                                                            Color::Accent
+                                                        }
+                                                        _ => tone,
+                                                    }),
                                             )
                                             .tooltip(Tooltip::text(stop_button_tooltip))
                                             .on_click(on_stop_click),
@@ -388,24 +400,30 @@ pub(super) fn render_voice_recording_panel(
                             h_flex()
                                 .gap_1()
                                 .child(
-                                    IconButton::new(
-                                        "agent-composer-retry-voice-input",
-                                        IconName::RotateCw,
-                                    )
-                                    .icon_size(IconSize::XSmall)
-                                    .icon_color(tone)
-                                    .tooltip(Tooltip::text("Retry Flow voice input"))
-                                    .on_click(on_retry_click),
+                                    Button::new("agent-composer-retry-voice-input", "Retry")
+                                        .size(ButtonSize::Compact)
+                                        .label_size(LabelSize::XSmall)
+                                        .color(tone)
+                                        .start_icon(
+                                            Icon::new(IconName::RotateCw)
+                                                .size(IconSize::XSmall)
+                                                .color(tone),
+                                        )
+                                        .tooltip(Tooltip::text("Retry Flow voice input"))
+                                        .on_click(on_retry_click),
                                 )
                                 .child(
-                                    IconButton::new(
-                                        "agent-composer-dismiss-voice-error",
-                                        IconName::Close,
-                                    )
-                                    .icon_size(IconSize::XSmall)
-                                    .icon_color(Color::Muted)
-                                    .tooltip(Tooltip::text("Dismiss Flow voice error"))
-                                    .on_click(on_dismiss_error_click),
+                                    Button::new("agent-composer-dismiss-voice-error", "Dismiss")
+                                        .size(ButtonSize::Compact)
+                                        .label_size(LabelSize::XSmall)
+                                        .color(Color::Muted)
+                                        .start_icon(
+                                            Icon::new(IconName::Close)
+                                                .size(IconSize::XSmall)
+                                                .color(Color::Muted),
+                                        )
+                                        .tooltip(Tooltip::text("Dismiss Flow voice error"))
+                                        .on_click(on_dismiss_error_click),
                                 ),
                         )
                     }),
@@ -445,7 +463,12 @@ fn render_voice_level_meter(level: f32, tone: Color, cx: &App) -> AnyElement {
 }
 
 fn voice_level_bar_count(level: f32) -> usize {
-    (level.clamp(0.0, 1.0) * VOICE_LEVEL_BAR_COUNT as f32).ceil() as usize
+    let level = level.clamp(0.0, 1.0);
+    if level < 0.03 {
+        0
+    } else {
+        (level * VOICE_LEVEL_BAR_COUNT as f32).ceil() as usize
+    }
 }
 
 fn recording_duration_tick(duration: Duration) -> u128 {
