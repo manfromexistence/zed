@@ -365,7 +365,7 @@ test("fullscreen onboarding Web Preview is parked until the completion handoff i
   );
   assert.match(
     paneSource,
-    /Some\(active_item\) if active_item\.screen_kind\(cx\) == WorkspaceScreenKind::Onboarding => \{\s*\(false, false\)\s*\}/,
+    /WorkspaceScreenKind::Agent\s*\|\s*WorkspaceScreenKind::Onboarding/s,
     "Onboarding must not expose clone or move split actions in pane chrome",
   );
   assert.match(
@@ -422,7 +422,7 @@ test("fullscreen onboarding Web Preview is parked until the completion handoff i
   );
   assert.match(
     agentPanelSource,
-    /WorkspaceScreenKind::Terminal\s*\|\s*WorkspaceScreenKind::Onboarding\s*\|\s*WorkspaceScreenKind::LiquidGlass/s,
+    /WorkspaceScreenKind::Agent\s*\|\s*WorkspaceScreenKind::Terminal\s*\|\s*WorkspaceScreenKind::Onboarding\s*\|\s*WorkspaceScreenKind::LiquidGlass/s,
     "Agent workspace snapshots should treat Onboarding like other non-editor screens",
   );
   assert.match(
@@ -432,12 +432,12 @@ test("fullscreen onboarding Web Preview is parked until the completion handoff i
   );
   assert.match(
     sidebarSource,
-    /WorkspaceScreenKind::Editor\s*\|\s*WorkspaceScreenKind::Onboarding\s*\|\s*WorkspaceScreenKind::LiquidGlass\s*\|\s*WorkspaceScreenKind::Other => self\.project_root_path\(cx\)/s,
+    /WorkspaceScreenKind::Agent\s*\|\s*WorkspaceScreenKind::Editor\s*\|\s*WorkspaceScreenKind::Onboarding\s*\|\s*WorkspaceScreenKind::LiquidGlass\s*\|\s*WorkspaceScreenKind::Other => self\.project_root_path\(cx\)/s,
     "sidebar grid context should use project-root shortcuts while Onboarding is active",
   );
   assert.match(
     sidebarSource,
-    /WorkspaceScreenKind::Editor\s*\|\s*WorkspaceScreenKind::Onboarding\s*\|\s*WorkspaceScreenKind::Other => (?:self\.editor_grid_entries\(cx\)|\{\s*self\.editor_grid_entries\(cx\)\s*\})/s,
+    /WorkspaceScreenKind::Agent\s*\|\s*WorkspaceScreenKind::Editor\s*\|\s*WorkspaceScreenKind::Onboarding\s*\|\s*WorkspaceScreenKind::Other => (?:self\.editor_grid_entries\(cx\)|\{\s*self\.editor_grid_entries\(cx\)\s*\})/s,
     "sidebar grid generation should show editor/project entries while Onboarding is active",
   );
 

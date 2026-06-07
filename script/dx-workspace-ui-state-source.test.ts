@@ -16,6 +16,7 @@ const workspace = read("crates/workspace/src/workspace.rs");
 const multiWorkspace = read("crates/workspace/src/multi_workspace.rs");
 const titleBar = read("crates/title_bar/src/title_bar.rs");
 const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
+const agentScreen = read("crates/agent_ui/src/agent_screen.rs");
 const conversationView = read("crates/agent_ui/src/conversation_view.rs");
 const threadView = read("crates/agent_ui/src/conversation_view/thread_view.rs");
 const composerProfileOptions = read(
@@ -429,10 +430,7 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
     1800,
   );
   const workspaceFocusZoomedAgentPanel = functionBody(workspace, "focus_zoomed_agent_panel");
-  const workspaceDismissAgentFullscreen = functionBody(
-    workspace,
-    "dismiss_agent_fullscreen_for_screen_activation",
-  );
+  const workspaceDismissAgentFullscreen = functionBody(workspace, "dismiss_zoomed_agent_panel");
   const workspaceToggleDock = functionBody(workspace, "toggle_dock");
   const workspaceDismissZoomed = functionBody(workspace, "dismiss_zoomed_items_to_reveal");
   const dockFocusIn = sourceWindow(dock, "cx.on_focus_in(&focus_handle", 0, 900);
@@ -443,6 +441,7 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
     360,
   );
   const toggleAgentPanelFocus = functionBody(agentPanel, "toggle_focus");
+  const focusAgentPanelFullscreen = functionBody(agentPanel, "focus_fullscreen");
   const focusAgentPanel = functionBody(agentPanel, "focus");
   const toggleAgentPanel = functionBody(agentPanel, "toggle");
   const profilesSupported = functionBody(conversationView, "profiles_supported");
@@ -452,6 +451,22 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(agentPanel, /fullscreen_progress_rail_open/);
   assert.match(agentPanel, /fullscreen_sources_rail_open: true/);
   assert.match(agentPanel, /fullscreen_progress_rail_open: true/);
+  assert.match(agentPanel, /pub\(crate\) fn new_builder_workspace\(/);
+  assert.match(agentPanel, /panel\.fullscreen_sources_rail_pinned = true/);
+  assert.match(agentPanel, /panel\.fullscreen_progress_rail_pinned = true/);
+  assert.match(focusAgentPanelFullscreen, /crate::AgentScreen::open_or_focus\(workspace, window, cx\);/);
+  assert.match(agentScreen, /pub struct AgentScreen \{\s*panel: Entity<AgentPanel>,\s*\}/);
+  assert.match(agentScreen, /AgentPanel::new_builder_workspace\(workspace, window, cx\)/);
+  assert.match(agentScreen, /pub\(crate\) fn open_or_focus\(/);
+  assert.match(agentScreen, /workspace\.dismiss_zoomed_agent_panel\(window, cx\);/);
+  assert.match(agentScreen, /workspace\.pane_for_screen_kind\(WorkspaceScreenKind::Agent, cx\)/);
+  assert.match(agentScreen, /item\.screen_kind\(cx\) == WorkspaceScreenKind::Agent/);
+  assert.match(agentScreen, /workspace\.activate_item\(&\*item, true, true, window, cx\);/);
+  assert.match(agentScreen, /workspace\.screen_host_pane\(\)/);
+  assert.match(agentScreen, /workspace\.add_item\(target_pane, Box::new\(item\), None, true, true, window, cx\);/);
+  assert.match(agentScreen, /fn screen_kind\(&self\) -> WorkspaceScreenKind \{\s*WorkspaceScreenKind::Agent\s*\}/);
+  assert.match(agentScreen, /fn can_split\(&self\) -> bool \{\s*false\s*\}/);
+  assert.match(agentScreen, /div\(\)\.size_full\(\)\.child\(self\.panel\.clone\(\)\)/);
   assert.match(agentPanel, /fn render_fullscreen_agent_center\(/);
   assert.match(agentPanel, /fn render_toolbar_response_indicator\(/);
   assert.match(agentPanel, /fn toolbar_response_indicator_segment\(/);
@@ -508,8 +523,13 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(workspaceRenderCenterScreen, /self\.render_screen_carousel_center\(center, cx\)/);
   assert.match(
     workspaceActivateScreenKind,
-    /self\.dismiss_agent_fullscreen_for_screen_activation\(window, cx\);[\s\S]*?let target_pane = self\.screen_host_pane\(\);/s,
+    /self\.dismiss_zoomed_agent_panel\(window, cx\);[\s\S]*?let target_pane = self\.screen_host_pane\(\);/s,
     "screen-dock navigation must leave Agent fullscreen before activating Editor, Browser, or Terminal",
+  );
+  assert.match(
+    workspaceActivateScreenKind,
+    /WorkspaceScreenKind::Agent => \{\s*window\.dispatch_action\(\s*zed_actions::assistant::FocusAgentFullscreen\.boxed_clone\(\),\s*cx,\s*\);\s*\}/s,
+    "screen-dock Agent activation must route through the real Agent screen action",
   );
   assert.match(workspaceDismissAgentFullscreen, /if !self\.zoomed_is_agent_panel/);
   assert.match(workspaceDismissAgentFullscreen, /dock\.zoom_out\(window, cx\)/);
@@ -773,11 +793,8 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(manageProfilesModal, /AgentProfile::available_profiles\(cx\)/);
   assert.match(manageProfilesModal, /AgentProfile::display_name\(&mode\.profile_id, &profile\.name\)/);
   assert.match(agentPanel, /then_some\(IconName::Chat\)/);
-  assert.match(focusAgentFullscreen, /workspace\.focus_panel::<Self>\(window, cx\);/);
-  assert.match(focusAgentFullscreen, /workspace[\s\S]*?\.panel::<Self>\(cx\)[\s\S]*?enabled\(cx\)/);
-  assert.match(focusAgentFullscreen, /panel\.fullscreen_sources_rail_open = true;/);
-  assert.match(focusAgentFullscreen, /panel\.fullscreen_progress_rail_open = true;/);
-  assert.match(focusAgentFullscreen, /cx\.emit\(PanelEvent::ZoomIn\)/);
+  assert.match(focusAgentFullscreen, /crate::AgentScreen::open_or_focus\(workspace, window, cx\);/);
+  assert.doesNotMatch(focusAgentFullscreen, /workspace\.focus_panel::<Self>|PanelEvent::ZoomIn/);
   assert.match(functionBody(agentPanel, "focus"), /cx\.emit\(PanelEvent::ZoomOut\)/);
   assert.match(workspace, /panel\.set_zoomed\(false, window, cx\);\s*dock\.set_open\(false, window, cx\);/);
   assert.match(dock, /let agent_screen_is_zoomed = workspace/);

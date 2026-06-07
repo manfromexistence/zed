@@ -1229,7 +1229,8 @@ impl DxWorkspaceSnapshot {
             match item.screen_kind(cx) {
                 WorkspaceScreenKind::Editor => has_editor = true,
                 WorkspaceScreenKind::Browser => has_browser = true,
-                WorkspaceScreenKind::Terminal
+                WorkspaceScreenKind::Agent
+                | WorkspaceScreenKind::Terminal
                 | WorkspaceScreenKind::Onboarding
                 | WorkspaceScreenKind::LiquidGlass
                 | WorkspaceScreenKind::Other => {}
@@ -1686,6 +1687,21 @@ impl AgentPanel {
         panel
     }
 
+    pub(crate) fn new_builder_workspace(
+        workspace: &Workspace,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Self {
+        let mut panel = Self::new(workspace, window, cx);
+        panel.manual_zoom_override = Some(true);
+        panel.fullscreen_sources_rail_open = true;
+        panel.fullscreen_progress_rail_open = true;
+        panel.fullscreen_sources_rail_pinned = true;
+        panel.fullscreen_progress_rail_pinned = true;
+        panel.ensure_thread_initialized(window, cx);
+        panel
+    }
+
     pub fn toggle_focus(
         workspace: &mut Workspace,
         _: &ToggleFocus,
@@ -1736,21 +1752,7 @@ impl AgentPanel {
         window: &mut Window,
         cx: &mut Context<Workspace>,
     ) {
-        if workspace
-            .panel::<Self>(cx)
-            .is_some_and(|panel| panel.read(cx).enabled(cx))
-        {
-            workspace.focus_panel::<Self>(window, cx);
-            let Some(panel) = workspace.panel::<Self>(cx) else {
-                return;
-            };
-            panel.update(cx, |panel, cx| {
-                panel.manual_zoom_override = Some(true);
-                panel.fullscreen_sources_rail_open = true;
-                panel.fullscreen_progress_rail_open = true;
-                cx.emit(PanelEvent::ZoomIn);
-            });
-        }
+        crate::AgentScreen::open_or_focus(workspace, window, cx);
     }
 
     pub fn toggle(

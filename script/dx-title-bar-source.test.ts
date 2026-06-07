@@ -133,8 +133,12 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
   );
   assert.match(agentScreenButton, /toggle_state\(selected\)/);
   assert.match(titleBarSource, /fn agent_screen_is_active\(&self, cx: &App\) -> bool/);
-  assert.match(agentScreenActive, /workspace\.read\(cx\)\.zoomed_is_agent_panel\(\)/);
+  assert.match(agentScreenActive, /self\.active_screen_kind\(cx\) == WorkspaceScreenKind::Agent/);
+  assert.match(titleBarSource, /WorkspaceScreenKind::Agent => "AI"/);
+  assert.match(titleBarSource, /WorkspaceScreenKind::Agent => dx_icon\(DxUiIcon::Ai\)/);
+  assert.match(titleBarSource, /WorkspaceScreenKind::Agent => "Open AI Screen"/);
   assert.doesNotMatch(agentScreenActive, /dock_at_position|visible_panel|agent_panel_is_active/);
+  assert.doesNotMatch(agentScreenActive, /zoomed_is_agent_panel/);
   assert.doesNotMatch(titleBarSource, /fn agent_panel_is_active/);
   assert.match(
     titleBarSource,

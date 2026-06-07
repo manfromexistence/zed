@@ -6008,7 +6008,7 @@ impl Workspace {
             return false;
         }
 
-        self.dismiss_agent_fullscreen_for_screen_activation(window, cx);
+        self.dismiss_zoomed_agent_panel(window, cx);
 
         let target_pane = self.screen_host_pane();
         self.set_active_pane(&target_pane, window, cx);
@@ -6033,6 +6033,12 @@ impl Workspace {
                 window.focus(&target_pane.focus_handle(cx), cx);
 
                 match kind {
+                    WorkspaceScreenKind::Agent => {
+                        window.dispatch_action(
+                            zed_actions::assistant::FocusAgentFullscreen.boxed_clone(),
+                            cx,
+                        );
+                    }
                     WorkspaceScreenKind::Editor => {
                         window.dispatch_action(NewFile.boxed_clone(), cx);
                     }
@@ -6057,11 +6063,7 @@ impl Workspace {
         }
     }
 
-    fn dismiss_agent_fullscreen_for_screen_activation(
-        &mut self,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
+    pub fn dismiss_zoomed_agent_panel(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if !self.zoomed_is_agent_panel {
             return;
         }
@@ -8926,7 +8928,9 @@ impl Render for Workspace {
         let centered_layout = self.centered_layout
             && !self.zoomed_is_agent_panel
             && self.center.panes().len() == 1
-            && self.active_item(cx).is_some();
+            && self
+                .active_item(cx)
+                .is_some_and(|item| item.screen_kind(cx) != WorkspaceScreenKind::Agent);
         let render_padding = |size| {
             (size > 0.0).then(|| {
                 div()

@@ -183,6 +183,7 @@ impl PaneTabBarControls {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum WorkspaceScreenKind {
+    Agent,
     Editor,
     Browser,
     Terminal,

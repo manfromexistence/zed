@@ -135,6 +135,7 @@ enum SerializedSidebarGridScreenKind {
 impl From<WorkspaceScreenKind> for SerializedSidebarGridScreenKind {
     fn from(kind: WorkspaceScreenKind) -> Self {
         match kind {
+            WorkspaceScreenKind::Agent => Self::Other,
             WorkspaceScreenKind::Editor => Self::Editor,
             WorkspaceScreenKind::Browser => Self::Browser,
             WorkspaceScreenKind::Terminal => Self::Terminal,
@@ -8262,7 +8263,8 @@ impl Sidebar {
             WorkspaceScreenKind::Terminal => self
                 .project_root_path(cx)
                 .or_else(|| std::env::current_dir().ok()),
-            WorkspaceScreenKind::Editor
+            WorkspaceScreenKind::Agent
+            | WorkspaceScreenKind::Editor
             | WorkspaceScreenKind::Onboarding
             | WorkspaceScreenKind::LiquidGlass
             | WorkspaceScreenKind::Other => self.project_root_path(cx),
@@ -8286,7 +8288,8 @@ impl Sidebar {
         }
 
         let entries = match kind {
-            WorkspaceScreenKind::Editor
+            WorkspaceScreenKind::Agent
+            | WorkspaceScreenKind::Editor
             | WorkspaceScreenKind::Onboarding
             | WorkspaceScreenKind::Other => self.editor_grid_entries(cx),
             WorkspaceScreenKind::Browser => self.browser_grid_entries(),

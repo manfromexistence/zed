@@ -2,6 +2,7 @@ IN PROGRESS:
 - None. Runtime proof remains deferred until an explicit authorized validation pass allows `just run`/Cargo.
 
 COMPLETED:
+- Agent Screen item routing is source-verified: `FocusAgentFullscreen` now opens or focuses a real center-pane `AgentScreen` item, builder-workspace AgentPanel rails start pinned/open, Agent screens cannot split/clone, and titlebar/carousel/sidebar/onboarding screen-kind paths treat AI as a first-class screen while runtime proof remains deferred.
 - Editor Power Mode and rainbow caret effects are source-verified: `power_mode.enabled` stays default-off, committed non-bulk input queues bounded caret-local particles only outside IME/no-op/bulk paths, shake is paint-only, and the reusable DX rainbow caret/glow helper respects reduced-motion behavior when cursor blinking is disabled.
 - AI composer liquid glass is source-verified through the shared ThreadView composer path: the bounded composer surface uses the liquid_glass painter, preserves the real MessageEditor and context/profile/model/voice/send controls, and keeps readability/fallback layers source-guarded while runtime visual proof remains deferred.
 - Agent Screen vs Sidechat routing is source-verified: Agent focus/toggle actions now record sidechat intent before zooming out, and Agent dock button clicks dispatch the sidechat action while fullscreen AI is active instead of stacking the zoomed Agent entity.

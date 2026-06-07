@@ -4464,7 +4464,12 @@ fn default_render_tab_bar_buttons(
         return (None, None);
     }
     let (can_clone, can_split_move) = match pane.active_item() {
-        Some(active_item) if active_item.screen_kind(cx) == WorkspaceScreenKind::Onboarding => {
+        Some(active_item)
+            if matches!(
+                active_item.screen_kind(cx),
+                WorkspaceScreenKind::Agent | WorkspaceScreenKind::Onboarding
+            ) =>
+        {
             (false, false)
         }
         Some(active_item) if active_item.can_split(cx) => (true, false),
@@ -4503,6 +4508,7 @@ fn default_render_tab_bar_buttons(
                     window.dispatch_action(NewCenterTerminal::default().boxed_clone(), cx);
                 })
                 .into_any_element(),
+            WorkspaceScreenKind::Agent => div().into_any_element(),
             WorkspaceScreenKind::Onboarding => div().into_any_element(),
             WorkspaceScreenKind::LiquidGlass => IconButton::new("plus", IconName::Plus)
                 .icon_size(IconSize::Small)

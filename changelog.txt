@@ -1,3 +1,21 @@
+[2026-06-07] - Agent Screen Item Source Routing
+
+ADDED:
+- `crates\agent_ui\src\agent_screen.rs` adds a real center-pane AgentScreen item that owns a builder-workspace AgentPanel, exposes AI tab metadata, disables split/toolbar behavior, and reuses existing Agent screen items before creating a new one.
+
+CHANGED:
+- `crates\agent_ui\src\agent_panel.rs` and `crates\agent_ui\src\agent_ui.rs` route FocusAgentFullscreen through AgentScreen instead of zooming the side-panel entity directly, with builder-workspace rails pinned/open from initialization.
+- `crates\workspace\src\item.rs`, `crates\workspace\src\workspace.rs`, `crates\workspace\src\pane.rs`, `crates\workspace\src\screen_carousel.rs`, `crates\title_bar\src\title_bar.rs`, `crates\sidebar\src\sidebar.rs`, and `crates\onboarding\src\onboarding.rs` now treat WorkspaceScreenKind::Agent as a first-class screen with AI labels/icons, no split/clone chrome, project/editor grid behavior, and non-editor post-onboarding handling.
+- `script\dx-workspace-ui-state-source.test.ts`, `script\dx-title-bar-source.test.ts`, `script\web-preview-platform-lifecycle.test.ts`, `DX.md`, and `todo.txt` now guard and document the Agent Screen item path.
+
+PASSED:
+- `node --test script\dx-workspace-ui-state-source.test.ts script\dx-title-bar-source.test.ts script\web-preview-platform-lifecycle.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\agent_ui.rs crates\agent_ui\src\agent_screen.rs crates\onboarding\src\onboarding.rs crates\sidebar\src\sidebar.rs crates\title_bar\src\title_bar.rs crates\workspace\src\item.rs crates\workspace\src\pane.rs crates\workspace\src\screen_carousel.rs crates\workspace\src\workspace.rs`
+- `git diff --cached --check -- crates/agent_ui/src/agent_panel.rs crates/agent_ui/src/agent_ui.rs crates/agent_ui/src/agent_screen.rs crates/onboarding/src/onboarding.rs crates/sidebar/src/sidebar.rs crates/title_bar/src/title_bar.rs crates/workspace/src/item.rs crates/workspace/src/pane.rs crates/workspace/src/screen_carousel.rs crates/workspace/src/workspace.rs script/dx-title-bar-source.test.ts script/dx-workspace-ui-state-source.test.ts script/web-preview-platform-lifecycle.test.ts DX.md todo.txt changelog.txt`
+- `git grep --cached -n -E "^<<<<<<<|^=======|^>>>>>>>" -- ...` across the touched Agent Screen source, guards, DX, todo, and changelog files returned no matches.
+
+NOTES:
+- This remains source-only by instruction. Cargo, `just run`, local servers, browser/WebView proof, and runtime visual validation were not run.
 [2026-06-07] - Editor Power Mode And Rainbow Caret Source Guards
 
 ADDED:

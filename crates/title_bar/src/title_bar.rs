@@ -481,7 +481,8 @@ impl TitleBar {
         let agent_screen_is_active = self.agent_screen_is_active(cx);
         let should_show_extra_entries = !matches!(
             active_screen_kind,
-            WorkspaceScreenKind::Editor
+            WorkspaceScreenKind::Agent
+                | WorkspaceScreenKind::Editor
                 | WorkspaceScreenKind::Browser
                 | WorkspaceScreenKind::Terminal
                 | WorkspaceScreenKind::Onboarding
@@ -492,7 +493,8 @@ impl TitleBar {
                 .filter(|entry| {
                     !matches!(
                         entry.kind,
-                        WorkspaceScreenKind::Editor
+                        WorkspaceScreenKind::Agent
+                            | WorkspaceScreenKind::Editor
                             | WorkspaceScreenKind::Browser
                             | WorkspaceScreenKind::Terminal
                             | WorkspaceScreenKind::Onboarding
@@ -751,11 +753,7 @@ impl TitleBar {
     }
 
     fn agent_screen_is_active(&self, cx: &App) -> bool {
-        let Some(workspace) = self.workspace.upgrade() else {
-            return false;
-        };
-
-        workspace.read(cx).zoomed_is_agent_panel()
+        self.active_screen_kind(cx) == WorkspaceScreenKind::Agent
     }
 
     fn render_screen_dock_add_menu(
@@ -916,6 +914,12 @@ impl TitleBar {
 
     fn dispatch_new_screen_action(kind: WorkspaceScreenKind, window: &mut Window, cx: &mut App) {
         match kind {
+            WorkspaceScreenKind::Agent => {
+                window.dispatch_action(
+                    zed_actions::assistant::FocusAgentFullscreen.boxed_clone(),
+                    cx,
+                );
+            }
             WorkspaceScreenKind::Editor => window.dispatch_action(NewFile.boxed_clone(), cx),
             WorkspaceScreenKind::Browser => {
                 window.dispatch_action(NewWebPreview.boxed_clone(), cx);
@@ -936,6 +940,7 @@ impl TitleBar {
 
     fn screen_kind_label(kind: WorkspaceScreenKind) -> &'static str {
         match kind {
+            WorkspaceScreenKind::Agent => "AI",
             WorkspaceScreenKind::Editor => "Editor",
             WorkspaceScreenKind::Browser => "Browser",
             WorkspaceScreenKind::Terminal => "Terminal",
@@ -947,6 +952,7 @@ impl TitleBar {
 
     fn screen_kind_create_label(kind: WorkspaceScreenKind) -> &'static str {
         match kind {
+            WorkspaceScreenKind::Agent => "Open AI Screen",
             WorkspaceScreenKind::Editor => "New Untitled File",
             WorkspaceScreenKind::Browser => "New Browser Tab",
             WorkspaceScreenKind::Terminal => "New Terminal",
@@ -958,6 +964,7 @@ impl TitleBar {
 
     fn screen_kind_icon(kind: WorkspaceScreenKind) -> IconName {
         match kind {
+            WorkspaceScreenKind::Agent => dx_icon(DxUiIcon::Ai),
             WorkspaceScreenKind::Editor => IconName::Code,
             WorkspaceScreenKind::Browser => dx_icon(DxUiIcon::Browser),
             WorkspaceScreenKind::Terminal => IconName::Terminal,
