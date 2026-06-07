@@ -8,6 +8,7 @@ PENDING:
 - Continue the DX/Zed ecosystem integration with bounded source-only slices for remaining receipt scans, semantic icon hotspots, and governed runtime proof when explicitly authorized.
 
 COMPLETED:
+- Agent/Profile settings semantic-cog rollout is source-verified: Manage Profiles built-in tool rows and headers plus the shared AI setting item action preview now route settings glyphs through `dx_icon(DxUiIcon::Settings)`, and the DX icon-system guard blocks those surfaces from reintroducing raw `IconName::Settings`.
 - DX Agents connection cards and trusted tool bridge are source-verified: social/provider rows now expose provider id, account state, auth method, QR capability, credential health, expiry/error state, receipt history, and fail-closed approved plugin/automation bridge metrics without fake connected states.
 - DX Automations foundation is source-verified: Zed now has a typed automation composer/model, honest pending-runtime UI, receipt/history contracts ready for DX Agents handoff, and focused source guards without `just run` or Cargo.
 - Launch receipt snapshot discovery now ranks candidate `launch-status-*.json` files by receipt timestamp before retaining the bounded newest set and exposes capped scans through `snapshot_scan_truncated` operator warnings.

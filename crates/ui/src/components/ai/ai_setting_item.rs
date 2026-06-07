@@ -301,7 +301,7 @@ impl Component for AiSettingItem {
                         )
                         .detail_label("3 tools")
                         .action(
-                            IconButton::new("menu", IconName::Settings)
+                            IconButton::new("menu", dx_icon(DxUiIcon::Settings))
                                 .icon_size(IconSize::Small)
                                 .icon_color(Color::Muted),
                         )

@@ -1,3 +1,19 @@
+[2026-06-07] - Agent Profile Settings Semantic Cog
+
+CHANGED:
+- `crates\agent_ui\src\agent_configuration\manage_profiles_modal.rs` now routes built-in tool settings rows and Configure Built-in Tools headers through `dx_icon(DxUiIcon::Settings)` instead of raw `IconName::Settings`.
+- `crates\ui\src\components\ai\ai_setting_item.rs` now uses the centralized DX settings icon mapping for its settings action preview.
+- `script\dx-icon-system-source.test.ts` now guards Manage Profiles and AI setting items against legacy raw settings icon literals.
+
+PASSED:
+- `node --test script\dx-icon-system-source.test.ts script\dx-agent-configuration-modal-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_ui\src\agent_configuration\manage_profiles_modal.rs crates\ui\src\components\ai\ai_setting_item.rs`
+- `git diff --check -- crates/agent_ui/src/agent_configuration/manage_profiles_modal.rs crates/ui/src/components/ai/ai_setting_item.rs script/dx-icon-system-source.test.ts DX.md todo.txt changelog.txt`
+- Focused raw-settings and conflict-marker scans returned no matches for the touched source, guard, and docs files.
+
+NOTES:
+- This remains source-only by instruction. Cargo, `just run`, local servers, browser automation, native Zed launch, and runtime visual proof remain skipped.
+
 [2026-06-07] - DX Agents Connection Cards And Trusted Tool Bridge
 
 ADDED:

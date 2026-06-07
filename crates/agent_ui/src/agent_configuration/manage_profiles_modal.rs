@@ -873,7 +873,7 @@ impl ManageProfilesModal {
                                         .inset(true)
                                         .spacing(ListItemSpacing::Sparse)
                                         .start_slot(
-                                            Icon::new(IconName::Settings)
+                                            Icon::new(dx_icon(DxUiIcon::Settings))
                                                 .size(IconSize::Small)
                                                 .color(Color::Muted),
                                         )
@@ -1086,7 +1086,7 @@ impl Render for ManageProfilesModal {
                         .pb_1()
                         .child(ProfileModalHeader::new(
                             format!("{profile_name} — Configure Built-in Tools"),
-                            Some(IconName::Settings),
+                            Some(dx_icon(DxUiIcon::Settings)),
                         ))
                         .child(ListSeparator)
                         .child(tool_picker.clone())

@@ -90,9 +90,13 @@ test("DX loading and tool surfaces use semantic icon helpers", () => {
   const conversationView = read("crates/agent_ui/src/conversation_view.rs");
   const voiceControls = read("crates/agent_ui/src/conversation_view/voice_controls.rs");
   const agentConfiguration = read("crates/agent_ui/src/agent_configuration.rs");
+  const manageProfilesModal = read(
+    "crates/agent_ui/src/agent_configuration/manage_profiles_modal.rs",
+  );
   const contextServerModal = read(
     "crates/agent_ui/src/agent_configuration/configure_context_server_modal.rs",
   );
+  const aiSettingItem = read("crates/ui/src/components/ai/ai_setting_item.rs");
   const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
   const launchWorkspace = read("crates/agent_ui/src/dx_launch_workspace.rs");
   const checkPanelView = read("crates/agent_ui/src/dx_check_panel_view.rs");
@@ -128,6 +132,9 @@ test("DX loading and tool surfaces use semantic icon helpers", () => {
   assert.match(projectPanel, /then_some\(dx_icon\(DxUiIcon::Project\)\)/);
   assert.match(agentConfiguration, /IconButton::new\("context-server-config-menu", dx_icon\(DxUiIcon::Settings\)\)/);
   assert.doesNotMatch(agentConfiguration, /IconButton::new\("context-server-config-menu", IconName::Settings\)/);
+  assert.match(manageProfilesModal, /Icon::new\(dx_icon\(DxUiIcon::Settings\)\)/);
+  assert.match(manageProfilesModal, /Some\(dx_icon\(DxUiIcon::Settings\)\)/);
+  assert.match(aiSettingItem, /IconButton::new\("menu", dx_icon\(DxUiIcon::Settings\)\)/);
 
   for (const icon of ["Search", "Plugins", "Automations", "Evidence", "Media", "Check"]) {
     assert.ok(
@@ -166,7 +173,9 @@ test("legacy loader/settings names do not leak into the DX icon contract", () =>
     "crates/agent_ui/src/conversation_view.rs",
     "crates/agent_ui/src/conversation_view/voice_controls.rs",
     "crates/agent_ui/src/agent_configuration.rs",
+    "crates/agent_ui/src/agent_configuration/manage_profiles_modal.rs",
     "crates/agent_ui/src/agent_configuration/configure_context_server_modal.rs",
+    "crates/ui/src/components/ai/ai_setting_item.rs",
     "crates/sidebar/src/sidebar.rs",
     "crates/agent_ui/src/agent_panel.rs",
     "crates/agent_ui/src/dx_launch_workspace.rs",
