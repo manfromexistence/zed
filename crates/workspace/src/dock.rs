@@ -2244,7 +2244,9 @@ impl Render for PanelButtons {
                                     let workspace_for_button = workspace_for_trigger.clone();
                                     move |_, window, cx| {
                                         window.focus(&focus_handle, cx);
-                                        if use_side_stack_click {
+                                        if is_agent_sidechat_button && agent_screen_is_zoomed {
+                                            window.dispatch_action(action.boxed_clone(), cx);
+                                        } else if use_side_stack_click {
                                             let did_change =
                                                 dock_for_button.update(cx, |dock, cx| {
                                                     if is_active_button {

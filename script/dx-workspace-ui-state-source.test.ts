@@ -436,6 +436,15 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   const workspaceToggleDock = functionBody(workspace, "toggle_dock");
   const workspaceDismissZoomed = functionBody(workspace, "dismiss_zoomed_items_to_reveal");
   const dockFocusIn = sourceWindow(dock, "cx.on_focus_in(&focus_handle", 0, 900);
+  const panelButtonsAgentClick = sourceWindow(
+    dock,
+    "if is_agent_sidechat_button && agent_screen_is_zoomed",
+    0,
+    360,
+  );
+  const toggleAgentPanelFocus = functionBody(agentPanel, "toggle_focus");
+  const focusAgentPanel = functionBody(agentPanel, "focus");
+  const toggleAgentPanel = functionBody(agentPanel, "toggle");
   const profilesSupported = functionBody(conversationView, "profiles_supported");
   assert.match(agentPanel, /"agent-toolbar-toggle-sources-rail"/);
   assert.match(agentPanel, /"agent-toolbar-toggle-progress-rail"/);
@@ -775,6 +784,26 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(dock, /zoomed_is_agent_panel\(\)/);
   assert.match(dock, /let is_agent_sidechat_button = entry\.panel\.is_agent_panel\(cx\)/);
   assert.match(dock, /!\(is_agent_sidechat_button && agent_screen_is_zoomed\)/);
+  assert.match(
+    panelButtonsAgentClick,
+    /if is_agent_sidechat_button && agent_screen_is_zoomed \{\s*window\.dispatch_action\(action\.boxed_clone\(\), cx\);\s*\} else if use_side_stack_click/s,
+    "bottom Agent sidechat button must use the Agent panel action while fullscreen AI is active instead of stacking the zoomed Agent entity",
+  );
+  assert.match(
+    toggleAgentPanelFocus,
+    /panel\.manual_zoom_override = Some\(false\);\s*if panel\.zoomed/s,
+    "ToggleFocus should always record sidechat intent before deciding whether to zoom out",
+  );
+  assert.match(
+    focusAgentPanel,
+    /panel\.manual_zoom_override = Some\(false\);\s*if panel\.zoomed/s,
+    "FocusAgent should always record sidechat intent before deciding whether to zoom out",
+  );
+  assert.match(
+    toggleAgentPanel,
+    /panel\.manual_zoom_override = Some\(false\);\s*if panel\.zoomed/s,
+    "Toggle should always record sidechat intent before deciding whether to zoom out",
+  );
   assert.doesNotMatch(messageEditor, /\.border_t_1\(\)/);
   assert.match(threadView, /\.rounded_md\(\)/);
   assert.match(threadView, /\.shadow_sm\(\)/);

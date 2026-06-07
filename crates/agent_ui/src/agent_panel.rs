@@ -1698,8 +1698,8 @@ impl AgentPanel {
         {
             if let Some(panel) = workspace.panel::<Self>(cx) {
                 panel.update(cx, |panel, cx| {
+                    panel.manual_zoom_override = Some(false);
                     if panel.zoomed {
-                        panel.manual_zoom_override = Some(false);
                         cx.emit(PanelEvent::ZoomOut);
                     }
                 });
@@ -1720,8 +1720,8 @@ impl AgentPanel {
         {
             if let Some(panel) = workspace.panel::<Self>(cx) {
                 panel.update(cx, |panel, cx| {
+                    panel.manual_zoom_override = Some(false);
                     if panel.zoomed {
-                        panel.manual_zoom_override = Some(false);
                         cx.emit(PanelEvent::ZoomOut);
                     }
                 });
@@ -1763,6 +1763,14 @@ impl AgentPanel {
             .panel::<Self>(cx)
             .is_some_and(|panel| panel.read(cx).enabled(cx))
         {
+            if let Some(panel) = workspace.panel::<Self>(cx) {
+                panel.update(cx, |panel, cx| {
+                    panel.manual_zoom_override = Some(false);
+                    if panel.zoomed {
+                        cx.emit(PanelEvent::ZoomOut);
+                    }
+                });
+            }
             if !workspace.toggle_panel_focus::<Self>(window, cx) {
                 workspace.close_panel::<Self>(window, cx);
             }
