@@ -13,7 +13,7 @@ struct GradientViewer {
 impl GradientViewer {
     fn new() -> Self {
         Self {
-            color_space: ColorSpace::default(),
+            color_space: ColorSpace::Oklab,
         }
     }
 }

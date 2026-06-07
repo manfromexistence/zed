@@ -72,6 +72,7 @@ const registeredGuardScripts = [
   "script/dx-breadcrumbs-source.test.ts",
   "script/dx-icon-picker-source.test.ts",
   "script/dx-icon-system-source.test.ts",
+  "script/dx-gpui-gradient-source.test.ts",
   "script/dx-language-selector-source.test.ts",
   "script/dx-toolchain-selector-source.test.ts",
   "script/dx-dev-container-source.test.ts",

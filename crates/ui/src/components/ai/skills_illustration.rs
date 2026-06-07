@@ -1,5 +1,4 @@
-use crate::prelude::*;
-use gpui::{linear_color_stop, linear_gradient};
+use crate::{oklab_linear_gradient, prelude::*};
 
 #[derive(IntoElement)]
 pub struct SkillsIllustration;
@@ -66,10 +65,10 @@ impl RenderOnce for SkillsIllustration {
             .absolute()
             .rounded_t_md()
             .inset_0()
-            .bg(linear_gradient(
+            .bg(oklab_linear_gradient(
                 0.,
-                linear_color_stop(gradient_bg.opacity(0.8), 0.),
-                linear_color_stop(gradient_bg.opacity(0.0), 1.),
+                gradient_bg.opacity(0.8),
+                gradient_bg.opacity(0.0),
             ));
 
         v_flex()

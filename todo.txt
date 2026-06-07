@@ -2,6 +2,7 @@ IN PROGRESS:
 - None. Runtime proof remains deferred until an explicit authorized validation pass allows `just run`/Cargo.
 
 COMPLETED:
+- Safe GPUI gradient support now has shared UI style helpers for clamped two-stop Oklab linear gradients, semantic theme gradients, panel gradients, and accent washes; shared fade/AI illustration surfaces use the helper, the GPUI gradient example starts in Oklab, and a source guard documents that mesh/noise/radial generators stay in Web Preview.
 - Agent Configuration DX Agents status/actions now use active workspace roots for Agent receipt and catalog defaults, so settings-page bridge controls prefer project-local `.dx\receipts\agents` before the shared DX fallback when settings do not explicitly override paths.
 - DX project context workspace-root candidates now reject empty, relative, and drive-relative roots before detection while preserving absolute drive and UNC roots for normalized local-first `.dx` lookup.
 - DX project context workspace-root detection now trims, normalizes, dedupes, and caps workspace roots before `detect()` can touch filesystem metadata, so duplicate or excessive roots cannot force unbounded `.is_dir()` checks.

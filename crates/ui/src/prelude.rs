@@ -15,7 +15,9 @@ pub use ui_macros::RegisterComponent;
 pub use crate::DynamicSpacing;
 pub use crate::animation::{AnimationDirection, AnimationDuration, DefaultAnimations};
 pub use crate::styles::{
-    PlatformStyle, Severity, StyledTypography, TextSize, rems_from_px, vh, vw,
+    PlatformStyle, Severity, StyledTypography, TextSize, accent_surface_gradient,
+    accent_wash_gradient, linear_gradient_stop, oklab_linear_gradient, oklab_linear_gradient_stops,
+    panel_surface_gradient, rems_from_px, theme_linear_gradient, vh, vw,
 };
 pub use crate::traits::clickable::*;
 pub use crate::traits::disableable::*;

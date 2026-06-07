@@ -27,6 +27,7 @@ This checkout is the Zed/DX editor surface. Worker chats here should focus on GP
 
 ## Current Verification Lane
 
+- Current GPUI gradient source slice: shared UI styles now expose clamped two-stop linear gradient helpers that set `ColorSpace::Oklab`, plus theme-aware panel and accent wash patterns for DX/Zed surfaces. Existing shared `GradientFade` and AI skills illustration gradients consume the helper, the GPUI gradient example starts in Oklab, and mesh/noise/radial generators remain Web Preview-owned rather than GPUI-owned. Runtime visual/native proof remains deferred until the governed validation window.
 - Current Agent Configuration bridge slice: the DX Agents settings/status section and its public/metadata bridge actions now resolve Agent receipt and catalog defaults with active workspace roots, preserving explicit settings while preferring project-local `.dx\receipts\agents` before the shared DX fallback. Live DX Agents command proof, Cargo, and `just run` remain deferred.
 - Current DX project context Windows-root slice: workspace-root candidates now reject empty, relative, and drive-relative roots before detection while preserving absolute drive and UNC roots for normalized local-first `.dx` lookup. Inaccessible-path/runtime proof, Cargo, and `just run` remain deferred.
 - Current DX project context source slice: workspace-root detection now trims, normalizes, dedupes, and caps candidates before `DxProjectContext::detect` can touch filesystem metadata, so duplicate roots do not consume the detection cap and excessive roots cannot force unbounded `is_dir()` checks. Inaccessible-path/runtime proof, Cargo, and `just run` remain deferred.
@@ -228,6 +229,7 @@ Current handoff and production-readiness guards:
 - `node --test script/dx-breadcrumbs-source.test.ts` - breadcrumb segment materialization boundaries.
 - `node --test script/dx-icon-picker-source.test.ts` - icon picker TSV sample and representative preview materialization boundaries.
 - `node --test script/dx-icon-system-source.test.ts` - DX semantic icon aliases, rebrand assets, rotating loader helper, sidebar/launch chrome mapping, and shell icon contracts.
+- `node --test script/dx-gpui-gradient-source.test.ts` - GPUI linear Oklab gradient helpers, theme-aware surface patterns, shared UI consumers, and no GPUI mesh/noise/radial generator boundary.
 - `node --test script/dx-language-selector-source.test.ts` - language selector candidate, match, stale-selection, and confirm boundaries.
 - `node --test script/dx-toolchain-selector-source.test.ts` - toolchain selector match, stale-selection, and stale candidate-id boundaries.
 - `node --test script/dx-dev-container-source.test.ts` - Dev Container template/feature picker stale match-row boundaries.

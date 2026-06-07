@@ -1,6 +1,6 @@
-use gpui::{Hsla, Pixels, SharedString, linear_color_stop, linear_gradient, px};
+use gpui::{Hsla, Pixels, SharedString, px};
 
-use crate::prelude::*;
+use crate::{linear_gradient_stop, oklab_linear_gradient_stops, prelude::*};
 
 /// A gradient overlay that fades from a solid color to transparent.
 #[derive(IntoElement)]
@@ -65,26 +65,26 @@ impl RenderOnce for GradientFade {
             .right(self.right)
             .w(self.width)
             .h_full()
-            .bg(linear_gradient(
+            .bg(oklab_linear_gradient_stops(
                 90.,
-                linear_color_stop(base_bg, stop),
-                linear_color_stop(base_bg.opacity(0.0), 0.),
+                linear_gradient_stop(base_bg, stop),
+                linear_gradient_stop(base_bg.opacity(0.0), 0.),
             ))
             .when_some(self.group_name.clone(), |element, group_name| {
                 element.group_hover(group_name, move |s| {
-                    s.bg(linear_gradient(
+                    s.bg(oklab_linear_gradient_stops(
                         90.,
-                        linear_color_stop(hover_bg, stop),
-                        linear_color_stop(hover_bg.opacity(0.0), 0.),
+                        linear_gradient_stop(hover_bg, stop),
+                        linear_gradient_stop(hover_bg.opacity(0.0), 0.),
                     ))
                 })
             })
             .when_some(self.group_name, |element, group_name| {
                 element.group_active(group_name, move |s| {
-                    s.bg(linear_gradient(
+                    s.bg(oklab_linear_gradient_stops(
                         90.,
-                        linear_color_stop(active_bg, stop),
-                        linear_color_stop(active_bg.opacity(0.0), 0.),
+                        linear_gradient_stop(active_bg, stop),
+                        linear_gradient_stop(active_bg.opacity(0.0), 0.),
                     ))
                 })
             })

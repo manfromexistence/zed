@@ -1,3 +1,23 @@
+[2026-06-07] - Safe GPUI Gradient Helpers
+
+ADDED:
+- `crates\ui\src\styles\gradient.rs` exposes clamped two-stop GPUI linear gradient helpers that use `linear_gradient`, `linear_color_stop`, and `ColorSpace::Oklab`.
+- `script\dx-gpui-gradient-source.test.ts` guards the shared helper, theme-aware surface patterns, shared UI consumers, Oklab example default, and no GPUI mesh/noise/radial generator boundary.
+
+CHANGED:
+- `crates\ui\src\components\gradient_fade.rs` and `crates\ui\src\components\ai\skills_illustration.rs` now consume the shared Oklab helpers instead of hand-building raw GPUI gradients.
+- `crates\gpui\examples\gradient.rs` now opens with Oklab interpolation selected by default while preserving the sRGB/Oklab toggle.
+- `crates\ui\src\styles.rs`, `crates\ui\src\prelude.rs`, `script\dx-handoff-source-guard-registry.test.ts`, `DX.md`, and `todo.txt` now export, register, and document the safe GPUI gradient slice.
+
+PASSED:
+- `node --test script\dx-gpui-gradient-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\ui\src\styles\gradient.rs crates\ui\src\styles.rs crates\ui\src\prelude.rs crates\ui\src\components\gradient_fade.rs crates\ui\src\components\ai\skills_illustration.rs crates\gpui\examples\gradient.rs`
+- `git diff --check`
+- `rg -n "^<<<<<<<|^=======|^>>>>>>>" ...` across the touched gradient source, guard, DX, todo, and changelog files returned no matches.
+
+NOTES:
+- This checkpoint is source-only. Cargo, `just run`, local servers, browser/WebView proof, and runtime visual proof remain skipped by instruction.
+
 [2026-06-07] - Agent Configuration Uses Workspace Agent Bridge Roots
 
 CHANGED:
