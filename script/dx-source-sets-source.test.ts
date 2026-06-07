@@ -7,12 +7,18 @@ const lineCount = (path: string) => read(path).split(/\r?\n/).length;
 
 test("DX source sets keep receipt IO and JSON field helpers in focused modules", () => {
   const parentPath = "crates/agent_ui/src/dx_source_sets.rs";
+  const attachmentSummaryPath =
+    "crates/agent_ui/src/dx_source_sets/attachment_summary.rs";
   const cachePath = "crates/agent_ui/src/dx_source_sets/cache.rs";
   const formattingPath = "crates/agent_ui/src/dx_source_sets/formatting.rs";
   const receiptsPath = "crates/agent_ui/src/dx_source_sets/receipts.rs";
   const fieldsPath = "crates/agent_ui/src/dx_source_sets/receipt_fields.rs";
   const restorePath = "crates/agent_ui/src/dx_source_sets/restore.rs";
 
+  assert.ok(
+    existsSync(attachmentSummaryPath),
+    "missing focused source-set attachment summary module",
+  );
   assert.ok(existsSync(cachePath), "missing focused source-set cache module");
   assert.ok(existsSync(formattingPath), "missing focused source-set formatting module");
   assert.ok(existsSync(receiptsPath), "missing focused source-set receipt IO module");
@@ -20,17 +26,20 @@ test("DX source sets keep receipt IO and JSON field helpers in focused modules",
   assert.ok(existsSync(restorePath), "missing focused source-set restore warning module");
 
   const parent = read(parentPath);
+  const attachmentSummary = read(attachmentSummaryPath);
   const cache = read(cachePath);
   const formatting = read(formattingPath);
   const receipts = read(receiptsPath);
   const fields = read(fieldsPath);
   const restore = read(restorePath);
 
+  assert.match(parent, /^mod attachment_summary;$/m);
   assert.match(parent, /^mod cache;$/m);
   assert.match(parent, /^mod formatting;$/m);
   assert.match(parent, /^mod receipt_fields;$/m);
   assert.match(parent, /^mod receipts;$/m);
   assert.match(parent, /^mod restore;$/m);
+  assert.match(parent, /pub\(crate\) use self::attachment_summary::DxSourceAttachmentSummary;/);
   assert.match(parent, /pub\(crate\) use self::cache::invalidate_source_set_snapshot_cache;/);
   assert.match(parent, /use self::cache::\{cached_source_set_snapshot, store_source_set_snapshot\};/);
   assert.match(
@@ -40,18 +49,25 @@ test("DX source sets keep receipt IO and JSON field helpers in focused modules",
   assert.match(parent, /use self::receipt_fields::\{/);
   assert.match(parent, /use self::receipts::\{ReceiptCandidate, latest_receipts, read_receipt_json\};/);
   assert.match(parent, /use self::restore::forge_restore_warnings;/);
+  assert.doesNotMatch(parent, /pub\(crate\) struct DxSourceAttachmentSummary/);
+  assert.doesNotMatch(parent, /fn attachment_summary\(/);
   assert.doesNotMatch(parent, /fn latest_receipts\(/);
   assert.doesNotMatch(parent, /fn read_receipt_json\(/);
   assert.doesNotMatch(parent, /fn value_at</);
   assert.doesNotMatch(parent, /fn format_bytes\(/);
   assert.doesNotMatch(parent, /fn source_set_status\(/);
   assert.doesNotMatch(parent, /fn forge_restore_warnings\(/);
+  assert.match(attachmentSummary, /pub\(crate\) struct DxSourceAttachmentSummary/);
+  assert.match(attachmentSummary, /impl DxSourceSetSnapshot/);
+  assert.match(attachmentSummary, /pub\(crate\) fn attachment_summary/);
   assert.match(formatting, /pub\(super\) fn display_name/);
   assert.match(formatting, /pub\(super\) fn format_bytes/);
   assert.match(formatting, /pub\(super\) fn source_set_status/);
   assert.match(receipts, /pub\(super\) struct ReceiptCandidate/);
   assert.match(receipts, /pub\(super\) fn latest_receipts/);
   assert.match(receipts, /pub\(super\) fn read_receipt_json/);
+  assert.match(receipts, /const LATEST_RECEIPT_ROOT_ENTRY_LIMIT: usize = 128;/);
+  assert.match(receipts, /entries\.flatten\(\)\.take\(LATEST_RECEIPT_ROOT_ENTRY_LIMIT\)/);
   assert.match(fields, /pub\(super\) fn string_at/);
   assert.match(fields, /pub\(super\) fn array_strings_at/);
   assert.match(restore, /pub\(super\) fn forge_restore_warnings/);
@@ -62,6 +78,10 @@ test("DX source sets keep receipt IO and JSON field helpers in focused modules",
   assert.match(cache, /pub\(crate\) fn invalidate_source_set_snapshot_cache/);
 
   assert.ok(lineCount(parentPath) < 420, "dx_source_sets.rs should stay a coordinator");
+  assert.ok(
+    lineCount(attachmentSummaryPath) < 55,
+    "source-set attachment summary module should stay small",
+  );
   assert.ok(lineCount(cachePath) < 60, "source-set cache module should stay small");
   assert.ok(lineCount(formattingPath) < 55, "source-set formatting module should stay small");
   assert.ok(lineCount(receiptsPath) < 90, "source-set receipt IO module should stay small");

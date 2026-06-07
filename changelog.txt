@@ -1,3 +1,21 @@
+[2026-06-07] - Bounded Receipt Latest Scan Guards
+
+ADDED:
+- `crates\agent_ui\src\dx_source_sets\attachment_summary.rs` moves source-set attachment summary projection out of the coordinator file while preserving the public read model.
+
+CHANGED:
+- `crates\agent_ui\src\dx_style_panel\apply_gate.rs`, `crates\agent_ui\src\dx_source_sets\receipts.rs`, and `crates\agent_ui\src\dx_receipt_history\receipt_files.rs` now cap root and nested latest-receipt directory iteration before metadata reads, candidate collection, or newest-first sorting.
+- `script\dx-style-panel-source.test.ts`, `script\dx-source-sets-source.test.ts`, and `script\dx-forge-panel-source.test.ts` now guard the bounded latest-scan contracts and reject the old unbounded receipt-history loop shape.
+- `DX.md` and `todo.txt` document the bounded receipt latest-scan source checkpoint.
+
+PASSED:
+- `node --test script\dx-receipt-directory-source.test.ts script\dx-forge-panel-source.test.ts script\dx-source-sets-source.test.ts script\dx-style-panel-source.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_ui\src\dx_style_panel\apply_gate.rs crates\agent_ui\src\dx_source_sets.rs crates\agent_ui\src\dx_source_sets\attachment_summary.rs crates\agent_ui\src\dx_source_sets\receipts.rs crates\agent_ui\src\dx_receipt_history\receipt_files.rs`
+- `git diff --cached --check -- crates/agent_ui/src/dx_style_panel/apply_gate.rs crates/agent_ui/src/dx_source_sets.rs crates/agent_ui/src/dx_source_sets/attachment_summary.rs crates/agent_ui/src/dx_source_sets/receipts.rs crates/agent_ui/src/dx_receipt_history/receipt_files.rs script/dx-style-panel-source.test.ts script/dx-source-sets-source.test.ts script/dx-forge-panel-source.test.ts DX.md todo.txt changelog.txt`
+- `git grep --cached -n -E "^<<<<<<<|^=======|^>>>>>>>" -- ...` across the touched receipt-scan source, guards, DX, todo, and changelog files returned no matches.
+
+NOTES:
+- This remains source-only by instruction. Cargo, `just run`, local servers, browser/WebView proof, and runtime visual validation were not run.
 [2026-06-07] - Agent Screen Item Source Routing
 
 ADDED:

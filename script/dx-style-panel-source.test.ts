@@ -4275,6 +4275,8 @@ test("DX Style has a real right-dock GPUI shell", () => {
   assert.match(applyGate, /trusted_dry_run_receipts\(\s*source_path: &str,\s*workspace_root: Option<&str>,/s);
   assert.doesNotMatch(applyGate, /DX_STYLE_PROJECT_RECEIPT_ROOT|DX_STYLE_HUB_RECEIPT_ROOT/);
   assert.match(applyGate, /latest_matching_trusted_dry_run_receipt/);
+  assert.match(applyGate, /const DRY_RUN_RECEIPT_ROOT_ENTRY_LIMIT: usize = 128/);
+  assert.match(applyGate, /entries\s*\.flatten\(\)\s*\.take\(DRY_RUN_RECEIPT_ROOT_ENTRY_LIMIT\)/);
   assert.match(applyGate, /paths\.sort_by/);
   assert.match(applyGate, /receipt_modified/);
   assert.match(applyGate, /needs_matching_active_source_receipt/);

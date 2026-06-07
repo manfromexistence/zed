@@ -8,6 +8,7 @@ use std::{
 };
 
 const MAX_RECEIPT_BYTES: u64 = 1024 * 1024;
+const LATEST_RECEIPT_ROOT_ENTRY_LIMIT: usize = 128;
 const LATEST_RECEIPT_CANDIDATE_LIMIT: usize = 64;
 
 #[derive(Clone)]
@@ -27,7 +28,7 @@ pub(super) fn latest_receipts(
     };
 
     let mut receipts = Vec::new();
-    for entry in entries.flatten() {
+    for entry in entries.flatten().take(LATEST_RECEIPT_ROOT_ENTRY_LIMIT) {
         let path = entry.path();
         if path.is_file() && is_receipt_file(&path) {
             push_latest_receipt_candidate(workspace_root, path, &mut receipts);

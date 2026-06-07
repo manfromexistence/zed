@@ -687,12 +687,16 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
 });
 
 test("Forge readers keep latest receipt edge cases visible", () => {
-  assert.match(receiptFiles, /for entry in entries\.flatten\(\) \{/);
-  assert.doesNotMatch(receiptFiles, /entries\s*\.flatten\(\)\s*\.take\(RECEIPT_HISTORY_LATEST_ROOT_ENTRY_LIMIT\)/);
-  assert.doesNotMatch(receiptFiles, /children\s*\.flatten\(\)\s*\.take\(RECEIPT_HISTORY_LATEST_NESTED_ENTRY_LIMIT\)/);
+  assert.match(receiptFiles, /const RECEIPT_HISTORY_LATEST_ROOT_ENTRY_LIMIT: usize = 64;/);
+  assert.match(receiptFiles, /const RECEIPT_HISTORY_LATEST_NESTED_ENTRY_LIMIT: usize = 64;/);
+  assert.match(receiptFiles, /entries\s*\.flatten\(\)\s*\.take\(RECEIPT_HISTORY_LATEST_ROOT_ENTRY_LIMIT\)/);
+  assert.match(receiptFiles, /children\s*\.flatten\(\)\s*\.take\(RECEIPT_HISTORY_LATEST_NESTED_ENTRY_LIMIT\)/);
+  assert.doesNotMatch(receiptFiles, /for entry in entries\.flatten\(\) \{/);
+  assert.doesNotMatch(receiptFiles, /for child in children\.flatten\(\) \{/);
+  assert.match(sourceSetReceipts, /const LATEST_RECEIPT_ROOT_ENTRY_LIMIT: usize = 128;/);
   assert.match(sourceSetReceipts, /const LATEST_RECEIPT_CANDIDATE_LIMIT: usize = 64;/);
+  assert.match(sourceSetReceipts, /entries\.flatten\(\)\.take\(LATEST_RECEIPT_ROOT_ENTRY_LIMIT\)/);
   assert.match(sourceSetReceipts, /push_latest_receipt_candidate/);
-  assert.doesNotMatch(sourceSetReceipts, /entries\.flatten\(\)\.take\(128\)/);
   assert.match(receiptFields, /array_len_field\(value, &\["restore_execution", "restore", "blockers"\]\)/);
   assert.match(receiptFields, /array_len_field\(value, &\["runner_gate", "validation", "blockers"\]\)/);
 });

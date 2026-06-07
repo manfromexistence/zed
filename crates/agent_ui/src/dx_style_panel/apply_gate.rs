@@ -19,6 +19,7 @@ use super::receipt_review::{
 use super::receipt_roots::active_style_receipt_roots;
 
 const MAX_DRY_RUN_RECEIPT_BYTES: u64 = 128 * 1024;
+const DRY_RUN_RECEIPT_ROOT_ENTRY_LIMIT: usize = 128;
 const DRY_RUN_RECEIPT_SCAN_LIMIT: usize = 64;
 
 #[derive(Clone)]
@@ -195,6 +196,7 @@ fn trusted_receipts_in(root: &Path) -> Vec<TrustedDryRunReceipt> {
 
     let mut paths = entries
         .flatten()
+        .take(DRY_RUN_RECEIPT_ROOT_ENTRY_LIMIT)
         .map(|entry| entry.path())
         .filter(|path| path.is_file() && has_receipt_extension(path))
         .collect::<Vec<_>>();
