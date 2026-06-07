@@ -261,7 +261,7 @@ impl AgentRegistryPage {
             .border_1()
             .border_color(cx.theme().colors().border)
             .rounded_md()
-            .child(Icon::new(IconName::MagnifyingGlass).color(Color::Muted))
+            .child(Icon::new(dx_icon(DxUiIcon::Search)).color(Color::Muted))
             .child(self.render_text_input(&self.query_editor, cx))
     }
 

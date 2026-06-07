@@ -110,6 +110,7 @@ test("DX loading and tool surfaces use semantic icon helpers", () => {
     "crates/agent_ui/src/agent_configuration/configure_context_server_modal.rs",
   );
   const aiSettingItem = read("crates/ui/src/components/ai/ai_setting_item.rs");
+  const agentRegistryUi = read("crates/agent_ui/src/agent_registry_ui.rs");
   const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
   const launchWorkspace = read("crates/agent_ui/src/dx_launch_workspace.rs");
   const checkPanelView = read("crates/agent_ui/src/dx_check_panel_view.rs");
@@ -161,6 +162,8 @@ test("DX loading and tool surfaces use semantic icon helpers", () => {
   assert.doesNotMatch(composerProfileOptions, /IconName::Sliders/);
   assert.match(threadView, /slot\.icon\.icon_name\(\)/);
   assert.match(threadView, /option\.icon\.icon_name\(\)/);
+  assert.match(agentRegistryUi, /Icon::new\(dx_icon\(DxUiIcon::Search\)\)/);
+  assert.doesNotMatch(agentRegistryUi, /Icon::new\(IconName::MagnifyingGlass\)/);
 
   for (const icon of ["Search", "Plugins", "Automations", "Evidence", "Media", "Check"]) {
     assert.ok(
