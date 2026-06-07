@@ -58,9 +58,13 @@ test("deploy capability receipt roots stay in a focused module", () => {
   assert.match(hubRoots, /DX_ROOT_ENV/);
   assert.match(hubRoots, /DX_HUB_ROOT_CANDIDATES/);
   assert.match(hubRoots, /r"D:\\Dx"/);
-  assert.match(hubRoots, /r"G:\\Dx"/);
+  assert.doesNotMatch(hubRoots, /r"G:\\Dx"/);
   assert.match(hubRoots, /use crate::dx_project_context::DxProjectContext;/);
   assert.match(hubRoots, /DxProjectContext::shared_fallback_root/);
+  assert.match(
+    hubRoots,
+    /\.chain\(std::iter::once\(DxProjectContext::shared_fallback_root\(\)\)\)/,
+  );
   assert.match(hubRoots, /DxProjectContext::receipt_root_for\(root, "deploy"\)/);
   assert.match(hubRoots, /pub\(crate\) fn deploy_hub_receipt_roots/);
   assert.match(hubRoots, /fn configured_dx_hub_root/);

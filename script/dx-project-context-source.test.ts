@@ -202,6 +202,7 @@ test("DX project context is wired into Check, Style, Deploy, and Web Preview DX 
   assert.match(deployCheckRoots, /DxProjectContext::receipt_root_for\(root\.as_ref\(\), "check"\)/);
   assert.match(deployHubRoots, /use crate::dx_project_context::DxProjectContext;/);
   assert.match(deployHubRoots, /DxProjectContext::shared_fallback_root/);
+  assert.doesNotMatch(deployHubRoots, /r"G:\\Dx"/);
   assert.match(deployHubRoots, /DxProjectContext::receipt_root_for\(root, "deploy"\)/);
   assert.match(receiptBuckets, /use crate::dx_project_context::DxProjectContext;/);
   assert.match(receiptBuckets, /DxProjectContext::receipts_root_candidates/);

@@ -5,7 +5,7 @@ use crate::dx_project_context::DxProjectContext;
 
 const DX_HOME_ENV: &str = "DX_HOME";
 const DX_ROOT_ENV: &str = "DX_ROOT";
-const DX_HUB_ROOT_CANDIDATES: &[&str] = &[r"D:\Dx", r"G:\Dx"];
+const DX_HUB_ROOT_CANDIDATES: &[&str] = &[r"D:\Dx"];
 
 pub(crate) struct DxDeployHubReceiptRoot {
     pub path: PathBuf,
@@ -44,6 +44,7 @@ fn existing_dx_hub_root() -> Option<PathBuf> {
     DX_HUB_ROOT_CANDIDATES
         .iter()
         .map(|root| PathBuf::from(*root))
+        .chain(std::iter::once(DxProjectContext::shared_fallback_root()))
         .find(|root| root.exists())
 }
 
