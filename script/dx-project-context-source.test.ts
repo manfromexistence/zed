@@ -155,6 +155,7 @@ test("DX project context is wired into Check, Style, Deploy, and Web Preview DX 
   const agentBridgePaths = read("crates/agent_ui/src/dx_agent_bridge/paths.rs");
   const checkReader = read("crates/agent_ui/src/dx_check_panel/reader.rs");
   const styleRoots = read("crates/agent_ui/src/dx_style_panel/receipt_roots.rs");
+  const styleReadiness = read("crates/agent_ui/src/dx_style_panel/readiness.rs");
   const deployRoots = read("crates/agent_ui/src/dx_deploy_receipt_roots.rs");
   const deployCheckRoots = read("crates/agent_ui/src/dx_deploy_check_roots.rs");
   const deployHubRoots = read("crates/agent_ui/src/dx_deploy_hub_roots.rs");
@@ -174,6 +175,11 @@ test("DX project context is wired into Check, Style, Deploy, and Web Preview DX 
     /DxProjectContext::check_receipt_candidates\(workspace_roots, DX_FALLBACK_CHECK_RECEIPT\)/,
   );
   assert.match(styleRoots, /DxProjectContext::source_scoped_receipt_roots/);
+  assert.match(styleReadiness, /use crate::dx_project_context::DxProjectContext;/);
+  assert.match(
+    styleReadiness,
+    /DxProjectContext::receipt_root_for\(DxProjectContext::shared_fallback_root\(\), "style"\)/,
+  );
   assert.doesNotMatch(
     styleRoots,
     /flat_map\(Path::ancestors\)|starts_with\(workspace_root\)|replace\('\\\\', "\/"\)/,

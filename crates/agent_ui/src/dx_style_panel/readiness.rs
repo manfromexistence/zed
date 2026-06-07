@@ -4,7 +4,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const DX_STYLE_HUB_RECEIPT_ROOT: &str = r"G:\Dx\.dx\receipts\style";
+use crate::dx_project_context::DxProjectContext;
+
 const MAX_STYLE_DOC_BYTES: u64 = 128 * 1024;
 const STYLE_RECEIPT_SCAN_LIMIT: usize = 64;
 
@@ -42,7 +43,7 @@ pub(crate) fn dx_style_readiness_snapshot(
     root_exists: bool,
 ) -> DxStyleReadinessSnapshot {
     let receipt_root = root.join(".dx/receipts/style");
-    let hub_receipt_root = PathBuf::from(DX_STYLE_HUB_RECEIPT_ROOT);
+    let hub_receipt_root = hub_style_receipt_root();
     let receipt_root_exists = receipt_root.is_dir();
     let hub_receipt_root_exists = hub_receipt_root.is_dir();
     let receipt_count =
@@ -93,6 +94,16 @@ pub(crate) fn dx_style_readiness_snapshot(
         "Wait for trusted DX Style dry-run receipts before enabling mutation controls.".to_string()
     };
     snapshot
+}
+
+fn hub_style_receipt_root() -> PathBuf {
+    DxProjectContext::receipt_root_for(DxProjectContext::shared_fallback_root(), "style")
+        .unwrap_or_else(|| {
+            DxProjectContext::shared_fallback_root()
+                .join(".dx")
+                .join("receipts")
+                .join("style")
+        })
 }
 
 fn expected_count(kind: ReadinessKind) -> usize {

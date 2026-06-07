@@ -4476,7 +4476,13 @@ test("Zed Style rail surfaces source-only DX Style readiness", () => {
   assert.match(panel, /dx_style_readiness_snapshot\(&root, root_exists\)/);
   assert.match(panel, /pub readiness: DxStyleReadinessSnapshot/);
 
-  assert.match(readiness, /const DX_STYLE_HUB_RECEIPT_ROOT: &str = r"G:\\Dx\\.dx\\receipts\\style";/);
+  assert.match(readiness, /use crate::dx_project_context::DxProjectContext;/);
+  assert.match(readiness, /fn hub_style_receipt_root\(\) -> PathBuf/);
+  assert.match(
+    readiness,
+    /DxProjectContext::receipt_root_for\(DxProjectContext::shared_fallback_root\(\), "style"\)/,
+  );
+  assert.doesNotMatch(readiness, /DX_STYLE_HUB_RECEIPT_ROOT/);
   assert.match(readiness, /mod expected_files/);
   assert.match(readinessExpectedFiles, /EXPECTED_STYLE_FILES/);
   assert.match(readinessExpectedFiles, /GROUPED_CLASS_CONTRACT_SCHEMA/);
