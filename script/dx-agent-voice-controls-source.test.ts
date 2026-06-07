@@ -422,7 +422,9 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(runtime, /FlowSpeechCancellation/);
   assert.match(runtime, /AtomicBool/);
   assert.match(runtime, /Ordering/);
-  assert.match(runtime, /G:\\\\Dx\\\\flow|DX_FLOW_ROOT|FLOW_ROOT/);
+  assert.match(runtime, /use crate::dx_project_context::DxProjectContext;/);
+  assert.match(runtime, /DX_FLOW_ROOT|FLOW_ROOT/);
+  assert.doesNotMatch(runtime, /r"G:\\Dx\\flow"|G:\\\\Dx\\\\flow/);
   assert.match(
     runtime,
     /FLOW_PARAKEET_EXECUTION_MODEL_KEY: &str = "parakeet-tdt-0\.6b-v3-int8"/,
@@ -625,6 +627,7 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(findBinary, /binary_modified_at/);
   assert.match(findBinary, /max_by_key/);
   assert.match(defaultFlowRoot, /flow_root_ready/);
+  assert.match(defaultFlowRoot, /DxProjectContext::shared_fallback_root\(\)\.join\("flow"\)/);
   assert.match(defaultFlowRoot, /join\("src"\)[\s\S]+join\("bin"\)[\s\S]+join\("flow-dictate\.rs"\)/);
   assert.doesNotMatch(defaultFlowRoot, /PARAKEET_MODEL_DIR/);
   assert.match(runtime, /RecordingTelemetry/);

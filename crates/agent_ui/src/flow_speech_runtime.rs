@@ -1,3 +1,4 @@
+use crate::dx_project_context::DxProjectContext;
 use anyhow::{Context as _, Result, anyhow};
 use cpal::{
     DeviceId, FromSample, Sample, SampleFormat, SizedSample,
@@ -1604,7 +1605,7 @@ fn resolve_flow_root(env_root: Option<PathBuf>, binary_root: Option<PathBuf>) ->
 
 fn default_flow_root() -> PathBuf {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let literal_flow_root = PathBuf::from(r"G:\Dx\flow");
+    let shared_flow_root = DxProjectContext::shared_fallback_root().join("flow");
     let mut roots = Vec::new();
 
     push_unique_flow_root(
@@ -1614,9 +1615,9 @@ fn default_flow_root() -> PathBuf {
             .nth(3)
             .map(|dx_root| dx_root.join("flow")),
     );
-    push_unique_flow_root(&mut roots, Some(literal_flow_root.clone()));
+    push_unique_flow_root(&mut roots, Some(shared_flow_root.clone()));
 
-    roots.into_iter().next().unwrap_or(literal_flow_root)
+    roots.into_iter().next().unwrap_or(shared_flow_root)
 }
 
 fn push_unique_flow_root(paths: &mut Vec<PathBuf>, path: Option<PathBuf>) {
