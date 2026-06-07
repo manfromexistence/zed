@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use super::snapshot::DxForgePanelState;
 
 const MAX_WORKSPACE_ROOTS: usize = 4;
@@ -161,17 +159,6 @@ pub(super) fn configured_root_scope(
 
     let scanned_roots = workspace_roots.len().min(MAX_WORKSPACE_ROOTS);
     format!("{configured_root_count} of {scanned_roots} scanned roots configured")
-}
-
-pub(super) fn configured_forge_root_count(workspace_roots: &[String]) -> usize {
-    workspace_roots
-        .iter()
-        .take(MAX_WORKSPACE_ROOTS)
-        .filter(|root| {
-            let root = Path::new(root);
-            root.join("tools").join("dx-forge").is_dir() || root.join(".dx").join("forge").is_dir()
-        })
-        .count()
 }
 
 pub(super) fn forge_history_root_path(

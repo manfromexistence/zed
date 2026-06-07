@@ -1,9 +1,9 @@
 use crate::dx_forge_panel::machine_cache::machine_cache_rows;
 use crate::dx_forge_panel::package_status::package_status_rows;
 use crate::dx_forge_panel::remote_registry::remote_registry_snapshot;
+use crate::dx_forge_panel::roots::configured_forge_root_count;
 use crate::dx_forge_panel::snapshot_state::{
-    ForgeStateInputs, configured_forge_root_count, forge_history_root_path, forge_state,
-    workspace_scope,
+    ForgeStateInputs, forge_history_root_path, forge_state, workspace_scope,
 };
 use crate::dx_receipt_history::{DxToolHistoryBucket, tool_history_snapshot};
 use crate::dx_source_sets::{DxSourceItem, source_set_snapshot};

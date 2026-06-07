@@ -3,12 +3,13 @@ use std::{
     collections::{BTreeMap, BTreeSet},
     fs::File,
     io::Read,
-    path::{Path, PathBuf},
+    path::Path,
     sync::{Mutex, OnceLock},
     time::{Duration, Instant},
 };
 
 use self::providers::{canonical_kind_label, catalog_provider_info, remote_providers};
+use super::roots::forge_root_contexts;
 use super::snapshot::{DxForgeReceiptDrilldown, DxForgeRemoteProvider, DxForgeSourceRow};
 
 #[path = "remote_registry/providers.rs"]
@@ -60,19 +61,24 @@ pub(super) fn invalidate_remote_registry_snapshot_cache() {
 fn scan_remote_registries(workspace_roots: &[String]) -> ForgeRemoteRegistrySnapshot {
     let mut snapshot = ForgeRemoteRegistrySnapshot::default();
 
-    for root in workspace_roots.iter().take(MAX_WORKSPACE_ROOTS) {
-        let path = Path::new(root).join(".forge").join("remotes.json");
+    for context in forge_root_contexts(workspace_roots)
+        .into_iter()
+        .take(MAX_WORKSPACE_ROOTS)
+    {
+        let path = context.forge_remote_registry_path();
         if !path.is_file() {
             continue;
         }
 
         let Some(value) = read_remote_registry_json(&path) else {
-            snapshot.rows.push(unreadable_registry_row(root, &path));
+            snapshot
+                .rows
+                .push(unreadable_registry_row(context.workspace_root(), &path));
             snapshot.warning_count += 1;
             continue;
         };
 
-        let (row, providers) = remote_registry_row(root, &path, &value);
+        let (row, providers) = remote_registry_row(context.workspace_root(), &path, &value);
         snapshot.warning_count += row.warnings.len();
         snapshot.providers.extend(providers);
         snapshot.rows.push(row);
@@ -95,7 +101,7 @@ fn read_remote_registry_json(path: &Path) -> Option<Value> {
 }
 
 fn remote_registry_row(
-    workspace_root: &str,
+    workspace_root: &Path,
     path: &Path,
     value: &Value,
 ) -> (DxForgeSourceRow, Vec<DxForgeRemoteProvider>) {
@@ -157,7 +163,7 @@ fn remote_registry_row(
     )
 }
 
-fn unreadable_registry_row(workspace_root: &str, path: &Path) -> DxForgeSourceRow {
+fn unreadable_registry_row(workspace_root: &Path, path: &Path) -> DxForgeSourceRow {
     DxForgeSourceRow {
         label: "Forge remotes".to_string(),
         detail: "remote registry unreadable or above bounded read limit".to_string(),
@@ -249,9 +255,8 @@ fn enabled(value: &Value) -> bool {
     bool_field(value, &["enabled"]).unwrap_or(true)
 }
 
-fn display_path(workspace_root: &str, path: &Path) -> String {
-    let root = PathBuf::from(workspace_root);
-    path.strip_prefix(&root)
+fn display_path(workspace_root: &Path, path: &Path) -> String {
+    path.strip_prefix(workspace_root)
         .unwrap_or(path)
         .display()
         .to_string()

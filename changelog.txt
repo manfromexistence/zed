@@ -1,3 +1,18 @@
+[2026-06-07] - Forge Readers Use Shared Project Context Roots
+
+CHANGED:
+- `crates\agent_ui\src\dx_forge_panel\roots.rs` now owns Forge root derivation from `DxProjectContext`, including package-status, remote-registry, machine-cache, configured-root, and shared fallback candidates.
+- `crates\agent_ui\src\dx_forge_panel\package_status.rs`, `remote_registry.rs`, `machine_cache.rs`, and `snapshot.rs` now use the shared Forge root context instead of rebuilding `.dx`, `.forge`, or `tools\dx-forge` paths independently.
+- `script\dx-forge-panel-source.test.ts` now guards the shared Forge root helper, shared fallback behavior, and the rule that shared fallback roots do not count as configured workspace roots.
+
+PASSED:
+- `node --test script\dx-forge-panel-source.test.ts script\dx-project-context-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_ui\src\dx_forge_panel.rs crates\agent_ui\src\dx_forge_panel\roots.rs crates\agent_ui\src\dx_forge_panel\machine_cache.rs crates\agent_ui\src\dx_forge_panel\package_status.rs crates\agent_ui\src\dx_forge_panel\remote_registry.rs crates\agent_ui\src\dx_forge_panel\snapshot.rs crates\agent_ui\src\dx_forge_panel\snapshot_state.rs`
+- `git diff --check -- crates\agent_ui\src\dx_forge_panel.rs crates\agent_ui\src\dx_forge_panel\roots.rs crates\agent_ui\src\dx_forge_panel\machine_cache.rs crates\agent_ui\src\dx_forge_panel\package_status.rs crates\agent_ui\src\dx_forge_panel\remote_registry.rs crates\agent_ui\src\dx_forge_panel\snapshot.rs crates\agent_ui\src\dx_forge_panel\snapshot_state.rs script\dx-forge-panel-source.test.ts`
+
+NOTES:
+- This remains source-only by instruction. Cargo, `just run`, local servers, browser/WebView proof, native Zed launch, and live Forge panel runtime proof remain skipped.
+
 [2026-06-07] - Semantic Icon Hotspot Source Cleanup
 
 CHANGED:

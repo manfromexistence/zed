@@ -7,6 +7,10 @@ const agentUi = readFileSync("crates/agent_ui/src/agent_ui.rs", "utf8");
 const moduleRoot = readFileSync("crates/agent_ui/src/dx_forge_panel.rs", "utf8");
 const controls = readFileSync("crates/agent_ui/src/dx_forge_panel/controls.rs", "utf8");
 const panel = readFileSync("crates/agent_ui/src/dx_forge_panel/panel.rs", "utf8");
+const rootsPath = "crates/agent_ui/src/dx_forge_panel/roots.rs";
+const roots = existsSync(rootsPath)
+  ? readFileSync(rootsPath, "utf8")
+  : "";
 const machineCachePath = "crates/agent_ui/src/dx_forge_panel/machine_cache.rs";
 const machineCache = existsSync(machineCachePath)
   ? readFileSync(machineCachePath, "utf8")
@@ -95,6 +99,7 @@ const forgeSources = [
   packageStatus,
   remoteRegistrySources,
   panel,
+  roots,
   providers,
   sourceSection,
   snapshot,
@@ -177,6 +182,57 @@ test("Forge snapshot reuses existing bounded DX readers", () => {
   );
 });
 
+test("Forge filesystem readers share DxProjectContext-derived roots", () => {
+  assert.ok(existsSync(rootsPath), "Forge root derivation must live in a focused module");
+  assert.match(moduleRoot, /mod roots;/);
+  assert.match(roots, /use crate::dx_project_context::DxProjectContext;/);
+  assert.match(roots, /pub\(super\) struct ForgeRootContext/);
+  assert.match(roots, /pub\(super\) fn forge_root_contexts\(workspace_roots: &\[String\]\)/);
+  assert.match(roots, /DxProjectContext::contexts_for_workspace_roots\(workspace_roots\)/);
+  assert.match(roots, /context\.dx_metadata_root/);
+  assert.match(roots, /context\.workspace_root/);
+  assert.match(roots, /pub\(super\) fn forge_package_status_candidates/);
+  assert.match(roots, /pub\(super\) fn forge_remote_registry_path/);
+  assert.match(roots, /pub\(super\) fn forge_machine_cache_root/);
+  assert.match(roots, /pub\(super\) fn configured_forge_root_count/);
+  assert.match(roots, /canonical_forge_root/);
+  assert.match(roots, /legacy_forge_root/);
+  assert.match(roots, /shared_fallback_forge_root/);
+  assert.match(roots, /shared_fallback_metadata_forge_root/);
+  assert.match(roots, /shared_fallback: false/);
+  assert.match(roots, /shared_fallback: true/);
+  assert.match(roots, /fn is_workspace_configured/);
+  assert.match(roots, /!self\.shared_fallback && self\.is_configured\(\)/);
+  assert.match(roots, /filter\(ForgeRootContext::is_workspace_configured\)/);
+  assert.match(roots, /PathBuf/);
+
+  assert.match(snapshot, /use crate::dx_forge_panel::roots::configured_forge_root_count;/);
+  assert.doesNotMatch(snapshotState, /Path::new\(root\)[\s\S]*join\("\.dx"\)\.join\("forge"\)/);
+  assert.doesNotMatch(snapshotState, /Path::new\(root\)[\s\S]*join\("tools"\)\.join\("dx-forge"\)/);
+  assert.match(remoteRegistry, /use super::roots::forge_root_contexts;/);
+  assert.match(remoteRegistry, /for context in forge_root_contexts\(workspace_roots\)/);
+  assert.match(remoteRegistry, /context\.forge_remote_registry_path\(\)/);
+  assert.match(packageStatus, /use super::roots::forge_root_contexts;/);
+  assert.match(packageStatus, /for context in forge_root_contexts\(workspace_roots\)/);
+  assert.match(packageStatus, /context\s*\.forge_package_status_candidates\(\)/);
+  assert.match(machineCache, /use super::roots::forge_root_contexts;/);
+  assert.match(machineCache, /for context in forge_root_contexts\(workspace_roots\)/);
+  assert.match(machineCache, /context\.forge_machine_cache_root\(\)/);
+
+  for (const [name, source] of [
+    ["remote_registry.rs", remoteRegistry],
+    ["package_status.rs", packageStatus],
+    ["machine_cache.rs", machineCache],
+    ["snapshot_state.rs", snapshotState],
+  ] as const) {
+    assert.doesNotMatch(
+      source,
+      /Path::new\(root\)\.join\("\.dx"\)|Path::new\(root\)\.join\("\.forge"\)|Path::new\(root\)\.join\("tools"\)\.join\("dx-forge"\)/,
+      `${name} should use dx_forge_panel::roots instead of rebuilding Forge roots`,
+    );
+  }
+});
+
 test("Forge panel reads package-status without runtime overclaims", () => {
   assert.ok(
     existsSync(packageStatusPath),
@@ -196,10 +252,10 @@ test("Forge panel reads package-status without runtime overclaims", () => {
   assert.match(panelView, /"Package Status"/);
   assert.match(panelView, /No Forge package status found/);
   assert.match(packageStatus, /const MAX_PACKAGE_STATUS_BYTES: u64 = 1024 \* 1024;/);
-  assert.match(packageStatus, /join\("\.dx"\)[\s\S]*\.join\("forge"\)[\s\S]*\.join\("package-status\.json"\)/);
-  assert.match(packageStatus, /join\("\.forge"\)[\s\S]*\.join\("receipts"\)[\s\S]*\.join\("package-status\.json"\)/);
+  assert.match(roots, /join\("\.dx"\)[\s\S]*\.join\("forge"\)[\s\S]*\.join\("package-status\.json"\)/);
+  assert.match(roots, /join\("\.forge"\)[\s\S]*\.join\("receipts"\)[\s\S]*\.join\("package-status\.json"\)/);
   assert.ok(
-    packageStatus.indexOf('join(".forge")') < packageStatus.indexOf('join(".dx")'),
+    roots.indexOf('join(".forge")') < roots.indexOf('join(".dx")'),
     "canonical .forge/receipts package-status should be checked before legacy .dx/forge package-status",
   );
   assert.match(packageStatus, /package_status_candidate_rows/);
@@ -291,8 +347,8 @@ test("Forge panel surfaces bounded machine-cache evidence without freshness over
   assert.match(machineCache, /summary\.scanned_directories >= MAX_MACHINE_CACHE_DIRECTORIES/);
   assert.match(machineCache, /total_entries >= MAX_MACHINE_CACHE_TOTAL_ENTRIES/);
   assert.match(machineCache, /directory_entries > MAX_MACHINE_CACHE_ENTRIES_PER_DIRECTORY/);
-  assert.match(machineCache, /let dx_root = Path::new\(root\)\.join\("\.dx"\);/);
-  assert.match(machineCache, /join\("\.dx"\)/);
+  assert.match(machineCache, /let dx_root = context\.forge_machine_cache_root\(\);/);
+  assert.match(roots, /join\("\.dx"\)/);
   assert.match(machineCache, /eq_ignore_ascii_case\("machine"\)/);
   assert.match(machineCache, /File::open\(path\)\.ok\(\)\?/);
   assert.match(machineCache, /file\.read\(&mut bytes\)\.ok\(\)\?/);
@@ -361,7 +417,7 @@ test("Forge panel reads Forge remote registry and makes provider targets concret
   assert.match(remoteRegistry, /const REMOTE_REGISTRY_CACHE_TTL: Duration = Duration::from_secs\(5\);/);
   assert.match(remoteRegistry, /const MAX_REMOTE_REGISTRY_BYTES: u64 = 256 \* 1024;/);
   assert.match(remoteRegistry, /const MAX_WORKSPACE_ROOTS: usize = 4;/);
-  assert.match(remoteRegistry, /join\("\.forge"\)[\s\S]*\.join\("remotes\.json"\)/);
+  assert.match(roots, /join\("\.forge"\)[\s\S]*\.join\("remotes\.json"\)/);
   assert.match(remoteRegistry, /File::open\(path\)\.ok\(\)\?/);
   assert.match(remoteRegistry, /file\.by_ref\(\)\s*\.take\(MAX_REMOTE_REGISTRY_BYTES \+ 1\)/);
   assert.match(remoteRegistry, /serde_json::from_slice/);
@@ -705,6 +761,7 @@ test("Forge panel files stay small and professionally named", () => {
   const lineCounts = new Map([
     ["dx_forge_panel.rs", moduleRoot],
     ["controls.rs", controls],
+    ["roots.rs", roots],
     ["machine_cache.rs", machineCache],
     ["package_status.rs", packageStatus],
     ["remote_registry.rs", remoteRegistry],

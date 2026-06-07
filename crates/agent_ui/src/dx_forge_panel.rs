@@ -6,6 +6,7 @@ mod package_status;
 mod panel_view;
 mod providers;
 mod remote_registry;
+mod roots;
 mod rows;
 mod snapshot;
 mod snapshot_state;

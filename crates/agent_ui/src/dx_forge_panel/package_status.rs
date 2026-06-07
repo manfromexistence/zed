@@ -1,45 +1,40 @@
 use serde_json::Value;
-use std::{
-    fs::File,
-    io::Read,
-    path::{Path, PathBuf},
-};
+use std::{fs::File, io::Read, path::Path};
 
+use super::roots::ForgeRootContext;
+use super::roots::forge_root_contexts;
 use super::snapshot::{DxForgeReceiptDrilldown, DxForgeSourceRow};
 
 const MAX_PACKAGE_STATUS_BYTES: u64 = 1024 * 1024;
 const MAX_WORKSPACE_ROOTS: usize = 4;
 
 pub(super) fn package_status_rows(workspace_roots: &[String]) -> Vec<DxForgeSourceRow> {
-    workspace_roots
-        .iter()
+    let mut rows = Vec::new();
+    for context in forge_root_contexts(workspace_roots)
+        .into_iter()
         .take(MAX_WORKSPACE_ROOTS)
-        .filter_map(|root| package_status_candidate_rows(root))
-        .collect()
+    {
+        if let Some(row) = package_status_candidate_rows(&context) {
+            rows.push(row);
+        }
+    }
+    rows
 }
 
-fn package_status_candidate_rows(root: &str) -> Option<DxForgeSourceRow> {
-    [
-        Path::new(root)
-            .join(".forge")
-            .join("receipts")
-            .join("package-status.json"),
-        Path::new(root)
-            .join(".dx")
-            .join("forge")
-            .join("package-status.json"),
-    ]
-    .into_iter()
-    .find_map(|path| {
-        if !path.is_file() {
-            return None;
-        }
+fn package_status_candidate_rows(context: &ForgeRootContext) -> Option<DxForgeSourceRow> {
+    context
+        .forge_package_status_candidates()
+        .into_iter()
+        .find_map(|path| {
+            if !path.is_file() {
+                return None;
+            }
 
-        Some(match read_package_status_json(&path) {
-            Some(value) => package_status_row(root, &path, &value),
-            None => unreadable_package_status_row(root, &path),
+            Some(match read_package_status_json(&path) {
+                Some(value) => package_status_row(context.workspace_root(), &path, &value),
+                None => unreadable_package_status_row(context.workspace_root(), &path),
+            })
         })
-    })
 }
 
 fn read_package_status_json(path: &Path) -> Option<Value> {
@@ -55,7 +50,7 @@ fn read_package_status_json(path: &Path) -> Option<Value> {
     serde_json::from_slice(&buffer).ok()
 }
 
-fn package_status_row(workspace_root: &str, path: &Path, value: &Value) -> DxForgeSourceRow {
+fn package_status_row(workspace_root: &Path, path: &Path, value: &Value) -> DxForgeSourceRow {
     if string_field(value, &["schema"]).as_deref() == Some("forge.package_status_receipt") {
         return forge_package_status_row(workspace_root, path, value);
     }
@@ -85,7 +80,7 @@ fn package_status_row(workspace_root: &str, path: &Path, value: &Value) -> DxFor
     }
 }
 
-fn unreadable_package_status_row(workspace_root: &str, path: &Path) -> DxForgeSourceRow {
+fn unreadable_package_status_row(workspace_root: &Path, path: &Path) -> DxForgeSourceRow {
     let warning = format!(
         "package status could not be read within {} bytes or parsed as JSON",
         MAX_PACKAGE_STATUS_BYTES
@@ -104,7 +99,7 @@ fn unreadable_package_status_row(workspace_root: &str, path: &Path) -> DxForgeSo
     }
 }
 
-fn forge_package_status_row(workspace_root: &str, path: &Path, value: &Value) -> DxForgeSourceRow {
+fn forge_package_status_row(workspace_root: &Path, path: &Path, value: &Value) -> DxForgeSourceRow {
     let package_count = usize_field(value, &["summary", "package_count"])
         .unwrap_or_else(|| package_rows(value).len());
     let valid_packages = usize_field(value, &["summary", "valid_packages"]).unwrap_or(0);
@@ -246,9 +241,8 @@ fn package_rows(value: &Value) -> &[Value] {
         .unwrap_or(&[])
 }
 
-fn display_path(workspace_root: &str, path: &Path) -> String {
-    let root = PathBuf::from(workspace_root);
-    path.strip_prefix(&root)
+fn display_path(workspace_root: &Path, path: &Path) -> String {
+    path.strip_prefix(workspace_root)
         .unwrap_or(path)
         .display()
         .to_string()

@@ -2,6 +2,7 @@ IN PROGRESS:
 - None. Runtime proof remains deferred until an explicit authorized validation pass allows `just run`/Cargo.
 
 COMPLETED:
+- Forge filesystem readers now share a `DxProjectContext`-backed root helper for package-status, remote registry, machine-cache, and configured-root detection, with shared fallback roots kept out of the workspace configured count.
 - Semantic icon hotspot cleanup is source-verified: Project Panel dock chrome, sidebar Search/Agents activity buttons, Agent Configuration MCP settings control, and Flow voice busy state now route through `DxUiIcon`/`dx_icon`, and `script\dx-icon-system-source.test.ts` guards those hotspots against raw generic literals.
 - Bounded receipt latest-scan guards are source-verified: DX Style dry-run receipts, source-set latest receipts, and receipt-history latest labels cap directory iteration before metadata/sort work, Forge guard expectations now reject the old unbounded scan, and source-set attachment summary moved out of the coordinator file.
 - Agent Screen item routing is source-verified: `FocusAgentFullscreen` now opens or focuses a real center-pane `AgentScreen` item, builder-workspace AgentPanel rails start pinned/open, Agent screens cannot split/clone, and titlebar/carousel/sidebar/onboarding screen-kind paths treat AI as a first-class screen while runtime proof remains deferred.

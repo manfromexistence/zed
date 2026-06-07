@@ -7,6 +7,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use super::roots::forge_root_contexts;
 use super::snapshot::{DxForgeReceiptDrilldown, DxForgeSourceRow};
 
 const MACHINE_CACHE_CACHE_TTL: Duration = Duration::from_secs(5);
@@ -51,21 +52,24 @@ pub(super) fn invalidate_machine_cache_snapshot_cache() {
 }
 
 fn scan_machine_cache_rows(workspace_roots: &[String]) -> Vec<DxForgeSourceRow> {
-    workspace_roots
-        .iter()
+    let mut rows = Vec::new();
+    for context in forge_root_contexts(workspace_roots)
+        .into_iter()
         .take(MAX_MACHINE_CACHE_ROOTS)
-        .filter_map(|root| {
-            let dx_root = Path::new(root).join(".dx");
-            if !dx_root.is_dir() {
-                return None;
-            }
+    {
+        let dx_root = context.forge_machine_cache_root();
+        if !dx_root.is_dir() {
+            continue;
+        }
 
-            let mut summary = MachineCacheSummary::default();
-            collect_machine_files(&dx_root, &mut summary);
-            (summary.total > 0 || summary.scan_errors > 0 || summary.truncated)
-                .then(|| machine_cache_row(root, &dx_root, summary))
-        })
-        .collect()
+        let mut summary = MachineCacheSummary::default();
+        collect_machine_files(&dx_root, &mut summary);
+        if summary.total > 0 || summary.scan_errors > 0 || summary.truncated {
+            let row = machine_cache_row(context.workspace_root(), &dx_root, summary);
+            rows.push(row);
+        }
+    }
+    rows
 }
 
 #[derive(Default)]
@@ -172,7 +176,7 @@ fn machine_family(header: &[u8; MACHINE_HEADER_BYTES], len: usize) -> MachineFam
 }
 
 fn machine_cache_row(
-    workspace_root: &str,
+    workspace_root: &Path,
     dx_root: &Path,
     summary: MachineCacheSummary,
 ) -> DxForgeSourceRow {
@@ -277,9 +281,8 @@ fn metadata_path_for(machine_path: &Path) -> PathBuf {
     machine_path.with_extension("machine.meta.json")
 }
 
-fn display_path(workspace_root: &str, path: &Path) -> String {
-    let root = PathBuf::from(workspace_root);
-    path.strip_prefix(&root)
+fn display_path(workspace_root: &Path, path: &Path) -> String {
+    path.strip_prefix(workspace_root)
         .unwrap_or(path)
         .display()
         .to_string()
