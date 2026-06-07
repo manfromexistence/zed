@@ -1,3 +1,4 @@
+use agent_settings::{AgentProfile, DxAiProfileKind};
 use ui::IconName;
 
 #[derive(Clone, Copy)]
@@ -10,11 +11,24 @@ pub(super) enum ComposerProfileKind {
 }
 
 #[derive(Clone, Copy)]
+pub(super) enum ComposerSlotControlState {
+    DisplayOnly,
+    BackendPending,
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct ComposerSlotContract {
+    pub(super) backing: &'static str,
+    pub(super) control_state: ComposerSlotControlState,
+}
+
+#[derive(Clone, Copy)]
 pub(super) struct ComposerOptionSlot {
     pub(super) id: &'static str,
     pub(super) icon: IconName,
     pub(super) label: &'static str,
     pub(super) tooltip: &'static str,
+    pub(super) contract: ComposerSlotContract,
     pub(super) options: &'static [ComposerOptionEntry],
 }
 
@@ -45,6 +59,7 @@ const fn slot(
     icon: IconName,
     label: &'static str,
     tooltip: &'static str,
+    contract: ComposerSlotContract,
     options: &'static [ComposerOptionEntry],
 ) -> ComposerOptionSlot {
     ComposerOptionSlot {
@@ -52,9 +67,40 @@ const fn slot(
         icon,
         label,
         tooltip,
+        contract,
         options,
     }
 }
+
+const ASK_CONTRACT: ComposerSlotContract = ComposerSlotContract {
+    backing: "Ask profile",
+    control_state: ComposerSlotControlState::DisplayOnly,
+};
+
+const AGENTS_CONTRACT: ComposerSlotContract = ComposerSlotContract {
+    backing: "Agent tools",
+    control_state: ComposerSlotControlState::DisplayOnly,
+};
+
+const SEARCH_CONTRACT: ComposerSlotContract = ComposerSlotContract {
+    backing: "DX MetaSearch and Web Preview evidence",
+    control_state: ComposerSlotControlState::DisplayOnly,
+};
+
+const STUDY_CONTRACT: ComposerSlotContract = ComposerSlotContract {
+    backing: "Study source receipts",
+    control_state: ComposerSlotControlState::DisplayOnly,
+};
+
+const MEDIA_RECEIPT_CONTRACT: ComposerSlotContract = ComposerSlotContract {
+    backing: "Media receipts",
+    control_state: ComposerSlotControlState::DisplayOnly,
+};
+
+const MEDIA_PROVIDER_CONTRACT: ComposerSlotContract = ComposerSlotContract {
+    backing: "Provider controls",
+    control_state: ComposerSlotControlState::BackendPending,
+};
 
 static ASK_MODEL_OPTIONS: [ComposerOptionEntry; 3] = [
     option(
@@ -182,7 +228,7 @@ static AGENT_WORKER_OPTIONS: [ComposerOptionEntry; 3] = [
     ),
 ];
 
-static MEDIA_OUTPUT_OPTIONS: [ComposerOptionEntry; 3] = [
+static MEDIA_OUTPUT_OPTIONS: [ComposerOptionEntry; 6] = [
     option(
         "media-output-image",
         IconName::Image,
@@ -200,6 +246,24 @@ static MEDIA_OUTPUT_OPTIONS: [ComposerOptionEntry; 3] = [
         IconName::AudioOn,
         "Audio",
         "Tune voice, music, timing, and transcript details.",
+    ),
+    option(
+        "media-output-music",
+        IconName::PlayOutlined,
+        "Music",
+        "Tune music style, structure, stems, and loops.",
+    ),
+    option(
+        "media-output-3d",
+        IconName::Box,
+        "3D",
+        "Tune model, material, scene, and export constraints.",
+    ),
+    option(
+        "media-output-docs",
+        IconName::FileDoc,
+        "Docs",
+        "Tune document format, source inputs, and review path.",
     ),
 ];
 
@@ -263,6 +327,27 @@ static MEDIA_QUALITY_OPTIONS: [ComposerOptionEntry; 3] = [
         IconName::CheckDouble,
         "Production",
         "Prefer final-pass output and stricter review.",
+    ),
+];
+
+static MEDIA_PROVIDER_OPTIONS: [ComposerOptionEntry; 3] = [
+    option(
+        "media-provider-readiness",
+        IconName::Warning,
+        "Readiness",
+        "Check credentials, local runners, and provider health before generation.",
+    ),
+    option(
+        "media-provider-receipts",
+        IconName::FileTextOutlined,
+        "Receipts",
+        "Use approved media plan and runner receipts before execution.",
+    ),
+    option(
+        "media-provider-budget",
+        IconName::Sliders,
+        "Budget",
+        "Keep provider cost, quality, and safety gates explicit.",
     ),
 ];
 
@@ -398,6 +483,7 @@ static ASK_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
         IconName::AiOpenAi,
         "Models",
         "Choose how many model answers Ask should compare",
+        ASK_CONTRACT,
         &ASK_MODEL_OPTIONS,
     ),
     slot(
@@ -405,6 +491,7 @@ static ASK_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
         IconName::FastForward,
         "Speed",
         "Choose the Ask response speed preference",
+        ASK_CONTRACT,
         &ASK_SPEED_OPTIONS,
     ),
     slot(
@@ -412,6 +499,7 @@ static ASK_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
         IconName::ThinkingMode,
         "Reasoning",
         "Choose the Ask reasoning depth",
+        ASK_CONTRACT,
         &ASK_REASON_OPTIONS,
     ),
 ];
@@ -422,6 +510,7 @@ static AGENTS_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
         IconName::ZedAgent,
         "Work",
         "Choose how Agents should handle workspace work",
+        AGENTS_CONTRACT,
         &AGENT_WORK_OPTIONS,
     ),
     slot(
@@ -429,6 +518,7 @@ static AGENTS_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
         IconName::ListTodo,
         "Plan",
         "Choose the Agents planning preference",
+        AGENTS_CONTRACT,
         &AGENT_PLAN_OPTIONS,
     ),
     slot(
@@ -436,16 +526,18 @@ static AGENTS_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
         IconName::UserGroup,
         "Workers",
         "Choose the Agents worker preference",
+        AGENTS_CONTRACT,
         &AGENT_WORKER_OPTIONS,
     ),
 ];
 
-static MEDIA_COMPOSER_SLOTS: [ComposerOptionSlot; 4] = [
+static MEDIA_COMPOSER_SLOTS: [ComposerOptionSlot; 5] = [
     slot(
         "media-output",
         IconName::Image,
         "Output",
         "Choose the Media output family",
+        MEDIA_PROVIDER_CONTRACT,
         &MEDIA_OUTPUT_OPTIONS,
     ),
     slot(
@@ -453,6 +545,7 @@ static MEDIA_COMPOSER_SLOTS: [ComposerOptionSlot; 4] = [
         IconName::Screen,
         "Frame",
         "Choose ratio and frame shape for Media",
+        MEDIA_PROVIDER_CONTRACT,
         &MEDIA_FRAME_OPTIONS,
     ),
     slot(
@@ -460,6 +553,7 @@ static MEDIA_COMPOSER_SLOTS: [ComposerOptionSlot; 4] = [
         IconName::Clock,
         "Time",
         "Choose duration behavior for Media",
+        MEDIA_PROVIDER_CONTRACT,
         &MEDIA_TIME_OPTIONS,
     ),
     slot(
@@ -467,7 +561,16 @@ static MEDIA_COMPOSER_SLOTS: [ComposerOptionSlot; 4] = [
         IconName::Sliders,
         "Quality",
         "Choose the Media generation quality target",
+        MEDIA_RECEIPT_CONTRACT,
         &MEDIA_QUALITY_OPTIONS,
+    ),
+    slot(
+        "media-provider",
+        IconName::Server,
+        "Provider",
+        "Choose Media provider readiness controls",
+        MEDIA_PROVIDER_CONTRACT,
+        &MEDIA_PROVIDER_OPTIONS,
     ),
 ];
 
@@ -477,6 +580,7 @@ static SEARCH_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
         IconName::MagnifyingGlass,
         "Scope",
         "Choose where Search should look",
+        SEARCH_CONTRACT,
         &SEARCH_SCOPE_OPTIONS,
     ),
     slot(
@@ -484,6 +588,7 @@ static SEARCH_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
         IconName::Clock,
         "Freshness",
         "Choose the Search freshness preference",
+        SEARCH_CONTRACT,
         &SEARCH_FRESHNESS_OPTIONS,
     ),
     slot(
@@ -491,6 +596,7 @@ static SEARCH_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
         IconName::Public,
         "Sources",
         "Choose the Search source mix",
+        SEARCH_CONTRACT,
         &SEARCH_SOURCE_OPTIONS,
     ),
 ];
@@ -501,6 +607,7 @@ static STUDY_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
         IconName::Book,
         "Sources",
         "Choose the Study source behavior",
+        STUDY_CONTRACT,
         &STUDY_SOURCE_OPTIONS,
     ),
     slot(
@@ -508,6 +615,7 @@ static STUDY_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
         IconName::Notepad,
         "Notes",
         "Choose the Study note style",
+        STUDY_CONTRACT,
         &STUDY_NOTE_OPTIONS,
     ),
     slot(
@@ -515,11 +623,27 @@ static STUDY_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
         IconName::Crosshair,
         "Practice",
         "Choose the Study practice behavior",
+        STUDY_CONTRACT,
         &STUDY_PRACTICE_OPTIONS,
     ),
 ];
 
 impl ComposerProfileKind {
+    pub(super) fn for_profile_id(profile_id: &str) -> Option<Self> {
+        let metadata = AgentProfile::dx_builtin_metadata_for_id(profile_id)?;
+        Some(Self::from_dx_kind(metadata.kind))
+    }
+
+    fn from_dx_kind(kind: DxAiProfileKind) -> Self {
+        match kind {
+            DxAiProfileKind::Ask => ComposerProfileKind::Ask,
+            DxAiProfileKind::Agents => ComposerProfileKind::Agents,
+            DxAiProfileKind::Search => ComposerProfileKind::Search,
+            DxAiProfileKind::Study => ComposerProfileKind::Study,
+            DxAiProfileKind::Media => ComposerProfileKind::Media,
+        }
+    }
+
     pub(super) fn slots(self) -> &'static [ComposerOptionSlot] {
         match self {
             ComposerProfileKind::Ask => &ASK_COMPOSER_SLOTS,

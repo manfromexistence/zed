@@ -97,7 +97,11 @@ impl Mode {
             }
         }
 
-        builtin_profiles.sort_unstable_by(|a, b| a.name.cmp(&b.name));
+        builtin_profiles.sort_unstable_by(|a, b| {
+            AgentProfile::builtin_sort_index(&a.id)
+                .cmp(&AgentProfile::builtin_sort_index(&b.id))
+                .then_with(|| a.name.cmp(&b.name))
+        });
         custom_profiles.sort_unstable_by(|a, b| a.name.cmp(&b.name));
 
         Self::ChooseProfile(ChooseProfileMode {

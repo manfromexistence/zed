@@ -407,7 +407,11 @@ impl ProfilePickerDelegate {
             }
         }
 
-        builtin_profiles.sort_unstable_by(|a, b| a.name.cmp(&b.name));
+        builtin_profiles.sort_unstable_by(|a, b| {
+            AgentProfile::builtin_sort_index(&a.id)
+                .cmp(&AgentProfile::builtin_sort_index(&b.id))
+                .then_with(|| a.name.cmp(&b.name))
+        });
         custom_profiles.sort_unstable_by(|a, b| a.name.cmp(&b.name));
         builtin_profiles.extend(custom_profiles);
         builtin_profiles
@@ -431,14 +435,7 @@ impl ProfilePickerDelegate {
     }
 
     fn documentation(candidate: &ProfileCandidate) -> Option<&'static str> {
-        match candidate.id.as_str() {
-            builtin_profiles::WRITE => Some("Use Agents for workspace edits and tool-backed work."),
-            builtin_profiles::ASK => Some("Ask questions without editing project files."),
-            builtin_profiles::MEDIA => Some("Prepare image, video, audio, and document outputs."),
-            builtin_profiles::SEARCH => Some("Search current web and workspace sources."),
-            builtin_profiles::STUDY => Some("Study sources with notebook-style context."),
-            _ => None,
-        }
+        AgentProfile::dx_builtin_metadata(&candidate.id).map(|metadata| metadata.summary)
     }
 
     fn entries_from_candidates(candidates: &[ProfileCandidate]) -> Vec<ProfilePickerEntry> {

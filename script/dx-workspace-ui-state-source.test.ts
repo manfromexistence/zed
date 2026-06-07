@@ -130,6 +130,29 @@ const sourceWindow = (
   return source.slice(Math.max(0, index - before), index + needle.length + after);
 };
 
+const objectBlock = (source: string, key: string, fromIndex = 0) => {
+  const keyIndex = source.indexOf(`"${key}": {`, fromIndex);
+  assert.ok(keyIndex >= 0, `expected object key ${key}`);
+
+  const bodyStart = source.indexOf("{", keyIndex);
+  assert.ok(bodyStart > keyIndex, `expected object body for ${key}`);
+
+  let depth = 0;
+  for (let index = bodyStart; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === "{") {
+      depth += 1;
+    } else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return source.slice(keyIndex, index + 1);
+      }
+    }
+  }
+
+  assert.fail(`expected object ${key} to close`);
+};
+
 test("history entries cap workspace path materialization before collection", () => {
   assert.match(historyManager, /const MAX_HISTORY_ENTRY_PATHS: usize = 32;/);
 
@@ -721,13 +744,26 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.doesNotMatch(profilesSupported, /supports_tools\(\)/);
   assert.match(profilesSupported, /self\.read\(cx\)\.model\(\)\.is_some\(\)/);
   assert.match(composerProfileOptions, /enum ComposerProfileKind/);
+  assert.match(composerProfileOptions, /use agent_settings::\{AgentProfile, DxAiProfileKind\};/);
+  assert.match(composerProfileOptions, /enum ComposerSlotControlState/);
+  assert.match(composerProfileOptions, /DisplayOnly/);
+  assert.match(composerProfileOptions, /BackendPending/);
+  assert.match(composerProfileOptions, /struct ComposerSlotContract/);
+  assert.match(composerProfileOptions, /pub\(super\) contract: ComposerSlotContract/);
   assert.match(composerProfileOptions, /static ASK_COMPOSER_SLOTS/);
   assert.match(composerProfileOptions, /static AGENTS_COMPOSER_SLOTS/);
-  assert.match(composerProfileOptions, /static MEDIA_COMPOSER_SLOTS: \[ComposerOptionSlot; 4\]/);
+  assert.match(composerProfileOptions, /static MEDIA_COMPOSER_SLOTS: \[ComposerOptionSlot; 5\]/);
   assert.match(composerProfileOptions, /static SEARCH_COMPOSER_SLOTS/);
   assert.match(composerProfileOptions, /static STUDY_COMPOSER_SLOTS/);
   assert.match(composerProfileOptions, /pub\(super\) id: &'static str/);
+  assert.match(composerProfileOptions, /"media-output-music"/);
+  assert.match(composerProfileOptions, /"media-output-3d"/);
+  assert.match(composerProfileOptions, /"media-output-docs"/);
+  assert.match(composerProfileOptions, /"media-provider"/);
   assert.match(composerProfileOptions, /"media-quality-production"/);
+  assert.match(composerProfileOptions, /"DX MetaSearch and Web Preview evidence"/);
+  assert.match(composerProfileOptions, /MEDIA_PROVIDER_CONTRACT[\s\S]*?BackendPending/);
+  assert.match(composerProfileOptions, /MEDIA_RECEIPT_CONTRACT[\s\S]*?DisplayOnly/);
   assert.match(threadView, /fn render_composer_option_overflow/);
   assert.match(threadView, /const MAX_VISIBLE_PROFILE_OPTION_SLOTS: usize = 4;/);
   assert.match(
@@ -744,17 +780,22 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   );
   assert.match(threadView, /fn composer_profile_kind_for_id\(profile_id: &str\) -> Option<ComposerProfileKind>/);
   assert.match(threadView, /fn composer_profile_kind\(&self, cx: &App\) -> Option<ComposerProfileKind>/);
-  assert.match(threadView, /builtin_profiles::WRITE => Some\(ComposerProfileKind::Agents\)/);
-  assert.match(threadView, /builtin_profiles::ASK\s*\|\s*builtin_profiles::LEGACY_MINIMAL\s*=>\s*\{?\s*Some\(ComposerProfileKind::Ask\)/);
-  assert.match(threadView, /builtin_profiles::MEDIA => Some\(ComposerProfileKind::Media\)/);
-  assert.match(threadView, /builtin_profiles::SEARCH => Some\(ComposerProfileKind::Search\)/);
-  assert.match(threadView, /builtin_profiles::STUDY => Some\(ComposerProfileKind::Study\)/);
+  assert.match(functionBody(threadView, "composer_profile_kind_for_id"), /ComposerProfileKind::for_profile_id\(profile_id\)/);
+  assert.match(composerProfileOptions, /DxAiProfileKind::Ask => ComposerProfileKind::Ask/);
+  assert.match(composerProfileOptions, /DxAiProfileKind::Agents => ComposerProfileKind::Agents/);
+  assert.match(composerProfileOptions, /DxAiProfileKind::Search => ComposerProfileKind::Search/);
+  assert.match(composerProfileOptions, /DxAiProfileKind::Study => ComposerProfileKind::Study/);
+  assert.match(composerProfileOptions, /DxAiProfileKind::Media => ComposerProfileKind::Media/);
   assert.doesNotMatch(functionBody(threadView, "composer_profile_kind"), /contains\(/);
   assert.doesNotMatch(functionBody(threadView, "composer_profile_kind"), /ComposerProfileKind::Agents\s*$/);
   assert.match(functionBody(threadView, "render_composer_option_overflow"), /for option in slot\.options/);
+  assert.match(threadView, /fn composer_slot_contract_row\(slot: ComposerOptionSlot\) -> AnyElement/);
+  assert.match(threadView, /No generation starts from this menu/);
+  assert.match(threadView, /Backend pending; use approved receipts or provider setup before generation\./);
+  assert.doesNotMatch(functionBody(threadView, "composer_option_menu_row"), /on_click|handler|set_profile|set_mode|update_settings_file|thread\.send/);
   assert.doesNotMatch(threadView, /fn render_dx_agent_action/);
   assert.doesNotMatch(threadView, /dx-agent-action/);
-  assert.match(threadView, /ComposerProfileKind::Agents/);
+  assert.doesNotMatch(functionBody(threadView, "composer_profile_kind_for_id"), /builtin_profiles::/);
   assert.match(profileSelector, /fn profile_display_name/);
   assert.match(profileSelector, /AgentProfile::display_name\(profile_id, name\)/);
   assert.match(profileSelector, /fn set_selected_profile\(/);
@@ -762,13 +803,22 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(profileSelector, /ProfilePickerDelegate::candidates_from\(profiles\)/);
   assert.match(profileSelector, /\.map_or\(0, \|current_index\| \(current_index \+ 1\) % candidates\.len\(\)\)/);
   assert.match(profileSelector, /provider\.set_profile\(fallback_profile_id\.clone\(\), cx\)/);
-  assert.match(profileSelector, /builtin_profiles\.sort_unstable_by/);
+  assert.match(profileSelector, /AgentProfile::builtin_sort_index\(&a\.id\)/);
+  assert.match(profileSelector, /AgentProfile::dx_builtin_metadata\(&candidate\.id\)\.map\(\|metadata\| metadata\.summary\)/);
+  assert.match(manageProfilesModal, /AgentProfile::builtin_sort_index\(&a\.id\)/);
   assert.match(profileSelector, /custom_profiles\.sort_unstable_by/);
   assert.match(profileSelector, /set_selected_profile\([\s\S]*?source = source/);
   assert.match(agentProfileSettings, /pub fn normalize_id\(/);
   assert.match(agentProfileSettings, /pub fn normalize_id_from_profiles\(/);
   assert.match(agentProfileSettings, /profile_id\.as_str\(\) == builtin_profiles::LEGACY_MINIMAL[\s\S]*?builtin_profiles::ASK/);
   assert.match(agentProfileSettings, /pub fn display_name\(/);
+  assert.match(agentProfileSettings, /enum DxAiProfileKind/);
+  assert.match(agentProfileSettings, /enum DxAiProfileBackendState/);
+  assert.match(agentProfileSettings, /struct DxAiProfileMetadata/);
+  assert.match(agentProfileSettings, /pub const DX_PROFILE_ORDER: \[&str; 5\] = \[ASK, WRITE, SEARCH, STUDY, MEDIA\]/);
+  assert.match(agentProfileSettings, /pub fn dx_builtin_metadata_for_id\(profile_id: &str\) -> Option<DxAiProfileMetadata>/);
+  assert.match(agentProfileSettings, /DxAiProfileKind::Agents/);
+  assert.match(agentProfileSettings, /DxAiProfileBackendState::ProviderPending/);
   assert.match(agentProfileSettings, /pub const MEDIA: &str = "media"/);
   assert.match(agentProfileSettings, /pub const SEARCH: &str = "search"/);
   assert.match(agentProfileSettings, /pub const STUDY: &str = "study"/);
@@ -780,17 +830,27 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(agentThread, /let profile_id = AgentProfile::normalize_id\(settings\.default_profile\.clone\(\), cx\)/);
   assert.match(agentThread, /let profile_id = AgentProfile::normalize_id\(profile_id, cx\)/);
   assert.match(functionBody(agentThread, "set_profile"), /let profile_id = AgentProfile::normalize_id\(profile_id, cx\)/);
+  const settingsProfiles = objectBlock(defaultSettings, "profiles");
+  const askProfile = objectBlock(settingsProfiles, "ask");
+  const studyProfile = objectBlock(settingsProfiles, "study");
   assert.match(defaultSettings, /"default_profile": "write"/);
   assert.match(defaultSettings, /"write": \{\s*"name": "Agents"/);
   assert.match(defaultSettings, /"ask": \{\s*"name": "Ask"/);
+  assert.doesNotMatch(askProfile, /"spawn_agent": true/);
+  assert.doesNotMatch(askProfile, /"update_plan": true/);
   assert.match(defaultSettings, /"media": \{\s*"name": "Media"/);
   assert.match(defaultSettings, /"media": \{[\s\S]*?"list_dx_launch_demo_recipes": true[\s\S]*?"plan_dx_media_tool": true[\s\S]*?"gate_dx_media_tool_runner": true[\s\S]*?"execute_dx_media_tool": true[\s\S]*?"prepare_dx_source_attachment": true/);
   assert.match(defaultSettings, /"search": \{\s*"name": "Search"/);
   assert.match(defaultSettings, /"study": \{\s*"name": "Study"/);
+  assert.match(studyProfile, /"extract_dx_metasearch_source": true[\s\S]*?"prepare_dx_source_attachment": true[\s\S]*?"prepare_dx_metasearch_context": true/);
+  assert.doesNotMatch(studyProfile, /"spawn_agent": true/);
   assert.doesNotMatch(defaultSettings, /"minimal": \{/);
-  assert.match(profileSelector, /builtin_profiles::MEDIA/);
-  assert.match(profileSelector, /builtin_profiles::SEARCH/);
-  assert.match(profileSelector, /builtin_profiles::STUDY/);
+  assert.match(agentProfileSettings, /builtin_profiles::SEARCH => Some\(DxAiProfileMetadata/);
+  assert.match(agentProfileSettings, /DxAiProfileKind::Search[\s\S]*?DxAiProfileBackendState::EvidenceBacked/);
+  assert.match(agentProfileSettings, /builtin_profiles::STUDY => Some\(DxAiProfileMetadata/);
+  assert.match(agentProfileSettings, /DxAiProfileKind::Study[\s\S]*?DxAiProfileBackendState::ReceiptBacked/);
+  assert.match(agentProfileSettings, /builtin_profiles::MEDIA => Some\(DxAiProfileMetadata/);
+  assert.match(agentProfileSettings, /DxAiProfileKind::Media[\s\S]*?DxAiProfileBackendState::ProviderPending/);
   assert.match(manageProfilesModal, /fn profile_icon\(profile_id: &AgentProfileId\) -> IconName/);
   assert.match(manageProfilesModal, /builtin_profiles::WRITE => IconName::ZedAgent/);
   assert.match(manageProfilesModal, /builtin_profiles::MEDIA => IconName::Image/);

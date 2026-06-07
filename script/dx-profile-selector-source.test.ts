@@ -50,18 +50,29 @@ test("profile candidates are capped before selector vector materialization", () 
     "fn string_candidates(candidates: &[ProfileCandidate]) -> Vec<StringMatchCandidate> {",
   );
 
+  assert.match(
+    candidatesFrom,
+    /for \(id, name\) in profiles\.into_iter\(\)\.take\(MAX_PROFILE_SELECTOR_CANDIDATES\) \{/,
+  );
   assertBefore(
     candidatesFrom,
-    ".take(MAX_PROFILE_SELECTOR_CANDIDATES)",
-    ".map(|(id, name)| ProfileCandidate",
+    "profiles.into_iter().take(MAX_PROFILE_SELECTOR_CANDIDATES)",
+    "let candidate = ProfileCandidate {",
     "profile candidates must be capped before candidate rows are allocated",
   );
   assertBefore(
     candidatesFrom,
-    ".take(MAX_PROFILE_SELECTOR_CANDIDATES)",
-    ".collect()",
-    "profile candidates must be capped before Vec materialization",
+    "profiles.into_iter().take(MAX_PROFILE_SELECTOR_CANDIDATES)",
+    "builtin_profiles.push(candidate)",
+    "builtin profile rows must be capped before vector push",
   );
+  assertBefore(
+    candidatesFrom,
+    "profiles.into_iter().take(MAX_PROFILE_SELECTOR_CANDIDATES)",
+    "custom_profiles.push(candidate)",
+    "custom profile rows must be capped before vector push",
+  );
+  assert.doesNotMatch(candidatesFrom, /\.collect\(\)/);
 });
 
 test("string-match candidates and fuzzy results are bounded before search vectors", () => {

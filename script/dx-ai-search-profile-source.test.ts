@@ -52,6 +52,37 @@ test("Search profile exposes only evidence-first DX metasearch tools", () => {
   const searchProfile = objectBlock(profiles, "search");
   const searchTools = objectBlock(searchProfile, "tools");
 
+  assert.match(searchProfile, /"enable_all_context_servers": false/);
+
+  const enabledSearchTools = [...searchTools.matchAll(/"([^"]+)": true/g)]
+    .map(([, tool]) => tool)
+    .sort();
+  assert.deepEqual(
+    enabledSearchTools,
+    [
+      "diagnostics",
+      "extract_dx_metasearch_source",
+      "fetch",
+      "find_path",
+      "find_references",
+      "get_code_actions",
+      "go_to_definition",
+      "grep",
+      "inspect_dx_metasearch",
+      "list_agent_plugins",
+      "list_directory",
+      "prepare_agent_plugin_runtime",
+      "prepare_dx_metasearch_context",
+      "prepare_dx_source_attachment",
+      "read_file",
+      "search_dx_metasearch",
+      "search_web",
+      "skill",
+      "update_plan",
+      "update_title",
+    ].sort(),
+  );
+
   for (const tool of [
     "inspect_dx_metasearch",
     "search_dx_metasearch",

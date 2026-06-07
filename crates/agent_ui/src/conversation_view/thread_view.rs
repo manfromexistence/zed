@@ -9,7 +9,7 @@ use std::{cell::RefCell, ops::Range};
 
 use acp_thread::{ContentBlock, PlanEntry};
 use agent::{SkillLoadingError, SkillLoadingErrorsUpdated};
-use agent_settings::{UserAgentsMd, builtin_profiles};
+use agent_settings::UserAgentsMd;
 use cloud_api_types::{SubmitAgentThreadFeedbackBody, SubmitAgentThreadFeedbackCommentsBody};
 use editor::actions::OpenExcerpts;
 use feature_flags::AcpBetaFeatureFlag;
@@ -4116,16 +4116,7 @@ impl ThreadView {
     }
 
     fn composer_profile_kind_for_id(profile_id: &str) -> Option<ComposerProfileKind> {
-        match profile_id {
-            builtin_profiles::WRITE => Some(ComposerProfileKind::Agents),
-            builtin_profiles::ASK | builtin_profiles::LEGACY_MINIMAL => {
-                Some(ComposerProfileKind::Ask)
-            }
-            builtin_profiles::MEDIA => Some(ComposerProfileKind::Media),
-            builtin_profiles::SEARCH => Some(ComposerProfileKind::Search),
-            builtin_profiles::STUDY => Some(ComposerProfileKind::Study),
-            _ => None,
-        }
+        ComposerProfileKind::for_profile_id(profile_id)
     }
 
     fn render_composer_option_slot(slot: ComposerOptionSlot) -> AnyElement {
@@ -4150,10 +4141,13 @@ impl ThreadView {
                     cx,
                     move |mut menu, _window, _cx| {
                         menu = menu.header(slot.label);
+                        menu =
+                            menu.custom_row(move |_window, _cx| composer_slot_contract_row(slot));
                         for option in slot.options {
                             let option = *option;
-                            menu = menu
-                                .custom_row(move |_window, _cx| composer_option_menu_row(option));
+                            menu = menu.custom_row(move |_window, _cx| {
+                                composer_option_menu_row(slot, option)
+                            });
                         }
                         menu
                     },
@@ -4187,10 +4181,12 @@ impl ThreadView {
                         for slot in slots {
                             let slot = *slot;
                             menu = menu.header(slot.label);
+                            menu = menu
+                                .custom_row(move |_window, _cx| composer_slot_contract_row(slot));
                             for option in slot.options {
                                 let option = *option;
                                 menu = menu.custom_row(move |_window, _cx| {
-                                    composer_option_menu_row(option)
+                                    composer_option_menu_row(slot, option)
                                 });
                             }
                         }
@@ -11164,7 +11160,49 @@ impl Render for ThreadView {
     }
 }
 
-fn composer_option_menu_row(option: ComposerOptionEntry) -> AnyElement {
+fn composer_slot_contract_row(slot: ComposerOptionSlot) -> AnyElement {
+    let (icon, color, detail) = match slot.contract.control_state {
+        super::composer_profile_options::ComposerSlotControlState::DisplayOnly => (
+            IconName::Info,
+            Color::Muted,
+            format!(
+                "Backed by {}. Choices are request guidance until session metadata wiring is available.",
+                slot.contract.backing
+            ),
+        ),
+        super::composer_profile_options::ComposerSlotControlState::BackendPending => (
+            IconName::Warning,
+            Color::Warning,
+            format!(
+                "{} backend is pending. No generation starts from this menu.",
+                slot.contract.backing
+            ),
+        ),
+    };
+
+    h_flex()
+        .id(format!("agent-composer-slot-contract-{}", slot.id))
+        .min_w(rems(16.))
+        .max_w(rems(26.))
+        .gap_2()
+        .child(Icon::new(icon).size(IconSize::Small).color(color))
+        .child(
+            Label::new(detail)
+                .size(LabelSize::XSmall)
+                .color(color)
+                .line_height_style(LineHeightStyle::UiLabel),
+        )
+        .into_any_element()
+}
+
+fn composer_option_menu_row(slot: ComposerOptionSlot, option: ComposerOptionEntry) -> AnyElement {
+    let detail = match slot.contract.control_state {
+        super::composer_profile_options::ComposerSlotControlState::DisplayOnly => option.detail,
+        super::composer_profile_options::ComposerSlotControlState::BackendPending => {
+            "Backend pending; use approved receipts or provider setup before generation."
+        }
+    };
+
     h_flex()
         .id(format!("agent-composer-option-{}", option.id))
         .min_w(rems(16.))
@@ -11180,7 +11218,7 @@ fn composer_option_menu_row(option: ComposerOptionEntry) -> AnyElement {
                 .gap_0p5()
                 .child(Label::new(option.label).size(LabelSize::Small))
                 .child(
-                    Label::new(option.detail)
+                    Label::new(detail)
                         .size(LabelSize::XSmall)
                         .color(Color::Muted)
                         .line_height_style(LineHeightStyle::UiLabel),
