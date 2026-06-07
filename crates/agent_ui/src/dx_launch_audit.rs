@@ -9,6 +9,7 @@ use self::review::{command_fanout_count, redaction_requires_review};
 use self::status_summaries::{
     status_agent_summary, status_discovery_summary, status_token_summary,
 };
+use crate::dx_project_context::DxProjectContext;
 use serde_json::Value;
 use std::{
     path::{Path, PathBuf},
@@ -16,7 +17,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-const DX_LAUNCH_EXAMPLES_ROOT: &str = r"G:\Dx\cli\fixtures\launch-examples";
 const SCHEMAS_FILE: &str = "schemas.json";
 const FIXTURES_FILE: &str = "fixtures.json";
 const SMOKE_FILE: &str = "smoke.json";
@@ -141,7 +141,7 @@ fn bounded_row(value: String) -> String {
 }
 
 fn scan_launch_audit() -> DxLaunchAuditSnapshot {
-    let root = PathBuf::from(DX_LAUNCH_EXAMPLES_ROOT);
+    let root = DxProjectContext::shared_launch_examples_root();
     let schemas_path = root.join(SCHEMAS_FILE);
     let fixtures_path = root.join(FIXTURES_FILE);
     let smoke_path = root.join(SMOKE_FILE);

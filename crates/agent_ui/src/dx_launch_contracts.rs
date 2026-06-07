@@ -7,6 +7,7 @@ use self::fields::{
 };
 use self::packets::read_json_packet;
 use self::review::redaction_requires_review;
+use crate::dx_project_context::DxProjectContext;
 use serde_json::Value;
 use std::{
     path::PathBuf,
@@ -14,7 +15,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-const DX_LAUNCH_EXAMPLES_ROOT: &str = r"G:\Dx\cli\fixtures\launch-examples";
 const IMPORT_MANIFEST_FILE: &str = "import-manifest.json";
 const HANDOFF_FILE: &str = "handoff.json";
 const IMPORT_MANIFEST_SCHEMA: &str = "dx.launch.import_manifest.v1";
@@ -116,7 +116,7 @@ fn compact_display_strings(values: Vec<String>) -> Vec<String> {
 }
 
 fn scan_launch_contracts() -> DxLaunchContractSnapshot {
-    let root = PathBuf::from(DX_LAUNCH_EXAMPLES_ROOT);
+    let root = DxProjectContext::shared_launch_examples_root();
     let manifest_path = root.join(IMPORT_MANIFEST_FILE);
     let handoff_path = root.join(HANDOFF_FILE);
     let manifest_present = manifest_path.is_file();

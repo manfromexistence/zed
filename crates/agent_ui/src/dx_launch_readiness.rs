@@ -10,6 +10,7 @@ use self::packet_fields::{
 };
 use self::packets::read_checked_packet;
 use self::review::{command_fanout_count, redaction_requires_review};
+use crate::dx_project_context::DxProjectContext;
 use serde_json::Value;
 use std::{
     path::PathBuf,
@@ -17,7 +18,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-const DX_LAUNCH_EXAMPLES_ROOT: &str = r"G:\Dx\cli\fixtures\launch-examples";
 const IMPORT_SUMMARY_SCHEMA: &str = "dx.launch.import_summary.v1";
 const RELEASE_GATE_SCHEMA: &str = "dx.launch.release_gate.v1";
 const FALLBACK_DRILL_SCHEMA: &str = "dx.launch.fallback_drill.v1";
@@ -118,7 +118,7 @@ pub(crate) fn launch_readiness_snapshot() -> DxLaunchReadinessSnapshot {
 }
 
 fn scan_launch_readiness() -> DxLaunchReadinessSnapshot {
-    let root = PathBuf::from(DX_LAUNCH_EXAMPLES_ROOT);
+    let root = DxProjectContext::shared_launch_examples_root();
     let root_exists = root.is_dir();
     let mut snapshot = DxLaunchReadinessSnapshot {
         root: root.clone(),

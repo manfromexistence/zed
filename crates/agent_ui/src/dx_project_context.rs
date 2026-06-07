@@ -266,6 +266,13 @@ impl DxProjectContext {
     pub fn shared_fallback_root() -> PathBuf {
         PathBuf::from(DX_SHARED_FALLBACK_ROOT)
     }
+
+    pub fn shared_launch_examples_root() -> PathBuf {
+        Self::shared_fallback_root()
+            .join("cli")
+            .join("fixtures")
+            .join("launch-examples")
+    }
 }
 
 pub fn normalize_project_root(path: &Path) -> Option<PathBuf> {
