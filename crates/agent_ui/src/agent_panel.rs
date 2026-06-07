@@ -1119,6 +1119,12 @@ enum WhichFontSize {
     None,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum AgentPanelHostKind {
+    Sidechat,
+    BuilderWorkspace,
+}
+
 impl BaseView {
     pub fn which_font_size_used(&self) -> WhichFontSize {
         match self {
@@ -1166,6 +1172,7 @@ pub struct AgentPanel {
     dx_launch_workspace_status_cache: Option<DxLaunchWorkspaceStatusCache>,
     dx_launch_workspace_status_refresh_pending: bool,
     dx_launch_workspace_status_refresh_generation: u64,
+    host_kind: AgentPanelHostKind,
     zoomed: bool,
     manual_zoom_override: Option<bool>,
     pending_serialization: Option<Task<Result<()>>>,
@@ -1660,8 +1667,9 @@ impl AgentPanel {
             dx_launch_workspace_status_cache: None,
             dx_launch_workspace_status_refresh_pending: false,
             dx_launch_workspace_status_refresh_generation: 0,
+            host_kind: AgentPanelHostKind::Sidechat,
             zoomed: false,
-            manual_zoom_override: None,
+            manual_zoom_override: Some(false),
             pending_serialization: None,
             new_user_onboarding: onboarding,
             thread_store,
@@ -1693,6 +1701,7 @@ impl AgentPanel {
         cx: &mut Context<Self>,
     ) -> Self {
         let mut panel = Self::new(workspace, window, cx);
+        panel.host_kind = AgentPanelHostKind::BuilderWorkspace;
         panel.manual_zoom_override = Some(true);
         panel.fullscreen_sources_rail_open = true;
         panel.fullscreen_progress_rail_open = true;
@@ -1714,7 +1723,7 @@ impl AgentPanel {
         {
             if let Some(panel) = workspace.panel::<Self>(cx) {
                 panel.update(cx, |panel, cx| {
-                    panel.manual_zoom_override = Some(false);
+                    panel.activate_sidechat_host();
                     if panel.zoomed {
                         cx.emit(PanelEvent::ZoomOut);
                     }
@@ -1736,7 +1745,7 @@ impl AgentPanel {
         {
             if let Some(panel) = workspace.panel::<Self>(cx) {
                 panel.update(cx, |panel, cx| {
-                    panel.manual_zoom_override = Some(false);
+                    panel.activate_sidechat_host();
                     if panel.zoomed {
                         cx.emit(PanelEvent::ZoomOut);
                     }
@@ -1767,7 +1776,7 @@ impl AgentPanel {
         {
             if let Some(panel) = workspace.panel::<Self>(cx) {
                 panel.update(cx, |panel, cx| {
-                    panel.manual_zoom_override = Some(false);
+                    panel.activate_sidechat_host();
                     if panel.zoomed {
                         cx.emit(PanelEvent::ZoomOut);
                     }
@@ -5030,12 +5039,22 @@ impl Panel for AgentPanel {
 
     fn set_zoomed(&mut self, zoomed: bool, _window: &mut Window, cx: &mut Context<Self>) {
         self.zoomed = zoomed;
+        self.host_kind = if zoomed {
+            AgentPanelHostKind::BuilderWorkspace
+        } else {
+            AgentPanelHostKind::Sidechat
+        };
         self.manual_zoom_override = Some(zoomed);
         cx.notify();
     }
 }
 
 impl AgentPanel {
+    fn activate_sidechat_host(&mut self) {
+        self.host_kind = AgentPanelHostKind::Sidechat;
+        self.manual_zoom_override = Some(false);
+    }
+
     fn ensure_thread_initialized(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if matches!(self.base_view, BaseView::Uninitialized) {
             if self.pending_terminal_spawn.is_some() {
@@ -7880,8 +7899,11 @@ impl AgentPanel {
     }
 
     fn should_render_dx_launch_chrome(&self, cx: &App) -> bool {
-        self.manual_zoom_override
-            .unwrap_or_else(|| self.zoomed || self.workspace_has_no_editor_file(cx))
+        self.manual_zoom_override.unwrap_or_else(|| {
+            matches!(self.host_kind, AgentPanelHostKind::BuilderWorkspace)
+                || self.zoomed
+                || self.workspace_has_no_editor_file(cx)
+        })
     }
 
     fn key_context(&self) -> KeyContext {

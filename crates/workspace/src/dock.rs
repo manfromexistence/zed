@@ -1,4 +1,5 @@
 use crate::focus_follows_mouse::FocusFollowsMouse as _;
+use crate::item::WorkspaceScreenKind;
 use crate::persistence::model::DockData;
 use crate::status_bar::HideStatusItem;
 use crate::{DraggedDock, Event, FocusFollowsMouse, ModalLayer, Pane, WorkspaceSettings};
@@ -2012,9 +2013,13 @@ impl Render for PanelButtons {
 
         let dock_entity = self.dock.clone();
         let workspace = dock.workspace.clone();
-        let agent_screen_is_zoomed = workspace
-            .upgrade()
-            .is_some_and(|workspace| workspace.read(cx).zoomed_is_agent_panel());
+        let agent_screen_is_active = workspace.upgrade().is_some_and(|workspace| {
+            let workspace = workspace.read(cx);
+            workspace.zoomed_is_agent_panel()
+                || workspace
+                    .active_item(cx)
+                    .is_some_and(|item| item.screen_kind(cx) == WorkspaceScreenKind::Agent)
+        });
         let mut buttons: Vec<_> = dock
             .panel_entries
             .iter()
@@ -2044,7 +2049,7 @@ impl Render for PanelButtons {
 
                 let is_active_button = Some(i) == active_index
                     && is_open
-                    && !(is_agent_sidechat_button && agent_screen_is_zoomed);
+                    && !(is_agent_sidechat_button && agent_screen_is_active);
                 let (action, tooltip) = if is_active_button {
                     let action = dock.toggle_action();
 
@@ -2244,7 +2249,7 @@ impl Render for PanelButtons {
                                     let workspace_for_button = workspace_for_trigger.clone();
                                     move |_, window, cx| {
                                         window.focus(&focus_handle, cx);
-                                        if is_agent_sidechat_button && agent_screen_is_zoomed {
+                                        if is_agent_sidechat_button && agent_screen_is_active {
                                             window.dispatch_action(action.boxed_clone(), cx);
                                         } else if use_side_stack_click {
                                             let did_change =
