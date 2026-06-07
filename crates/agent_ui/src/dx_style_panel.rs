@@ -32,8 +32,8 @@ mod source_digest;
 
 use self::readiness::{DxStyleReadinessSnapshot, dx_style_readiness_snapshot};
 
-const DX_STYLE_ROOT: &str = r"G:\Dx\style";
-const DX_ZED_ROOT: &str = r"G:\Dx\zed";
+use crate::dx_project_context::DxProjectContext;
+
 const DX_STYLE_CACHE_TTL: Duration = Duration::from_secs(5);
 const MAX_TEXT_BYTES: u64 = 128 * 1024;
 const MAX_WEB_PREVIEW_HOST_BYTES: u64 = 4 * 1024 * 1024;
@@ -92,7 +92,7 @@ pub(crate) fn dx_style_panel_snapshot() -> DxStylePanelSnapshot {
 }
 
 fn scan_dx_style_panel() -> DxStylePanelSnapshot {
-    let root = PathBuf::from(DX_STYLE_ROOT);
+    let root = dx_style_root();
     let plan_path = root.join("PLAN.md");
     let grouped_contract_path = root
         .join("src")
@@ -148,7 +148,7 @@ fn scan_dx_style_panel() -> DxStylePanelSnapshot {
         .join("fixtures")
         .join("grouped-class-source-apply-contract.json");
     let group_registry_path = root.join("src").join("core").join("group").join("mod.rs");
-    let zed_root = PathBuf::from(DX_ZED_ROOT);
+    let zed_root = dx_zed_root();
     let web_preview_host_path = zed_root
         .join("crates")
         .join("web_preview")
@@ -379,7 +379,10 @@ fn scan_dx_style_panel() -> DxStylePanelSnapshot {
     let (status, next_action) = if !root_exists {
         (
             "Missing dx-style root".to_string(),
-            format!("Create or mount {DX_STYLE_ROOT} before enabling the Style panel"),
+            format!(
+                "Create or mount {} before enabling the Style panel",
+                root.display()
+            ),
         )
     } else if !grouped_contract_ready {
         (
@@ -564,6 +567,14 @@ fn scan_dx_style_panel() -> DxStylePanelSnapshot {
         rows,
         warnings,
     }
+}
+
+fn dx_style_root() -> PathBuf {
+    DxProjectContext::shared_fallback_root().join("style")
+}
+
+fn dx_zed_root() -> PathBuf {
+    DxProjectContext::shared_fallback_root().join("zed")
 }
 
 fn read_text_limited(path: &Path) -> Option<String> {

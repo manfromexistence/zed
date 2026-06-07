@@ -154,6 +154,7 @@ test("DX project context is wired into Check, Style, Deploy, and Web Preview DX 
   const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
   const agentBridgePaths = read("crates/agent_ui/src/dx_agent_bridge/paths.rs");
   const checkReader = read("crates/agent_ui/src/dx_check_panel/reader.rs");
+  const stylePanel = read("crates/agent_ui/src/dx_style_panel.rs");
   const styleRoots = read("crates/agent_ui/src/dx_style_panel/receipt_roots.rs");
   const styleReadiness = read("crates/agent_ui/src/dx_style_panel/readiness.rs");
   const deployRoots = read("crates/agent_ui/src/dx_deploy_receipt_roots.rs");
@@ -179,6 +180,9 @@ test("DX project context is wired into Check, Style, Deploy, and Web Preview DX 
     /DxProjectContext::receipt_root_for\(DxProjectContext::shared_fallback_root\(\), "check"\)/,
   );
   assert.match(styleRoots, /DxProjectContext::source_scoped_receipt_roots/);
+  assert.match(stylePanel, /use crate::dx_project_context::DxProjectContext;/);
+  assert.match(stylePanel, /DxProjectContext::shared_fallback_root\(\)\.join\("style"\)/);
+  assert.match(stylePanel, /DxProjectContext::shared_fallback_root\(\)\.join\("zed"\)/);
   assert.match(styleReadiness, /use crate::dx_project_context::DxProjectContext;/);
   assert.match(
     styleReadiness,
