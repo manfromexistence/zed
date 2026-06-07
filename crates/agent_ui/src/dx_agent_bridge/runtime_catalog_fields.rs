@@ -54,13 +54,19 @@ fn receipt_status(
     model_value: Option<&Value>,
     root_exists: bool,
 ) -> String {
-    first_receipt_string(provider_value, model_value, &["status"]).unwrap_or_else(|| {
-        if root_exists {
-            "waiting_for_provider_receipt".to_string()
-        } else {
-            "missing_receipt_root".to_string()
-        }
-    })
+    if provider_value.is_none() {
+        return receipt_unavailable_status(root_exists).to_string();
+    }
+
+    first_receipt_string(provider_value, model_value, &["status"])
+        .unwrap_or_else(|| receipt_unavailable_status(root_exists).to_string())
+}
+
+fn receipt_unavailable_status(root_exists: bool) -> &'static str {
+    match root_exists {
+        true => "waiting_for_provider_receipt",
+        false => "missing_receipt_root",
+    }
 }
 
 fn readiness_count(

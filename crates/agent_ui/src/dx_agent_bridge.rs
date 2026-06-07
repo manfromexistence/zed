@@ -14,6 +14,7 @@ const DEFAULT_PROVIDER_CATALOG_PATH: &str = r"G:\Dx\.dx\catalog\agents\provider-
 const SNAPSHOT_CACHE_TTL: Duration = Duration::from_secs(5);
 const MAX_RECEIPT_BYTES: u64 = 128 * 1024;
 
+mod catalog_active_provider_label;
 mod catalog_labels;
 mod command_receipts;
 mod command_safety;
@@ -29,8 +30,11 @@ use self::command_safety::{
 };
 use self::local_files::{dx_home_from_receipt_root, latest_receipts, read_first_json, read_json};
 
+pub(crate) use self::catalog_active_provider_label::{
+    catalog_active_provider_label, catalog_active_provider_value_label,
+};
 pub(crate) use self::catalog_labels::{
-    catalog_active_provider_label, catalog_cache_state_label, catalog_detail_label,
+    catalog_cache_state_label, catalog_detail_label, catalog_receipt_status_label,
 };
 pub(crate) use self::commands::{
     DxAgentMetadataCommand, DxAgentPublicCommand, run_dx_agent_metadata_command,

@@ -84,6 +84,7 @@ test("DX Agents catalog configuration copy separates inventory from readiness", 
   const renderer = source.slice(functionStart, functionEnd);
 
   assert.match(renderer, /catalog_detail_label\(&snapshot\.catalog\)/);
+  assert.match(renderer, /catalog_receipt_status_label\(&snapshot\.catalog\.receipt_status\)/);
   assert.match(renderer, /catalog_active_provider_label\(&snapshot\.catalog, &snapshot\.providers\)/);
   assert.match(renderer, /Catalog Inventory/);
   assert.match(renderer, /Receipt status:/);

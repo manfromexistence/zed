@@ -1,16 +1,14 @@
 use gpui::AnyElement;
 
 use crate::dx_agent_bridge::{
-    DxAgentBridgeSnapshot, catalog_active_provider_label, catalog_cache_state_label,
-    catalog_detail_label,
+    DxAgentBridgeSnapshot, catalog_active_provider_value_label, catalog_cache_state_label,
+    catalog_detail_label, catalog_receipt_status_label,
 };
 
 use super::super::super::metric_row;
+use super::{VISIBLE_MODEL_ROW_LIMIT, VISIBLE_PROVIDER_ROW_LIMIT};
 
-pub(super) fn dx_agent_provider_summary_rows(
-    snapshot: &DxAgentBridgeSnapshot,
-    model_count: usize,
-) -> Vec<AnyElement> {
+pub(super) fn dx_agent_provider_summary_rows(snapshot: &DxAgentBridgeSnapshot) -> Vec<AnyElement> {
     let mut rows = vec![
         metric_row("Catalog summary", catalog_detail_label(&snapshot.catalog)),
         metric_row(
@@ -25,14 +23,23 @@ pub(super) fn dx_agent_provider_summary_rows(
             "Enabled candidates",
             snapshot.catalog.enabled_provider_count.to_string(),
         ),
-        metric_row("Provider rows shown", snapshot.providers.len().to_string()),
-        metric_row("Catalog models", model_count.to_string()),
-        metric_row("Model rows shown", snapshot.models.len().to_string()),
         metric_row(
-            "Active provider",
-            catalog_active_provider_label(&snapshot.catalog, &snapshot.providers),
+            "Provider rows shown",
+            visible_row_count_label(snapshot.providers.len(), VISIBLE_PROVIDER_ROW_LIMIT),
         ),
-        metric_row("Receipt status", snapshot.catalog.receipt_status.clone()),
+        metric_row("Catalog models", snapshot.catalog.model_count.to_string()),
+        metric_row(
+            "Model rows shown",
+            visible_row_count_label(snapshot.models.len(), VISIBLE_MODEL_ROW_LIMIT),
+        ),
+        metric_row(
+            "Catalog active provider",
+            catalog_active_provider_value_label(&snapshot.catalog, &snapshot.providers),
+        ),
+        metric_row(
+            "Receipt status",
+            catalog_receipt_status_label(&snapshot.catalog.receipt_status),
+        ),
         metric_row("Catalog path", snapshot.catalog.path.display().to_string()),
         metric_row("Fast cache", catalog_cache_state_label(&snapshot.catalog)),
     ];
@@ -42,4 +49,13 @@ pub(super) fn dx_agent_provider_summary_rows(
     }
 
     rows
+}
+
+fn visible_row_count_label(total: usize, limit: usize) -> String {
+    let visible = total.min(limit);
+    if total > limit {
+        format!("{visible} of {total}")
+    } else {
+        visible.to_string()
+    }
 }

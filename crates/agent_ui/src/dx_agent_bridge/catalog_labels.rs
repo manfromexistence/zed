@@ -1,12 +1,10 @@
-use super::{DxAgentCatalogSummary, DxAgentProvider};
+use super::DxAgentCatalogSummary;
 
 pub(crate) fn catalog_cache_state_label(summary: &DxAgentCatalogSummary) -> &'static str {
-    if summary.present && !summary.stale {
-        "fast cache ready"
-    } else if summary.present {
-        "cache stale"
-    } else {
-        "cache missing"
+    match (summary.present, summary.stale) {
+        (true, false) => "fast cache ready",
+        (true, true) => "cache stale",
+        (false, _) => "cache missing",
     }
 }
 
@@ -18,34 +16,23 @@ pub(crate) fn catalog_detail_label(summary: &DxAgentCatalogSummary) -> String {
         summary.enabled_provider_count,
         summary.model_count,
         catalog_cache_state_label(summary),
-        summary.receipt_status
+        catalog_receipt_status_label(&summary.receipt_status)
     )
 }
 
-pub(crate) fn catalog_active_provider_label(
-    summary: &DxAgentCatalogSummary,
-    providers: &[DxAgentProvider],
-) -> String {
-    let Some(active_provider_id) = summary.active_provider_id.as_deref() else {
-        return "No active DX provider".to_string();
-    };
-    let Some(provider) = providers
-        .iter()
-        .find(|provider| provider.id == active_provider_id)
-    else {
-        return format!("Active provider: {active_provider_id}");
-    };
+pub(crate) fn catalog_receipt_status_label(status: &str) -> String {
+    let status = status.trim();
+    if status.is_empty() {
+        return "unknown".to_string();
+    }
 
-    if provider.display_name == active_provider_id {
-        format!("Active provider: {active_provider_id}")
-    } else {
-        format!(
-            "Active provider: {} ({active_provider_id})",
-            provider.display_name
-        )
+    match status {
+        "missing_receipt_root" => "receipt root missing".to_string(),
+        "waiting_for_provider_receipt" => "waiting for provider receipt".to_string(),
+        status => status.replace('_', " "),
     }
 }
 
 #[cfg(test)]
 #[path = "catalog_labels_tests.rs"]
-mod tests;
+mod catalog_labels_tests;

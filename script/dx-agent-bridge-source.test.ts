@@ -12,6 +12,8 @@ test("DX Agent bridge stays split by command, runtime, and receipt ownership", (
     "crates/agent_ui/src/dx_agent_bridge/command_safety_tests.rs",
     "crates/agent_ui/src/dx_agent_bridge/command_receipts.rs",
     "crates/agent_ui/src/dx_agent_bridge/commands.rs",
+    "crates/agent_ui/src/dx_agent_bridge/catalog_active_provider_label.rs",
+    "crates/agent_ui/src/dx_agent_bridge/catalog_active_provider_label_tests.rs",
     "crates/agent_ui/src/dx_agent_bridge/catalog_labels.rs",
     "crates/agent_ui/src/dx_agent_bridge/catalog_labels_tests.rs",
     "crates/agent_ui/src/dx_agent_bridge/local_file_labels.rs",
@@ -19,6 +21,7 @@ test("DX Agent bridge stays split by command, runtime, and receipt ownership", (
     "crates/agent_ui/src/dx_agent_bridge/receipts.rs",
     "crates/agent_ui/src/dx_agent_bridge/receipts/receipt_strings.rs",
     "crates/agent_ui/src/dx_agent_bridge/runtime_catalog.rs",
+    "crates/agent_ui/src/dx_agent_bridge/runtime_catalog_tests.rs",
     "crates/agent_ui/src/dx_agent_bridge/runtime_catalog_fields.rs",
     "crates/agent_ui/src/dx_agent_bridge/runtime_display.rs",
     "crates/agent_ui/src/dx_agent_bridge/runtime_provider_models.rs",
@@ -50,13 +53,22 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   const safetyTests = read("crates/agent_ui/src/dx_agent_bridge/command_safety_tests.rs");
   const commandReceipts = read("crates/agent_ui/src/dx_agent_bridge/command_receipts.rs");
   const commands = read("crates/agent_ui/src/dx_agent_bridge/commands.rs");
+  const catalogActiveProviderLabel = read(
+    "crates/agent_ui/src/dx_agent_bridge/catalog_active_provider_label.rs",
+  );
   const catalogLabels = read("crates/agent_ui/src/dx_agent_bridge/catalog_labels.rs");
   const catalogLabelsTests = read("crates/agent_ui/src/dx_agent_bridge/catalog_labels_tests.rs");
+  const catalogActiveProviderLabelTests = read(
+    "crates/agent_ui/src/dx_agent_bridge/catalog_active_provider_label_tests.rs",
+  );
   const localFileLabels = read("crates/agent_ui/src/dx_agent_bridge/local_file_labels.rs");
   const localFiles = read("crates/agent_ui/src/dx_agent_bridge/local_files.rs");
   const receipts = read("crates/agent_ui/src/dx_agent_bridge/receipts.rs");
   const receiptStrings = read("crates/agent_ui/src/dx_agent_bridge/receipts/receipt_strings.rs");
   const runtimeCatalog = read("crates/agent_ui/src/dx_agent_bridge/runtime_catalog.rs");
+  const runtimeCatalogTests = read(
+    "crates/agent_ui/src/dx_agent_bridge/runtime_catalog_tests.rs",
+  );
   const runtimeCatalogFields = read(
     "crates/agent_ui/src/dx_agent_bridge/runtime_catalog_fields.rs",
   );
@@ -76,8 +88,17 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.doesNotMatch(parent, /fn is_secret_like_arg/);
   assert.doesNotMatch(parent, /fn public_command_for_runtime/);
   assert.match(parent, /use self::command_safety::\{/);
+  assert.match(parent, /^mod catalog_active_provider_label;$/m);
   assert.match(parent, /^mod catalog_labels;$/m);
+  assert.match(
+    parent,
+    /pub\(crate\) use self::catalog_active_provider_label::\{\s*catalog_active_provider_label, catalog_active_provider_value_label,\s*\};/s,
+  );
   assert.match(parent, /pub\(crate\) use self::catalog_labels::\{/);
+  assert.match(
+    parent,
+    /pub\(crate\) use self::catalog_labels::\{\s*catalog_cache_state_label, catalog_detail_label, catalog_receipt_status_label,\s*\};/s,
+  );
   assert.match(safety, /pub\(crate\) fn is_secret_like_arg/);
   assert.match(safety, /pub\(crate\) fn redact_action_scalar/);
   assert.match(safety, /pub\(crate\) fn public_command_for_runtime/);
@@ -115,16 +136,39 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.match(receiptStrings, /pub\(super\) fn receipt_string_values_field/);
   assert.match(catalogLabels, /pub\(crate\) fn catalog_cache_state_label/);
   assert.match(catalogLabels, /pub\(crate\) fn catalog_detail_label/);
-  assert.match(catalogLabels, /pub\(crate\) fn catalog_active_provider_label/);
+  assert.match(catalogLabels, /pub\(crate\) fn catalog_receipt_status_label/);
+  assert.deepEqual(catalogLabels.match(/^pub\(crate\) fn \w+/gm), [
+    "pub(crate) fn catalog_cache_state_label",
+    "pub(crate) fn catalog_detail_label",
+    "pub(crate) fn catalog_receipt_status_label",
+  ]);
+  assert.match(catalogActiveProviderLabel, /pub\(crate\) fn catalog_active_provider_label/);
+  assert.match(catalogActiveProviderLabel, /pub\(crate\) fn catalog_active_provider_value_label/);
+  assert.deepEqual(catalogActiveProviderLabel.match(/^pub\(crate\) fn \w+/gm), [
+    "pub(crate) fn catalog_active_provider_label",
+    "pub(crate) fn catalog_active_provider_value_label",
+  ]);
   assert.match(catalogLabels, /#\[path = "catalog_labels_tests\.rs"\]/);
+  assert.match(catalogActiveProviderLabel, /#\[path = "catalog_active_provider_label_tests\.rs"\]/);
   assert.match(catalogLabelsTests, /catalog_detail_label_separates_catalog_from_readiness/);
-  assert.match(catalogLabelsTests, /catalog_active_provider_label_prefers_display_name/);
+  assert.match(catalogLabelsTests, /catalog_receipt_status_label_humanizes_waiting_states/);
+  assert.doesNotMatch(catalogLabelsTests, /catalog_active_provider_label_/);
+  assert.match(catalogActiveProviderLabelTests, /catalog_active_provider_label_prefers_display_name/);
+  assert.match(
+    catalogActiveProviderLabelTests,
+    /catalog_active_provider_label_waits_for_receipt_before_claiming_none/,
+  );
+  assert.match(catalogActiveProviderLabelTests, /catalog_active_provider_label_ignores_blank_display_name/);
   assert.match(runtime, /pub\(super\) fn social_accounts/);
   assert.match(runtime, /runtime_catalog::catalog_summary/);
   assert.match(runtime, /#\[path = "runtime_catalog_fields\.rs"\]\s*mod runtime_catalog_fields;/);
   assert.match(runtime, /runtime_provider_models::\{models, providers\}/);
   assert.match(runtime, /#\[path = "runtime_display\.rs"\]/);
+  assert.match(runtime, /#\[path = "runtime_catalog_tests\.rs"\]\s*mod runtime_catalog_tests;/);
   assert.match(runtimeCatalog, /pub\(in super::super\) fn catalog_summary/);
+  assert.deepEqual(runtimeCatalog.match(/^pub\(in super::super\) fn \w+/gm), [
+    "pub(in super::super) fn catalog_summary",
+  ]);
   assert.match(runtimeCatalog, /root_exists: bool/);
   assert.match(runtimeCatalog, /catalog_honesty_fields/);
   assert.match(runtimeCatalog, /binary_cache_path/);
@@ -141,6 +185,23 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.match(runtimeDisplay, /const MAX_RUNTIME_DISPLAY_CHARS: usize = 180;/);
   assert.match(runtimeProviderModels, /pub\(in super::super\) fn providers/);
   assert.match(runtimeProviderModels, /pub\(in super::super\) fn models/);
+  assert.deepEqual(runtimeProviderModels.match(/^pub\(in super::super\) fn \w+/gm), [
+    "pub(in super::super) fn providers",
+    "pub(in super::super) fn models",
+  ]);
+  for (const [name, source] of [
+    ["runtime_catalog.rs", runtimeCatalog],
+    ["runtime_catalog_fields.rs", runtimeCatalogFields],
+    ["runtime_display.rs", runtimeDisplay],
+    ["runtime_provider_models.rs", runtimeProviderModels],
+  ]) {
+    assert.doesNotMatch(source, /^pub\s+(?:fn|struct|enum|mod|use)\b/m, `${name} must not expose public APIs`);
+    assert.doesNotMatch(
+      source,
+      /^pub\(crate\)\s+(?:fn|struct|enum|mod|use)\b/m,
+      `${name} must not expose crate APIs`,
+    );
+  }
   assert.match(runtimeProviderModels, /fn grouped_model_rows/);
   assert.match(runtimeProviderModels, /#\[path = "runtime_provider_models_tests\.rs"\]/);
   assert.match(runtimeProviderModelsTests, /grouped_model_rows_skip_blank_string_entries/);
@@ -152,28 +213,38 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.match(runtimeTests, /provider_rows_read_agent_cli_provider_receipts/);
   assert.match(runtimeTests, /model_rows_flatten_agent_cli_provider_model_groups/);
   assert.match(runtimeTests, /legacy_flat_model_rows_still_parse/);
-  assert.match(runtimeTests, /catalog_summary_reads_agent_cli_catalog_diagnostics/);
-  assert.match(runtimeTests, /catalog_summary_derives_provider_honesty_from_provider_rows/);
-  assert.match(runtimeTests, /catalog_summary_reports_missing_receipt_root/);
+  assert.match(runtimeCatalogTests, /catalog_summary_reads_agent_cli_catalog_diagnostics/);
+  assert.match(runtimeCatalogTests, /catalog_summary_derives_provider_honesty_from_provider_rows/);
+  assert.match(runtimeCatalogTests, /catalog_summary_reports_missing_receipt_root/);
+  assert.match(runtimeCatalogTests, /catalog_summary_reports_waiting_for_provider_receipt/);
+  assert.match(
+    runtimeCatalogTests,
+    /catalog_summary_waits_for_provider_receipt_when_only_model_receipt_exists/,
+  );
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/command_safety.rs") < 120);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/command_safety_tests.rs") < 130);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/command_receipts.rs") < 210);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/commands.rs") < 240);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/catalog_labels.rs") < 90);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/catalog_active_provider_label.rs") < 90);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/catalog_labels_tests.rs") < 110);
+  assert.ok(
+    lineCount("crates/agent_ui/src/dx_agent_bridge/catalog_active_provider_label_tests.rs") < 110,
+  );
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/local_file_labels.rs") < 110);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/local_files.rs") < 110);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/receipts.rs") < 560);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/receipts/receipt_strings.rs") < 75);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_catalog.rs") < 90);
-  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_catalog_fields.rs") < 120);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_catalog_tests.rs") < 130);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_catalog_fields.rs") < 125);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_display.rs") < 80);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_provider_models.rs") < 190);
   assert.ok(
     lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_provider_models_tests.rs") < 120,
   );
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime.rs") < 420);
-  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_tests.rs") < 210);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_tests.rs") < 130);
 });
 
 test("DX Agent provider and model public commands persist JSON receipts", () => {

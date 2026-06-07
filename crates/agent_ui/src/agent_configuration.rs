@@ -54,9 +54,9 @@ use crate::{
     dx_agent_bridge::{
         DxAgentBridgeSnapshot, DxAgentMetadataCommand, DxAgentPublicCommand, DxAgentReceipt,
         DxAgentRowAction, DxAgentSocialActionSummary, catalog_active_provider_label,
-        catalog_detail_label, dx_agent_bridge_snapshot, dx_agent_cli_actions_allowed,
-        dx_agent_cli_path, dx_agent_dx_home, dx_agent_receipt_root, run_dx_agent_metadata_command,
-        run_dx_agent_public_command,
+        catalog_detail_label, catalog_receipt_status_label, dx_agent_bridge_snapshot,
+        dx_agent_cli_actions_allowed, dx_agent_cli_path, dx_agent_dx_home, dx_agent_receipt_root,
+        run_dx_agent_metadata_command, run_dx_agent_public_command,
     },
 };
 
@@ -1423,7 +1423,7 @@ impl AgentConfiguration {
             .child(
                 Label::new(format!(
                     "Receipt status: {}",
-                    snapshot.catalog.receipt_status
+                    catalog_receipt_status_label(&snapshot.catalog.receipt_status)
                 ))
                 .size(LabelSize::Small)
                 .color(Color::Muted),

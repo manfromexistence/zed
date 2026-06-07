@@ -917,19 +917,38 @@ test("DX launch workspace delegates agents and source rails", () => {
   assert.match(agentProviders, /pub\(in super::super\) fn dx_agent_provider_state/);
   assert.match(agentProviders, /^mod rows;$/m);
   assert.match(agentProviders, /^mod summary;$/m);
+  assert.match(agentProviders, /const VISIBLE_PROVIDER_ROW_LIMIT: usize = 3;/);
+  assert.match(agentProviders, /const VISIBLE_MODEL_ROW_LIMIT: usize = 2;/);
   assert.match(agentProviders, /use self::summary::dx_agent_provider_summary_rows/);
-  assert.match(agentProviders, /children\(dx_agent_provider_summary_rows\(snapshot, model_count\)\)/);
+  assert.match(agentProviders, /children\(dx_agent_provider_summary_rows\(snapshot\)\)/);
+  assert.match(agentProviders, /\.take\(VISIBLE_PROVIDER_ROW_LIMIT\)/);
+  assert.match(agentProviders, /\.take\(VISIBLE_MODEL_ROW_LIMIT\)/);
   assert.match(agentProviderSummary, /pub\(super\) fn dx_agent_provider_summary_rows/);
   assert.match(
     agentProviderSummary,
-    /use crate::dx_agent_bridge::\{\s*DxAgentBridgeSnapshot,\s*catalog_active_provider_label,\s*catalog_cache_state_label,\s*catalog_detail_label,\s*\}/s,
+    /use crate::dx_agent_bridge::\{\s*DxAgentBridgeSnapshot,\s*catalog_active_provider_value_label,\s*catalog_cache_state_label,\s*catalog_detail_label,\s*catalog_receipt_status_label,\s*\}/s,
   );
+  assert.match(agentProviderSummary, /catalog_receipt_status_label/);
   assert.match(agentProviders, /use self::rows::\{dx_agent_model_row, dx_agent_provider_row\}/);
   assert.match(agentProviderSummary, /metric_row\(\s*"Catalog providers"/);
   assert.match(agentProviderSummary, /metric_row\(\s*"Configured providers"/);
   assert.match(agentProviderSummary, /metric_row\(\s*"Enabled candidates"/);
   assert.match(agentProviderSummary, /metric_row\(\s*"Provider rows shown"/);
-  assert.match(agentProviderSummary, /catalog_active_provider_label\(&snapshot\.catalog, &snapshot\.providers\)/);
+  assert.match(agentProviderSummary, /visible_row_count_label\(snapshot\.providers\.len\(\), VISIBLE_PROVIDER_ROW_LIMIT\)/);
+  assert.match(agentProviderSummary, /visible_row_count_label\(snapshot\.models\.len\(\), VISIBLE_MODEL_ROW_LIMIT\)/);
+  assert.match(agentProviderSummary, /fn visible_row_count_label\(total: usize, limit: usize\)/);
+  assert.match(agentProviderSummary, /format!\("\{visible\} of \{total\}"\)/);
+  assert.doesNotMatch(agentProviderSummary, /"Provider rows shown"[\s\S]*?snapshot\.providers\.len\(\)\.to_string\(\)/);
+  assert.doesNotMatch(agentProviderSummary, /"Model rows shown"[\s\S]*?snapshot\.models\.len\(\)\.to_string\(\)/);
+  assert.match(
+    agentProviderSummary,
+    /catalog_active_provider_value_label\(&snapshot\.catalog, &snapshot\.providers\)/,
+  );
+  assert.match(
+    agentProviderSummary,
+    /metric_row\("Catalog models", snapshot\.catalog\.model_count\.to_string\(\)\)/,
+  );
+  assert.doesNotMatch(agentProviders, /let model_count = if snapshot\.catalog\.model_count == 0/);
   assert.match(agentProviders, /dx-agent-provider-\{ix\}/);
   assert.match(agentProviders, /dx-agent-model-\{ix\}/);
   assert.doesNotMatch(agentProviders, /fn dx_agent_provider_row/);

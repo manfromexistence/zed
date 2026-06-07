@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-use super::super::{DxAgentCatalogSummary, DxAgentProvider};
-use super::{catalog_active_provider_label, catalog_detail_label};
+use super::super::DxAgentCatalogSummary;
+use super::{catalog_detail_label, catalog_receipt_status_label};
 
 fn catalog_summary() -> DxAgentCatalogSummary {
     DxAgentCatalogSummary {
@@ -30,30 +30,24 @@ fn catalog_detail_label_separates_catalog_from_readiness() {
 }
 
 #[test]
-fn catalog_active_provider_label_prefers_display_name() {
-    let providers = vec![DxAgentProvider {
-        id: "nvidia".to_string(),
-        display_name: "NVIDIA NIM".to_string(),
-        status: "not_configured".to_string(),
-        configured: false,
-        active: false,
-        local: false,
-        compatibility: vec!["remote".to_string()],
-    }];
-
+fn catalog_receipt_status_label_humanizes_waiting_states() {
     assert_eq!(
-        catalog_active_provider_label(&catalog_summary(), &providers),
-        "Active provider: NVIDIA NIM (nvidia)"
+        catalog_receipt_status_label("waiting_for_provider_receipt"),
+        "waiting for provider receipt"
     );
-}
-
-#[test]
-fn catalog_active_provider_label_reports_missing_active_provider() {
-    let mut summary = catalog_summary();
-    summary.active_provider_id = None;
-
     assert_eq!(
-        catalog_active_provider_label(&summary, &[]),
-        "No active DX provider"
+        catalog_receipt_status_label(" waiting_for_provider_receipt "),
+        "waiting for provider receipt"
+    );
+    assert_eq!(
+        catalog_receipt_status_label("missing_receipt_root"),
+        "receipt root missing"
+    );
+    assert_eq!(catalog_receipt_status_label("warning"), "warning");
+    assert_eq!(catalog_receipt_status_label(""), "unknown");
+    assert_eq!(catalog_receipt_status_label("  "), "unknown");
+    assert_eq!(
+        catalog_receipt_status_label("custom_status"),
+        "custom status"
     );
 }
