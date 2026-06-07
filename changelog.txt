@@ -1,3 +1,22 @@
+[2026-06-07] - DX AI Profiles Remote Integration And Runtime Proof Gate
+
+CHANGED:
+- Integrated the four remote `origin/dev` provider-catalog commits into `dev` and preserved the resolved Agent UI provider catalog, runtime display, receipt parsing, and source-guard updates.
+- Recorded the governed runtime-proof window for live DX MetaSearch, Study, Media, and Web Preview evidence without running `just run`, Cargo, local app servers, or native Zed launch.
+
+PASSED:
+- `node --test script\dx-agent-bridge-source.test.ts script\dx-agent-configuration-source.test.ts script\dx-launch-workspace-source.test.ts`
+- `git diff --cached --check`
+- `git diff --check`
+- Staged conflict-marker scan across the integrated merge payload
+- `git merge-base --is-ancestor origin/dev HEAD`
+- Lightweight runtime-proof gate: MetaSearch port/status probe, proof-tool path probe, proof receipt search, and agent provider/model receipt listing
+
+NOTES:
+- Live MetaSearch proof is pending: `DX_METASEARCH_BASE_URL` resolved to `http://127.0.0.1:8888`, port `8888` had no listener, and `/api/v1/status` refused the connection.
+- Study, Media, and Web Preview runtime proof remain backend-pending: `tools\dx-runtime-proof`, `tools\dx-metasearch`, and `tools\agent-plugins` were absent, and no matching runtime proof receipts were found under `G:\Dx\.dx\receipts`.
+- Existing unrelated local edits were preserved in stashes so the remote integration and documentation commits stayed scoped.
+
 [2026-06-07] - DX Agent Workspace Taxonomy
 
 ADDED:

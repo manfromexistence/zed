@@ -257,7 +257,7 @@ fn deploy_provider_summary(snapshot: &DxDeployCapabilityMatrixSnapshot) -> Strin
 fn deploy_provider_icon(provider_id: &str) -> IconName {
     match provider_id {
         "vercel" => IconName::AiVercel,
-        "cloudflare-workers" | "s3-r2" => IconName::Server,
+        "cloudflare-workers" | "s3-r2" => dx_icon(DxUiIcon::Gateway),
         _ => IconName::Public,
     }
 }

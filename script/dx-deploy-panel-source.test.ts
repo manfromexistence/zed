@@ -9,6 +9,29 @@ import {
   read,
 } from "./dx-deploy-source-guard.ts";
 
+const functionBody = (source: string, name: string) => {
+  const start = source.search(new RegExp(`fn\\s+${name}\\b`));
+  assert.ok(start >= 0, `expected ${name}`);
+
+  const bodyStart = source.indexOf("{", start);
+  assert.ok(bodyStart > start, `expected ${name} body`);
+
+  let depth = 0;
+  for (let index = bodyStart; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === "{") {
+      depth += 1;
+    } else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return source.slice(start, index + 1);
+      }
+    }
+  }
+
+  assert.fail(`expected ${name} body to close`);
+};
+
 test("agent_ui registers the focused deploy modules", () => {
   const source = read("crates/agent_ui/src/agent_ui.rs");
   const modules = [
@@ -119,6 +142,18 @@ test("deploy rail renders launch approval before provider dry-run rows", () => {
     launchGateIndex < matrixIndex,
     "launch approval should be visible before plan/status/provider rows",
   );
+});
+
+test("deploy provider chrome uses the DX gateway semantic icon", () => {
+  const deployRail = read("crates/agent_ui/src/dx_deploy_rail.rs");
+  const matrixRail = read("crates/agent_ui/src/dx_deploy_matrix_rail.rs");
+  const targetIconBody = functionBody(deployRail, "deploy_platform_icon");
+  const providerIconBody = functionBody(matrixRail, "deploy_provider_icon");
+
+  assert.match(targetIconBody, /"Cloudflare" => dx_icon\(DxUiIcon::Gateway\)/);
+  assert.doesNotMatch(targetIconBody, /"Cloudflare" => IconName::Server/);
+  assert.match(providerIconBody, /"cloudflare-workers" \| "s3-r2" => dx_icon\(DxUiIcon::Gateway\)/);
+  assert.doesNotMatch(providerIconBody, /"cloudflare-workers" \| "s3-r2" => IconName::Server/);
 });
 
 test("deploy source files stay small enough for maintenance", () => {

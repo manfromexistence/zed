@@ -177,7 +177,7 @@ fn deploy_target_row(id: SharedString, target: &DxDeployTarget, cx: &App) -> Any
 fn deploy_platform_icon(platform: &str) -> IconName {
     match platform {
         "Vercel" => IconName::AiVercel,
-        "Cloudflare" => IconName::Server,
+        "Cloudflare" => dx_icon(DxUiIcon::Gateway),
         "Docker" => IconName::Box,
         _ => IconName::Public,
     }
