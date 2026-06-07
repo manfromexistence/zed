@@ -4224,18 +4224,15 @@ test("DX Style has a real right-dock GPUI shell", () => {
   assert.match(groupRegistry, /source_path: Option<&str>/);
   assert.match(groupRegistry, /workspace_root: Option<&str>/);
   assert.doesNotMatch(groupRegistry, /Path::ancestors/);
-  assert.match(receiptRoots, /PROJECT_RECEIPT_ANCESTOR_LIMIT: usize = 8/);
+  assert.match(receiptRoots, /use crate::dx_project_context::DxProjectContext;/);
   assert.match(receiptRoots, /active_style_receipt_roots/);
-  assert.match(receiptRoots, /path\.is_absolute\(\)/);
   assert.match(receiptRoots, /workspace_root/);
-  assert.match(receiptRoots, /source_path\.starts_with\(root\)/);
-  assert.match(receiptRoots, /Path::ancestors/);
-  assert.match(receiptRoots, /if !ancestor\.starts_with\(workspace_root\)/);
-  assert.match(receiptRoots, /if ancestor == workspace_root/);
-  assert.match(receiptRoots, /\.dx"\)\.join\("receipts"\)\.join\("style"\)/);
-  assert.match(receiptRoots, /receipt_root_key/);
-  assert.match(receiptRoots, /replace/);
-  assert.match(receiptRoots, /to_ascii_lowercase/);
+  assert.match(
+    receiptRoots,
+    /DxProjectContext::source_scoped_receipt_roots\(source_path, workspace_root, "style"\)/,
+  );
+  assert.doesNotMatch(receiptRoots, /Path::ancestors/);
+  assert.doesNotMatch(receiptRoots, /starts_with\(workspace_root\)|replace\(|to_ascii_lowercase/);
   assert.match(groupRegistry, /cache_key/);
   assert.match(groupRegistry, /GROUP_REGISTRY_CACHE_TTL/);
   assert.match(groupRegistry, /MAX_GROUP_REGISTRY_RECEIPT_BYTES: u64 = 128 \* 1024/);

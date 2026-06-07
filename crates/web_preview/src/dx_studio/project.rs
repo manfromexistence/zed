@@ -4,6 +4,8 @@ use std::{
     path::Path,
 };
 
+use agent_ui::dx_project_context::DxProjectContext;
+
 use super::{DxStudioProjectDetection, MAX_DX_MARKER_SCAN_BYTES, MAX_DX_MARKER_SCAN_FILES};
 
 const MAX_DX_CARGO_TOML_SCAN_BYTES: u64 = 256 * 1024;
@@ -13,16 +15,30 @@ pub fn detect_project(root: &Path) -> Option<DxStudioProjectDetection> {
         return None;
     }
 
+    let project_context = DxProjectContext::detect(root);
     let mut confidence = 0u8;
     let mut reasons = Vec::new();
-    let dx_file = root.join("dx");
+    let dx_file = project_context
+        .as_ref()
+        .map(|context| context.dx_config_path.clone())
+        .unwrap_or_else(|| root.join("dx"));
     let legacy_toml = root.join("dx.config.toml");
     let app_dir = root.join("app");
     let components_dir = root.join("components");
-    let dx_dir = root.join(".dx");
-    let forge_dir = root.join(".dx").join("forge");
+    let dx_dir = project_context
+        .as_ref()
+        .map(|context| context.dx_metadata_root.clone())
+        .unwrap_or_else(|| root.join(".dx"));
+    let forge_receipt_root = project_context
+        .as_ref()
+        .map(|context| context.forge_receipt_root.clone())
+        .unwrap_or_else(|| root.join(".dx").join("receipts").join("forge"));
     let visible_forge_dir = root.join("forge");
     let public_preview_manifest = root.join("public").join("preview-manifest.json");
+    let www_route_manifest = project_context
+        .as_ref()
+        .map(|context| context.www_route_manifest_path.clone())
+        .unwrap_or_else(|| root.join(".dx").join("www").join("routes-latest.json"));
     let launch_template = root.join("examples").join("launch-template");
     let node_modules = root.join("node_modules");
 
@@ -46,6 +62,11 @@ pub fn detect_project(root: &Path) -> Option<DxStudioProjectDetection> {
         reasons.push("public preview-manifest.json".to_string());
     }
 
+    if www_route_manifest.is_file() {
+        confidence = confidence.saturating_add(45);
+        reasons.push("DX WWW route manifest".to_string());
+    }
+
     if app_dir.is_dir() {
         confidence = confidence.saturating_add(18);
         reasons.push("Next-familiar app route folder".to_string());
@@ -56,7 +77,7 @@ pub fn detect_project(root: &Path) -> Option<DxStudioProjectDetection> {
         reasons.push("local components folder".to_string());
     }
 
-    if forge_dir.is_dir() || visible_forge_dir.is_dir() {
+    if forge_receipt_root.is_dir() || visible_forge_dir.is_dir() {
         confidence = confidence.saturating_add(18);
         reasons.push("Forge package boundary".to_string());
     }

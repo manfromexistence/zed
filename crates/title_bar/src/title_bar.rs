@@ -40,8 +40,8 @@ use std::time::Duration;
 use theme::ActiveTheme;
 use title_bar_settings::TitleBarSettings;
 use ui::{
-    Avatar, ButtonLike, ButtonSize, ContextMenu, ContextMenuEntry, IconWithIndicator, Indicator,
-    PopoverMenu, PopoverMenuHandle, TintColor, Tooltip, prelude::*,
+    Avatar, ButtonLike, ButtonSize, ContextMenu, ContextMenuEntry, DxUiIcon, IconWithIndicator,
+    Indicator, PopoverMenu, PopoverMenuHandle, TintColor, Tooltip, dx_icon, prelude::*,
 };
 use update_version::UpdateVersion;
 use util::ResultExt;
@@ -736,7 +736,7 @@ impl TitleBar {
     }
 
     fn render_agent_screen_button(&self, selected: bool, _cx: &mut Context<Self>) -> AnyElement {
-        IconButton::new("screen-dock-agent", IconName::ZedAssistant)
+        IconButton::new("screen-dock-agent", dx_icon(DxUiIcon::Ai))
             .size(ButtonSize::Default)
             .icon_size(IconSize::Medium)
             .toggle_state(selected)
@@ -959,7 +959,7 @@ impl TitleBar {
     fn screen_kind_icon(kind: WorkspaceScreenKind) -> IconName {
         match kind {
             WorkspaceScreenKind::Editor => IconName::Code,
-            WorkspaceScreenKind::Browser => IconName::ToolWeb,
+            WorkspaceScreenKind::Browser => dx_icon(DxUiIcon::Browser),
             WorkspaceScreenKind::Terminal => IconName::Terminal,
             WorkspaceScreenKind::Onboarding => IconName::Sparkle,
             WorkspaceScreenKind::LiquidGlass => IconName::Sparkle,
@@ -972,28 +972,28 @@ impl TitleBar {
         vec![
             self.render_title_right_panel_button(
                 "titlebar-icon-picker",
-                IconName::SquareDot,
+                dx_icon(DxUiIcon::Icons),
                 "Icons",
                 icon_picker::ToggleFocus.boxed_clone(),
                 active_right_panel == Some("Icon Picker"),
             ),
             self.render_title_right_panel_button(
                 "titlebar-font-panel",
-                IconName::Font,
+                dx_icon(DxUiIcon::Fonts),
                 "Fonts",
                 font_panel::ToggleFocus.boxed_clone(),
                 active_right_panel == Some("Font Panel"),
             ),
             self.render_title_right_panel_button(
                 "titlebar-media-panel",
-                IconName::Image,
+                dx_icon(DxUiIcon::Media),
                 "Media",
                 media_panel::ToggleFocus.boxed_clone(),
                 active_right_panel == Some("Media"),
             ),
             self.render_title_right_panel_button(
                 "titlebar-shadcn-ui-panel",
-                IconName::Blocks,
+                dx_icon(DxUiIcon::Ui),
                 "UI",
                 shadcn_ui_panel::ToggleFocus.boxed_clone(),
                 active_right_panel == Some("UI"),
@@ -1002,7 +1002,7 @@ impl TitleBar {
             // workflow graduates from parked implementation to production UI.
             self.render_title_right_panel_button(
                 "titlebar-dx-check-panel",
-                IconName::Check,
+                dx_icon(DxUiIcon::Check),
                 "Check",
                 zed_actions::dx_check_panel::ToggleFocus.boxed_clone(),
                 active_right_panel == Some("Check"),

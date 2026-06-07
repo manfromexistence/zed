@@ -6,11 +6,10 @@ use std::{
 
 use serde_json::Value;
 
-use crate::dx_deploy_root_key::deploy_root_key;
+use crate::dx_project_context::DxProjectContext;
 
 use super::{
-    CHECK_RECEIPT_RELATIVE_PATH, DX_FALLBACK_CHECK_RECEIPT, DxCheckPanelSnapshot,
-    MAX_RECEIPT_BYTES,
+    DX_FALLBACK_CHECK_RECEIPT, DxCheckPanelSnapshot, MAX_RECEIPT_BYTES,
     parser::{malformed_snapshot, missing_snapshot, panel_from_receipt_value},
 };
 pub(super) fn read_latest_check_panel(workspace_roots: &[String]) -> DxCheckPanelSnapshot {
@@ -30,27 +29,7 @@ pub(super) fn read_latest_check_panel(workspace_roots: &[String]) -> DxCheckPane
 }
 
 fn check_receipt_candidates(workspace_roots: &[String]) -> Vec<PathBuf> {
-    let mut candidates = Vec::new();
-    for root in workspace_roots {
-        let mut path = PathBuf::from(root);
-        for component in CHECK_RECEIPT_RELATIVE_PATH {
-            path.push(*component);
-        }
-        push_unique_path(&mut candidates, path);
-    }
-
-    push_unique_path(&mut candidates, PathBuf::from(DX_FALLBACK_CHECK_RECEIPT));
-    candidates
-}
-
-fn push_unique_path(paths: &mut Vec<PathBuf>, path: PathBuf) {
-    let path_key = deploy_root_key(&path);
-    if !paths
-        .iter()
-        .any(|existing| deploy_root_key(existing) == path_key)
-    {
-        paths.push(path);
-    }
+    DxProjectContext::check_receipt_candidates(workspace_roots, DX_FALLBACK_CHECK_RECEIPT)
 }
 
 fn read_check_receipt(path: &Path) -> DxCheckPanelSnapshot {

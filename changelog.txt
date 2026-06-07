@@ -1,3 +1,28 @@
+[2026-06-07] - DX Project Context, Icon Rebrand, And Explorer Chrome
+
+ADDED:
+- `crates\agent_ui\src\dx_project_context.rs` centralizes DX project root normalization and local-first `.dx` receipt/config/metadata paths for Check, Style, Forge, diagnostics, WWW route manifests, and future DX integrations.
+- `script\dx-project-context-source.test.ts` guards bounded source-scoped receipt roots, local-first Check receipt candidates, Windows-friendly root normalization, and render-path scan boundaries.
+- `assets\icons\dx_loader.svg`, `assets\icons\dx_cog.svg`, and `crates\ui\src\dx_icons.rs` add a semantic DX icon layer over the existing Zed icon pipeline.
+- `script\dx-icon-system-source.test.ts` guards DX semantic aliases, rebrand assets, and titlebar/panel icon mapping.
+
+CHANGED:
+- `crates\agent_ui\src\dx_check_panel\reader.rs` now asks the shared project context for local-first Check receipt candidates before the shared `G:\Dx` fallback.
+- `crates\agent_ui\src\dx_style_panel\receipt_roots.rs` now delegates source-scoped Style receipt roots to the shared project context helper.
+- `crates\web_preview\src\dx_studio\project.rs` now uses the shared project context for the root `dx` config, `.dx` metadata, Forge receipt root, and DX WWW route manifest paths.
+- `crates\title_bar\src\title_bar.rs`, `crates\agent_ui\src\dx_forge_panel\panel.rs`, and `crates\agent_ui\src\dx_style_panel\panel.rs` now use semantic DX icon names for the relevant shell/tool surfaces.
+- `crates\project_panel\src\project_panel.rs` now renders a source-backed DX Explorer header above the real virtualized tree and empty state, with existing Open Project, Open File, Project Symbols, New File, New Folder, Collapse All, and panel controls.
+- `DX.md`, `script\dx-handoff-source-guard-registry.test.ts`, `script\dx-project-panel-source.test.ts`, and `todo.txt` now track the new source guards and active implementation slice.
+
+PASSED:
+- `node --test script\dx-project-context-source.test.ts script\dx-icon-system-source.test.ts script\dx-project-panel-source.test.ts script\dx-handoff-source-guard-registry.test.ts script\dx-studio-project-source.test.ts script\dx-title-bar-source.test.ts script\dx-style-panel-source.test.ts script\dx-forge-panel-source.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true` on touched Rust files.
+- `git diff --check` on tracked touched files.
+- Conflict-marker scan over the touched lane files.
+
+NOTES:
+- This checkpoint remains source-only. `just run`, broad Cargo commands, servers, browser automation, and live runtime proof remain skipped by instruction.
+
 [2026-06-07] - DX Zed Ecosystem Goal Mode Plan
 
 ADDED:

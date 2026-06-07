@@ -7,7 +7,6 @@ use std::{
 const CHECK_RECEIPT_SCHEMA: &str = "dx.check.receipt.v1";
 const ZED_PANEL_SCHEMA: &str = "dx.check.zed_panel.v1";
 const VIEW_MODEL_SCHEMA: &str = "dx.www.check_panel_view_model.v1";
-const CHECK_RECEIPT_RELATIVE_PATH: &[&str] = &[".dx", "receipts", "check", "check-latest.json"];
 const DX_FALLBACK_CHECK_RECEIPT: &str = r"G:\Dx\.dx\receipts\check\check-latest.json";
 const CHECK_PANEL_CACHE_TTL: Duration = Duration::from_secs(5);
 const MAX_RECEIPT_BYTES: u64 = 256 * 1024;

@@ -113,12 +113,12 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
   );
   assert.match(
     titleBarSource,
-    /WorkspaceScreenKind::Browser => IconName::ToolWeb/,
+    /WorkspaceScreenKind::Browser => dx_icon\(DxUiIcon::Browser\)/,
     "Browser screen dock button should use the preview/browser tool icon",
   );
   assert.match(
     agentScreenButton,
-    /"screen-dock-agent",\s*IconName::ZedAssistant/s,
+    /"screen-dock-agent",\s*dx_icon\(DxUiIcon::Ai\)/s,
     "screen dock should expose a real AI button",
   );
   assert.match(
@@ -138,7 +138,7 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
   assert.doesNotMatch(titleBarSource, /fn agent_panel_is_active/);
   assert.match(
     titleBarSource,
-    /"titlebar-shadcn-ui-panel",\s*IconName::Blocks,\s*"UI"/s,
+    /"titlebar-shadcn-ui-panel",\s*dx_icon\(DxUiIcon::Ui\),\s*"UI"/s,
     "UI panel titlebar button should use the component blocks icon",
   );
   assert.doesNotMatch(

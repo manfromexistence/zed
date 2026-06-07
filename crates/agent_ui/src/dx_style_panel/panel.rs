@@ -3,7 +3,7 @@ use gpui::{
     ScrollHandle, WeakEntity,
 };
 use gpui::{Window, px};
-use ui::IconName;
+use ui::{DxUiIcon, IconName, dx_icon};
 use workspace::{
     Workspace,
     dock::{DockPosition, Panel, PanelEvent},
@@ -104,7 +104,7 @@ impl Panel for DxStylePanel {
     }
 
     fn icon(&self, _: &Window, _: &App) -> Option<IconName> {
-        None
+        Some(dx_icon(DxUiIcon::Style))
     }
 
     fn icon_tooltip(&self, _: &Window, _: &App) -> Option<&'static str> {

@@ -4,7 +4,7 @@ use gpui::{
     Action, App, AppContext, Context, EventEmitter, FocusHandle, Focusable, IntoElement, Render,
     ScrollHandle, WeakEntity, Window, px,
 };
-use ui::IconName;
+use ui::{DxUiIcon, IconName, dx_icon};
 use workspace::{
     Workspace,
     dock::{DockPosition, Panel, PanelEvent},
@@ -141,7 +141,7 @@ impl Panel for DxForgePanel {
     }
 
     fn icon(&self, _: &Window, _: &App) -> Option<IconName> {
-        Some(IconName::Forgejo)
+        Some(dx_icon(DxUiIcon::Forge))
     }
 
     fn icon_tooltip(&self, _: &Window, _: &App) -> Option<&'static str> {

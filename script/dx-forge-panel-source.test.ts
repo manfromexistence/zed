@@ -143,7 +143,8 @@ test("Forge panel owns a stable local action and dock identity", () => {
   assert.match(panel, /fn persistent_name\(\) -> &'static str \{\s*"Forge"/);
   assert.match(panel, /DockPosition::Left/);
   assert.match(panel, /position == DockPosition::Left/);
-  assert.match(panel, /Some\(IconName::Forgejo\)/);
+  assert.match(panel, /use ui::\{DxUiIcon, IconName, dx_icon\};/);
+  assert.match(panel, /Some\(dx_icon\(DxUiIcon::Forge\)\)/);
   assert.match(panel, /fn activation_priority\(&self\) -> u32 \{\s*4\s*\}/);
   assert.match(panel, /fn starts_open\(&self, _:\s*&Window, _:\s*&App\) -> bool \{\s*false/);
   assert.doesNotMatch(panel, /DockPosition::Right|DockPosition::Bottom/);

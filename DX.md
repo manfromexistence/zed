@@ -193,7 +193,7 @@ Current handoff and production-readiness guards:
 - `node --test script/dx-editor-input-source.test.ts` - editor newline cursor remap stale-row boundaries.
 - `node --test script/dx-workspace-ui-state-source.test.ts` - workspace dock, history, jump-list, and item project-handle materialization boundaries.
 - `node --test script/dx-title-bar-source.test.ts` - title-bar application menu stale entry activation boundaries.
-- `node --test script/dx-project-panel-source.test.ts` - project panel tree, selection, visible-range, edit-state, drag/drop, sticky-row, undo, and lazy inline media-preview materialization boundaries.
+- `node --test script/dx-project-panel-source.test.ts` - project panel DX Explorer summary/action chrome, tree, selection, visible-range, edit-state, drag/drop, sticky-row, undo, and lazy inline media-preview materialization boundaries.
 - `node --test script/dx-diagnostics-ui-source.test.ts` - diagnostics grouping, excerpt, markdown, hint, copy, and status-label materialization boundaries.
 - `node --test script/dx-git-ui-source.test.ts` - Git branch, stash, repository, status, history, remote, and worktree picker materialization boundaries.
 - `node --test script/dx-settings-keymap-source.test.ts` - settings search/picker rows and keymap stale candidate-id materialization boundaries.
@@ -220,6 +220,7 @@ Current handoff and production-readiness guards:
 - `node --test script/dx-acp-tools-source.test.ts` - ACP tool request-id chip materialization boundaries.
 - `node --test script/dx-breadcrumbs-source.test.ts` - breadcrumb segment materialization boundaries.
 - `node --test script/dx-icon-picker-source.test.ts` - icon picker TSV sample and representative preview materialization boundaries.
+- `node --test script/dx-icon-system-source.test.ts` - DX semantic icon aliases, rebrand assets, and shell chrome icon mapping.
 - `node --test script/dx-language-selector-source.test.ts` - language selector candidate, match, stale-selection, and confirm boundaries.
 - `node --test script/dx-toolchain-selector-source.test.ts` - toolchain selector match, stale-selection, and stale candidate-id boundaries.
 - `node --test script/dx-dev-container-source.test.ts` - Dev Container template/feature picker stale match-row boundaries.
@@ -245,6 +246,7 @@ Current handoff and production-readiness guards:
 - `node --test script/dx-source-quality.test.ts` - DX Studio source/edit manifest and bridge source contracts.
 - `node --test script/dx-style-panel-source.test.ts` - DX Style plan/read-model, Web Preview generator split modules, trusted source-apply session, CSS declaration dry-run review contracts, and Zed Style panel source-truth contracts.
 - `node --test script/dx-forge-panel-source.test.ts` - DX Forge dock panel registration, real receipt/restore/media read-model wiring, left-dock identity, edge-case states, and no Git-panel copy/process-call regressions.
+- `node --test script/dx-project-context-source.test.ts` - shared DX project context path normalization, local-first receipt roots, and render-path scan boundaries.
 - `node G:\Dx\style\scripts\sync_zed_visual_generator_fixtures.mjs --check` - DX Style source fixture to Zed embedded visual-generator mirror freshness.
 - `node --test script/dx-studio-project-source.test.ts` - DX Studio project detection and source-edit bounded file-read contracts.
 - `node --test script/dx-buffer-codegen-source.test.ts` - inline assistant rewrite source-selection byte boundaries.

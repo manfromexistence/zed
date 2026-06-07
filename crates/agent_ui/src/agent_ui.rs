@@ -61,6 +61,7 @@ mod dx_launch_receipts;
 mod dx_launch_source_audit;
 mod dx_launch_status;
 mod dx_launch_workspace;
+pub mod dx_project_context;
 mod dx_proof_freshness;
 mod dx_receipt_history;
 mod dx_receipts;

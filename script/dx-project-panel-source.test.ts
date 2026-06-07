@@ -75,6 +75,59 @@ test("project panel visible tree materialization has named caps before collectio
   });
 });
 
+test("project panel DX Explorer header is source-backed and action-wired", () => {
+  const source = read("crates/project_panel/src/project_panel.rs");
+  const dxExplorerSummary = functionBody(source, "dx_explorer_summary");
+  const renderDxExplorerHeader = functionBody(source, "render_dx_explorer_header");
+
+  assert.match(source, /struct DxExplorerSummary/);
+  assert.match(dxExplorerSummary, /worktree_count: self\.state\.visible_entries\.len\(\)/);
+  assert.match(
+    dxExplorerSummary,
+    /visible_entry_count:[\s\S]*\.map\(\|worktree\| worktree\.entries\.len\(\)\)[\s\S]*\.sum\(\)/,
+  );
+  assert.match(dxExplorerSummary, /selected_entry_count,/);
+  assert.match(
+    dxExplorerSummary,
+    /expanded_dir_count:[\s\S]*self[\s\S]*\.state[\s\S]*expanded_dir_ids[\s\S]*\.sum\(\)/,
+  );
+  assert.match(
+    dxExplorerSummary,
+    /cached_media_folder_count: self\.folder_media_previews\.borrow\(\)\.len\(\)/,
+  );
+  assert.doesNotMatch(dxExplorerSummary, /\bread_dir\(|\bFile::open\(|read_to_string|cx\.spawn/);
+
+  assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-header"\)/);
+  assert.match(renderDxExplorerHeader, /IconName::FileTree/);
+  assert.match(renderDxExplorerHeader, /Label::new\("DX Explorer"\)/);
+  assert.match(renderDxExplorerHeader, /side_panel_header_controls\(\s*"dx-explorer"/);
+  assert.match(renderDxExplorerHeader, /workspace::Open::default\(\)\.boxed_clone\(\)/);
+  assert.match(renderDxExplorerHeader, /ToggleFileFinder::default\(\)\.boxed_clone\(\)/);
+  assert.match(renderDxExplorerHeader, /ToggleProjectSymbols\.boxed_clone\(\)/);
+  assert.match(renderDxExplorerHeader, /this\.new_file\(&NewFile, window, cx\)/);
+  assert.match(renderDxExplorerHeader, /this\.new_directory\(&NewDirectory, window, cx\)/);
+  assert.match(
+    renderDxExplorerHeader,
+    /this\.collapse_all_entries\(&CollapseAllEntries, window, cx\)/,
+  );
+  assert.match(renderDxExplorerHeader, /\.disabled\(is_read_only \|\| !has_worktree\)/);
+  assert.match(renderDxExplorerHeader, /\.min_w_0\(\)[\s\S]*\.overflow_hidden\(\)/);
+  assert.doesNotMatch(renderDxExplorerHeader, /\bread_dir\(|\bFile::open\(|read_to_string|cx\.spawn/);
+
+  assert.match(
+    source,
+    /let dx_explorer_summary = self\.dx_explorer_summary\(selected_entry_count\);/,
+  );
+  const headerMounts = source.match(/\.child\(self\.render_dx_explorer_header\(/g) ?? [];
+  assert.equal(headerMounts.length, 2, "DX Explorer header should mount in tree and empty states");
+  assertBefore({
+    body: source,
+    before: ".child(self.render_dx_explorer_header(",
+    after: ".map(|this| {\n                            if let Some(toolbar) = selected_entries_toolbar",
+    message: "DX Explorer header should render before the selected-entry toolbar and tree",
+  });
+});
+
 test("project panel expansion and selection fanout is bounded", () => {
   const source = read("crates/project_panel/src/project_panel.rs");
   const expandAllForEntry = functionBody(source, "expand_all_for_entry");
