@@ -1,3 +1,18 @@
+[2026-06-07] - DX Project Context PathBuf Receipt Roots
+
+CHANGED:
+- `crates\agent_ui\src\dx_project_context.rs` now normalizes, absolute-filters, dedupes, and caps `PathBuf` workspace roots before `workspace_receipt_roots` calls `DxProjectContext::detect`.
+- `script\dx-project-context-source.test.ts` guards the PathBuf receipt-root boundary so duplicate, relative, and drive-relative roots cannot consume the cap or trigger metadata detection.
+- `script\dx-launch-audit-source.test.ts` now pins `bool_label` ownership to the focused launch-audit status summary module instead of requiring an unused parent import.
+
+PASSED:
+- `node --test script\dx-project-context-source.test.ts script\dx-deploy-receipts-source.test.ts script\dx-deploy-launch-gate-source.test.ts`
+- `node --test script\dx-launch-audit-source.test.ts script\dx-launch-contracts-source.test.ts script\dx-launch-readiness-source.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_ui\src\dx_project_context.rs`
+
+NOTES:
+- This remains source-only by instruction. Cargo, `just run`, local servers, browser/WebView proof, native Zed launch, and inaccessible-path runtime proof remain skipped.
+
 [2026-06-07] - DX Evidence Basket Projection
 
 ADDED:

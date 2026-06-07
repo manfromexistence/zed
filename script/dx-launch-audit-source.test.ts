@@ -27,7 +27,7 @@ test("DX launch audit keeps packet IO, JSON helpers, and review policy focused",
   assert.match(parent, /^mod packets;$/m);
   assert.match(parent, /^mod review;$/m);
   assert.match(parent, /^mod status_summaries;$/m);
-  assert.match(parent, /use self::packet_fields::\{array_len, bool_field, bool_label, string_field, usize_field\};/);
+  assert.match(parent, /use self::packet_fields::\{array_len, bool_field, string_field, usize_field\};/);
   assert.match(parent, /use self::packets::read_checked_packet;/);
   assert.match(parent, /use self::review::\{command_fanout_count, redaction_requires_review\};/);
   assert.match(parent, /use self::status_summaries::\{/);
@@ -70,6 +70,9 @@ test("DX launch audit keeps packet IO, JSON helpers, and review policy focused",
   assert.match(review, /exports_secret_values/);
   assert.match(status, /pub\(super\) fn status_agent_summary/);
   assert.match(status, /pub\(super\) fn status_discovery_summary/);
+  assert.match(status, /use super::packet_fields::\{bool_field, bool_label, string_field, usize_field\};/);
+  assert.match(status, /bool_label\(bool_field\(discovery, "www_manifest_present"\)\)/);
+  assert.match(status, /bool_label\(bool_field\(discovery, "configured_binary_present"\)\)/);
 
   assert.ok(lineCount(parentPath) < 405, "dx_launch_audit.rs should stay focused on snapshot assembly");
   assert.ok(lineCount(fieldsPath) < 65, "launch-audit packet field module should stay small");

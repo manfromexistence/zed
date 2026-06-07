@@ -160,15 +160,22 @@ impl DxProjectContext {
         workspace_roots: &[PathBuf],
         receipt_kind: &str,
     ) -> Vec<PathBuf> {
-        let mut seen = HashSet::new();
+        let mut seen_roots = HashSet::new();
+        let mut seen_receipts = HashSet::new();
         let mut roots = Vec::new();
 
         for context in workspace_roots
             .iter()
+            .filter_map(|root| workspace_path_candidate(root))
+            .filter(|root| push_unique_path_key(&mut seen_roots, root))
             .take(DX_PROJECT_CONTEXT_WORKSPACE_ROOT_LIMIT)
-            .filter_map(|root| Self::detect(root))
+            .filter_map(|root| Self::detect(&root))
         {
-            push_unique_path(&mut roots, &mut seen, context.receipt_root(receipt_kind));
+            push_unique_path(
+                &mut roots,
+                &mut seen_receipts,
+                context.receipt_root(receipt_kind),
+            );
         }
 
         roots
@@ -295,6 +302,11 @@ fn workspace_root_candidate(root: &str) -> Option<PathBuf> {
         return None;
     }
     let normalized = normalize_project_root(Path::new(root))?;
+    normalized.is_absolute().then_some(normalized)
+}
+
+fn workspace_path_candidate(root: &Path) -> Option<PathBuf> {
+    let normalized = normalize_project_root(root)?;
     normalized.is_absolute().then_some(normalized)
 }
 
