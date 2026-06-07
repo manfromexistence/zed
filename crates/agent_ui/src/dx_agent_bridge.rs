@@ -9,8 +9,6 @@ use serde_json::Value;
 use settings::SettingsStore;
 
 const DEFAULT_DX_CLI: &str = "dx";
-const DEFAULT_AGENT_RECEIPT_ROOT: &str = r"G:\Dx\.dx\receipts\agents";
-const DEFAULT_PROVIDER_CATALOG_PATH: &str = r"G:\Dx\.dx\catalog\agents\provider-model-catalog.rkyv";
 const SNAPSHOT_CACHE_TTL: Duration = Duration::from_secs(5);
 const MAX_RECEIPT_BYTES: u64 = 128 * 1024;
 
@@ -18,6 +16,7 @@ mod command_safety;
 mod commands;
 mod local_file_labels;
 mod local_files;
+mod paths;
 mod receipts;
 mod runtime;
 
@@ -26,6 +25,10 @@ use self::command_safety::{
     is_secret_like_arg, public_command_for_runtime, redact_action_scalar,
 };
 use self::local_files::{dx_home_from_receipt_root, latest_receipts, read_first_json, read_json};
+use self::paths::{
+    active_agent_receipt_root, active_provider_catalog_path, default_agent_receipt_root,
+    default_provider_catalog_path,
+};
 
 pub(crate) use self::commands::{
     DxAgentMetadataCommand, DxAgentPublicCommand, run_dx_agent_metadata_command,
@@ -345,6 +348,14 @@ pub(crate) fn dx_agent_bridge_settings_snapshot(cx: &App) -> DxAgentSettingsSnap
 pub(crate) fn dx_agent_bridge_snapshot_from_settings(
     settings: DxAgentSettingsSnapshot,
 ) -> DxAgentBridgeSnapshot {
+    dx_agent_bridge_snapshot_from_settings_for_roots(settings, &[])
+}
+
+pub(crate) fn dx_agent_bridge_snapshot_from_settings_for_roots(
+    settings: DxAgentSettingsSnapshot,
+    workspace_roots: &[String],
+) -> DxAgentBridgeSnapshot {
+    let settings = settings.with_workspace_roots(workspace_roots);
     let cache_key = format!(
         "{}|{}|{}|{}|{}|{}|{}",
         settings.enabled,
@@ -405,8 +416,22 @@ pub(crate) struct DxAgentSettingsSnapshot {
     cli_path: String,
     receipt_root: PathBuf,
     provider_catalog_path: PathBuf,
+    receipt_root_configured: bool,
+    provider_catalog_path_configured: bool,
     show_managed_providers: bool,
     show_in_agent_rail: bool,
+}
+
+impl DxAgentSettingsSnapshot {
+    fn with_workspace_roots(mut self, workspace_roots: &[String]) -> Self {
+        if !self.receipt_root_configured {
+            self.receipt_root = active_agent_receipt_root(workspace_roots);
+        }
+        if !self.provider_catalog_path_configured {
+            self.provider_catalog_path = active_provider_catalog_path(workspace_roots);
+        }
+        self
+    }
 }
 
 fn dx_agent_settings(cx: &App) -> DxAgentSettingsSnapshot {
@@ -415,6 +440,14 @@ fn dx_agent_settings(cx: &App) -> DxAgentSettingsSnapshot {
         .agent
         .as_ref()
         .and_then(|agent| agent.dx_agents.as_ref());
+    let receipt_root = settings
+        .and_then(|settings| settings.receipt_root.clone())
+        .filter(|path| !path.trim().is_empty())
+        .map(PathBuf::from);
+    let provider_catalog_path = settings
+        .and_then(|settings| settings.provider_catalog_path.clone())
+        .filter(|path| !path.trim().is_empty())
+        .map(PathBuf::from);
     DxAgentSettingsSnapshot {
         enabled: settings
             .and_then(|settings| settings.enabled)
@@ -426,16 +459,10 @@ fn dx_agent_settings(cx: &App) -> DxAgentSettingsSnapshot {
             .and_then(|settings| settings.cli_path.clone())
             .filter(|path| !path.trim().is_empty())
             .unwrap_or_else(|| DEFAULT_DX_CLI.to_string()),
-        receipt_root: settings
-            .and_then(|settings| settings.receipt_root.clone())
-            .filter(|path| !path.trim().is_empty())
-            .map(PathBuf::from)
-            .unwrap_or_else(|| PathBuf::from(DEFAULT_AGENT_RECEIPT_ROOT)),
-        provider_catalog_path: settings
-            .and_then(|settings| settings.provider_catalog_path.clone())
-            .filter(|path| !path.trim().is_empty())
-            .map(PathBuf::from)
-            .unwrap_or_else(|| PathBuf::from(DEFAULT_PROVIDER_CATALOG_PATH)),
+        receipt_root_configured: receipt_root.is_some(),
+        receipt_root: receipt_root.unwrap_or_else(default_agent_receipt_root),
+        provider_catalog_path_configured: provider_catalog_path.is_some(),
+        provider_catalog_path: provider_catalog_path.unwrap_or_else(default_provider_catalog_path),
         show_managed_providers: settings
             .and_then(|settings| settings.show_managed_providers)
             .unwrap_or(true),

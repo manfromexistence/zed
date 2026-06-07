@@ -40,7 +40,7 @@ use crate::agent_connection_store::AgentConnectionStore;
 use crate::completion_provider::AgentContextSource;
 use crate::dx_agent_bridge::{
     DxAgentSettingsSnapshot, dx_agent_bridge_settings_snapshot,
-    dx_agent_bridge_snapshot_from_settings,
+    dx_agent_bridge_snapshot_from_settings_for_roots,
 };
 use crate::dx_check_score::{DxCheckScoreInput, check_score_snapshot};
 use crate::dx_deploy_prompts::deploy_readiness_prompt;
@@ -7509,7 +7509,10 @@ impl AgentPanel {
         let launch_audit = launch_audit_snapshot();
         let source_audit = launch_source_audit_snapshot_for_roots(&workspace_roots);
         let www_evidence = www_launch_evidence_snapshot(&workspace_roots);
-        let agent_bridge = dx_agent_bridge_snapshot_from_settings(input.agent_settings);
+        let agent_bridge = dx_agent_bridge_snapshot_from_settings_for_roots(
+            input.agent_settings,
+            &workspace_roots,
+        );
         let receipt_file_count = receipt_snapshot
             .buckets
             .iter()

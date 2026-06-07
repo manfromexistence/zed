@@ -152,6 +152,7 @@ test("DX project context centralizes bounded local-first paths", () => {
 test("DX project context is wired into Check, Style, Deploy, and Web Preview DX Studio", () => {
   const agentRoot = read("crates/agent_ui/src/agent_ui.rs");
   const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
+  const agentBridgePaths = read("crates/agent_ui/src/dx_agent_bridge/paths.rs");
   const checkReader = read("crates/agent_ui/src/dx_check_panel/reader.rs");
   const styleRoots = read("crates/agent_ui/src/dx_style_panel/receipt_roots.rs");
   const deployRoots = read("crates/agent_ui/src/dx_deploy_receipt_roots.rs");
@@ -163,6 +164,9 @@ test("DX project context is wired into Check, Style, Deploy, and Web Preview DX 
   const dxStudioProject = read("crates/web_preview/src/dx_studio/project.rs");
 
   assert.match(agentRoot, /pub mod dx_project_context;/);
+  assert.match(agentBridgePaths, /use crate::dx_project_context::\{DxProjectContext, project_root_key\};/);
+  assert.match(agentBridgePaths, /DxProjectContext::receipt_root_candidates/);
+  assert.match(agentBridgePaths, /DxProjectContext::shared_fallback_root/);
   assert.match(agentRoot, /^mod dx_launch_receipt_roots;$/m);
   assert.match(checkReader, /use crate::dx_project_context::DxProjectContext;/);
   assert.match(
@@ -199,6 +203,10 @@ test("DX project context is wired into Check, Style, Deploy, and Web Preview DX 
   assert.match(agentPanel, /launch_receipt_review_snapshot_for_roots\(&workspace_roots\)/);
   assert.match(agentPanel, /launch_source_audit_snapshot_for_roots\(&workspace_roots\)/);
   assert.match(agentPanel, /receipt_snapshot_for_roots\(&workspace_roots\)/);
+  assert.match(
+    agentPanel,
+    /dx_agent_bridge_snapshot_from_settings_for_roots\(\s*input\.agent_settings,\s*&workspace_roots,\s*\)/,
+  );
   assert.match(launchSourceAuditPaths, /use crate::dx_project_context::DxProjectContext;/);
   assert.match(launchSourceAuditPaths, /DxProjectContext::audit_root_candidates/);
   assert.match(launchSourceAuditPaths, /DxProjectContext::shared_fallback_root/);

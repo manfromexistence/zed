@@ -13,6 +13,7 @@ test("DX Agent bridge stays split by command, runtime, and receipt ownership", (
     "crates/agent_ui/src/dx_agent_bridge/commands.rs",
     "crates/agent_ui/src/dx_agent_bridge/local_file_labels.rs",
     "crates/agent_ui/src/dx_agent_bridge/local_files.rs",
+    "crates/agent_ui/src/dx_agent_bridge/paths.rs",
     "crates/agent_ui/src/dx_agent_bridge/receipts.rs",
     "crates/agent_ui/src/dx_agent_bridge/receipts/receipt_strings.rs",
     "crates/agent_ui/src/dx_agent_bridge/runtime_catalog.rs",
@@ -29,6 +30,7 @@ test("DX Agent bridge stays split by command, runtime, and receipt ownership", (
   assert.match(parent, /^mod commands;$/m);
   assert.match(parent, /^mod local_file_labels;$/m);
   assert.match(parent, /^mod local_files;$/m);
+  assert.match(parent, /^mod paths;$/m);
   assert.match(parent, /^mod receipts;$/m);
   assert.match(parent, /^mod runtime;$/m);
   assert.ok(
@@ -44,6 +46,7 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   const commands = read("crates/agent_ui/src/dx_agent_bridge/commands.rs");
   const localFileLabels = read("crates/agent_ui/src/dx_agent_bridge/local_file_labels.rs");
   const localFiles = read("crates/agent_ui/src/dx_agent_bridge/local_files.rs");
+  const paths = read("crates/agent_ui/src/dx_agent_bridge/paths.rs");
   const receipts = read("crates/agent_ui/src/dx_agent_bridge/receipts.rs");
   const receiptStrings = read("crates/agent_ui/src/dx_agent_bridge/receipts/receipt_strings.rs");
   const runtimeCatalog = read("crates/agent_ui/src/dx_agent_bridge/runtime_catalog.rs");
@@ -59,6 +62,14 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.doesNotMatch(parent, /fn is_secret_like_arg/);
   assert.doesNotMatch(parent, /fn public_command_for_runtime/);
   assert.match(parent, /use self::command_safety::\{/);
+  assert.match(parent, /use self::paths::\{/);
+  assert.match(parent, /dx_agent_bridge_snapshot_from_settings_for_roots/);
+  assert.match(parent, /let settings = settings\.with_workspace_roots\(workspace_roots\);/);
+  assert.match(parent, /receipt_root_configured: bool/);
+  assert.match(parent, /provider_catalog_path_configured: bool/);
+  assert.match(parent, /active_agent_receipt_root\(workspace_roots\)/);
+  assert.match(parent, /active_provider_catalog_path\(workspace_roots\)/);
+  assert.doesNotMatch(parent, /DEFAULT_AGENT_RECEIPT_ROOT|DEFAULT_PROVIDER_CATALOG_PATH/);
   assert.match(safety, /pub\(crate\) fn is_secret_like_arg/);
   assert.match(safety, /pub\(crate\) fn redact_action_scalar/);
   assert.match(safety, /pub\(crate\) fn public_command_for_runtime/);
@@ -81,6 +92,14 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.match(localFiles, /pub\(super\) fn dx_home_from_receipt_root/);
   assert.match(localFiles, /receipt_file_label/);
   assert.match(localFiles, /MAX_RECEIPT_BYTES/);
+  assert.match(paths, /pub\(super\) fn active_agent_receipt_root/);
+  assert.match(paths, /DxProjectContext::receipt_root_candidates/);
+  assert.match(paths, /pub\(super\) fn active_provider_catalog_path/);
+  assert.match(paths, /provider_catalog_path_candidates\(workspace_roots\)/);
+  assert.match(paths, /DEFAULT_PROVIDER_CATALOG_PATH/);
+  assert.match(paths, /project_root_key/);
+  assert.match(paths, /\.find\(\|root\| root\.is_dir\(\)\)/);
+  assert.match(paths, /\.find\(\|path\| path\.is_file\(\)\)/);
   assert.match(localFileLabels, /pub\(crate\) fn receipt_file_label/);
   assert.match(localFileLabels, /eq_ignore_ascii_case\("json"\)/);
   assert.match(localFileLabels, /receipt_file_label_accepts_uppercase_json_extension/);
@@ -110,6 +129,7 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/commands.rs") < 330);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/local_file_labels.rs") < 110);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/local_files.rs") < 110);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/paths.rs") < 90);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/receipts.rs") < 560);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/receipts/receipt_strings.rs") < 75);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_catalog.rs") < 90);
