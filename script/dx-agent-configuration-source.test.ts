@@ -73,3 +73,22 @@ test("oversized settings editor path reports a deferred visible status", () => {
   assert.match(source, /show_deferred_agent_configuration_status\(\s*&workspace,/);
   assert.match(source, /settings file is too large/i);
 });
+
+test("DX Agents catalog configuration copy separates inventory from readiness", () => {
+  const functionStart = source.indexOf("fn render_dx_agents_catalog_items");
+  const functionEnd = source.indexOf("\n    fn run_dx_agents_public_action", functionStart);
+
+  assert.ok(functionStart >= 0, "expected DX Agents catalog renderer");
+  assert.ok(functionEnd > functionStart, "expected catalog renderer to stay focused");
+
+  const renderer = source.slice(functionStart, functionEnd);
+
+  assert.match(renderer, /catalog_detail_label\(&snapshot\.catalog\)/);
+  assert.match(renderer, /catalog_receipt_status_label\(&snapshot\.catalog\.receipt_status\)/);
+  assert.match(renderer, /catalog_active_provider_label\(&snapshot\.catalog, &snapshot\.providers\)/);
+  assert.match(renderer, /Catalog Inventory/);
+  assert.match(renderer, /Receipt status:/);
+  assert.match(renderer, /Generated at:/);
+  assert.doesNotMatch(renderer, /"Managed Providers"/);
+  assert.doesNotMatch(renderer, /provider\(s\), \{\} model\(s\)/);
+});

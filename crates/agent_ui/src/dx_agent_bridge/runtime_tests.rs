@@ -1,8 +1,6 @@
-use std::path::PathBuf;
-
 use serde_json::json;
 
-use super::{catalog_summary, models, providers};
+use super::{models, providers};
 
 #[test]
 fn provider_rows_read_agent_cli_provider_receipts() {
@@ -103,61 +101,4 @@ fn legacy_flat_model_rows_still_parse() {
     assert_eq!(rows[0].status, "ready");
     assert!(rows[0].active);
     assert_eq!(rows[0].compatibility, vec!["tools".to_string()]);
-}
-
-#[test]
-fn catalog_summary_reads_agent_cli_catalog_diagnostics() {
-    let receipt = json!({
-        "schema_version": "dx.agents.zed.providers_list.v1",
-        "catalog": {
-            "loaded": false,
-            "path": "G:\\Dx\\.dx\\catalog\\agents\\provider-model-catalog.rkyv",
-            "provider_count": 75,
-            "model_count": 1200,
-            "error": "provider catalog file not found"
-        }
-    });
-
-    let summary = catalog_summary(
-        Some(&receipt),
-        None,
-        PathBuf::from("G:\\fallback\\provider-model-catalog.rkyv"),
-    );
-
-    assert_eq!(
-        summary.path,
-        PathBuf::from("G:\\Dx\\.dx\\catalog\\agents\\provider-model-catalog.rkyv")
-    );
-    assert!(!summary.present);
-    assert!(summary.stale);
-    assert_eq!(summary.provider_count, 75);
-    assert_eq!(summary.model_count, 1200);
-    assert_eq!(
-        summary.error.as_deref(),
-        Some("provider catalog file not found")
-    );
-}
-
-#[test]
-fn catalog_summary_falls_back_to_receipt_counts() {
-    let providers_receipt = json!({
-        "schema_version": "dx.agents.zed.providers_list.v1",
-        "provider_count": 75,
-        "providers": []
-    });
-    let models_receipt = json!({
-        "schema_version": "dx.agents.zed.models_list.v1",
-        "provider_count": 70,
-        "model_count": 1200,
-        "providers": []
-    });
-
-    let summary = catalog_summary(
-        Some(&providers_receipt),
-        Some(&models_receipt),
-        PathBuf::from("G:\\fallback\\provider-model-catalog.rkyv"),
-    );
-
-    assert_eq!(summary.provider_count, 75);
-    assert_eq!(summary.model_count, 1200);
 }

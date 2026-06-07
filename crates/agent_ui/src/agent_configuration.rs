@@ -54,6 +54,7 @@ use crate::{
     dx_agent_bridge::{
         DxAgentBridgeSnapshot, DxAgentMetadataCommand, DxAgentPublicCommand, DxAgentReceipt,
         DxAgentRowAction, DxAgentSocialActionSummary, automation_public_command_for_action,
+        catalog_active_provider_label, catalog_detail_label, catalog_receipt_status_label,
         dx_agent_bridge_snapshot_for_roots, dx_agent_cli_actions_allowed, dx_agent_cli_path,
         dx_agent_dx_home_for_roots, dx_agent_receipt_root_for_roots, run_dx_agent_metadata_command,
         run_dx_agent_public_command,
@@ -1580,32 +1581,15 @@ impl AgentConfiguration {
                 .into_any_element();
         }
 
-        let cache_state = if snapshot.catalog.present && !snapshot.catalog.stale {
-            "fast cache ready"
-        } else if snapshot.catalog.present {
-            "cache stale"
-        } else {
-            "cache missing"
-        };
-        let provider_detail = format!(
-            "{} provider(s), {} model(s), {}",
-            snapshot.catalog.provider_count, snapshot.catalog.model_count, cache_state
-        );
-        let active_provider = snapshot
-            .providers
-            .iter()
-            .find(|provider| provider.active)
-            .map(|provider| provider.display_name.clone())
-            .unwrap_or_else(|| "No active DX provider".to_string());
-
         let catalog_status = if snapshot.catalog.present && !snapshot.catalog.stale {
             AiSettingItemStatus::Running
         } else {
             AiSettingItemStatus::Starting
         };
+        let active_provider = catalog_active_provider_label(&snapshot.catalog, &snapshot.providers);
         let mut catalog_item = AiSettingItem::new(
             "dx-agents-provider-catalog",
-            "Managed Providers",
+            "Catalog Inventory",
             catalog_status,
             AiSettingItemSource::Custom,
         )
@@ -1614,7 +1598,7 @@ impl AgentConfiguration {
                 .size(IconSize::Small)
                 .color(Color::Muted),
         )
-        .detail_label(provider_detail);
+        .detail_label(catalog_detail_label(&snapshot.catalog));
 
         if snapshot.enabled && snapshot.cli_actions_allowed {
             catalog_item = catalog_item
@@ -1663,6 +1647,14 @@ impl AgentConfiguration {
                     .color(Color::Muted),
             )
             .child(
+                Label::new(format!(
+                    "Receipt status: {}",
+                    catalog_receipt_status_label(&snapshot.catalog.receipt_status)
+                ))
+                .size(LabelSize::Small)
+                .color(Color::Muted),
+            )
+            .child(
                 Label::new(snapshot.catalog.path.display().to_string())
                     .size(LabelSize::Small)
                     .color(Color::Muted),
@@ -1671,6 +1663,14 @@ impl AgentConfiguration {
         if let Some(source_hash) = snapshot.catalog.source_hash.as_ref() {
             stack = stack.child(
                 Label::new(format!("Source hash: {source_hash}"))
+                    .size(LabelSize::Small)
+                    .color(Color::Muted),
+            );
+        }
+
+        if let Some(generated_at) = snapshot.catalog.generated_at.as_ref() {
+            stack = stack.child(
+                Label::new(format!("Generated at: {generated_at}"))
                     .size(LabelSize::Small)
                     .color(Color::Muted),
             );

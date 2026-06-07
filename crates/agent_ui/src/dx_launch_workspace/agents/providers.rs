@@ -4,38 +4,22 @@ use ui::prelude::*;
 use crate::dx_agent_bridge::DxAgentBridgeSnapshot;
 
 use self::rows::{dx_agent_model_row, dx_agent_provider_row};
+use self::summary::dx_agent_provider_summary_rows;
 use super::super::{metric_row, muted_card};
 
 mod rows;
+mod summary;
+
+pub(super) const VISIBLE_PROVIDER_ROW_LIMIT: usize = 3;
+pub(super) const VISIBLE_MODEL_ROW_LIMIT: usize = 2;
 
 pub(in super::super) fn dx_agent_provider_state(
     snapshot: &DxAgentBridgeSnapshot,
     cx: &App,
 ) -> AnyElement {
-    let model_count = if snapshot.catalog.model_count == 0 {
-        snapshot.models.len()
-    } else {
-        snapshot.catalog.model_count
-    };
     let mut stack = v_flex()
         .gap_1()
-        .child(metric_row(
-            "Providers",
-            snapshot.providers.len().to_string(),
-        ))
-        .child(metric_row("Models", model_count.to_string()))
-        .child(metric_row(
-            "Catalog path",
-            snapshot.catalog.path.display().to_string(),
-        ))
-        .child(metric_row(
-            "Fast cache",
-            if snapshot.catalog.present && !snapshot.catalog.stale {
-                "ready"
-            } else {
-                "stale/missing"
-            },
-        ));
+        .children(dx_agent_provider_summary_rows(snapshot));
 
     if !snapshot.show_managed_providers {
         return stack
@@ -56,7 +40,12 @@ pub(in super::super) fn dx_agent_provider_state(
             cx,
         ));
     } else {
-        for (ix, provider) in snapshot.providers.iter().take(3).enumerate() {
+        for (ix, provider) in snapshot
+            .providers
+            .iter()
+            .take(VISIBLE_PROVIDER_ROW_LIMIT)
+            .enumerate()
+        {
             stack = stack.child(dx_agent_provider_row(
                 SharedString::from(format!("dx-agent-provider-{ix}")),
                 provider,
@@ -65,7 +54,12 @@ pub(in super::super) fn dx_agent_provider_state(
         }
     }
 
-    for (ix, model) in snapshot.models.iter().take(2).enumerate() {
+    for (ix, model) in snapshot
+        .models
+        .iter()
+        .take(VISIBLE_MODEL_ROW_LIMIT)
+        .enumerate()
+    {
         stack = stack.child(dx_agent_model_row(
             SharedString::from(format!("dx-agent-model-{ix}")),
             model,

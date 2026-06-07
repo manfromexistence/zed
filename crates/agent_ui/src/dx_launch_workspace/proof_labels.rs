@@ -7,4 +7,5 @@ pub(crate) use evidence::{runtime_proof_evidence_detail, runtime_proof_requireme
 pub(crate) use receipt::runtime_proof_receipt_state_label;
 
 #[cfg(test)]
+#[path = "proof_labels_tests.rs"]
 mod proof_labels_tests;

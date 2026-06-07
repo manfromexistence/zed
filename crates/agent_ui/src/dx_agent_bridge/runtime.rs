@@ -9,6 +9,10 @@ use super::{
 
 #[path = "runtime_catalog.rs"]
 mod runtime_catalog;
+#[path = "runtime_catalog_fields.rs"]
+mod runtime_catalog_fields;
+#[path = "runtime_display.rs"]
+mod runtime_display;
 #[path = "runtime_provider_models.rs"]
 mod runtime_provider_models;
 
@@ -268,6 +272,9 @@ fn social_action_command_matches_prefix(command: &str, prefix: &str) -> bool {
 #[cfg(test)]
 #[path = "runtime_connection_tests.rs"]
 mod runtime_connection_tests;
+#[cfg(test)]
+#[path = "runtime_catalog_tests.rs"]
+mod runtime_catalog_tests;
 #[cfg(test)]
 #[path = "runtime_tests.rs"]
 mod runtime_tests;

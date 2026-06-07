@@ -14,7 +14,10 @@ const MAX_RECEIPT_BYTES: u64 = 128 * 1024;
 
 mod automation_actions;
 mod automation_contract;
+mod catalog_active_provider_label;
+mod catalog_labels;
 mod command_args;
+mod command_receipts;
 mod command_safety;
 mod commands;
 mod local_file_labels;
@@ -39,6 +42,12 @@ pub(crate) use self::automation_contract::{
     DxAgentAutomation, DxAgentAutomationComposer, DxAgentAutomationComposerField,
     DxAgentAutomationDestination, DxAgentAutomationHistoryEntry, DxAgentAutomationReceiptRef,
     DxAgentAutomationSchedule, DxAgentAutomationStatus,
+};
+pub(crate) use self::catalog_active_provider_label::{
+    catalog_active_provider_label, catalog_active_provider_value_label,
+};
+pub(crate) use self::catalog_labels::{
+    catalog_cache_state_label, catalog_detail_label, catalog_receipt_status_label,
 };
 pub(crate) use self::commands::{
     DxAgentMetadataCommand, DxAgentPublicCommand, run_dx_agent_metadata_command,
@@ -190,6 +199,11 @@ pub(crate) struct DxAgentCatalogSummary {
     pub stale: bool,
     pub provider_count: usize,
     pub model_count: usize,
+    pub generated_at: Option<String>,
+    pub receipt_status: String,
+    pub configured_provider_count: usize,
+    pub enabled_provider_count: usize,
+    pub active_provider_id: Option<String>,
     pub source_hash: Option<String>,
     pub error: Option<String>,
     pub safe_regeneration_command: String,
@@ -652,6 +666,7 @@ fn read_bridge_snapshot(settings: DxAgentSettingsSnapshot) -> DxAgentBridgeSnaps
             provider_value.as_ref(),
             model_value.as_ref(),
             settings.provider_catalog_path.clone(),
+            root_exists,
         ),
         trusted_tool_bridge: trusted_tool_bridge_summary(
             status_value.as_ref(),

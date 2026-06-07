@@ -721,6 +721,9 @@ test("DX launch workspace delegates agents and source rails", () => {
   const agentProviderRows = read(
     "crates/agent_ui/src/dx_launch_workspace/agents/providers/rows.rs",
   );
+  const agentProviderSummary = read(
+    "crates/agent_ui/src/dx_launch_workspace/agents/providers/summary.rs",
+  );
   const agentReceipts = read("crates/agent_ui/src/dx_launch_workspace/agents/receipts.rs");
   const agentReceiptLabels = read(
     "crates/agent_ui/src/dx_launch_workspace/agents/receipts/labels.rs",
@@ -833,7 +836,7 @@ test("DX launch workspace delegates agents and source rails", () => {
   assert.doesNotMatch(agentAutomationRows, /automation\.schedule_kind/);
   assert.doesNotMatch(agentAutomationRows, /automation\.status\.clone\(\)/);
   assert.match(agentAutomationRows, /use super::super::actions::dx_agent_action_line/);
-  assert.match(agentAutomationRows, /use super::super::super::metric_row/);
+  assert.match(agentAutomationRows, /use super::super::connection_rows::\{connection_detail_row, connection_detail_stack\}/);
   assert.match(agentBridge, /pub\(in super::super\) fn dx_agent_bridge_state/);
   assert.match(agentBridge, /DxAgentBridgeSnapshot/);
   assert.match(agentBridge, /^mod details;$/m);
@@ -923,7 +926,7 @@ test("DX launch workspace delegates agents and source rails", () => {
   assert.match(agentBridgeSummaryOverview, /pub\(super\) fn dx_agent_bridge_overview_rows/);
   assert.match(agentBridgeSummaryOverview, /metric_row\("Bridge"/);
   assert.match(agentBridgeSummaryOverview, /connected_accounts_summary\.connected/);
-  assert.match(agentBridgeSummaryOverview, /catalog\.present/);
+  assert.match(agentBridgeSummaryOverview, /catalog_cache_state_label\(&snapshot\.catalog\)/);
   assert.match(agentBridgeSummaryContract, /pub\(super\) fn dx_agent_bridge_contract_rows/);
   assert.match(agentBridgeSummaryContract, /metric_row\("Contract"/);
   assert.match(agentBridgeSummaryContract, /provider_catalog_receipt_count/);
@@ -957,13 +960,47 @@ test("DX launch workspace delegates agents and source rails", () => {
   assert.match(agentBridgeSummaryGateRecovery, /use super::super::super::super::super::metric_row/);
   assert.match(agentProviders, /pub\(in super::super\) fn dx_agent_provider_state/);
   assert.match(agentProviders, /^mod rows;$/m);
+  assert.match(agentProviders, /^mod summary;$/m);
+  assert.match(agentProviders, /const VISIBLE_PROVIDER_ROW_LIMIT: usize = 3;/);
+  assert.match(agentProviders, /const VISIBLE_MODEL_ROW_LIMIT: usize = 2;/);
+  assert.match(agentProviders, /use self::summary::dx_agent_provider_summary_rows/);
+  assert.match(agentProviders, /children\(dx_agent_provider_summary_rows\(snapshot\)\)/);
+  assert.match(agentProviders, /\.take\(VISIBLE_PROVIDER_ROW_LIMIT\)/);
+  assert.match(agentProviders, /\.take\(VISIBLE_MODEL_ROW_LIMIT\)/);
+  assert.match(agentProviderSummary, /pub\(super\) fn dx_agent_provider_summary_rows/);
+  assert.match(
+    agentProviderSummary,
+    /use crate::dx_agent_bridge::\{\s*DxAgentBridgeSnapshot,\s*catalog_active_provider_value_label,\s*catalog_cache_state_label,\s*catalog_detail_label,\s*catalog_receipt_status_label,\s*\}/s,
+  );
+  assert.match(agentProviderSummary, /catalog_receipt_status_label/);
   assert.match(agentProviders, /use self::rows::\{dx_agent_model_row, dx_agent_provider_row\}/);
+  assert.match(agentProviderSummary, /metric_row\(\s*"Catalog providers"/);
+  assert.match(agentProviderSummary, /metric_row\(\s*"Configured providers"/);
+  assert.match(agentProviderSummary, /metric_row\(\s*"Enabled candidates"/);
+  assert.match(agentProviderSummary, /metric_row\(\s*"Provider rows shown"/);
+  assert.match(agentProviderSummary, /visible_row_count_label\(snapshot\.providers\.len\(\), VISIBLE_PROVIDER_ROW_LIMIT\)/);
+  assert.match(agentProviderSummary, /visible_row_count_label\(snapshot\.models\.len\(\), VISIBLE_MODEL_ROW_LIMIT\)/);
+  assert.match(agentProviderSummary, /fn visible_row_count_label\(total: usize, limit: usize\)/);
+  assert.match(agentProviderSummary, /format!\("\{visible\} of \{total\}"\)/);
+  assert.doesNotMatch(agentProviderSummary, /"Provider rows shown"[\s\S]*?snapshot\.providers\.len\(\)\.to_string\(\)/);
+  assert.doesNotMatch(agentProviderSummary, /"Model rows shown"[\s\S]*?snapshot\.models\.len\(\)\.to_string\(\)/);
+  assert.match(
+    agentProviderSummary,
+    /catalog_active_provider_value_label\(&snapshot\.catalog, &snapshot\.providers\)/,
+  );
+  assert.match(
+    agentProviderSummary,
+    /metric_row\("Catalog models", snapshot\.catalog\.model_count\.to_string\(\)\)/,
+  );
+  assert.doesNotMatch(agentProviders, /let model_count = if snapshot\.catalog\.model_count == 0/);
   assert.match(agentProviders, /dx-agent-provider-\{ix\}/);
   assert.match(agentProviders, /dx-agent-model-\{ix\}/);
   assert.doesNotMatch(agentProviders, /fn dx_agent_provider_row/);
   assert.doesNotMatch(agentProviders, /fn dx_agent_model_row/);
   assert.doesNotMatch(agentProviders, /DxAgentProvider/);
   assert.doesNotMatch(agentProviders, /DxAgentModel/);
+  assert.doesNotMatch(agentProviders, /metric_row\(\s*"Providers"/);
+  assert.doesNotMatch(agentProviders, /metric_row\(\s*"Catalog providers"/);
   assert.doesNotMatch(agentProviders, /use super::provider_labels::\{/);
   assert.doesNotMatch(agentProviders, /provider\.compatibility\.join/);
   assert.doesNotMatch(agentProviders, /model\.compatibility\.join/);
@@ -971,6 +1008,8 @@ test("DX launch workspace delegates agents and source rails", () => {
   assert.match(agentProviderRows, /pub\(super\) fn dx_agent_model_row/);
   assert.match(agentProviderRows, /DxAgentProvider/);
   assert.match(agentProviderRows, /DxAgentModel/);
+  assert.doesNotMatch(agentProviderSummary, /DxAgentProvider/);
+  assert.doesNotMatch(agentProviderSummary, /DxAgentModel/);
   assert.match(agentProviderRows, /provider_state_label/);
   assert.match(agentProviderRows, /model_detail_label/);
   assert.doesNotMatch(agentProviderRows, /dx-agent-provider-\{ix\}/);
@@ -1135,7 +1174,7 @@ test("DX launch workspace delegates agents and source rails", () => {
   assert.doesNotMatch(agentSocialRows, /if account\.connected \{\s*"Connected"/);
   assert.match(agentSocialRows, /account\.next_action/);
   assert.match(agentSocialRows, /use super::super::actions::dx_agent_action_line/);
-  assert.match(agentSocialRows, /use super::super::super::metric_row/);
+  assert.match(agentSocialRows, /use super::super::connection_rows::\{connection_detail_row, connection_detail_stack\}/);
   assert.match(agentSocialActions, /pub\(super\) fn dx_agent_social_action_row/);
   assert.match(agentSocialActions, /DxAgentSocialActionSummary/);
   assert.match(agentSocialActions, /connect_supported/);
@@ -1222,7 +1261,7 @@ test("DX launch workspace delegates agents and source rails", () => {
     lineCount("crates/agent_ui/src/dx_launch_workspace/agents/automations/labels.rs") < 70,
   );
   assert.ok(
-    lineCount("crates/agent_ui/src/dx_launch_workspace/agents/automations/rows.rs") < 110,
+    lineCount("crates/agent_ui/src/dx_launch_workspace/agents/automations/rows.rs") < 180,
   );
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/bridge.rs") < 70);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/bridge/details.rs") < 60);
@@ -1265,7 +1304,8 @@ test("DX launch workspace delegates agents and source rails", () => {
     lineCount("crates/agent_ui/src/dx_launch_workspace/agents/provider_labels_tests.rs") < 90,
   );
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/providers.rs") < 90);
-  assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/providers/rows.rs") < 115);
+  assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/providers/rows.rs") < 155);
+  assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/providers/summary.rs") < 75);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/receipts.rs") < 75);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/receipts/footer.rs") < 45);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/receipts/labels.rs") < 95);
@@ -1275,8 +1315,8 @@ test("DX launch workspace delegates agents and source rails", () => {
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/receipts/summary.rs") < 75);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/receipts/text.rs") < 25);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/social.rs") < 70);
-  assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/social/rows.rs") < 110);
-  assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/social_actions.rs") < 90);
+  assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/social/rows.rs") < 165);
+  assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/social_actions.rs") < 110);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/sources.rs") < 95);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/sources/attachments.rs") < 60);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/sources/receipts.rs") < 55);
@@ -1363,7 +1403,10 @@ test("DX launch workspace delegates Check rail rendering", () => {
   assert.match(labels, /#\[path = "check_labels\/run\.rs"\]\s*mod run;/);
   assert.match(labels, /pub\(crate\) use counts::\{/);
   assert.match(labels, /pub\(crate\) use run::\{/);
-  assert.match(labels, /#\[cfg\(test\)\]\s*mod check_labels_tests;/);
+  assert.match(
+    labels,
+    /#\[cfg\(test\)\]\s*#\[path = "check_labels_tests\.rs"\]\s*mod check_labels_tests;/,
+  );
   assert.doesNotMatch(labels, /fn nonblank_count/);
   assert.doesNotMatch(labels, /pub\(crate\) fn check_outcome_label/);
   assert.match(labelCounts, /pub\(crate\) fn check_outcome_label/);
@@ -1511,6 +1554,10 @@ test("DX launch workspace delegates Proof rail rendering", () => {
   assert.doesNotMatch(proof, /fn runtime_proof_plan_requirements/);
   assert.match(proofLabels, /#\[path = "proof_labels\/evidence\.rs"\]\s*mod evidence;/);
   assert.match(proofLabels, /#\[path = "proof_labels\/receipt\.rs"\]\s*mod receipt;/);
+  assert.match(
+    proofLabels,
+    /#\[cfg\(test\)\]\s*#\[path = "proof_labels_tests\.rs"\]\s*mod proof_labels_tests;/,
+  );
   assert.match(
     proofLabels,
     /pub\(crate\) use evidence::\{runtime_proof_evidence_detail, runtime_proof_requirements_label\}/,

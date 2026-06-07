@@ -1,6 +1,6 @@
 use gpui::AnyElement;
 
-use crate::dx_agent_bridge::DxAgentBridgeSnapshot;
+use crate::dx_agent_bridge::{DxAgentBridgeSnapshot, catalog_cache_state_label};
 
 use super::super::super::super::metric_row;
 
@@ -20,11 +20,7 @@ pub(super) fn dx_agent_bridge_overview_rows(snapshot: &DxAgentBridgeSnapshot) ->
         metric_row("Tasks", snapshot.active_task_count.to_string()),
         metric_row(
             "Catalog",
-            if snapshot.catalog.present && !snapshot.catalog.stale {
-                "fast".to_string()
-            } else {
-                "fallback".to_string()
-            },
+            catalog_cache_state_label(&snapshot.catalog).to_string(),
         ),
     ]
 }
