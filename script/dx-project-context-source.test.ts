@@ -157,6 +157,9 @@ test("DX project context is wired into Check, Style, Deploy, and Web Preview DX 
   const stylePanel = read("crates/agent_ui/src/dx_style_panel.rs");
   const styleRoots = read("crates/agent_ui/src/dx_style_panel/receipt_roots.rs");
   const styleReadiness = read("crates/agent_ui/src/dx_style_panel/readiness.rs");
+  const styleSurfaceFixture = read(
+    "crates/web_preview/src/dx_style_generator_surface/fixture.rs",
+  );
   const deployRoots = read("crates/agent_ui/src/dx_deploy_receipt_roots.rs");
   const deployCheckRoots = read("crates/agent_ui/src/dx_deploy_check_roots.rs");
   const deployHubRoots = read("crates/agent_ui/src/dx_deploy_hub_roots.rs");
@@ -187,6 +190,14 @@ test("DX project context is wired into Check, Style, Deploy, and Web Preview DX 
   assert.match(
     styleReadiness,
     /DxProjectContext::receipt_root_for\(DxProjectContext::shared_fallback_root\(\), "style"\)/,
+  );
+  assert.match(
+    styleSurfaceFixture,
+    /use agent_ui::dx_project_context::DxProjectContext;/,
+  );
+  assert.match(
+    styleSurfaceFixture,
+    /DxProjectContext::shared_fallback_root\(\)\.join\("style"\)/,
   );
   assert.doesNotMatch(
     styleRoots,

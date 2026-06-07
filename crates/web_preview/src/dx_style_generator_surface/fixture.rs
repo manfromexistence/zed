@@ -7,8 +7,9 @@ use std::{
 
 use serde_json::Value;
 
+use agent_ui::dx_project_context::DxProjectContext;
+
 const DX_STYLE_ROOT_ENV: &str = "DX_STYLE_ROOT";
-const DX_STYLE_DEFAULT_ROOT: &str = r"G:\Dx\style";
 const MAX_DX_STYLE_FIXTURE_BYTES: u64 = 128 * 1024;
 
 pub(super) fn dx_style_fixture_path(path_env: &str, relative_path: &str) -> PathBuf {
@@ -17,8 +18,12 @@ pub(super) fn dx_style_fixture_path(path_env: &str, relative_path: &str) -> Path
     }
     let root = env::var_os(DX_STYLE_ROOT_ENV)
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(DX_STYLE_DEFAULT_ROOT));
+        .unwrap_or_else(default_dx_style_root);
     root.join(relative_path)
+}
+
+fn default_dx_style_root() -> PathBuf {
+    DxProjectContext::shared_fallback_root().join("style")
 }
 
 pub(super) fn bounded_json_fixture(path: &Path) -> Option<Value> {

@@ -2991,7 +2991,10 @@ test("Web Preview owns the DX Style generator surface action", () => {
   assert.match(surfaceCatalog, /source_edit_safety/);
   assert.doesNotMatch(surfaceCatalog, /token_hints_for/);
   assert.match(surfaceFixture, /DX_STYLE_ROOT_ENV/);
-  assert.match(surfaceFixture, /DX_STYLE_DEFAULT_ROOT/);
+  assert.match(surfaceFixture, /use agent_ui::dx_project_context::DxProjectContext;/);
+  assert.match(surfaceFixture, /fn default_dx_style_root\(\) -> PathBuf/);
+  assert.match(surfaceFixture, /DxProjectContext::shared_fallback_root\(\)\.join\("style"\)/);
+  assert.doesNotMatch(surfaceFixture, /DX_STYLE_DEFAULT_ROOT|r"G:\\Dx\\style"/);
   assert.match(surfaceFixture, /MAX_DX_STYLE_FIXTURE_BYTES/);
   assert.match(surfaceFixture, /dx_style_fixture_path/);
   assert.match(surfaceFixture, /bounded_json_fixture/);
