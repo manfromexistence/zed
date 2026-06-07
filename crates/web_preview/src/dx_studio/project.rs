@@ -1,7 +1,8 @@
 use std::{
+    collections::HashSet,
     fs::{self, File},
     io::Read,
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 use agent_ui::dx_project_context::DxProjectContext;
@@ -9,6 +10,47 @@ use agent_ui::dx_project_context::DxProjectContext;
 use super::{DxStudioProjectDetection, MAX_DX_MARKER_SCAN_BYTES, MAX_DX_MARKER_SCAN_FILES};
 
 const MAX_DX_CARGO_TOML_SCAN_BYTES: u64 = 256 * 1024;
+const MAX_DX_MARKER_SCAN_DIRS: usize = 128;
+const MAX_DX_MARKER_SCAN_VISITED_DIRS: usize = 256;
+
+struct DxMarkerScanBudget {
+    files_left: usize,
+    dirs_left: usize,
+    visited_dirs: HashSet<PathBuf>,
+}
+
+impl DxMarkerScanBudget {
+    fn new() -> Self {
+        Self {
+            files_left: MAX_DX_MARKER_SCAN_FILES,
+            dirs_left: MAX_DX_MARKER_SCAN_DIRS,
+            visited_dirs: HashSet::new(),
+        }
+    }
+
+    fn take_file(&mut self) -> bool {
+        if self.files_left == 0 {
+            return false;
+        }
+
+        self.files_left -= 1;
+        true
+    }
+
+    fn try_visit_dir(&mut self, dir: &Path) -> bool {
+        if self.dirs_left == 0 || self.visited_dirs.len() >= MAX_DX_MARKER_SCAN_VISITED_DIRS {
+            return false;
+        }
+
+        let dir_key = fs::canonicalize(dir).unwrap_or_else(|_| dir.to_path_buf());
+        if !self.visited_dirs.insert(dir_key) {
+            return false;
+        }
+
+        self.dirs_left -= 1;
+        true
+    }
+}
 
 pub fn detect_project(root: &Path) -> Option<DxStudioProjectDetection> {
     if !root.is_dir() {
@@ -119,7 +161,7 @@ fn cargo_toml_contains_dx_www_marker(path: &Path) -> bool {
 }
 
 fn contains_dx_marker_in_project_sources(root: &Path) -> bool {
-    let mut files_left = MAX_DX_MARKER_SCAN_FILES;
+    let mut budget = DxMarkerScanBudget::new();
     for source_root in [
         root.join("app"),
         root.join("pages"),
@@ -127,16 +169,15 @@ fn contains_dx_marker_in_project_sources(root: &Path) -> bool {
         root.join("src"),
         root.join("examples").join("launch-template"),
     ] {
-        if files_left == 0 {
-            return false;
-        }
-
         if source_root.is_file() {
+            if !budget.take_file() {
+                return false;
+            }
             if dx_marker_source_file_contains_marker(&source_root) {
                 return true;
             }
         } else if source_root.is_dir()
-            && dx_marker_source_dir_contains_marker(&source_root, &mut files_left)
+            && dx_marker_source_dir_contains_marker(&source_root, &mut budget)
         {
             return true;
         }
@@ -145,9 +186,13 @@ fn contains_dx_marker_in_project_sources(root: &Path) -> bool {
     false
 }
 
-fn dx_marker_source_dir_contains_marker(root: &Path, files_left: &mut usize) -> bool {
+fn dx_marker_source_dir_contains_marker(root: &Path, budget: &mut DxMarkerScanBudget) -> bool {
     let mut stack = vec![root.to_path_buf()];
     while let Some(dir) = stack.pop() {
+        if !budget.try_visit_dir(&dir) {
+            continue;
+        }
+
         let Ok(entries) = fs::read_dir(&dir) else {
             continue;
         };
@@ -161,10 +206,9 @@ fn dx_marker_source_dir_contains_marker(root: &Path, files_left: &mut usize) -> 
                     stack.push(path);
                 }
             } else if file_type.is_file() && is_dx_marker_source_file(&path) {
-                if *files_left == 0 {
+                if !budget.take_file() {
                     return false;
                 }
-                *files_left -= 1;
                 if dx_marker_source_file_contains_marker(&path) {
                     return true;
                 }
