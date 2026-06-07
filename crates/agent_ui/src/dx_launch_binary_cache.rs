@@ -51,7 +51,7 @@ pub(crate) struct DxBinaryCacheRow {
 
 pub(crate) fn binary_cache_snapshot(input: DxBinaryCacheInput) -> DxBinaryCacheSnapshot {
     let launch_cache_path = launch_receipt_cache_path(&input.launch_receipt_root);
-    let receipt_cache_path = receipt_cache_artifact_path();
+    let receipt_cache_path = receipt_cache_artifact_path(&input.receipt_root);
     let launch_artifact = read_receipt_cache_artifact_state(&launch_cache_path);
     let receipt_artifact = read_receipt_cache_artifact_state(&receipt_cache_path);
     let receipt_cache_ready = matches!(&receipt_artifact, ReceiptCacheArtifactState::Ready(_));

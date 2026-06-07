@@ -57,8 +57,12 @@ test("DX launch binary cache keeps artifacts, meters, paths, rows, states, and s
   assert.match(meters, /pub\(super\) fn metering_row_from_artifact/);
   assert.match(meters, /fn combined_meter_health/);
   assert.match(paths, /pub\(super\) fn launch_receipt_cache_path/);
-  assert.match(paths, /pub\(super\) fn receipt_cache_artifact_path/);
+  assert.match(paths, /const DEFAULT_RECEIPT_CACHE_FILE: &str = "receipt-cache\.dxrc";/);
+  assert.match(paths, /pub\(super\) fn receipt_cache_artifact_path\(receipt_root: &Path\) -> PathBuf/);
+  assert.match(paths, /receipt_root\.join\(DEFAULT_RECEIPT_CACHE_FILE\)/);
+  assert.doesNotMatch(paths, /DEFAULT_RECEIPT_CACHE_ARTIFACT|G:\\Dx/);
   assert.match(paths, /fn env_path/);
+  assert.match(parent, /receipt_cache_artifact_path\(&input\.receipt_root\)/);
   assert.match(rows, /pub\(super\) fn provider_catalog_row/);
   assert.match(rows, /pub\(super\) fn launch_receipts_row/);
   assert.match(rows, /pub\(super\) fn receipt_index_row/);
