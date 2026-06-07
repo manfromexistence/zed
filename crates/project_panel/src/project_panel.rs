@@ -110,6 +110,7 @@ const MAX_PROJECT_PANEL_STICKY_PARENTS: usize = 128;
 const MAX_PROJECT_PANEL_SIBLING_ENTRIES: usize = 20_000;
 const MAX_PROJECT_PANEL_BACKGROUND_MEDIA_PREVIEW_FOLDERS: usize = 256;
 const MAX_PROJECT_PANEL_BACKGROUND_FOLDER_STORAGE_DIRS: usize = 4_096;
+const MAX_PROJECT_PANEL_STORAGE_DRILLDOWN_ITEMS: usize = 5;
 
 fn project_panel_cap_hit(boundary: &'static str, cap: usize) {
     telemetry::event!(
@@ -207,6 +208,16 @@ impl FolderStorageSummary {
     }
 }
 
+#[derive(Clone)]
+struct DxExplorerStorageDrilldownItem {
+    worktree_id: WorktreeId,
+    entry_id: ProjectEntryId,
+    label: String,
+    file_count: usize,
+    file_bytes: u64,
+    heat_level: u8,
+}
+
 struct State {
     last_worktree_root_id: Option<ProjectEntryId>,
     /// Maps from leaf project entry ID to the currently selected ancestor.
@@ -220,6 +231,7 @@ struct State {
     unfolded_dir_ids: HashSet<ProjectEntryId>,
     expanded_dir_ids: HashMap<WorktreeId, Vec<ProjectEntryId>>,
     dx_explorer_visible_summary: DxExplorerVisibleSummary,
+    dx_explorer_storage_drilldown: Vec<DxExplorerStorageDrilldownItem>,
 }
 
 impl State {
@@ -241,6 +253,7 @@ impl State {
             unfolded_dir_ids: old.unfolded_dir_ids.clone(),
             expanded_dir_ids: old.expanded_dir_ids.clone(),
             dx_explorer_visible_summary: Default::default(),
+            dx_explorer_storage_drilldown: Vec::new(),
         }
     }
 }
@@ -4112,6 +4125,62 @@ impl ProjectPanel {
         }
     }
 
+    fn dx_explorer_storage_drilldown_items(
+        state: &State,
+        folder_storage_summaries: &HashMap<(WorktreeId, ProjectEntryId), FolderStorageSummary>,
+    ) -> Vec<DxExplorerStorageDrilldownItem> {
+        let mut items = Vec::new();
+
+        for visible_worktree in &state.visible_entries {
+            for entry in &visible_worktree.entries {
+                if !entry.kind.is_dir() {
+                    continue;
+                }
+
+                let cache_key = (visible_worktree.worktree_id, entry.id);
+                let Some(summary) = folder_storage_summaries.get(&cache_key).copied() else {
+                    continue;
+                };
+                if summary.file_count == 0 && summary.file_bytes == 0 {
+                    continue;
+                }
+
+                let label = entry
+                    .path
+                    .file_name()
+                    .map(|name| name.to_string())
+                    .unwrap_or_else(|| entry.path.as_unix_str().to_string());
+                items.push(DxExplorerStorageDrilldownItem {
+                    worktree_id: visible_worktree.worktree_id,
+                    entry_id: entry.id,
+                    label,
+                    file_count: summary.file_count,
+                    file_bytes: summary.file_bytes,
+                    heat_level: 0,
+                });
+            }
+        }
+
+        items.sort_by(|left, right| {
+            right
+                .file_bytes
+                .cmp(&left.file_bytes)
+                .then_with(|| right.file_count.cmp(&left.file_count))
+                .then_with(|| left.label.cmp(&right.label))
+        });
+        items.truncate(MAX_PROJECT_PANEL_STORAGE_DRILLDOWN_ITEMS);
+
+        let max_file_bytes = items
+            .first()
+            .map(|item| item.file_bytes)
+            .unwrap_or_default();
+        for item in &mut items {
+            item.heat_level = dx_explorer_storage_heat_level(item.file_bytes, max_file_bytes);
+        }
+
+        items
+    }
+
     fn dx_explorer_count_label(value: usize, singular: &str, plural: &str) -> String {
         if value == 1 {
             format!("1 {singular}")
@@ -4125,6 +4194,121 @@ impl ProjectPanel {
             .size(LabelSize::Small)
             .color(Color::Muted)
             .truncate()
+            .into_any_element()
+    }
+
+    fn render_dx_explorer_storage_drilldown(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let items = self.state.dx_explorer_storage_drilldown.clone();
+        if items.is_empty() {
+            return None;
+        }
+
+        let rows = items
+            .into_iter()
+            .map(|item| self.render_dx_explorer_storage_drilldown_row(item, cx))
+            .collect::<Vec<_>>();
+
+        Some(
+            v_flex()
+                .id("dx-explorer-storage-drilldown")
+                .w_full()
+                .gap_1()
+                .px_2()
+                .py_1()
+                .border_b_1()
+                .border_color(cx.theme().colors().border.opacity(0.6))
+                .bg(cx.theme().colors().panel_background)
+                .child(
+                    h_flex()
+                        .items_center()
+                        .gap_1()
+                        .child(
+                            Icon::new(dx_icon(DxUiIcon::Storage))
+                                .size(IconSize::XSmall)
+                                .color(Color::Muted),
+                        )
+                        .child(
+                            Label::new("Folder storage")
+                                .size(LabelSize::XSmall)
+                                .color(Color::Muted),
+                        ),
+                )
+                .children(rows)
+                .into_any_element(),
+        )
+    }
+
+    fn render_dx_explorer_storage_drilldown_row(
+        &self,
+        item: DxExplorerStorageDrilldownItem,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let target = SelectedEntry {
+            worktree_id: item.worktree_id,
+            entry_id: item.entry_id,
+        };
+        let is_selected = self.selection == Some(target);
+        let heat_color = dx_explorer_storage_heat_color(item.heat_level, cx);
+        let file_count = Self::dx_explorer_count_label(item.file_count, "file", "files");
+        let storage_label = format_file_size(item.file_bytes);
+        let bar_width = px(12. + f32::from(item.heat_level.max(1)) * 8.);
+
+        h_flex()
+            .id(SharedString::from(format!(
+                "dx-explorer-storage-drilldown-{}-{}",
+                item.worktree_id.to_usize(),
+                item.entry_id.to_usize()
+            )))
+            .w_full()
+            .items_center()
+            .gap_1()
+            .px_1()
+            .py_0p5()
+            .rounded_sm()
+            .cursor_pointer()
+            .border_1()
+            .border_color(if is_selected {
+                heat_color.opacity(0.58)
+            } else {
+                cx.theme().colors().border_variant.opacity(0.42)
+            })
+            .bg(if is_selected {
+                heat_color.opacity(0.14)
+            } else {
+                cx.theme().colors().element_background.opacity(0.35)
+            })
+            .hover(|style| style.bg(heat_color.opacity(0.12)))
+            .on_click(cx.listener(move |this, _, window, cx| {
+                this.focus_handle(cx).focus(window, cx);
+                this.expand_entry(target.worktree_id, target.entry_id, cx);
+                this.update_visible_entries(
+                    Some((target.worktree_id, target.entry_id)),
+                    false,
+                    true,
+                    window,
+                    cx,
+                );
+            }))
+            .child(
+                div()
+                    .h(px(4.))
+                    .w(bar_width)
+                    .rounded_sm()
+                    .bg(heat_color.opacity(0.8)),
+            )
+            .child(
+                Label::new(item.label)
+                    .size(LabelSize::XSmall)
+                    .color(Color::Default)
+                    .truncate(),
+            )
+            .child(div().flex_1())
+            .child(
+                Label::new(format!("{file_count} / {storage_label}"))
+                    .size(LabelSize::XSmall)
+                    .color(Color::Muted)
+                    .truncate(),
+            )
             .into_any_element()
     }
 
@@ -4912,9 +5096,8 @@ impl ProjectPanel {
             .keys()
             .copied()
             .collect::<HashSet<_>>();
-        let cached_folder_storage_summary_keys = self
-            .folder_storage_summaries
-            .borrow()
+        let cached_folder_storage_summaries = self.folder_storage_summaries.borrow().clone();
+        let cached_folder_storage_summary_keys = cached_folder_storage_summaries
             .keys()
             .copied()
             .collect::<HashSet<_>>();
@@ -4945,7 +5128,7 @@ impl ProjectPanel {
         let hide_hidden = settings.hide_hidden;
 
         let visible_entries_task = cx.spawn_in(window, async move |this, cx| {
-            let (new_state, media_preview_updates, folder_storage_summary_updates) = cx
+            let (mut new_state, media_preview_updates, folder_storage_summary_updates) = cx
                 .background_spawn(async move {
                     let mut visible_entries_total = 0usize;
                     let mut active_media_shelf_entry_ids = active_media_shelf_entry_ids;
@@ -4953,6 +5136,7 @@ impl ProjectPanel {
                     let mut folder_storage_summary_updates = Vec::new();
                     let mut media_preview_background_cap_reported = false;
                     let mut folder_storage_background_cap_reported = false;
+                    let mut folder_storage_summary_cache = cached_folder_storage_summaries;
                     for worktree_snapshot in visible_worktrees {
                         if visible_entries_total >= MAX_PROJECT_PANEL_VISIBLE_ENTRIES {
                             project_panel_cap_hit(
@@ -5366,6 +5550,16 @@ impl ProjectPanel {
                             new_state.max_width_item_index = Some(visited_worktrees_length + index);
                         }
                     }
+                    for (cache_key, summary) in &folder_storage_summary_updates {
+                        folder_storage_summary_cache
+                            .entry(*cache_key)
+                            .or_insert(*summary);
+                    }
+                    new_state.dx_explorer_storage_drilldown =
+                        Self::dx_explorer_storage_drilldown_items(
+                            &new_state,
+                            &folder_storage_summary_cache,
+                        );
                     (new_state, media_preview_updates, folder_storage_summary_updates)
                 })
                 .await;
@@ -8163,6 +8357,25 @@ fn format_file_size(bytes: u64) -> String {
     }
 }
 
+fn dx_explorer_storage_heat_level(file_bytes: u64, max_file_bytes: u64) -> u8 {
+    if file_bytes == 0 || max_file_bytes == 0 {
+        return 0;
+    }
+
+    let scaled = ((u128::from(file_bytes) * 4) + (u128::from(max_file_bytes) - 1))
+        / u128::from(max_file_bytes);
+    scaled.clamp(1, 4) as u8
+}
+
+fn dx_explorer_storage_heat_color(heat_level: u8, cx: &App) -> Hsla {
+    match heat_level {
+        4 => cx.theme().status().warning,
+        3 => cx.theme().colors().text_accent,
+        2 => cx.theme().status().info,
+        _ => cx.theme().colors().text_muted,
+    }
+}
+
 fn project_panel_marquee_bounds(selection: &ProjectPanelMarqueeSelection) -> Bounds<Pixels> {
     let upper_left = selection.anchor.min(&selection.current);
     let bottom_right = selection.anchor.max(&selection.current);
@@ -8496,6 +8709,10 @@ impl Render for ProjectPanel {
                                 this
                             }
                         })
+                        .when_some(
+                            self.render_dx_explorer_storage_drilldown(cx),
+                            |this, drilldown| this.child(drilldown),
+                        )
                         .when(show_active_media_preview, |this| {
                             this.when_some(active_media_preview, |this, media_preview| {
                                 let (active_media_folder, media_preview) = media_preview;

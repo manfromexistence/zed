@@ -1,3 +1,19 @@
+[2026-06-07] - DX Explorer Cached Storage Drilldown
+
+CHANGED:
+- `crates\project_panel\src\project_panel.rs` now ranks a bounded top-five list of visible folders from the existing folder storage summary cache during the background visible-entry refresh.
+- DX Explorer renders a compact `Folder storage` strip before media shelves and tree rows, with heat-level bars, direct child file/storage labels, and click-through selection/expansion for the real project folder.
+- `script\dx-project-panel-source.test.ts`, `DX.md`, and `todo.txt` now guard and document the cache-only storage drilldown boundary.
+
+PASSED:
+- `node --test script\dx-project-panel-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\project_panel\src\project_panel.rs`
+- `git diff --check -- crates/project_panel/src/project_panel.rs script/dx-project-panel-source.test.ts DX.md todo.txt changelog.txt`
+- Conflict-marker scan over the touched Project Panel storage files.
+
+NOTES:
+- This is a source-only storage visualizer foothold. It is not recursive folder sizing, runtime visual proof, or full heatmap validation; `just run`, broad Cargo, servers, and browser proof remain skipped by instruction.
+
 [2026-06-07] - DX Project Context Deploy Receipt Root Reuse
 
 CHANGED:
