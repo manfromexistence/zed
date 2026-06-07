@@ -10,6 +10,7 @@ use crate::dx_agent_bridge::DxAgentBridgeSnapshot;
 use crate::dx_check_score::DxCheckScoreSnapshot;
 use crate::dx_deploy_rail::deploy_target_state;
 use crate::dx_deploy_targets::DxDeployTargetSnapshot;
+use crate::dx_evidence_basket::DxEvidenceBasket;
 use crate::dx_launch_audit::DxLaunchAuditSnapshot;
 use crate::dx_launch_binary_cache::DxBinaryCacheSnapshot;
 use crate::dx_launch_contracts::DxLaunchContractSnapshot;
@@ -32,6 +33,7 @@ mod binary_cache_labels;
 mod check;
 mod check_labels;
 mod contracts;
+mod evidence_basket;
 mod launch_receipts;
 mod launch_status;
 mod launch_status_labels;
@@ -44,7 +46,6 @@ mod sources;
 mod style_panel;
 mod tool_history;
 mod www_evidence;
-use self::list_labels::{bounded_items, yes_no};
 
 #[derive(Clone)]
 pub(crate) struct DxLaunchWorkspaceStatus {
@@ -63,6 +64,7 @@ pub(crate) struct DxLaunchWorkspaceStatus {
     pub receipt_snapshot: DxReceiptSnapshot,
     pub source_sets: DxSourceSetSnapshot,
     pub tool_history: DxToolHistorySnapshot,
+    pub evidence_basket: DxEvidenceBasket,
     pub check_score: DxCheckScoreSnapshot,
     pub deploy_targets: DxDeployTargetSnapshot,
     pub proof_freshness: DxProofFreshnessSnapshot,
@@ -258,6 +260,14 @@ impl Render for DxLaunchDiagnosticsMenu {
             .child(section_title("Tool History", IconName::Archive))
             .child(tool_history::tool_history_state(
                 &self.status.tool_history,
+                cx,
+            ))
+            .child(section_title(
+                "Evidence Basket",
+                dx_icon(DxUiIcon::Evidence),
+            ))
+            .child(evidence_basket::evidence_basket_state(
+                &self.status.evidence_basket,
                 cx,
             ))
     }

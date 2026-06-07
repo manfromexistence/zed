@@ -27,6 +27,7 @@ This checkout is the Zed/DX editor surface. Worker chats here should focus on GP
 
 ## Current Verification Lane
 
+- Current DX Evidence Basket source slice: Agent launch diagnostics now builds a typed `DxEvidenceBasket` from cached source-set snapshots, tool-history buckets, and Flow readiness facts, then renders the basket in the diagnostics popover without direct filesystem scans, live audio capture, command execution, Cargo, or `just run`. Runtime/native Zed proof remains deferred.
 - Current AI Search profile evidence-tools slice: the built-in Search profile now keeps its stable `search` id while enabling only the existing DX metasearch/source-pack evidence tools (`inspect_dx_metasearch`, `search_dx_metasearch`, `extract_dx_metasearch_source`, `prepare_dx_source_attachment`, and `prepare_dx_metasearch_context`). Serializer/media/restore execution tools remain outside the Search default. Runtime Agent-tool proof, Cargo, and `just run` remain deferred.
 - Current Project Panel source-kind evidence slice: DX Explorer now carries a typed local/WSL/remote/read-only/empty source kind from `Project`, plus cached skipped-entry counts from visible-entry materialization, so the header source label and omitted-row metric no longer guess from render-path booleans or filesystem scans. Runtime visual proof, Cargo, and `just run` remain deferred.
 - Current Forge shared-root source slice: Forge filesystem readers now derive package-status, remote-registry, machine-cache, and configured-root paths through a focused `dx_forge_panel::roots` helper backed by `DxProjectContext`, preserving local workspace roots before the shared `G:\Dx` fallback while keeping the fallback out of the workspace configured count. Runtime Forge panel proof, Cargo, and `just run` remain deferred.
@@ -313,6 +314,7 @@ Launch workspace and receipt guards:
 - `node --test script/dx-runtime-proof-status-source.test.ts`
 - `node --test script/dx-source-sets-source.test.ts`
 - `node --test script/dx-ai-search-profile-source.test.ts`
+- `node --test script/dx-evidence-basket-source.test.ts`
 
 Adjacent source guards:
 - `node --test script/dx-agent-bridge-source.test.ts`

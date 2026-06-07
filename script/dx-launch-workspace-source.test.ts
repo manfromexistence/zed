@@ -38,6 +38,7 @@ test("DX launch workspace UI stays split by rail ownership", () => {
     "crates/agent_ui/src/dx_launch_workspace/check.rs",
     "crates/agent_ui/src/dx_launch_workspace/check_labels.rs",
     "crates/agent_ui/src/dx_launch_workspace/contracts.rs",
+    "crates/agent_ui/src/dx_launch_workspace/evidence_basket.rs",
     "crates/agent_ui/src/dx_launch_workspace/launch_status.rs",
     "crates/agent_ui/src/dx_launch_workspace/launch_status_labels.rs",
     "crates/agent_ui/src/dx_launch_workspace/launch_receipts.rs",
@@ -63,6 +64,7 @@ test("DX launch workspace UI stays split by rail ownership", () => {
   assert.match(parent, /^mod check;$/m);
   assert.match(parent, /^mod check_labels;$/m);
   assert.match(parent, /^mod contracts;$/m);
+  assert.match(parent, /^mod evidence_basket;$/m);
   assert.match(parent, /^mod launch_status;$/m);
   assert.match(parent, /^mod launch_status_labels;$/m);
   assert.match(parent, /^mod launch_receipts;$/m);
@@ -97,7 +99,7 @@ test("empty workspaces render the no-project Agent state inside DX launch chrome
   );
   assert.match(
     agentPanel,
-    /fn should_render_dx_launch_chrome\(&self, cx: &App\) -> bool \{\s*self\.manual_zoom_override\s*\.unwrap_or_else\(\|\| self\.zoomed \|\| self\.workspace_has_no_editor_file\(cx\)\)\s*\}/s,
+    /fn should_render_dx_launch_chrome\(&self, cx: &App\) -> bool \{\s*self\.manual_zoom_override\s*\.unwrap_or_else\(\|\| \{\s*matches!\(self\.host_kind, AgentPanelHostKind::BuilderWorkspace\)\s*\|\|\s*self\.zoomed\s*\|\|\s*self\.workspace_has_no_editor_file\(cx\)\s*\}\)\s*\}/s,
   );
   assert.doesNotMatch(
     agentPanel,
@@ -1231,11 +1233,12 @@ test("DX launch workspace delegates agents and source rails", () => {
 
 test("DX launch workspace delegates bounded list labels", () => {
   const parent = read("crates/agent_ui/src/dx_launch_workspace.rs");
+  const evidenceBasket = read("crates/agent_ui/src/dx_launch_workspace/evidence_basket.rs");
   const listLabels = read("crates/agent_ui/src/dx_launch_workspace/list_labels.rs");
 
-  assert.match(parent, /use (?:self::)?list_labels::\{bounded_items, yes_no\}/);
   assert.doesNotMatch(parent, /fn bounded_items/);
   assert.doesNotMatch(parent, /fn yes_no/);
+  assert.match(evidenceBasket, /use super::list_labels::\{bounded_items, yes_no\}/);
   assert.match(listLabels, /pub\(crate\) fn bounded_items/);
   assert.match(listLabels, /pub\(crate\) fn yes_no/);
   assert.match(listLabels, /const MAX_BOUNDED_ITEM_CHARS: usize = 120;/);

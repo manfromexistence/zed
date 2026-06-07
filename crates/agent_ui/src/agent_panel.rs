@@ -47,6 +47,7 @@ use crate::dx_agent_bridge::{
 use crate::dx_check_score::{DxCheckScoreInput, check_score_snapshot};
 use crate::dx_deploy_prompts::deploy_readiness_prompt;
 use crate::dx_deploy_targets::{DxDeployTargetSnapshot, deploy_target_snapshot};
+use crate::dx_evidence_basket::dx_evidence_basket;
 use crate::dx_launch_audit::launch_audit_snapshot;
 use crate::dx_launch_binary_cache::{DxBinaryCacheInput, binary_cache_snapshot};
 use crate::dx_launch_contracts::launch_contract_snapshot;
@@ -7585,6 +7586,7 @@ impl AgentPanel {
         });
         let source_sets = source_set_snapshot(&workspace_roots);
         let tool_history = tool_history_snapshot(&workspace_roots);
+        let evidence_basket = dx_evidence_basket(&workspace_roots);
         let deploy_targets = deploy_target_snapshot(&workspace_roots);
         let proof_freshness = proof_freshness_snapshot(&workspace_roots);
         let runtime_proof_status = runtime_proof_status_snapshot(&workspace_roots);
@@ -7646,6 +7648,7 @@ impl AgentPanel {
             receipt_snapshot,
             source_sets,
             tool_history,
+            evidence_basket,
             check_score,
             deploy_targets,
             proof_freshness,

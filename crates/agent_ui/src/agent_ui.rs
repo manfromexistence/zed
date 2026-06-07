@@ -52,6 +52,7 @@ mod dx_deploy_receipt_summary;
 mod dx_deploy_root_key;
 mod dx_deploy_target_detection;
 mod dx_deploy_targets;
+mod dx_evidence_basket;
 mod dx_forge_panel;
 mod dx_launch_audit;
 mod dx_launch_binary_cache;

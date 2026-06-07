@@ -1,3 +1,17 @@
+[2026-06-07] - DX Evidence Basket Projection
+
+ADDED:
+- `crates\agent_ui\src\dx_evidence_basket.rs` now projects cached source sets, tool-history buckets, and Flow readiness into a typed evidence basket for launch diagnostics.
+- `script\dx-evidence-basket-source.test.ts` guards the projection boundary, Flow readiness snapshot, diagnostics wiring, registry entry, and no direct filesystem/process work in the basket module.
+
+CHANGED:
+- Agent launch diagnostics now renders an Evidence Basket section with source, receipt, Forge restore, media, and Flow readiness facts from the cached launch status path.
+- `flow_speech_runtime.rs` now exposes a source-only readiness snapshot with Flow root, dictate binary, STT model readiness, Kokoro readiness, and deferred input-device detail.
+- `script\dx-handoff-source-guard-registry.test.ts`, `DX.md`, and `todo.txt` now register and document this source-only evidence checkpoint.
+
+NOTES:
+- This remains source-only by instruction. Cargo, `just run`, local servers, browser/WebView proof, native Zed launch, live audio capture, and live Agent/tool execution proof remain skipped.
+
 [2026-06-07] - AI Search Profile Evidence Tools
 
 CHANGED:

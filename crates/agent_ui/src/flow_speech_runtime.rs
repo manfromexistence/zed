@@ -48,6 +48,18 @@ pub(crate) struct FlowSpeechRuntime {
     kokoro_tts_runtime: Result<KokoroTtsRuntime, String>,
 }
 
+#[derive(Clone, Debug)]
+pub(crate) struct FlowSpeechReadinessSnapshot {
+    pub(crate) flow_root: String,
+    pub(crate) dictate_binary: Option<String>,
+    pub(crate) stt_model: String,
+    pub(crate) stt_ready: bool,
+    pub(crate) stt_detail: String,
+    pub(crate) kokoro_ready: bool,
+    pub(crate) kokoro_detail: String,
+    pub(crate) input_device_detail: String,
+}
+
 #[derive(Clone, Copy, Debug)]
 struct FlowSttModel {
     key: &'static str,
@@ -256,6 +268,22 @@ impl FlowSpeechRuntime {
         }
     }
 
+    pub(crate) fn readiness_snapshot(&self) -> FlowSpeechReadinessSnapshot {
+        FlowSpeechReadinessSnapshot {
+            flow_root: self.flow_root.display().to_string(),
+            dictate_binary: self
+                .flow_dictate_binary
+                .as_ref()
+                .map(|path| path.display().to_string()),
+            stt_model: self.stt_model_label(),
+            stt_ready: self.stt_available(),
+            stt_detail: self.stt_readiness_summary(),
+            kokoro_ready: self.tts_available(),
+            kokoro_detail: self.tts_readiness_summary().to_string(),
+            input_device_detail: input_device_readiness_detail(),
+        }
+    }
+
     pub(crate) fn start_recording(
         &self,
         input_device_id: Option<&DeviceId>,
@@ -344,6 +372,13 @@ impl FlowSpeechRuntime {
             Ok(stt_model) => format!("{} ready", stt_model.label),
             Err(error) => error.to_string(),
         }
+    }
+
+    fn stt_model_label(&self) -> String {
+        self.selected_stt_model
+            .as_ref()
+            .map(|model| model.label.to_string())
+            .unwrap_or_else(|error| error.clone())
     }
 
     pub(crate) fn tts_readiness_summary(&self) -> &str {
@@ -980,6 +1015,12 @@ fn requested_input_device_name() -> Option<String> {
         .ok()
         .map(|name| name.trim().to_string())
         .filter(|name| !name.is_empty())
+}
+
+fn input_device_readiness_detail() -> String {
+    requested_input_device_name()
+        .map(|name| format!("Configured input device: {name}"))
+        .unwrap_or_else(|| "Input device not checked; live capture proof deferred".to_string())
 }
 
 fn input_device_name(device: &cpal::Device) -> Option<String> {
