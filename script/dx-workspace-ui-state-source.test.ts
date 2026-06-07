@@ -841,6 +841,7 @@ test("agent rails and project badges keep compact production layout", () => {
   const progressRail = functionBody(dxLaunchWorkspace, "render_right_rail");
   const diagnosticsMenu = functionBody(dxLaunchWorkspace, "diagnostics_menu");
   const railSection = functionBody(dxLaunchWorkspace, "rail_section");
+  const subagentSummary = functionBody(dxLaunchWorkspace, "subagent_summary");
   const sourceRow = functionBody(dxLaunchSourceRows, "source_item_row");
   const sourceRowControls = functionBody(agentPanel, "render_dx_launch_source_row_controls");
   const toolbar = functionBody(agentPanel, "render_toolbar");
@@ -864,8 +865,29 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(dxLaunchWorkspace, /"dx-readiness-section"/);
   assert.match(dxLaunchWorkspace, /fn subagent_pixel_icon/);
   assert.match(dxLaunchWorkspace, /gpui::hsla\(210\.0 \/ 360\.0/);
-  assert.match(dxLaunchWorkspace, /status\.agent_bridge\.automations\.iter\(\)\.take\(6\)/);
-  assert.match(dxLaunchWorkspace, /muted_card\("No subagent activity", cx\)/);
+  assert.match(dxLaunchWorkspace, /status\.subagent_rows\.iter\(\)\.take\(6\)/);
+  assert.doesNotMatch(subagentSummary, /agent_bridge\.automations/);
+  assert.doesNotMatch(subagentSummary, /automation_count/);
+  assert.match(dxLaunchWorkspace, /enum DxSubagentStatus/);
+  assert.match(dxLaunchWorkspace, /DxSubagentStatus::Running/);
+  assert.match(dxLaunchWorkspace, /DxSubagentStatus::Queued/);
+  assert.match(dxLaunchWorkspace, /DxSubagentStatus::Blocked/);
+  assert.match(dxLaunchWorkspace, /DxSubagentStatus::Failed/);
+  assert.match(dxLaunchWorkspace, /DxSubagentStatus::Idle/);
+  assert.match(dxLaunchWorkspace, /fn subagent_pixel_icon\(status: DxSubagentStatus\)/);
+  assert.match(agentPanel, /fn dx_subagent_status_rows/);
+  assert.match(agentPanel, /AgentThreadEntry::ToolCall/);
+  assert.match(agentPanel, /subagent_session_info/);
+  assert.match(agentPanel, /ThreadStatus::Generating/);
+  assert.match(agentPanel, /has_in_progress_tool_calls/);
+  assert.match(agentPanel, /has_queued_messages/);
+  assert.match(agentPanel, /had_error/);
+  assert.match(agentPanel, /pending_tool_call_for_session/);
+  assert.match(agentPanel, /dx_subagent_status_from_tool_call/);
+  assert.match(agentPanel, /dx_session_id_label/);
+  assert.doesNotMatch(agentPanel, /dx_session_label/);
+  assert.match(agentPanel, /ToolCallStatus::WaitingForConfirmation/);
+  assert.match(dxLaunchWorkspace, /muted_card\("No live subagent state", cx\)/);
   assert.match(agentPanel, /collapsed_dx_launch_rail_sections: HashSet<DxLaunchRailSection>/);
   assert.match(agentPanel, /fullscreen_sources_rail_pinned: bool/);
   assert.match(agentPanel, /fullscreen_progress_rail_pinned: bool/);
@@ -916,7 +938,10 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(progressRail, /\.shadow_md\(\)/);
   assert.match(progressRail, /\.occlude\(\)/);
   assert.match(progressRail, /rail_pin_header\(\s*"dx-progress-rail-pin"/);
-  assert.match(diagnosticsMenu, /IconButton::new\("dx-launch-diagnostics-button", IconName::Sliders\)/);
+  assert.match(
+    diagnosticsMenu,
+    /IconButton::new\("dx-launch-diagnostics-button", dx_icon\(DxUiIcon::Source\)\)/,
+  );
   assert.doesNotMatch(diagnosticsMenu, /Button::new\("dx-launch-diagnostics-button", "Diagnostics"\)|\.full_width\(\)/);
   assert.doesNotMatch(sourcesRail, /\.border_r_1\(\)/);
   assert.doesNotMatch(progressRail, /\.right_0\(\)/);
@@ -1034,7 +1059,7 @@ test("agent launch rails use professional operator-facing copy", () => {
   assert.match(progressSummary, /"Quality Gate"/);
   assert.match(environmentSummary, /"Fresh Receipts"/);
   assert.match(subagentSummary, /"Active Tasks"/);
-  assert.match(subagentSummary, /"No subagent activity"/);
+  assert.match(subagentSummary, /"No live subagent state"/);
   assert.match(sourceSummary, /"Attachable"/);
   assert.doesNotMatch(
     dxLaunchWorkspace,

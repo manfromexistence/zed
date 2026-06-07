@@ -27,6 +27,7 @@ This checkout is the Zed/DX editor surface. Worker chats here should focus on GP
 
 ## Current Verification Lane
 
+- Current Agent fullscreen subagent rail slice: the right rail Subagents section now reads live ACP subagent/tool-call state and non-idle root agent fallback rows instead of DX Agents automation receipts, maps only running/queued/blocked/failed/idle into compact GPUI badges, and uses the semantic DX loader icon for running rows. Runtime visual proof, Cargo, and `just run` remain deferred.
 - Current DX icon source-of-truth slice: icon picker catalog loading and editor icon insertion now share a UI-level DX icon data resolver that prefers `DX_ICON_INDEX`, `DX_ICON_DATA`, `DX_ICON_ROOT`, legacy `DX_ICONS_DATA_DIR`, `DX_HOME\icon`, `G:\Dx\icon`, then `%USERPROFILE%\.dx\icon` before reading Iconify pack JSON. Runtime picker/editor proof, Cargo, and `just run` remain deferred.
 - Current GPUI gradient source slice: shared UI styles now expose clamped two-stop linear gradient helpers that set `ColorSpace::Oklab`, plus theme-aware panel and accent wash patterns for DX/Zed surfaces. Existing shared `GradientFade` and AI skills illustration gradients consume the helper, the GPUI gradient example starts in Oklab, and mesh/noise/radial generators remain Web Preview-owned rather than GPUI-owned. Runtime visual/native proof remains deferred until the governed validation window.
 - Current Agent Configuration bridge slice: the DX Agents settings/status section and its public/metadata bridge actions now resolve Agent receipt and catalog defaults with active workspace roots, preserving explicit settings while preferring project-local `.dx\receipts\agents` before the shared DX fallback. Live DX Agents command proof, Cargo, and `just run` remain deferred.
@@ -200,7 +201,7 @@ Current handoff and production-readiness guards:
 - `node --test script/dx-editor-navigation-source.test.ts` - editor navigation, signature-help, linked-editing, and LSP extension fanout boundaries.
 - `node --test script/dx-editor-inlay-semantic-source.test.ts` - editor inlay hint and semantic-token request/result materialization boundaries.
 - `node --test script/dx-editor-input-source.test.ts` - editor newline cursor remap stale-row boundaries.
-- `node --test script/dx-workspace-ui-state-source.test.ts` - workspace dock, history, jump-list, and item project-handle materialization boundaries.
+- `node --test script/dx-workspace-ui-state-source.test.ts` - workspace dock, history, jump-list, item project-handle, Agent fullscreen rail, and live subagent status materialization boundaries.
 - `node --test script/dx-title-bar-source.test.ts` - title-bar application menu stale entry activation boundaries.
 - `node --test script/dx-project-panel-source.test.ts` - project panel DX Explorer source/filter/view/edit chrome, visible file/folder/storage/media summary counts, direct-child folder storage summaries, tree, selection, visible-range, edit-state, drag/drop, sticky-row, undo, and lazy inline media-preview materialization boundaries.
 - `node --test script/dx-diagnostics-ui-source.test.ts` - diagnostics grouping, excerpt, markdown, hint, copy, and status-label materialization boundaries.

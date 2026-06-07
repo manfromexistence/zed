@@ -1,3 +1,19 @@
+[2026-06-07] - Live Agent Subagent Rail Status
+
+CHANGED:
+- `crates\agent_ui\src\agent_panel.rs` now derives Agent fullscreen subagent rows from real ACP subagent tool calls and connected thread views, using non-idle root agent rows only as a real fallback.
+- `crates\agent_ui\src\dx_launch_workspace.rs` now renders running, queued, blocked, failed, and idle subagent rows with compact GPUI status badges and the semantic DX loader icon for running state instead of treating DX Agents automation receipts as subagents.
+- `script\dx-workspace-ui-state-source.test.ts`, `DX.md`, and `todo.txt` now guard and document the live subagent status contract.
+
+PASSED:
+- `node --test script\dx-workspace-ui-state-source.test.ts script\dx-icon-system-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\dx_launch_workspace.rs`
+- `git diff --check`
+- `rg -n "^<<<<<<<|^=======|^>>>>>>>" ...` across the touched subagent rail source, guard, DX, todo, and changelog files returned no matches.
+
+NOTES:
+- This checkpoint is source-only. Cargo, `just run`, local servers, browser/WebView proof, and runtime visual proof remain skipped by instruction.
+
 [2026-06-07] - Shared DX Icon Data Resolver
 
 ADDED:

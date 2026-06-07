@@ -9,7 +9,9 @@ use std::{
     time::{Duration, Instant},
 };
 
-use acp_thread::{AcpThread, AcpThreadEvent, MentionUri, ThreadStatus};
+use acp_thread::{
+    AcpThread, AcpThreadEvent, AgentThreadEntry, MentionUri, ThreadStatus, ToolCallStatus,
+};
 use agent::{ContextServerRegistry, SharedThread, ThreadStore};
 use agent_client_protocol::schema as acp;
 use agent_servers::AgentServer;
@@ -61,7 +63,8 @@ use crate::dx_launch_source_audit::launch_source_audit_snapshot_for_roots;
 use crate::dx_launch_status::launch_status_snapshot_for_roots;
 use crate::dx_launch_workspace::{
     DxLaunchRailControls, DxLaunchRailSection, DxLaunchRailSide, DxLaunchRailState,
-    DxLaunchWorkspaceStatus, DxSourceRowControl, render_workspace_chrome,
+    DxLaunchWorkspaceStatus, DxSourceRowControl, DxSubagentStatus, DxSubagentStatusRow,
+    render_workspace_chrome,
 };
 use crate::dx_proof_freshness::proof_freshness_snapshot;
 use crate::dx_receipt_history::tool_history_snapshot;
@@ -199,6 +202,8 @@ fn terminal_program_to_report(
 /// Set as a GPUI global to override; otherwise defaults to 5.
 pub struct MaxIdleRetainedThreads(pub usize);
 impl gpui::Global for MaxIdleRetainedThreads {}
+
+const MAX_DX_SUBAGENT_STATUS_ROWS: usize = 12;
 
 impl MaxIdleRetainedThreads {
     pub fn global(cx: &App) -> usize {
@@ -1200,6 +1205,7 @@ struct DxLaunchWorkspaceStatusInput {
     visible_worktree_count: usize,
     background_task_count: usize,
     active_status: SharedString,
+    subagent_rows: Vec<DxSubagentStatusRow>,
     agent_settings: DxAgentSettingsSnapshot,
 }
 
@@ -7416,6 +7422,7 @@ impl AgentPanel {
         cx: &Context<Self>,
     ) -> DxLaunchWorkspaceStatus {
         status.active_status = self.dx_active_status(cx);
+        status.subagent_rows = self.dx_subagent_status_rows(cx);
         status
     }
 
@@ -7490,6 +7497,7 @@ impl AgentPanel {
             visible_worktree_count: self.project.read(cx).visible_worktrees(cx).count(),
             background_task_count: self.retained_threads.len(),
             active_status: self.dx_active_status(cx),
+            subagent_rows: self.dx_subagent_status_rows(cx),
             agent_settings: dx_agent_bridge_settings_snapshot(cx),
         }
     }
@@ -7500,6 +7508,7 @@ impl AgentPanel {
         let workspace_roots = input.workspace_roots;
         let visible_worktree_count = input.visible_worktree_count;
         let background_task_count = input.background_task_count;
+        let subagent_rows = input.subagent_rows;
 
         let receipt_snapshot = receipt_snapshot_for_roots(&workspace_roots);
         let launch_status = launch_status_snapshot_for_roots(&workspace_roots);
@@ -7595,6 +7604,7 @@ impl AgentPanel {
         DxLaunchWorkspaceStatus {
             active_status: input.active_status,
             visible_worktree_count,
+            subagent_rows,
             agent_bridge,
             launch_status,
             launch_receipts,
@@ -7612,6 +7622,223 @@ impl AgentPanel {
             proof_freshness,
             runtime_proof_status,
             style_panel,
+        }
+    }
+
+    fn dx_subagent_status_rows(&self, cx: &Context<Self>) -> Vec<DxSubagentStatusRow> {
+        let mut rows = Vec::new();
+        let mut seen_sessions = HashSet::default();
+
+        for conversation_view in self.conversation_views() {
+            Self::collect_dx_subagent_status_rows(
+                &conversation_view,
+                &mut rows,
+                &mut seen_sessions,
+                cx,
+            );
+        }
+
+        if rows.is_empty() {
+            for conversation_view in self.conversation_views() {
+                Self::collect_dx_agent_status_rows(
+                    &conversation_view,
+                    &mut rows,
+                    &mut seen_sessions,
+                    cx,
+                );
+            }
+        }
+
+        rows.sort_by(|left, right| {
+            left.status
+                .rank()
+                .cmp(&right.status.rank())
+                .then_with(|| left.label.as_ref().cmp(right.label.as_ref()))
+        });
+        rows.truncate(MAX_DX_SUBAGENT_STATUS_ROWS);
+        rows
+    }
+
+    fn collect_dx_subagent_status_rows(
+        conversation_view: &Entity<ConversationView>,
+        rows: &mut Vec<DxSubagentStatusRow>,
+        seen_sessions: &mut HashSet<String>,
+        cx: &Context<Self>,
+    ) {
+        let conversation_view = conversation_view.read(cx);
+        let Some(root_thread_view) = conversation_view.root_thread_view() else {
+            return;
+        };
+        let root_thread_view = root_thread_view.read(cx);
+        let root_thread = root_thread_view.thread.read(cx);
+
+        for entry in root_thread.entries().iter().rev() {
+            let AgentThreadEntry::ToolCall(tool_call) = entry else {
+                continue;
+            };
+            let Some(info) = tool_call.subagent_session_info.as_ref() else {
+                continue;
+            };
+            let session_id = info.session_id.clone();
+            if !seen_sessions.insert(session_id.to_string()) {
+                continue;
+            }
+
+            let parent_status = Self::dx_subagent_status_from_tool_call(&tool_call.status);
+            let parent_label = Self::dx_subagent_tool_call_label(tool_call, cx);
+            let (label, status, detail) =
+                if let Some(subagent_view) = conversation_view.thread_view(&session_id) {
+                    let subagent_view = subagent_view.read(cx);
+                    let subagent_thread = subagent_view.thread.read(cx);
+                    (
+                        subagent_thread
+                            .title()
+                            .filter(|title| !title.as_ref().trim().is_empty())
+                            .or(parent_label)
+                            .unwrap_or_else(|| Self::dx_session_id_label(&session_id)),
+                        Self::dx_status_from_thread_view(
+                            &subagent_view,
+                            &subagent_thread,
+                            Some(parent_status),
+                            cx,
+                        ),
+                        Self::dx_thread_detail("ACP subagent", &subagent_view, &session_id),
+                    )
+                } else {
+                    (
+                        parent_label.unwrap_or_else(|| Self::dx_session_id_label(&session_id)),
+                        parent_status,
+                        Self::dx_session_detail("ACP subagent tool call", &session_id),
+                    )
+                };
+
+            rows.push(DxSubagentStatusRow {
+                label,
+                status,
+                detail,
+            });
+        }
+    }
+
+    fn collect_dx_agent_status_rows(
+        conversation_view: &Entity<ConversationView>,
+        rows: &mut Vec<DxSubagentStatusRow>,
+        seen_sessions: &mut HashSet<String>,
+        cx: &Context<Self>,
+    ) {
+        let conversation_view = conversation_view.read(cx);
+        let Some(thread_view) = conversation_view.root_thread_view() else {
+            return;
+        };
+        let thread_view = thread_view.read(cx);
+        let thread = thread_view.thread.read(cx);
+        let status = Self::dx_status_from_thread_view(&thread_view, &thread, None, cx);
+        if status == DxSubagentStatus::Idle {
+            return;
+        }
+
+        let session_id = thread.session_id().clone();
+        if !seen_sessions.insert(format!("agent:{session_id}")) {
+            return;
+        }
+
+        rows.push(DxSubagentStatusRow {
+            label: thread
+                .title()
+                .filter(|title| !title.as_ref().trim().is_empty())
+                .unwrap_or_else(|| Self::dx_session_id_label(&session_id)),
+            status,
+            detail: Self::dx_thread_detail("ACP agent thread", &thread_view, &session_id),
+        });
+    }
+
+    fn dx_status_from_thread_view(
+        thread_view: &ThreadView,
+        thread: &AcpThread,
+        parent_status: Option<DxSubagentStatus>,
+        cx: &Context<Self>,
+    ) -> DxSubagentStatus {
+        if thread.had_error() || matches!(parent_status, Some(DxSubagentStatus::Failed)) {
+            return DxSubagentStatus::Failed;
+        }
+
+        let session_id = thread.session_id().clone();
+        let pending_permission = thread_view
+            .conversation
+            .read(cx)
+            .pending_tool_call_for_session(&session_id, cx)
+            .is_some();
+
+        if pending_permission
+            || thread.is_waiting_for_confirmation()
+            || thread_view.thread_retry_status.is_some()
+            || matches!(parent_status, Some(DxSubagentStatus::Blocked))
+        {
+            return DxSubagentStatus::Blocked;
+        }
+
+        if thread_view.is_loading_contents
+            || thread_view.has_queued_messages()
+            || matches!(parent_status, Some(DxSubagentStatus::Queued))
+        {
+            return DxSubagentStatus::Queued;
+        }
+
+        if thread.status() == ThreadStatus::Generating
+            || thread.has_in_progress_tool_calls()
+            || matches!(parent_status, Some(DxSubagentStatus::Running))
+        {
+            return DxSubagentStatus::Running;
+        }
+
+        DxSubagentStatus::Idle
+    }
+
+    fn dx_subagent_status_from_tool_call(status: &ToolCallStatus) -> DxSubagentStatus {
+        match status {
+            ToolCallStatus::Pending => DxSubagentStatus::Queued,
+            ToolCallStatus::WaitingForConfirmation { .. } => DxSubagentStatus::Blocked,
+            ToolCallStatus::InProgress => DxSubagentStatus::Running,
+            ToolCallStatus::Completed => DxSubagentStatus::Idle,
+            ToolCallStatus::Failed | ToolCallStatus::Rejected | ToolCallStatus::Canceled => {
+                DxSubagentStatus::Failed
+            }
+        }
+    }
+
+    fn dx_subagent_tool_call_label(
+        tool_call: &acp_thread::ToolCall,
+        cx: &Context<Self>,
+    ) -> Option<SharedString> {
+        let label = tool_call.label.read(cx).source().trim().to_string();
+        (!label.is_empty()).then(|| SharedString::from(label))
+    }
+
+    fn dx_session_id_label(session_id: &acp::SessionId) -> SharedString {
+        SharedString::from(session_id.to_string())
+    }
+
+    fn dx_session_detail(kind: &'static str, session_id: &acp::SessionId) -> SharedString {
+        let session = session_id.to_string();
+        if session.is_empty() {
+            kind.into()
+        } else {
+            SharedString::from(format!("{kind}, session {session}"))
+        }
+    }
+
+    fn dx_thread_detail(
+        kind: &'static str,
+        thread_view: &ThreadView,
+        session_id: &acp::SessionId,
+    ) -> SharedString {
+        let queued = thread_view.local_queued_messages.len();
+        let session = session_id.to_string();
+        match (queued, session.is_empty()) {
+            (0, true) => kind.into(),
+            (0, false) => SharedString::from(format!("{kind}, session {session}")),
+            (_, true) => SharedString::from(format!("{kind}, {queued} queued")),
+            (_, false) => SharedString::from(format!("{kind}, {queued} queued, session {session}")),
         }
     }
 

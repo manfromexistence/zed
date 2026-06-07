@@ -50,6 +50,7 @@ use self::list_labels::{bounded_items, yes_no};
 pub(crate) struct DxLaunchWorkspaceStatus {
     pub active_status: SharedString,
     pub visible_worktree_count: usize,
+    pub subagent_rows: Vec<DxSubagentStatusRow>,
     pub agent_bridge: DxAgentBridgeSnapshot,
     pub launch_status: DxLaunchStatusSnapshot,
     pub launch_receipts: DxLaunchReceiptReviewSnapshot,
@@ -67,6 +68,44 @@ pub(crate) struct DxLaunchWorkspaceStatus {
     pub proof_freshness: DxProofFreshnessSnapshot,
     pub runtime_proof_status: DxRuntimeProofStatusSnapshot,
     pub style_panel: DxStylePanelSnapshot,
+}
+
+#[derive(Clone)]
+pub(crate) struct DxSubagentStatusRow {
+    pub label: SharedString,
+    pub status: DxSubagentStatus,
+    pub detail: SharedString,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum DxSubagentStatus {
+    Running,
+    Queued,
+    Blocked,
+    Failed,
+    Idle,
+}
+
+impl DxSubagentStatus {
+    pub(crate) fn label(self) -> &'static str {
+        match self {
+            DxSubagentStatus::Running => "running",
+            DxSubagentStatus::Queued => "queued",
+            DxSubagentStatus::Blocked => "blocked",
+            DxSubagentStatus::Failed => "failed",
+            DxSubagentStatus::Idle => "idle",
+        }
+    }
+
+    pub(crate) fn rank(self) -> usize {
+        match self {
+            DxSubagentStatus::Running => 0,
+            DxSubagentStatus::Blocked => 1,
+            DxSubagentStatus::Queued => 2,
+            DxSubagentStatus::Failed => 3,
+            DxSubagentStatus::Idle => 4,
+        }
+    }
 }
 
 pub(crate) struct DxSourceRowControl {
@@ -587,33 +626,25 @@ fn subagent_summary(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {
         cx,
     ));
 
-    if status.agent_bridge.automations.is_empty() {
+    if status.subagent_rows.is_empty() {
         return stack
-            .child(muted_card("No subagent activity", cx))
+            .child(muted_card("No live subagent state", cx))
             .into_any_element();
     }
 
-    for (ix, automation) in status.agent_bridge.automations.iter().take(6).enumerate() {
-        let label = if automation.id.is_empty() {
-            automation.source.clone()
-        } else {
-            automation.id.clone()
-        };
+    for (ix, row) in status.subagent_rows.iter().take(6).enumerate() {
         stack = stack.child(subagent_row(
             SharedString::from(format!("dx-subagent-row-{ix}")),
-            ix,
-            label,
-            automation.status.clone(),
-            automation.enabled,
+            row,
             cx,
         ));
     }
 
-    if status.agent_bridge.automation_count > 6 {
+    if status.subagent_rows.len() > 6 {
         stack = stack.child(
             Label::new(format!(
                 "+{} more",
-                status.agent_bridge.automation_count.saturating_sub(6)
+                status.subagent_rows.len().saturating_sub(6)
             ))
             .size(LabelSize::XSmall)
             .color(Color::Muted),
@@ -760,23 +791,7 @@ fn compact_status_row(
         .into_any_element()
 }
 
-fn subagent_row(
-    id: SharedString,
-    index: usize,
-    label: impl Into<SharedString>,
-    state: impl Into<SharedString>,
-    active: bool,
-    cx: &App,
-) -> AnyElement {
-    let state = state.into();
-    let activity = if active {
-        SharedString::from("active")
-    } else if state.as_ref().is_empty() {
-        SharedString::from("idle")
-    } else {
-        state
-    };
-
+fn subagent_row(id: SharedString, row: &DxSubagentStatusRow, cx: &App) -> AnyElement {
     h_flex()
         .id(id)
         .items_center()
@@ -786,36 +801,71 @@ fn subagent_row(
         .px_1()
         .py_0p5()
         .hover(|this| this.bg(cx.theme().colors().element_hover))
-        .child(subagent_pixel_icon(index))
+        .tooltip(Tooltip::text(row.detail.clone()))
+        .child(subagent_pixel_icon(row.status))
         .child(
-            Label::new(label.into())
+            Label::new(row.label.clone())
                 .size(LabelSize::Small)
                 .color(Color::Default)
                 .truncate(),
         )
+        .child(div().flex_1())
+        .child(subagent_status_badge(row.status, cx))
+        .into_any_element()
+}
+
+fn subagent_status_badge(status: DxSubagentStatus, cx: &App) -> AnyElement {
+    let color = subagent_status_color(status);
+
+    h_flex()
+        .items_center()
+        .gap_0p5()
+        .rounded_sm()
+        .border_1()
+        .border_color(color.opacity(0.42))
+        .bg(color.opacity(0.1))
+        .px_1()
+        .py_0p5()
         .child(
-            Label::new(activity)
+            Icon::new(subagent_status_icon(status))
+                .size(IconSize::Indicator)
+                .color(Color::Custom(color)),
+        )
+        .child(
+            Label::new(status.label())
                 .size(LabelSize::XSmall)
-                .color(Color::Muted)
+                .color(Color::Custom(color))
                 .truncate(),
         )
         .into_any_element()
 }
 
-fn subagent_pixel_icon(index: usize) -> AnyElement {
-    let colors = [
-        gpui::hsla(210.0 / 360.0, 0.92, 0.56, 1.0),
-        gpui::hsla(25.0 / 360.0, 0.96, 0.55, 1.0),
-        gpui::hsla(355.0 / 360.0, 0.88, 0.56, 1.0),
-        gpui::hsla(188.0 / 360.0, 0.86, 0.52, 1.0),
-        gpui::hsla(0.0 / 360.0, 0.84, 0.58, 1.0),
-        gpui::hsla(18.0 / 360.0, 0.98, 0.5, 1.0),
-    ];
-    let color = colors[index % colors.len()];
+fn subagent_status_icon(status: DxSubagentStatus) -> IconName {
+    match status {
+        DxSubagentStatus::Running => dx_icon(DxUiIcon::Loading),
+        DxSubagentStatus::Queued => IconName::TodoProgress,
+        DxSubagentStatus::Blocked => IconName::Warning,
+        DxSubagentStatus::Failed => IconName::Close,
+        DxSubagentStatus::Idle => IconName::Circle,
+    }
+}
+
+fn subagent_status_color(status: DxSubagentStatus) -> gpui::Hsla {
+    match status {
+        DxSubagentStatus::Running => gpui::hsla(188.0 / 360.0, 0.86, 0.52, 1.0),
+        DxSubagentStatus::Queued => gpui::hsla(45.0 / 360.0, 0.9, 0.5, 1.0),
+        DxSubagentStatus::Blocked => gpui::hsla(25.0 / 360.0, 0.96, 0.55, 1.0),
+        DxSubagentStatus::Failed => gpui::hsla(355.0 / 360.0, 0.88, 0.56, 1.0),
+        DxSubagentStatus::Idle => gpui::hsla(210.0 / 360.0, 0.22, 0.58, 1.0),
+    }
+}
+
+fn subagent_pixel_icon(status: DxSubagentStatus) -> AnyElement {
+    let color = subagent_status_color(status);
 
     div()
         .relative()
-        .size(px(24.0))
+        .size(px(20.0))
         .flex_shrink_0()
         .rounded_sm()
         .border_1()
@@ -824,33 +874,33 @@ fn subagent_pixel_icon(index: usize) -> AnyElement {
         .child(
             div()
                 .absolute()
-                .left(px(4.0))
-                .top(px(4.0))
-                .size(px(6.0))
+                .left(px(3.0))
+                .top(px(3.0))
+                .size(px(5.0))
                 .bg(color),
         )
         .child(
             div()
                 .absolute()
-                .left(px(14.0))
-                .top(px(4.0))
-                .size(px(6.0))
+                .left(px(12.0))
+                .top(px(3.0))
+                .size(px(5.0))
                 .bg(color.opacity(0.8)),
         )
         .child(
             div()
                 .absolute()
-                .left(px(4.0))
-                .top(px(14.0))
-                .size(px(6.0))
+                .left(px(3.0))
+                .top(px(12.0))
+                .size(px(5.0))
                 .bg(color.opacity(0.8)),
         )
         .child(
             div()
                 .absolute()
-                .left(px(14.0))
-                .top(px(14.0))
-                .size(px(6.0))
+                .left(px(12.0))
+                .top(px(12.0))
+                .size(px(5.0))
                 .bg(color),
         )
         .into_any_element()
