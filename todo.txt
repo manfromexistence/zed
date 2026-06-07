@@ -2,6 +2,7 @@ IN PROGRESS:
 - None. Runtime proof remains deferred until an explicit authorized validation pass allows `just run`/Cargo.
 
 COMPLETED:
+- DX project context workspace-root candidates now reject empty, relative, and drive-relative roots before detection while preserving absolute drive and UNC roots for normalized local-first `.dx` lookup.
 - DX project context workspace-root detection now trims, normalizes, dedupes, and caps workspace roots before `detect()` can touch filesystem metadata, so duplicate or excessive roots cannot force unbounded `.is_dir()` checks.
 - DX-WWW launch evidence now dedupes workspace/fallback project roots with the shared DX project root key and derives the shared `G:\Dx\www\examples\launch-template` fallback from `DxProjectContext` instead of a second hardcoded hub literal.
 - Project Panel DX Explorer now has a bounded cached storage drilldown strip that ranks the largest visible cached folders, shows heat levels, and clicks through to select/expand the real folder without render-path filesystem scans.

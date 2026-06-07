@@ -294,7 +294,8 @@ fn workspace_root_candidate(root: &str) -> Option<PathBuf> {
     if root.is_empty() {
         return None;
     }
-    normalize_project_root(Path::new(root))
+    let normalized = normalize_project_root(Path::new(root))?;
+    normalized.is_absolute().then_some(normalized)
 }
 
 fn normalize_absolute_project_path(path: &Path) -> Option<PathBuf> {

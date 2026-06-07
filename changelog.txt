@@ -1,3 +1,18 @@
+[2026-06-07] - DX Project Context Absolute Workspace Roots
+
+CHANGED:
+- `crates\agent_ui\src\dx_project_context.rs` now rejects empty, relative, and drive-relative workspace-root candidates before detection, preserving absolute drive and UNC roots for normalized local-first `.dx` lookup.
+- `script\dx-project-context-source.test.ts` now guards that root candidate normalization requires an absolute path and remains free of metadata checks.
+- `todo.txt` and `DX.md` now record this source-only Windows workspace-root edge checkpoint.
+
+PASSED:
+- `node --test script\dx-project-context-source.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_ui\src\dx_project_context.rs`
+- `git diff --check -- crates/agent_ui/src/dx_project_context.rs script/dx-project-context-source.test.ts`
+
+NOTES:
+- This remains source-only. Cargo, `just run`, local servers, browser/WebView proof, native Zed launch, and live Windows inaccessible-path proof remain skipped by instruction.
+
 [2026-06-07] - DX Project Context Bounded Root Detection
 
 CHANGED:

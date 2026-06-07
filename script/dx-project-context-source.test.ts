@@ -163,7 +163,12 @@ test("DX project context centralizes bounded local-first paths", () => {
   assert.match(projectRootKey, /deploy_root_key\(&normalized\)/);
   assert.match(workspaceRootCandidate, /let root = root\.trim\(\)/);
   assert.match(workspaceRootCandidate, /root\.is_empty\(\)/);
-  assert.match(workspaceRootCandidate, /normalize_project_root\(Path::new\(root\)\)/);
+  assert.match(
+    workspaceRootCandidate,
+    /let normalized = normalize_project_root\(Path::new\(root\)\)\?/,
+  );
+  assert.match(workspaceRootCandidate, /normalized\.is_absolute\(\)\.then_some\(normalized\)/);
+  assert.doesNotMatch(workspaceRootCandidate, /is_dir|Self::detect/);
   assert.match(pathIsSameOrChild, /path_key == root_key/);
   assert.match(pathIsSameOrChild, /root_key\.ends_with\(MAIN_SEPARATOR\)/);
   assert.match(pathIsSameOrChild, /format!\("\{root_key\}\{MAIN_SEPARATOR\}"\)/);
