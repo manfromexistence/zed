@@ -6,7 +6,8 @@ use std::{
     time::{Duration, Instant, SystemTime},
 };
 
-const DX_RECEIPTS_ROOT: &str = r"G:\Dx\.dx\receipts";
+use crate::dx_project_context::DxProjectContext;
+
 const RECEIPT_CACHE_TTL: Duration = Duration::from_secs(5);
 const DX_RECEIPT_BUCKET_ENTRY_LIMIT: usize = 128;
 const DX_RECEIPT_BUCKET_NESTED_ENTRY_LIMIT: usize = 32;
@@ -28,29 +29,30 @@ pub(crate) struct DxReceiptSnapshot {
     pub latest: Vec<String>,
 }
 
-static RECEIPT_CACHE: OnceLock<Mutex<Option<(Instant, DxReceiptSnapshot)>>> = OnceLock::new();
+static RECEIPT_CACHE: OnceLock<Mutex<Option<(Instant, PathBuf, DxReceiptSnapshot)>>> =
+    OnceLock::new();
 
-pub(crate) fn receipt_snapshot() -> DxReceiptSnapshot {
+pub(crate) fn receipt_snapshot_for_roots(workspace_roots: &[String]) -> DxReceiptSnapshot {
+    let root = active_receipts_root(workspace_roots);
     let cache = RECEIPT_CACHE.get_or_init(|| Mutex::new(None));
     let now = Instant::now();
 
     if let Ok(mut cache) = cache.lock() {
-        if let Some((cached_at, snapshot)) = cache.as_ref() {
-            if now.duration_since(*cached_at) <= RECEIPT_CACHE_TTL {
+        if let Some((cached_at, cached_root, snapshot)) = cache.as_ref() {
+            if cached_root == &root && now.duration_since(*cached_at) <= RECEIPT_CACHE_TTL {
                 return snapshot.clone();
             }
         }
 
-        let snapshot = scan_receipts_root();
-        *cache = Some((now, snapshot.clone()));
+        let snapshot = scan_receipts_root(root.clone());
+        *cache = Some((now, root, snapshot.clone()));
         return snapshot;
     }
 
-    scan_receipts_root()
+    scan_receipts_root(root)
 }
 
-fn scan_receipts_root() -> DxReceiptSnapshot {
-    let root = PathBuf::from(DX_RECEIPTS_ROOT);
+fn scan_receipts_root(root: PathBuf) -> DxReceiptSnapshot {
     let root_exists = root.is_dir();
 
     let buckets = [
@@ -164,5 +166,28 @@ fn is_receipt_file(path: &Path) -> bool {
     matches!(
         path.extension().and_then(|extension| extension.to_str()),
         Some("json" | "jsonl" | "receipt")
+    )
+}
+
+fn active_receipts_root(workspace_roots: &[String]) -> PathBuf {
+    let roots = DxProjectContext::receipts_root_candidates(
+        workspace_roots,
+        DxProjectContext::shared_fallback_root(),
+    );
+    roots
+        .iter()
+        .find(|root| root.is_dir())
+        .cloned()
+        .or_else(|| roots.last().cloned())
+        .unwrap_or_else(fallback_receipts_root)
+}
+
+fn fallback_receipts_root() -> PathBuf {
+    DxProjectContext::receipts_root_for(DxProjectContext::shared_fallback_root()).unwrap_or_else(
+        || {
+            DxProjectContext::shared_fallback_root()
+                .join(".dx")
+                .join("receipts")
+        },
     )
 }

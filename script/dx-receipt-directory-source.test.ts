@@ -25,6 +25,13 @@ test("deploy receipt directory scans use named entry caps and bounded latest can
 test("global DX receipt root scans use named entry caps and bounded latest labels", () => {
   const source = read("crates/agent_ui/src/dx_receipts.rs");
 
+  assert.match(source, /use crate::dx_project_context::DxProjectContext;/);
+  assert.match(source, /pub\(crate\) fn receipt_snapshot_for_roots\(workspace_roots: &\[String\]\)/);
+  assert.match(source, /let root = active_receipts_root\(workspace_roots\);/);
+  assert.match(source, /cached_root == &root/);
+  assert.match(source, /DxProjectContext::receipts_root_candidates/);
+  assert.match(source, /\.find\(\|root\| root\.is_dir\(\)\)/);
+  assert.doesNotMatch(source, /DX_RECEIPTS_ROOT/);
   assert.match(source, /const DX_RECEIPT_BUCKET_ENTRY_LIMIT: usize = 128;/);
   assert.match(source, /const DX_RECEIPT_BUCKET_NESTED_ENTRY_LIMIT: usize = 32;/);
   assert.match(source, /const DX_RECEIPT_LATEST_ROOT_ENTRY_LIMIT: usize = 24;/);

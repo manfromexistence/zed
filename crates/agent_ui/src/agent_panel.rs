@@ -65,7 +65,7 @@ use crate::dx_launch_workspace::{
 };
 use crate::dx_proof_freshness::proof_freshness_snapshot;
 use crate::dx_receipt_history::tool_history_snapshot;
-use crate::dx_receipts::receipt_snapshot;
+use crate::dx_receipts::receipt_snapshot_for_roots;
 use crate::dx_runtime_proof_status::runtime_proof_status_snapshot;
 use crate::dx_source_sets::{DxSourceKind, DxSourceSetSnapshot, source_set_snapshot};
 use crate::dx_style_panel::dx_style_panel_snapshot;
@@ -7501,7 +7501,7 @@ impl AgentPanel {
         let visible_worktree_count = input.visible_worktree_count;
         let background_task_count = input.background_task_count;
 
-        let receipt_snapshot = receipt_snapshot();
+        let receipt_snapshot = receipt_snapshot_for_roots(&workspace_roots);
         let launch_status = launch_status_snapshot_for_roots(&workspace_roots);
         let launch_receipts = launch_receipt_review_snapshot_for_roots(&workspace_roots);
         let launch_contracts = launch_contract_snapshot();
