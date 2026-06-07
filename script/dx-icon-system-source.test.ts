@@ -59,6 +59,7 @@ test("DX shell chrome uses semantic icons instead of scattered literals", () => 
   const titleBar = read("crates/title_bar/src/title_bar.rs");
   const forgePanel = read("crates/agent_ui/src/dx_forge_panel/panel.rs");
   const stylePanel = read("crates/agent_ui/src/dx_style_panel/panel.rs");
+  const launchStylePanel = read("crates/agent_ui/src/dx_launch_workspace/style_panel.rs");
   const agentButton = functionBody(titleBar, "render_agent_screen_button");
   const screenKindIcon = functionBody(titleBar, "screen_kind_icon");
   const hiddenButtons = functionBody(titleBar, "render_hidden_feature_buttons");
@@ -72,6 +73,8 @@ test("DX shell chrome uses semantic icons instead of scattered literals", () => 
 
   assert.match(forgePanel, /dx_icon\(DxUiIcon::Forge\)/);
   assert.match(stylePanel, /dx_icon\(DxUiIcon::Style\)/);
+  assert.match(launchStylePanel, /dx_icon\(DxUiIcon::Style\)/);
+  assert.doesNotMatch(launchStylePanel, /IconName::Sliders/);
   assert.doesNotMatch(agentButton, /IconName::ZedAssistant/);
   assert.doesNotMatch(screenKindIcon, /IconName::ToolWeb/);
   assert.doesNotMatch(

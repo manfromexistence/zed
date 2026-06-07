@@ -77,7 +77,7 @@ pub(super) fn dx_style_panel_state(snapshot: &DxStylePanelSnapshot, cx: &App) ->
                 .full_width()
                 .label_size(LabelSize::XSmall)
                 .color(Color::Muted)
-                .start_icon(Icon::new(IconName::Sliders).size(IconSize::XSmall))
+                .start_icon(Icon::new(dx_icon(DxUiIcon::Style)).size(IconSize::XSmall))
                 .disabled(!snapshot.web_preview_bridge_ready)
                 .on_click(|_, window, cx| {
                     window.dispatch_action(OpenGeneratorPreview.boxed_clone(), cx);

@@ -1,3 +1,18 @@
+[2026-06-07] - DX Style Rail Semantic Icon
+
+CHANGED:
+- `crates\agent_ui\src\dx_launch_workspace\style_panel.rs` now routes the Open Style Controls button through `dx_icon(DxUiIcon::Style)` instead of raw `IconName::Sliders`.
+- `script\dx-icon-system-source.test.ts` now guards the launch workspace Style rail against raw Style icon literals.
+
+PASSED:
+- `node --test script\dx-icon-system-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_ui\src\dx_launch_workspace\style_panel.rs`
+- `git diff --check -- crates/agent_ui/src/dx_launch_workspace/style_panel.rs script/dx-icon-system-source.test.ts DX.md todo.txt changelog.txt`
+- Focused raw-Style-icon and conflict-marker scans returned no matches for the touched source, guard, and docs files.
+
+NOTES:
+- This remains source-only by instruction. Cargo, `just run`, local servers, browser automation, native Zed launch, and runtime visual proof remain skipped.
+
 [2026-06-07] - Agent Profile Settings Semantic Cog
 
 CHANGED:
