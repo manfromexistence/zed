@@ -27,6 +27,7 @@ This checkout is the Zed/DX editor surface. Worker chats here should focus on GP
 
 ## Current Verification Lane
 
+- Current Web Preview favicon source slice: Web Preview now accepts favicon URI updates from the Windows WebView2 host snapshot and page bridge IPC, rejects stale page events and non-local `file:` favicon reads, caches bounded favicon image bytes under the preview profile off render paths, renders cached favicons in browser tabs before falling back to `ToolWeb`, and clears/clones favicon state across navigation and split flows. Runtime/WebView proof, Cargo, and `just run` remain deferred.
 - Current Agent fullscreen subagent rail slice: the right rail Subagents section now reads live ACP subagent/tool-call state and non-idle root agent fallback rows instead of DX Agents automation receipts, maps only running/queued/blocked/failed/idle into compact GPUI badges, and uses the semantic DX loader icon for running rows. Runtime visual proof, Cargo, and `just run` remain deferred.
 - Current DX icon source-of-truth slice: icon picker catalog loading and editor icon insertion now share a UI-level DX icon data resolver that prefers `DX_ICON_INDEX`, `DX_ICON_DATA`, `DX_ICON_ROOT`, legacy `DX_ICONS_DATA_DIR`, `DX_HOME\icon`, `G:\Dx\icon`, then `%USERPROFILE%\.dx\icon` before reading Iconify pack JSON. Runtime picker/editor proof, Cargo, and `just run` remain deferred.
 - Current GPUI gradient source slice: shared UI styles now expose clamped two-stop linear gradient helpers that set `ColorSpace::Oklab`, plus theme-aware panel and accent wash patterns for DX/Zed surfaces. Existing shared `GradientFade` and AI skills illustration gradients consume the helper, the GPUI gradient example starts in Oklab, and mesh/noise/radial generators remain Web Preview-owned rather than GPUI-owned. Runtime visual/native proof remains deferred until the governed validation window.
@@ -304,7 +305,7 @@ Adjacent source guards:
 - `node --test script/dx-agent-bridge-source.test.ts`
 - `node --test script/web-preview-payload-source.test.ts`
 - `node --test script/dx-www-launch-evidence-source.test.ts`
-- `node --test script/web-preview-platform-lifecycle.test.ts`
+- `node --test script/web-preview-platform-lifecycle.test.ts` - Web Preview lifecycle, Windows WebView2 favicon host snapshot, bridge favicon IPC, local-file favicon refusal, and tab-icon source checks.
 
 ## Current Launch Targets
 

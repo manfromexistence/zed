@@ -603,6 +603,94 @@ for (const [name, path] of platformViews) {
   });
 }
 
+test("Windows Web Preview favicon updates are bounded and page-scoped", () => {
+  const source = read("crates/web_preview/src/web_preview_view.rs");
+  const windowsHost = read("crates/web_preview/src/windows_visual_webview.rs");
+  const eventEnum = source.slice(
+    source.indexOf("pub(crate) enum BrowserEvent"),
+    source.indexOf("pub struct WebPreviewView"),
+  );
+  const updateForPage = functionBody(source, "update_favicon_uri_for_page");
+  const pageMatch = functionBody(source, "favicon_page_url_matches_active_url");
+  const updateUri = functionBody(source, "update_favicon_uri");
+  const cacheUri = functionBody(source, "cache_favicon_uri");
+  const validateUri = functionBody(source, "validated_favicon_uri");
+  const cacheTask = functionBody(source, "cache_web_preview_favicon_uri");
+  const downloadBytes = functionBody(source, "download_favicon_bytes");
+  const readFileBytes = functionBody(source, "read_favicon_file_bytes");
+  const imageCheck = functionBody(source, "favicon_bytes_look_like_image");
+  const writeCache = functionBody(source, "write_cached_favicon");
+  const applyBrowserEvents = functionBody(source, "apply_browser_events");
+  const handleIpc = functionBody(source, "handle_ipc_message");
+  const tabIcon = functionBody(source, "tab_icon");
+  const cloneOnSplit = functionBody(source, "clone_on_split");
+  const requestFavicon = functionBody(windowsHost, "request_favicon_uri");
+
+  assert.match(source, /const FAVICONS_DIR_NAME: &str = "favicons";/);
+  assert.match(source, /const MAX_WEB_PREVIEW_FAVICON_URI_BYTES: usize = 4096;/);
+  assert.match(source, /const MAX_WEB_PREVIEW_FAVICON_IMAGE_BYTES: usize = 512 \* 1024;/);
+  assert.match(eventEnum, /FaviconUriChanged\s*\{\s*uri: String,\s*page_url: Option<String>,\s*\}/);
+  assert.match(source, /favicon_uri: Option<SharedString>/);
+  assert.match(source, /favicon_image_path: Option<SharedString>/);
+
+  assert.match(updateForPage, /favicon_page_url_matches_active_url\(page_url\)/);
+  assert.match(updateForPage, /favicon_page_allows_file_uri\(page_url\)/);
+  assert.match(updateForPage, /return false;/);
+  assert.match(pageMatch, /page_url\.is_empty\(\) \|\| page_url\.len\(\) > MAX_WEB_PREVIEW_FAVICON_URI_BYTES/);
+  assert.match(
+    pageMatch,
+    /display_url_for_loaded_url\(page_url, source_apply_session_active\)\s*== self\.active_url\.as_ref\(\)/,
+  );
+  assert.match(updateUri, /validated_favicon_uri\(uri\.as_str\(\), allow_file_uri\)/);
+  assert.match(updateUri, /favicon_cache_file_path\(&cache_dir, uri\.as_str\(\)\)/);
+  assert.match(updateUri, /cached_path\.exists\(\)/);
+  assert.match(updateUri, /self\.cache_favicon_uri\(uri, allow_file_uri, cx\);/);
+  assert.match(cacheUri, /cx\.background_spawn\(cache_web_preview_favicon_uri/);
+  assert.match(cacheUri, /allow_file_uri/);
+  assert.match(cacheUri, /cx\.emit\(ItemEvent::UpdateTab\);/);
+
+  assert.match(validateUri, /uri\.trim\(\)/);
+  assert.match(validateUri, /uri\.is_empty\(\) \|\| uri\.len\(\) > MAX_WEB_PREVIEW_FAVICON_URI_BYTES/);
+  assert.match(validateUri, /"http" \| "https" => Some\(parsed\.to_string\(\)\)/);
+  assert.match(validateUri, /"file" if allow_file_uri => Some\(parsed\.to_string\(\)\)/);
+  assert.doesNotMatch(validateUri, /data/);
+  assert.match(source, /fn favicon_page_allows_file_uri\(page_url: Option<&str>\) -> bool/);
+  assert.match(source, /page_url\.scheme\(\) == "file"/);
+  assert.match(cacheTask, /validated_favicon_uri\(uri\.as_str\(\), allow_file_uri\)/);
+  assert.match(cacheTask, /"http" \| "https" => download_favicon_bytes/);
+  assert.match(cacheTask, /"file" =>/);
+  assert.match(cacheTask, /favicon_bytes_look_like_image\(&bytes\)/);
+  assert.match(downloadBytes, /\.take\(\(MAX_WEB_PREVIEW_FAVICON_IMAGE_BYTES \+ 1\) as u64\)/);
+  assert.match(readFileBytes, /metadata\.len\(\) > MAX_WEB_PREVIEW_FAVICON_IMAGE_BYTES as u64/);
+  assert.match(readFileBytes, /\.take\(\(MAX_WEB_PREVIEW_FAVICON_IMAGE_BYTES \+ 1\) as u64\)/);
+  assert.match(imageCheck, /image::guess_format\(bytes\)\.is_ok\(\)/);
+  assert.match(imageCheck, /prefix\.contains\("<svg"\)/);
+  assert.match(writeCache, /fs::write\(&temp_path, bytes\)/);
+  assert.match(writeCache, /fs::rename\(&temp_path, cache_path\)/);
+  assert.match(source, /fn favicon_cache_file_path\(cache_dir: &Path, uri: &str\) -> PathBuf/);
+  assert.match(source, /fn fnv1a64\(bytes: &\[u8\]\) -> u64/);
+
+  assert.match(applyBrowserEvents, /BrowserEvent::FaviconUriChanged \{ uri, page_url \} => \{/);
+  assert.match(applyBrowserEvents, /self\.update_favicon_uri_for_page\(uri, page_url\.as_deref\(\), cx\)/);
+  assert.match(applyBrowserEvents, /BrowserEvent::NavigationStarted[\s\S]*self\.clear_favicon\(\)/);
+  assert.match(handleIpc, /"favicon-uri" => \{/);
+  assert.match(handleIpc, /payload\.get\("page_url"\)\.and_then\(Value::as_str\)/);
+  assert.match(tabIcon, /self\.project_item\.is_none\(\)/);
+  assert.match(tabIcon, /ui::Icon::from_path\(path\.clone\(\)\)/);
+  assert.match(cloneOnSplit, /favicon_uri,/);
+  assert.match(cloneOnSplit, /favicon_image_path,/);
+  assert.match(source, /post\(\{ kind: "favicon-uri", uri, page_url: window\.location\.href, reason \}\);/);
+  assert.match(source, /new MutationObserver\(\(\) => \{/);
+  assert.match(source, /\(!\/\^file:\/i\.test\(window\.location\.href\) && \/\^file:\/i\.test\(uri\)\)/);
+
+  assert.match(windowsHost, /const FAVICON_URI_SCRIPT: &str = r#"/);
+  assert.match(windowsHost, /\(!\/\^file:\/i\.test\(window\.location\.href\) && \/\^file:\/i\.test\(uri\)\)/);
+  assert.match(windowsHost, /request_favicon_uri\(webview, event_queue\.clone\(\), current_url\);/);
+  assert.match(requestFavicon, /webview\.ExecuteScript\(&script, &handler\)/);
+  assert.match(requestFavicon, /serde_json::from_str::<Option<String>>\(result\.as_str\(\)\)/);
+  assert.match(requestFavicon, /BrowserEvent::FaviconUriChanged/);
+});
+
 for (const [name, path] of desktopOnboardingPreviewViews) {
   test(`${name} web preview shows a real loading spinner placeholder`, () => {
     const source = read(path);

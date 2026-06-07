@@ -1,3 +1,18 @@
+[2026-06-07] - Web Preview Favicon Cache And Tab Icons
+
+CHANGED:
+- `crates\web_preview\src\web_preview_view.rs` now accepts page-scoped favicon URI updates from native browser events and bridge IPC, validates http/https favicon URIs plus `file:` favicons only for local file pages, caches bounded image bytes under the preview profile off render paths, clears/clones favicon state across navigation/split flows, and renders cached favicons for browser tabs before `ToolWeb`.
+- `crates\web_preview\src\windows_visual_webview.rs` now snapshots favicon URIs after Windows WebView2 navigation completion and refuses page-provided `file:` favicon reads unless the page itself is local.
+- `script\web-preview-platform-lifecycle.test.ts`, `DX.md`, and `todo.txt` now guard and document the favicon cache/tab-icon source contract.
+
+PASSED:
+- `node --test script\web-preview-platform-lifecycle.test.ts script\web-preview-payload-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\web_preview\src\web_preview_view.rs crates\web_preview\src\windows_visual_webview.rs`
+- `git diff --check -- crates/web_preview/src/web_preview_view.rs crates/web_preview/src/windows_visual_webview.rs script/web-preview-platform-lifecycle.test.ts DX.md todo.txt changelog.txt`
+- `rg -n "^<<<<<<<|^=======|^>>>>>>>" ...` across the touched Web Preview source, guard, DX, todo, and changelog files returned no matches.
+
+NOTES:
+- This checkpoint is source-only. Cargo, `just run`, local servers, browser automation, live WebView proof, and runtime tab-icon proof remain skipped by instruction.
 [2026-06-07] - Live Agent Subagent Rail Status
 
 CHANGED:

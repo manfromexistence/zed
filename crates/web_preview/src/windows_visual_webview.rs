@@ -41,6 +41,50 @@ use crate::{
 
 const IPC_SHIM_SCRIPT: &str = r#"Object.defineProperty(window, 'ipc', { value: Object.freeze({ postMessage: s => window.chrome.webview.postMessage(s) }) });"#;
 const DEFAULT_BROWSER_ARGS: &str = "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection";
+const FAVICON_URI_SCRIPT: &str = r#"
+(() => {
+  const links = Array.from(document.querySelectorAll("link[rel][href]"));
+  let best = null;
+  let bestScore = -1;
+  for (const link of links) {
+    const rel = String(link.getAttribute("rel") || "").toLowerCase();
+    if (!rel.includes("icon")) continue;
+    const href = link.getAttribute("href");
+    if (!href) continue;
+    let uri;
+    try {
+      uri = new URL(href, document.baseURI || window.location.href).href;
+    } catch (_error) {
+      continue;
+    }
+    if (
+      /^data:/i.test(uri) ||
+      (!/^file:/i.test(window.location.href) && /^file:/i.test(uri)) ||
+      uri.length > 4096
+    ) continue;
+    const type = String(link.getAttribute("type") || "").toLowerCase();
+    const sizes = String(link.getAttribute("sizes") || "").toLowerCase();
+    let score = 1;
+    if (rel === "icon") score += 40;
+    if (rel.includes("shortcut")) score += 35;
+    if (rel.includes("apple-touch-icon")) score += 20;
+    if (rel.includes("mask-icon")) score += 10;
+    if (type.includes("svg") || uri.toLowerCase().endsWith(".svg")) score += 8;
+    if (type.includes("png") || uri.toLowerCase().endsWith(".png")) score += 6;
+    if (uri.toLowerCase().endsWith(".ico")) score += 4;
+    if (sizes.includes("any")) score += 3;
+    if (score > bestScore) {
+      best = uri;
+      bestScore = score;
+    }
+  }
+  if (best) return best;
+  if (/^https?:/i.test(window.location.href) && window.location.origin) {
+    return new URL("/favicon.ico", window.location.origin).href;
+  }
+  return null;
+})()
+"#;
 pub(crate) struct WindowsVisualWebView {
     main_window: HWND,
     controller: ICoreWebView2Controller,
@@ -650,7 +694,9 @@ fn attach_event_handlers(
                 };
                 let mut url = PWSTR::null();
                 webview.Source(&mut url)?;
-                push_browser_event(&event_queue, BrowserEvent::UrlChanged(take_pwstr(url)));
+                let current_url = take_pwstr(url);
+                push_browser_event(&event_queue, BrowserEvent::UrlChanged(current_url.clone()));
+                request_favicon_uri(webview, event_queue.clone(), current_url);
                 push_browser_event(&event_queue, BrowserEvent::NavigationCompleted);
                 Ok(())
             })),
@@ -672,6 +718,33 @@ fn attach_event_handlers(
         )?;
     }
     Ok(())
+}
+
+fn request_favicon_uri(
+    webview: &ICoreWebView2,
+    event_queue: Arc<Mutex<Vec<BrowserEvent>>>,
+    page_url: String,
+) {
+    let script = HSTRING::from(FAVICON_URI_SCRIPT);
+    let handler = ExecuteScriptCompletedHandler::create(Box::new(move |error_code, result| {
+        if error_code.is_err() {
+            return Ok(());
+        }
+
+        let result = take_pwstr(result);
+        if let Ok(Some(uri)) = serde_json::from_str::<Option<String>>(result.as_str()) {
+            push_browser_event(
+                &event_queue,
+                BrowserEvent::FaviconUriChanged {
+                    uri,
+                    page_url: Some(page_url.clone()),
+                },
+            );
+        }
+        Ok(())
+    }));
+
+    let _ = unsafe { webview.ExecuteScript(&script, &handler) };
 }
 
 fn add_init_script(webview: &ICoreWebView2, script: &str) -> Result<()> {
