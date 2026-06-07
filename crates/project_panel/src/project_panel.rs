@@ -7876,7 +7876,7 @@ impl ProjectPanel {
                 })
                 .await;
 
-            this.update(cx, |this, cx| {
+            this.update_in(cx, |this, window, cx| {
                 this.media_metadata_generation_tasks
                     .borrow_mut()
                     .remove(&cache_key);
@@ -7886,6 +7886,7 @@ impl ProjectPanel {
                     .insert(cache_key, generated_metadata);
                 if generated_metadata_has_records {
                     this.folder_media_previews.borrow_mut().remove(&cache_key);
+                    this.update_visible_entries(None, false, false, window, cx);
                     cx.notify();
                 }
             })

@@ -1,3 +1,16 @@
+[2026-06-07] - Project Panel Generated Media Refresh
+
+CHANGED:
+- `crates\project_panel\src\project_panel.rs` now uses `update_in` after generated media metadata completes so stale folder media preview cache invalidation can schedule the existing visible-entry refresh path.
+- `script\dx-project-panel-source.test.ts` now guards that generated metadata completion invalidates the stale preview cache before refreshing visible entries without changing selection.
+
+PASSED:
+- `node --test script\dx-project-panel-source.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\project_panel\src\project_panel.rs`
+
+NOTES:
+- This remains source-only by instruction. Cargo, `just run`, local servers, browser automation, runtime Project Panel visual proof, and native Zed launch remain skipped.
+
 [2026-06-07] - Web Preview Semantic Loading Icons
 
 CHANGED:

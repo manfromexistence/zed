@@ -1393,6 +1393,11 @@ test("project panel media preview renders direct image previews and video frames
   assert.match(ensureGeneratedMediaMetadata, /cx\.spawn\(async move \|this, cx\|/);
   assert.match(
     ensureGeneratedMediaMetadata,
+    /this\.update_in\(cx,\s*\|this,\s*window,\s*cx\|/,
+    "generated metadata completion must use update_in so it can schedule visible-entry rebuilds",
+  );
+  assert.match(
+    ensureGeneratedMediaMetadata,
     /let executor = cx\.background_executor\(\)\.clone\(\);[\s\S]*background_spawn\([\s\S]*async move \{[\s\S]*collect_generated_media_metadata\(batch, executor\)\.await/,
     "generated metadata work must run through a background task",
   );
@@ -1406,6 +1411,11 @@ test("project panel media preview renders direct image previews and video frames
     /folder_media_previews[\s\S]*borrow_mut\(\)[\s\S]*\.remove\(&cache_key\)/,
     "generated metadata results must invalidate the stale rendered preview cache",
   );
+  assert.match(
+    ensureGeneratedMediaMetadata,
+    /this\.update_visible_entries\(None,\s*false,\s*false,\s*window,\s*cx\)/,
+    "generated metadata cache invalidation must schedule visible-entry refresh without changing selection",
+  );
   assertBefore({
     body: ensureGeneratedMediaMetadata,
     before: /collect_generated_media_metadata\(batch, executor\)/,
@@ -1417,6 +1427,12 @@ test("project panel media preview renders direct image previews and video frames
     before: /\.insert\(cache_key, generated_metadata\)/,
     after: /folder_media_previews[\s\S]*\.remove\(&cache_key\)/,
     message: "preview cache invalidation must happen after generated metadata is stored",
+  });
+  assertBefore({
+    body: ensureGeneratedMediaMetadata,
+    before: /folder_media_previews[\s\S]*\.remove\(&cache_key\)/,
+    after: /this\.update_visible_entries\(None,\s*false,\s*false,\s*window,\s*cx\)/,
+    message: "visible entries must refresh after the stale media preview cache is invalidated",
   });
   assert.doesNotMatch(
     `${activeFolderMediaPreview}\n${renderFolderMediaShelf}\n${renderMediaShelfCard}\n${renderMediaShelfCardBody}\n${mediaGalleryCardContainer}`,
