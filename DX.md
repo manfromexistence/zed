@@ -193,7 +193,7 @@ Current handoff and production-readiness guards:
 - `node --test script/dx-editor-input-source.test.ts` - editor newline cursor remap stale-row boundaries.
 - `node --test script/dx-workspace-ui-state-source.test.ts` - workspace dock, history, jump-list, and item project-handle materialization boundaries.
 - `node --test script/dx-title-bar-source.test.ts` - title-bar application menu stale entry activation boundaries.
-- `node --test script/dx-project-panel-source.test.ts` - project panel DX Explorer summary/action chrome, tree, selection, visible-range, edit-state, drag/drop, sticky-row, undo, and lazy inline media-preview materialization boundaries.
+- `node --test script/dx-project-panel-source.test.ts` - project panel DX Explorer source/filter/view/edit chrome, visible file/folder/storage/media summary counts, tree, selection, visible-range, edit-state, drag/drop, sticky-row, undo, and lazy inline media-preview materialization boundaries.
 - `node --test script/dx-diagnostics-ui-source.test.ts` - diagnostics grouping, excerpt, markdown, hint, copy, and status-label materialization boundaries.
 - `node --test script/dx-git-ui-source.test.ts` - Git branch, stash, repository, status, history, remote, and worktree picker materialization boundaries.
 - `node --test script/dx-settings-keymap-source.test.ts` - settings search/picker rows and keymap stale candidate-id materialization boundaries.

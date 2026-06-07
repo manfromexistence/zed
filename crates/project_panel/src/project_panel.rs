@@ -65,7 +65,7 @@ use ui::{
     Color, ContextMenu, ContextMenuEntry, DecoratedIcon, Icon, IconButtonShape, IconDecoration,
     IconDecorationKind, IndentGuideColors, IndentGuideLayout, Indicator, KeyBinding, Label,
     LabelSize, ListItem, ListItemSpacing, ProjectEmptyState, ScrollAxes, ScrollableHandle,
-    Scrollbars, StickyCandidate, Tooltip, WithScrollbar, prelude::*, v_flex,
+    Scrollbars, StickyCandidate, TintColor, Tooltip, WithScrollbar, prelude::*, v_flex,
 };
 use util::{
     ResultExt, TakeUntilExt, TryFutureExt,
@@ -161,9 +161,37 @@ struct VisibleEntriesForWorktree {
 struct DxExplorerSummary {
     worktree_count: usize,
     visible_entry_count: usize,
+    visible_file_count: usize,
+    visible_folder_count: usize,
+    visible_file_bytes: u64,
     selected_entry_count: usize,
     expanded_dir_count: usize,
     cached_media_folder_count: usize,
+    cached_media_item_count: usize,
+}
+
+#[derive(Clone, Copy, Default)]
+struct DxExplorerVisibleSummary {
+    entry_count: usize,
+    file_count: usize,
+    folder_count: usize,
+    file_bytes: u64,
+}
+
+impl DxExplorerVisibleSummary {
+    fn record_entry(&mut self, entry: &Entry) {
+        self.record_entry_kind(entry.kind, entry.size);
+    }
+
+    fn record_entry_kind(&mut self, kind: EntryKind, size: u64) {
+        self.entry_count += 1;
+        if kind.is_file() {
+            self.file_count += 1;
+            self.file_bytes = self.file_bytes.saturating_add(size);
+        } else if kind.is_dir() {
+            self.folder_count += 1;
+        }
+    }
 }
 
 struct State {
@@ -178,6 +206,7 @@ struct State {
     temporarily_unfolded_pending_state: Option<TemporaryUnfoldedPendingState>,
     unfolded_dir_ids: HashSet<ProjectEntryId>,
     expanded_dir_ids: HashMap<WorktreeId, Vec<ProjectEntryId>>,
+    dx_explorer_visible_summary: DxExplorerVisibleSummary,
 }
 
 impl State {
@@ -198,6 +227,7 @@ impl State {
             temporarily_unfolded_pending_state: None,
             unfolded_dir_ids: old.unfolded_dir_ids.clone(),
             expanded_dir_ids: old.expanded_dir_ids.clone(),
+            dx_explorer_visible_summary: Default::default(),
         }
     }
 }
@@ -988,6 +1018,7 @@ impl ProjectPanel {
                     ancestors: Default::default(),
                     expanded_dir_ids: Default::default(),
                     unfolded_dir_ids: Default::default(),
+                    dx_explorer_visible_summary: Default::default(),
                 },
                 update_visible_entries_task: Default::default(),
                 undo_manager: UndoManager::new(workspace.weak_handle(), weak_project_panel, &cx),
@@ -4038,14 +4069,21 @@ impl ProjectPanel {
     }
 
     fn dx_explorer_summary(&self, selected_entry_count: usize) -> DxExplorerSummary {
+        let visible_summary = self.state.dx_explorer_visible_summary;
+        let folder_media_previews = self.folder_media_previews.borrow();
+        let cached_media_folder_count = folder_media_previews
+            .values()
+            .filter(|preview| preview.is_some())
+            .count();
+        let cached_media_item_count = folder_media_previews
+            .values()
+            .filter_map(|preview| preview.as_ref())
+            .map(|preview| preview.total_count)
+            .sum();
+
         DxExplorerSummary {
             worktree_count: self.state.visible_entries.len(),
-            visible_entry_count: self
-                .state
-                .visible_entries
-                .iter()
-                .map(|worktree| worktree.entries.len())
-                .sum(),
+            visible_entry_count: visible_summary.entry_count,
             selected_entry_count,
             expanded_dir_count: self
                 .state
@@ -4053,7 +4091,11 @@ impl ProjectPanel {
                 .values()
                 .map(|entries| entries.len())
                 .sum(),
-            cached_media_folder_count: self.folder_media_previews.borrow().len(),
+            visible_file_count: visible_summary.file_count,
+            visible_folder_count: visible_summary.folder_count,
+            visible_file_bytes: visible_summary.file_bytes,
+            cached_media_folder_count,
+            cached_media_item_count,
         }
     }
 
@@ -4078,8 +4120,20 @@ impl ProjectPanel {
         summary: DxExplorerSummary,
         has_worktree: bool,
         is_read_only: bool,
+        is_remote: bool,
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        let project_panel_settings = ProjectPanelSettings::get_global(cx);
+        let show_ignored_entries = !project_panel_settings.hide_gitignore;
+        let show_hidden_entries = !project_panel_settings.hide_hidden;
+        let source_label = if is_read_only {
+            "Read-only source"
+        } else if is_remote {
+            "Remote source"
+        } else {
+            "Local source"
+        };
+
         h_flex()
             .id("dx-explorer-header")
             .w_full()
@@ -4099,13 +4153,24 @@ impl ProjectPanel {
                     .items_center()
                     .gap_1()
                     .child(
-                        Icon::new(IconName::FileTree)
+                        Icon::new(dx_icon(DxUiIcon::Project))
                             .size(IconSize::Small)
                             .color(Color::Accent),
                     )
                     .child(Label::new("DX Explorer").size(LabelSize::Small))
+                    .child(Self::render_dx_explorer_metric(source_label.to_string()))
                     .child(Self::render_dx_explorer_metric(
                         Self::dx_explorer_count_label(summary.worktree_count, "root", "roots"),
+                    ))
+                    .child(Self::render_dx_explorer_metric(
+                        Self::dx_explorer_count_label(summary.visible_file_count, "file", "files"),
+                    ))
+                    .child(Self::render_dx_explorer_metric(
+                        Self::dx_explorer_count_label(
+                            summary.visible_folder_count,
+                            "folder",
+                            "folders",
+                        ),
                     ))
                     .child(Self::render_dx_explorer_metric(
                         Self::dx_explorer_count_label(
@@ -4114,6 +4179,12 @@ impl ProjectPanel {
                             "entries",
                         ),
                     ))
+                    .when(summary.visible_file_bytes > 0, |this| {
+                        this.child(Self::render_dx_explorer_metric(format!(
+                            "{} storage",
+                            format_file_size(summary.visible_file_bytes)
+                        )))
+                    })
                     .when(summary.selected_entry_count > 0, |this| {
                         this.child(Self::render_dx_explorer_metric(
                             Self::selected_entries_count_label(summary.selected_entry_count),
@@ -4132,10 +4203,22 @@ impl ProjectPanel {
                         this.child(Self::render_dx_explorer_metric(
                             Self::dx_explorer_count_label(
                                 summary.cached_media_folder_count,
-                                "media shelf",
-                                "media shelves",
+                                "media folder",
+                                "media folders",
                             ),
                         ))
+                        .when(
+                            summary.cached_media_item_count > 0,
+                            |this| {
+                                this.child(Self::render_dx_explorer_metric(
+                                    Self::dx_explorer_count_label(
+                                        summary.cached_media_item_count,
+                                        "media item",
+                                        "media items",
+                                    ),
+                                ))
+                            },
+                        )
                     }),
             )
             .child(
@@ -4144,74 +4227,152 @@ impl ProjectPanel {
                     .items_center()
                     .gap_0p5()
                     .child(
-                        IconButton::new("dx-explorer-open-project", IconName::OpenFolder)
-                            .shape(IconButtonShape::Square)
-                            .style(ButtonStyle::Subtle)
-                            .icon_size(IconSize::Small)
-                            .tooltip(Tooltip::text("Open project"))
-                            .on_click(move |_, window, cx| {
-                                window
-                                    .dispatch_action(workspace::Open::default().boxed_clone(), cx);
-                            }),
+                        h_flex()
+                            .id("dx-explorer-source-controls")
+                            .gap_0p5()
+                            .child(
+                                IconButton::new(
+                                    "dx-explorer-open-project",
+                                    dx_icon(DxUiIcon::Source),
+                                )
+                                .shape(IconButtonShape::Square)
+                                .style(ButtonStyle::Subtle)
+                                .icon_size(IconSize::Small)
+                                .tooltip(Tooltip::text("Open project"))
+                                .on_click(move |_, window, cx| {
+                                    window.dispatch_action(
+                                        workspace::Open::default().boxed_clone(),
+                                        cx,
+                                    );
+                                }),
+                            )
+                            .child(
+                                IconButton::new("dx-explorer-open-file", dx_icon(DxUiIcon::Search))
+                                    .shape(IconButtonShape::Square)
+                                    .style(ButtonStyle::Subtle)
+                                    .icon_size(IconSize::Small)
+                                    .disabled(!has_worktree)
+                                    .tooltip(Tooltip::text("Open file"))
+                                    .on_click(move |_, window, cx| {
+                                        window.dispatch_action(
+                                            ToggleFileFinder::default().boxed_clone(),
+                                            cx,
+                                        );
+                                    }),
+                            ),
                     )
                     .child(
-                        IconButton::new("dx-explorer-open-file", IconName::MagnifyingGlass)
-                            .shape(IconButtonShape::Square)
-                            .style(ButtonStyle::Subtle)
-                            .icon_size(IconSize::Small)
-                            .disabled(!has_worktree)
-                            .tooltip(Tooltip::text("Open file"))
-                            .on_click(move |_, window, cx| {
-                                window
-                                    .dispatch_action(ToggleFileFinder::default().boxed_clone(), cx);
-                            }),
+                        h_flex()
+                            .id("dx-explorer-filter-controls")
+                            .gap_0p5()
+                            .child(
+                                IconButton::new(
+                                    "dx-explorer-toggle-ignored",
+                                    if show_ignored_entries {
+                                        IconName::Eye
+                                    } else {
+                                        IconName::EyeOff
+                                    },
+                                )
+                                .shape(IconButtonShape::Square)
+                                .style(ButtonStyle::Subtle)
+                                .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+                                .toggle_state(show_ignored_entries)
+                                .icon_size(IconSize::Small)
+                                .disabled(!has_worktree)
+                                .tooltip(Tooltip::text(if show_ignored_entries {
+                                    "Hide ignored files"
+                                } else {
+                                    "Show ignored files"
+                                }))
+                                .on_click(move |_, window, cx| {
+                                    window.dispatch_action(ToggleHideGitIgnore.boxed_clone(), cx);
+                                }),
+                            )
+                            .child(
+                                IconButton::new(
+                                    "dx-explorer-toggle-hidden",
+                                    if show_hidden_entries {
+                                        IconName::Eye
+                                    } else {
+                                        IconName::EyeOff
+                                    },
+                                )
+                                .shape(IconButtonShape::Square)
+                                .style(ButtonStyle::Subtle)
+                                .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+                                .toggle_state(show_hidden_entries)
+                                .icon_size(IconSize::Small)
+                                .disabled(!has_worktree)
+                                .tooltip(Tooltip::text(if show_hidden_entries {
+                                    "Hide hidden files"
+                                } else {
+                                    "Show hidden files"
+                                }))
+                                .on_click(move |_, window, cx| {
+                                    window.dispatch_action(ToggleHideHidden.boxed_clone(), cx);
+                                }),
+                            ),
                     )
                     .child(
-                        IconButton::new("dx-explorer-project-symbols", IconName::ListTree)
-                            .shape(IconButtonShape::Square)
-                            .style(ButtonStyle::Subtle)
-                            .icon_size(IconSize::Small)
-                            .disabled(!has_worktree)
-                            .tooltip(Tooltip::text("Project symbols"))
-                            .on_click(move |_, window, cx| {
-                                window.dispatch_action(ToggleProjectSymbols.boxed_clone(), cx);
-                            }),
+                        h_flex()
+                            .id("dx-explorer-view-controls")
+                            .gap_0p5()
+                            .child(
+                                IconButton::new("dx-explorer-project-symbols", IconName::ListTree)
+                                    .shape(IconButtonShape::Square)
+                                    .style(ButtonStyle::Subtle)
+                                    .icon_size(IconSize::Small)
+                                    .disabled(!has_worktree)
+                                    .tooltip(Tooltip::text("Project symbols"))
+                                    .on_click(move |_, window, cx| {
+                                        window.dispatch_action(
+                                            ToggleProjectSymbols.boxed_clone(),
+                                            cx,
+                                        );
+                                    }),
+                            )
+                            .child(
+                                IconButton::new("dx-explorer-collapse-all", IconName::ListCollapse)
+                                    .shape(IconButtonShape::Square)
+                                    .style(ButtonStyle::Subtle)
+                                    .icon_size(IconSize::Small)
+                                    .disabled(!has_worktree)
+                                    .tooltip(Tooltip::text("Collapse all"))
+                                    .on_click(cx.listener(|this, _, window, cx| {
+                                        this.focus_handle(cx).focus(window, cx);
+                                        this.collapse_all_entries(&CollapseAllEntries, window, cx);
+                                    })),
+                            ),
                     )
                     .child(
-                        IconButton::new("dx-explorer-new-file", IconName::File)
-                            .shape(IconButtonShape::Square)
-                            .style(ButtonStyle::Subtle)
-                            .icon_size(IconSize::Small)
-                            .disabled(is_read_only || !has_worktree)
-                            .tooltip(Tooltip::text("New file"))
-                            .on_click(cx.listener(|this, _, window, cx| {
-                                this.focus_handle(cx).focus(window, cx);
-                                this.new_file(&NewFile, window, cx);
-                            })),
-                    )
-                    .child(
-                        IconButton::new("dx-explorer-new-folder", IconName::FolderOpenAdd)
-                            .shape(IconButtonShape::Square)
-                            .style(ButtonStyle::Subtle)
-                            .icon_size(IconSize::Small)
-                            .disabled(is_read_only || !has_worktree)
-                            .tooltip(Tooltip::text("New folder"))
-                            .on_click(cx.listener(|this, _, window, cx| {
-                                this.focus_handle(cx).focus(window, cx);
-                                this.new_directory(&NewDirectory, window, cx);
-                            })),
-                    )
-                    .child(
-                        IconButton::new("dx-explorer-collapse-all", IconName::ListCollapse)
-                            .shape(IconButtonShape::Square)
-                            .style(ButtonStyle::Subtle)
-                            .icon_size(IconSize::Small)
-                            .disabled(!has_worktree)
-                            .tooltip(Tooltip::text("Collapse all"))
-                            .on_click(cx.listener(|this, _, window, cx| {
-                                this.focus_handle(cx).focus(window, cx);
-                                this.collapse_all_entries(&CollapseAllEntries, window, cx);
-                            })),
+                        h_flex()
+                            .id("dx-explorer-edit-controls")
+                            .gap_0p5()
+                            .child(
+                                IconButton::new("dx-explorer-new-file", IconName::File)
+                                    .shape(IconButtonShape::Square)
+                                    .style(ButtonStyle::Subtle)
+                                    .icon_size(IconSize::Small)
+                                    .disabled(is_read_only || !has_worktree)
+                                    .tooltip(Tooltip::text("New file"))
+                                    .on_click(cx.listener(|this, _, window, cx| {
+                                        this.focus_handle(cx).focus(window, cx);
+                                        this.new_file(&NewFile, window, cx);
+                                    })),
+                            )
+                            .child(
+                                IconButton::new("dx-explorer-new-folder", IconName::FolderOpenAdd)
+                                    .shape(IconButtonShape::Square)
+                                    .style(ButtonStyle::Subtle)
+                                    .icon_size(IconSize::Small)
+                                    .disabled(is_read_only || !has_worktree)
+                                    .tooltip(Tooltip::text("New folder"))
+                                    .on_click(cx.listener(|this, _, window, cx| {
+                                        this.focus_handle(cx).focus(window, cx);
+                                        this.new_directory(&NewDirectory, window, cx);
+                                    })),
+                            ),
                     )
                     .child(side_panel_header_controls(
                         "dx-explorer",
@@ -4823,11 +4984,15 @@ impl ProjectPanel {
                                         );
                                         break;
                                     }
-                                    visible_worktree_entries.push(Self::create_new_git_entry(
+                                    new_state
+                                        .dx_explorer_visible_summary
+                                        .record_entry_kind(new_entry_kind, 0);
+                                    let new_entry = Self::create_new_git_entry(
                                         entry.entry,
                                         entry.git_summary,
                                         new_entry_kind,
-                                    ));
+                                    );
+                                    visible_worktree_entries.push(new_entry);
                                     new_entry_parent_id = None;
                                 }
                                 entry_iter.advance();
@@ -4951,6 +5116,9 @@ impl ProjectPanel {
                                     );
                                     break;
                                 }
+                                new_state
+                                    .dx_explorer_visible_summary
+                                    .record_entry(entry.entry);
                                 visible_worktree_entries.push(entry.to_owned());
                             }
                             let precedes_new_entry = if let Some(new_entry_id) = new_entry_parent_id
@@ -4975,11 +5143,15 @@ impl ProjectPanel {
                                     );
                                     break;
                                 }
-                                visible_worktree_entries.push(Self::create_new_git_entry(
+                                new_state
+                                    .dx_explorer_visible_summary
+                                    .record_entry_kind(new_entry_kind, 0);
+                                let new_entry = Self::create_new_git_entry(
                                     entry.entry,
                                     entry.git_summary,
                                     new_entry_kind,
-                                ));
+                                );
+                                visible_worktree_entries.push(new_entry);
                             }
 
                             if entry_is_active_media_shelf_child {
@@ -8289,6 +8461,7 @@ impl Render for ProjectPanel {
                             dx_explorer_summary,
                             has_worktree,
                             is_read_only,
+                            is_remote,
                             cx,
                         ))
                         .map(|this| {
@@ -8758,6 +8931,7 @@ impl Render for ProjectPanel {
                     dx_explorer_summary,
                     has_worktree,
                     is_read_only,
+                    is_remote,
                     cx,
                 ))
                 .child(

@@ -79,12 +79,34 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   const source = read("crates/project_panel/src/project_panel.rs");
   const dxExplorerSummary = functionBody(source, "dx_explorer_summary");
   const renderDxExplorerHeader = functionBody(source, "render_dx_explorer_header");
+  const updateVisibleEntries = functionBody(source, "update_visible_entries");
 
   assert.match(source, /struct DxExplorerSummary/);
+  assert.match(source, /struct DxExplorerVisibleSummary/);
+  assert.match(source, /dx_explorer_visible_summary:\s*DxExplorerVisibleSummary/);
+  assert.match(source, /fn record_entry\(&mut self, entry: &Entry\)/);
+  assert.match(source, /fn record_entry_kind\(&mut self, kind: EntryKind, size: u64\)/);
   assert.match(dxExplorerSummary, /worktree_count: self\.state\.visible_entries\.len\(\)/);
+  assert.match(dxExplorerSummary, /let visible_summary = self\.state\.dx_explorer_visible_summary;/);
   assert.match(
     dxExplorerSummary,
-    /visible_entry_count:[\s\S]*\.map\(\|worktree\| worktree\.entries\.len\(\)\)[\s\S]*\.sum\(\)/,
+    /visible_entry_count: visible_summary\.entry_count/,
+    "DX Explorer visible entry counts must read the cached visible summary",
+  );
+  assert.match(
+    dxExplorerSummary,
+    /visible_file_count: visible_summary\.file_count/,
+    "DX Explorer file counts must read the cached visible summary",
+  );
+  assert.match(
+    dxExplorerSummary,
+    /visible_folder_count: visible_summary\.folder_count/,
+    "DX Explorer folder counts must read the cached visible summary",
+  );
+  assert.match(
+    dxExplorerSummary,
+    /visible_file_bytes: visible_summary\.file_bytes/,
+    "DX Explorer storage counts must read the cached visible summary",
   );
   assert.match(dxExplorerSummary, /selected_entry_count,/);
   assert.match(
@@ -93,22 +115,63 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   );
   assert.match(
     dxExplorerSummary,
-    /cached_media_folder_count: self\.folder_media_previews\.borrow\(\)\.len\(\)/,
+    /cached_media_folder_count = folder_media_previews[\s\S]*\.values\(\)[\s\S]*\.filter\(\|preview\| preview\.is_some\(\)\)[\s\S]*\.count\(\)/,
+    "DX Explorer media folder counts must skip negative preview cache entries",
+  );
+  assert.match(
+    dxExplorerSummary,
+    /cached_media_item_count = folder_media_previews[\s\S]*\.values\(\)[\s\S]*\.filter_map\(\|preview\| preview\.as_ref\(\)\)[\s\S]*\.map\(\|preview\| preview\.total_count\)[\s\S]*\.sum\(\)/,
+    "DX Explorer media item counts must come from cached folder media previews",
   );
   assert.doesNotMatch(dxExplorerSummary, /\bread_dir\(|\bFile::open\(|read_to_string|cx\.spawn/);
+  assert.doesNotMatch(
+    dxExplorerSummary,
+    /for visible_worktree|for entry in/,
+    "DX Explorer header summary must not walk all visible entries during render",
+  );
+  assertBefore({
+    body: updateVisibleEntries,
+    before: /\.dx_explorer_visible_summary[\s\S]*\.record_entry\(entry\.entry\)/,
+    after: "visible_worktree_entries.push(entry.to_owned())",
+    message: "visible-tree summary must be recorded as rows are materialized, before the row push",
+  });
+  assertBefore({
+    body: updateVisibleEntries,
+    before: /\.dx_explorer_visible_summary[\s\S]*\.record_entry_kind\(new_entry_kind, 0\)/,
+    after: "Self::create_new_git_entry",
+    message: "temporary new-entry rows must update visible summary without counting parent bytes",
+  });
 
   assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-header"\)/);
-  assert.match(renderDxExplorerHeader, /IconName::FileTree/);
+  assert.match(renderDxExplorerHeader, /ProjectPanelSettings::get_global\(cx\)/);
+  assert.match(renderDxExplorerHeader, /dx_icon\(DxUiIcon::Project\)/);
   assert.match(renderDxExplorerHeader, /Label::new\("DX Explorer"\)/);
+  assert.match(renderDxExplorerHeader, /source_label = if is_read_only/);
+  assert.match(renderDxExplorerHeader, /"Local source"/);
+  assert.match(renderDxExplorerHeader, /summary\.visible_file_count/);
+  assert.match(renderDxExplorerHeader, /summary\.visible_folder_count/);
+  assert.match(renderDxExplorerHeader, /format_file_size\(summary\.visible_file_bytes\)/);
+  assert.match(renderDxExplorerHeader, /summary\.cached_media_item_count/);
+  assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-source-controls"\)/);
+  assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-filter-controls"\)/);
+  assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-view-controls"\)/);
+  assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-edit-controls"\)/);
   assert.match(renderDxExplorerHeader, /side_panel_header_controls\(\s*"dx-explorer"/);
+  assert.match(renderDxExplorerHeader, /dx_icon\(DxUiIcon::Source\)/);
+  assert.match(renderDxExplorerHeader, /dx_icon\(DxUiIcon::Search\)/);
   assert.match(renderDxExplorerHeader, /workspace::Open::default\(\)\.boxed_clone\(\)/);
   assert.match(renderDxExplorerHeader, /ToggleFileFinder::default\(\)\.boxed_clone\(\)/);
+  assert.match(renderDxExplorerHeader, /ToggleHideGitIgnore\.boxed_clone\(\)/);
+  assert.match(renderDxExplorerHeader, /ToggleHideHidden\.boxed_clone\(\)/);
+  assert.match(renderDxExplorerHeader, /selected_style\(ButtonStyle::Tinted\(TintColor::Accent\)\)/);
+  assert.match(renderDxExplorerHeader, /toggle_state\(show_ignored_entries\)/);
+  assert.match(renderDxExplorerHeader, /toggle_state\(show_hidden_entries\)/);
   assert.match(renderDxExplorerHeader, /ToggleProjectSymbols\.boxed_clone\(\)/);
   assert.match(renderDxExplorerHeader, /this\.new_file\(&NewFile, window, cx\)/);
   assert.match(renderDxExplorerHeader, /this\.new_directory\(&NewDirectory, window, cx\)/);
   assert.match(
     renderDxExplorerHeader,
-    /this\.collapse_all_entries\(&CollapseAllEntries, window, cx\)/,
+    /this\.collapse_all_entries\([\s\S]*&CollapseAllEntries,[\s\S]*window,[\s\S]*cx[\s\S]*\)/,
   );
   assert.match(renderDxExplorerHeader, /\.disabled\(is_read_only \|\| !has_worktree\)/);
   assert.match(renderDxExplorerHeader, /\.min_w_0\(\)[\s\S]*\.overflow_hidden\(\)/);
@@ -117,6 +180,11 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   assert.match(
     source,
     /let dx_explorer_summary = self\.dx_explorer_summary\(selected_entry_count\);/,
+  );
+  assert.match(
+    source,
+    /self\.render_dx_explorer_header\([\s\S]*dx_explorer_summary,[\s\S]*has_worktree,[\s\S]*is_read_only,[\s\S]*is_remote,[\s\S]*cx/,
+    "DX Explorer header must receive the current source mode instead of guessing from path text",
   );
   const headerMounts = source.match(/\.child\(self\.render_dx_explorer_header\(/g) ?? [];
   assert.equal(headerMounts.length, 2, "DX Explorer header should mount in tree and empty states");

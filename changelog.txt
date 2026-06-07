@@ -1,3 +1,20 @@
+[2026-06-07] - DX Explorer Header Controls And Counts
+
+CHANGED:
+- `crates\project_panel\src\project_panel.rs` now derives DX Explorer source mode, visible file/folder counts, visible file storage, and cached media folder/item counts from existing visible tree and media-preview caches.
+- The DX Explorer header now groups real controls into source/search, filter, view, edit, and panel-control clusters while preserving the real project tree, empty state, Open Project, Open File, Project Symbols, New File, New Folder, Collapse All, ignored/hidden filter, and side-panel controls.
+- `script\dx-project-panel-source.test.ts` now guards the richer source-backed counts, real ignored/hidden filter actions, semantic DX source/search/project icon usage, and no render-path IO in the header summary.
+- `DX.md` and `todo.txt` now describe the new DX Explorer header control/count source contract.
+
+PASSED:
+- `node --test script\dx-handoff-source-guard-registry.test.ts script\dx-project-panel-source.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\project_panel\src\project_panel.rs`
+- `git diff --check -- crates/project_panel/src/project_panel.rs script/dx-project-panel-source.test.ts DX.md todo.txt changelog.txt`
+- Conflict-marker scan over the touched lane files.
+
+NOTES:
+- This checkpoint remains source-only. Runtime launch, browser proof, broad Cargo, and `just run` remain skipped by instruction.
+
 [2026-06-07] - DX Semantic Icon Loader And Tool Surface Rollout
 
 ADDED:
