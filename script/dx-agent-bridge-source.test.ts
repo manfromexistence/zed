@@ -17,7 +17,9 @@ test("DX Agent bridge stays split by command, runtime, and receipt ownership", (
     "crates/agent_ui/src/dx_agent_bridge/receipts.rs",
     "crates/agent_ui/src/dx_agent_bridge/receipts/receipt_strings.rs",
     "crates/agent_ui/src/dx_agent_bridge/runtime_catalog.rs",
+    "crates/agent_ui/src/dx_agent_bridge/runtime_display.rs",
     "crates/agent_ui/src/dx_agent_bridge/runtime_provider_models.rs",
+    "crates/agent_ui/src/dx_agent_bridge/runtime_provider_models_tests.rs",
     "crates/agent_ui/src/dx_agent_bridge/runtime.rs",
     "crates/agent_ui/src/dx_agent_bridge/runtime_tests.rs",
   ];
@@ -50,8 +52,12 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   const receipts = read("crates/agent_ui/src/dx_agent_bridge/receipts.rs");
   const receiptStrings = read("crates/agent_ui/src/dx_agent_bridge/receipts/receipt_strings.rs");
   const runtimeCatalog = read("crates/agent_ui/src/dx_agent_bridge/runtime_catalog.rs");
+  const runtimeDisplay = read("crates/agent_ui/src/dx_agent_bridge/runtime_display.rs");
   const runtimeProviderModels = read(
     "crates/agent_ui/src/dx_agent_bridge/runtime_provider_models.rs",
+  );
+  const runtimeProviderModelsTests = read(
+    "crates/agent_ui/src/dx_agent_bridge/runtime_provider_models_tests.rs",
   );
   const runtime = read("crates/agent_ui/src/dx_agent_bridge/runtime.rs");
   const runtimeTests = read("crates/agent_ui/src/dx_agent_bridge/runtime_tests.rs");
@@ -100,12 +106,23 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.match(runtime, /pub\(super\) fn social_accounts/);
   assert.match(runtime, /runtime_catalog::catalog_summary/);
   assert.match(runtime, /runtime_provider_models::\{models, providers\}/);
+  assert.match(runtime, /#\[path = "runtime_display\.rs"\]/);
   assert.match(runtimeCatalog, /pub\(super\) fn catalog_summary/);
   assert.match(runtimeCatalog, /binary_cache_path/);
   assert.match(runtimeCatalog, /bool_field\(catalog, &\["loaded"\]\)/);
+  assert.match(runtimeDisplay, /pub\(super\) fn display_string_field/);
+  assert.match(runtimeDisplay, /pub\(super\) fn display_string_array_field/);
+  assert.match(runtimeDisplay, /redact_action_scalar\(&value\)/);
+  assert.match(runtimeDisplay, /const MAX_RUNTIME_DISPLAY_CHARS: usize = 180;/);
   assert.match(runtimeProviderModels, /pub\(super\) fn providers/);
   assert.match(runtimeProviderModels, /pub\(super\) fn models/);
   assert.match(runtimeProviderModels, /fn grouped_model_rows/);
+  assert.match(runtimeProviderModels, /#\[path = "runtime_provider_models_tests\.rs"\]/);
+  assert.match(runtimeProviderModelsTests, /grouped_model_rows_skip_blank_string_entries/);
+  assert.match(
+    runtimeProviderModelsTests,
+    /provider_and_model_rows_bound_and_redact_display_values/,
+  );
   assert.match(runtime, /#\[path = "runtime_tests\.rs"\]/);
   assert.match(runtimeTests, /provider_rows_read_agent_cli_provider_receipts/);
   assert.match(runtimeTests, /model_rows_flatten_agent_cli_provider_model_groups/);
@@ -120,7 +137,11 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/receipts.rs") < 560);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/receipts/receipt_strings.rs") < 75);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_catalog.rs") < 90);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_display.rs") < 80);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_provider_models.rs") < 190);
+  assert.ok(
+    lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_provider_models_tests.rs") < 120,
+  );
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime.rs") < 420);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_tests.rs") < 170);
 });
