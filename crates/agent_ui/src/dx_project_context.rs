@@ -273,6 +273,13 @@ impl DxProjectContext {
             .join("fixtures")
             .join("launch-examples")
     }
+
+    pub fn shared_receipt_cache_artifact_path() -> PathBuf {
+        Self::shared_fallback_root()
+            .join(DX_METADATA_DIR_NAME)
+            .join("receipts")
+            .join("receipt-cache.dxrc")
+    }
 }
 
 pub fn normalize_project_root(path: &Path) -> Option<PathBuf> {

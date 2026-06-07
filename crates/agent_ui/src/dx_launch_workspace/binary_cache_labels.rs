@@ -25,6 +25,8 @@ fn nonblank_or(value: &str, fallback: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    use crate::dx_project_context::DxProjectContext;
+
     use super::{
         binary_cache_next_action_label, binary_cache_row_detail_label, binary_cache_row_path_label,
         binary_cache_summary_label,
@@ -58,9 +60,12 @@ mod tests {
     #[test]
     fn labels_preserve_nonblank_row_fields() {
         assert_eq!(binary_cache_row_detail_label("3 receipts"), "3 receipts");
+        let receipt_cache_path = DxProjectContext::shared_receipt_cache_artifact_path()
+            .to_string_lossy()
+            .into_owned();
         assert_eq!(
-            binary_cache_row_path_label(r"G:\Dx\.dx\receipts\receipt-cache.dxrc"),
-            r"G:\Dx\.dx\receipts\receipt-cache.dxrc"
+            binary_cache_row_path_label(&receipt_cache_path),
+            receipt_cache_path
         );
     }
 }

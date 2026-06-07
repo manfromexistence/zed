@@ -13,6 +13,9 @@ test("DX launch binary cache keeps artifacts, meters, paths, rows, states, and s
   const rowsPath = "crates/agent_ui/src/dx_launch_binary_cache/rows.rs";
   const statesPath = "crates/agent_ui/src/dx_launch_binary_cache/states.rs";
   const summaryPath = "crates/agent_ui/src/dx_launch_binary_cache/summary.rs";
+  const projectContextPath = "crates/agent_ui/src/dx_project_context.rs";
+  const workspaceLabelsPath =
+    "crates/agent_ui/src/dx_launch_workspace/binary_cache_labels.rs";
 
   assert.ok(existsSync(artifactsPath), "missing focused binary-cache artifact module");
   assert.ok(existsSync(metersPath), "missing focused binary-cache meter module");
@@ -28,6 +31,8 @@ test("DX launch binary cache keeps artifacts, meters, paths, rows, states, and s
   const rows = read(rowsPath);
   const states = read(statesPath);
   const summary = read(summaryPath);
+  const projectContext = read(projectContextPath);
+  const workspaceLabels = read(workspaceLabelsPath);
 
   assert.match(parent, /^mod artifacts;$/m);
   assert.match(parent, /^mod meters;$/m);
@@ -75,6 +80,20 @@ test("DX launch binary cache keeps artifacts, meters, paths, rows, states, and s
   assert.match(summary, /pub\(super\) fn binary_cache_status/);
   assert.match(summary, /pub\(super\) fn binary_cache_operator_summary/);
   assert.match(summary, /pub\(super\) fn binary_cache_next_action/);
+  assert.match(
+    projectContext,
+    /pub fn shared_receipt_cache_artifact_path\(\) -> PathBuf/,
+  );
+  assert.match(projectContext, /\.join\("receipt-cache\.dxrc"\)/);
+  assert.match(workspaceLabels, /use crate::dx_project_context::DxProjectContext;/);
+  assert.match(
+    workspaceLabels,
+    /DxProjectContext::shared_receipt_cache_artifact_path\(\)/,
+  );
+  assert.doesNotMatch(
+    workspaceLabels,
+    /G:\\Dx\\\.dx\\receipts\\receipt-cache\.dxrc/,
+  );
 
   assert.ok(lineCount(parentPath) < 170, "dx_launch_binary_cache.rs should stay focused on snapshot assembly");
   assert.ok(lineCount(artifactsPath) < 35, "binary-cache artifact module should stay small");
