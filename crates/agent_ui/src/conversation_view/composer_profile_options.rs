@@ -1,5 +1,5 @@
 use agent_settings::{AgentProfile, DxAiProfileKind};
-use ui::IconName;
+use ui::{DxUiIcon, IconName, dx_icon};
 
 #[derive(Clone, Copy)]
 pub(super) enum ComposerProfileKind {
@@ -25,7 +25,7 @@ pub(super) struct ComposerSlotContract {
 #[derive(Clone, Copy)]
 pub(super) struct ComposerOptionSlot {
     pub(super) id: &'static str,
-    pub(super) icon: IconName,
+    pub(super) icon: ComposerOptionIcon,
     pub(super) label: &'static str,
     pub(super) tooltip: &'static str,
     pub(super) contract: ComposerSlotContract,
@@ -35,14 +35,33 @@ pub(super) struct ComposerOptionSlot {
 #[derive(Clone, Copy)]
 pub(super) struct ComposerOptionEntry {
     pub(super) id: &'static str,
-    pub(super) icon: IconName,
+    pub(super) icon: ComposerOptionIcon,
     pub(super) label: &'static str,
     pub(super) detail: &'static str,
 }
 
+#[derive(Clone, Copy)]
+pub(super) enum ComposerOptionIcon {
+    Static(IconName),
+    Dx(DxUiIcon),
+}
+
+impl ComposerOptionIcon {
+    pub(super) fn icon_name(self) -> IconName {
+        match self {
+            ComposerOptionIcon::Static(icon) => icon,
+            ComposerOptionIcon::Dx(icon) => dx_icon(icon),
+        }
+    }
+}
+
+const fn composer_icon(icon: IconName) -> ComposerOptionIcon {
+    ComposerOptionIcon::Static(icon)
+}
+
 const fn option(
     id: &'static str,
-    icon: IconName,
+    icon: ComposerOptionIcon,
     label: &'static str,
     detail: &'static str,
 ) -> ComposerOptionEntry {
@@ -56,7 +75,7 @@ const fn option(
 
 const fn slot(
     id: &'static str,
-    icon: IconName,
+    icon: ComposerOptionIcon,
     label: &'static str,
     tooltip: &'static str,
     contract: ComposerSlotContract,
@@ -105,19 +124,19 @@ const MEDIA_PROVIDER_CONTRACT: ComposerSlotContract = ComposerSlotContract {
 static ASK_MODEL_OPTIONS: [ComposerOptionEntry; 3] = [
     option(
         "ask-models-multiple",
-        IconName::AiOpenAi,
+        composer_icon(IconName::AiOpenAi),
         "Multiple answers",
         "Compare several model responses before choosing a direction.",
     ),
     option(
         "ask-models-consensus",
-        IconName::CheckDouble,
+        composer_icon(IconName::CheckDouble),
         "Consensus pass",
         "Prefer agreement across strong models for higher confidence.",
     ),
     option(
         "ask-models-single",
-        IconName::ZedAssistant,
+        composer_icon(IconName::ZedAssistant),
         "Single answer",
         "Use the selected model for one focused answer.",
     ),
@@ -126,19 +145,19 @@ static ASK_MODEL_OPTIONS: [ComposerOptionEntry; 3] = [
 static ASK_SPEED_OPTIONS: [ComposerOptionEntry; 3] = [
     option(
         "ask-speed-fast",
-        IconName::FastForward,
+        composer_icon(IconName::FastForward),
         "Fast",
         "Prioritize a short, low-latency answer.",
     ),
     option(
         "ask-speed-balanced",
-        IconName::SignalMedium,
+        composer_icon(IconName::SignalMedium),
         "Balanced",
         "Balance speed, context, and explanation depth.",
     ),
     option(
         "ask-speed-source-aware",
-        IconName::ToolSearch,
+        ComposerOptionIcon::Dx(DxUiIcon::Search),
         "Source aware",
         "Prefer answers that can cite concrete local or web evidence.",
     ),
@@ -147,19 +166,19 @@ static ASK_SPEED_OPTIONS: [ComposerOptionEntry; 3] = [
 static ASK_REASON_OPTIONS: [ComposerOptionEntry; 3] = [
     option(
         "ask-reasoning-light",
-        IconName::ThinkingModeOff,
+        composer_icon(IconName::ThinkingModeOff),
         "Light",
         "Use minimal reasoning for simple questions.",
     ),
     option(
         "ask-reasoning-deep",
-        IconName::ThinkingMode,
+        composer_icon(IconName::ThinkingMode),
         "Deep",
         "Spend more reasoning on tradeoffs and correctness.",
     ),
     option(
         "ask-reasoning-exhaustive",
-        IconName::Crosshair,
+        composer_icon(IconName::Crosshair),
         "Exhaustive",
         "Use the strongest reasoning path for hard decisions.",
     ),
@@ -168,19 +187,19 @@ static ASK_REASON_OPTIONS: [ComposerOptionEntry; 3] = [
 static AGENT_WORK_OPTIONS: [ComposerOptionEntry; 3] = [
     option(
         "agents-work-workspace-edits",
-        IconName::ToolHammer,
+        composer_icon(IconName::ToolHammer),
         "Workspace edits",
         "Let the assistant change files through the normal tool path.",
     ),
     option(
         "agents-work-queued",
-        IconName::QueueMessage,
+        composer_icon(IconName::QueueMessage),
         "Queued work",
         "Stage follow-up prompts while the current turn is running.",
     ),
     option(
         "agents-work-diagnostics",
-        IconName::ToolDiagnostics,
+        composer_icon(IconName::ToolDiagnostics),
         "Diagnostics",
         "Prefer inspection and focused checks before runtime proof.",
     ),
@@ -189,19 +208,19 @@ static AGENT_WORK_OPTIONS: [ComposerOptionEntry; 3] = [
 static AGENT_PLAN_OPTIONS: [ComposerOptionEntry; 3] = [
     option(
         "agents-plan-mode",
-        IconName::ListTodo,
+        composer_icon(IconName::ListTodo),
         "Plan mode",
         "Turn intent into a clear implementation path.",
     ),
     option(
         "agents-plan-checkpoints",
-        IconName::TodoProgress,
+        composer_icon(IconName::TodoProgress),
         "Checkpoints",
         "Keep long work split into visible, reviewable milestones.",
     ),
     option(
         "agents-plan-handoff",
-        IconName::FileTextOutlined,
+        composer_icon(IconName::FileTextOutlined),
         "Handoff",
         "Preserve decisions and verification for the next pass.",
     ),
@@ -210,19 +229,19 @@ static AGENT_PLAN_OPTIONS: [ComposerOptionEntry; 3] = [
 static AGENT_WORKER_OPTIONS: [ComposerOptionEntry; 3] = [
     option(
         "agents-workers-parallel",
-        IconName::UserGroup,
+        composer_icon(IconName::UserGroup),
         "Parallel workers",
         "Split independent work into bounded lanes when available.",
     ),
     option(
         "agents-workers-review",
-        IconName::Eye,
+        composer_icon(IconName::Eye),
         "Review lane",
         "Use a focused pass to catch regressions and unverified wiring.",
     ),
     option(
         "agents-workers-handoff",
-        IconName::GitBranch,
+        composer_icon(IconName::GitBranch),
         "Lane handoff",
         "Keep branch and ownership boundaries explicit.",
     ),
@@ -231,37 +250,37 @@ static AGENT_WORKER_OPTIONS: [ComposerOptionEntry; 3] = [
 static MEDIA_OUTPUT_OPTIONS: [ComposerOptionEntry; 6] = [
     option(
         "media-output-image",
-        IconName::Image,
+        ComposerOptionIcon::Dx(DxUiIcon::Media),
         "Image",
         "Tune prompt, ratio, and quality for still images.",
     ),
     option(
         "media-output-video",
-        IconName::Screen,
+        composer_icon(IconName::Screen),
         "Video",
         "Tune scene length, motion, and preview frames.",
     ),
     option(
         "media-output-audio",
-        IconName::AudioOn,
+        composer_icon(IconName::AudioOn),
         "Audio",
         "Tune voice, music, timing, and transcript details.",
     ),
     option(
         "media-output-music",
-        IconName::PlayOutlined,
+        composer_icon(IconName::PlayOutlined),
         "Music",
         "Tune music style, structure, stems, and loops.",
     ),
     option(
         "media-output-3d",
-        IconName::Box,
+        composer_icon(IconName::Box),
         "3D",
         "Tune model, material, scene, and export constraints.",
     ),
     option(
         "media-output-docs",
-        IconName::FileDoc,
+        composer_icon(IconName::FileDoc),
         "Docs",
         "Tune document format, source inputs, and review path.",
     ),
@@ -270,19 +289,19 @@ static MEDIA_OUTPUT_OPTIONS: [ComposerOptionEntry; 6] = [
 static MEDIA_FRAME_OPTIONS: [ComposerOptionEntry; 3] = [
     option(
         "media-frame-square",
-        IconName::SquareDot,
+        composer_icon(IconName::SquareDot),
         "Square",
         "Use square output for cards, posts, and thumbnails.",
     ),
     option(
         "media-frame-wide",
-        IconName::Screen,
+        composer_icon(IconName::Screen),
         "Wide",
         "Use wide output for previews, videos, and hero media.",
     ),
     option(
         "media-frame-tall",
-        IconName::ExpandVertical,
+        composer_icon(IconName::ExpandVertical),
         "Tall",
         "Use vertical output for mobile and story formats.",
     ),
@@ -291,19 +310,19 @@ static MEDIA_FRAME_OPTIONS: [ComposerOptionEntry; 3] = [
 static MEDIA_TIME_OPTIONS: [ComposerOptionEntry; 3] = [
     option(
         "media-time-short",
-        IconName::Clock,
+        composer_icon(IconName::Clock),
         "Short",
         "Generate compact clips or samples.",
     ),
     option(
         "media-time-loop",
-        IconName::HistoryRerun,
+        composer_icon(IconName::HistoryRerun),
         "Loop",
         "Prefer seamless motion or audio loops.",
     ),
     option(
         "media-time-scene",
-        IconName::CountdownTimer,
+        composer_icon(IconName::CountdownTimer),
         "Scene",
         "Use a longer scene with richer timing controls.",
     ),
@@ -312,19 +331,19 @@ static MEDIA_TIME_OPTIONS: [ComposerOptionEntry; 3] = [
 static MEDIA_QUALITY_OPTIONS: [ComposerOptionEntry; 3] = [
     option(
         "media-quality-draft",
-        IconName::Pencil,
+        composer_icon(IconName::Pencil),
         "Draft",
         "Explore quickly before spending more generation budget.",
     ),
     option(
         "media-quality-high",
-        IconName::Sparkle,
+        composer_icon(IconName::Sparkle),
         "High",
         "Raise quality for assets that may ship.",
     ),
     option(
         "media-quality-production",
-        IconName::CheckDouble,
+        composer_icon(IconName::CheckDouble),
         "Production",
         "Prefer final-pass output and stricter review.",
     ),
@@ -333,19 +352,19 @@ static MEDIA_QUALITY_OPTIONS: [ComposerOptionEntry; 3] = [
 static MEDIA_PROVIDER_OPTIONS: [ComposerOptionEntry; 3] = [
     option(
         "media-provider-readiness",
-        IconName::Warning,
+        composer_icon(IconName::Warning),
         "Readiness",
         "Check credentials, local runners, and provider health before generation.",
     ),
     option(
         "media-provider-receipts",
-        IconName::FileTextOutlined,
+        composer_icon(IconName::FileTextOutlined),
         "Receipts",
         "Use approved media plan and runner receipts before execution.",
     ),
     option(
         "media-provider-budget",
-        IconName::Sliders,
+        ComposerOptionIcon::Dx(DxUiIcon::Gateway),
         "Budget",
         "Keep provider cost, quality, and safety gates explicit.",
     ),
@@ -354,19 +373,19 @@ static MEDIA_PROVIDER_OPTIONS: [ComposerOptionEntry; 3] = [
 static SEARCH_SCOPE_OPTIONS: [ComposerOptionEntry; 3] = [
     option(
         "search-scope-web",
-        IconName::Public,
+        composer_icon(IconName::Public),
         "Web",
         "Search current public sources.",
     ),
     option(
         "search-scope-workspace",
-        IconName::FileTree,
+        composer_icon(IconName::FileTree),
         "Workspace",
         "Search local project context first.",
     ),
     option(
         "search-scope-both",
-        IconName::Blocks,
+        composer_icon(IconName::Blocks),
         "Both",
         "Blend web and workspace evidence.",
     ),
@@ -375,19 +394,19 @@ static SEARCH_SCOPE_OPTIONS: [ComposerOptionEntry; 3] = [
 static SEARCH_FRESHNESS_OPTIONS: [ComposerOptionEntry; 3] = [
     option(
         "search-freshness-latest",
-        IconName::Clock,
+        composer_icon(IconName::Clock),
         "Latest",
         "Prefer fresh sources when the topic may have changed.",
     ),
     option(
         "search-freshness-stable",
-        IconName::Library,
+        composer_icon(IconName::Library),
         "Stable",
         "Prefer canonical documentation and durable references.",
     ),
     option(
         "search-freshness-archive",
-        IconName::Archive,
+        composer_icon(IconName::Archive),
         "Archive",
         "Include older records when history matters.",
     ),
@@ -396,19 +415,19 @@ static SEARCH_FRESHNESS_OPTIONS: [ComposerOptionEntry; 3] = [
 static SEARCH_SOURCE_OPTIONS: [ComposerOptionEntry; 3] = [
     option(
         "search-sources-primary",
-        IconName::Check,
+        composer_icon(IconName::Check),
         "Primary",
         "Favor official docs, papers, and first-party sources.",
     ),
     option(
         "search-sources-community",
-        IconName::UserGroup,
+        composer_icon(IconName::UserGroup),
         "Community",
         "Include reputable community reports when useful.",
     ),
     option(
         "search-sources-media",
-        IconName::Image,
+        ComposerOptionIcon::Dx(DxUiIcon::Media),
         "Media",
         "Include image, video, or visual source results.",
     ),
@@ -417,19 +436,19 @@ static SEARCH_SOURCE_OPTIONS: [ComposerOptionEntry; 3] = [
 static STUDY_SOURCE_OPTIONS: [ComposerOptionEntry; 3] = [
     option(
         "study-sources-attached",
-        IconName::Book,
+        composer_icon(IconName::Book),
         "Study sources",
         "Use attached notes, docs, and saved material.",
     ),
     option(
         "study-sources-extracts",
-        IconName::FileTextOutlined,
+        composer_icon(IconName::FileTextOutlined),
         "Extracts",
         "Pull key passages into the study flow.",
     ),
     option(
         "study-sources-tables",
-        IconName::DatabaseZap,
+        composer_icon(IconName::DatabaseZap),
         "Tables",
         "Organize facts into structured study tables.",
     ),
@@ -438,19 +457,19 @@ static STUDY_SOURCE_OPTIONS: [ComposerOptionEntry; 3] = [
 static STUDY_NOTE_OPTIONS: [ComposerOptionEntry; 3] = [
     option(
         "study-notes-summary",
-        IconName::Notepad,
+        composer_icon(IconName::Notepad),
         "Summary",
         "Condense sources into clean notes.",
     ),
     option(
         "study-notes-outline",
-        IconName::ListTree,
+        composer_icon(IconName::ListTree),
         "Outline",
         "Build a lesson structure from the source set.",
     ),
     option(
         "study-notes-citations",
-        IconName::Quote,
+        composer_icon(IconName::Quote),
         "Citations",
         "Keep important references visible while studying.",
     ),
@@ -459,19 +478,19 @@ static STUDY_NOTE_OPTIONS: [ComposerOptionEntry; 3] = [
 static STUDY_PRACTICE_OPTIONS: [ComposerOptionEntry; 3] = [
     option(
         "study-practice-drills",
-        IconName::Crosshair,
+        composer_icon(IconName::Crosshair),
         "Practice",
         "Turn material into questions and drills.",
     ),
     option(
         "study-practice-recall",
-        IconName::TodoComplete,
+        composer_icon(IconName::TodoComplete),
         "Recall",
         "Check retention with short active-recall prompts.",
     ),
     option(
         "study-practice-progress",
-        IconName::TodoProgress,
+        composer_icon(IconName::TodoProgress),
         "Progress",
         "Track what is understood and what needs review.",
     ),
@@ -480,7 +499,7 @@ static STUDY_PRACTICE_OPTIONS: [ComposerOptionEntry; 3] = [
 static ASK_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
     slot(
         "ask-models",
-        IconName::AiOpenAi,
+        composer_icon(IconName::AiOpenAi),
         "Models",
         "View model comparison guidance for Ask",
         ASK_CONTRACT,
@@ -488,7 +507,7 @@ static ASK_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
     ),
     slot(
         "ask-speed",
-        IconName::FastForward,
+        composer_icon(IconName::FastForward),
         "Speed",
         "View response speed guidance for Ask",
         ASK_CONTRACT,
@@ -496,7 +515,7 @@ static ASK_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
     ),
     slot(
         "ask-reasoning",
-        IconName::ThinkingMode,
+        composer_icon(IconName::ThinkingMode),
         "Reasoning",
         "View reasoning depth guidance for Ask",
         ASK_CONTRACT,
@@ -507,7 +526,7 @@ static ASK_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
 static AGENTS_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
     slot(
         "agents-work",
-        IconName::ZedAgent,
+        composer_icon(IconName::ZedAgent),
         "Work",
         "View workspace-work guidance for Agents",
         AGENTS_CONTRACT,
@@ -515,7 +534,7 @@ static AGENTS_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
     ),
     slot(
         "agents-plan",
-        IconName::ListTodo,
+        composer_icon(IconName::ListTodo),
         "Plan",
         "View planning guidance for Agents",
         AGENTS_CONTRACT,
@@ -523,7 +542,7 @@ static AGENTS_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
     ),
     slot(
         "agents-workers",
-        IconName::UserGroup,
+        composer_icon(IconName::UserGroup),
         "Workers",
         "View worker-lane guidance for Agents",
         AGENTS_CONTRACT,
@@ -534,7 +553,7 @@ static AGENTS_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
 static MEDIA_COMPOSER_SLOTS: [ComposerOptionSlot; 5] = [
     slot(
         "media-output",
-        IconName::Image,
+        ComposerOptionIcon::Dx(DxUiIcon::Media),
         "Output",
         "View Media output guidance",
         MEDIA_PROVIDER_CONTRACT,
@@ -542,7 +561,7 @@ static MEDIA_COMPOSER_SLOTS: [ComposerOptionSlot; 5] = [
     ),
     slot(
         "media-frame",
-        IconName::Screen,
+        composer_icon(IconName::Screen),
         "Frame",
         "View Media frame guidance",
         MEDIA_PROVIDER_CONTRACT,
@@ -550,7 +569,7 @@ static MEDIA_COMPOSER_SLOTS: [ComposerOptionSlot; 5] = [
     ),
     slot(
         "media-time",
-        IconName::Clock,
+        composer_icon(IconName::Clock),
         "Time",
         "View Media timing guidance",
         MEDIA_PROVIDER_CONTRACT,
@@ -558,7 +577,7 @@ static MEDIA_COMPOSER_SLOTS: [ComposerOptionSlot; 5] = [
     ),
     slot(
         "media-quality",
-        IconName::Sliders,
+        ComposerOptionIcon::Dx(DxUiIcon::Settings),
         "Quality",
         "View Media quality guidance",
         MEDIA_RECEIPT_CONTRACT,
@@ -566,7 +585,7 @@ static MEDIA_COMPOSER_SLOTS: [ComposerOptionSlot; 5] = [
     ),
     slot(
         "media-provider",
-        IconName::Server,
+        ComposerOptionIcon::Dx(DxUiIcon::Gateway),
         "Provider",
         "View Media provider readiness",
         MEDIA_PROVIDER_CONTRACT,
@@ -577,7 +596,7 @@ static MEDIA_COMPOSER_SLOTS: [ComposerOptionSlot; 5] = [
 static SEARCH_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
     slot(
         "search-scope",
-        IconName::MagnifyingGlass,
+        ComposerOptionIcon::Dx(DxUiIcon::Search),
         "Scope",
         "View Search scope guidance",
         SEARCH_CONTRACT,
@@ -585,7 +604,7 @@ static SEARCH_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
     ),
     slot(
         "search-freshness",
-        IconName::Clock,
+        composer_icon(IconName::Clock),
         "Freshness",
         "View Search freshness guidance",
         SEARCH_CONTRACT,
@@ -593,7 +612,7 @@ static SEARCH_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
     ),
     slot(
         "search-sources",
-        IconName::Public,
+        composer_icon(IconName::Public),
         "Sources",
         "View Search source guidance",
         SEARCH_CONTRACT,
@@ -604,7 +623,7 @@ static SEARCH_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
 static STUDY_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
     slot(
         "study-sources",
-        IconName::Book,
+        composer_icon(IconName::Book),
         "Sources",
         "View Study source guidance",
         STUDY_CONTRACT,
@@ -612,7 +631,7 @@ static STUDY_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
     ),
     slot(
         "study-notes",
-        IconName::Notepad,
+        composer_icon(IconName::Notepad),
         "Notes",
         "View Study note guidance",
         STUDY_CONTRACT,
@@ -620,7 +639,7 @@ static STUDY_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
     ),
     slot(
         "study-practice",
-        IconName::Crosshair,
+        composer_icon(IconName::Crosshair),
         "Practice",
         "View Study practice guidance",
         STUDY_CONTRACT,

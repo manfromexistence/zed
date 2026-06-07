@@ -96,6 +96,10 @@ test("DX loading and tool surfaces use semantic icon helpers", () => {
   const manageProfilesModal = read(
     "crates/agent_ui/src/agent_configuration/manage_profiles_modal.rs",
   );
+  const composerProfileOptions = read(
+    "crates/agent_ui/src/conversation_view/composer_profile_options.rs",
+  );
+  const threadView = read("crates/agent_ui/src/conversation_view/thread_view.rs");
   const contextServerModal = read(
     "crates/agent_ui/src/agent_configuration/configure_context_server_modal.rs",
   );
@@ -144,6 +148,13 @@ test("DX loading and tool surfaces use semantic icon helpers", () => {
   assert.match(manageProfilesModal, /Icon::new\(dx_icon\(DxUiIcon::Settings\)\)/);
   assert.match(manageProfilesModal, /Some\(dx_icon\(DxUiIcon::Settings\)\)/);
   assert.match(aiSettingItem, /IconButton::new\("menu", dx_icon\(DxUiIcon::Settings\)\)/);
+  assert.match(composerProfileOptions, /pub\(super\) enum ComposerOptionIcon/);
+  assert.match(composerProfileOptions, /ComposerOptionIcon::Dx\(DxUiIcon::Media\)/);
+  assert.match(composerProfileOptions, /ComposerOptionIcon::Dx\(DxUiIcon::Search\)/);
+  assert.match(composerProfileOptions, /ComposerOptionIcon::Dx\(DxUiIcon::Gateway\)/);
+  assert.doesNotMatch(composerProfileOptions, /IconName::Sliders/);
+  assert.match(threadView, /slot\.icon\.icon_name\(\)/);
+  assert.match(threadView, /option\.icon\.icon_name\(\)/);
 
   for (const icon of ["Search", "Plugins", "Automations", "Evidence", "Media", "Check"]) {
     assert.ok(

@@ -4124,7 +4124,7 @@ impl ThreadView {
             .trigger_with_tooltip(
                 IconButton::new(
                     format!("agent-composer-profile-slot-trigger-{}", slot.id),
-                    slot.icon,
+                    slot.icon.icon_name(),
                 )
                 .icon_size(IconSize::Small)
                 .icon_color(Color::Muted),
@@ -11209,7 +11209,7 @@ fn composer_option_menu_row(slot: ComposerOptionSlot, option: ComposerOptionEntr
         .max_w(rems(26.))
         .gap_2()
         .child(
-            Icon::new(option.icon)
+            Icon::new(option.icon.icon_name())
                 .size(IconSize::Small)
                 .color(Color::Muted),
         )
