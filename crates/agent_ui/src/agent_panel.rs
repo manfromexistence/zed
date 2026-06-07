@@ -65,7 +65,7 @@ use crate::dx_launch_status::launch_status_snapshot_for_roots;
 use crate::dx_launch_workspace::{
     DxLaunchRailControls, DxLaunchRailSection, DxLaunchRailSide, DxLaunchRailState,
     DxLaunchWorkspaceStatus, DxSourceRowControl, DxSubagentStatus, DxSubagentStatusRow,
-    render_workspace_chrome,
+    render_automation_screen, render_workspace_chrome,
 };
 use crate::dx_proof_freshness::proof_freshness_snapshot;
 use crate::dx_receipt_history::tool_history_snapshot;
@@ -1124,6 +1124,7 @@ enum WhichFontSize {
 enum AgentPanelHostKind {
     Sidechat,
     BuilderWorkspace,
+    AutomationWorkspace,
 }
 
 impl BaseView {
@@ -1238,6 +1239,7 @@ impl DxWorkspaceSnapshot {
                 WorkspaceScreenKind::Editor => has_editor = true,
                 WorkspaceScreenKind::Browser => has_browser = true,
                 WorkspaceScreenKind::Agent
+                | WorkspaceScreenKind::Automations
                 | WorkspaceScreenKind::Terminal
                 | WorkspaceScreenKind::Onboarding
                 | WorkspaceScreenKind::LiquidGlass
@@ -1709,6 +1711,21 @@ impl AgentPanel {
         panel.fullscreen_sources_rail_pinned = true;
         panel.fullscreen_progress_rail_pinned = true;
         panel.ensure_thread_initialized(window, cx);
+        panel
+    }
+
+    pub(crate) fn new_automation_workspace(
+        workspace: &Workspace,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Self {
+        let mut panel = Self::new(workspace, window, cx);
+        panel.host_kind = AgentPanelHostKind::AutomationWorkspace;
+        panel.manual_zoom_override = Some(false);
+        panel.fullscreen_sources_rail_open = false;
+        panel.fullscreen_progress_rail_open = false;
+        panel.fullscreen_sources_rail_pinned = false;
+        panel.fullscreen_progress_rail_pinned = false;
         panel
     }
 
@@ -6739,6 +6756,11 @@ impl AgentPanel {
         )
     }
 
+    fn render_automation_workspace_screen(&mut self, cx: &mut Context<Self>) -> AnyElement {
+        let status = self.cached_dx_launch_workspace_status(cx);
+        render_automation_screen(status.as_ref(), cx)
+    }
+
     fn default_collapsed_dx_launch_rail_sections() -> HashSet<DxLaunchRailSection> {
         let mut collapsed = HashSet::default();
         collapsed.insert(DxLaunchRailSection::SourceTools);
@@ -6844,7 +6866,8 @@ impl AgentPanel {
                     "Automations",
                 )
                 .on_click(|_event, window, cx| {
-                    window.dispatch_action(zed_actions::OpenProjectDebugTasks.boxed_clone(), cx);
+                    window
+                        .dispatch_action(zed_actions::assistant::OpenAutomations.boxed_clone(), cx);
                 }),
             )
             .child(
@@ -7516,9 +7539,12 @@ impl AgentPanel {
     }
 
     fn should_refresh_dx_launch_workspace_status(&self, generation: u64, cx: &App) -> bool {
+        let automation_workspace =
+            matches!(self.host_kind, AgentPanelHostKind::AutomationWorkspace);
         self.dx_launch_workspace_status_refresh_generation == generation
-            && self.should_render_dx_launch_chrome(cx)
-            && (self.fullscreen_sources_rail_open || self.fullscreen_progress_rail_open)
+            && (automation_workspace
+                || (self.should_render_dx_launch_chrome(cx)
+                    && (self.fullscreen_sources_rail_open || self.fullscreen_progress_rail_open)))
     }
 
     fn dx_launch_workspace_status_input(&self, cx: &Context<Self>) -> DxLaunchWorkspaceStatusInput {
@@ -7931,6 +7957,10 @@ fn dropped_web_preview_url(item: &dyn workspace::ItemHandle, cx: &App) -> Option
 
 impl Render for AgentPanel {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        if matches!(self.host_kind, AgentPanelHostKind::AutomationWorkspace) {
+            return self.render_automation_workspace_screen(cx);
+        }
+
         // WARNING: Changes to this element hierarchy can have
         // non-obvious implications to the layout of children.
         //

@@ -914,6 +914,7 @@ async fn initialize_agent_panel(
                 .register_action(agent_ui::AgentPanel::focus)
                 .register_action(agent_ui::AgentPanel::focus_fullscreen)
                 .register_action(agent_ui::AgentPanel::toggle)
+                .register_action(agent_ui::AutomationScreen::open)
                 .register_action(agent_ui::InlineAssistant::inline_assist);
         }
     })?;

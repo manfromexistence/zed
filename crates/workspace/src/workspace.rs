@@ -6039,6 +6039,12 @@ impl Workspace {
                             cx,
                         );
                     }
+                    WorkspaceScreenKind::Automations => {
+                        window.dispatch_action(
+                            zed_actions::assistant::OpenAutomations.boxed_clone(),
+                            cx,
+                        );
+                    }
                     WorkspaceScreenKind::Editor => {
                         window.dispatch_action(NewFile.boxed_clone(), cx);
                     }

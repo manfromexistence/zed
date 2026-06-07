@@ -50,6 +50,11 @@ test("DX Automations remain receipt-backed and do not fake scheduled execution",
   const contract = read("crates/agent_ui/src/dx_agent_bridge/automation_contract.rs");
   const runtime = read("crates/agent_ui/src/dx_agent_bridge/runtime.rs");
   const configuration = read("crates/agent_ui/src/agent_configuration.rs");
+  const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
+  const launchWorkspace = read("crates/agent_ui/src/dx_launch_workspace.rs");
+  const automationScreenView = read(
+    "crates/agent_ui/src/dx_launch_workspace/automation_screen.rs",
+  );
   const rail = read("crates/agent_ui/src/dx_launch_workspace/agents/automations.rs");
   const composer = read("crates/agent_ui/src/dx_launch_workspace/agents/automations/composer.rs");
   const labels = read("crates/agent_ui/src/dx_launch_workspace/agents/automations/labels.rs");
@@ -71,6 +76,18 @@ test("DX Automations remain receipt-backed and do not fake scheduled execution",
   assert.match(rail, /dx_agent_automation_composer_contract/);
   assert.match(rail, /"dx agents automate list --json"/);
   assert.match(rail, /muted_card\("Run automation list receipt"/);
+  assert.match(agentPanel, /"dx-launch-automations"/);
+  assert.match(agentPanel, /zed_actions::assistant::OpenAutomations\.boxed_clone\(\)/);
+  assert.doesNotMatch(
+    agentPanel,
+    /"dx-launch-automations"[\s\S]*?OpenProjectDebugTasks/,
+    "Automations launch rail action must not route to debugger tasks",
+  );
+  assert.match(launchWorkspace, /pub\(crate\) use automation_screen::render_automation_screen;/);
+  assert.doesNotMatch(launchWorkspace, /pub\(crate\) fn render_automation_screen/);
+  assert.match(automationScreenView, /"pending DX Agents runtime"/);
+  assert.match(automationScreenView, /agents::dx_agent_automation_state/);
+  assert.match(automationScreenView, /agents::dx_agent_receipt_state/);
   assert.match(composer, /"pending runtime"/);
   assert.match(composer, /composer\.receipt_filename/);
   assert.match(composer, /composer\.unavailable_reason/);
@@ -91,10 +108,60 @@ test("DX Automations remain receipt-backed and do not fake scheduled execution",
   );
 });
 
+test("DX Automations have a first-class workspace tab contract", () => {
+  const agentUi = read("crates/agent_ui/src/agent_ui.rs");
+  const automationScreen = read("crates/agent_ui/src/automation_screen.rs");
+  const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
+  const item = read("crates/workspace/src/item.rs");
+  const workspace = read("crates/workspace/src/workspace.rs");
+  const pane = read("crates/workspace/src/pane.rs");
+  const sidebar = read("crates/sidebar/src/sidebar.rs");
+  const titleBar = read("crates/title_bar/src/title_bar.rs");
+  const zedActions = read("crates/zed_actions/src/lib.rs");
+  const zed = read("crates/zed/src/zed.rs");
+
+  assert.match(agentUi, /^mod automation_screen;$/m);
+  assert.match(agentUi, /pub use crate::automation_screen::AutomationScreen;/);
+  assert.match(item, /pub enum WorkspaceScreenKind \{[\s\S]*Agent,\s*Automations,\s*Editor,/);
+  assert.match(zedActions, /OpenAutomations/);
+  assert.match(zed, /register_action\(agent_ui::AutomationScreen::open\)/);
+
+  assert.match(automationScreen, /pub struct AutomationScreen \{\s*panel: Entity<AgentPanel>,\s*\}/);
+  assert.match(automationScreen, /AgentPanel::new_automation_workspace\(workspace, window, cx\)/);
+  assert.match(automationScreen, /pub\(crate\) fn open_or_focus\(/);
+  assert.match(automationScreen, /workspace\.dismiss_zoomed_agent_panel\(window, cx\);/);
+  assert.match(automationScreen, /workspace\.pane_for_screen_kind\(WorkspaceScreenKind::Automations, cx\)/);
+  assert.match(automationScreen, /item\.screen_kind\(cx\) == WorkspaceScreenKind::Automations/);
+  assert.match(automationScreen, /workspace\.add_item\(target_pane, Box::new\(item\), None, true, true, window, cx\);/);
+  assert.match(automationScreen, /fn tab_content_text\(&self,[\s\S]*"Automations"\.into\(\)/);
+  assert.match(automationScreen, /fn screen_kind\(&self\) -> WorkspaceScreenKind \{\s*WorkspaceScreenKind::Automations\s*\}/);
+  assert.match(automationScreen, /dx_icon\(DxUiIcon::Automations\)/);
+  assert.match(automationScreen, /fn show_toolbar\(&self\) -> bool \{\s*false\s*\}/);
+  assert.match(automationScreen, /fn can_split\(&self\) -> bool \{\s*false\s*\}/);
+  assert.match(automationScreen, /pub fn open\([\s\S]*_: &OpenAutomations/);
+
+  assert.match(agentPanel, /AgentPanelHostKind::AutomationWorkspace/);
+  assert.match(agentPanel, /render_automation_workspace_screen/);
+  assert.match(agentPanel, /let automation_workspace =\s*matches!\(self\.host_kind, AgentPanelHostKind::AutomationWorkspace\);/);
+  assert.match(agentPanel, /automation_workspace\s*\|\|\s*\(self\.should_render_dx_launch_chrome\(cx\)/);
+  assert.match(workspace, /WorkspaceScreenKind::Automations => \{\s*window\.dispatch_action\(\s*zed_actions::assistant::OpenAutomations\.boxed_clone\(\),\s*cx,\s*\);\s*\}/s);
+  assert.match(
+    pane,
+    /WorkspaceScreenKind::Agent\s*\|\s*WorkspaceScreenKind::Automations\s*\|\s*WorkspaceScreenKind::Onboarding/s,
+  );
+  assert.match(sidebar, /"sidebar-toolbar-automations"[\s\S]*?zed_actions::assistant::OpenAutomations\.boxed_clone\(\)/);
+  assert.match(sidebar, /"sidebar-activity-automations"[\s\S]*?zed_actions::assistant::OpenAutomations\.boxed_clone\(\)/);
+  assert.match(titleBar, /WorkspaceScreenKind::Automations/);
+  assert.match(titleBar, /zed_actions::assistant::OpenAutomations\.boxed_clone\(\)/);
+  assert.doesNotMatch(automationScreen, /dummy|fake|OpenProjectDebugTasks/);
+});
+
 test("DX Automation source stays split into focused files", () => {
   for (const file of [
+    "crates/agent_ui/src/automation_screen.rs",
     "crates/agent_ui/src/dx_agent_bridge/automation_contract.rs",
     "crates/agent_ui/src/dx_agent_bridge/automation_contract_tests.rs",
+    "crates/agent_ui/src/dx_launch_workspace/automation_screen.rs",
     "crates/agent_ui/src/dx_launch_workspace/agents/automations/composer.rs",
     "crates/agent_ui/src/dx_launch_workspace/agents/automations/labels.rs",
     "crates/agent_ui/src/dx_launch_workspace/agents/automations/rows.rs",
@@ -103,6 +170,8 @@ test("DX Automation source stays split into focused files", () => {
   }
 
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge.rs") < 880);
+  assert.ok(lineCount("crates/agent_ui/src/automation_screen.rs") < 115);
+  assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/automation_screen.rs") < 120);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_contract.rs") < 520);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_contract_tests.rs") < 150);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/automations.rs") < 70);

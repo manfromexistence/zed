@@ -28,6 +28,7 @@ use crate::dx_www_launch_evidence::DxWwwLaunchEvidenceSnapshot;
 
 mod agents;
 mod audit;
+mod automation_screen;
 mod binary_cache;
 mod binary_cache_labels;
 mod check;
@@ -46,6 +47,8 @@ mod sources;
 mod style_panel;
 mod tool_history;
 mod www_evidence;
+
+pub(crate) use automation_screen::render_automation_screen;
 
 #[derive(Clone)]
 pub(crate) struct DxLaunchWorkspaceStatus {

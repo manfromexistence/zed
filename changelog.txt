@@ -1,3 +1,23 @@
+[2026-06-07] - DX Automations Workspace Tab
+
+ADDED:
+- `crates\agent_ui\src\automation_screen.rs` adds a first-class `AutomationScreen` workspace item for the DX Automations tab.
+- `crates\agent_ui\src\dx_launch_workspace\automation_screen.rs` renders the receipt-backed Automations surface from the existing DX launch workspace status cache.
+
+CHANGED:
+- `WorkspaceScreenKind::Automations` now participates in workspace activation, title-bar screen dock buttons, pane tab controls, screen carousel labels/icons, sidebar grid context, and onboarding fallback routing.
+- `zed_actions::assistant::OpenAutomations` is registered through `agent_ui::AutomationScreen::open`.
+- Agent launch rail and sidebar Automations entry points now dispatch the Automations tab instead of debug tasks or prompt drafting.
+- The Automations tab reports scheduled execution as pending DX Agents runtime and keeps composer/receipt state sourced from the existing bridge snapshot.
+
+PASSED:
+- `rustfmt crates/agent_ui/src/automation_screen.rs crates/agent_ui/src/agent_panel.rs crates/agent_ui/src/agent_ui.rs crates/agent_ui/src/dx_launch_workspace.rs crates/agent_ui/src/dx_launch_workspace/automation_screen.rs crates/onboarding/src/onboarding.rs crates/sidebar/src/sidebar.rs crates/workspace/src/item.rs crates/workspace/src/pane.rs crates/workspace/src/screen_carousel.rs crates/workspace/src/workspace.rs crates/zed/src/zed.rs crates/zed_actions/src/lib.rs`
+- `node --test script/dx-automations-source.test.ts script/dx-title-bar-source.test.ts script/web-preview-platform-lifecycle.test.ts script/dx-launch-workspace-source.test.ts`
+
+NOTES:
+- Source-only by instruction. Cargo, `just run`, local servers, native editor launch, browser automation, and live scheduled-execution proof remain skipped.
+- `node --test script/dx-workspace-ui-state-source.test.ts` is currently blocked by unrelated AI-profile dirty changes in this worktree, not by the Automations tab wiring.
+
 [2026-06-07] - DX Style Rail Semantic Icon
 
 CHANGED:

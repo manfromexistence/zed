@@ -5,6 +5,7 @@ mod agent_model_selector;
 mod agent_panel;
 mod agent_registry_ui;
 mod agent_screen;
+mod automation_screen;
 mod buffer_codegen;
 mod completion_provider;
 mod config_options;
@@ -135,6 +136,7 @@ pub use crate::agent_panel::{
 };
 use crate::agent_registry_ui::AgentRegistryPage;
 pub use crate::agent_screen::AgentScreen;
+pub use crate::automation_screen::AutomationScreen;
 pub use crate::dx_check_panel_view::DxCheckPanel;
 pub use crate::inline_assistant::InlineAssistant;
 pub use crate::thread_metadata_store::ThreadId;

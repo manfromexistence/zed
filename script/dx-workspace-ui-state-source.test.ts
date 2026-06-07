@@ -17,6 +17,7 @@ const multiWorkspace = read("crates/workspace/src/multi_workspace.rs");
 const titleBar = read("crates/title_bar/src/title_bar.rs");
 const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
 const agentScreen = read("crates/agent_ui/src/agent_screen.rs");
+const automationScreen = read("crates/agent_ui/src/automation_screen.rs");
 const conversationView = read("crates/agent_ui/src/conversation_view.rs");
 const threadView = read("crates/agent_ui/src/conversation_view/thread_view.rs");
 const composerProfileOptions = read(
@@ -151,6 +152,20 @@ const objectBlock = (source: string, key: string, fromIndex = 0) => {
   }
 
   assert.fail(`expected object ${key} to close`);
+};
+
+const repeatedStringIds = (ids: string[]) => {
+  const seen = new Set<string>();
+  const repeated = new Set<string>();
+
+  for (const id of ids) {
+    if (seen.has(id)) {
+      repeated.add(id);
+    }
+    seen.add(id);
+  }
+
+  return [...repeated].sort();
 };
 
 test("history entries cap workspace path materialization before collection", () => {
@@ -472,6 +487,7 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(agentPanel, /enum AgentPanelHostKind \{/);
   assert.match(agentPanel, /Sidechat,/);
   assert.match(agentPanel, /BuilderWorkspace,/);
+  assert.match(agentPanel, /AutomationWorkspace,/);
   assert.match(agentPanel, /host_kind: AgentPanelHostKind/);
   assert.match(agentPanel, /host_kind: AgentPanelHostKind::Sidechat,[\s\S]*?manual_zoom_override: Some\(false\)/);
   assert.match(agentPanel, /"agent-toolbar-toggle-progress-rail"/);
@@ -483,6 +499,10 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(agentPanel, /panel\.host_kind = AgentPanelHostKind::BuilderWorkspace/);
   assert.match(agentPanel, /panel\.fullscreen_sources_rail_pinned = true/);
   assert.match(agentPanel, /panel\.fullscreen_progress_rail_pinned = true/);
+  assert.match(agentPanel, /pub\(crate\) fn new_automation_workspace\(/);
+  assert.match(agentPanel, /panel\.host_kind = AgentPanelHostKind::AutomationWorkspace/);
+  assert.match(agentPanel, /fn render_automation_workspace_screen\(/);
+  assert.match(agentPanel, /render_automation_screen\(status\.as_ref\(\), cx\)/);
   assert.match(focusAgentPanelFullscreen, /crate::AgentScreen::open_or_focus\(workspace, window, cx\);/);
   assert.match(agentScreen, /pub struct AgentScreen \{\s*panel: Entity<AgentPanel>,\s*\}/);
   assert.match(agentScreen, /AgentPanel::new_builder_workspace\(workspace, window, cx\)/);
@@ -496,6 +516,16 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(agentScreen, /fn screen_kind\(&self\) -> WorkspaceScreenKind \{\s*WorkspaceScreenKind::Agent\s*\}/);
   assert.match(agentScreen, /fn can_split\(&self\) -> bool \{\s*false\s*\}/);
   assert.match(agentScreen, /div\(\)\.size_full\(\)\.child\(self\.panel\.clone\(\)\)/);
+  assert.match(automationScreen, /pub struct AutomationScreen \{\s*panel: Entity<AgentPanel>,\s*\}/);
+  assert.match(automationScreen, /AgentPanel::new_automation_workspace\(workspace, window, cx\)/);
+  assert.match(automationScreen, /pub\(crate\) fn open_or_focus\(/);
+  assert.match(automationScreen, /workspace\.pane_for_screen_kind\(WorkspaceScreenKind::Automations, cx\)/);
+  assert.match(automationScreen, /item\.screen_kind\(cx\) == WorkspaceScreenKind::Automations/);
+  assert.match(automationScreen, /fn screen_kind\(&self\) -> WorkspaceScreenKind \{\s*WorkspaceScreenKind::Automations\s*\}/);
+  assert.match(automationScreen, /fn tab_content_text\(&self,[\s\S]*"Automations"\.into\(\)/);
+  assert.match(automationScreen, /dx_icon\(DxUiIcon::Automations\)/);
+  assert.match(automationScreen, /fn can_split\(&self\) -> bool \{\s*false\s*\}/);
+  assert.match(automationScreen, /zed_actions::assistant::OpenAutomations/);
   assert.match(agentPanel, /fn render_fullscreen_agent_center\(/);
   assert.match(agentPanel, /fn render_toolbar_response_indicator\(/);
   assert.match(agentPanel, /fn toolbar_response_indicator_segment\(/);
@@ -559,6 +589,11 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
     workspaceActivateScreenKind,
     /WorkspaceScreenKind::Agent => \{\s*window\.dispatch_action\(\s*zed_actions::assistant::FocusAgentFullscreen\.boxed_clone\(\),\s*cx,\s*\);\s*\}/s,
     "screen-dock Agent activation must route through the real Agent screen action",
+  );
+  assert.match(
+    workspaceActivateScreenKind,
+    /WorkspaceScreenKind::Automations => \{\s*window\.dispatch_action\(\s*zed_actions::assistant::OpenAutomations\.boxed_clone\(\),\s*cx,\s*\);\s*\}/s,
+    "screen-dock Automation activation must route through the real automation screen action",
   );
   assert.match(workspaceDismissAgentFullscreen, /if !self\.zoomed_is_agent_panel/);
   assert.match(workspaceDismissAgentFullscreen, /dock\.zoom_out\(window, cx\)/);
@@ -761,6 +796,20 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(composerProfileOptions, /"media-output-docs"/);
   assert.match(composerProfileOptions, /"media-provider"/);
   assert.match(composerProfileOptions, /"media-quality-production"/);
+  assert.doesNotMatch(composerProfileOptions, /\bdummy\b/);
+  assert.doesNotMatch(composerProfileOptions, /notebook/i);
+  assert.doesNotMatch(composerProfileOptions, /"Choose /);
+  assert.match(composerProfileOptions, /"Study sources"/);
+  assert.deepEqual(
+    repeatedStringIds([...composerProfileOptions.matchAll(/\bslot\(\s*"([^"]+)"/g)].map(([, id]) => id)),
+    [],
+    "composer slot ids must stay unique",
+  );
+  assert.deepEqual(
+    repeatedStringIds([...composerProfileOptions.matchAll(/\boption\(\s*"([^"]+)"/g)].map(([, id]) => id)),
+    [],
+    "composer option ids must stay unique",
+  );
   assert.match(composerProfileOptions, /"DX MetaSearch and Web Preview evidence"/);
   assert.match(composerProfileOptions, /MEDIA_PROVIDER_CONTRACT[\s\S]*?BackendPending/);
   assert.match(composerProfileOptions, /MEDIA_RECEIPT_CONTRACT[\s\S]*?DisplayOnly/);
@@ -789,9 +838,14 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.doesNotMatch(functionBody(threadView, "composer_profile_kind"), /contains\(/);
   assert.doesNotMatch(functionBody(threadView, "composer_profile_kind"), /ComposerProfileKind::Agents\s*$/);
   assert.match(functionBody(threadView, "render_composer_option_overflow"), /for option in slot\.options/);
+  assert.match(functionBody(threadView, "render_composer_option_slot"), /custom_row[\s\S]*composer_option_menu_row\(slot, option\)/);
+  assert.match(functionBody(threadView, "render_composer_option_overflow"), /custom_row[\s\S]*composer_option_menu_row\(slot, option\)/);
+  assert.doesNotMatch(functionBody(threadView, "render_composer_option_slot"), /custom_entry|handler|thread\.send/);
+  assert.doesNotMatch(functionBody(threadView, "render_composer_option_overflow"), /custom_entry|handler|thread\.send/);
   assert.match(threadView, /fn composer_slot_contract_row\(slot: ComposerOptionSlot\) -> AnyElement/);
+  assert.match(threadView, /informational until profile preferences can be saved with the request/);
   assert.match(threadView, /No generation starts from this menu/);
-  assert.match(threadView, /Backend pending; use approved receipts or provider setup before generation\./);
+  assert.match(threadView, /Provider setup is required before this choice can start generation\./);
   assert.doesNotMatch(functionBody(threadView, "composer_option_menu_row"), /on_click|handler|set_profile|set_mode|update_settings_file|thread\.send/);
   assert.doesNotMatch(threadView, /fn render_dx_agent_action/);
   assert.doesNotMatch(threadView, /dx-agent-action/);
@@ -810,7 +864,18 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(profileSelector, /set_selected_profile\([\s\S]*?source = source/);
   assert.match(agentProfileSettings, /pub fn normalize_id\(/);
   assert.match(agentProfileSettings, /pub fn normalize_id_from_profiles\(/);
-  assert.match(agentProfileSettings, /profile_id\.as_str\(\) == builtin_profiles::LEGACY_MINIMAL[\s\S]*?builtin_profiles::ASK/);
+  const normalizeProfileId = functionBody(agentProfileSettings, "normalize_id_from_profiles");
+  assert.match(normalizeProfileId, /let ask_profile = AgentProfileId\(builtin_profiles::ASK\.into\(\)\)/);
+  assertBefore({
+    body: normalizeProfileId,
+    before: "let ask_profile = AgentProfileId(builtin_profiles::ASK.into())",
+    after: "profile_id.as_str() == builtin_profiles::LEGACY_MINIMAL",
+    message: "legacy Minimal fallback must know whether Ask exists before normalizing",
+  });
+  assert.match(
+    normalizeProfileId,
+    /profile_id\.as_str\(\) == builtin_profiles::LEGACY_MINIMAL[\s\S]*?profiles\.contains_key\(&ask_profile\)/,
+  );
   assert.match(agentProfileSettings, /pub fn display_name\(/);
   assert.match(agentProfileSettings, /enum DxAiProfileKind/);
   assert.match(agentProfileSettings, /enum DxAiProfileBackendState/);
@@ -832,6 +897,8 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(functionBody(agentThread, "set_profile"), /let profile_id = AgentProfile::normalize_id\(profile_id, cx\)/);
   const settingsProfiles = objectBlock(defaultSettings, "profiles");
   const askProfile = objectBlock(settingsProfiles, "ask");
+  const mediaProfile = objectBlock(settingsProfiles, "media");
+  const searchProfile = objectBlock(settingsProfiles, "search");
   const studyProfile = objectBlock(settingsProfiles, "study");
   assert.match(defaultSettings, /"default_profile": "write"/);
   assert.match(defaultSettings, /"write": \{\s*"name": "Agents"/);
@@ -839,12 +906,18 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.doesNotMatch(askProfile, /"spawn_agent": true/);
   assert.doesNotMatch(askProfile, /"update_plan": true/);
   assert.match(defaultSettings, /"media": \{\s*"name": "Media"/);
-  assert.match(defaultSettings, /"media": \{[\s\S]*?"list_dx_launch_demo_recipes": true[\s\S]*?"plan_dx_media_tool": true[\s\S]*?"gate_dx_media_tool_runner": true[\s\S]*?"execute_dx_media_tool": true[\s\S]*?"prepare_dx_source_attachment": true/);
+  assert.match(mediaProfile, /"plan_dx_media_tool": true[\s\S]*?"gate_dx_media_tool_runner": true[\s\S]*?"prepare_dx_source_attachment": true/);
+  assert.doesNotMatch(mediaProfile, /"list_dx_launch_demo_recipes": true/);
+  assert.doesNotMatch(mediaProfile, /"execute_dx_media_tool": true/);
+  assert.doesNotMatch(mediaProfile, /"prepare_agent_plugin_runtime": true/);
   assert.match(defaultSettings, /"search": \{\s*"name": "Search"/);
+  assert.doesNotMatch(searchProfile, /"prepare_agent_plugin_runtime": true/);
   assert.match(defaultSettings, /"study": \{\s*"name": "Study"/);
   assert.match(studyProfile, /"extract_dx_metasearch_source": true[\s\S]*?"prepare_dx_source_attachment": true[\s\S]*?"prepare_dx_metasearch_context": true/);
   assert.doesNotMatch(studyProfile, /"spawn_agent": true/);
+  assert.doesNotMatch(studyProfile, /"prepare_agent_plugin_runtime": true/);
   assert.doesNotMatch(defaultSettings, /"minimal": \{/);
+  assert.doesNotMatch(agentProfileSettings, /notebook/i);
   assert.match(agentProfileSettings, /builtin_profiles::SEARCH => Some\(DxAiProfileMetadata/);
   assert.match(agentProfileSettings, /DxAiProfileKind::Search[\s\S]*?DxAiProfileBackendState::EvidenceBacked/);
   assert.match(agentProfileSettings, /builtin_profiles::STUDY => Some\(DxAiProfileMetadata/);

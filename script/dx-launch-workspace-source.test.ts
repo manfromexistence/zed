@@ -32,6 +32,7 @@ test("DX launch workspace UI stays split by rail ownership", () => {
   const parent = read("crates/agent_ui/src/dx_launch_workspace.rs");
   const expectedModules = [
     "crates/agent_ui/src/dx_launch_workspace/agents.rs",
+    "crates/agent_ui/src/dx_launch_workspace/automation_screen.rs",
     "crates/agent_ui/src/dx_launch_workspace/audit.rs",
     "crates/agent_ui/src/dx_launch_workspace/binary_cache.rs",
     "crates/agent_ui/src/dx_launch_workspace/binary_cache_labels.rs",
@@ -58,6 +59,7 @@ test("DX launch workspace UI stays split by rail ownership", () => {
   }
 
   assert.match(parent, /^mod agents;$/m);
+  assert.match(parent, /^mod automation_screen;$/m);
   assert.match(parent, /^mod audit;$/m);
   assert.match(parent, /^mod binary_cache;$/m);
   assert.match(parent, /^mod binary_cache_labels;$/m);
@@ -77,6 +79,7 @@ test("DX launch workspace UI stays split by rail ownership", () => {
   assert.match(parent, /^mod style_panel;$/m);
   assert.match(parent, /^mod tool_history;$/m);
   assert.match(parent, /^mod www_evidence;$/m);
+  assert.match(parent, /pub\(crate\) use automation_screen::render_automation_screen;/);
   assert.match(parent, /struct DxLaunchDiagnosticsMenu/);
   assert.match(parent, /fn diagnostics_menu\(status: DxLaunchWorkspaceStatus\)/);
   assert.match(parent, /PopoverMenu::new\("dx-launch-diagnostics-trigger"\)/);
@@ -87,6 +90,10 @@ test("DX launch workspace UI stays split by rail ownership", () => {
   assert.ok(
     lineCount("crates/agent_ui/src/dx_launch_workspace.rs") < 1050,
     "dx_launch_workspace.rs should stay a coordinator instead of owning every rail",
+  );
+  assert.ok(
+    lineCount("crates/agent_ui/src/dx_launch_workspace/automation_screen.rs") < 120,
+    "automation screen renderer should stay focused and delegate automation rows",
   );
 });
 

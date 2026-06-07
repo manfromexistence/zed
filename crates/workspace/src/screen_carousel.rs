@@ -64,6 +64,7 @@ impl Workspace {
             }
             (
                 WorkspaceScreenKind::Agent
+                | WorkspaceScreenKind::Automations
                 | WorkspaceScreenKind::Onboarding
                 | WorkspaceScreenKind::LiquidGlass
                 | WorkspaceScreenKind::Other,
@@ -284,6 +285,7 @@ impl Workspace {
     fn screen_kind_label(kind: WorkspaceScreenKind) -> &'static str {
         match kind {
             WorkspaceScreenKind::Agent => "AI",
+            WorkspaceScreenKind::Automations => "Automations",
             WorkspaceScreenKind::Editor => "Editor",
             WorkspaceScreenKind::Browser => "Browser",
             WorkspaceScreenKind::Terminal => "Terminal",
@@ -296,6 +298,7 @@ impl Workspace {
     fn screen_kind_icon(kind: WorkspaceScreenKind) -> IconName {
         match kind {
             WorkspaceScreenKind::Agent => IconName::ZedAgent,
+            WorkspaceScreenKind::Automations => dx_icon(DxUiIcon::Automations),
             WorkspaceScreenKind::Editor => IconName::Code,
             WorkspaceScreenKind::Browser => dx_icon(DxUiIcon::Browser),
             WorkspaceScreenKind::Terminal => IconName::Terminal,

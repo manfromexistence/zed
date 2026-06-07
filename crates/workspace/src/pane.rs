@@ -2766,9 +2766,12 @@ impl Pane {
         cx: &mut Context<Self>,
     ) {
         if mode == SplitMode::MovePane
-            && self
-                .active_item()
-                .is_some_and(|item| item.screen_kind(cx) == WorkspaceScreenKind::Onboarding)
+            && self.active_item().is_some_and(|item| {
+                matches!(
+                    item.screen_kind(cx),
+                    WorkspaceScreenKind::Automations | WorkspaceScreenKind::Onboarding
+                )
+            })
         {
             return;
         }
@@ -4467,7 +4470,9 @@ fn default_render_tab_bar_buttons(
         Some(active_item)
             if matches!(
                 active_item.screen_kind(cx),
-                WorkspaceScreenKind::Agent | WorkspaceScreenKind::Onboarding
+                WorkspaceScreenKind::Agent
+                    | WorkspaceScreenKind::Automations
+                    | WorkspaceScreenKind::Onboarding
             ) =>
         {
             (false, false)
@@ -4509,6 +4514,7 @@ fn default_render_tab_bar_buttons(
                 })
                 .into_any_element(),
             WorkspaceScreenKind::Agent => div().into_any_element(),
+            WorkspaceScreenKind::Automations => div().into_any_element(),
             WorkspaceScreenKind::Onboarding => div().into_any_element(),
             WorkspaceScreenKind::LiquidGlass => IconButton::new("plus", IconName::Plus)
                 .icon_size(IconSize::Small)

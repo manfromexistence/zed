@@ -136,6 +136,7 @@ impl From<WorkspaceScreenKind> for SerializedSidebarGridScreenKind {
     fn from(kind: WorkspaceScreenKind) -> Self {
         match kind {
             WorkspaceScreenKind::Agent => Self::Other,
+            WorkspaceScreenKind::Automations => Self::Other,
             WorkspaceScreenKind::Editor => Self::Editor,
             WorkspaceScreenKind::Browser => Self::Browser,
             WorkspaceScreenKind::Terminal => Self::Terminal,
@@ -7735,8 +7736,11 @@ impl Sidebar {
                         "sidebar-toolbar-automations",
                         dx_icon(DxUiIcon::Automations),
                         "Automations",
-                        |this, _, window, cx| {
-                            this.draft_dx_automation_action(window, cx);
+                        |_this, _, window, cx| {
+                            window.dispatch_action(
+                                zed_actions::assistant::OpenAutomations.boxed_clone(),
+                                cx,
+                            );
                         },
                     ))
                     .child(button(
@@ -7902,7 +7906,10 @@ impl Sidebar {
                 "sidebar-activity-automations",
                 dx_icon(DxUiIcon::Automations),
                 "Automations",
-                |this, _, window, cx| this.draft_dx_automation_action(window, cx),
+                |_this, _, window, cx| {
+                    window
+                        .dispatch_action(zed_actions::assistant::OpenAutomations.boxed_clone(), cx);
+                },
             )
             .into_any_element(),
             button(
@@ -8264,6 +8271,7 @@ impl Sidebar {
                 .project_root_path(cx)
                 .or_else(|| std::env::current_dir().ok()),
             WorkspaceScreenKind::Agent
+            | WorkspaceScreenKind::Automations
             | WorkspaceScreenKind::Editor
             | WorkspaceScreenKind::Onboarding
             | WorkspaceScreenKind::LiquidGlass
@@ -8289,6 +8297,7 @@ impl Sidebar {
 
         let entries = match kind {
             WorkspaceScreenKind::Agent
+            | WorkspaceScreenKind::Automations
             | WorkspaceScreenKind::Editor
             | WorkspaceScreenKind::Onboarding
             | WorkspaceScreenKind::Other => self.editor_grid_entries(cx),

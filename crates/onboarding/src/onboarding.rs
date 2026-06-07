@@ -983,6 +983,7 @@ fn find_post_onboarding_item(workspace: &Workspace, cx: &App) -> Option<Box<dyn 
             match item.screen_kind(cx) {
                 WorkspaceScreenKind::Editor => return Some(item.boxed_clone()),
                 WorkspaceScreenKind::Agent
+                | WorkspaceScreenKind::Automations
                 | WorkspaceScreenKind::Browser
                 | WorkspaceScreenKind::Terminal
                 | WorkspaceScreenKind::LiquidGlass
