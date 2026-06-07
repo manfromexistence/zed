@@ -9,6 +9,7 @@ mod automation_screen;
 mod buffer_codegen;
 mod completion_provider;
 mod config_options;
+mod connections_screen;
 mod context;
 mod context_server_configuration;
 pub(crate) mod conversation_view;
@@ -94,6 +95,7 @@ pub mod test_support;
 mod thread_import;
 pub mod thread_metadata_store;
 pub mod thread_worktree_archive;
+mod tools_screen;
 
 pub mod threads_archive_view;
 mod ui;
@@ -137,9 +139,11 @@ pub use crate::agent_panel::{
 use crate::agent_registry_ui::AgentRegistryPage;
 pub use crate::agent_screen::AgentScreen;
 pub use crate::automation_screen::AutomationScreen;
+pub use crate::connections_screen::ConnectionsScreen;
 pub use crate::dx_check_panel_view::DxCheckPanel;
 pub use crate::inline_assistant::InlineAssistant;
 pub use crate::thread_metadata_store::ThreadId;
+pub use crate::tools_screen::ToolsScreen;
 pub use agent_diff::{AgentDiffPane, AgentDiffToolbar};
 pub use conversation_view::ConversationView;
 pub use external_source_prompt::ExternalSourcePrompt;

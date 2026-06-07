@@ -2769,7 +2769,10 @@ impl Pane {
             && self.active_item().is_some_and(|item| {
                 matches!(
                     item.screen_kind(cx),
-                    WorkspaceScreenKind::Automations | WorkspaceScreenKind::Onboarding
+                    WorkspaceScreenKind::Automations
+                        | WorkspaceScreenKind::Connections
+                        | WorkspaceScreenKind::Tools
+                        | WorkspaceScreenKind::Onboarding
                 )
             })
         {
@@ -4472,6 +4475,8 @@ fn default_render_tab_bar_buttons(
                 active_item.screen_kind(cx),
                 WorkspaceScreenKind::Agent
                     | WorkspaceScreenKind::Automations
+                    | WorkspaceScreenKind::Connections
+                    | WorkspaceScreenKind::Tools
                     | WorkspaceScreenKind::Onboarding
             ) =>
         {
@@ -4515,6 +4520,8 @@ fn default_render_tab_bar_buttons(
                 .into_any_element(),
             WorkspaceScreenKind::Agent => div().into_any_element(),
             WorkspaceScreenKind::Automations => div().into_any_element(),
+            WorkspaceScreenKind::Connections => div().into_any_element(),
+            WorkspaceScreenKind::Tools => div().into_any_element(),
             WorkspaceScreenKind::Onboarding => div().into_any_element(),
             WorkspaceScreenKind::LiquidGlass => IconButton::new("plus", IconName::Plus)
                 .icon_size(IconSize::Small)

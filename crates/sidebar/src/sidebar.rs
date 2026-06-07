@@ -137,6 +137,8 @@ impl From<WorkspaceScreenKind> for SerializedSidebarGridScreenKind {
         match kind {
             WorkspaceScreenKind::Agent => Self::Other,
             WorkspaceScreenKind::Automations => Self::Other,
+            WorkspaceScreenKind::Connections => Self::Other,
+            WorkspaceScreenKind::Tools => Self::Other,
             WorkspaceScreenKind::Editor => Self::Editor,
             WorkspaceScreenKind::Browser => Self::Browser,
             WorkspaceScreenKind::Terminal => Self::Terminal,
@@ -7720,7 +7722,10 @@ impl Sidebar {
                         dx_icon(DxUiIcon::Plugins),
                         "Plugins",
                         |_this, _, window, cx| {
-                            window.dispatch_action(Box::new(zed_actions::AcpRegistry), cx);
+                            window.dispatch_action(
+                                zed_actions::assistant::OpenTools.boxed_clone(),
+                                cx,
+                            );
                         },
                     ))
                     .child(button(
@@ -7728,7 +7733,10 @@ impl Sidebar {
                         dx_icon(DxUiIcon::Connections),
                         "Connections",
                         |_this, _, window, cx| {
-                            window.dispatch_action(Box::new(zed_actions::agent::OpenSettings), cx);
+                            window.dispatch_action(
+                                zed_actions::assistant::OpenConnections.boxed_clone(),
+                                cx,
+                            );
                         },
                     ))
                     .child(button(
@@ -7895,7 +7903,7 @@ impl Sidebar {
                 dx_icon(DxUiIcon::Plugins),
                 "Plugins",
                 |_this, _, window, cx| {
-                    window.dispatch_action(Box::new(zed_actions::AcpRegistry), cx);
+                    window.dispatch_action(zed_actions::assistant::OpenTools.boxed_clone(), cx);
                 },
             )
             .into_any_element(),
@@ -7905,7 +7913,8 @@ impl Sidebar {
                 dx_icon(DxUiIcon::Connections),
                 "Connections",
                 |_this, _, window, cx| {
-                    window.dispatch_action(Box::new(zed_actions::agent::OpenSettings), cx);
+                    window
+                        .dispatch_action(zed_actions::assistant::OpenConnections.boxed_clone(), cx);
                 },
             )
             .into_any_element(),
@@ -8290,6 +8299,8 @@ impl Sidebar {
                 .or_else(|| std::env::current_dir().ok()),
             WorkspaceScreenKind::Agent
             | WorkspaceScreenKind::Automations
+            | WorkspaceScreenKind::Connections
+            | WorkspaceScreenKind::Tools
             | WorkspaceScreenKind::Editor
             | WorkspaceScreenKind::Onboarding
             | WorkspaceScreenKind::LiquidGlass
@@ -8316,6 +8327,8 @@ impl Sidebar {
         let entries = match kind {
             WorkspaceScreenKind::Agent
             | WorkspaceScreenKind::Automations
+            | WorkspaceScreenKind::Connections
+            | WorkspaceScreenKind::Tools
             | WorkspaceScreenKind::Editor
             | WorkspaceScreenKind::Onboarding
             | WorkspaceScreenKind::Other => self.editor_grid_entries(cx),

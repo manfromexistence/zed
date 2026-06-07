@@ -6045,6 +6045,15 @@ impl Workspace {
                             cx,
                         );
                     }
+                    WorkspaceScreenKind::Connections => {
+                        window.dispatch_action(
+                            zed_actions::assistant::OpenConnections.boxed_clone(),
+                            cx,
+                        );
+                    }
+                    WorkspaceScreenKind::Tools => {
+                        window.dispatch_action(zed_actions::assistant::OpenTools.boxed_clone(), cx);
+                    }
                     WorkspaceScreenKind::Editor => {
                         window.dispatch_action(NewFile.boxed_clone(), cx);
                     }

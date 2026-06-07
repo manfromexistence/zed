@@ -65,6 +65,8 @@ impl Workspace {
             (
                 WorkspaceScreenKind::Agent
                 | WorkspaceScreenKind::Automations
+                | WorkspaceScreenKind::Connections
+                | WorkspaceScreenKind::Tools
                 | WorkspaceScreenKind::Onboarding
                 | WorkspaceScreenKind::LiquidGlass
                 | WorkspaceScreenKind::Other,
@@ -286,6 +288,8 @@ impl Workspace {
         match kind {
             WorkspaceScreenKind::Agent => "AI",
             WorkspaceScreenKind::Automations => "Automations",
+            WorkspaceScreenKind::Connections => "Connections",
+            WorkspaceScreenKind::Tools => "Tools",
             WorkspaceScreenKind::Editor => "Editor",
             WorkspaceScreenKind::Browser => "Browser",
             WorkspaceScreenKind::Terminal => "Terminal",
@@ -299,6 +303,8 @@ impl Workspace {
         match kind {
             WorkspaceScreenKind::Agent => IconName::ZedAgent,
             WorkspaceScreenKind::Automations => dx_icon(DxUiIcon::Automations),
+            WorkspaceScreenKind::Connections => dx_icon(DxUiIcon::Connections),
+            WorkspaceScreenKind::Tools => dx_icon(DxUiIcon::Plugins),
             WorkspaceScreenKind::Editor => IconName::Code,
             WorkspaceScreenKind::Browser => dx_icon(DxUiIcon::Browser),
             WorkspaceScreenKind::Terminal => IconName::Terminal,

@@ -27,9 +27,9 @@ test("DX connection UI uses semantic icons and real Zed sidebar routes", () => {
   assert.match(dxIcons, /DxUiIcon::Credentials => IconName::LockOutlined/);
   assert.match(dxIcons, /DxUiIcon::Permissions => IconName::UserCheck/);
 
-  assert.match(sidebar, /"sidebar-toolbar-connections"[\s\S]*?dx_icon\(DxUiIcon::Connections\)[\s\S]*?"Connections"[\s\S]*?zed_actions::agent::OpenSettings/);
-  assert.match(sidebar, /"sidebar-activity-connections"[\s\S]*?dx_icon\(DxUiIcon::Connections\)[\s\S]*?"Connections"[\s\S]*?zed_actions::agent::OpenSettings/);
-  assert.match(agentPanel, /"dx-launch-connections"[\s\S]*?dx_icon\(DxUiIcon::Connections\)[\s\S]*?"Connections"[\s\S]*?zed_actions::agent::OpenSettings/);
+  assert.match(sidebar, /"sidebar-toolbar-connections"[\s\S]*?dx_icon\(DxUiIcon::Connections\)[\s\S]*?"Connections"[\s\S]*?zed_actions::assistant::OpenConnections/);
+  assert.match(sidebar, /"sidebar-activity-connections"[\s\S]*?dx_icon\(DxUiIcon::Connections\)[\s\S]*?"Connections"[\s\S]*?zed_actions::assistant::OpenConnections/);
+  assert.match(agentPanel, /"dx-launch-connections"[\s\S]*?dx_icon\(DxUiIcon::Connections\)[\s\S]*?"Connections"[\s\S]*?zed_actions::assistant::OpenConnections/);
 });
 
 test("DX connection entities render with Zed AI/list components, not ad hoc badges", () => {
@@ -76,6 +76,9 @@ test("DX connection UI keeps missing channels and gateways explicit", () => {
     "crates/agent_ui/src/dx_launch_workspace/agents/connection_rows.rs",
   );
   const launchWorkspace = read("crates/agent_ui/src/dx_launch_workspace.rs");
+  const connectionsScreen = read(
+    "crates/agent_ui/src/dx_launch_workspace/connections_screen.rs",
+  );
 
   assert.match(social, /connection_unavailable_rows\(\)/);
   assert.match(connectionRows, /unavailable_capability_row/);
@@ -88,4 +91,8 @@ test("DX connection UI keeps missing channels and gateways explicit", () => {
 
   assert.match(launchWorkspace, /section_title\(\s*"Agent Connections",\s*dx_icon\(DxUiIcon::Connections\),\s*\)/);
   assert.match(launchWorkspace, /section_title\("Agent Providers", dx_icon\(DxUiIcon::Gateway\)\)/);
+  assert.match(connectionsScreen, /section_title\("Channels", dx_icon\(DxUiIcon::Channels\)\)/);
+  assert.match(connectionsScreen, /section_title\("Gateway", dx_icon\(DxUiIcon::Gateway\)\)/);
+  assert.match(connectionsScreen, /No DX Agents channel receipt\/schema is available yet\./);
+  assert.match(connectionsScreen, /No first-class provider gateway health receipt is available yet\./);
 });

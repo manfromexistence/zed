@@ -204,12 +204,12 @@ test("DX Automations have a first-class workspace tab contract", () => {
 
   assert.match(agentPanel, /AgentPanelHostKind::AutomationWorkspace/);
   assert.match(agentPanel, /render_automation_workspace_screen/);
-  assert.match(agentPanel, /let automation_workspace =\s*matches!\(self\.host_kind, AgentPanelHostKind::AutomationWorkspace\);/);
-  assert.match(agentPanel, /automation_workspace\s*\|\|\s*\(self\.should_render_dx_launch_chrome\(cx\)/);
+  assert.match(agentPanel, /let status_workspace =\s*matches!\(\s*self\.host_kind,[\s\S]*?AgentPanelHostKind::AutomationWorkspace[\s\S]*?AgentPanelHostKind::ConnectionsWorkspace[\s\S]*?AgentPanelHostKind::ToolsWorkspace[\s\S]*?\);/);
+  assert.match(agentPanel, /status_workspace\s*\|\|\s*\(self\.should_render_dx_launch_chrome\(cx\)/);
   assert.match(workspace, /WorkspaceScreenKind::Automations => \{\s*window\.dispatch_action\(\s*zed_actions::assistant::OpenAutomations\.boxed_clone\(\),\s*cx,\s*\);\s*\}/s);
   assert.match(
     pane,
-    /WorkspaceScreenKind::Agent\s*\|\s*WorkspaceScreenKind::Automations\s*\|\s*WorkspaceScreenKind::Onboarding/s,
+    /WorkspaceScreenKind::Agent\s*\|\s*WorkspaceScreenKind::Automations\s*\|\s*WorkspaceScreenKind::Connections\s*\|\s*WorkspaceScreenKind::Tools\s*\|\s*WorkspaceScreenKind::Onboarding/s,
   );
   assert.match(sidebar, /"sidebar-toolbar-automations"[\s\S]*?zed_actions::assistant::OpenAutomations\.boxed_clone\(\)/);
   assert.match(sidebar, /"sidebar-activity-automations"[\s\S]*?zed_actions::assistant::OpenAutomations\.boxed_clone\(\)/);

@@ -68,12 +68,16 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
   const agentScreenActive = functionBodyFrom(titleBarSource, "agent_screen_is_active");
   const agentButtonIndex = screenDock.indexOf("render_agent_screen_button(agent_screen_is_active, cx)");
   const automationButtonIndex = screenDock.indexOf("WorkspaceScreenKind::Automations", agentButtonIndex);
-  const editorButtonIndex = screenDock.indexOf("WorkspaceScreenKind::Editor", automationButtonIndex);
+  const connectionsButtonIndex = screenDock.indexOf("WorkspaceScreenKind::Connections", automationButtonIndex);
+  const toolsButtonIndex = screenDock.indexOf("WorkspaceScreenKind::Tools", connectionsButtonIndex);
+  const editorButtonIndex = screenDock.indexOf("WorkspaceScreenKind::Editor", toolsButtonIndex);
   const browserButtonIndex = screenDock.indexOf("WorkspaceScreenKind::Browser", editorButtonIndex);
   const terminalButtonIndex = screenDock.indexOf("WorkspaceScreenKind::Terminal", browserButtonIndex);
   assert.ok(agentButtonIndex >= 0, "screen dock should render the AI button");
   assert.ok(automationButtonIndex > agentButtonIndex, "Automations should follow AI in the screen dock");
-  assert.ok(editorButtonIndex > automationButtonIndex, "Editor should follow Automations in the screen dock");
+  assert.ok(connectionsButtonIndex > automationButtonIndex, "Connections should follow Automations in the screen dock");
+  assert.ok(toolsButtonIndex > connectionsButtonIndex, "Tools should follow Connections in the screen dock");
+  assert.ok(editorButtonIndex > toolsButtonIndex, "Editor should follow Tools in the screen dock");
   assert.ok(browserButtonIndex > editorButtonIndex, "Browser should follow Editor in the screen dock");
   assert.ok(terminalButtonIndex > browserButtonIndex, "Terminal should follow Browser in the screen dock");
   assert.doesNotMatch(
@@ -83,8 +87,8 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
   );
   assert.match(
     screenDock,
-    /\.child\(self\.render_agent_screen_button\(agent_screen_is_active, cx\)\)[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Automations,[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Editor,[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Browser,[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Terminal,[\s\S]*?\.children\(\s*extra_entries/s,
-    "primary screen dock buttons must stay AI, Automations, Editor, Browser, Terminal before overflow entries",
+    /\.child\(self\.render_agent_screen_button\(agent_screen_is_active, cx\)\)[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Automations,[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Connections,[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Tools,[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Editor,[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Browser,[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Terminal,[\s\S]*?\.children\(\s*extra_entries/s,
+    "primary screen dock buttons must stay AI, Automations, Connections, Tools, Editor, Browser, Terminal before overflow entries",
   );
   assert.match(screenDock, /let agent_screen_is_active = self\.agent_screen_is_active\(cx\);/);
   assert.match(screenDock, /&& !agent_screen_is_active/);
@@ -143,11 +147,19 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
   assert.match(agentScreenActive, /self\.active_screen_kind\(cx\) == WorkspaceScreenKind::Agent/);
   assert.match(titleBarSource, /WorkspaceScreenKind::Agent => "AI"/);
   assert.match(titleBarSource, /WorkspaceScreenKind::Automations => "Automations"/);
+  assert.match(titleBarSource, /WorkspaceScreenKind::Connections => "Connections"/);
+  assert.match(titleBarSource, /WorkspaceScreenKind::Tools => "Tools"/);
   assert.match(titleBarSource, /WorkspaceScreenKind::Agent => dx_icon\(DxUiIcon::Ai\)/);
   assert.match(titleBarSource, /WorkspaceScreenKind::Automations => dx_icon\(DxUiIcon::Automations\)/);
+  assert.match(titleBarSource, /WorkspaceScreenKind::Connections => dx_icon\(DxUiIcon::Connections\)/);
+  assert.match(titleBarSource, /WorkspaceScreenKind::Tools => dx_icon\(DxUiIcon::Plugins\)/);
   assert.match(titleBarSource, /WorkspaceScreenKind::Agent => "Open AI Screen"/);
   assert.match(titleBarSource, /WorkspaceScreenKind::Automations => "Open Automations"/);
+  assert.match(titleBarSource, /WorkspaceScreenKind::Connections => "Open Connections"/);
+  assert.match(titleBarSource, /WorkspaceScreenKind::Tools => "Open Tools"/);
   assert.match(titleBarSource, /zed_actions::assistant::OpenAutomations\.boxed_clone\(\)/);
+  assert.match(titleBarSource, /zed_actions::assistant::OpenConnections\.boxed_clone\(\)/);
+  assert.match(titleBarSource, /zed_actions::assistant::OpenTools\.boxed_clone\(\)/);
   assert.doesNotMatch(agentScreenActive, /dock_at_position|visible_panel|agent_panel_is_active/);
   assert.doesNotMatch(agentScreenActive, /zoomed_is_agent_panel/);
   assert.doesNotMatch(titleBarSource, /fn agent_panel_is_active/);

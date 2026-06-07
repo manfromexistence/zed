@@ -33,6 +33,7 @@ mod binary_cache;
 mod binary_cache_labels;
 mod check;
 mod check_labels;
+mod connections_screen;
 mod contracts;
 mod evidence_basket;
 mod launch_receipts;
@@ -46,9 +47,12 @@ mod source_audit;
 mod sources;
 mod style_panel;
 mod tool_history;
+mod tools_screen;
 mod www_evidence;
 
 pub(crate) use automation_screen::render_automation_screen;
+pub(crate) use connections_screen::render_connections_screen;
+pub(crate) use tools_screen::render_tools_screen;
 
 #[derive(Clone)]
 pub(crate) struct DxLaunchWorkspaceStatus {

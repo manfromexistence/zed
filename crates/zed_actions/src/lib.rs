@@ -578,6 +578,8 @@ pub mod assistant {
             FocusAgent,
             FocusAgentFullscreen,
             OpenAutomations,
+            OpenConnections,
+            OpenTools,
             /// Opens the skill creator window for creating a new skill.
             OpenSkillCreator,
             /// Opens the skill creator window to import a skill from a GitHub URL.

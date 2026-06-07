@@ -65,7 +65,8 @@ use crate::dx_launch_status::launch_status_snapshot_for_roots;
 use crate::dx_launch_workspace::{
     DxLaunchRailControls, DxLaunchRailSection, DxLaunchRailSide, DxLaunchRailState,
     DxLaunchWorkspaceStatus, DxSourceRowControl, DxSubagentStatus, DxSubagentStatusRow,
-    render_automation_screen, render_workspace_chrome,
+    render_automation_screen, render_connections_screen, render_tools_screen,
+    render_workspace_chrome,
 };
 use crate::dx_proof_freshness::proof_freshness_snapshot;
 use crate::dx_receipt_history::tool_history_snapshot;
@@ -1125,6 +1126,8 @@ enum AgentPanelHostKind {
     Sidechat,
     BuilderWorkspace,
     AutomationWorkspace,
+    ConnectionsWorkspace,
+    ToolsWorkspace,
 }
 
 impl BaseView {
@@ -1240,6 +1243,8 @@ impl DxWorkspaceSnapshot {
                 WorkspaceScreenKind::Browser => has_browser = true,
                 WorkspaceScreenKind::Agent
                 | WorkspaceScreenKind::Automations
+                | WorkspaceScreenKind::Connections
+                | WorkspaceScreenKind::Tools
                 | WorkspaceScreenKind::Terminal
                 | WorkspaceScreenKind::Onboarding
                 | WorkspaceScreenKind::LiquidGlass
@@ -1721,6 +1726,36 @@ impl AgentPanel {
     ) -> Self {
         let mut panel = Self::new(workspace, window, cx);
         panel.host_kind = AgentPanelHostKind::AutomationWorkspace;
+        panel.manual_zoom_override = Some(false);
+        panel.fullscreen_sources_rail_open = false;
+        panel.fullscreen_progress_rail_open = false;
+        panel.fullscreen_sources_rail_pinned = false;
+        panel.fullscreen_progress_rail_pinned = false;
+        panel
+    }
+
+    pub(crate) fn new_connections_workspace(
+        workspace: &Workspace,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Self {
+        let mut panel = Self::new(workspace, window, cx);
+        panel.host_kind = AgentPanelHostKind::ConnectionsWorkspace;
+        panel.manual_zoom_override = Some(false);
+        panel.fullscreen_sources_rail_open = false;
+        panel.fullscreen_progress_rail_open = false;
+        panel.fullscreen_sources_rail_pinned = false;
+        panel.fullscreen_progress_rail_pinned = false;
+        panel
+    }
+
+    pub(crate) fn new_tools_workspace(
+        workspace: &Workspace,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Self {
+        let mut panel = Self::new(workspace, window, cx);
+        panel.host_kind = AgentPanelHostKind::ToolsWorkspace;
         panel.manual_zoom_override = Some(false);
         panel.fullscreen_sources_rail_open = false;
         panel.fullscreen_progress_rail_open = false;
@@ -6761,6 +6796,16 @@ impl AgentPanel {
         render_automation_screen(status.as_ref(), cx)
     }
 
+    fn render_connections_workspace_screen(&mut self, cx: &mut Context<Self>) -> AnyElement {
+        let status = self.cached_dx_launch_workspace_status(cx);
+        render_connections_screen(status.as_ref(), cx)
+    }
+
+    fn render_tools_workspace_screen(&mut self, cx: &mut Context<Self>) -> AnyElement {
+        let status = self.cached_dx_launch_workspace_status(cx);
+        render_tools_screen(status.as_ref(), cx)
+    }
+
     fn default_collapsed_dx_launch_rail_sections() -> HashSet<DxLaunchRailSection> {
         let mut collapsed = HashSet::default();
         collapsed.insert(DxLaunchRailSection::SourceTools);
@@ -6859,13 +6904,14 @@ impl AgentPanel {
                     "Connections",
                 )
                 .on_click(|_event, window, cx| {
-                    window.dispatch_action(Box::new(zed_actions::agent::OpenSettings), cx);
+                    window
+                        .dispatch_action(zed_actions::assistant::OpenConnections.boxed_clone(), cx);
                 }),
             )
             .child(
                 action_button("dx-launch-plugins", dx_icon(DxUiIcon::Plugins), "Plugins").on_click(
                     |_event, window, cx| {
-                        window.dispatch_action(Box::new(zed_actions::AcpRegistry), cx);
+                        window.dispatch_action(zed_actions::assistant::OpenTools.boxed_clone(), cx);
                     },
                 ),
             )
@@ -7549,10 +7595,14 @@ impl AgentPanel {
     }
 
     fn should_refresh_dx_launch_workspace_status(&self, generation: u64, cx: &App) -> bool {
-        let automation_workspace =
-            matches!(self.host_kind, AgentPanelHostKind::AutomationWorkspace);
+        let status_workspace = matches!(
+            self.host_kind,
+            AgentPanelHostKind::AutomationWorkspace
+                | AgentPanelHostKind::ConnectionsWorkspace
+                | AgentPanelHostKind::ToolsWorkspace
+        );
         self.dx_launch_workspace_status_refresh_generation == generation
-            && (automation_workspace
+            && (status_workspace
                 || (self.should_render_dx_launch_chrome(cx)
                     && (self.fullscreen_sources_rail_open || self.fullscreen_progress_rail_open)))
     }
@@ -7967,8 +8017,17 @@ fn dropped_web_preview_url(item: &dyn workspace::ItemHandle, cx: &App) -> Option
 
 impl Render for AgentPanel {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        if matches!(self.host_kind, AgentPanelHostKind::AutomationWorkspace) {
-            return self.render_automation_workspace_screen(cx);
+        match self.host_kind {
+            AgentPanelHostKind::AutomationWorkspace => {
+                return self.render_automation_workspace_screen(cx);
+            }
+            AgentPanelHostKind::ConnectionsWorkspace => {
+                return self.render_connections_workspace_screen(cx);
+            }
+            AgentPanelHostKind::ToolsWorkspace => {
+                return self.render_tools_workspace_screen(cx);
+            }
+            AgentPanelHostKind::Sidechat | AgentPanelHostKind::BuilderWorkspace => {}
         }
 
         // WARNING: Changes to this element hierarchy can have

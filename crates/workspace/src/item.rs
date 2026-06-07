@@ -185,6 +185,8 @@ impl PaneTabBarControls {
 pub enum WorkspaceScreenKind {
     Agent,
     Automations,
+    Connections,
+    Tools,
     Editor,
     Browser,
     Terminal,

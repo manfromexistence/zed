@@ -1,0 +1,146 @@
+import assert from "node:assert/strict";
+import { existsSync, readFileSync } from "node:fs";
+import test from "node:test";
+
+const read = (path: string) => readFileSync(path, "utf8");
+const enumBody = (source: string, name: string) =>
+  source.match(new RegExp(`enum ${name} \\{[\\s\\S]*?\\}`))?.[0] ?? "";
+
+test("DX agent workspace taxonomy has first-class Zed screens", () => {
+  const item = read("crates/workspace/src/item.rs");
+  const actions = read("crates/zed_actions/src/lib.rs");
+  const agentUi = read("crates/agent_ui/src/agent_ui.rs");
+  const zed = read("crates/zed/src/zed.rs");
+  const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
+  const workspace = read("crates/workspace/src/workspace.rs");
+  const pane = read("crates/workspace/src/pane.rs");
+  const titleBar = read("crates/title_bar/src/title_bar.rs");
+  const sidebar = read("crates/sidebar/src/sidebar.rs");
+  const carousel = read("crates/workspace/src/screen_carousel.rs");
+  const screenKinds = enumBody(item, "WorkspaceScreenKind");
+
+  for (const kind of ["Agent", "Automations", "Connections", "Tools", "Editor"]) {
+    assert.match(screenKinds, new RegExp(`\\b${kind}\\b`));
+  }
+
+  for (const action of ["OpenAutomations", "OpenConnections", "OpenTools"]) {
+    assert.match(actions, new RegExp(`\\b${action}\\b`));
+  }
+
+  assert.match(agentUi, /^mod connections_screen;$/m);
+  assert.match(agentUi, /^mod tools_screen;$/m);
+  assert.match(agentUi, /pub use crate::connections_screen::ConnectionsScreen;/);
+  assert.match(agentUi, /pub use crate::tools_screen::ToolsScreen;/);
+  assert.match(zed, /register_action\(agent_ui::ConnectionsScreen::open\)/);
+  assert.match(zed, /register_action\(agent_ui::ToolsScreen::open\)/);
+
+  assert.match(agentPanel, /AgentPanelHostKind::ConnectionsWorkspace/);
+  assert.match(agentPanel, /AgentPanelHostKind::ToolsWorkspace/);
+  assert.match(agentPanel, /new_connections_workspace/);
+  assert.match(agentPanel, /new_tools_workspace/);
+  assert.match(agentPanel, /render_connections_workspace_screen/);
+  assert.match(agentPanel, /render_tools_workspace_screen/);
+  assert.match(agentPanel, /render_connections_screen\(status\.as_ref\(\), cx\)/);
+  assert.match(agentPanel, /render_tools_screen\(status\.as_ref\(\), cx\)/);
+
+  assert.match(workspace, /WorkspaceScreenKind::Connections => \{[\s\S]*?zed_actions::assistant::OpenConnections\.boxed_clone\(\)/);
+  assert.match(workspace, /WorkspaceScreenKind::Tools => \{[\s\S]*?zed_actions::assistant::OpenTools\.boxed_clone\(\)/);
+  assert.match(pane, /WorkspaceScreenKind::Connections/);
+  assert.match(pane, /WorkspaceScreenKind::Tools/);
+  assert.match(titleBar, /WorkspaceScreenKind::Connections => "Connections"/);
+  assert.match(titleBar, /WorkspaceScreenKind::Tools => "Tools"/);
+  assert.match(titleBar, /WorkspaceScreenKind::Connections => dx_icon\(DxUiIcon::Connections\)/);
+  assert.match(titleBar, /WorkspaceScreenKind::Tools => dx_icon\(DxUiIcon::Plugins\)/);
+  assert.match(carousel, /WorkspaceScreenKind::Connections => "Connections"/);
+  assert.match(carousel, /WorkspaceScreenKind::Tools => "Tools"/);
+
+  assert.match(sidebar, /"sidebar-toolbar-connections"[\s\S]*?zed_actions::assistant::OpenConnections/);
+  assert.match(sidebar, /"sidebar-activity-connections"[\s\S]*?zed_actions::assistant::OpenConnections/);
+  assert.match(sidebar, /"sidebar-toolbar-plugins"[\s\S]*?zed_actions::assistant::OpenTools/);
+  assert.match(sidebar, /"sidebar-activity-plugins"[\s\S]*?zed_actions::assistant::OpenTools/);
+});
+
+test("Connections workspace is wired to provider, channel, social, gateway, and credential state", () => {
+  const dxWorkspace = read("crates/agent_ui/src/dx_launch_workspace.rs");
+  const screen = read("crates/agent_ui/src/dx_launch_workspace/connections_screen.rs");
+  const bridge = read("crates/agent_ui/src/dx_agent_bridge.rs");
+  const connectionsScreen = read("crates/agent_ui/src/connections_screen.rs");
+
+  assert.ok(existsSync("crates/agent_ui/src/dx_launch_workspace/connections_screen.rs"));
+  assert.match(dxWorkspace, /^mod connections_screen;$/m);
+  assert.match(dxWorkspace, /pub\(crate\) use connections_screen::render_connections_screen;/);
+  assert.match(connectionsScreen, /AgentPanel::new_connections_workspace\(workspace, window, cx\)/);
+  assert.match(connectionsScreen, /WorkspaceScreenKind::Connections/);
+  assert.match(connectionsScreen, /fn show_toolbar\(&self\) -> bool \{\s*false\s*\}/);
+  assert.match(connectionsScreen, /fn can_split\(&self\) -> bool \{\s*false\s*\}/);
+
+  for (const title of ["Providers", "Channels", "Social", "Gateway", "Credentials"]) {
+    assert.match(screen, new RegExp(`section_title\\("${title}"`));
+  }
+  assert.match(screen, /agents::dx_agent_provider_state\(snapshot, cx\)/);
+  assert.match(screen, /agents::dx_agent_social_state\(snapshot, cx\)/);
+  assert.match(screen, /connected_accounts_summary/);
+  assert.match(screen, /credential_error/);
+  assert.match(screen, /credential_expires_at/);
+  assert.match(screen, /No DX Agents channel receipt\/schema is available yet\./);
+  assert.match(screen, /No first-class provider gateway health receipt is available yet\./);
+  assert.match(screen, /AiSettingItem::new/);
+  assert.match(screen, /ListItem::new/);
+
+  for (const field of [
+    "provider_id",
+    "account_state",
+    "auth_method",
+    "qr_capability",
+    "credential_health",
+    "credential_expires_at",
+    "credential_error",
+    "receipt_history",
+  ]) {
+    assert.match(bridge, new RegExp(`pub ${field}:`));
+  }
+});
+
+test("Tools workspace exposes trusted bridge contracts without fake approvals", () => {
+  const dxWorkspace = read("crates/agent_ui/src/dx_launch_workspace.rs");
+  const screen = read("crates/agent_ui/src/dx_launch_workspace/tools_screen.rs");
+  const toolsScreen = read("crates/agent_ui/src/tools_screen.rs");
+  const bridge = read("crates/agent_ui/src/dx_agent_bridge.rs");
+
+  assert.ok(existsSync("crates/agent_ui/src/dx_launch_workspace/tools_screen.rs"));
+  assert.match(dxWorkspace, /^mod tools_screen;$/m);
+  assert.match(dxWorkspace, /pub\(crate\) use tools_screen::render_tools_screen;/);
+  assert.match(toolsScreen, /AgentPanel::new_tools_workspace\(workspace, window, cx\)/);
+  assert.match(toolsScreen, /WorkspaceScreenKind::Tools/);
+  assert.match(toolsScreen, /fn show_toolbar\(&self\) -> bool \{\s*false\s*\}/);
+  assert.match(toolsScreen, /fn can_split\(&self\) -> bool \{\s*false\s*\}/);
+
+  for (const title of ["Browser", "Computer", "MCP", "DX Plugins", "Receipts", "Permissions"]) {
+    assert.match(screen, new RegExp(`section_title\\("${title}"`));
+  }
+  assert.match(screen, /trusted_tool_bridge/);
+  assert.match(screen, /trusted_tool_ids/);
+  assert.match(screen, /approved_plugin_tool_count/);
+  assert.match(screen, /approved_automation_tool_count/);
+  assert.match(screen, /blocked_tool_count/);
+  assert.match(screen, /bridge_contract_id/);
+  assert.match(screen, /agents::dx_agent_receipt_state\(snapshot, cx\)/);
+  assert.match(screen, /No approved Browser tool receipt is available yet\./);
+  assert.match(screen, /No approved Computer tool receipt is available yet\./);
+  assert.match(screen, /MCP tool receipts are pending trusted bridge approval\./);
+  assert.match(screen, /AiSettingItem::new/);
+  assert.match(screen, /ListItem::new/);
+
+  for (const field of [
+    "present",
+    "trust_policy",
+    "approved_plugin_tool_count",
+    "approved_automation_tool_count",
+    "blocked_tool_count",
+    "receipt_count",
+    "bridge_contract_id",
+    "trusted_tool_ids",
+  ]) {
+    assert.match(bridge, new RegExp(`pub ${field}:`));
+  }
+});

@@ -360,13 +360,13 @@ test("fullscreen onboarding Web Preview is parked until the completion handoff i
   assert.match(source, /fn can_split\(&self\) -> bool \{\s+false\s+\}/);
   assert.match(
     paneSource,
-    /mode == SplitMode::MovePane[\s\S]*?WorkspaceScreenKind::Automations\s*\|\s*WorkspaceScreenKind::Onboarding[\s\S]*?return;/,
-    "Onboarding and Automations must not be movable into a split pane through MovePane commands",
+    /mode == SplitMode::MovePane[\s\S]*?WorkspaceScreenKind::Automations\s*\|\s*WorkspaceScreenKind::Connections\s*\|\s*WorkspaceScreenKind::Tools\s*\|\s*WorkspaceScreenKind::Onboarding[\s\S]*?return;/,
+    "Onboarding, Automations, Connections, and Tools must not be movable into a split pane through MovePane commands",
   );
   assert.match(
     paneSource,
-    /WorkspaceScreenKind::Agent\s*\|\s*WorkspaceScreenKind::Automations\s*\|\s*WorkspaceScreenKind::Onboarding/s,
-    "Onboarding and Automations must not expose clone or move split actions in pane chrome",
+    /WorkspaceScreenKind::Agent\s*\|\s*WorkspaceScreenKind::Automations\s*\|\s*WorkspaceScreenKind::Connections\s*\|\s*WorkspaceScreenKind::Tools\s*\|\s*WorkspaceScreenKind::Onboarding/s,
+    "Onboarding, Automations, Connections, and Tools must not expose clone or move split actions in pane chrome",
   );
   assert.match(
     source,
@@ -422,7 +422,7 @@ test("fullscreen onboarding Web Preview is parked until the completion handoff i
   );
   assert.match(
     agentPanelSource,
-    /WorkspaceScreenKind::Agent\s*\|\s*WorkspaceScreenKind::Automations\s*\|\s*WorkspaceScreenKind::Terminal\s*\|\s*WorkspaceScreenKind::Onboarding\s*\|\s*WorkspaceScreenKind::LiquidGlass/s,
+    /WorkspaceScreenKind::Agent\s*\|\s*WorkspaceScreenKind::Automations\s*\|\s*WorkspaceScreenKind::Connections\s*\|\s*WorkspaceScreenKind::Tools\s*\|\s*WorkspaceScreenKind::Terminal\s*\|\s*WorkspaceScreenKind::Onboarding\s*\|\s*WorkspaceScreenKind::LiquidGlass/s,
     "Agent workspace snapshots should treat Onboarding and Automations like other non-editor screens",
   );
   assert.match(
@@ -432,12 +432,12 @@ test("fullscreen onboarding Web Preview is parked until the completion handoff i
   );
   assert.match(
     sidebarSource,
-    /WorkspaceScreenKind::Agent\s*\|\s*WorkspaceScreenKind::Automations\s*\|\s*WorkspaceScreenKind::Editor\s*\|\s*WorkspaceScreenKind::Onboarding\s*\|\s*WorkspaceScreenKind::LiquidGlass\s*\|\s*WorkspaceScreenKind::Other => self\.project_root_path\(cx\)/s,
+    /WorkspaceScreenKind::Agent\s*\|\s*WorkspaceScreenKind::Automations\s*\|\s*WorkspaceScreenKind::Connections\s*\|\s*WorkspaceScreenKind::Tools\s*\|\s*WorkspaceScreenKind::Editor\s*\|\s*WorkspaceScreenKind::Onboarding\s*\|\s*WorkspaceScreenKind::LiquidGlass\s*\|\s*WorkspaceScreenKind::Other => self\.project_root_path\(cx\)/s,
     "sidebar grid context should use project-root shortcuts while Onboarding or Automations are active",
   );
   assert.match(
     sidebarSource,
-    /WorkspaceScreenKind::Agent\s*\|\s*WorkspaceScreenKind::Automations\s*\|\s*WorkspaceScreenKind::Editor\s*\|\s*WorkspaceScreenKind::Onboarding\s*\|\s*WorkspaceScreenKind::Other => (?:self\.editor_grid_entries\(cx\)|\{\s*self\.editor_grid_entries\(cx\)\s*\})/s,
+    /WorkspaceScreenKind::Agent\s*\|\s*WorkspaceScreenKind::Automations\s*\|\s*WorkspaceScreenKind::Connections\s*\|\s*WorkspaceScreenKind::Tools\s*\|\s*WorkspaceScreenKind::Editor\s*\|\s*WorkspaceScreenKind::Onboarding\s*\|\s*WorkspaceScreenKind::Other => (?:self\.editor_grid_entries\(cx\)|\{\s*self\.editor_grid_entries\(cx\)\s*\})/s,
     "sidebar grid generation should show editor/project entries while Onboarding or Automations are active",
   );
 

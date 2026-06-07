@@ -1,3 +1,23 @@
+[2026-06-07] - DX Agent Workspace Taxonomy
+
+ADDED:
+- `crates\agent_ui\src\connections_screen.rs` adds a first-class non-splittable Connections workspace item.
+- `crates\agent_ui\src\tools_screen.rs` adds a first-class non-splittable Tools workspace item.
+- `crates\agent_ui\src\dx_launch_workspace\connections_screen.rs` renders Providers, Channels, Social, Gateway, and Credentials from receipt-backed DX Agents state with explicit unavailable channel/gateway states.
+- `crates\agent_ui\src\dx_launch_workspace\tools_screen.rs` renders Browser, Computer, MCP, DX Plugins, Receipts, and Permissions from the trusted bridge and receipt contracts.
+- `script\dx-agent-workspaces-source.test.ts` guards the workspace taxonomy, routes, screen wrappers, connection sections, and trusted bridge sections.
+
+CHANGED:
+- `WorkspaceScreenKind` now includes `Connections` and `Tools`, with title-bar, sidebar, pane, carousel, and workspace activation routing through `assistant::OpenConnections` and `assistant::OpenTools`.
+- The main sidebar and Agent launch rail route Connections/Plugins into the curated workspace tabs instead of using the old settings/ACP shortcuts for the primary DX slots.
+- `DX.md`, `todo.txt`, and the handoff guard registry now document the Connections/Tools workspace structure and source-only proof boundary.
+
+PASSED:
+- `node --test script/dx-agent-workspaces-source.test.ts script/dx-agent-connections-ui-source.test.ts script/dx-automations-source.test.ts script/dx-title-bar-source.test.ts script/dx-workspace-ui-state-source.test.ts script/dx-handoff-source-guard-registry.test.ts script/web-preview-platform-lifecycle.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_ui\src\agent_ui.rs crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\connections_screen.rs crates\agent_ui\src\tools_screen.rs crates\agent_ui\src\dx_launch_workspace.rs crates\agent_ui\src\dx_launch_workspace\connections_screen.rs crates\agent_ui\src\dx_launch_workspace\tools_screen.rs crates\sidebar\src\sidebar.rs crates\title_bar\src\title_bar.rs crates\workspace\src\item.rs crates\workspace\src\workspace.rs crates\workspace\src\pane.rs crates\workspace\src\screen_carousel.rs crates\zed\src\zed.rs crates\zed_actions\src\lib.rs`
+
+NOTES:
+- Source-only by instruction. Cargo, `just run`, local servers, browser automation, native Zed launch, live provider login, QR payload proof, and live trusted tool approval proof remain skipped.
 [2026-06-07] - DX Automations Execution Proof Status
 
 ADDED:
