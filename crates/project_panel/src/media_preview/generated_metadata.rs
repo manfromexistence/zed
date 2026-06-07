@@ -17,6 +17,7 @@ pub(crate) const GENERATED_MEDIA_METADATA_RUNNER_SCHEMA: &str =
 
 const MAX_GENERATED_MEDIA_METADATA_JOBS: usize = 8;
 const MAX_GENERATED_MEDIA_METADATA_FILE_BYTES: u64 = 64 * 1024 * 1024;
+const MAX_GENERATED_MEDIA_METADATA_PATH_TEXT_BYTES: usize = 4096;
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct GeneratedMediaMetadataJobBatch {
@@ -30,6 +31,26 @@ struct GeneratedMediaMetadataJob {
     path: PathBuf,
     kind: MediaPreviewKind,
     size: u64,
+}
+
+impl GeneratedMediaMetadataJob {
+    fn is_safe_managed_job(&self) -> bool {
+        self.size > 0
+            && self.size <= MAX_GENERATED_MEDIA_METADATA_FILE_BYTES
+            && self.path.is_absolute()
+            && !self.path_text.is_empty()
+            && self.path_text.len() <= MAX_GENERATED_MEDIA_METADATA_PATH_TEXT_BYTES
+            && !matches!(self.kind, MediaPreviewKind::Image)
+    }
+}
+
+impl GeneratedMediaMetadataJobBatch {
+    fn safe_jobs(self) -> impl Iterator<Item = GeneratedMediaMetadataJob> {
+        self.jobs
+            .into_iter()
+            .take(MAX_GENERATED_MEDIA_METADATA_JOBS)
+            .filter(GeneratedMediaMetadataJob::is_safe_managed_job)
+    }
 }
 
 pub(crate) fn build_generated_media_metadata_job_batch(
@@ -58,12 +79,16 @@ pub(crate) fn build_generated_media_metadata_job_batch(
             continue;
         }
 
-        jobs.push(GeneratedMediaMetadataJob {
+        let job = GeneratedMediaMetadataJob {
             path_text: item.absolute_path.display().to_string(),
             path: item.absolute_path.clone(),
             kind: item.kind,
             size: item.size,
-        });
+        };
+
+        if job.is_safe_managed_job() {
+            jobs.push(job);
+        }
     }
 
     (!jobs.is_empty()).then_some(GeneratedMediaMetadataJobBatch {
@@ -80,9 +105,9 @@ pub(crate) async fn collect_generated_media_metadata(
         return GeneratedMediaMetadataIndex::default();
     }
 
-    let mut records = Vec::with_capacity(batch.jobs.len());
+    let mut records = Vec::with_capacity(batch.jobs.len().min(MAX_GENERATED_MEDIA_METADATA_JOBS));
 
-    for job in batch.jobs {
+    for job in batch.safe_jobs() {
         match job.kind {
             MediaPreviewKind::Audio => {
                 if let Some(duration_seconds) = audio_duration_seconds_for_path(&job.path) {

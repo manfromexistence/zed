@@ -18,6 +18,8 @@ const GENERATED_VIDEO_DURATION_PROBE_TIMEOUT: Duration = Duration::from_secs(3);
 const GENERATED_VIDEO_FRAME_EXTRACTION_TIMEOUT: Duration = Duration::from_secs(8);
 const MAX_GENERATED_VIDEO_DURATION_STDOUT_BYTES: usize = 256;
 const MAX_GENERATED_VIDEO_DURATION_SECONDS: f64 = 24. * 60. * 60.;
+const MAX_GENERATED_VIDEO_SOURCE_BYTES: u64 = 64 * 1024 * 1024;
+const MAX_GENERATED_VIDEO_PATH_TEXT_BYTES: usize = 4096;
 const MAX_GENERATED_VIDEO_FRAME_BYTES: u64 = 8 * 1024 * 1024;
 
 pub(super) struct GeneratedVideoFrameMetadata {
@@ -31,6 +33,10 @@ pub(super) async fn generate_video_center_frame(
     size: u64,
     executor: &BackgroundExecutor,
 ) -> Option<GeneratedVideoFrameMetadata> {
+    if !is_safe_generated_video_source(source_path, path_text, size) {
+        return None;
+    }
+
     let modified_at = video_frame_cache_modified_at(source_path);
     let output_path = managed_video_frame_cache_path(path_text, size, modified_at);
     let duration_seconds = probe_video_duration_seconds(source_path, executor).await;
@@ -91,6 +97,14 @@ pub(super) async fn generate_video_center_frame(
             None
         }
     }
+}
+
+fn is_safe_generated_video_source(source_path: &Path, path_text: &str, size: u64) -> bool {
+    size > 0
+        && size <= MAX_GENERATED_VIDEO_SOURCE_BYTES
+        && source_path.is_absolute()
+        && !path_text.is_empty()
+        && path_text.len() <= MAX_GENERATED_VIDEO_PATH_TEXT_BYTES
 }
 
 fn managed_video_frame_cache_path(path_text: &str, size: u64, modified_at: u64) -> PathBuf {

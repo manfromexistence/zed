@@ -1,3 +1,19 @@
+[2026-06-07] - Project Panel Generated Media Cache Safety
+
+CHANGED:
+- `crates\project_panel\src\media_preview\generated_metadata.rs` now bounds generated metadata path text and rechecks job size, absolute source path, path text, and media kind at both job creation and collection before opening audio files or delegating video extraction.
+- `crates\project_panel\src\media_preview\generated_video_frame.rs` now rejects empty, oversized, relative, or path-text-abusive video frame jobs before source metadata reads, cache lookup, ffprobe, or ffmpeg execution.
+- `crates\project_panel\src\project_panel.rs` now tracks a media preview cache generation and requires background media preview/generated metadata completions to match it before repopulating caches after worktree/settings invalidation.
+- `script\dx-project-panel-source.test.ts` guards the generated media safety boundary and stale async cache-generation checks.
+
+PASSED:
+- `node --test script\dx-project-panel-source.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\project_panel\src\project_panel.rs crates\project_panel\src\media_preview\generated_metadata.rs crates\project_panel\src\media_preview\generated_video_frame.rs`
+
+NOTES:
+- Source-only by instruction. Cargo, `just run`, local servers, browser/WebView proof, native Zed launch, and live media probing/runtime visual proof remain skipped.
+- Exactly six GPT-5.5 extra-high subagent lanes were reused for this continuation; the first completed audit identified the stale Project Panel media-cache completion risk that this patch addresses.
+
 [2026-06-07] - DX AI Profiles Production Hardening Follow-up
 
 CHANGED:

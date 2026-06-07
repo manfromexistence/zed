@@ -51,7 +51,7 @@ use settings::{
 use smallvec::SmallVec;
 use std::{
     any::TypeId,
-    cell::{OnceCell, RefCell},
+    cell::{Cell, OnceCell, RefCell},
     cmp,
     collections::HashSet,
     ops::{Neg, Range},
@@ -332,6 +332,7 @@ pub struct ProjectPanel {
     media_metadata_generation_tasks: RefCell<HashMap<(WorktreeId, ProjectEntryId), Task<()>>>,
     folder_media_previews:
         RefCell<HashMap<(WorktreeId, ProjectEntryId), Option<media_preview::FolderMediaPreview>>>,
+    media_preview_cache_generation: Cell<u64>,
     sticky_items_count: usize,
     last_reported_update: Instant,
     update_visible_entries_task: UpdateVisibleEntriesTask,
@@ -887,6 +888,7 @@ impl ProjectPanel {
                         this.media_metadata_generation_tasks
                             .borrow_mut()
                             .retain(|(worktree_id, _), _| *worktree_id != *id);
+                        this.bump_media_preview_cache_generation();
                         this.state.expanded_dir_ids.remove(id);
                         this.update_visible_entries(None, false, false, window, cx);
                         cx.notify();
@@ -894,10 +896,7 @@ impl ProjectPanel {
                     project::Event::WorktreeUpdatedEntries(_, _)
                     | project::Event::WorktreeAdded(_)
                     | project::Event::WorktreeOrderChanged => {
-                        this.folder_storage_summaries.borrow_mut().clear();
-                        this.generated_media_metadata.borrow_mut().clear();
-                        this.media_metadata_generation_tasks.borrow_mut().clear();
-                        this.folder_media_previews.borrow_mut().clear();
+                        this.clear_dx_explorer_media_and_storage_caches();
                         this.update_visible_entries(None, false, false, window, cx);
                         cx.notify();
                     }
@@ -1011,20 +1010,14 @@ impl ProjectPanel {
                 let new_settings = *ProjectPanelSettings::get_global(cx);
                 if project_panel_settings != new_settings {
                     if project_panel_settings.hide_gitignore != new_settings.hide_gitignore {
-                        this.folder_storage_summaries.borrow_mut().clear();
-                        this.generated_media_metadata.borrow_mut().clear();
-                        this.media_metadata_generation_tasks.borrow_mut().clear();
-                        this.folder_media_previews.borrow_mut().clear();
+                        this.clear_dx_explorer_media_and_storage_caches();
                         this.update_visible_entries(None, false, false, window, cx);
                     }
                     if project_panel_settings.hide_root != new_settings.hide_root {
                         this.update_visible_entries(None, false, false, window, cx);
                     }
                     if project_panel_settings.hide_hidden != new_settings.hide_hidden {
-                        this.folder_storage_summaries.borrow_mut().clear();
-                        this.generated_media_metadata.borrow_mut().clear();
-                        this.media_metadata_generation_tasks.borrow_mut().clear();
-                        this.folder_media_previews.borrow_mut().clear();
+                        this.clear_dx_explorer_media_and_storage_caches();
                         this.update_visible_entries(None, false, false, window, cx);
                     }
                     if project_panel_settings.sort_mode != new_settings.sort_mode {
@@ -1073,6 +1066,7 @@ impl ProjectPanel {
                 generated_media_metadata: Default::default(),
                 media_metadata_generation_tasks: Default::default(),
                 folder_media_previews: Default::default(),
+                media_preview_cache_generation: Cell::new(0),
                 sticky_items_count: 0,
                 last_reported_update: Instant::now(),
                 state: State {
@@ -5101,6 +5095,23 @@ impl ProjectPanel {
         }
     }
 
+    fn bump_media_preview_cache_generation(&self) {
+        self.media_preview_cache_generation
+            .set(self.media_preview_cache_generation.get().wrapping_add(1));
+    }
+
+    fn clear_dx_explorer_media_caches(&self) {
+        self.bump_media_preview_cache_generation();
+        self.generated_media_metadata.borrow_mut().clear();
+        self.media_metadata_generation_tasks.borrow_mut().clear();
+        self.folder_media_previews.borrow_mut().clear();
+    }
+
+    fn clear_dx_explorer_media_and_storage_caches(&self) {
+        self.folder_storage_summaries.borrow_mut().clear();
+        self.clear_dx_explorer_media_caches();
+    }
+
     fn update_visible_entries(
         &mut self,
         new_selected_entry: Option<(WorktreeId, ProjectEntryId)>,
@@ -5155,6 +5166,7 @@ impl ProjectPanel {
             .copied()
             .collect::<HashSet<_>>();
         let generated_media_metadata = self.generated_media_metadata.borrow().clone();
+        let media_preview_cache_generation = self.media_preview_cache_generation.get();
         let project = self.project.read(cx);
         let repo_snapshots = project.git_store().read(cx).repo_snapshots(cx);
 
@@ -5627,7 +5639,9 @@ impl ProjectPanel {
                         folder_storage_summaries.entry(cache_key).or_insert(summary);
                     }
                 }
-                if !media_preview_updates.is_empty() {
+                if !media_preview_updates.is_empty()
+                    && this.media_preview_cache_generation.get() == media_preview_cache_generation
+                {
                     let mut folder_media_previews = this.folder_media_previews.borrow_mut();
                     for (cache_key, preview) in media_preview_updates {
                         folder_media_previews.entry(cache_key).or_insert(preview);
@@ -7868,6 +7882,7 @@ impl ProjectPanel {
             return;
         };
 
+        let media_preview_cache_generation = self.media_preview_cache_generation.get();
         let task = cx.spawn(async move |this, cx| {
             let executor = cx.background_executor().clone();
             let generated_metadata = cx
@@ -7880,6 +7895,9 @@ impl ProjectPanel {
                 this.media_metadata_generation_tasks
                     .borrow_mut()
                     .remove(&cache_key);
+                if this.media_preview_cache_generation.get() != media_preview_cache_generation {
+                    return;
+                }
                 let generated_metadata_has_records = !generated_metadata.is_empty();
                 this.generated_media_metadata
                     .borrow_mut()
