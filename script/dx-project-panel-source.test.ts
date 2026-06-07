@@ -83,15 +83,29 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
 
   assert.match(source, /struct DxExplorerSummary/);
   assert.match(source, /struct DxExplorerVisibleSummary/);
+  assert.match(source, /enum DxExplorerSourceKind/);
+  assert.match(source, /fn from_project\(project: &Project, cx: &App\) -> Self/);
+  assert.match(source, /fn label\(self\) -> &'static str/);
+  assert.match(source, /LocalWorkspace/);
+  assert.match(source, /WslWorkspace/);
+  assert.match(source, /RemoteWorkspace/);
+  assert.match(source, /ReadOnlyWorkspace/);
   assert.match(source, /dx_explorer_visible_summary:\s*DxExplorerVisibleSummary/);
   assert.match(source, /fn record_entry\(&mut self, entry: &Entry\)/);
   assert.match(source, /fn record_entry_kind\(&mut self, kind: EntryKind, size: u64\)/);
+  assert.match(source, /fn record_skipped_entry\(&mut self\)/);
+  assert.match(dxExplorerSummary, /source_kind,/);
   assert.match(dxExplorerSummary, /worktree_count: self\.state\.visible_entries\.len\(\)/);
   assert.match(dxExplorerSummary, /let visible_summary = self\.state\.dx_explorer_visible_summary;/);
   assert.match(
     dxExplorerSummary,
     /visible_entry_count: visible_summary\.entry_count/,
     "DX Explorer visible entry counts must read the cached visible summary",
+  );
+  assert.match(
+    dxExplorerSummary,
+    /skipped_entry_count: visible_summary\.skipped_entry_count/,
+    "DX Explorer skipped entry counts must read the cached visible summary",
   );
   assert.match(
     dxExplorerSummary,
@@ -146,8 +160,13 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   assert.match(renderDxExplorerHeader, /ProjectPanelSettings::get_global\(cx\)/);
   assert.match(renderDxExplorerHeader, /dx_icon\(DxUiIcon::Project\)/);
   assert.match(renderDxExplorerHeader, /Label::new\("DX Explorer"\)/);
-  assert.match(renderDxExplorerHeader, /source_label = if is_read_only/);
-  assert.match(renderDxExplorerHeader, /"Local source"/);
+  assert.match(renderDxExplorerHeader, /let source_label = summary\.source_kind\.label\(\);/);
+  assert.doesNotMatch(renderDxExplorerHeader, /source_label = if is_read_only/);
+  assert.match(source, /Self::LocalWorkspace => "Local source"/);
+  assert.match(source, /Self::WslWorkspace => "WSL source"/);
+  assert.match(source, /Self::RemoteWorkspace => "Remote source"/);
+  assert.match(source, /Self::ReadOnlyWorkspace => "Read-only source"/);
+  assert.match(renderDxExplorerHeader, /summary\.skipped_entry_count/);
   assert.match(renderDxExplorerHeader, /summary\.visible_file_count/);
   assert.match(renderDxExplorerHeader, /summary\.visible_folder_count/);
   assert.match(renderDxExplorerHeader, /format_file_size\(summary\.visible_file_bytes\)/);
@@ -179,11 +198,15 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
 
   assert.match(
     source,
-    /let dx_explorer_summary = self\.dx_explorer_summary\(selected_entry_count\);/,
+    /let dx_explorer_source_kind = DxExplorerSourceKind::from_project\(&project, cx\);/,
   );
   assert.match(
     source,
-    /self\.render_dx_explorer_header\([\s\S]*dx_explorer_summary,[\s\S]*has_worktree,[\s\S]*is_read_only,[\s\S]*is_remote,[\s\S]*cx/,
+    /let dx_explorer_summary =\s*self\.dx_explorer_summary\(selected_entry_count, dx_explorer_source_kind\);/,
+  );
+  assert.match(
+    source,
+    /self\.render_dx_explorer_header\([\s\S]*dx_explorer_summary,[\s\S]*has_worktree,[\s\S]*is_read_only,[\s\S]*cx/,
     "DX Explorer header must receive the current source mode instead of guessing from path text",
   );
   const headerMounts = source.match(/\.child\(self\.render_dx_explorer_header\(/g) ?? [];
@@ -745,7 +768,7 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   assert.match(renderEntry, /block_mouse_except_scroll\(\)/);
   assert.match(
     renderProjectPanel,
-    /let \(is_read_only, is_remote, is_local, is_local_or_wsl, is_via_remote_server\) = \{[\s\S]*let project = self\.project\.read\(cx\);[\s\S]*project\.is_read_only\(cx\)[\s\S]*project\.is_remote\(\)[\s\S]*project\.is_local\(\)[\s\S]*project\.is_local\(\) \|\| project\.is_via_wsl_with_host_interop\(cx\)[\s\S]*project\.is_via_remote_server\(\)[\s\S]*\};/,
+    /let \([\s\S]*is_read_only,[\s\S]*is_remote,[\s\S]*is_local,[\s\S]*is_local_or_wsl,[\s\S]*is_via_remote_server,[\s\S]*dx_explorer_source_kind,[\s\S]*\) = \{[\s\S]*let project = self\.project\.read\(cx\);[\s\S]*let dx_explorer_source_kind = DxExplorerSourceKind::from_project\(&project, cx\);[\s\S]*project\.is_read_only\(cx\)[\s\S]*project\.is_remote\(\)[\s\S]*project\.is_local\(\)[\s\S]*project\.is_local\(\) \|\| project\.is_via_wsl_with_host_interop\(cx\)[\s\S]*project\.is_via_remote_server\(\)[\s\S]*dx_explorer_source_kind,[\s\S]*\};/,
     "render must snapshot project flags before media shelf lookup so no long project borrow crosses cx-using closures",
   );
   assertBefore({

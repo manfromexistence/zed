@@ -2,6 +2,7 @@ IN PROGRESS:
 - None. Runtime proof remains deferred until an explicit authorized validation pass allows `just run`/Cargo.
 
 COMPLETED:
+- Project Panel DX Explorer now carries typed Project-derived source-kind evidence plus cached skipped-entry counts, with source guards covering local/WSL/remote/read-only labels and render-path scan avoidance.
 - Forge filesystem readers now share a `DxProjectContext`-backed root helper for package-status, remote registry, machine-cache, and configured-root detection, with shared fallback roots kept out of the workspace configured count.
 - Semantic icon hotspot cleanup is source-verified: Project Panel dock chrome, sidebar Search/Agents activity buttons, Agent Configuration MCP settings control, and Flow voice busy state now route through `DxUiIcon`/`dx_icon`, and `script\dx-icon-system-source.test.ts` guards those hotspots against raw generic literals.
 - Bounded receipt latest-scan guards are source-verified: DX Style dry-run receipts, source-set latest receipts, and receipt-history latest labels cap directory iteration before metadata/sort work, Forge guard expectations now reject the old unbounded scan, and source-set attachment summary moved out of the coordinator file.

@@ -159,9 +159,44 @@ struct VisibleEntriesForWorktree {
 }
 
 #[derive(Clone, Copy)]
+enum DxExplorerSourceKind {
+    Empty,
+    LocalWorkspace,
+    WslWorkspace,
+    RemoteWorkspace,
+    ReadOnlyWorkspace,
+}
+
+impl DxExplorerSourceKind {
+    fn from_project(project: &Project, cx: &App) -> Self {
+        if project.is_read_only(cx) {
+            Self::ReadOnlyWorkspace
+        } else if project.is_via_wsl_with_host_interop(cx) {
+            Self::WslWorkspace
+        } else if project.is_remote() {
+            Self::RemoteWorkspace
+        } else {
+            Self::LocalWorkspace
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::Empty => "No source",
+            Self::LocalWorkspace => "Local source",
+            Self::WslWorkspace => "WSL source",
+            Self::RemoteWorkspace => "Remote source",
+            Self::ReadOnlyWorkspace => "Read-only source",
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
 struct DxExplorerSummary {
+    source_kind: DxExplorerSourceKind,
     worktree_count: usize,
     visible_entry_count: usize,
+    skipped_entry_count: usize,
     visible_file_count: usize,
     visible_folder_count: usize,
     visible_file_bytes: u64,
@@ -174,6 +209,7 @@ struct DxExplorerSummary {
 #[derive(Clone, Copy, Default)]
 struct DxExplorerVisibleSummary {
     entry_count: usize,
+    skipped_entry_count: usize,
     file_count: usize,
     folder_count: usize,
     file_bytes: u64,
@@ -192,6 +228,10 @@ impl DxExplorerVisibleSummary {
         } else if kind.is_dir() {
             self.folder_count += 1;
         }
+    }
+
+    fn record_skipped_entry(&mut self) {
+        self.skipped_entry_count += 1;
     }
 }
 
@@ -4094,7 +4134,11 @@ impl ProjectPanel {
         }
     }
 
-    fn dx_explorer_summary(&self, selected_entry_count: usize) -> DxExplorerSummary {
+    fn dx_explorer_summary(
+        &self,
+        selected_entry_count: usize,
+        source_kind: DxExplorerSourceKind,
+    ) -> DxExplorerSummary {
         let visible_summary = self.state.dx_explorer_visible_summary;
         let folder_media_previews = self.folder_media_previews.borrow();
         let cached_media_folder_count = folder_media_previews
@@ -4106,10 +4150,17 @@ impl ProjectPanel {
             .filter_map(|preview| preview.as_ref())
             .map(|preview| preview.total_count)
             .sum();
+        let source_kind = if self.state.visible_entries.is_empty() {
+            DxExplorerSourceKind::Empty
+        } else {
+            source_kind
+        };
 
         DxExplorerSummary {
+            source_kind,
             worktree_count: self.state.visible_entries.len(),
             visible_entry_count: visible_summary.entry_count,
+            skipped_entry_count: visible_summary.skipped_entry_count,
             selected_entry_count,
             expanded_dir_count: self
                 .state
@@ -4317,19 +4368,12 @@ impl ProjectPanel {
         summary: DxExplorerSummary,
         has_worktree: bool,
         is_read_only: bool,
-        is_remote: bool,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let project_panel_settings = ProjectPanelSettings::get_global(cx);
         let show_ignored_entries = !project_panel_settings.hide_gitignore;
         let show_hidden_entries = !project_panel_settings.hide_hidden;
-        let source_label = if is_read_only {
-            "Read-only source"
-        } else if is_remote {
-            "Remote source"
-        } else {
-            "Local source"
-        };
+        let source_label = summary.source_kind.label();
 
         h_flex()
             .id("dx-explorer-header")
@@ -4376,6 +4420,15 @@ impl ProjectPanel {
                             "entries",
                         ),
                     ))
+                    .when(summary.skipped_entry_count > 0, |this| {
+                        this.child(Self::render_dx_explorer_metric(
+                            Self::dx_explorer_count_label(
+                                summary.skipped_entry_count,
+                                "skipped",
+                                "skipped",
+                            ),
+                        ))
+                    })
                     .when(summary.visible_file_bytes > 0, |this| {
                         this.child(Self::render_dx_explorer_metric(format!(
                             "{} storage",
@@ -5355,6 +5408,7 @@ impl ProjectPanel {
                             }
 
                             if entry_is_active_media_shelf_child {
+                                new_state.dx_explorer_visible_summary.record_skipped_entry();
                                 entry_iter.advance();
                                 continue;
                             }
@@ -5363,6 +5417,7 @@ impl ProjectPanel {
                                 == worktree_snapshot.root_entry()
                             {
                                 let Some(path_name) = worktree_abs_path.file_name() else {
+                                    new_state.dx_explorer_visible_summary.record_skipped_entry();
                                     entry_iter.advance();
                                     continue;
                                 };
@@ -5377,6 +5432,7 @@ impl ProjectPanel {
                                     })
                                     .log_err()
                                 else {
+                                    new_state.dx_explorer_visible_summary.record_skipped_entry();
                                     entry_iter.advance();
                                     continue;
                                 };
@@ -8489,17 +8545,27 @@ impl Render for ProjectPanel {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let has_worktree = !self.state.visible_entries.is_empty();
         let selected_entry_count = self.selected_entries_count(cx);
-        let dx_explorer_summary = self.dx_explorer_summary(selected_entry_count);
-        let (is_read_only, is_remote, is_local, is_local_or_wsl, is_via_remote_server) = {
+        let (
+            is_read_only,
+            is_remote,
+            is_local,
+            is_local_or_wsl,
+            is_via_remote_server,
+            dx_explorer_source_kind,
+        ) = {
             let project = self.project.read(cx);
+            let dx_explorer_source_kind = DxExplorerSourceKind::from_project(&project, cx);
             (
                 project.is_read_only(cx),
                 project.is_remote(),
                 project.is_local(),
                 project.is_local() || project.is_via_wsl_with_host_interop(cx),
                 project.is_via_remote_server(),
+                dx_explorer_source_kind,
             )
         };
+        let dx_explorer_summary =
+            self.dx_explorer_summary(selected_entry_count, dx_explorer_source_kind);
         let selected_entries_toolbar = (selected_entry_count > 0
             && self.state.edit_state.is_none())
         .then(|| {
@@ -8699,7 +8765,6 @@ impl Render for ProjectPanel {
                             dx_explorer_summary,
                             has_worktree,
                             is_read_only,
-                            is_remote,
                             cx,
                         ))
                         .map(|this| {
@@ -9173,7 +9238,6 @@ impl Render for ProjectPanel {
                     dx_explorer_summary,
                     has_worktree,
                     is_read_only,
-                    is_remote,
                     cx,
                 ))
                 .child(

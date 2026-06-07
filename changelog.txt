@@ -1,3 +1,18 @@
+[2026-06-07] - Project Panel DX Explorer Typed Source Evidence
+
+CHANGED:
+- `crates\project_panel\src\project_panel.rs` now derives a typed `DxExplorerSourceKind` from `Project` and carries it through the cached DX Explorer summary before rendering the header label.
+- `crates\project_panel\src\project_panel.rs` now records concrete skipped visible entries during row materialization and exposes that cached count in the DX Explorer header.
+- `script\dx-project-panel-source.test.ts` now guards the source-kind enum, source labels, skipped-entry summary path, and whitespace-tolerant render snapshot.
+- `todo.txt` and `DX.md` now record this source-only Project Panel checkpoint.
+
+PASSED:
+- `node --test script\dx-project-panel-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\project_panel\src\project_panel.rs`
+
+NOTES:
+- This remains source-only by instruction. Cargo, `just run`, local servers, browser/WebView proof, native Zed launch, and runtime DX Explorer visual proof remain skipped.
+
 [2026-06-07] - Forge Readers Use Shared Project Context Roots
 
 CHANGED:
