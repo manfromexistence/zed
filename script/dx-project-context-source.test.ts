@@ -45,6 +45,7 @@ const assertBefore = (
 test("DX project context centralizes bounded local-first paths", () => {
   const source = read("crates/agent_ui/src/dx_project_context.rs");
   const detect = functionBody(source, "detect");
+  const contextsForWorkspaceRoots = functionBody(source, "contexts_for_workspace_roots");
   const checkCandidates = functionBody(source, "check_receipt_candidates");
   const sourceScopedRoots = functionBody(source, "source_scoped_receipt_roots");
   const receiptsRoot = functionBody(source, "receipts_root");
@@ -59,6 +60,7 @@ test("DX project context centralizes bounded local-first paths", () => {
   const receiptRootCandidates = functionBody(source, "receipt_root_candidates");
   const normalizeProjectRoot = functionBody(source, "normalize_project_root");
   const projectRootKey = functionBody(source, "project_root_key");
+  const workspaceRootCandidate = functionBody(source, "workspace_root_candidate");
   const pathIsSameOrChild = functionBody(source, "path_is_same_or_child");
 
   assert.match(source, /use crate::dx_deploy_root_key::deploy_root_key;/);
@@ -77,6 +79,22 @@ test("DX project context centralizes bounded local-first paths", () => {
 
   assert.match(detect, /normalize_project_root\(root\.as_ref\(\)\)\?/);
   assert.match(detect, /workspace_root\.is_dir\(\)/);
+  assert.match(contextsForWorkspaceRoots, /workspace_root_candidate\(root\)/);
+  assert.match(contextsForWorkspaceRoots, /push_unique_path_key\(&mut seen, root\)/);
+  assert.match(contextsForWorkspaceRoots, /\.take\(DX_PROJECT_CONTEXT_WORKSPACE_ROOT_LIMIT\)/);
+  assert.match(contextsForWorkspaceRoots, /\.filter_map\(\|root\| Self::detect\(&root\)\)/);
+  assertBefore(
+    contextsForWorkspaceRoots,
+    /\.take\(DX_PROJECT_CONTEXT_WORKSPACE_ROOT_LIMIT\)/,
+    /Self::detect\(&root\)/,
+    "workspace roots must be capped before detect can touch metadata",
+  );
+  assertBefore(
+    contextsForWorkspaceRoots,
+    /push_unique_path_key\(&mut seen, root\)/,
+    /\.take\(DX_PROJECT_CONTEXT_WORKSPACE_ROOT_LIMIT\)/,
+    "duplicate workspace roots should not consume the root-detection cap",
+  );
   assert.match(checkCandidates, /contexts_for_workspace_roots\(workspace_roots\)/);
   assertBefore(
     checkCandidates,
@@ -143,6 +161,9 @@ test("DX project context centralizes bounded local-first paths", () => {
   assert.match(normalizeProjectRoot, /Component::CurDir/);
   assert.match(normalizeProjectRoot, /Component::ParentDir/);
   assert.match(projectRootKey, /deploy_root_key\(&normalized\)/);
+  assert.match(workspaceRootCandidate, /let root = root\.trim\(\)/);
+  assert.match(workspaceRootCandidate, /root\.is_empty\(\)/);
+  assert.match(workspaceRootCandidate, /normalize_project_root\(Path::new\(root\)\)/);
   assert.match(pathIsSameOrChild, /path_key == root_key/);
   assert.match(pathIsSameOrChild, /root_key\.ends_with\(MAIN_SEPARATOR\)/);
   assert.match(pathIsSameOrChild, /format!\("\{root_key\}\{MAIN_SEPARATOR\}"\)/);

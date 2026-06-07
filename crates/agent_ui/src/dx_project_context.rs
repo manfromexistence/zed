@@ -58,8 +58,10 @@ impl DxProjectContext {
         let mut seen = HashSet::new();
         workspace_roots
             .iter()
-            .filter_map(|root| Self::detect(root.trim()))
-            .filter(|context| push_unique_path_key(&mut seen, &context.workspace_root))
+            .filter_map(|root| workspace_root_candidate(root))
+            .filter(|root| push_unique_path_key(&mut seen, root))
+            .take(DX_PROJECT_CONTEXT_WORKSPACE_ROOT_LIMIT)
+            .filter_map(|root| Self::detect(&root))
             .collect()
     }
 
@@ -285,6 +287,14 @@ pub fn normalize_project_root(path: &Path) -> Option<PathBuf> {
 pub fn project_root_key(path: &Path) -> String {
     let normalized = normalize_project_root(path).unwrap_or_else(|| path.to_path_buf());
     deploy_root_key(&normalized)
+}
+
+fn workspace_root_candidate(root: &str) -> Option<PathBuf> {
+    let root = root.trim();
+    if root.is_empty() {
+        return None;
+    }
+    normalize_project_root(Path::new(root))
 }
 
 fn normalize_absolute_project_path(path: &Path) -> Option<PathBuf> {

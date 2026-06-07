@@ -1,3 +1,18 @@
+[2026-06-07] - DX Project Context Bounded Root Detection
+
+CHANGED:
+- `crates\agent_ui\src\dx_project_context.rs` now trims, normalizes, dedupes, and caps workspace root candidates before `DxProjectContext::detect` can touch filesystem metadata.
+- `script\dx-project-context-source.test.ts` now guards that duplicate roots do not consume the cap and the workspace-root limit is applied before `Self::detect(&root)`.
+- `todo.txt` and `DX.md` now record this source-only bounded-root detection checkpoint.
+
+PASSED:
+- `node --test script\dx-project-context-source.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_ui\src\dx_project_context.rs`
+- `git diff --check -- crates/agent_ui/src/dx_project_context.rs script/dx-project-context-source.test.ts`
+
+NOTES:
+- This remains source-only. Cargo, `just run`, local servers, browser/WebView proof, native Zed launch, and inaccessible-path runtime proof remain skipped by instruction.
+
 [2026-06-07] - DX-WWW Launch Evidence Project Context Fallback
 
 CHANGED:
