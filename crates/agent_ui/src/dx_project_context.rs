@@ -138,6 +138,14 @@ impl DxProjectContext {
         Self::detect(root).map(|context| context.receipt_root(receipt_kind))
     }
 
+    pub fn audit_root(&self, audit_kind: &str) -> PathBuf {
+        self.dx_metadata_root.join("audit").join(audit_kind)
+    }
+
+    pub fn audit_root_for(root: impl AsRef<Path>, audit_kind: &str) -> Option<PathBuf> {
+        Self::detect(root).map(|context| context.audit_root(audit_kind))
+    }
+
     pub fn workspace_receipt_roots(
         workspace_roots: &[PathBuf],
         receipt_kind: &str,
@@ -152,6 +160,34 @@ impl DxProjectContext {
         {
             push_unique_path(&mut roots, &mut seen, context.receipt_root(receipt_kind));
         }
+
+        roots
+    }
+
+    pub fn audit_root_candidates(
+        workspace_roots: &[String],
+        audit_kind: &str,
+        fallback_workspace_root: impl AsRef<Path>,
+    ) -> Vec<PathBuf> {
+        let mut seen = HashSet::new();
+        let mut roots = Vec::new();
+
+        for context in Self::contexts_for_workspace_roots(workspace_roots)
+            .into_iter()
+            .take(DX_PROJECT_CONTEXT_WORKSPACE_ROOT_LIMIT)
+        {
+            push_unique_path(&mut roots, &mut seen, context.audit_root(audit_kind));
+        }
+
+        let fallback = Self::audit_root_for(fallback_workspace_root.as_ref(), audit_kind)
+            .unwrap_or_else(|| {
+                fallback_workspace_root
+                    .as_ref()
+                    .join(DX_METADATA_DIR_NAME)
+                    .join("audit")
+                    .join(audit_kind)
+            });
+        push_unique_path(&mut roots, &mut seen, fallback);
 
         roots
     }

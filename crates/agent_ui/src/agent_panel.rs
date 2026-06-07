@@ -57,7 +57,7 @@ use crate::dx_launch_prompts::{
 };
 use crate::dx_launch_readiness::launch_readiness_snapshot;
 use crate::dx_launch_receipts::launch_receipt_review_snapshot_for_roots;
-use crate::dx_launch_source_audit::launch_source_audit_snapshot;
+use crate::dx_launch_source_audit::launch_source_audit_snapshot_for_roots;
 use crate::dx_launch_status::launch_status_snapshot_for_roots;
 use crate::dx_launch_workspace::{
     DxLaunchRailControls, DxLaunchRailSection, DxLaunchRailSide, DxLaunchRailState,
@@ -7507,7 +7507,7 @@ impl AgentPanel {
         let launch_contracts = launch_contract_snapshot();
         let launch_readiness = launch_readiness_snapshot();
         let launch_audit = launch_audit_snapshot();
-        let source_audit = launch_source_audit_snapshot();
+        let source_audit = launch_source_audit_snapshot_for_roots(&workspace_roots);
         let www_evidence = www_launch_evidence_snapshot(&workspace_roots);
         let agent_bridge = dx_agent_bridge_snapshot_from_settings(input.agent_settings);
         let receipt_file_count = receipt_snapshot

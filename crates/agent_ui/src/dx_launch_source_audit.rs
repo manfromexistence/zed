@@ -13,41 +13,51 @@ pub(crate) use self::snapshot::DxLaunchSourceAuditSnapshot;
 use self::status::{source_audit_operator_summary, source_audit_status};
 use serde_json::Value;
 use std::{
+    path::PathBuf,
     sync::{Mutex, OnceLock},
     time::{Duration, Instant},
 };
 
-const SOURCE_AUDIT_ROOT: &str = r"G:\Dx\.dx\audit\launch-source";
 const SOURCE_AUDIT_LATEST: &str = "latest.json";
 const SOURCE_AUDIT_MARKDOWN: &str = "latest.md";
-const DX_STUDIO_QA_LATEST: &str = r"G:\Dx\.dx\audit\dx-studio-www-qa\latest.json";
 const SOURCE_AUDIT_SCHEMA: &str = "dx.launch_audit.source_guard.v1";
 const SOURCE_AUDIT_CACHE_TTL: Duration = Duration::from_secs(5);
 
-static SOURCE_AUDIT_CACHE: OnceLock<Mutex<Option<(Instant, DxLaunchSourceAuditSnapshot)>>> =
-    OnceLock::new();
+static SOURCE_AUDIT_CACHE: OnceLock<
+    Mutex<Option<(Instant, PathBuf, PathBuf, DxLaunchSourceAuditSnapshot)>>,
+> = OnceLock::new();
 
-pub(crate) fn launch_source_audit_snapshot() -> DxLaunchSourceAuditSnapshot {
+pub(crate) fn launch_source_audit_snapshot_for_roots(
+    workspace_roots: &[String],
+) -> DxLaunchSourceAuditSnapshot {
+    let paths = source_audit_paths(workspace_roots);
     let cache = SOURCE_AUDIT_CACHE.get_or_init(|| Mutex::new(None));
     let now = Instant::now();
 
     if let Ok(mut cache) = cache.lock() {
-        if let Some((cached_at, snapshot)) = cache.as_ref() {
-            if now.duration_since(*cached_at) <= SOURCE_AUDIT_CACHE_TTL {
+        if let Some((cached_at, cached_root, cached_qa_path, snapshot)) = cache.as_ref() {
+            if cached_root == &paths.root
+                && cached_qa_path == &paths.dx_studio_qa_path
+                && now.duration_since(*cached_at) <= SOURCE_AUDIT_CACHE_TTL
+            {
                 return snapshot.clone();
             }
         }
 
-        let snapshot = scan_source_audit();
-        *cache = Some((now, snapshot.clone()));
+        let snapshot = scan_source_audit(paths);
+        *cache = Some((
+            now,
+            snapshot.root.clone(),
+            snapshot.dx_studio_qa_path.clone(),
+            snapshot.clone(),
+        ));
         return snapshot;
     }
 
-    scan_source_audit()
+    scan_source_audit(paths)
 }
 
-fn scan_source_audit() -> DxLaunchSourceAuditSnapshot {
-    let paths = source_audit_paths();
+fn scan_source_audit(paths: self::paths::SourceAuditPaths) -> DxLaunchSourceAuditSnapshot {
     let packet = read_json_packet(&paths.latest_path);
     let mut issues = Vec::new();
     let mut last_error = None;

@@ -1,6 +1,8 @@
-use super::{DX_STUDIO_QA_LATEST, SOURCE_AUDIT_LATEST, SOURCE_AUDIT_MARKDOWN, SOURCE_AUDIT_ROOT};
+use super::{SOURCE_AUDIT_LATEST, SOURCE_AUDIT_MARKDOWN};
+use crate::dx_project_context::DxProjectContext;
 use std::path::PathBuf;
-
+const SOURCE_AUDIT_KIND: &str = "launch-source";
+const DX_STUDIO_QA_AUDIT_KIND: &str = "dx-studio-www-qa";
 pub(super) struct SourceAuditPaths {
     pub root: PathBuf,
     pub latest_path: PathBuf,
@@ -12,11 +14,12 @@ pub(super) struct SourceAuditPaths {
     pub dx_studio_qa_present: bool,
 }
 
-pub(super) fn source_audit_paths() -> SourceAuditPaths {
-    let root = PathBuf::from(SOURCE_AUDIT_ROOT);
+pub(super) fn source_audit_paths(workspace_roots: &[String]) -> SourceAuditPaths {
+    let root = active_audit_root(workspace_roots, SOURCE_AUDIT_KIND);
     let latest_path = root.join(SOURCE_AUDIT_LATEST);
     let markdown_path = root.join(SOURCE_AUDIT_MARKDOWN);
-    let dx_studio_qa_path = PathBuf::from(DX_STUDIO_QA_LATEST);
+    let dx_studio_qa_path =
+        active_audit_root(workspace_roots, DX_STUDIO_QA_AUDIT_KIND).join(SOURCE_AUDIT_LATEST);
 
     SourceAuditPaths {
         root_exists: root.is_dir(),
@@ -28,4 +31,28 @@ pub(super) fn source_audit_paths() -> SourceAuditPaths {
         markdown_path,
         dx_studio_qa_path,
     }
+}
+
+fn active_audit_root(workspace_roots: &[String], audit_kind: &str) -> PathBuf {
+    let roots = DxProjectContext::audit_root_candidates(
+        workspace_roots,
+        audit_kind,
+        DxProjectContext::shared_fallback_root(),
+    );
+    roots
+        .iter()
+        .find(|root| root.is_dir())
+        .cloned()
+        .or_else(|| roots.last().cloned())
+        .unwrap_or_else(|| fallback_audit_root(audit_kind))
+}
+
+fn fallback_audit_root(audit_kind: &str) -> PathBuf {
+    DxProjectContext::audit_root_for(DxProjectContext::shared_fallback_root(), audit_kind)
+        .unwrap_or_else(|| {
+            DxProjectContext::shared_fallback_root()
+                .join(".dx")
+                .join("audit")
+                .join(audit_kind)
+        })
 }

@@ -49,7 +49,10 @@ test("DX project context centralizes bounded local-first paths", () => {
   const sourceScopedRoots = functionBody(source, "source_scoped_receipt_roots");
   const receiptRoot = functionBody(source, "receipt_root");
   const receiptRootFor = functionBody(source, "receipt_root_for");
+  const auditRoot = functionBody(source, "audit_root");
+  const auditRootFor = functionBody(source, "audit_root_for");
   const workspaceReceiptRoots = functionBody(source, "workspace_receipt_roots");
+  const auditRootCandidates = functionBody(source, "audit_root_candidates");
   const receiptRootCandidates = functionBody(source, "receipt_root_candidates");
   const normalizeProjectRoot = functionBody(source, "normalize_project_root");
   const projectRootKey = functionBody(source, "project_root_key");
@@ -88,9 +91,23 @@ test("DX project context centralizes bounded local-first paths", () => {
     receiptRootFor,
     /Self::detect\(root\)\.map\(\|context\| context\.receipt_root\(receipt_kind\)\)/,
   );
+  assert.match(auditRoot, /self\.dx_metadata_root\.join\("audit"\)\.join\(audit_kind\)/);
+  assert.match(
+    auditRootFor,
+    /Self::detect\(root\)\.map\(\|context\| context\.audit_root\(audit_kind\)\)/,
+  );
   assert.match(workspaceReceiptRoots, /\.take\(DX_PROJECT_CONTEXT_WORKSPACE_ROOT_LIMIT\)/);
   assert.match(workspaceReceiptRoots, /\.filter_map\(\|root\| Self::detect\(root\)\)/);
   assert.match(workspaceReceiptRoots, /context\.receipt_root\(receipt_kind\)/);
+  assert.match(auditRootCandidates, /contexts_for_workspace_roots\(workspace_roots\)/);
+  assert.match(auditRootCandidates, /\.take\(DX_PROJECT_CONTEXT_WORKSPACE_ROOT_LIMIT\)/);
+  assertBefore(
+    auditRootCandidates,
+    /context\.audit_root\(audit_kind\)/,
+    /fallback_workspace_root\.as_ref\(\)/,
+    "project-local audit roots must be listed before shared fallback roots",
+  );
+  assert.match(auditRootCandidates, /Self::audit_root_for/);
   assert.match(receiptRootCandidates, /contexts_for_workspace_roots\(workspace_roots\)/);
   assert.match(receiptRootCandidates, /\.take\(DX_PROJECT_CONTEXT_WORKSPACE_ROOT_LIMIT\)/);
   assertBefore(
@@ -124,6 +141,7 @@ test("DX project context is wired into Check, Style, Deploy, and Web Preview DX 
   const deployCheckRoots = read("crates/agent_ui/src/dx_deploy_check_roots.rs");
   const deployHubRoots = read("crates/agent_ui/src/dx_deploy_hub_roots.rs");
   const launchReceiptRoots = read("crates/agent_ui/src/dx_launch_receipt_roots.rs");
+  const launchSourceAuditPaths = read("crates/agent_ui/src/dx_launch_source_audit/paths.rs");
   const dxStudioProject = read("crates/web_preview/src/dx_studio/project.rs");
 
   assert.match(agentRoot, /pub mod dx_project_context;/);
@@ -159,6 +177,10 @@ test("DX project context is wired into Check, Style, Deploy, and Web Preview DX 
   assert.match(launchReceiptRoots, /\.find\(\|root\| root\.is_dir\(\)\)/);
   assert.match(agentPanel, /launch_status_snapshot_for_roots\(&workspace_roots\)/);
   assert.match(agentPanel, /launch_receipt_review_snapshot_for_roots\(&workspace_roots\)/);
+  assert.match(agentPanel, /launch_source_audit_snapshot_for_roots\(&workspace_roots\)/);
+  assert.match(launchSourceAuditPaths, /use crate::dx_project_context::DxProjectContext;/);
+  assert.match(launchSourceAuditPaths, /DxProjectContext::audit_root_candidates/);
+  assert.match(launchSourceAuditPaths, /DxProjectContext::shared_fallback_root/);
   assert.match(dxStudioProject, /use agent_ui::dx_project_context::DxProjectContext;/);
   assert.match(dxStudioProject, /let project_context = DxProjectContext::detect\(root\);/);
   assert.match(dxStudioProject, /context\.dx_config_path/);

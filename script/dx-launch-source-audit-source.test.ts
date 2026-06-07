@@ -42,6 +42,12 @@ test("DX launch source audit keeps paths, packet IO, fields, rows, and status fo
   assert.match(parent, /use self::paths::source_audit_paths;/);
   assert.match(parent, /use self::rows::\{delta_row, repo_row\};/);
   assert.match(parent, /use self::status::\{source_audit_operator_summary, source_audit_status\};/);
+  assert.match(parent, /pub\(crate\) fn launch_source_audit_snapshot_for_roots/);
+  assert.match(parent, /let paths = source_audit_paths\(workspace_roots\);/);
+  assert.match(parent, /cached_root == &paths\.root/);
+  assert.match(parent, /cached_qa_path == &paths\.dx_studio_qa_path/);
+  assert.doesNotMatch(parent, /SOURCE_AUDIT_ROOT/);
+  assert.doesNotMatch(parent, /DX_STUDIO_QA_LATEST/);
   assert.doesNotMatch(parent, /fn read_json_packet\(/);
   assert.doesNotMatch(parent, /fn packet_schema\(/);
   assert.doesNotMatch(parent, /fn repo_row\(/);
@@ -60,7 +66,12 @@ test("DX launch source audit keeps paths, packet IO, fields, rows, and status fo
   assert.match(packetIo, /serde_json::from_slice\(&buffer\)/);
   assert.doesNotMatch(packetIo, /read_to_string/);
   assert.match(paths, /pub\(super\) struct SourceAuditPaths/);
-  assert.match(paths, /pub\(super\) fn source_audit_paths/);
+  assert.match(paths, /use crate::dx_project_context::DxProjectContext;/);
+  assert.match(paths, /pub\(super\) fn source_audit_paths\(workspace_roots: &\[String\]\)/);
+  assert.match(paths, /active_audit_root\(workspace_roots, SOURCE_AUDIT_KIND\)/);
+  assert.match(paths, /active_audit_root\(workspace_roots, DX_STUDIO_QA_AUDIT_KIND\)/);
+  assert.match(paths, /DxProjectContext::audit_root_candidates/);
+  assert.match(paths, /\.find\(\|root\| root\.is_dir\(\)\)/);
   assert.match(rows, /pub\(super\) fn repo_row/);
   assert.match(rows, /pub\(super\) fn delta_row/);
   assert.match(rows, /fn signed_field/);
