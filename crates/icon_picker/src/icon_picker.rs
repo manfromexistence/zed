@@ -15,7 +15,7 @@ use std::{
     sync::OnceLock,
 };
 use strum::IntoEnumIterator;
-use ui::{TintColor, Tooltip, prelude::*};
+use ui::{TintColor, Tooltip, dx_icon_data_dir, prelude::*};
 use workspace::{
     DraggedIconAsset, Workspace,
     dock::{DockPosition, Panel, PanelEvent, side_panel_header_controls},
@@ -32,7 +32,6 @@ actions!(
 );
 
 const ICON_PICKER_PANEL_KEY: &str = "IconPickerPanel";
-const DX_ICON_DATA_DIR: &str = "G:/Assets/icon/data";
 const ICON_PACK_INDEX: &str = include_str!("icon_pack_index.tsv");
 const ICON_REPRESENTATIVE_BODIES: &str = include_str!("icon_representative_bodies.tsv");
 const MAX_ICON_RESULTS: usize = 360;
@@ -2298,9 +2297,7 @@ fn icon_preview_batch_signature(icons: &[ExternalIcon]) -> String {
 }
 
 fn external_icon_data_dir() -> PathBuf {
-    std::env::var("DX_ICONS_DATA_DIR")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from(DX_ICON_DATA_DIR))
+    dx_icon_data_dir()
 }
 
 fn external_icon_preview_path(icon: &ExternalIcon) -> PathBuf {

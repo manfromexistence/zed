@@ -4,12 +4,14 @@ import test from "node:test";
 
 const sourcePath = "crates/icon_picker/src/icon_picker.rs";
 const editorSourcePath = "crates/editor/src/items.rs";
+const uiIconPathsSourcePath = "crates/ui/src/dx_icon_paths.rs";
 
 const productionSource = (source: string) =>
   source.split(/\r?\n#\[cfg\(test\)\]\r?\nmod tests\s*\{/)[0] ?? source;
 
 const source = productionSource(readFileSync(sourcePath, "utf8"));
 const editorSource = productionSource(readFileSync(editorSourcePath, "utf8"));
+const uiIconPathsSource = productionSource(readFileSync(uiIconPathsSourcePath, "utf8"));
 
 function functionBody(source: string, name: string): string {
   const start = source.search(new RegExp(`fn\\s+${name}(?:\\s*<[^>]+>)?\\s*\\(`));
@@ -199,11 +201,50 @@ test("icon insertion guards supported editors and safe React asset names", () =>
   assert.match(reactIconComponentName, /name\.push_str\("Icon"\)/);
 });
 
+test("DX icon data resolves through the shared DX icon source order", () => {
+  const candidates = functionBody(uiIconPathsSource, "dx_icon_data_dir_candidates");
+  const resolver = functionBody(uiIconPathsSource, "resolve_dx_icon_data_dir");
+  const pickerDataDir = functionBody(source, "external_icon_data_dir");
+  const iconifySvgSource = functionBody(editorSource, "iconify_svg_source");
+
+  assertBefore(candidates, "DX_ICON_INDEX_ENV", "DX_ICON_DATA_ENV", "DX_ICON_INDEX should win first");
+  assertBefore(candidates, "DX_ICON_DATA_ENV", "DX_ICON_ROOT_ENV", "DX_ICON_DATA should win before root");
+  assertBefore(
+    candidates,
+    "DX_ICON_ROOT_ENV",
+    "LEGACY_DX_ICONS_DATA_DIR_ENV",
+    "DX_ICON_ROOT should win before the legacy env",
+  );
+  assertBefore(
+    candidates,
+    "LEGACY_DX_ICONS_DATA_DIR_ENV",
+    "DX_HOME_ENV",
+    "legacy env should stay only as compatibility after DX source vars",
+  );
+  assertBefore(candidates, "DX_HOME_ENV", "SHARED_DX_ICON_ROOT", "DX_HOME icon should win before shared fallback");
+  assertBefore(candidates, "SHARED_DX_ICON_ROOT", "USERPROFILE_ENV", "shared DX checkout should win before user fallback");
+
+  assert.match(
+    resolver,
+    /file_name\(\)\s*\.is_some_and\(\|name\| name == OsStr::new\("data"\)\)/,
+  );
+  assert.match(resolver, /candidate\.join\("data"\)/);
+  assert.match(resolver, /OsStr::new\("index"\)/);
+  assert.match(resolver, /root\.join\("data"\)/);
+  assert.match(pickerDataDir, /dx_icon_data_dir\(\)/);
+  assert.match(iconifySvgSource, /dx_icon_data_dir\(\)\.join\(format!\("\{pack\}\.json"\)\)/);
+
+  const combinedProduction = `${source}\n${editorSource}\n${uiIconPathsSource}`;
+  assert.doesNotMatch(combinedProduction, /G:\/Assets\/icon\/data|DX_ICON_DATA_DIR/);
+});
+
 test("icon picker source guard is focused on production editor code", () => {
   assert.equal(sourcePath, "crates/icon_picker/src/icon_picker.rs");
   assert.equal(editorSourcePath, "crates/editor/src/items.rs");
+  assert.equal(uiIconPathsSourcePath, "crates/ui/src/dx_icon_paths.rs");
   assert.doesNotMatch(sourcePath, /test/i);
   assert.doesNotMatch(editorSourcePath, /test/i);
+  assert.doesNotMatch(uiIconPathsSourcePath, /test/i);
   assert.doesNotMatch(
     source,
     /#\[cfg\(test\)\]/,
@@ -213,5 +254,10 @@ test("icon picker source guard is focused on production editor code", () => {
     editorSource,
     /#\[cfg\(test\)\]/,
     "source guard should only inspect production editor insertion code",
+  );
+  assert.doesNotMatch(
+    uiIconPathsSource,
+    /#\[cfg\(test\)\]/,
+    "source guard should only inspect production DX icon path code",
   );
 });

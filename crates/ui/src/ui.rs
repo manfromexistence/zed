@@ -9,6 +9,7 @@
 
 pub mod component_prelude;
 mod components;
+mod dx_icon_paths;
 mod dx_icons;
 pub mod prelude;
 mod styles;
@@ -16,6 +17,7 @@ mod traits;
 pub mod utils;
 
 pub use components::*;
+pub use dx_icon_paths::*;
 pub use dx_icons::*;
 pub use prelude::*;
 pub use styles::*;

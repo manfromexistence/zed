@@ -1,3 +1,21 @@
+[2026-06-07] - Shared DX Icon Data Resolver
+
+ADDED:
+- `crates\ui\src\dx_icon_paths.rs` centralizes DX icon data directory resolution for Iconify pack JSON, preferring `DX_ICON_INDEX`, `DX_ICON_DATA`, `DX_ICON_ROOT`, legacy `DX_ICONS_DATA_DIR`, `DX_HOME\icon`, `G:\Dx\icon`, then `%USERPROFILE%\.dx\icon`.
+
+CHANGED:
+- `crates\icon_picker\src\icon_picker.rs` and `crates\editor\src\items.rs` now use the shared resolver instead of the old hardcoded `G:/Assets/icon/data` fallback.
+- `script\dx-icon-picker-source.test.ts`, `DX.md`, and `todo.txt` now guard and document the shared DX icon source-order boundary.
+
+PASSED:
+- `node --test script\dx-icon-picker-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\ui\src\dx_icon_paths.rs crates\ui\src\ui.rs crates\icon_picker\src\icon_picker.rs crates\editor\src\items.rs`
+- `git diff --check`
+- `rg -n "^<<<<<<<|^=======|^>>>>>>>" ...` across the touched icon resolver source, guard, DX, todo, and changelog files returned no matches.
+
+NOTES:
+- This checkpoint is source-only. Cargo, `just run`, local servers, browser/WebView proof, icon picker runtime proof, and editor insertion runtime proof remain skipped by instruction.
+
 [2026-06-07] - Safe GPUI Gradient Helpers
 
 ADDED:

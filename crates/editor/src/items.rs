@@ -42,7 +42,7 @@ use std::{
     sync::Arc,
 };
 use text::{BufferId, BufferSnapshot, OffsetRangeExt, Selection};
-use ui::{IconDecorationKind, prelude::*};
+use ui::{IconDecorationKind, dx_icon_data_dir, prelude::*};
 use util::{ResultExt, TryFutureExt, asset_str, paths::PathExt, rel_path::RelPath};
 use workspace::item::{
     Dedup, ItemSettings, SerializableItem, TabContentParams, WorkspaceScreenKind,
@@ -620,10 +620,7 @@ struct IconifyAlias {
 }
 
 fn iconify_svg_source(pack: &str, name: &str, width: u32, height: u32) -> Option<String> {
-    let path = std::env::var("DX_ICONS_DATA_DIR")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from("G:/Assets/icon/data"))
-        .join(format!("{pack}.json"));
+    let path = dx_icon_data_dir().join(format!("{pack}.json"));
     let text = std_fs::read_to_string(path).ok()?;
     let pack = serde_json::from_str::<IconifyBodyPack>(&text).ok()?;
     let (body, icon_width, icon_height) = if let Some(icon) = pack.icons.get(name) {
