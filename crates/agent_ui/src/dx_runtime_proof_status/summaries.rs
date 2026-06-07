@@ -26,6 +26,8 @@ pub(super) fn parse_plan_summary(path: &Path, label: &str) -> Option<DxRuntimePr
             .or_else(|| compact_string_at(evidence_contract, "final_command")),
         checklist_step_count,
         required_step_count: usize_at(status, "required_step_count"),
+        profile_backend_lane_count: array_len_at(plan, "profile_backend_lanes"),
+        profile_backend_lanes: profile_backend_lane_labels(plan),
         minimum_evidence_lines_for_pass: usize_at(
             evidence_contract,
             "minimum_evidence_lines_for_pass",
@@ -42,11 +44,32 @@ pub(super) fn parse_plan_summary(path: &Path, label: &str) -> Option<DxRuntimePr
                 evidence_contract,
                 "runtime_green_claim_requires_import_receipt",
             ),
+        requires_profile_backend_proofs: bool_at(request, "require_profile_backend_proofs"),
         blocker_count: usize_at(status, "blocker_count").max(blockers.len()),
         blockers,
         next_action: compact_string_at(plan, "next_action")
             .or_else(|| compact_string_at(&value, "next_action")),
     })
+}
+
+fn profile_backend_lane_labels(plan: &Value) -> Vec<String> {
+    plan.get("profile_backend_lanes")
+        .and_then(Value::as_array)
+        .map(|lanes| {
+            lanes
+                .iter()
+                .take(4)
+                .filter_map(|lane| {
+                    let label = compact_string_at(lane, "label")?;
+                    let profile = compact_string_at(lane, "profile");
+                    Some(match profile {
+                        Some(profile) => format!("{profile}: {label}"),
+                        None => label,
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default()
 }
 
 pub(super) fn parse_import_summary(

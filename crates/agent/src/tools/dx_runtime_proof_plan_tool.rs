@@ -32,6 +32,8 @@ pub struct DxRuntimeProofPlanToolInput {
     pub require_runtime_visual_evidence: bool,
     /// Require a follow-up managed import receipt via `import_dx_runtime_proof`.
     pub require_runtime_proof_import: bool,
+    /// Require backend proof lanes for Search, Study, Media, and Web Preview.
+    pub require_profile_backend_proofs: bool,
     /// Optional operator notes to carry into the plan receipt.
     pub operator_notes: Vec<String>,
     /// Persist the plan to a managed runtime-proof plan receipt after authorization.
@@ -48,6 +50,7 @@ impl Default for DxRuntimeProofPlanToolInput {
             require_diff_check: true,
             require_runtime_visual_evidence: true,
             require_runtime_proof_import: true,
+            require_profile_backend_proofs: true,
             operator_notes: Vec::new(),
             write_runtime_proof_plan_receipt: true,
             receipt_root_mode: DxRuntimeProofPlanReceiptRootMode::Workspace,
@@ -126,6 +129,10 @@ impl AgentTool for DxRuntimeProofPlanTool {
                         "require_runtime_proof_import={}",
                         input.require_runtime_proof_import
                     ),
+                    format!(
+                        "require_profile_backend_proofs={}",
+                        input.require_profile_backend_proofs
+                    ),
                 ];
                 if let Some(receipt_target) = &receipt_target {
                     permission_values.push(path_string(&receipt_target.latest_path));
@@ -148,6 +155,7 @@ impl AgentTool for DxRuntimeProofPlanTool {
                     require_diff_check: input.require_diff_check,
                     require_runtime_visual_evidence: input.require_runtime_visual_evidence,
                     require_runtime_proof_import: input.require_runtime_proof_import,
+                    require_profile_backend_proofs: input.require_profile_backend_proofs,
                     operator_notes: input.operator_notes,
                     root_mode,
                 },

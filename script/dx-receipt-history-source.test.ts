@@ -45,6 +45,21 @@ test("DX receipt history keeps bucket scanning, receipt IO, Forge summaries, and
   assert.match(buckets, /pub\(super\) fn scan_tool_history/);
   assert.match(buckets, /fn scan_bucket/);
   assert.match(buckets, /Forge History/);
+  assert.match(buckets, /Metasearch Source Packs/);
+  assert.match(buckets, /Metasearch Context/);
+  assert.match(buckets, /Source Attachments/);
+  assert.match(
+    buckets,
+    /Path::new\("tools"\)[\s\S]*?\.join\("dx-metasearch"\)[\s\S]*?\.join\("source-packs"\)/,
+  );
+  assert.match(
+    buckets,
+    /Path::new\("tools"\)[\s\S]*?\.join\("dx-metasearch"\)[\s\S]*?\.join\("context"\)/,
+  );
+  assert.match(
+    buckets,
+    /Path::new\("tools"\)[\s\S]*?\.join\("dx-sources"\)[\s\S]*?\.join\("attachments"\)/,
+  );
   assert.match(fields, /pub\(super\) fn string_field/);
   assert.match(fields, /pub\(super\) fn safe_string_field/);
   assert.match(fields, /pub\(super\) fn bool_field/);
@@ -78,7 +93,7 @@ test("DX receipt history keeps bucket scanning, receipt IO, Forge summaries, and
   assert.doesNotMatch(receiptIo, /fn receipt_reader/);
 
   assert.ok(lineCount(parentPath) < 95, "dx_receipt_history.rs should stay focused on cache and public snapshot types");
-  assert.ok(lineCount(bucketsPath) < 95, "receipt-history bucket scanner should stay small");
+  assert.ok(lineCount(bucketsPath) < 115, "receipt-history bucket scanner should stay small");
   assert.ok(lineCount(fieldsPath) < 75, "receipt-history field helpers should stay small");
   assert.ok(lineCount(forgePath) < 85, "receipt-history Forge summary parser should stay small");
   assert.ok(lineCount(forgeFieldsPath) < 120, "receipt-history Forge field parser should stay small");

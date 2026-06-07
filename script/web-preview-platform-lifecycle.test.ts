@@ -577,12 +577,17 @@ for (const [name, path, cfg] of platformLibs) {
   });
 }
 
-for (const [name, path] of platformViews) {
+for (const [name, path] of desktopOnboardingPreviewViews) {
   test(`${name} web preview exposes a startup hook without opening anything eagerly`, () => {
     const source = read(path);
+    const startup = functionBody(source, "ensure_startup_preview");
 
     assert.match(source, /pub fn ensure_startup_preview\(\s*workspace: &mut Workspace,/);
-    assert.match(source, /let _ = \(workspace, window, cx\);/);
+    assert.match(startup, /let _ = \(workspace, window, cx\);/);
+    assert.doesNotMatch(
+      startup,
+      /NewWebPreview|OpenDxWwwPreview|OpenBundledDxPreview|new_for_url|open_url|navigate|load_url|dispatch_action|cx\.spawn|cx\.background_spawn|workspace\.(add|activate|open)/,
+    );
   });
 }
 

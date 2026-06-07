@@ -21,6 +21,20 @@ pub(super) fn scan_tool_history(workspace_roots: &[String]) -> DxToolHistorySnap
             Path::new("tools").join("dx-media").join("executions"),
         ),
         (
+            "Metasearch Source Packs",
+            Path::new("tools")
+                .join("dx-metasearch")
+                .join("source-packs"),
+        ),
+        (
+            "Metasearch Context",
+            Path::new("tools").join("dx-metasearch").join("context"),
+        ),
+        (
+            "Source Attachments",
+            Path::new("tools").join("dx-sources").join("attachments"),
+        ),
+        (
             "Serializer/RLM",
             Path::new("tools").join("dx-serializer-rlm"),
         ),

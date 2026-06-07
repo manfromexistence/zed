@@ -553,9 +553,12 @@ fn read_receipt_json(path: &Path) -> Option<Value> {
     let mut file = File::open(path).ok()?;
     let mut buffer = Vec::new();
     file.by_ref()
-        .take(MAX_ATTACHMENT_RECEIPT_BYTES)
+        .take(MAX_ATTACHMENT_RECEIPT_BYTES + 1)
         .read_to_end(&mut buffer)
         .ok()?;
+    if buffer.len() as u64 > MAX_ATTACHMENT_RECEIPT_BYTES {
+        return None;
+    }
     serde_json::from_slice(&buffer).ok()
 }
 

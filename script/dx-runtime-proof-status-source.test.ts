@@ -5,6 +5,40 @@ import test from "node:test";
 const read = (path: string) => readFileSync(path, "utf8");
 const lineCount = (path: string) => read(path).split(/\r?\n/).length;
 
+test("DX runtime proof plan owns backend proof lanes before runtime-green import", () => {
+  const plan = read("crates/agent/src/dx_runtime_proof_plan.rs");
+  const planTool = read("crates/agent/src/tools/dx_runtime_proof_plan_tool.rs");
+  const runtimePrompt = read("crates/agent_ui/src/dx_launch_prompts/runtime_proof.rs");
+
+  assert.match(plan, /pub\(crate\) struct DxRuntimeProofProfileBackendLane/);
+  assert.match(plan, /pub\(crate\) const DX_RUNTIME_PROOF_PROFILE_BACKEND_LANES/);
+  for (const lane of [
+    "dx-metasearch-live-proof",
+    "study-source-workspace-execution",
+    "media-provider-readiness-proof",
+    "web-preview-runtime-proof",
+  ]) {
+    assert.match(plan, new RegExp(`lane_id: "${lane}"`), `${lane} should be serialized as lane metadata`);
+  }
+  assert.match(plan, /step_id: lane\.lane_id/);
+
+  assert.match(plan, /require_profile_backend_proofs: bool/);
+  assert.match(plan, /profile_backend_lanes: Vec<DxRuntimeProofProfileBackendLane>/);
+  assert.match(plan, /minimum_evidence_lines_for_pass:\s*if request\.require_profile_backend_proofs/);
+  assert.match(plan, /runtime_green_claim_ready: false/);
+  assert.match(plan, /runs_just_run: false/);
+  assert.match(plan, /runs_cargo: false/);
+  assert.match(plan, /starts_local_servers: false/);
+  assert.match(plan, /dispatches_browser_input: false/);
+  assert.match(plan, /runs_external_processes: false/);
+
+  assert.match(planTool, /pub require_profile_backend_proofs: bool/);
+  assert.match(planTool, /require_profile_backend_proofs: true/);
+  assert.match(planTool, /format!\(\s*"require_profile_backend_proofs=\{\}"/);
+  assert.match(runtimePrompt, /profile_backend_proofs/);
+  assert.match(runtimePrompt, /backend lanes/);
+});
+
 test("DX runtime proof status keeps receipt IO and JSON helpers focused", () => {
   const parentPath = "crates/agent_ui/src/dx_runtime_proof_status.rs";
   const receiptsPath = "crates/agent_ui/src/dx_runtime_proof_status/receipts.rs";
@@ -58,6 +92,9 @@ test("DX runtime proof status keeps receipt IO and JSON helpers focused", () => 
     summaries,
     /expected_final_command: compact_string_at\(request, "expected_final_command"\)/,
   );
+  assert.match(summaries, /profile_backend_lane_count: array_len_at\(plan, "profile_backend_lanes"\)/);
+  assert.match(summaries, /profile_backend_lanes: profile_backend_lane_labels\(plan\)/);
+  assert.match(summaries, /fn profile_backend_lane_labels\(plan: &Value\) -> Vec<String>/);
   assert.match(summaries, /next_action: compact_string_at\(plan, "next_action"\)/);
   assert.match(
     summaries,
@@ -76,5 +113,5 @@ test("DX runtime proof status keeps receipt IO and JSON helpers focused", () => 
   assert.ok(lineCount(parentPath) < 280, "dx_runtime_proof_status.rs should stay focused on snapshot assembly");
   assert.ok(lineCount(receiptsPath) < 95, "runtime-proof receipt IO module should stay small");
   assert.ok(lineCount(fieldsPath) < 95, "runtime-proof JSON field module should stay small");
-  assert.ok(lineCount(summariesPath) < 130, "runtime-proof summary parser module should stay small");
+  assert.ok(lineCount(summariesPath) < 150, "runtime-proof summary parser module should stay small");
 });

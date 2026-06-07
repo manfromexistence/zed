@@ -164,12 +164,14 @@ fn runtime_proof_status_prompt_context(snapshot: &DxRuntimeProofStatusSnapshot) 
                 .clone()
                 .unwrap_or_else(|| "unknown command".to_string());
             format!(
-                "latest plan {} status {} command {} steps {} required {} minimum_evidence {} examples {} requirements {} blockers {}",
+                "latest plan {} status {} command {} steps {} required {} profile_backend_proofs {} backend lanes {} minimum_evidence {} examples {} requirements {} blockers {}",
                 plan.label,
                 plan.status,
                 command,
                 plan.checklist_step_count,
                 plan.required_step_count,
+                plan.profile_backend_lane_count,
+                bounded_join(&plan.profile_backend_lanes, 4, "no backend proof lanes"),
                 runtime_proof_minimum_evidence(plan),
                 bounded_join(
                     &plan.accepted_evidence_examples,
@@ -292,6 +294,9 @@ fn runtime_proof_plan_requirements(
     }
     if plan.requires_import {
         requirements.push("runtime_proof_import");
+    }
+    if plan.requires_profile_backend_proofs {
+        requirements.push("profile_backend_proofs");
     }
 
     if requirements.is_empty() {

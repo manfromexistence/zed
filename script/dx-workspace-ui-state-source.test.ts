@@ -811,7 +811,18 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
     "composer option ids must stay unique",
   );
   assert.match(composerProfileOptions, /"DX MetaSearch and Web Preview evidence"/);
+  assert.equal(
+    [
+      ...composerProfileOptions.matchAll(
+        /control_state: ComposerSlotControlState::BackendPending/g,
+      ),
+    ].length,
+    1,
+    "only Media provider controls should be backend-pending",
+  );
   assert.match(composerProfileOptions, /MEDIA_PROVIDER_CONTRACT[\s\S]*?BackendPending/);
+  assert.match(composerProfileOptions, /SEARCH_CONTRACT[\s\S]*?DisplayOnly/);
+  assert.match(composerProfileOptions, /STUDY_CONTRACT[\s\S]*?DisplayOnly/);
   assert.match(composerProfileOptions, /MEDIA_RECEIPT_CONTRACT[\s\S]*?DisplayOnly/);
   assert.match(threadView, /fn render_composer_option_overflow/);
   assert.match(threadView, /const MAX_VISIBLE_PROFILE_OPTION_SLOTS: usize = 4;/);
@@ -910,6 +921,13 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.doesNotMatch(mediaProfile, /"list_dx_launch_demo_recipes": true/);
   assert.doesNotMatch(mediaProfile, /"execute_dx_media_tool": true/);
   assert.doesNotMatch(mediaProfile, /"prepare_agent_plugin_runtime": true/);
+  assert.match(agentPanel, /const DX_MEDIA_PROOF_PROMPT: &str = "Prepare the DX media provider proof flow/);
+  assert.doesNotMatch(agentPanel, /DX_MEDIA_PROOF_PROMPT[\s\S]*?list_dx_launch_demo_recipes/);
+  assert.doesNotMatch(agentPanel, /DX_MEDIA_PROOF_PROMPT[\s\S]*?execute_dx_media_tool/);
+  assert.match(
+    agentPanel,
+    /"Plan, gate, and attach media receipts; execution waits for an approved provider run gate\."/,
+  );
   assert.match(defaultSettings, /"search": \{\s*"name": "Search"/);
   assert.doesNotMatch(searchProfile, /"prepare_agent_plugin_runtime": true/);
   assert.match(defaultSettings, /"study": \{\s*"name": "Study"/);

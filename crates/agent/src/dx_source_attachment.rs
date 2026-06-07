@@ -384,10 +384,7 @@ fn media_sources_from_receipt(receipt: &ReceiptCandidate) -> Vec<DxSourceAttachm
         .iter()
         .filter_map(|file| {
             let path = string_at(file, &["path"])?;
-            let exists = bool_at(file, &["exists"]).unwrap_or_else(|| Path::new(&path).is_file());
-            if !exists {
-                return None;
-            }
+            let file_exists = Path::new(&path).is_file();
 
             let label = Path::new(&path)
                 .file_name()
@@ -397,15 +394,30 @@ fn media_sources_from_receipt(receipt: &ReceiptCandidate) -> Vec<DxSourceAttachm
             let media_kind =
                 string_at(file, &["media_kind"]).unwrap_or_else(|| "media".to_string());
             let format = string_at(file, &["format"]).unwrap_or_else(|| "output".to_string());
-            let size_bytes = u64_at(file, &["size_bytes"]).unwrap_or_default();
+            let size_bytes = Path::new(&path)
+                .metadata()
+                .ok()
+                .map(|metadata| metadata.len())
+                .or_else(|| u64_at(file, &["size_bytes"]))
+                .unwrap_or_default();
+            let attachment_path = if file_exists {
+                path.clone()
+            } else {
+                receipt.path.display().to_string()
+            };
+            let detail = if file_exists {
+                format!("{media_kind} - {format} - {}", format_bytes(size_bytes))
+            } else {
+                format!("{media_kind} - {format} - missing output; receipt retained for review")
+            };
 
             Some(DxSourceAttachmentItem {
                 id: format!("media-output-{}", stable_id_fragment(&path)),
                 label,
                 kind: "media_output",
-                attach_as: "file",
-                path,
-                detail: format!("{media_kind} - {format} - {}", format_bytes(size_bytes)),
+                attach_as: if file_exists { "file" } else { "receipt" },
+                path: attachment_path,
+                detail,
                 estimated_tokens: 0,
                 binary_payload_embedded: false,
             })
@@ -504,9 +516,12 @@ fn read_receipt_json(path: &Path) -> Option<Value> {
     let mut file = File::open(path).ok()?;
     let mut buffer = Vec::new();
     file.by_ref()
-        .take(MAX_RECEIPT_BYTES)
+        .take(MAX_RECEIPT_BYTES + 1)
         .read_to_end(&mut buffer)
         .ok()?;
+    if buffer.len() as u64 > MAX_RECEIPT_BYTES {
+        return None;
+    }
     serde_json::from_slice(&buffer).ok()
 }
 

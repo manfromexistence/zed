@@ -192,7 +192,7 @@ fn metasearch_source_from_receipt(receipt: &ReceiptCandidate) -> Option<DxSource
         open_path: receipt.path.display().to_string(),
         kind: DxSourceKind::MetasearchSourcePack,
         receipt_drilldowns: vec![receipt_drilldown("Source-pack receipt", receipt)],
-        proofs: Vec::new(),
+        proofs: vec![format!("Source-pack receipt {}", receipt.label)],
         warnings: Vec::new(),
     })
 }
@@ -218,11 +218,8 @@ fn media_sources_from_receipt(receipt: &ReceiptCandidate) -> Vec<DxSourceItem> {
         .filter_map(|file| {
             let path = string_at(file, &["path"])?;
             let open_path = receipt_declared_open_path(&path, receipt);
-            let exists =
-                bool_at(file, &["exists"]).unwrap_or_else(|| Path::new(&open_path).is_file());
-            if !exists {
-                return None;
-            }
+            let file_exists = Path::new(&open_path).is_file();
+            let receipt_declared_exists = bool_at(file, &["exists"]);
 
             let label = Path::new(&path)
                 .file_name()
@@ -232,16 +229,38 @@ fn media_sources_from_receipt(receipt: &ReceiptCandidate) -> Vec<DxSourceItem> {
             let media_kind =
                 string_at(file, &["media_kind"]).unwrap_or_else(|| "media".to_string());
             let format = string_at(file, &["format"]).unwrap_or_else(|| "output".to_string());
-            let size_bytes = u64_at(file, &["size_bytes"]).unwrap_or_default();
+            let size_bytes = Path::new(&open_path)
+                .metadata()
+                .ok()
+                .map(|metadata| metadata.len())
+                .or_else(|| u64_at(file, &["size_bytes"]))
+                .unwrap_or_default();
             let sha256 = string_at(file, &["sha256"]);
-            let mut proofs = vec!["Output exists on disk".to_string()];
-            if let Some(sha256) = sha256 {
-                proofs.push(format!("sha256 {}", short_hash(&sha256)));
+            let mut proofs = if file_exists {
+                vec!["Output exists on disk".to_string()]
+            } else {
+                vec!["Output missing on disk".to_string()]
+            };
+            if file_exists {
+                if let Some(sha256) = sha256 {
+                    proofs.push(format!("sha256 {}", short_hash(&sha256)));
+                }
             }
             proofs.push(format!("Receipt {}", receipt.label));
 
             let mut warnings = Vec::new();
-            if size_bytes == 0 {
+            if !file_exists {
+                warnings.push(
+                    "Produced file is missing; generation cannot be claimed from this receipt."
+                        .to_string(),
+                );
+                if receipt_declared_exists.unwrap_or(false) {
+                    warnings.push(
+                        "Receipt declared the file existed, but the file is missing on disk."
+                            .to_string(),
+                    );
+                }
+            } else if size_bytes == 0 {
                 warnings.push("Produced file is empty".to_string());
             }
 

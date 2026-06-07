@@ -18,6 +18,7 @@ const metasearchExtractTool = read(
 const metasearchContextTool = read(
   "crates/agent/src/tools/dx_metasearch_context_adapter_tool.rs",
 );
+const metasearchBridge = read("crates/agent/src/dx_metasearch_agent_bridge.rs");
 const sourceAttachmentTool = read("crates/agent/src/tools/dx_source_attachment_tool.rs");
 
 const objectBlock = (source: string, key: string, fromIndex = 0) => {
@@ -126,4 +127,51 @@ test("Search profile tools are backed by registered native Agent tools", () => {
   ]) {
     assert.match(thread, new RegExp(`self\\.add_tool\\(${toolType}::new`));
   }
+});
+
+test("Study and Media profiles stay evidence-first while backends are pending", () => {
+  const profiles = objectBlock(defaultSettings, "profiles");
+  const studyProfile = objectBlock(profiles, "study");
+  const studyTools = objectBlock(studyProfile, "tools");
+  const mediaProfile = objectBlock(profiles, "media");
+  const mediaTools = objectBlock(mediaProfile, "tools");
+
+  assert.match(studyTools, /"extract_dx_metasearch_source": true/);
+  assert.match(studyTools, /"prepare_dx_source_attachment": true/);
+  assert.match(studyTools, /"prepare_dx_metasearch_context": true/);
+  assert.doesNotMatch(
+    studyTools,
+    /"spawn_agent": true|"prepare_agent_plugin_runtime": true|"execute_dx_media_tool": true|"plan_dx_runtime_proof": true/,
+  );
+
+  assert.deepEqual(
+    [...mediaTools.matchAll(/"([^"]+)": true/g)].map(([, tool]) => tool).sort(),
+    [
+      "diagnostics",
+      "fetch",
+      "find_path",
+      "gate_dx_media_tool_runner",
+      "grep",
+      "list_agent_plugins",
+      "list_directory",
+      "plan_dx_media_tool",
+      "prepare_dx_source_attachment",
+      "read_file",
+      "search_web",
+      "skill",
+      "update_title",
+    ].sort(),
+  );
+  assert.doesNotMatch(
+    mediaTools,
+    /"execute_dx_media_tool": true|"prepare_agent_plugin_runtime": true|"list_dx_launch_demo_recipes": true|"plan_dx_runtime_proof": true/,
+  );
+});
+
+test("DX metasearch bridge keeps live proof reads bounded", () => {
+  assert.match(metasearchBridge, /const MAX_METASEARCH_RESPONSE_BYTES: usize = 1_500_000;/);
+  assert.match(metasearchBridge, /read_bounded_http_response_body\(/);
+  assert.match(metasearchBridge, /\.take\(\(MAX_METASEARCH_RESPONSE_BYTES \+ 1\) as u64\)/);
+  assert.match(metasearchBridge, /buffer\.len\(\) > MAX_METASEARCH_RESPONSE_BYTES/);
+  assert.doesNotMatch(metasearchBridge, /\.read_to_end\(&mut body\)\s*\.await/);
 });

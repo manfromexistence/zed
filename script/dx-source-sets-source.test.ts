@@ -5,6 +5,29 @@ import test from "node:test";
 const read = (path: string) => readFileSync(path, "utf8");
 const lineCount = (path: string) => read(path).split(/\r?\n/).length;
 
+const functionBody = (source: string, name: string) => {
+  const start = source.indexOf(`fn ${name}(`);
+  assert.ok(start >= 0, `expected ${name}`);
+
+  const bodyStart = source.indexOf("{", start);
+  assert.ok(bodyStart > start, `expected ${name} body`);
+
+  let depth = 0;
+  for (let index = bodyStart; index < source.length; index += 1) {
+    const character = source[index];
+    if (character === "{") {
+      depth += 1;
+    } else if (character === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return source.slice(start, index + 1);
+      }
+    }
+  }
+
+  assert.fail(`expected ${name} body to close`);
+};
+
 test("DX source sets keep receipt IO and JSON field helpers in focused modules", () => {
   const parentPath = "crates/agent_ui/src/dx_source_sets.rs";
   const attachmentSummaryPath =
@@ -89,12 +112,42 @@ test("DX source sets keep receipt IO and JSON field helpers in focused modules",
   assert.ok(lineCount(restorePath) < 50, "source-set restore warning module should stay small");
 });
 
+test("DX source sets surface receipt-backed proof and missing media honestly", () => {
+  const sourceSets = read("crates/agent_ui/src/dx_source_sets.rs");
+  const attachments = read("crates/agent/src/dx_source_attachment.rs");
+  const metasearchSource = functionBody(sourceSets, "metasearch_source_from_receipt");
+  const mediaSourceRows = functionBody(sourceSets, "media_sources_from_receipt");
+  const mediaAttachments = functionBody(attachments, "media_sources_from_receipt");
+
+  assert.match(metasearchSource, /proofs: vec!\[format!\("Source-pack receipt \{\}", receipt\.label\)\]/);
+
+  assert.match(mediaSourceRows, /let file_exists = Path::new\(&open_path\)\.is_file\(\);/);
+  assert.match(mediaSourceRows, /let receipt_declared_exists = bool_at\(file, &\["exists"\]\);/);
+  assert.match(mediaSourceRows, /if !file_exists \{/);
+  assert.match(mediaSourceRows, /Produced file is missing; generation cannot be claimed from this receipt\./);
+  assert.match(mediaSourceRows, /Receipt declared the file existed, but the file is missing on disk\./);
+  assert.doesNotMatch(
+    mediaSourceRows,
+    /bool_at\(file, &\["exists"\]\)\.unwrap_or_else\(\|\| Path::new\(&open_path\)\.is_file\(\)\)/,
+  );
+  assert.doesNotMatch(mediaSourceRows, /if !exists \{\s*return None;\s*\}/);
+
+  assert.match(mediaAttachments, /let file_exists = Path::new\(&path\)\.is_file\(\);/);
+  assert.match(mediaAttachments, /attach_as: if file_exists \{ "file" \} else \{ "receipt" \}/);
+  assert.match(mediaAttachments, /missing output; receipt retained for review/);
+  assert.doesNotMatch(mediaAttachments, /if !exists \{\s*return None;\s*\}/);
+});
+
 test("DX source-set bounded readers reject files larger than their parse limits", () => {
   const receiptsPath = "crates/agent_ui/src/dx_source_sets/receipts.rs";
   const toolchainPath = "crates/agent_ui/src/dx_source_sets/dx_editor_toolchain.rs";
+  const agentAttachmentPath = "crates/agent/src/dx_source_attachment.rs";
+  const contextAdapterPath = "crates/agent/src/dx_metasearch_context_adapter.rs";
 
   const receipts = read(receiptsPath);
   const toolchain = read(toolchainPath);
+  const agentAttachment = read(agentAttachmentPath);
+  const contextAdapter = read(contextAdapterPath);
 
   assert.match(receipts, /\.take\(MAX_RECEIPT_BYTES \+ 1\)/);
   assert.match(receipts, /buffer\.len\(\) as u64 > MAX_RECEIPT_BYTES/);
@@ -105,4 +158,12 @@ test("DX source-set bounded readers reject files larger than their parse limits"
   assert.match(toolchain, /let config = read_bounded_utf8\(&config_path\)\?;/);
   assert.doesNotMatch(toolchain, /\.take\(MAX_DX_CONFIG_BYTES\)/);
   assert.doesNotMatch(toolchain, /read_bounded_utf8\(&config_path\)\.unwrap_or_default\(\)/);
+
+  assert.match(agentAttachment, /\.take\(MAX_RECEIPT_BYTES \+ 1\)/);
+  assert.match(agentAttachment, /buffer\.len\(\) as u64 > MAX_RECEIPT_BYTES/);
+  assert.doesNotMatch(agentAttachment, /\.take\(MAX_RECEIPT_BYTES\)/);
+
+  assert.match(contextAdapter, /\.take\(MAX_ATTACHMENT_RECEIPT_BYTES \+ 1\)/);
+  assert.match(contextAdapter, /buffer\.len\(\) as u64 > MAX_ATTACHMENT_RECEIPT_BYTES/);
+  assert.doesNotMatch(contextAdapter, /\.take\(MAX_ATTACHMENT_RECEIPT_BYTES\)/);
 });

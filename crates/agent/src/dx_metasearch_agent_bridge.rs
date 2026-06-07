@@ -28,7 +28,8 @@ const SOURCE_PACK_APPROX_CHARS_PER_TOKEN: usize = 4;
 const DEFAULT_SOURCE_EXTRACT_CHAR_LIMIT: usize = 4_000;
 const MIN_SOURCE_EXTRACT_CHAR_LIMIT: usize = 500;
 const MAX_SOURCE_EXTRACT_CHAR_LIMIT: usize = 12_000;
-const MAX_SOURCE_EXTRACT_FETCH_BYTES: usize = 1_500_000;
+const MAX_METASEARCH_RESPONSE_BYTES: usize = 1_500_000;
+const MAX_SOURCE_EXTRACT_FETCH_BYTES: usize = MAX_METASEARCH_RESPONSE_BYTES;
 
 pub(crate) const DX_METASEARCH_RESULT_SCHEMA: &str = "zed.dx.metasearch.result.v1";
 pub(crate) const DX_METASEARCH_STATUS_SCHEMA: &str = "zed.dx.metasearch.status.v1";
@@ -328,6 +329,12 @@ struct MetasearchApiResult {
     category: String,
 }
 
+struct BoundedHttpBody {
+    bytes: Vec<u8>,
+    read_bytes: usize,
+    truncated: bool,
+}
+
 pub(crate) async fn search_metasearch(
     http_client: Arc<HttpClientWithUrl>,
     request: DxMetasearchRequest,
@@ -343,24 +350,26 @@ pub(crate) async fn search_metasearch(
             )
         })?;
 
-    let mut body = Vec::new();
-    response
-        .body_mut()
-        .read_to_end(&mut body)
-        .await
-        .map_err(|error| format!("Failed to read DX metasearch response body: {error}"))?;
+    let body =
+        read_bounded_http_response_body(response.body_mut(), "DX metasearch response body").await?;
 
     let status = response.status();
     if status.as_u16() >= 400 {
-        let text = String::from_utf8_lossy(&body);
+        let text = String::from_utf8_lossy(&body.bytes);
         return Err(format!(
             "DX metasearch returned HTTP {}: {}",
             status.as_u16(),
             truncate_text(&text, SNIPPET_CHAR_LIMIT)
         ));
     }
+    if body.truncated {
+        return Err(format!(
+            "DX metasearch response exceeded {} bytes before JSON parsing.",
+            MAX_METASEARCH_RESPONSE_BYTES
+        ));
+    }
 
-    let api_response = serde_json::from_slice::<MetasearchApiResponse>(&body)
+    let api_response = serde_json::from_slice::<MetasearchApiResponse>(&body.bytes)
         .map_err(|error| format!("Failed to parse DX metasearch JSON response: {error}"))?;
     Ok(compact_response(api_response, normalized))
 }
@@ -414,15 +423,14 @@ pub(crate) async fn extract_metasearch_source(
         .and_then(|value| value.to_str().ok())
         .map(ToOwned::to_owned);
     let status = response.status();
-    let mut body = Vec::new();
-    response
-        .body_mut()
-        .read_to_end(&mut body)
-        .await
-        .map_err(|error| format!("Failed to read DX metasearch source body: {error}"))?;
+    let body = read_bounded_http_response_body(
+        response.body_mut(),
+        "DX metasearch source extract response body",
+    )
+    .await?;
 
     if status.as_u16() >= 400 {
-        let text = String::from_utf8_lossy(&body);
+        let text = String::from_utf8_lossy(&body.bytes);
         return Err(format!(
             "DX metasearch source extract returned HTTP {} for {}: {}",
             status.as_u16(),
@@ -431,19 +439,13 @@ pub(crate) async fn extract_metasearch_source(
         ));
     }
 
-    let fetched_bytes = body.len();
-    let body_truncated = fetched_bytes > MAX_SOURCE_EXTRACT_FETCH_BYTES;
-    if body_truncated {
-        body.truncate(MAX_SOURCE_EXTRACT_FETCH_BYTES);
-    }
-
     Ok(compact_source_extract_response(
         request,
         status.as_u16(),
         content_type,
-        fetched_bytes,
-        body_truncated,
-        body,
+        body.read_bytes,
+        body.truncated,
+        body.bytes,
     ))
 }
 
@@ -536,25 +538,53 @@ async fn fetch_json(
             )
         })?;
 
-    let mut body = Vec::new();
-    response
-        .body_mut()
-        .read_to_end(&mut body)
-        .await
-        .map_err(|error| format!("Failed to read DX metasearch response body: {error}"))?;
+    let body =
+        read_bounded_http_response_body(response.body_mut(), "DX metasearch JSON body").await?;
 
     let status = response.status();
     if status.as_u16() >= 400 {
-        let text = String::from_utf8_lossy(&body);
+        let text = String::from_utf8_lossy(&body.bytes);
         return Err(format!(
             "DX metasearch returned HTTP {} for {endpoint}: {}",
             status.as_u16(),
             truncate_text(&text, SNIPPET_CHAR_LIMIT)
         ));
     }
+    if body.truncated {
+        return Err(format!(
+            "DX metasearch response for {endpoint} exceeded {} bytes before JSON parsing.",
+            MAX_METASEARCH_RESPONSE_BYTES
+        ));
+    }
 
-    serde_json::from_slice::<serde_json::Value>(&body)
+    serde_json::from_slice::<serde_json::Value>(&body.bytes)
         .map_err(|error| format!("Failed to parse DX metasearch JSON response: {error}"))
+}
+
+async fn read_bounded_http_response_body<R>(
+    reader: &mut R,
+    label: &str,
+) -> Result<BoundedHttpBody, String>
+where
+    R: futures::io::AsyncRead + Unpin,
+{
+    let mut buffer = Vec::new();
+    reader
+        .take((MAX_METASEARCH_RESPONSE_BYTES + 1) as u64)
+        .read_to_end(&mut buffer)
+        .await
+        .map_err(|error| format!("Failed to read {label}: {error}"))?;
+    let read_bytes = buffer.len();
+    let truncated = buffer.len() > MAX_METASEARCH_RESPONSE_BYTES;
+    if truncated {
+        buffer.truncate(MAX_METASEARCH_RESPONSE_BYTES);
+    }
+
+    Ok(BoundedHttpBody {
+        bytes: buffer,
+        read_bytes,
+        truncated,
+    })
 }
 
 fn resolve_base_url(base_url: Option<String>) -> String {

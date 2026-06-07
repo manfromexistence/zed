@@ -164,3 +164,19 @@ test("buffer search field cycling guards stale focus indexes before focusing han
     message: "field cycling must guard the computed focus index before focusing",
   });
 });
+
+test("project search stays local until explicit Agent backend handoff", () => {
+  for (const source of [
+    read("crates/search/src/project_search.rs"),
+    read("crates/project/src/search.rs"),
+  ]) {
+    assert.doesNotMatch(
+      source,
+      /dx_metasearch|search_dx_metasearch|prepare_dx_metasearch_context|extract_dx_metasearch_source/,
+    );
+    assert.doesNotMatch(
+      source,
+      /web_preview|WebPreview|source_set_snapshot|dx_source_sets|execute_dx_media_tool/,
+    );
+  }
+});

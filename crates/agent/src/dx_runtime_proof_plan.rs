@@ -12,6 +12,7 @@ pub(crate) struct DxRuntimeProofPlanRequest {
     pub require_diff_check: bool,
     pub require_runtime_visual_evidence: bool,
     pub require_runtime_proof_import: bool,
+    pub require_profile_backend_proofs: bool,
     pub operator_notes: Vec<String>,
     pub root_mode: String,
 }
@@ -23,6 +24,7 @@ pub(crate) struct DxRuntimeProofPlan {
     pub request: DxRuntimeProofPlanRequestSummary,
     pub status: DxRuntimeProofPlanStatus,
     pub checklist: Vec<DxRuntimeProofPlanStep>,
+    pub profile_backend_lanes: Vec<DxRuntimeProofProfileBackendLane>,
     pub evidence_contract: DxRuntimeProofEvidenceContract,
     pub runtime_proof_plan_receipt: Option<DxRuntimeProofPlanReceipt>,
     pub safety: DxRuntimeProofPlanSafety,
@@ -36,6 +38,7 @@ pub(crate) struct DxRuntimeProofPlanRequestSummary {
     pub require_diff_check: bool,
     pub require_runtime_visual_evidence: bool,
     pub require_runtime_proof_import: bool,
+    pub require_profile_backend_proofs: bool,
     pub operator_notes: Vec<String>,
     pub root_mode: String,
 }
@@ -60,6 +63,17 @@ pub(crate) struct DxRuntimeProofPlanStep {
     pub evidence_required: &'static str,
     pub tool_after_evidence: Option<&'static str>,
     pub status: &'static str,
+}
+
+#[derive(Clone, Copy, Debug, Serialize)]
+pub(crate) struct DxRuntimeProofProfileBackendLane {
+    pub lane_id: &'static str,
+    pub profile: &'static str,
+    pub label: &'static str,
+    pub required: bool,
+    pub operator_action: &'static str,
+    pub evidence_required: &'static str,
+    pub tool_after_evidence: Option<&'static str>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -101,10 +115,54 @@ pub(crate) struct DxRuntimeProofPlanReceipt {
     pub next_action: String,
 }
 
+pub(crate) const DX_RUNTIME_PROOF_PROFILE_BACKEND_LANES: &[DxRuntimeProofProfileBackendLane] = &[
+    DxRuntimeProofProfileBackendLane {
+        lane_id: "dx-metasearch-live-proof",
+        profile: "Search",
+        label: "Live DX MetaSearch proof",
+        required: true,
+        operator_action: "Inspect DX MetaSearch service readiness and capture ready or unavailable status before Search claims live backend proof.",
+        evidence_required: "inspect_dx_metasearch status schema, base URL, service status, engine count, and warnings or blockers.",
+        tool_after_evidence: Some("inspect_dx_metasearch"),
+    },
+    DxRuntimeProofProfileBackendLane {
+        lane_id: "study-source-workspace-execution",
+        profile: "Study",
+        label: "Study source workspace execution",
+        required: true,
+        operator_action: "Prepare Study source attachments and context receipts from the active workspace source set before claiming a Study execution path.",
+        evidence_required: "prepare_dx_source_attachment or prepare_dx_metasearch_context receipt path with source counts and blockers.",
+        tool_after_evidence: Some("prepare_dx_source_attachment"),
+    },
+    DxRuntimeProofProfileBackendLane {
+        lane_id: "media-provider-readiness-proof",
+        profile: "Media",
+        label: "Media provider readiness proof",
+        required: true,
+        operator_action: "Plan and gate provider or runner readiness, then retain receipts; do not claim generated media unless produced files exist on disk.",
+        evidence_required: "plan_dx_media_tool or gate_dx_media_tool_runner receipt path, provider/runner readiness, and produced-file receipt state.",
+        tool_after_evidence: Some("gate_dx_media_tool_runner"),
+    },
+    DxRuntimeProofProfileBackendLane {
+        lane_id: "web-preview-runtime-proof",
+        profile: "Web Preview",
+        label: "Web Preview runtime proof",
+        required: true,
+        operator_action: "Capture Web Preview runtime evidence as supporting proof, then import canonical DX runtime proof only after governed validation evidence exists.",
+        evidence_required: "Web Preview final validation evidence plus canonical import_dx_runtime_proof import/status receipt paths.",
+        tool_after_evidence: Some("import_dx_runtime_proof"),
+    },
+];
+
 pub(crate) fn build_runtime_proof_plan(request: DxRuntimeProofPlanRequest) -> DxRuntimeProofPlan {
     let final_command = clean_optional_text(request.expected_final_command)
         .unwrap_or_else(|| "just run".to_string());
     let operator_notes = clean_lines(request.operator_notes, 12);
+    let profile_backend_lanes = if request.require_profile_backend_proofs {
+        DX_RUNTIME_PROOF_PROFILE_BACKEND_LANES.to_vec()
+    } else {
+        Vec::new()
+    };
     let mut checklist = vec![DxRuntimeProofPlanStep {
         step_id: "governed-window",
         label: "Open governed runtime validation window",
@@ -138,6 +196,18 @@ pub(crate) fn build_runtime_proof_plan(request: DxRuntimeProofPlanRequest) -> Dx
                 .to_string(),
             evidence_required: "Exit status and any whitespace/conflict-marker findings.",
             tool_after_evidence: None,
+            status: "manual_required",
+        });
+    }
+
+    for lane in &profile_backend_lanes {
+        checklist.push(DxRuntimeProofPlanStep {
+            step_id: lane.lane_id,
+            label: lane.label,
+            required: lane.required,
+            operator_action: lane.operator_action.to_string(),
+            evidence_required: lane.evidence_required,
+            tool_after_evidence: lane.tool_after_evidence,
             status: "manual_required",
         });
     }
@@ -186,6 +256,12 @@ pub(crate) fn build_runtime_proof_plan(request: DxRuntimeProofPlanRequest) -> Dx
         "Runtime proof cannot be claim-ready until the governed manual validation window runs."
             .to_string(),
         "Runtime-green status requires imported evidence, not this plan receipt alone.".to_string(),
+        if request.require_profile_backend_proofs {
+            "Profile backend proof lanes require operator evidence for Search, Study, Media, and Web Preview."
+                .to_string()
+        } else {
+            "Profile backend proof lanes were not requested for this plan.".to_string()
+        },
     ];
     let required_step_count = checklist.iter().filter(|step| step.required).count();
 
@@ -198,6 +274,7 @@ pub(crate) fn build_runtime_proof_plan(request: DxRuntimeProofPlanRequest) -> Dx
             require_diff_check: request.require_diff_check,
             require_runtime_visual_evidence: request.require_runtime_visual_evidence,
             require_runtime_proof_import: request.require_runtime_proof_import,
+            require_profile_backend_proofs: request.require_profile_backend_proofs,
             operator_notes,
             root_mode: request.root_mode,
         },
@@ -211,17 +288,26 @@ pub(crate) fn build_runtime_proof_plan(request: DxRuntimeProofPlanRequest) -> Dx
             blockers,
         },
         checklist,
+        profile_backend_lanes,
         evidence_contract: DxRuntimeProofEvidenceContract {
             final_command,
             import_tool: "import_dx_runtime_proof",
             import_operator_status: "passed",
-            minimum_evidence_lines_for_pass: 1,
+            minimum_evidence_lines_for_pass: if request.require_profile_backend_proofs {
+                DX_RUNTIME_PROOF_PROFILE_BACKEND_LANES.len()
+            } else {
+                1
+            },
             accepted_evidence_examples: vec![
                 "final command exit status",
                 "visible Zed/DX window title",
                 "Agent panel route or action exercised",
                 "managed receipt path",
                 "screenshot or runtime proof artifact path",
+                "DX MetaSearch status receipt with ready or unavailable service state",
+                "Study source attachment or metasearch context receipt path",
+                "Media provider plan, runner gate, or produced-file receipt path",
+                "Web Preview final validation evidence plus canonical runtime proof import",
             ],
             managed_import_root: "tools/dx-runtime-proof/imports",
             managed_status_root: "tools/dx-runtime-proof/status",
@@ -240,7 +326,7 @@ pub(crate) fn build_runtime_proof_plan(request: DxRuntimeProofPlanRequest) -> Dx
             restores_to_target: false,
         },
         next_action:
-            "Use this plan to run the governed manual validation window, then import the evidence with import_dx_runtime_proof."
+            "Use this plan to collect the governed backend and runtime proof lanes, then import the evidence with import_dx_runtime_proof."
                 .to_string(),
     }
 }
