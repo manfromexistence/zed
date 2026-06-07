@@ -1,3 +1,20 @@
+[2026-06-07] - DX Automations Backend Receipt Bridge
+
+ADDED:
+- `G:\Dx\cli\src\agents_bridge\automation_receipts.rs` adds CLI-local automation composer/list/save-draft/enable/run receipt handling for Zed handoff.
+- `G:\Dx\cli\src\agents_bridge\automation_receipts\actions.rs` and `state.rs` define safe automation actions, redacted prompt previews, typed records, receipts, and history rows.
+
+CHANGED:
+- `dx agents automate composer/list/save-draft/enable/run --json` now writes stable receipt contracts instead of pretending scheduled runtime execution exists.
+
+PASSED:
+- `node --test script\dx-automations-source.test.ts`
+- Governed temp-root CLI proof for `composer`, `save-draft`, `enable`, and `run`
+- Focused CLI automation receipt and parser contract tests
+
+NOTES:
+- Actual scheduled execution is still pending DX Agents runtime and receipt action handoff; run receipts remain blocked with `runtime_execution=false`.
+
 [2026-06-07] - DX AI Profiles Remote Integration And Runtime Proof Gate
 
 CHANGED:
