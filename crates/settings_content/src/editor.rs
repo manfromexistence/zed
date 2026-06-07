@@ -22,6 +22,9 @@ pub struct EditorSettingsContent {
     ///
     /// Default: bar
     pub cursor_shape: Option<CursorShape>,
+    /// VS Code Power Mode-like typing effects for committed editor input.
+    /// Disabled by default and rendered as bounded paint-only effects.
+    pub power_mode: Option<PowerModeContent>,
     /// Determines how snippets are sorted relative to other completion items.
     ///
     /// Default: inline
@@ -271,6 +274,15 @@ pub struct EditorSettingsContent {
     ///
     /// Default: 100
     pub minimum_split_diff_width: Option<f32>,
+}
+
+#[with_fallible_options]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, JsonSchema, MergeFrom, PartialEq, Eq)]
+pub struct PowerModeContent {
+    /// Whether to show subtle caret particles and paint-only shake after typing.
+    ///
+    /// Default: false
+    pub enabled: Option<bool>,
 }
 
 #[derive(

@@ -1,3 +1,22 @@
+[2026-06-07] - Editor Power Mode And Rainbow Caret Source Guards
+
+ADDED:
+- `crates\ui\src\components\dx_rainbow_glow.rs` adds a reusable GPUI DX rainbow glow and caret-glow helper with animated and reduced-motion modes.
+- `script\dx-editor-power-rainbow-source.test.ts` guards the default-off Power Mode setting, bounded committed-input typing effects, paint-only shake, restored layout origin, and rainbow caret/glow source boundaries.
+
+CHANGED:
+- `assets\settings\default.json`, `crates\editor\src\editor_settings.rs`, `crates\settings_content\src\editor.rs`, and `crates\settings\src\vscode_import.rs` now define the default-off `power_mode.enabled` editor setting.
+- `crates\editor\src\input.rs`, `crates\editor\src\editor.rs`, and `crates\editor\src\element.rs` now queue bounded Power Mode particles only for committed non-bulk typing, keep IME/no-op/bulk paths quiet, paint particles and shake without mutating layout state permanently, and request animation frames only while effects are alive.
+- `crates\ui\src\components.rs`, `DX.md`, and `todo.txt` now export, register, and document the editor Power Mode/rainbow source guard.
+
+PASSED:
+- `node --test script\dx-editor-power-rainbow-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\editor\src\editor.rs crates\editor\src\editor_settings.rs crates\editor\src\element.rs crates\editor\src\input.rs crates\settings\src\vscode_import.rs crates\settings_content\src\editor.rs crates\ui\src\components.rs crates\ui\src\components\dx_rainbow_glow.rs`
+- `git diff --cached --check -- assets/settings/default.json crates/editor/src/editor.rs crates/editor/src/editor_settings.rs crates/editor/src/element.rs crates/editor/src/input.rs crates/settings/src/vscode_import.rs crates/settings_content/src/editor.rs crates/ui/src/components.rs crates/ui/src/components/dx_rainbow_glow.rs script/dx-editor-power-rainbow-source.test.ts script/dx-handoff-source-guard-registry.test.ts DX.md todo.txt changelog.txt`
+- `git grep --cached -n -E "^<<<<<<<|^=======|^>>>>>>>" -- ...` across the touched editor visual-effects source, guards, DX, todo, and changelog files returned no matches.
+
+NOTES:
+- This remains source-only by instruction. Cargo, `just run`, local servers, browser/WebView proof, and runtime visual validation were not run.
 [2026-06-07] - Agent Composer Liquid Glass Source Shell
 
 ADDED:

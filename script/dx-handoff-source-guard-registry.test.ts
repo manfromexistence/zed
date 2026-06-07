@@ -42,6 +42,7 @@ const registeredGuardScripts = [
   "script/dx-editor-navigation-source.test.ts",
   "script/dx-editor-inlay-semantic-source.test.ts",
   "script/dx-editor-input-source.test.ts",
+  "script/dx-editor-power-rainbow-source.test.ts",
   "script/dx-workspace-ui-state-source.test.ts",
   "script/dx-title-bar-source.test.ts",
   "script/dx-project-panel-source.test.ts",

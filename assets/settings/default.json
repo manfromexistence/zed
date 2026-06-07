@@ -232,6 +232,11 @@
   //
   // Default: "bar"
   "cursor_shape": "bar",
+  // VS Code Power Mode-like typing effects. Disabled by default so editor
+  // input stays on the normal fast path unless explicitly enabled.
+  "power_mode": {
+    "enabled": false,
+  },
   // Determines when the mouse cursor should be hidden in response to keyboard
   // input.
   //

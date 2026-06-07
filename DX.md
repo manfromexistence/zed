@@ -27,6 +27,7 @@ This checkout is the Zed/DX editor surface. Worker chats here should focus on GP
 
 ## Current Verification Lane
 
+- Current editor Power Mode/rainbow source slice: editor settings now expose default-off `power_mode.enabled`; committed non-bulk typing can queue bounded caret particles and paint-only shake; local cursors use the reusable DX rainbow caret/glow helper with reduced-motion behavior when cursor blinking is disabled. Runtime visual proof, Cargo, and `just run` remain deferred.
 - Current Agent composer liquid-glass source slice: the shared ThreadView composer shell now uses the checked-in liquid_glass surface painter with bounded fallback/readability layers, keeps the real MessageEditor and existing context/profile/model/voice/send controls, and makes the editor background transparent for the composer path. Runtime visual proof, Cargo, and `just run` remain deferred.
 - Current Agent Screen vs sidechat route slice: Agent panel focus/toggle actions now record sidechat intent before zoom-out, and dock Agent sidechat clicks dispatch the Agent sidechat action while fullscreen AI is zoomed instead of stacking the zoomed Agent panel entity. Runtime UI proof, Cargo, and `just run` remain deferred.
 - Current icon hover microinteraction source slice: shared UI now exposes keyed hover animation helpers, bounded `IconHoverEffect` transforms/opacity, reduced-motion static presentation, IconButton hover-icon/effect/callback wiring, and a source guard for the GPUI transform composition path. Runtime visual proof, Cargo, and `just run` remain deferred.
@@ -205,6 +206,7 @@ Current handoff and production-readiness guards:
 - `node --test script/dx-editor-navigation-source.test.ts` - editor navigation, signature-help, linked-editing, and LSP extension fanout boundaries.
 - `node --test script/dx-editor-inlay-semantic-source.test.ts` - editor inlay hint and semantic-token request/result materialization boundaries.
 - `node --test script/dx-editor-input-source.test.ts` - editor newline cursor remap stale-row boundaries.
+- `node --test script/dx-editor-power-rainbow-source.test.ts` - editor Power Mode and rainbow caret/glow source-only paint boundaries.
 - `node --test script/dx-workspace-ui-state-source.test.ts` - workspace dock, history, jump-list, item project-handle, Agent fullscreen rail, Agent sidechat/fullscreen route separation, and live subagent status materialization boundaries.
 - `node --test script/dx-title-bar-source.test.ts` - title-bar application menu stale entry activation boundaries.
 - `node --test script/dx-project-panel-source.test.ts` - project panel DX Explorer source/filter/view/edit chrome, visible file/folder/storage/media summary counts, direct-child folder storage summaries, tree, selection, visible-range, edit-state, drag/drop, sticky-row, undo, and lazy inline media-preview materialization boundaries.

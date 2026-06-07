@@ -86,7 +86,10 @@ use text::BufferId;
 use theme::{ActiveTheme, Appearance, PlayerColor};
 use theme_settings::BufferLineHeight;
 use ui::utils::ensure_minimum_contrast;
-use ui::{ButtonLike, POPOVER_Y_PADDING, Tooltip, prelude::*, scrollbars::ShowScrollbar};
+use ui::{
+    ButtonLike, DxRainbowMotion, POPOVER_Y_PADDING, Tooltip, dx_rainbow_caret_color,
+    paint_dx_rainbow_caret_glow, prelude::*, scrollbars::ShowScrollbar,
+};
 use unicode_segmentation::UnicodeSegmentation;
 use util::{ResultExt, debug_panic};
 use workspace::{
@@ -960,6 +963,13 @@ impl EditorElement {
             let mut cursors = Vec::new();
 
             let show_local_cursors = editor.show_local_cursors(window, cx);
+            let use_rainbow_caret = editor.leader_id.is_none();
+            let rainbow_motion = if EditorSettings::get_global(cx).cursor_blink {
+                DxRainbowMotion::Animated
+            } else {
+                DxRainbowMotion::Reduced
+            };
+            let rainbow_cursor_color = dx_rainbow_caret_color(rainbow_motion);
 
             for (player_color, selections) in selections {
                 for selection in selections {
@@ -1057,10 +1067,12 @@ impl EditorElement {
                         * ScrollPixelOffset::from(line_height))
                     .into();
                     if selection.is_newest {
-                        editor.pixel_position_of_newest_cursor = Some(point(
+                        let cursor_center = point(
                             text_hitbox.origin.x + x + block_width / 2.,
                             text_hitbox.origin.y + y + line_height / 2.,
-                        ));
+                        );
+                        editor.pixel_position_of_newest_cursor = Some(cursor_center);
+                        editor.flush_power_mode_pending_bursts_at(cursor_center, cx);
 
                         if autoscroll_containing_element {
                             let top = text_hitbox.origin.y
@@ -1091,14 +1103,19 @@ impl EditorElement {
                         }
                     }
 
+                    let rainbow_motion =
+                        (selection.is_local && use_rainbow_caret).then_some(rainbow_motion);
                     let mut cursor = CursorLayout {
-                        color: player_color.cursor,
+                        color: rainbow_motion
+                            .map(|_| rainbow_cursor_color)
+                            .unwrap_or(player_color.cursor),
                         block_width,
                         origin: point(x, y),
                         line_height,
                         shape: selection.cursor_shape,
                         block_text,
                         cursor_name: None,
+                        rainbow_motion,
                     };
                     let cursor_name = selection.user_name.clone().map(|name| CursorName {
                         string: name,
@@ -5505,6 +5522,38 @@ impl EditorElement {
         )
     }
 
+    fn paint_power_mode_particles(
+        &self,
+        layout: &EditorLayout,
+        particles: &[crate::PowerModePaintParticle],
+        shake_offset: gpui::Point<Pixels>,
+        window: &mut Window,
+    ) {
+        if particles.is_empty() {
+            return;
+        }
+
+        window.paint_layer(layout.position_map.text_hitbox.bounds, |window| {
+            for particle in particles {
+                let half_size = particle.size / 2.;
+                let origin = point(
+                    particle.origin.x + shake_offset.x - half_size,
+                    particle.origin.y + shake_offset.y - half_size,
+                );
+                window.paint_quad(
+                    fill(
+                        Bounds {
+                            origin,
+                            size: size(particle.size, particle.size),
+                        },
+                        particle.color,
+                    )
+                    .corner_radii(half_size),
+                );
+            }
+        });
+    }
+
     fn paint_highlights(
         &mut self,
         layout: &mut EditorLayout,
@@ -5680,8 +5729,15 @@ impl EditorElement {
     }
 
     fn paint_cursors(&mut self, layout: &mut EditorLayout, window: &mut Window, cx: &mut App) {
+        let mut refresh_rainbow_caret = false;
         for cursor in &mut layout.visible_cursors {
+            refresh_rainbow_caret |= cursor
+                .rainbow_motion
+                .is_some_and(DxRainbowMotion::is_animated);
             cursor.paint(layout.content_origin, window, cx);
+        }
+        if refresh_rainbow_caret {
+            window.request_animation_frame();
         }
     }
 
@@ -9354,6 +9410,9 @@ impl Element for EditorElement {
             self.register_key_listeners(window, cx, layout);
         }
 
+        let power_mode_state = self
+            .editor
+            .update(cx, |editor, cx| editor.power_mode_paint_state(cx));
         let text_style = TextStyleRefinement {
             font_size: Some(self.style.text.font_size),
             line_height: Some(self.style.text.line_height),
@@ -9397,7 +9456,19 @@ impl Element for EditorElement {
                             self.paint_line_numbers(layout, window, cx);
                         }
 
+                        let original_content_origin = layout.content_origin;
+                        layout.content_origin = point(
+                            original_content_origin.x + power_mode_state.shake_offset.x,
+                            original_content_origin.y + power_mode_state.shake_offset.y,
+                        );
                         self.paint_text(layout, window, cx);
+                        self.paint_power_mode_particles(
+                            layout,
+                            &power_mode_state.particles,
+                            power_mode_state.shake_offset,
+                            window,
+                        );
+                        layout.content_origin = original_content_origin;
 
                         if !layout.spacer_blocks.is_empty() {
                             window.with_element_namespace("blocks", |window| {
@@ -9430,7 +9501,11 @@ impl Element for EditorElement {
                     self.paint_mouse_context_menu(layout, window, cx);
                 });
             })
-        })
+        });
+
+        if power_mode_state.alive {
+            window.request_animation_frame();
+        }
     }
 }
 
@@ -10223,6 +10298,7 @@ pub struct CursorLayout {
     shape: CursorShape,
     block_text: Option<ShapedLine>,
     cursor_name: Option<AnyElement>,
+    rainbow_motion: Option<DxRainbowMotion>,
 }
 
 #[derive(Debug)]
@@ -10249,6 +10325,7 @@ impl CursorLayout {
             shape,
             block_text,
             cursor_name: None,
+            rainbow_motion: None,
         }
     }
 
@@ -10320,6 +10397,9 @@ impl CursorLayout {
 
     pub fn paint(&mut self, origin: gpui::Point<Pixels>, window: &mut Window, cx: &mut App) {
         let bounds = window.pixel_snap_bounds(self.bounds(origin));
+        if self.rainbow_motion.is_some() {
+            paint_dx_rainbow_caret_glow(bounds, self.color, window);
+        }
 
         //Draw background or border quad
         let cursor = if matches!(self.shape, CursorShape::Hollow) {

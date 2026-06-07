@@ -77,6 +77,11 @@ impl Editor {
             return;
         }
 
+        let is_composing_input = self.ime_transaction.is_some()
+            || self
+                .text_highlights(HighlightKey::InputComposition, cx)
+                .is_some();
+
         self.unfold_buffers_with_selections(cx);
 
         let selections = self.selections.all_adjusted(&self.display_snapshot(cx));
@@ -418,6 +423,12 @@ impl Editor {
             if clear_linked_edit_ranges {
                 this.linked_edit_ranges.clear();
             }
+            let should_queue_power_mode_effect = !is_bulk_input
+                && !is_composing_input
+                && !text.is_empty()
+                && edits
+                    .iter()
+                    .any(|(_, inserted_text)| !inserted_text.is_empty());
             let initial_buffer_versions = if is_bulk_input {
                 jsx_tag_auto_close::InitialBufferVersionsMap::default()
             } else {
@@ -533,6 +544,9 @@ impl Editor {
                     this.show_edit_predictions_in_menu() || !had_active_edit_prediction;
                 this.defer_completion_on_input(text.to_string(), trigger_in_words, window, cx);
                 jsx_tag_auto_close::handle_from(this, initial_buffer_versions, window, cx);
+            }
+            if should_queue_power_mode_effect {
+                this.queue_power_mode_insert_effect(cx);
             }
         });
     }

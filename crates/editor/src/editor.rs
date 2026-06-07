@@ -295,6 +295,13 @@ pub(crate) const CURSORS_VISIBLE_FOR: Duration = Duration::from_millis(2000);
 pub const CODE_ACTIONS_DEBOUNCE_TIMEOUT: Duration = Duration::from_millis(250);
 pub const SELECTION_HIGHLIGHT_DEBOUNCE_TIMEOUT: Duration = Duration::from_millis(100);
 pub(crate) const DEFERRED_SELECTION_REFRESH_DEBOUNCE: Duration = Duration::from_millis(75);
+const POWER_MODE_MAX_PARTICLES: usize = 48;
+const POWER_MODE_MAX_PENDING_BURSTS: usize = 4;
+const POWER_MODE_PARTICLES_PER_BURST: usize = 5;
+const POWER_MODE_PARTICLE_LIFETIME: Duration = Duration::from_millis(360);
+const POWER_MODE_PENDING_BURST_LIFETIME: Duration = Duration::from_millis(120);
+const POWER_MODE_SHAKE_LIFETIME: Duration = Duration::from_millis(90);
+const POWER_MODE_SHAKE_MAX_PX: f32 = 1.4;
 
 pub(crate) const CODE_ACTION_TIMEOUT: Duration = Duration::from_secs(5);
 pub(crate) const FORMAT_TIMEOUT: Duration = Duration::from_secs(5);
@@ -914,6 +921,63 @@ struct ActionFetchReady {
     actions: Rc<[AvailableCodeAction]>,
 }
 
+#[derive(Default)]
+struct PowerModeEffects {
+    particles: Vec<PowerModeParticle>,
+    pending_bursts: usize,
+    pending_until: Option<Instant>,
+    shake_until: Option<Instant>,
+    sequence: u32,
+}
+
+struct PowerModeParticle {
+    origin: gpui::Point<Pixels>,
+    travel_x: f32,
+    travel_y: f32,
+    size: Pixels,
+    color: Hsla,
+    created_at: Instant,
+    expires_at: Instant,
+}
+
+pub(crate) struct PowerModePaintParticle {
+    pub(crate) origin: gpui::Point<Pixels>,
+    pub(crate) size: Pixels,
+    pub(crate) color: Hsla,
+}
+
+pub(crate) struct PowerModePaintState {
+    pub(crate) particles: Vec<PowerModePaintParticle>,
+    pub(crate) shake_offset: gpui::Point<Pixels>,
+    pub(crate) alive: bool,
+}
+
+impl PowerModeEffects {
+    fn clear(&mut self) {
+        self.particles.clear();
+        self.pending_bursts = 0;
+        self.pending_until = None;
+        self.shake_until = None;
+    }
+
+    fn prune(&mut self, now: Instant) {
+        self.particles.retain(|particle| particle.expires_at > now);
+        if self.pending_until.is_some_and(|deadline| deadline <= now) {
+            self.pending_bursts = 0;
+            self.pending_until = None;
+        }
+        if self.shake_until.is_some_and(|deadline| deadline <= now) {
+            self.shake_until = None;
+        }
+    }
+
+    fn is_alive(&self, now: Instant) -> bool {
+        !self.particles.is_empty()
+            || self.pending_until.is_some_and(|deadline| deadline > now)
+            || self.shake_until.is_some_and(|deadline| deadline > now)
+    }
+}
+
 /// Zed's primary implementation of text input, allowing users to edit a [`MultiBuffer`].
 ///
 /// See the [module level documentation](self) for more information.
@@ -1061,6 +1125,7 @@ pub struct Editor {
     next_color_inlay_id: usize,
     _subscriptions: Vec<Subscription>,
     pixel_position_of_newest_cursor: Option<gpui::Point<Pixels>>,
+    power_mode_effects: PowerModeEffects,
     gutter_dimensions: GutterDimensions,
     style: Option<EditorStyle>,
     text_style_refinement: Option<TextStyleRefinement>,
@@ -2272,6 +2337,7 @@ impl Editor {
             inline_value_cache: InlineValueCache::new(inlay_hint_settings.show_value_hints),
             gutter_hovered: false,
             pixel_position_of_newest_cursor: None,
+            power_mode_effects: PowerModeEffects::default(),
             last_bounds: None,
             last_position_map: None,
             expect_bounds_change: None,
@@ -3019,6 +3085,153 @@ impl Editor {
 
     pub fn show_cursor(&mut self, cx: &mut Context<Self>) {
         self.blink_manager.update(cx, BlinkManager::show_cursor);
+    }
+
+    pub(crate) fn queue_power_mode_insert_effect(&mut self, cx: &mut Context<Self>) {
+        if !self.mode.is_full() || !EditorSettings::get_global(cx).power_mode.enabled {
+            return;
+        }
+
+        let now = Instant::now();
+        self.power_mode_effects.pending_bursts =
+            (self.power_mode_effects.pending_bursts + 1).min(POWER_MODE_MAX_PENDING_BURSTS);
+        self.power_mode_effects.pending_until = Some(now + POWER_MODE_PENDING_BURST_LIFETIME);
+        cx.notify();
+    }
+
+    pub(crate) fn flush_power_mode_pending_bursts_at(
+        &mut self,
+        caret_center: gpui::Point<Pixels>,
+        cx: &mut App,
+    ) {
+        if !self.mode.is_full() || !EditorSettings::get_global(cx).power_mode.enabled {
+            self.power_mode_effects.clear();
+            return;
+        }
+
+        let now = Instant::now();
+        self.power_mode_effects.prune(now);
+        let Some(pending_until) = self.power_mode_effects.pending_until else {
+            return;
+        };
+        if pending_until <= now || self.power_mode_effects.pending_bursts == 0 {
+            self.power_mode_effects.pending_bursts = 0;
+            self.power_mode_effects.pending_until = None;
+            return;
+        }
+
+        const TRAVEL: [(f32, f32); 10] = [
+            (-18.0, -18.0),
+            (-12.0, -24.0),
+            (-6.0, -17.0),
+            (6.0, -23.0),
+            (14.0, -15.0),
+            (19.0, -4.0),
+            (10.0, 8.0),
+            (-11.0, 7.0),
+            (-20.0, -2.0),
+            (2.0, -28.0),
+        ];
+
+        let burst_count = self.power_mode_effects.pending_bursts;
+        let colors = [
+            cx.theme().colors().text_accent,
+            cx.theme().players().local().cursor,
+            cx.theme().colors().editor_foreground,
+        ];
+
+        for _ in 0..burst_count {
+            for particle_ix in 0..POWER_MODE_PARTICLES_PER_BURST {
+                let sequence = self.power_mode_effects.sequence;
+                self.power_mode_effects.sequence = self.power_mode_effects.sequence.wrapping_add(1);
+                let (travel_x, travel_y) = TRAVEL[(sequence as usize + particle_ix) % TRAVEL.len()];
+                let jitter = (sequence % 5) as f32 - 2.0;
+                let origin = point(
+                    caret_center.x + px(jitter),
+                    caret_center.y + px(jitter * 0.4),
+                );
+                let size = px(2.0 + (sequence % 3) as f32);
+                self.power_mode_effects.particles.push(PowerModeParticle {
+                    origin,
+                    travel_x,
+                    travel_y,
+                    size,
+                    color: colors[sequence as usize % colors.len()],
+                    created_at: now,
+                    expires_at: now + POWER_MODE_PARTICLE_LIFETIME,
+                });
+            }
+        }
+
+        if self.power_mode_effects.particles.len() > POWER_MODE_MAX_PARTICLES {
+            let overflow = self.power_mode_effects.particles.len() - POWER_MODE_MAX_PARTICLES;
+            self.power_mode_effects.particles.drain(0..overflow);
+        }
+
+        self.power_mode_effects.pending_bursts = 0;
+        self.power_mode_effects.pending_until = None;
+        self.power_mode_effects.shake_until = Some(now + POWER_MODE_SHAKE_LIFETIME);
+    }
+
+    pub(crate) fn power_mode_paint_state(&mut self, cx: &mut App) -> PowerModePaintState {
+        let zero = point(Pixels::ZERO, Pixels::ZERO);
+        if !self.mode.is_full() || !EditorSettings::get_global(cx).power_mode.enabled {
+            self.power_mode_effects.clear();
+            return PowerModePaintState {
+                particles: Vec::new(),
+                shake_offset: zero,
+                alive: false,
+            };
+        }
+
+        let now = Instant::now();
+        self.power_mode_effects.prune(now);
+
+        let mut particles = Vec::with_capacity(self.power_mode_effects.particles.len());
+        for particle in &self.power_mode_effects.particles {
+            let lifetime = particle
+                .expires_at
+                .duration_since(particle.created_at)
+                .as_secs_f32()
+                .max(0.001);
+            let elapsed = now
+                .saturating_duration_since(particle.created_at)
+                .as_secs_f32();
+            let progress = (elapsed / lifetime).clamp(0.0, 1.0);
+            let fade = (1.0 - progress) * (1.0 - progress);
+            particles.push(PowerModePaintParticle {
+                origin: point(
+                    particle.origin.x + px(particle.travel_x * progress),
+                    particle.origin.y + px(particle.travel_y * progress),
+                ),
+                size: particle.size * (1.0 - progress * 0.35),
+                color: particle.color.opacity(0.48 * fade),
+            });
+        }
+
+        let shake_offset = self
+            .power_mode_effects
+            .shake_until
+            .and_then(|shake_until| {
+                if shake_until <= now {
+                    return None;
+                }
+
+                let remaining = shake_until.duration_since(now).as_secs_f32();
+                let amount =
+                    POWER_MODE_SHAKE_MAX_PX * (remaining / POWER_MODE_SHAKE_LIFETIME.as_secs_f32());
+                let frame = ((POWER_MODE_SHAKE_LIFETIME.as_secs_f32() - remaining) * 60.0) as u32;
+                let sign = if frame % 2 == 0 { 1.0 } else { -1.0 };
+                Some(point(px(amount * sign), px(amount * -0.35 * sign)))
+            })
+            .unwrap_or(zero);
+
+        let alive = self.power_mode_effects.is_alive(now);
+        PowerModePaintState {
+            particles,
+            shake_offset,
+            alive,
+        }
     }
 
     pub fn cursor_shape(&self) -> CursorShape {

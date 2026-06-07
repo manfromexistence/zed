@@ -19,6 +19,7 @@ use ui::scrollbars::ShowScrollbar;
 pub struct EditorSettings {
     pub cursor_blink: bool,
     pub cursor_shape: Option<CursorShape>,
+    pub power_mode: PowerMode,
     pub current_line_highlight: CurrentLineHighlight,
     pub selection_highlight: bool,
     pub rounded_selection: bool,
@@ -74,6 +75,11 @@ pub struct Jupyter {
     /// Whether the Jupyter feature is enabled.
     ///
     /// Default: true
+    pub enabled: bool,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct PowerMode {
     pub enabled: bool,
 }
 
@@ -201,11 +207,15 @@ impl Settings for EditorSettings {
         let axes = scrollbar.axes.unwrap();
         let toolbar = editor.toolbar.unwrap();
         let search = editor.search.unwrap();
+        let power_mode = editor.power_mode.unwrap();
         let drag_and_drop_selection = editor.drag_and_drop_selection.unwrap();
         let sticky_scroll = editor.sticky_scroll.unwrap();
         Self {
             cursor_blink: editor.cursor_blink.unwrap(),
             cursor_shape: editor.cursor_shape.map(Into::into),
+            power_mode: PowerMode {
+                enabled: power_mode.enabled.unwrap(),
+            },
             current_line_highlight: editor.current_line_highlight.unwrap(),
             selection_highlight: editor.selection_highlight.unwrap(),
             rounded_selection: editor.rounded_selection.unwrap(),
