@@ -1,3 +1,20 @@
+[2026-06-07] - DX Explorer Folder Storage Summaries
+
+CHANGED:
+- `crates\project_panel\src\project_panel.rs` now replaces the direct folder file-count cache with a bounded `FolderStorageSummary` cache that records direct child file count and byte size during the existing background visible-entry refresh.
+- Project Panel hover badges for folders now show cached direct child file count plus storage size when available, while cold folder summaries still render no misleading zero badge.
+- `script\dx-project-panel-source.test.ts` now guards that folder storage summaries are cache-only on the visible-row path, bounded by `MAX_PROJECT_PANEL_BACKGROUND_FOLDER_STORAGE_DIRS`, and populated without overwriting fresher cache entries.
+- `DX.md` and `todo.txt` now describe the direct-child folder storage summary source contract.
+
+PASSED:
+- `node --test script\dx-handoff-source-guard-registry.test.ts script\dx-project-panel-source.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\project_panel\src\project_panel.rs`
+- `git diff --check -- crates/project_panel/src/project_panel.rs script/dx-project-panel-source.test.ts DX.md todo.txt changelog.txt`
+- Conflict-marker scan over the touched lane files.
+
+NOTES:
+- This checkpoint is a source-only storage foothold, not a full recursive heatmap/drilldown visualizer. Runtime launch, browser proof, broad Cargo, and `just run` remain skipped by instruction.
+
 [2026-06-07] - DX Explorer Header Controls And Counts
 
 CHANGED:

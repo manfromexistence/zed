@@ -109,7 +109,7 @@ const MAX_PROJECT_PANEL_DOWNLOAD_FILES: usize = 10_000;
 const MAX_PROJECT_PANEL_STICKY_PARENTS: usize = 128;
 const MAX_PROJECT_PANEL_SIBLING_ENTRIES: usize = 20_000;
 const MAX_PROJECT_PANEL_BACKGROUND_MEDIA_PREVIEW_FOLDERS: usize = 256;
-const MAX_PROJECT_PANEL_BACKGROUND_FOLDER_FILE_COUNT_DIRS: usize = 4_096;
+const MAX_PROJECT_PANEL_BACKGROUND_FOLDER_STORAGE_DIRS: usize = 4_096;
 
 fn project_panel_cap_hit(boundary: &'static str, cap: usize) {
     telemetry::event!(
@@ -194,6 +194,19 @@ impl DxExplorerVisibleSummary {
     }
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct FolderStorageSummary {
+    file_count: usize,
+    file_bytes: u64,
+}
+
+impl FolderStorageSummary {
+    fn record_file(&mut self, size: u64) {
+        self.file_count += 1;
+        self.file_bytes = self.file_bytes.saturating_add(size);
+    }
+}
+
 struct State {
     last_worktree_root_id: Option<ProjectEntryId>,
     /// Maps from leaf project entry ID to the currently selected ancestor.
@@ -260,7 +273,7 @@ pub struct ProjectPanel {
     mouse_down: bool,
     hover_expand_task: Option<Task<()>>,
     previous_drag_position: Option<Point<Pixels>>,
-    folder_file_counts: RefCell<HashMap<(WorktreeId, ProjectEntryId), usize>>,
+    folder_storage_summaries: RefCell<HashMap<(WorktreeId, ProjectEntryId), FolderStorageSummary>>,
     generated_media_metadata:
         RefCell<HashMap<(WorktreeId, ProjectEntryId), media_preview::GeneratedMediaMetadataIndex>>,
     media_metadata_generation_tasks: RefCell<HashMap<(WorktreeId, ProjectEntryId), Task<()>>>,
@@ -399,7 +412,7 @@ impl DiagnosticCount {
 struct EntryDetails {
     filename: String,
     size: u64,
-    folder_file_count: Option<usize>,
+    folder_storage_summary: Option<FolderStorageSummary>,
     media_preview: Option<media_preview::FolderMediaPreview>,
     icon: Option<SharedString>,
     path: Arc<RelPath>,
@@ -809,7 +822,7 @@ impl ProjectPanel {
                         }
                     }
                     project::Event::WorktreeRemoved(id) => {
-                        this.folder_file_counts
+                        this.folder_storage_summaries
                             .borrow_mut()
                             .retain(|(worktree_id, _), _| *worktree_id != *id);
                         this.folder_media_previews
@@ -828,7 +841,7 @@ impl ProjectPanel {
                     project::Event::WorktreeUpdatedEntries(_, _)
                     | project::Event::WorktreeAdded(_)
                     | project::Event::WorktreeOrderChanged => {
-                        this.folder_file_counts.borrow_mut().clear();
+                        this.folder_storage_summaries.borrow_mut().clear();
                         this.generated_media_metadata.borrow_mut().clear();
                         this.media_metadata_generation_tasks.borrow_mut().clear();
                         this.folder_media_previews.borrow_mut().clear();
@@ -945,7 +958,7 @@ impl ProjectPanel {
                 let new_settings = *ProjectPanelSettings::get_global(cx);
                 if project_panel_settings != new_settings {
                     if project_panel_settings.hide_gitignore != new_settings.hide_gitignore {
-                        this.folder_file_counts.borrow_mut().clear();
+                        this.folder_storage_summaries.borrow_mut().clear();
                         this.generated_media_metadata.borrow_mut().clear();
                         this.media_metadata_generation_tasks.borrow_mut().clear();
                         this.folder_media_previews.borrow_mut().clear();
@@ -955,7 +968,7 @@ impl ProjectPanel {
                         this.update_visible_entries(None, false, false, window, cx);
                     }
                     if project_panel_settings.hide_hidden != new_settings.hide_hidden {
-                        this.folder_file_counts.borrow_mut().clear();
+                        this.folder_storage_summaries.borrow_mut().clear();
                         this.generated_media_metadata.borrow_mut().clear();
                         this.media_metadata_generation_tasks.borrow_mut().clear();
                         this.folder_media_previews.borrow_mut().clear();
@@ -1003,7 +1016,7 @@ impl ProjectPanel {
                 mouse_down: false,
                 hover_expand_task: None,
                 previous_drag_position: None,
-                folder_file_counts: Default::default(),
+                folder_storage_summaries: Default::default(),
                 generated_media_metadata: Default::default(),
                 media_metadata_generation_tasks: Default::default(),
                 folder_media_previews: Default::default(),
@@ -4899,8 +4912,8 @@ impl ProjectPanel {
             .keys()
             .copied()
             .collect::<HashSet<_>>();
-        let cached_folder_file_count_keys = self
-            .folder_file_counts
+        let cached_folder_storage_summary_keys = self
+            .folder_storage_summaries
             .borrow()
             .keys()
             .copied()
@@ -4932,14 +4945,14 @@ impl ProjectPanel {
         let hide_hidden = settings.hide_hidden;
 
         let visible_entries_task = cx.spawn_in(window, async move |this, cx| {
-            let (new_state, media_preview_updates, folder_file_count_updates) = cx
+            let (new_state, media_preview_updates, folder_storage_summary_updates) = cx
                 .background_spawn(async move {
                     let mut visible_entries_total = 0usize;
                     let mut active_media_shelf_entry_ids = active_media_shelf_entry_ids;
                     let mut media_preview_updates = Vec::new();
-                    let mut folder_file_count_updates = Vec::new();
+                    let mut folder_storage_summary_updates = Vec::new();
                     let mut media_preview_background_cap_reported = false;
-                    let mut folder_file_count_background_cap_reported = false;
+                    let mut folder_storage_background_cap_reported = false;
                     for worktree_snapshot in visible_worktrees {
                         if visible_entries_total >= MAX_PROJECT_PANEL_VISIBLE_ENTRIES {
                             project_panel_cap_hit(
@@ -5060,12 +5073,13 @@ impl ProjectPanel {
                             let cache_key = (worktree_id, entry.id);
                             if entry_is_visible
                                 && entry.kind.is_dir()
-                                && !cached_folder_file_count_keys.contains(&cache_key)
+                                && !cached_folder_storage_summary_keys.contains(&cache_key)
                             {
-                                if folder_file_count_updates.len()
-                                    < MAX_PROJECT_PANEL_BACKGROUND_FOLDER_FILE_COUNT_DIRS
+                                if folder_storage_summary_updates.len()
+                                    < MAX_PROJECT_PANEL_BACKGROUND_FOLDER_STORAGE_DIRS
                                 {
-                                    let count = worktree_snapshot
+                                    let mut summary = FolderStorageSummary::default();
+                                    for child in worktree_snapshot
                                         .child_entries_with_options(
                                             &entry.path,
                                             ChildEntriesOptions {
@@ -5075,13 +5089,15 @@ impl ProjectPanel {
                                             },
                                         )
                                         .filter(|child| !hide_hidden || !child.is_hidden)
-                                        .count();
-                                    folder_file_count_updates.push((cache_key, count));
-                                } else if !folder_file_count_background_cap_reported {
-                                    folder_file_count_background_cap_reported = true;
+                                    {
+                                        summary.record_file(child.size);
+                                    }
+                                    folder_storage_summary_updates.push((cache_key, summary));
+                                } else if !folder_storage_background_cap_reported {
+                                    folder_storage_background_cap_reported = true;
                                     project_panel_cap_hit(
-                                        "background-folder-file-counts",
-                                        MAX_PROJECT_PANEL_BACKGROUND_FOLDER_FILE_COUNT_DIRS,
+                                        "background-folder-storage-summaries",
+                                        MAX_PROJECT_PANEL_BACKGROUND_FOLDER_STORAGE_DIRS,
                                     );
                                 }
                             }
@@ -5350,14 +5366,15 @@ impl ProjectPanel {
                             new_state.max_width_item_index = Some(visited_worktrees_length + index);
                         }
                     }
-                    (new_state, media_preview_updates, folder_file_count_updates)
+                    (new_state, media_preview_updates, folder_storage_summary_updates)
                 })
                 .await;
             this.update_in(cx, |this, window, cx| {
-                if !folder_file_count_updates.is_empty() {
-                    let mut folder_file_counts = this.folder_file_counts.borrow_mut();
-                    for (cache_key, count) in folder_file_count_updates {
-                        folder_file_counts.entry(cache_key).or_insert(count);
+                if !folder_storage_summary_updates.is_empty() {
+                    let mut folder_storage_summaries =
+                        this.folder_storage_summaries.borrow_mut();
+                    for (cache_key, summary) in folder_storage_summary_updates {
+                        folder_storage_summaries.entry(cache_key).or_insert(summary);
                     }
                 }
                 if !media_preview_updates.is_empty() {
@@ -6464,18 +6481,23 @@ impl ProjectPanel {
         &self,
         kind: EntryKind,
         size: u64,
-        folder_file_count: Option<usize>,
+        folder_storage_summary: Option<FolderStorageSummary>,
         _absolute_path: &Path,
         cx: &App,
     ) -> AnyElement {
         let label = if kind.is_dir() {
-            let Some(count) = folder_file_count else {
+            let Some(summary) = folder_storage_summary else {
                 return div().into_any_element();
             };
-            SharedString::from(if count == 1 {
+            let file_count = if summary.file_count == 1 {
                 "1 file".to_string()
             } else {
-                format!("{count} files")
+                format!("{} files", summary.file_count)
+            };
+            SharedString::from(if summary.file_bytes > 0 {
+                format!("{file_count} / {}", format_file_size(summary.file_bytes))
+            } else {
+                file_count
             })
         } else {
             SharedString::from(format_file_size(size))
@@ -6570,7 +6592,7 @@ impl ProjectPanel {
         let hover_badge = self.render_entry_info_badge(
             kind,
             details.size,
-            details.folder_file_count,
+            details.folder_storage_summary,
             &details.absolute_path,
             cx,
         );
@@ -7452,13 +7474,16 @@ impl ProjectPanel {
             .flatten()
     }
 
-    fn cached_folder_file_count(
+    fn cached_folder_storage_summary(
         &self,
         worktree_id: WorktreeId,
         entry_id: ProjectEntryId,
-    ) -> Option<usize> {
+    ) -> Option<FolderStorageSummary> {
         let cache_key = (worktree_id, entry_id);
-        self.folder_file_counts.borrow().get(&cache_key).copied()
+        self.folder_storage_summaries
+            .borrow()
+            .get(&cache_key)
+            .copied()
     }
 
     fn active_media_folder_for_selection(&self, cx: &App) -> Option<ActiveMediaFolder> {
@@ -7790,10 +7815,10 @@ impl ProjectPanel {
                     .map(|worktree| worktree.read(cx).absolutize(&entry.path))
                     .unwrap_or_default()
             });
-        let folder_file_count = entry
+        let folder_storage_summary = entry
             .kind
             .is_dir()
-            .then(|| self.cached_folder_file_count(worktree_id, entry.id))
+            .then(|| self.cached_folder_storage_summary(worktree_id, entry.id))
             .flatten();
         let media_preview = if entry.kind.is_dir() && is_expanded {
             self.cached_folder_media_preview(worktree_id, entry.id)
@@ -7804,7 +7829,7 @@ impl ProjectPanel {
         EntryDetails {
             filename,
             size: entry.size,
-            folder_file_count,
+            folder_storage_summary,
             media_preview,
             icon,
             path: entry.path.clone(),
