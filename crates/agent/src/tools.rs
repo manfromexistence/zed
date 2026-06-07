@@ -43,6 +43,7 @@ mod dx_metasearch_context_adapter_tool;
 mod dx_metasearch_source_extract_tool;
 mod dx_metasearch_status_tool;
 mod dx_metasearch_tool;
+mod dx_plugin_manifest;
 mod dx_runtime_proof_import_tool;
 mod dx_runtime_proof_plan_tool;
 mod dx_serializer_rlm_execution_plan_tool;

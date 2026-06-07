@@ -1,4 +1,7 @@
 use super::agent_plugin_contracts::*;
+use super::dx_plugin_manifest::{
+    DxPluginCatalogPaths, dx_first_party_plugin_catalog, dx_first_party_plugin_catalog_summary,
+};
 use crate::{
     AGENT_BROWSER_PAYLOAD_QUEUE_INSPECT_TOOL_NAME, AGENT_BROWSER_PAYLOAD_QUEUE_INSPECTION_SCHEMA,
     AGENT_BROWSER_PAYLOAD_QUEUE_ITEM_SCHEMA, AGENT_BROWSER_PAYLOAD_QUEUE_TOOL_NAME,
@@ -46,12 +49,12 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-/// Lists the built-in DX/Zed agent plugin catalog for browser, Chrome, and PC-use workflows.
+/// Lists the built-in DX/Zed agent plugin catalog and DX-native first-party plugin manifests.
 ///
-/// Use this before trying to control the in-app WebPreview browser, external Chrome through
-/// Playwright and the DX Chrome extension, or future permissioned PC UI tools. The tool is
-/// read-only and returns capability manifests, bootstrap roots, current readiness, and safety
-/// requirements.
+/// Use this before trying to control the in-app WebPreview browser, managed Chrome through
+/// Playwright and the DX Chrome extension, permissioned computer-control paths, or Driven
+/// workflow nodes. The tool is read-only and returns capability manifests, bootstrap roots,
+/// current readiness, and safety requirements.
 #[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(default)]
 pub struct AgentPluginCatalogToolInput {
@@ -141,6 +144,16 @@ fn agent_plugin_catalog(
         .as_ref()
         .map(|root| root.join("tools").join("agent-plugins"));
     let workspace_tools_root = project_root.as_ref().map(|root| root.join("tools"));
+    let dx_plugin_catalog = dx_first_party_plugin_catalog(
+        DxPluginCatalogPaths {
+            workspace_plugin_root: workspace_plugin_root.clone(),
+            workspace_tools_root: workspace_tools_root.clone(),
+            zed_data_plugin_root: default_plugin_root.clone(),
+        },
+        AgentPluginCatalogTool::NAME,
+        AGENT_PLUGIN_RUNTIME_STATUS_TOOL_NAME,
+    );
+    let dx_plugin_catalog_summary = dx_first_party_plugin_catalog_summary(&dx_plugin_catalog);
 
     let mut plugins = vec![
         browser_plugin_manifest(),
@@ -186,7 +199,9 @@ fn agent_plugin_catalog(
             "name": "DX Agent Plugin Runtime",
             "status": "discovery_layer_available",
             "summary_schema": AGENT_PLUGIN_CATALOG_SUMMARY_SCHEMA,
+            "dx_plugin_catalog_summary": dx_plugin_catalog_summary,
             "default_enabled_plugins": ["zed.browser", "zed.chrome", "zed.pc_use"],
+            "dx_default_enabled_plugins": ["dx.browser", "dx.computer", "dx.driven"],
             "tool_name": AgentPluginCatalogTool::NAME,
             "tools": agent_plugin_catalog_tools_manifest(),
             "runtime_status": agent_plugin_catalog_runtime_status_manifest(),
@@ -201,6 +216,7 @@ fn agent_plugin_catalog(
             "bootstrap_readiness": bootstrap_readiness,
             "bootstrap_readiness_handoff": agent_plugin_catalog_bootstrap_readiness_handoff(),
             "permission_model": agent_plugin_catalog_permission_model(),
+            "dx_plugin_catalog": dx_plugin_catalog,
             "plugins": plugins,
         }
     })

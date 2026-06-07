@@ -323,6 +323,7 @@ Launch workspace and receipt guards:
 
 Adjacent source guards:
 - `node --test script/dx-agent-bridge-source.test.ts`
+- `node --test script/dx-plugin-catalog-source.test.ts` - DX-native first-party plugin manifest model, Browser/Computer/Driven catalog entries, DX-owned source-root allowlist, and forbidden upstream plugin-source guard.
 - `node --test script/dx-icon-hover-source.test.ts` - GPUI/UI icon hover animation, reduced-motion, and IconButton source checks.
 - `node --test script/web-preview-payload-source.test.ts`
 - `node --test script/dx-www-launch-evidence-source.test.ts`
