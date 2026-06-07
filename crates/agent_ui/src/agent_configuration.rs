@@ -1610,7 +1610,7 @@ impl AgentConfiguration {
             AiSettingItemSource::Custom,
         )
         .icon(
-            Icon::new(IconName::Sliders)
+            Icon::new(dx_icon(DxUiIcon::Gateway))
                 .size(IconSize::Small)
                 .color(Color::Muted),
         )
