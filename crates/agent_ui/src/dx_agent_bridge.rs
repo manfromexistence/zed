@@ -341,6 +341,16 @@ pub(crate) fn dx_agent_bridge_snapshot(cx: &App) -> DxAgentBridgeSnapshot {
     dx_agent_bridge_snapshot_from_settings(dx_agent_bridge_settings_snapshot(cx))
 }
 
+pub(crate) fn dx_agent_bridge_snapshot_for_roots(
+    cx: &App,
+    workspace_roots: &[String],
+) -> DxAgentBridgeSnapshot {
+    dx_agent_bridge_snapshot_from_settings_for_roots(
+        dx_agent_bridge_settings_snapshot(cx),
+        workspace_roots,
+    )
+}
+
 pub(crate) fn dx_agent_bridge_settings_snapshot(cx: &App) -> DxAgentSettingsSnapshot {
     dx_agent_settings(cx)
 }
@@ -388,8 +398,22 @@ pub(crate) fn dx_agent_dx_home(cx: &App) -> Option<PathBuf> {
     dx_home_from_receipt_root(&dx_agent_settings(cx).receipt_root)
 }
 
+pub(crate) fn dx_agent_dx_home_for_roots(cx: &App, workspace_roots: &[String]) -> Option<PathBuf> {
+    dx_home_from_receipt_root(
+        &dx_agent_settings(cx)
+            .with_workspace_roots(workspace_roots)
+            .receipt_root,
+    )
+}
+
 pub(crate) fn dx_agent_receipt_root(cx: &App) -> PathBuf {
     dx_agent_settings(cx).receipt_root
+}
+
+pub(crate) fn dx_agent_receipt_root_for_roots(cx: &App, workspace_roots: &[String]) -> PathBuf {
+    dx_agent_settings(cx)
+        .with_workspace_roots(workspace_roots)
+        .receipt_root
 }
 
 pub(crate) fn dx_agent_cli_actions_allowed(cx: &App) -> bool {

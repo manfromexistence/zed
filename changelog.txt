@@ -1,3 +1,19 @@
+[2026-06-07] - Agent Configuration Uses Workspace Agent Bridge Roots
+
+CHANGED:
+- `crates\agent_ui\src\agent_configuration.rs` now snapshots DX Agents status and runs DX Agents public/metadata actions with active workspace roots, matching the launch rail's project-local Agent receipt/catalog defaults.
+- `crates\agent_ui\src\dx_agent_bridge.rs` now exposes root-aware Agent bridge snapshot, DX home, and receipt-root accessors while preserving explicit settings overrides.
+- `script\dx-agent-bridge-source.test.ts` now guards the Agent Configuration workspace-root bridge path and rejects the old hub-only calls.
+- `todo.txt` and `DX.md` now record this source-only Agent Configuration bridge checkpoint.
+
+PASSED:
+- `node --test script\dx-agent-bridge-source.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_ui\src\dx_agent_bridge.rs crates\agent_ui\src\agent_configuration.rs`
+- `git diff --check -- crates/agent_ui/src/dx_agent_bridge.rs crates/agent_ui/src/agent_configuration.rs script/dx-agent-bridge-source.test.ts`
+
+NOTES:
+- This remains source-only. Cargo, `just run`, local servers, browser/WebView proof, native Zed launch, and live DX Agents command proof remain skipped by instruction.
+
 [2026-06-07] - DX Project Context Absolute Workspace Roots
 
 CHANGED:

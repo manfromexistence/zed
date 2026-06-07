@@ -53,9 +53,10 @@ use crate::{
     agent_connection_store::{AgentConnectionStatus, AgentConnectionStore},
     dx_agent_bridge::{
         DxAgentBridgeSnapshot, DxAgentMetadataCommand, DxAgentPublicCommand, DxAgentReceipt,
-        DxAgentRowAction, DxAgentSocialActionSummary, dx_agent_bridge_snapshot,
-        dx_agent_cli_actions_allowed, dx_agent_cli_path, dx_agent_dx_home, dx_agent_receipt_root,
-        run_dx_agent_metadata_command, run_dx_agent_public_command,
+        DxAgentRowAction, DxAgentSocialActionSummary, dx_agent_bridge_snapshot_for_roots,
+        dx_agent_cli_actions_allowed, dx_agent_cli_path, dx_agent_dx_home_for_roots,
+        dx_agent_receipt_root_for_roots, run_dx_agent_metadata_command,
+        run_dx_agent_public_command,
     },
 };
 
@@ -284,8 +285,27 @@ impl AgentConfiguration {
             )
     }
 
+    fn dx_agent_bridge_workspace_snapshot(&self, cx: &App) -> DxAgentBridgeSnapshot {
+        let workspace_roots = self.dx_agent_workspace_roots(cx);
+        dx_agent_bridge_snapshot_for_roots(cx, &workspace_roots)
+    }
+
+    fn dx_agent_workspace_roots(&self, cx: &App) -> Vec<String> {
+        self.workspace
+            .upgrade()
+            .map(|workspace| {
+                workspace
+                    .read(cx)
+                    .root_paths(cx)
+                    .into_iter()
+                    .map(|path| path.display().to_string())
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
     fn render_dx_agents_section(&mut self, cx: &mut Context<Self>) -> impl IntoElement {
-        let snapshot = dx_agent_bridge_snapshot(cx);
+        let snapshot = self.dx_agent_bridge_workspace_snapshot(cx);
         let actions_allowed = snapshot.enabled && snapshot.cli_actions_allowed;
         let controls = h_flex()
             .gap_1()
@@ -1472,8 +1492,9 @@ impl AgentConfiguration {
         }
 
         let cli_path = dx_agent_cli_path(cx);
-        let dx_home = dx_agent_dx_home(cx);
-        let receipt_root = dx_agent_receipt_root(cx);
+        let workspace_roots = self.dx_agent_workspace_roots(cx);
+        let dx_home = dx_agent_dx_home_for_roots(cx, &workspace_roots);
+        let receipt_root = dx_agent_receipt_root_for_roots(cx, &workspace_roots);
         let task = cx.background_spawn(async move {
             run_dx_agent_public_command(command, cli_path, dx_home, receipt_root)
         });
@@ -1500,8 +1521,9 @@ impl AgentConfiguration {
         }
 
         let cli_path = dx_agent_cli_path(cx);
-        let dx_home = dx_agent_dx_home(cx);
-        let receipt_root = dx_agent_receipt_root(cx);
+        let workspace_roots = self.dx_agent_workspace_roots(cx);
+        let dx_home = dx_agent_dx_home_for_roots(cx, &workspace_roots);
+        let receipt_root = dx_agent_receipt_root_for_roots(cx, &workspace_roots);
         let task = cx.background_spawn(async move {
             run_dx_agent_metadata_command(command, cli_path, dx_home, receipt_root)
         });

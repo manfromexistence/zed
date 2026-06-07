@@ -41,6 +41,7 @@ test("DX Agent bridge stays split by command, runtime, and receipt ownership", (
 
 test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   const parent = read("crates/agent_ui/src/dx_agent_bridge.rs");
+  const agentConfiguration = read("crates/agent_ui/src/agent_configuration.rs");
   const safety = read("crates/agent_ui/src/dx_agent_bridge/command_safety.rs");
   const safetyTests = read("crates/agent_ui/src/dx_agent_bridge/command_safety_tests.rs");
   const commands = read("crates/agent_ui/src/dx_agent_bridge/commands.rs");
@@ -63,8 +64,11 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.doesNotMatch(parent, /fn public_command_for_runtime/);
   assert.match(parent, /use self::command_safety::\{/);
   assert.match(parent, /use self::paths::\{/);
+  assert.match(parent, /pub\(crate\) fn dx_agent_bridge_snapshot_for_roots/);
   assert.match(parent, /dx_agent_bridge_snapshot_from_settings_for_roots/);
   assert.match(parent, /let settings = settings\.with_workspace_roots\(workspace_roots\);/);
+  assert.match(parent, /pub\(crate\) fn dx_agent_dx_home_for_roots/);
+  assert.match(parent, /pub\(crate\) fn dx_agent_receipt_root_for_roots/);
   assert.match(parent, /receipt_root_configured: bool/);
   assert.match(parent, /provider_catalog_path_configured: bool/);
   assert.match(parent, /active_agent_receipt_root\(workspace_roots\)/);
@@ -100,6 +104,13 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.match(paths, /project_root_key/);
   assert.match(paths, /\.find\(\|root\| root\.is_dir\(\)\)/);
   assert.match(paths, /\.find\(\|path\| path\.is_file\(\)\)/);
+  assert.match(agentConfiguration, /fn dx_agent_workspace_roots\(&self, cx: &App\) -> Vec<String>/);
+  assert.match(agentConfiguration, /root_paths\(cx\)/);
+  assert.match(agentConfiguration, /dx_agent_bridge_snapshot_for_roots\(cx, &workspace_roots\)/);
+  assert.match(agentConfiguration, /dx_agent_dx_home_for_roots\(cx, &workspace_roots\)/);
+  assert.match(agentConfiguration, /dx_agent_receipt_root_for_roots\(cx, &workspace_roots\)/);
+  assert.doesNotMatch(agentConfiguration, /dx_agent_bridge_snapshot\(cx\)/);
+  assert.doesNotMatch(agentConfiguration, /dx_agent_dx_home\(cx\)|dx_agent_receipt_root\(cx\)/);
   assert.match(localFileLabels, /pub\(crate\) fn receipt_file_label/);
   assert.match(localFileLabels, /eq_ignore_ascii_case\("json"\)/);
   assert.match(localFileLabels, /receipt_file_label_accepts_uppercase_json_extension/);
