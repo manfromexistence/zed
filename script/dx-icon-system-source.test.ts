@@ -58,6 +58,8 @@ test("DX semantic icon layer owns rebrand-specific aliases", () => {
 test("DX shell chrome uses semantic icons instead of scattered literals", () => {
   const titleBar = read("crates/title_bar/src/title_bar.rs");
   const forgePanel = read("crates/agent_ui/src/dx_forge_panel/panel.rs");
+  const forgePanelView = read("crates/agent_ui/src/dx_forge_panel/panel_view.rs");
+  const forgeProviderView = read("crates/agent_ui/src/dx_forge_panel/providers/view.rs");
   const stylePanel = read("crates/agent_ui/src/dx_style_panel/panel.rs");
   const launchStylePanel = read("crates/agent_ui/src/dx_launch_workspace/style_panel.rs");
   const agentButton = functionBody(titleBar, "render_agent_screen_button");
@@ -72,6 +74,10 @@ test("DX shell chrome uses semantic icons instead of scattered literals", () => 
   }
 
   assert.match(forgePanel, /dx_icon\(DxUiIcon::Forge\)/);
+  assert.match(forgePanelView, /icon: dx_icon\(DxUiIcon::Media\)/);
+  assert.match(forgeProviderView, /ProviderGroup::Media => dx_icon\(DxUiIcon::Media\)/);
+  assert.doesNotMatch(forgePanelView, /icon: IconName::Image/);
+  assert.doesNotMatch(forgeProviderView, /ProviderGroup::Media => IconName::Image/);
   assert.match(stylePanel, /dx_icon\(DxUiIcon::Style\)/);
   assert.match(launchStylePanel, /dx_icon\(DxUiIcon::Style\)/);
   assert.doesNotMatch(launchStylePanel, /IconName::Sliders/);

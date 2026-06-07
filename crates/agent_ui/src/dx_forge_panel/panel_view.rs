@@ -250,7 +250,7 @@ fn media_section(
         SourceSection {
             header_id: "dx-forge-media-header",
             title: "Media Outputs",
-            icon: IconName::Image,
+            icon: dx_icon(DxUiIcon::Media),
             empty_id: "dx-forge-media-empty",
             workspace_empty: "Open a workspace to read media outputs",
             empty: "No media outputs found",

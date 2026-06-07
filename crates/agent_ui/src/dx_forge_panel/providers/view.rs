@@ -228,6 +228,6 @@ fn group_icon(group: ProviderGroup) -> IconName {
     match group {
         ProviderGroup::Code => IconName::GitBranch,
         ProviderGroup::Storage => IconName::CloudDownload,
-        ProviderGroup::Media => IconName::Image,
+        ProviderGroup::Media => dx_icon(DxUiIcon::Media),
     }
 }
