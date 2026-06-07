@@ -25,6 +25,7 @@ pub use crate::traits::toggleable::*;
 pub use crate::traits::visible_on_hover::*;
 pub use crate::{Button, ButtonSize, ButtonStyle, IconButton, SelectableButton};
 pub use crate::{ButtonCommon, Color};
+pub use crate::{DxUiIcon, dx_icon, dx_loading_icon};
 pub use crate::{Headline, HeadlineSize};
 pub use crate::{Icon, IconName, IconPosition, IconSize};
 pub use crate::{Label, LabelCommon, LabelSize, LineHeightStyle, LoadingLabel};

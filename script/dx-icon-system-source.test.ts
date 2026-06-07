@@ -45,8 +45,13 @@ test("DX semantic icon layer owns rebrand-specific aliases", () => {
   assert.match(uiRoot, /pub use dx_icons::\*/);
   assert.match(dxIcons, /pub enum DxUiIcon/);
   assert.match(dxIcons, /pub fn dx_icon\(icon: DxUiIcon\) -> IconName/);
+  assert.match(dxIcons, /pub fn dx_loading_icon\(size: IconSize, color: Color, duration_secs: u64\) -> AnyElement/);
   assert.match(dxIcons, /DxUiIcon::Loading => IconName::DxLoader/);
   assert.match(dxIcons, /DxUiIcon::Settings => IconName::DxCog/);
+  assert.match(dxIcons, /DxUiIcon::Evidence => IconName::Public/);
+  assert.match(dxIcons, /DxUiIcon::Source => IconName::FolderSearch/);
+  assert.match(dxIcons, /DxUiIcon::Storage => IconName::DatabaseZap/);
+  assert.match(dxIcons, /with_rotate_animation\(duration_secs\)/);
   assert.doesNotMatch(dxIcons, /LoadCircle|Settings => IconName::Settings/);
 });
 
@@ -75,12 +80,79 @@ test("DX shell chrome uses semantic icons instead of scattered literals", () => 
   );
 });
 
+test("DX loading and tool surfaces use semantic icon helpers", () => {
+  const prelude = read("crates/ui/src/prelude.rs");
+  const button = read("crates/ui/src/components/button/button.rs");
+  const threadItem = read("crates/ui/src/components/ai/thread_item.rs");
+  const sidebar = read("crates/sidebar/src/sidebar.rs");
+  const agentDiff = read("crates/agent_ui/src/agent_diff.rs");
+  const conversationView = read("crates/agent_ui/src/conversation_view.rs");
+  const contextServerModal = read(
+    "crates/agent_ui/src/agent_configuration/configure_context_server_modal.rs",
+  );
+  const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
+  const launchWorkspace = read("crates/agent_ui/src/dx_launch_workspace.rs");
+  const checkPanelView = read("crates/agent_ui/src/dx_check_panel_view.rs");
+  const launchPromptSources = read("crates/agent_ui/src/dx_launch_prompts/source.rs");
+  const launchSourceKinds = read("crates/agent_ui/src/dx_launch_workspace/sources/kinds.rs");
+  const screenCarousel = read("crates/workspace/src/screen_carousel.rs");
+
+  assert.match(prelude, /pub use crate::\{DxUiIcon, dx_icon, dx_loading_icon\};/);
+
+  for (const source of [button, threadItem, sidebar, agentDiff, conversationView, contextServerModal]) {
+    assert.match(source, /dx_loading_icon\(/);
+    assert.doesNotMatch(source, /IconName::LoadCircle/);
+  }
+
+  for (const icon of ["Plugins", "Extensions", "Automations", "Settings"]) {
+    assert.ok(
+      sidebar.includes(`dx_icon(DxUiIcon::${icon})`),
+      `sidebar should use semantic DX icon ${icon}`,
+    );
+  }
+
+  for (const icon of ["Search", "Plugins", "Automations", "Evidence", "Media", "Check"]) {
+    assert.ok(
+      agentPanel.includes(`dx_icon(DxUiIcon::${icon})`),
+      `Agent launch surface should use semantic DX icon ${icon}`,
+    );
+  }
+
+  for (const icon of ["Receipts", "Evidence", "Storage", "Settings", "Source"]) {
+    assert.ok(
+      launchWorkspace.includes(`dx_icon(DxUiIcon::${icon})`),
+      `Launch diagnostics should use semantic DX icon ${icon}`,
+    );
+  }
+
+  assert.match(agentDiff, /IconButton::new\("review", dx_icon\(DxUiIcon::Receipts\)\)/);
+  assert.match(checkPanelView, /Self::Sections => dx_icon\(DxUiIcon::Check\)/);
+  assert.match(checkPanelView, /Self::WebAudit => dx_icon\(DxUiIcon::Evidence\)/);
+  assert.match(launchPromptSources, /DxSourceKind::MediaOutput => dx_icon\(DxUiIcon::Media\)/);
+  assert.match(launchPromptSources, /DxSourceKind::DxToolchainConfig => dx_icon\(DxUiIcon::Settings\)/);
+  assert.match(launchSourceKinds, /DxSourceKind::MediaOutput => dx_icon\(DxUiIcon::Media\)/);
+  assert.match(launchSourceKinds, /DxSourceKind::DxToolchainConfig => dx_icon\(DxUiIcon::Settings\)/);
+  assert.match(screenCarousel, /WorkspaceScreenKind::Browser => dx_icon\(DxUiIcon::Browser\)/);
+});
+
 test("legacy loader/settings names do not leak into the DX icon contract", () => {
   const guardedSources = [
     "crates/ui/src/dx_icons.rs",
+    "crates/ui/src/components/button/button.rs",
+    "crates/ui/src/components/ai/thread_item.rs",
     "crates/title_bar/src/title_bar.rs",
     "crates/agent_ui/src/dx_forge_panel/panel.rs",
     "crates/agent_ui/src/dx_style_panel/panel.rs",
+    "crates/agent_ui/src/agent_diff.rs",
+    "crates/agent_ui/src/conversation_view.rs",
+    "crates/agent_ui/src/agent_configuration/configure_context_server_modal.rs",
+    "crates/sidebar/src/sidebar.rs",
+    "crates/agent_ui/src/agent_panel.rs",
+    "crates/agent_ui/src/dx_launch_workspace.rs",
+    "crates/agent_ui/src/dx_check_panel_view.rs",
+    "crates/agent_ui/src/dx_launch_prompts/source.rs",
+    "crates/agent_ui/src/dx_launch_workspace/sources/kinds.rs",
+    "crates/workspace/src/screen_carousel.rs",
   ].map(read).join("\n");
 
   assert.doesNotMatch(guardedSources, /loader-circle|IconName::LoadCircle/);

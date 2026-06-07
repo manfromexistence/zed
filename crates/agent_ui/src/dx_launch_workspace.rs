@@ -165,7 +165,7 @@ impl Render for DxLaunchDiagnosticsMenu {
                 &self.status.launch_status,
                 cx,
             ))
-            .child(section_title("Launch Handoff", IconName::ListTodo))
+            .child(section_title("Launch Handoff", dx_icon(DxUiIcon::Receipts)))
             .child(contracts::launch_contract_state(
                 &self.status.launch_contracts,
                 cx,
@@ -182,7 +182,7 @@ impl Render for DxLaunchDiagnosticsMenu {
                 &self.status.source_audit,
                 cx,
             ))
-            .child(section_title("WWW Evidence", IconName::Public))
+            .child(section_title("WWW Evidence", dx_icon(DxUiIcon::Evidence)))
             .child(www_evidence::www_launch_evidence_state(
                 &self.status.www_evidence,
                 cx,
@@ -192,7 +192,7 @@ impl Render for DxLaunchDiagnosticsMenu {
                 &self.status.launch_receipts,
                 cx,
             ))
-            .child(section_title("Binary Cache", IconName::Sliders))
+            .child(section_title("Binary Cache", dx_icon(DxUiIcon::Storage)))
             .child(binary_cache::binary_cache_state(
                 &self.status.binary_cache,
                 cx,
@@ -357,7 +357,7 @@ fn render_right_rail(
         .child(rail_section(
             "dx-environment-section",
             "Environment",
-            IconName::Settings,
+            dx_icon(DxUiIcon::Settings),
             DxLaunchRailSection::Environment,
             rail_controls,
             environment_summary(status, cx),
@@ -474,7 +474,7 @@ fn rail_section(
 fn diagnostics_menu(status: DxLaunchWorkspaceStatus) -> AnyElement {
     PopoverMenu::new("dx-launch-diagnostics-trigger")
         .trigger_with_tooltip(
-            IconButton::new("dx-launch-diagnostics-button", IconName::Sliders)
+            IconButton::new("dx-launch-diagnostics-button", dx_icon(DxUiIcon::Source))
                 .icon_size(IconSize::Small)
                 .icon_color(Color::Muted),
             Tooltip::text("Open diagnostics"),
@@ -581,7 +581,7 @@ fn environment_summary(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement
 fn subagent_summary(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {
     let mut stack = v_flex().gap_1().child(compact_status_row(
         "dx-subagents-active",
-        IconName::ListTodo,
+        dx_icon(DxUiIcon::Receipts),
         "Active Tasks",
         status.agent_bridge.active_task_count.to_string(),
         cx,

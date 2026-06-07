@@ -220,7 +220,7 @@ Current handoff and production-readiness guards:
 - `node --test script/dx-acp-tools-source.test.ts` - ACP tool request-id chip materialization boundaries.
 - `node --test script/dx-breadcrumbs-source.test.ts` - breadcrumb segment materialization boundaries.
 - `node --test script/dx-icon-picker-source.test.ts` - icon picker TSV sample and representative preview materialization boundaries.
-- `node --test script/dx-icon-system-source.test.ts` - DX semantic icon aliases, rebrand assets, and shell chrome icon mapping.
+- `node --test script/dx-icon-system-source.test.ts` - DX semantic icon aliases, rebrand assets, rotating loader helper, sidebar/launch chrome mapping, and shell icon contracts.
 - `node --test script/dx-language-selector-source.test.ts` - language selector candidate, match, stale-selection, and confirm boundaries.
 - `node --test script/dx-toolchain-selector-source.test.ts` - toolchain selector match, stale-selection, and stale candidate-id boundaries.
 - `node --test script/dx-dev-container-source.test.ts` - Dev Container template/feature picker stale match-row boundaries.

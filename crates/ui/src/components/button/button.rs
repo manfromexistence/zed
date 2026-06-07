@@ -2,7 +2,6 @@ use crate::component_prelude::*;
 use gpui::{AnyElement, AnyView, DefiniteLength};
 use ui_macros::RegisterComponent;
 
-use crate::traits::animation_ext::CommonAnimationExt;
 use crate::{ButtonCommon, ButtonLike, ButtonSize, ButtonStyle, Icon, Label};
 use crate::{
     Color, DynamicSpacing, ElevationIndex, KeyBinding, KeybindingPosition, TintColor, prelude::*,
@@ -392,14 +391,7 @@ impl RenderOnce for Button {
                 .gap(DynamicSpacing::Base04.rems(cx))
                 .when_else(
                     self.loading,
-                    |this| {
-                        this.child(
-                            Icon::new(IconName::LoadCircle)
-                                .size(IconSize::Small)
-                                .color(Color::Muted)
-                                .with_rotate_animation(2),
-                        )
-                    },
+                    |this| this.child(dx_loading_icon(IconSize::Small, Color::Muted, 2)),
                     |this| {
                         this.when_some(self.start_icon, |this, icon| {
                             this.child(if is_disabled {

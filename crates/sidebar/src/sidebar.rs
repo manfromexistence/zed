@@ -56,11 +56,10 @@ use strum::IntoEnumIterator as _;
 use terminal_view::terminal_panel::TerminalPanel;
 use theme::ActiveTheme;
 use ui::{
-    AgentThreadStatus, ButtonLike, ButtonStyle, CommonAnimationExt, ContextMenu, ContextMenuEntry,
-    Divider, GradientFade, HighlightedLabel, IconButtonShape, KeyBinding, PopoverMenu,
-    PopoverMenuHandle, ProjectEmptyState, ScrollAxes, Scrollbars, Tab, ThreadItem,
-    ThreadItemWorktreeInfo, TintColor, Tooltip, WithScrollbar, prelude::*, render_modifiers,
-    right_click_menu,
+    AgentThreadStatus, ButtonLike, ButtonStyle, ContextMenu, ContextMenuEntry, Divider,
+    GradientFade, HighlightedLabel, IconButtonShape, KeyBinding, PopoverMenu, PopoverMenuHandle,
+    ProjectEmptyState, ScrollAxes, Scrollbars, Tab, ThreadItem, ThreadItemWorktreeInfo, TintColor,
+    Tooltip, WithScrollbar, prelude::*, render_modifiers, right_click_menu,
 };
 use util::ResultExt as _;
 use util::path_list::PathList;
@@ -2979,12 +2978,7 @@ impl Sidebar {
                     )
                     .when(is_collapsed, |this| {
                         this.when(has_running_threads, |this| {
-                            this.child(
-                                Icon::new(IconName::LoadCircle)
-                                    .size(IconSize::XSmall)
-                                    .color(Color::Muted)
-                                    .with_rotate_animation(2),
-                            )
+                            this.child(dx_loading_icon(IconSize::XSmall, Color::Muted, 2))
                         })
                         .when(waiting_thread_count > 0, |this| {
                             let tooltip_text = if waiting_thread_count == 1 {
@@ -7721,7 +7715,7 @@ impl Sidebar {
                     ))
                     .child(button(
                         "sidebar-toolbar-plugins",
-                        IconName::Blocks,
+                        dx_icon(DxUiIcon::Plugins),
                         "Plugins",
                         |_this, _, window, cx| {
                             window.dispatch_action(Box::new(zed_actions::AcpRegistry), cx);
@@ -7729,7 +7723,7 @@ impl Sidebar {
                     ))
                     .child(button(
                         "sidebar-toolbar-extensions",
-                        IconName::Box,
+                        dx_icon(DxUiIcon::Extensions),
                         "Extensions",
                         |_this, _, window, cx| {
                             window
@@ -7738,7 +7732,7 @@ impl Sidebar {
                     ))
                     .child(button(
                         "sidebar-toolbar-automations",
-                        IconName::ListTodo,
+                        dx_icon(DxUiIcon::Automations),
                         "Automations",
                         |this, _, window, cx| {
                             this.draft_dx_automation_action(window, cx);
@@ -7746,7 +7740,7 @@ impl Sidebar {
                     ))
                     .child(button(
                         "sidebar-toolbar-settings",
-                        IconName::Settings,
+                        dx_icon(DxUiIcon::Settings),
                         "Settings",
                         |_this, _, window, cx| {
                             window.dispatch_action(Box::new(zed_actions::OpenSettings), cx);
@@ -7885,7 +7879,7 @@ impl Sidebar {
             button(
                 cx,
                 "sidebar-activity-plugins",
-                IconName::Blocks,
+                dx_icon(DxUiIcon::Plugins),
                 "Plugins",
                 |_this, _, window, cx| {
                     window.dispatch_action(Box::new(zed_actions::AcpRegistry), cx);
@@ -7895,7 +7889,7 @@ impl Sidebar {
             button(
                 cx,
                 "sidebar-activity-extensions",
-                IconName::Box,
+                dx_icon(DxUiIcon::Extensions),
                 "Extensions",
                 |_this, _, window, cx| {
                     window.dispatch_action(Box::new(zed_actions::Extensions::default()), cx);
@@ -7905,7 +7899,7 @@ impl Sidebar {
             button(
                 cx,
                 "sidebar-activity-automations",
-                IconName::ListTodo,
+                dx_icon(DxUiIcon::Automations),
                 "Automations",
                 |this, _, window, cx| this.draft_dx_automation_action(window, cx),
             )
@@ -7925,7 +7919,7 @@ impl Sidebar {
             button(
                 cx,
                 "sidebar-activity-settings",
-                IconName::Settings,
+                dx_icon(DxUiIcon::Settings),
                 "Settings",
                 |_this, _, window, cx| {
                     window.dispatch_action(Box::new(zed_actions::agent::OpenSettings), cx);

@@ -74,8 +74,8 @@ impl DxCheckPanelSectionKind {
         match self {
             Self::Run => IconName::PlayOutlined,
             Self::Receipt => IconName::FileTextOutlined,
-            Self::Sections => IconName::ListTodo,
-            Self::WebAudit => IconName::Public,
+            Self::Sections => dx_icon(DxUiIcon::Check),
+            Self::WebAudit => dx_icon(DxUiIcon::Evidence),
             Self::AdapterPlans => IconName::Terminal,
             Self::Notices => IconName::Warning,
             Self::QuickFixes => IconName::Sparkle,

@@ -6785,7 +6785,7 @@ impl AgentPanel {
                     })),
             )
             .child(
-                action_button("dx-launch-search", IconName::MagnifyingGlass, "Search").on_click(
+                action_button("dx-launch-search", dx_icon(DxUiIcon::Search), "Search").on_click(
                     |_event, window, cx| {
                         window.dispatch_action(
                             Box::new(zed_actions::agents_sidebar::FocusSidebarFilter),
@@ -6795,19 +6795,21 @@ impl AgentPanel {
                 ),
             )
             .child(
-                action_button("dx-launch-plugins", IconName::Blocks, "Plugins").on_click(
+                action_button("dx-launch-plugins", dx_icon(DxUiIcon::Plugins), "Plugins").on_click(
                     |_event, window, cx| {
                         window.dispatch_action(Box::new(zed_actions::AcpRegistry), cx);
                     },
                 ),
             )
             .child(
-                action_button("dx-launch-automations", IconName::ListTodo, "Automations").on_click(
-                    |_event, window, cx| {
-                        window
-                            .dispatch_action(zed_actions::OpenProjectDebugTasks.boxed_clone(), cx);
-                    },
-                ),
+                action_button(
+                    "dx-launch-automations",
+                    dx_icon(DxUiIcon::Automations),
+                    "Automations",
+                )
+                .on_click(|_event, window, cx| {
+                    window.dispatch_action(zed_actions::OpenProjectDebugTasks.boxed_clone(), cx);
+                }),
             )
             .child(
                 action_button(
@@ -6871,7 +6873,7 @@ impl AgentPanel {
             stack = stack.child(self.dx_launch_prompt_card(
                 "dx-deploy-readiness-card".to_string(),
                 "dx-deploy-readiness-action".to_string(),
-                IconName::Public,
+                dx_icon(DxUiIcon::Evidence),
                 "Deploy Readiness".to_string(),
                 target.path.clone(),
                 "Review Deploy Readiness",
@@ -7064,7 +7066,7 @@ impl AgentPanel {
             .child(self.dx_launch_guided_card(
                 "dx-launch-audit-card",
                 "dx-launch-audit-action",
-                IconName::ListTodo,
+                dx_icon(DxUiIcon::Check),
                 "Launch Audit",
                 "Review schemas, fixtures, smoke, and launch scenarios.",
                 "Review Audit",
@@ -7091,7 +7093,7 @@ impl AgentPanel {
             .child(self.dx_launch_guided_card(
                 "dx-www-evidence-card",
                 "dx-www-evidence-action",
-                IconName::Public,
+                dx_icon(DxUiIcon::Evidence),
                 "WWW Evidence",
                 "Review DX-WWW release packet and handoff readiness.",
                 "Review DX-WWW",
@@ -7102,7 +7104,7 @@ impl AgentPanel {
             .child(self.dx_launch_guided_card(
                 "dx-media-proof-card",
                 "dx-media-proof-action",
-                IconName::File,
+                dx_icon(DxUiIcon::Media),
                 "Media Proof",
                 "Plan, gate, execute, and attach produced media receipts.",
                 "Prepare Media",
@@ -7157,7 +7159,7 @@ impl AgentPanel {
             .child(self.dx_launch_guided_card(
                 "dx-runtime-proof-evidence-card",
                 "dx-runtime-proof-evidence-action",
-                IconName::ListTodo,
+                dx_icon(DxUiIcon::Evidence),
                 "Evidence Form",
                 "Prepare operator evidence fields for proof import.",
                 "Prepare Evidence Form",
@@ -7184,7 +7186,7 @@ impl AgentPanel {
             .child(self.dx_launch_guided_card(
                 "dx-reducer-guard-card",
                 "dx-reducer-guard-action",
-                IconName::ListTodo,
+                dx_icon(DxUiIcon::Check),
                 "Reducer Guard",
                 "Review serializer/RLM gates before external reducer execution.",
                 "Review Guard",

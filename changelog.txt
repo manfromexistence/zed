@@ -1,3 +1,24 @@
+[2026-06-07] - DX Semantic Icon Loader And Tool Surface Rollout
+
+ADDED:
+- `crates\ui\src\dx_icons.rs` now exposes `dx_loading_icon` so rotating loading states use the DX `loader` asset through the same semantic icon layer.
+- `crates\ui\src\prelude.rs` now exports `DxUiIcon`, `dx_icon`, and `dx_loading_icon` for GPUI surfaces that already use the UI prelude.
+
+CHANGED:
+- Button loading, thread running, sidebar running-thread, Agent diff generation, conversation loading, and context-server modal loading states now use the rotating DX loader helper instead of `IconName::LoadCircle`.
+- Sidebar plugin/extension/automation/settings chrome, Agent launch actions/guided cards, launch diagnostics sections, Check panel sections, source action helpers, and screen carousel browser previews now route through `DxUiIcon`.
+- `script\dx-icon-system-source.test.ts` now guards the helper, prelude export, semantic sidebar/launch mappings, and no legacy loader/settings leakage across the touched surfaces.
+- `DX.md` and `todo.txt` now describe the broader source-verified icon rollout.
+
+PASSED:
+- `node --test script\dx-icon-system-source.test.ts script\dx-handoff-source-guard-registry.test.ts script\dx-title-bar-source.test.ts script\dx-check-panel-source.test.ts script\dx-launch-workspace-source.test.ts script\dx-launch-prompts-source.test.ts script\dx-agent-panel-input-source.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true` on touched Rust files.
+- `git diff --check` on tracked touched files.
+- Conflict-marker scan over the touched lane files.
+
+NOTES:
+- This checkpoint remains source-only. Runtime launch, browser proof, broad Cargo, and `just run` remain skipped by instruction.
+
 [2026-06-07] - DX Project Context, Icon Rebrand, And Explorer Chrome
 
 ADDED:

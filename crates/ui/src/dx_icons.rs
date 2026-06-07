@@ -1,4 +1,7 @@
-use crate::IconName;
+use gpui::{AnyElement, IntoElement};
+
+use crate::traits::animation_ext::CommonAnimationExt;
+use crate::{Color, Icon, IconName, IconSize};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DxUiIcon {
@@ -8,6 +11,7 @@ pub enum DxUiIcon {
     Browser,
     Check,
     Commands,
+    Evidence,
     Extensions,
     Fonts,
     Forge,
@@ -19,7 +23,9 @@ pub enum DxUiIcon {
     Receipts,
     Search,
     Settings,
+    Source,
     Style,
+    Storage,
     Ui,
     WebPreview,
 }
@@ -32,6 +38,7 @@ pub fn dx_icon(icon: DxUiIcon) -> IconName {
         DxUiIcon::Browser | DxUiIcon::WebPreview => IconName::ToolWeb,
         DxUiIcon::Check => IconName::Check,
         DxUiIcon::Commands => IconName::Terminal,
+        DxUiIcon::Evidence => IconName::Public,
         DxUiIcon::Extensions => IconName::BoxOpen,
         DxUiIcon::Fonts => IconName::Font,
         DxUiIcon::Forge => IconName::Forgejo,
@@ -43,6 +50,16 @@ pub fn dx_icon(icon: DxUiIcon) -> IconName {
         DxUiIcon::Receipts => IconName::FileTextOutlined,
         DxUiIcon::Search => IconName::MagnifyingGlass,
         DxUiIcon::Settings => IconName::DxCog,
+        DxUiIcon::Source => IconName::FolderSearch,
         DxUiIcon::Style => IconName::Sliders,
+        DxUiIcon::Storage => IconName::DatabaseZap,
     }
+}
+
+pub fn dx_loading_icon(size: IconSize, color: Color, duration_secs: u64) -> AnyElement {
+    Icon::new(dx_icon(DxUiIcon::Loading))
+        .size(size)
+        .color(color)
+        .with_rotate_animation(duration_secs)
+        .into_any_element()
 }

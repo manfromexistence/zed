@@ -1,4 +1,4 @@
-use ui::IconName;
+use ui::{DxUiIcon, IconName, dx_icon};
 
 use crate::dx_source_sets::{DxSourceItem, DxSourceKind};
 pub(crate) fn source_action_icon(kind: DxSourceKind) -> IconName {
@@ -7,9 +7,9 @@ pub(crate) fn source_action_icon(kind: DxSourceKind) -> IconName {
         DxSourceKind::MetasearchSourcePack | DxSourceKind::ReducedContextReceipt => {
             IconName::FileTextOutlined
         }
-        DxSourceKind::MediaOutput => IconName::File,
+        DxSourceKind::MediaOutput => dx_icon(DxUiIcon::Media),
         DxSourceKind::ForgeRestorePreview => IconName::Archive,
-        DxSourceKind::DxToolchainConfig => IconName::Settings,
+        DxSourceKind::DxToolchainConfig => dx_icon(DxUiIcon::Settings),
     }
 }
 

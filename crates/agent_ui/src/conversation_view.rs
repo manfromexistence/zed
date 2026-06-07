@@ -3040,11 +3040,7 @@ impl ConversationView {
 }
 
 fn loading_contents_spinner(size: IconSize) -> AnyElement {
-    Icon::new(IconName::LoadCircle)
-        .size(size)
-        .color(Color::Accent)
-        .with_rotate_animation(3)
-        .into_any_element()
+    dx_loading_icon(size, Color::Accent, 3)
 }
 
 fn native_available_skills(

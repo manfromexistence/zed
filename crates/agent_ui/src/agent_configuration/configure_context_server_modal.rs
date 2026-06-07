@@ -25,8 +25,7 @@ use settings::{Settings as _, update_settings_file};
 use std::sync::Arc;
 use theme_settings::ThemeSettings;
 use ui::{
-    CommonAnimationExt, KeyBinding, Modal, ModalFooter, ModalHeader, Section, Tooltip,
-    WithScrollbar, prelude::*,
+    KeyBinding, Modal, ModalFooter, ModalHeader, Section, Tooltip, WithScrollbar, prelude::*,
 };
 use util::ResultExt as _;
 use workspace::{ModalView, Workspace};
@@ -1136,12 +1135,7 @@ impl ConfigureContextServerModal {
             .h_8()
             .gap_1p5()
             .justify_center()
-            .child(
-                Icon::new(IconName::LoadCircle)
-                    .size(IconSize::XSmall)
-                    .color(Color::Muted)
-                    .with_rotate_animation(3),
-            )
+            .child(dx_loading_icon(IconSize::XSmall, Color::Muted, 3))
             .child(Label::new(label).size(LabelSize::Small).color(Color::Muted))
     }
 
@@ -1260,12 +1254,7 @@ impl ConfigureContextServerModal {
             .child(
                 h_flex()
                     .gap_1p5()
-                    .child(
-                        Icon::new(IconName::LoadCircle)
-                            .size(IconSize::XSmall)
-                            .color(Color::Muted)
-                            .with_rotate_animation(3),
-                    )
+                    .child(dx_loading_icon(IconSize::XSmall, Color::Muted, 3))
                     .child(
                         Label::new("Authenticating…")
                             .size(LabelSize::Small)

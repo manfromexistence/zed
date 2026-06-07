@@ -29,7 +29,7 @@ use std::{
     ops::Range,
     sync::Arc,
 };
-use ui::{CommonAnimationExt, IconButtonShape, KeyBinding, Tooltip, prelude::*, vertical_divider};
+use ui::{IconButtonShape, KeyBinding, Tooltip, prelude::*, vertical_divider};
 use util::ResultExt;
 use workspace::{
     Item, ItemHandle, ItemNavHistory, ToolbarItemEvent, ToolbarItemLocation, ToolbarItemView,
@@ -1228,12 +1228,7 @@ impl Render for AgentDiffToolbar {
             .px_0p5()
             .id("generating")
             .tooltip(Tooltip::text("Generating Changes…"))
-            .child(
-                Icon::new(IconName::LoadCircle)
-                    .size(IconSize::Small)
-                    .color(Color::Accent)
-                    .with_rotate_animation(3),
-            )
+            .child(dx_loading_icon(IconSize::Small, Color::Accent, 3))
             .into_any();
 
         let Some(active_item) = self.active_item.as_ref() else {
@@ -1333,7 +1328,7 @@ impl Render for AgentDiffToolbar {
                     .child(vertical_divider())
                     .when_some(editor.read(cx).workspace(), |this, _workspace| {
                         this.child(
-                            IconButton::new("review", IconName::ListTodo)
+                            IconButton::new("review", dx_icon(DxUiIcon::Receipts))
                                 .icon_size(IconSize::Small)
                                 .tooltip(Tooltip::for_action_title_in(
                                     "Review All Files",

@@ -78,7 +78,10 @@ test("DX launch workspace UI stays split by rail ownership", () => {
   assert.match(parent, /struct DxLaunchDiagnosticsMenu/);
   assert.match(parent, /fn diagnostics_menu\(status: DxLaunchWorkspaceStatus\)/);
   assert.match(parent, /PopoverMenu::new\("dx-launch-diagnostics-trigger"\)/);
-  assert.match(parent, /IconButton::new\("dx-launch-diagnostics-button", IconName::Sliders\)/);
+  assert.match(
+    parent,
+    /IconButton::new\("dx-launch-diagnostics-button", dx_icon\(DxUiIcon::Source\)\)/,
+  );
   assert.ok(
     lineCount("crates/agent_ui/src/dx_launch_workspace.rs") < 1050,
     "dx_launch_workspace.rs should stay a coordinator instead of owning every rail",
@@ -135,10 +138,10 @@ test("collapsed workspace activity bar stays icon-only with hover details", () =
   assert.match(sidebar, /"Collapse to Activity Bar"/);
   assert.match(sidebar, /"sidebar-toolbar-acp-registry"[\s\S]*?IconName::Sparkle/);
   assert.match(sidebar, /"sidebar-toolbar-mcp"[\s\S]*?IconName::Server/);
-  assert.match(sidebar, /"sidebar-toolbar-plugins"[\s\S]*?IconName::Blocks/);
-  assert.match(sidebar, /"sidebar-toolbar-extensions"[\s\S]*?IconName::Box/);
-  assert.match(sidebar, /"sidebar-toolbar-automations"[\s\S]*?IconName::ListTodo/);
-  assert.match(sidebar, /"sidebar-toolbar-settings"[\s\S]*?IconName::Settings/);
+  assert.match(sidebar, /"sidebar-toolbar-plugins"[\s\S]*?dx_icon\(DxUiIcon::Plugins\)/);
+  assert.match(sidebar, /"sidebar-toolbar-extensions"[\s\S]*?dx_icon\(DxUiIcon::Extensions\)/);
+  assert.match(sidebar, /"sidebar-toolbar-automations"[\s\S]*?dx_icon\(DxUiIcon::Automations\)/);
+  assert.match(sidebar, /"sidebar-toolbar-settings"[\s\S]*?dx_icon\(DxUiIcon::Settings\)/);
   assert.doesNotMatch(sidebar, /"sidebar-toolbar-acp-registry"[\s\S]*?IconName::AcpRegistry/);
   assert.doesNotMatch(sidebar, /"sidebar-toolbar-extensions"[\s\S]*?IconName::ZedSrcExtension/);
   assert.doesNotMatch(sidebar, /"sidebar-toolbar-new-chat"/);

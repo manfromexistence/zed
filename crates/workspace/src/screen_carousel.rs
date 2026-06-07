@@ -294,7 +294,7 @@ impl Workspace {
     fn screen_kind_icon(kind: WorkspaceScreenKind) -> IconName {
         match kind {
             WorkspaceScreenKind::Editor => IconName::Code,
-            WorkspaceScreenKind::Browser => IconName::ToolWeb,
+            WorkspaceScreenKind::Browser => dx_icon(DxUiIcon::Browser),
             WorkspaceScreenKind::Terminal => IconName::Terminal,
             WorkspaceScreenKind::Onboarding => IconName::Sparkle,
             WorkspaceScreenKind::LiquidGlass => IconName::Sparkle,
