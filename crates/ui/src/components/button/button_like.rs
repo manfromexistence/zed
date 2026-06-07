@@ -497,6 +497,7 @@ pub struct ButtonLike {
     cursor_style: CursorStyle,
     on_click: Option<Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>>,
     on_right_click: Option<Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>>,
+    on_hover: Option<Box<dyn Fn(&bool, &mut Window, &mut App) + 'static>>,
     children: SmallVec<[AnyElement; 2]>,
     focus_handle: Option<FocusHandle>,
 }
@@ -520,6 +521,7 @@ impl ButtonLike {
             cursor_style: CursorStyle::PointingHand,
             on_click: None,
             on_right_click: None,
+            on_hover: None,
             layer: None,
             tab_index: None,
             focus_handle: None,
@@ -558,6 +560,11 @@ impl ButtonLike {
         handler: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     ) -> Self {
         self.on_right_click = Some(Box::new(handler));
+        self
+    }
+
+    pub fn on_hover(mut self, handler: impl Fn(&bool, &mut Window, &mut App) + 'static) -> Self {
+        self.on_hover = Some(Box::new(handler));
         self
     }
 
@@ -771,6 +778,12 @@ impl RenderOnce for ButtonLike {
                             cx.stop_propagation();
                             (on_click)(event, window, cx)
                         })
+                },
+            )
+            .when_some(
+                self.on_hover.filter(|_| !self.disabled),
+                |this, on_hover| {
+                    this.on_hover(move |hovered, window, cx| on_hover(hovered, window, cx))
                 },
             )
             .when_some(self.tooltip, |this, tooltip| {

@@ -247,6 +247,20 @@ impl Transformation {
         self
     }
 
+    /// Compose this transformation with another transformation.
+    pub fn then(mut self, transform: Transformation) -> Self {
+        self.scale = size(
+            self.scale.width * transform.scale.width,
+            self.scale.height * transform.scale.height,
+        );
+        self.translate = point(
+            px(self.translate.x.0 + transform.translate.x.0),
+            px(self.translate.y.0 + transform.translate.y.0),
+        );
+        self.rotate = radians(self.rotate.0 + transform.rotate.0);
+        self
+    }
+
     fn into_matrix(self, center: Point<Pixels>, scale_factor: f32) -> TransformationMatrix {
         //Note: if you read this as a sequence of matrix multiplications, start from the bottom
         TransformationMatrix::unit()

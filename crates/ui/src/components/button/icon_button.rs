@@ -3,8 +3,8 @@ use gpui::{AnyView, DefiniteLength, Hsla, Transformation};
 use super::button_like::{ButtonCommon, ButtonLike, ButtonSize, ButtonStyle};
 use crate::traits::transformable::Transformable;
 use crate::{
-    ElevationIndex, Icon, IconWithIndicator, Indicator, SelectableButton, TintColor, Tooltip,
-    prelude::*,
+    ElevationIndex, Icon, IconHoverEffect, IconWithIndicator, Indicator, SelectableButton,
+    TintColor, Tooltip, prelude::*,
 };
 use crate::{IconName, IconSize};
 
@@ -23,6 +23,9 @@ pub struct IconButton {
     icon_size: IconSize,
     icon_color: Color,
     selected_icon: Option<IconName>,
+    hover_icon: Option<IconName>,
+    hovered: bool,
+    icon_hover_effect: Option<IconHoverEffect>,
     selected_icon_color: Option<Color>,
     selected_style: Option<ButtonStyle>,
     icon_transformation: Transformation,
@@ -40,6 +43,9 @@ impl IconButton {
             icon_size: IconSize::default(),
             icon_color: Color::Default,
             selected_icon: None,
+            hover_icon: None,
+            hovered: false,
+            icon_hover_effect: None,
             selected_icon_color: None,
             selected_style: None,
             icon_transformation: Transformation::default(),
@@ -81,11 +87,31 @@ impl IconButton {
         self
     }
 
+    pub fn hover_icon(mut self, icon: impl Into<Option<IconName>>) -> Self {
+        self.hover_icon = icon.into();
+        self
+    }
+
+    pub fn hovered(mut self, hovered: bool) -> Self {
+        self.hovered = hovered;
+        self
+    }
+
+    pub fn icon_hover_effect(mut self, effect: impl Into<Option<IconHoverEffect>>) -> Self {
+        self.icon_hover_effect = effect.into();
+        self
+    }
+
     pub fn on_right_click(
         mut self,
         handler: impl Fn(&gpui::ClickEvent, &mut Window, &mut App) + 'static,
     ) -> Self {
         self.base = self.base.on_right_click(handler);
+        self
+    }
+
+    pub fn on_hover(mut self, handler: impl Fn(&bool, &mut Window, &mut App) + 'static) -> Self {
+        self.base = self.base.on_hover(handler);
         self
     }
 
@@ -204,10 +230,12 @@ impl RenderOnce for IconButton {
     fn render(self, window: &mut Window, cx: &mut App) -> ButtonLike {
         let is_disabled = self.base.disabled;
         let is_selected = self.base.selected;
+        let is_hovered = self.hovered && !is_disabled;
 
         let icon = self
             .selected_icon
             .filter(|_| is_selected)
+            .or_else(|| self.hover_icon.filter(|_| is_hovered))
             .unwrap_or(self.icon);
 
         let icon_color = if is_disabled {
@@ -225,6 +253,11 @@ impl RenderOnce for IconButton {
             .size(self.icon_size)
             .color(icon_color)
             .transform(self.icon_transformation);
+        let icon_element = if let Some(effect) = self.icon_hover_effect.filter(|_| !is_disabled) {
+            icon_element.with_hover_effect(self.base.id().clone(), effect, is_hovered)
+        } else {
+            icon_element.into()
+        };
 
         self.base
             .map(|this| match self.shape {
@@ -381,6 +414,18 @@ impl Component for IconButton {
                             "With Indicator",
                             IconButton::new("indicator", IconName::Check)
                                 .indicator(Indicator::dot().color(Color::Success))
+                                .style(ButtonStyle::Filled)
+                                .layer(ElevationIndex::Background)
+                                .into_any_element(),
+                        ),
+                        single_example(
+                            "Hover Microinteraction",
+                            IconButton::new("hover_microinteraction", IconName::Star)
+                                .hovered(true)
+                                .hover_icon(IconName::StarFilled)
+                                .icon_hover_effect(
+                                    IconHoverEffect::lift().with_rotation_degrees(4.0),
+                                )
                                 .style(ButtonStyle::Filled)
                                 .layer(ElevationIndex::Background)
                                 .into_any_element(),

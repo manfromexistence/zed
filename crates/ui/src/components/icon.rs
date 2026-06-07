@@ -9,6 +9,7 @@ use gpui::{AnimationElement, AnyElement, Hsla, IntoElement, Rems, Transformation
 pub use icon_decoration::*;
 pub use icons::*;
 
+use crate::traits::animation_ext::{CommonAnimationExt, HoverAnimationElement, IconHoverEffect};
 use crate::traits::transformable::Transformable;
 use crate::{Indicator, prelude::*};
 
@@ -16,6 +17,7 @@ use crate::{Indicator, prelude::*};
 pub enum AnyIcon {
     Icon(Icon),
     AnimatedIcon(AnimationElement<Icon>),
+    HoverAnimatedIcon(HoverAnimationElement<Icon>),
 }
 
 impl AnyIcon {
@@ -25,6 +27,9 @@ impl AnyIcon {
         match self {
             Self::Icon(icon) => Self::Icon(f(icon)),
             Self::AnimatedIcon(animated_icon) => Self::AnimatedIcon(animated_icon.map_element(f)),
+            Self::HoverAnimatedIcon(animated_icon) => {
+                Self::HoverAnimatedIcon(animated_icon.map_element(f))
+            }
         }
     }
 }
@@ -41,11 +46,18 @@ impl From<AnimationElement<Icon>> for AnyIcon {
     }
 }
 
+impl From<HoverAnimationElement<Icon>> for AnyIcon {
+    fn from(value: HoverAnimationElement<Icon>) -> Self {
+        Self::HoverAnimatedIcon(value)
+    }
+}
+
 impl RenderOnce for AnyIcon {
     fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
         match self {
             Self::Icon(icon) => icon.into_any_element(),
             Self::AnimatedIcon(animated_icon) => animated_icon.into_any_element(),
+            Self::HoverAnimatedIcon(animated_icon) => animated_icon.into_any_element(),
         }
     }
 }
@@ -133,6 +145,7 @@ pub struct Icon {
     color: Color,
     size: Rems,
     transformation: Transformation,
+    opacity: f32,
 }
 
 impl Icon {
@@ -142,6 +155,7 @@ impl Icon {
             color: Color::default(),
             size: IconSize::default().rems(),
             transformation: Transformation::default(),
+            opacity: 1.0,
         }
     }
 
@@ -160,6 +174,7 @@ impl Icon {
             color: Color::default(),
             size: IconSize::default().rems(),
             transformation: Transformation::default(),
+            opacity: 1.0,
         }
     }
 
@@ -169,6 +184,7 @@ impl Icon {
             color: Color::default(),
             size: IconSize::default().rems(),
             transformation: Transformation::default(),
+            opacity: 1.0,
         }
     }
 
@@ -182,11 +198,44 @@ impl Icon {
         self
     }
 
+    pub fn opacity(mut self, opacity: f32) -> Self {
+        self.opacity = opacity;
+        self
+    }
+
     /// Sets a custom size for the icon, in [`Rems`].
     ///
     /// Not to be exposed outside of the `ui` crate.
     pub(crate) fn custom_size(mut self, size: Rems) -> Self {
         self.size = size;
+        self
+    }
+
+    pub fn with_hover_effect(
+        self,
+        id: impl Into<ElementId>,
+        effect: IconHoverEffect,
+        hovered: bool,
+    ) -> AnyIcon {
+        if effect.is_reduced_motion() {
+            return self
+                .apply_hover_effect(effect, if hovered { 1.0 } else { 0.0 })
+                .into();
+        }
+
+        self.with_hover_animation(
+            (id.into(), "icon-hover-effect"),
+            hovered,
+            effect.animation(),
+            false,
+            move |icon, progress| icon.apply_hover_effect(effect, progress),
+        )
+        .into()
+    }
+
+    fn apply_hover_effect(mut self, effect: IconHoverEffect, progress: f32) -> Self {
+        self.transformation = effect.transformation_at(self.transformation, progress);
+        self.opacity = effect.opacity_at(progress);
         self
     }
 }
@@ -207,6 +256,7 @@ impl RenderOnce for Icon {
                 .flex_none()
                 .path(path)
                 .text_color(self.color.color(cx))
+                .opacity(self.opacity)
                 .into_any_element(),
             IconSource::ExternalSvg(path) => svg()
                 .external_path(path)
@@ -214,11 +264,13 @@ impl RenderOnce for Icon {
                 .size(self.size)
                 .flex_none()
                 .text_color(self.color.color(cx))
+                .opacity(self.opacity)
                 .into_any_element(),
             IconSource::External(path) => img(path)
                 .size(self.size)
                 .flex_none()
                 .text_color(self.color.color(cx))
+                .opacity(self.opacity)
                 .into_any_element(),
         }
     }
@@ -226,15 +278,15 @@ impl RenderOnce for Icon {
 
 #[derive(IntoElement)]
 pub struct IconWithIndicator {
-    icon: Icon,
+    icon: AnyIcon,
     indicator: Option<Indicator>,
     indicator_border_color: Option<Hsla>,
 }
 
 impl IconWithIndicator {
-    pub fn new(icon: Icon, indicator: Option<Indicator>) -> Self {
+    pub fn new(icon: impl Into<AnyIcon>, indicator: Option<Indicator>) -> Self {
         Self {
-            icon,
+            icon: icon.into(),
             indicator,
             indicator_border_color: None,
         }

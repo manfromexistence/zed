@@ -1,3 +1,20 @@
+[2026-06-07] - Source-Only Icon Hover Microinteractions
+
+ADDED:
+- `script\dx-icon-hover-source.test.ts` guards the keyed hover-animation helper, reduced-motion path, Icon/IconButton hover primitives, ButtonLike hover callback gating, and GPUI transform composition.
+
+CHANGED:
+- `crates\gpui\src\elements\svg.rs`, `crates\ui\src\traits\animation_ext.rs`, `crates\ui\src\components\icon.rs`, `crates\ui\src\components\button\button_like.rs`, `crates\ui\src\components\button\icon_button.rs`, and `crates\ui\src\prelude.rs` now provide source-only hover microinteraction primitives for icons and icon buttons.
+- `script\dx-handoff-source-guard-registry.test.ts`, `DX.md`, and `todo.txt` now register and document the icon-hover source guard.
+
+PASSED:
+- `node --test script\dx-icon-hover-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\gpui\src\elements\svg.rs crates\ui\src\traits\animation_ext.rs crates\ui\src\components\icon.rs crates\ui\src\components\button\button_like.rs crates\ui\src\components\button\icon_button.rs crates\ui\src\prelude.rs`
+- `git diff --cached --check -- crates/gpui/src/elements/svg.rs crates/ui/src/traits/animation_ext.rs crates/ui/src/components/icon.rs crates/ui/src/components/button/button_like.rs crates/ui/src/components/button/icon_button.rs crates/ui/src/prelude.rs script/dx-icon-hover-source.test.ts script/dx-handoff-source-guard-registry.test.ts DX.md todo.txt changelog.txt`
+- `git grep --cached -n -E "^<<<<<<<|^=======|^>>>>>>>" -- ...` across the touched icon hover source, guards, DX, todo, and changelog files returned no matches.
+
+NOTES:
+- This checkpoint is source-only. Cargo, `just run`, local servers, browser automation, and runtime visual proof remain skipped by instruction.
 [2026-06-07] - Web Preview Favicon Cache And Tab Icons
 
 CHANGED:
