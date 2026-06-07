@@ -2067,7 +2067,7 @@ impl AgentConfiguration {
 
         let context_server_configuration_menu = PopoverMenu::new("context-server-config-menu")
             .trigger_with_tooltip(
-                IconButton::new("context-server-config-menu", IconName::Settings)
+                IconButton::new("context-server-config-menu", dx_icon(DxUiIcon::Settings))
                     .icon_color(Color::Muted)
                     .icon_size(IconSize::Small),
                 Tooltip::text("Configure MCP Server"),

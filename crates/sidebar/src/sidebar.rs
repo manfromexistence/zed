@@ -7816,7 +7816,7 @@ impl Sidebar {
             button(
                 cx,
                 "sidebar-activity-search",
-                IconName::MagnifyingGlass,
+                dx_icon(DxUiIcon::Search),
                 "Search",
                 |this, _, window, cx| {
                     this.activity_bar_expanded = true;
@@ -7836,7 +7836,7 @@ impl Sidebar {
             button(
                 cx,
                 "sidebar-activity-agents",
-                IconName::ZedAgent,
+                dx_icon(DxUiIcon::Agent),
                 "Agents",
                 |this, _, window, cx| this.focus_agent_panel(window, cx),
             )

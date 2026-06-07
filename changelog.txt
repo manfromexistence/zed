@@ -1,3 +1,17 @@
+[2026-06-07] - Semantic Icon Hotspot Source Cleanup
+
+CHANGED:
+- `crates\project_panel\src\project_panel.rs`, `crates\sidebar\src\sidebar.rs`, `crates\agent_ui\src\agent_configuration.rs`, and `crates\agent_ui\src\conversation_view\voice_controls.rs` now use semantic DX icon helpers for Project Panel dock chrome, Search/Agents activity buttons, MCP settings controls, and Flow voice busy state.
+- `script\dx-icon-system-source.test.ts`, `DX.md`, and `todo.txt` now guard and document these semantic icon hotspots.
+
+PASSED:
+- `node --test script\dx-icon-system-source.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_ui\src\conversation_view\voice_controls.rs crates\project_panel\src\project_panel.rs crates\sidebar\src\sidebar.rs crates\agent_ui\src\agent_configuration.rs`
+- `git diff --cached --check -- crates/agent_ui/src/agent_configuration.rs crates/agent_ui/src/conversation_view/voice_controls.rs crates/project_panel/src/project_panel.rs crates/sidebar/src/sidebar.rs script/dx-icon-system-source.test.ts DX.md todo.txt changelog.txt`
+- `git grep --cached -n -E "^<<<<<<<|^=======|^>>>>>>>" -- ...` across the touched semantic icon source, guard, DX, todo, and changelog files returned no matches.
+
+NOTES:
+- This remains source-only by instruction. Cargo, `just run`, local servers, browser/WebView proof, and runtime visual validation were not run.
 [2026-06-07] - Bounded Receipt Latest Scan Guards
 
 ADDED:

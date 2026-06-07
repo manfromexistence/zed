@@ -85,8 +85,11 @@ test("DX loading and tool surfaces use semantic icon helpers", () => {
   const button = read("crates/ui/src/components/button/button.rs");
   const threadItem = read("crates/ui/src/components/ai/thread_item.rs");
   const sidebar = read("crates/sidebar/src/sidebar.rs");
+  const projectPanel = read("crates/project_panel/src/project_panel.rs");
   const agentDiff = read("crates/agent_ui/src/agent_diff.rs");
   const conversationView = read("crates/agent_ui/src/conversation_view.rs");
+  const voiceControls = read("crates/agent_ui/src/conversation_view/voice_controls.rs");
+  const agentConfiguration = read("crates/agent_ui/src/agent_configuration.rs");
   const contextServerModal = read(
     "crates/agent_ui/src/agent_configuration/configure_context_server_modal.rs",
   );
@@ -99,10 +102,20 @@ test("DX loading and tool surfaces use semantic icon helpers", () => {
 
   assert.match(prelude, /pub use crate::\{DxUiIcon, dx_icon, dx_loading_icon\};/);
 
-  for (const source of [button, threadItem, sidebar, agentDiff, conversationView, contextServerModal]) {
+  for (const source of [
+    button,
+    threadItem,
+    sidebar,
+    agentDiff,
+    conversationView,
+    contextServerModal,
+  ]) {
     assert.match(source, /dx_loading_icon\(/);
     assert.doesNotMatch(source, /IconName::LoadCircle/);
   }
+
+  assert.match(voiceControls, /dx_icon\(DxUiIcon::Loading\)/);
+  assert.doesNotMatch(voiceControls, /IconName::LoadCircle/);
 
   for (const icon of ["Plugins", "Extensions", "Automations", "Settings"]) {
     assert.ok(
@@ -110,6 +123,11 @@ test("DX loading and tool surfaces use semantic icon helpers", () => {
       `sidebar should use semantic DX icon ${icon}`,
     );
   }
+  assert.match(sidebar, /dx_icon\(DxUiIcon::Search\)/);
+  assert.match(sidebar, /dx_icon\(DxUiIcon::Agent\)/);
+  assert.match(projectPanel, /then_some\(dx_icon\(DxUiIcon::Project\)\)/);
+  assert.match(agentConfiguration, /IconButton::new\("context-server-config-menu", dx_icon\(DxUiIcon::Settings\)\)/);
+  assert.doesNotMatch(agentConfiguration, /IconButton::new\("context-server-config-menu", IconName::Settings\)/);
 
   for (const icon of ["Search", "Plugins", "Automations", "Evidence", "Media", "Check"]) {
     assert.ok(
@@ -140,11 +158,14 @@ test("legacy loader/settings names do not leak into the DX icon contract", () =>
     "crates/ui/src/dx_icons.rs",
     "crates/ui/src/components/button/button.rs",
     "crates/ui/src/components/ai/thread_item.rs",
+    "crates/project_panel/src/project_panel.rs",
     "crates/title_bar/src/title_bar.rs",
     "crates/agent_ui/src/dx_forge_panel/panel.rs",
     "crates/agent_ui/src/dx_style_panel/panel.rs",
     "crates/agent_ui/src/agent_diff.rs",
     "crates/agent_ui/src/conversation_view.rs",
+    "crates/agent_ui/src/conversation_view/voice_controls.rs",
+    "crates/agent_ui/src/agent_configuration.rs",
     "crates/agent_ui/src/agent_configuration/configure_context_server_modal.rs",
     "crates/sidebar/src/sidebar.rs",
     "crates/agent_ui/src/agent_panel.rs",

@@ -27,6 +27,7 @@ This checkout is the Zed/DX editor surface. Worker chats here should focus on GP
 
 ## Current Verification Lane
 
+- Current semantic icon hotspot source slice: Project Panel dock chrome, sidebar Search/Agents activity buttons, Agent Configuration MCP settings control, and Flow voice busy state now use `DxUiIcon`/`dx_icon` instead of raw generic icon literals, with the DX icon guard expanded around those hotspots. Runtime visual proof, Cargo, and `just run` remain deferred.
 - Current bounded receipt latest-scan source slice: DX Style dry-run receipt discovery, source-set latest receipts, and receipt-history latest labels now cap root/nested directory iteration before metadata reads or newest-first sorting; source-set attachment summary lives in a focused module. Runtime proof, Cargo, and `just run` remain deferred.
 - Current Agent Screen item source slice: fullscreen AI now opens a real center-pane `AgentScreen` item with its own builder-workspace AgentPanel, reuses existing Agent screen items when present, treats `WorkspaceScreenKind::Agent` as a first-class screen in titlebar/carousel/sidebar/onboarding/pane chrome, and keeps runtime visual proof, Cargo, and `just run` deferred.
 - Current editor Power Mode/rainbow source slice: editor settings now expose default-off `power_mode.enabled`; committed non-bulk typing can queue bounded caret particles and paint-only shake; local cursors use the reusable DX rainbow caret/glow helper with reduced-motion behavior when cursor blinking is disabled. Runtime visual proof, Cargo, and `just run` remain deferred.

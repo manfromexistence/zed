@@ -475,7 +475,7 @@ fn status_icon(phase: ComposerVoicePhase) -> IconName {
         ComposerVoicePhase::Recording => IconName::Mic,
         ComposerVoicePhase::Transcribing
         | ComposerVoicePhase::Synthesizing
-        | ComposerVoicePhase::Speaking => IconName::LoadCircle,
+        | ComposerVoicePhase::Speaking => dx_icon(DxUiIcon::Loading),
         ComposerVoicePhase::Error => IconName::Warning,
         ComposerVoicePhase::Ready => IconName::Mic,
     }
