@@ -48,6 +48,15 @@ pub(crate) fn is_safe_platform_arg(platform: &str) -> bool {
             .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
 }
 
+pub(crate) fn is_safe_automation_id_arg(automation_id: &str) -> bool {
+    !automation_id.trim().is_empty()
+        && automation_id.len() <= 96
+        && !is_secret_like_arg(automation_id)
+        && automation_id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
+}
+
 pub(crate) fn bridge_command_label(cli_path: &str, args: &[String]) -> String {
     let mut parts = Vec::with_capacity(args.len() + 1);
     parts.push(cli_path.to_string());

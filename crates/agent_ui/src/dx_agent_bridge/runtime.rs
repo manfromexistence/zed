@@ -232,6 +232,7 @@ where
     Some(DxAgentRowAction {
         label: string_field(value, &["label"]).unwrap_or_else(|| id.clone()),
         id,
+        automation_id: None,
         command,
         public_command,
         enabled: bool_field(value, &["enabled"]).unwrap_or(false),

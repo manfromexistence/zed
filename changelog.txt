@@ -1,3 +1,25 @@
+[2026-06-07] - DX Automations Typed Action Wiring
+
+ADDED:
+- `crates\agent_ui\src\dx_agent_bridge\automation_actions.rs` validates receipt-advertised automation composer and row actions for save-draft, enable, refresh, and automation-id scoped run commands.
+- `crates\agent_ui\src\dx_agent_bridge\command_args.rs` keeps fixed DX Agents argv construction separate from command execution.
+- `crates\agent_ui\src\dx_agent_bridge\automation_actions_tests.rs` documents the typed automation action contract and rejects generic run actions for automation rows.
+
+CHANGED:
+- Agent Configuration now wires `Save Draft`, `Enable`, refresh, and Run controls through validated automation actions instead of inert buttons or generic `dx agents run --json`.
+- Automation composer availability is derived from validated action records, and launch/settings rows show requested-next and execution-proof-pending states until runtime receipts exist.
+- Focused source guards now cover typed automation action variants, safe automation ids, launch-row honesty copy, and the split bridge modules.
+
+PASSED:
+- `node --test script\dx-automations-source.test.ts script\dx-agent-bridge-source.test.ts script\dx-launch-workspace-source.test.ts`
+- `node --test script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_ui\src\agent_configuration.rs crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\dx_agent_bridge.rs crates\agent_ui\src\dx_agent_bridge\automation_actions.rs crates\agent_ui\src\dx_agent_bridge\automation_actions_tests.rs crates\agent_ui\src\dx_agent_bridge\automation_contract.rs crates\agent_ui\src\dx_agent_bridge\command_args.rs crates\agent_ui\src\dx_agent_bridge\command_safety.rs crates\agent_ui\src\dx_agent_bridge\command_safety_tests.rs crates\agent_ui\src\dx_agent_bridge\commands.rs crates\agent_ui\src\dx_agent_bridge\runtime.rs crates\agent_ui\src\dx_launch_workspace\agents\actions.rs crates\agent_ui\src\dx_launch_workspace\agents\automations\labels.rs crates\agent_ui\src\dx_launch_workspace\agents\automations\rows.rs`
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. Cargo, `just run`, native Zed launch, browser automation, live DX Agents CLI action proof, and actual scheduled execution remain skipped.
+- Actual scheduled execution is not wired in Zed; the UI now exposes only safe typed actions that remain unavailable unless DX Agents backend receipts advertise them.
+
 [2026-06-07] - Project Panel Generated Media Cache Safety
 
 CHANGED:

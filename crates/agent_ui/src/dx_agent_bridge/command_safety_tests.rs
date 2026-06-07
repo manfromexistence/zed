@@ -53,6 +53,15 @@ fn safe_platform_args_refuse_secrets_and_shell_shapes() {
 }
 
 #[test]
+fn safe_automation_ids_refuse_secrets_and_shell_shapes() {
+    assert!(is_safe_automation_id_arg("daily-dx-audit"));
+    assert!(is_safe_automation_id_arg("workspace.audit_01"));
+    assert!(!is_safe_automation_id_arg(""));
+    assert!(!is_safe_automation_id_arg("run;remove"));
+    assert!(!is_safe_automation_id_arg("token-value"));
+}
+
+#[test]
 fn public_command_guards_and_labels_are_explicit() {
     assert!(is_public_dx_agents_command("dx agents status --json"));
     assert!(!is_public_dx_agents_command(

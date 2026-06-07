@@ -1,9 +1,7 @@
 use serde_json::Value;
 
-use super::{
-    DxAgentRowAction, array_field, bool_field, is_dx_agents_command, is_public_dx_agents_command,
-    is_secret_like_arg, public_command_for_runtime, safe_string_field, string_field,
-};
+use super::automation_actions::{automation_composer_actions, automation_row_actions};
+use super::{DxAgentRowAction, array_field, bool_field, safe_string_field};
 
 const MAX_AUTOMATION_TEXT_CHARS: usize = 180;
 const MAX_AUTOMATION_LIST_ITEMS: usize = 6;
@@ -36,6 +34,7 @@ pub(crate) struct DxAgentAutomationComposer {
     pub command: String,
     pub next_action: String,
     pub unavailable_reason: String,
+    pub actions: Vec<DxAgentRowAction>,
     pub fields: Vec<DxAgentAutomationComposerField>,
 }
 
@@ -102,6 +101,15 @@ pub(super) fn automation_composer(
                 .and_then(|runtime| bool_field(runtime, &["available"]))
         })
         .unwrap_or(false);
+    let actions = value.map(automation_composer_actions).unwrap_or_default();
+    let save_draft_available = runtime_available
+        && actions
+            .iter()
+            .any(|action| action.id == "save_draft" && action.enabled);
+    let enable_available = runtime_available
+        && actions
+            .iter()
+            .any(|action| action.id == "enable" && action.enabled);
 
     DxAgentAutomationComposer {
         schema_version: value
@@ -117,14 +125,8 @@ pub(super) fn automation_composer(
                 }
             }),
         runtime_available,
-        save_draft_available: runtime_available
-            && value
-                .and_then(|value| bool_field(value, &["save_draft_available"]))
-                .unwrap_or(false),
-        enable_available: runtime_available
-            && value
-                .and_then(|value| bool_field(value, &["enable_available"]))
-                .unwrap_or(false),
+        save_draft_available,
+        enable_available,
         receipt_filename: value
             .and_then(|value| automation_text_field(value, &["receipt_filename"]))
             .unwrap_or_else(|| "automate-composer-latest.json".to_string()),
@@ -151,6 +153,7 @@ pub(super) fn automation_composer(
                     "DX Agents receipt root is missing.".to_string()
                 }
             }),
+        actions,
         fields: value
             .and_then(|value| array_field(value, &["fields"]))
             .map(|fields| fields.iter().take(12).filter_map(composer_field).collect())
@@ -193,7 +196,7 @@ fn automation_row(automation: &Value) -> DxAgentAutomation {
             .unwrap_or_else(|| "pending runtime".to_string()),
         receipts: automation_receipts(automation),
         history: automation_history(automation),
-        actions: automation_row_actions(automation),
+        actions: automation_row_actions(automation, &id),
         next_action: automation_text_field(automation, &["next_action"]).unwrap_or_default(),
     }
 }
@@ -311,88 +314,6 @@ fn automation_history(automation: &Value) -> Vec<DxAgentAutomationHistoryEntry> 
                 .collect()
         })
         .unwrap_or_default()
-}
-
-fn automation_row_actions(value: &Value) -> Vec<DxAgentRowAction> {
-    row_actions(value, |id, command, receipt_filename, refresh_command| {
-        is_dx_agents_command(refresh_command, "automate list --json")
-            && match id {
-                "run" => {
-                    receipt_filename == "run-latest.json"
-                        && is_dx_agents_command(command, "run --json")
-                }
-                "refresh" => {
-                    receipt_filename == "automate-list-latest.json"
-                        && is_dx_agents_command(command, "automate list --json")
-                }
-                _ => false,
-            }
-    })
-}
-
-fn row_actions<F>(value: &Value, is_allowed: F) -> Vec<DxAgentRowAction>
-where
-    F: Fn(&str, &str, &str, &str) -> bool,
-{
-    array_field(value, &["actions"])
-        .map(|actions| {
-            actions
-                .iter()
-                .take(8)
-                .filter_map(|action| row_action(action, &is_allowed))
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
-fn row_action<F>(value: &Value, is_allowed: &F) -> Option<DxAgentRowAction>
-where
-    F: Fn(&str, &str, &str, &str) -> bool,
-{
-    let id = string_field(value, &["id"])?;
-    let command = string_field(value, &["command"])?;
-    let public_command = string_field(value, &["public_command"])
-        .unwrap_or_else(|| public_command_for_runtime(&command));
-    let receipt_filename = string_field(value, &["receipt_filename"])?;
-    let refresh_command = string_field(value, &["refresh_command"])?;
-    let public_refresh_command = string_field(value, &["public_refresh_command"])
-        .unwrap_or_else(|| public_command_for_runtime(&refresh_command));
-    let secrets_exposed = bool_field(value, &["secrets_exposed"]).unwrap_or(true);
-    let writes_receipt = bool_field(value, &["writes_receipt"]).unwrap_or(false);
-
-    if !writes_receipt
-        || secrets_exposed
-        || is_secret_like_arg(&command)
-        || is_secret_like_arg(&public_command)
-        || is_secret_like_arg(&receipt_filename)
-        || is_secret_like_arg(&refresh_command)
-        || is_secret_like_arg(&public_refresh_command)
-        || !is_public_dx_agents_command(&public_command)
-        || !is_public_dx_agents_command(&public_refresh_command)
-        || !is_allowed(&id, &command, &receipt_filename, &refresh_command)
-        || !is_allowed(
-            &id,
-            &public_command,
-            &receipt_filename,
-            &public_refresh_command,
-        )
-    {
-        return None;
-    }
-
-    Some(DxAgentRowAction {
-        label: string_field(value, &["label"]).unwrap_or_else(|| id.clone()),
-        id,
-        command,
-        public_command,
-        enabled: bool_field(value, &["enabled"]).unwrap_or(false),
-        user_action_required: bool_field(value, &["user_action_required"]).unwrap_or(false),
-        writes_receipt,
-        receipt_filename,
-        refresh_command,
-        public_refresh_command,
-        secrets_exposed,
-    })
 }
 
 fn composer_field(field: &Value) -> Option<DxAgentAutomationComposerField> {

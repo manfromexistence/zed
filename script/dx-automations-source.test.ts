@@ -8,6 +8,9 @@ const lineCount = (path: string) => read(path).split(/\r?\n/).length;
 test("DX Automations expose typed bridge schema and pending composer contract", () => {
   const bridge = read("crates/agent_ui/src/dx_agent_bridge.rs");
   const contract = read("crates/agent_ui/src/dx_agent_bridge/automation_contract.rs");
+  const actionTests = read(
+    "crates/agent_ui/src/dx_agent_bridge/automation_actions_tests.rs",
+  );
   const contractTests = read(
     "crates/agent_ui/src/dx_agent_bridge/automation_contract_tests.rs",
   );
@@ -42,13 +45,17 @@ test("DX Automations expose typed bridge schema and pending composer contract", 
   assert.match(contract, /waiting_for_automation_composer_contract/);
   assert.match(contract, /pending_backend_contract/);
   assert.doesNotMatch(contract, /HashMap<String,\s*Value>/);
+  assert.match(actionTests, /automation_run_action_requires_typed_backend_target/);
+  assert.match(actionTests, /automation_composer_actions_parse_backend_contract/);
   assert.match(contractTests, /automation_rows_parse_composer_ready_contract_fields/);
   assert.match(contractTests, /automation_composer_falls_back_to_pending_backend_contract/);
 });
 
 test("DX Automations remain receipt-backed and do not fake scheduled execution", () => {
   const contract = read("crates/agent_ui/src/dx_agent_bridge/automation_contract.rs");
+  const actions = read("crates/agent_ui/src/dx_agent_bridge/automation_actions.rs");
   const runtime = read("crates/agent_ui/src/dx_agent_bridge/runtime.rs");
+  const commands = read("crates/agent_ui/src/dx_agent_bridge/commands.rs");
   const configuration = read("crates/agent_ui/src/agent_configuration.rs");
   const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
   const launchWorkspace = read("crates/agent_ui/src/dx_launch_workspace.rs");
@@ -62,16 +69,28 @@ test("DX Automations remain receipt-backed and do not fake scheduled execution",
 
   assert.match(contract, /pub\(super\) fn automation_composer/);
   assert.match(contract, /pub\(super\) fn automations\(value: &Value\)/);
+  assert.match(contract, /pub actions: Vec<DxAgentRowAction>/);
   assert.match(contract, /array_field\(value, &\["automations"\]\)[\s\S]*\.take\(12\)/);
-  assert.match(contract, /fn automation_row_actions/);
-  assert.match(contract, /is_dx_agents_command\(refresh_command, "automate list --json"\)/);
-  assert.match(contract, /receipt_filename == "run-latest\.json"/);
-  assert.match(contract, /receipt_filename == "automate-list-latest\.json"/);
-  assert.match(contract, /writes_receipt/);
-  assert.match(contract, /secrets_exposed/);
-  assert.match(contract, /is_secret_like_arg/);
+  assert.match(actions, /pub\(super\) fn automation_composer_actions/);
+  assert.match(actions, /pub\(super\) fn automation_row_actions/);
+  assert.match(actions, /pub\(crate\) fn automation_public_command_for_action/);
+  assert.match(actions, /is_safe_automation_id_arg/);
+  assert.match(actions, /"automate run --id/);
+  assert.match(actions, /"automate enable --id/);
+  assert.match(actions, /"automate save-draft --json"/);
+  assert.match(actions, /receipt_filename == "automate-run-latest\.json"/);
+  assert.match(actions, /receipt_filename == "automate-list-latest\.json"/);
+  assert.match(actions, /receipt_filename == "automate-draft-latest\.json"/);
+  assert.match(actions, /writes_receipt/);
+  assert.match(actions, /secrets_exposed/);
+  assert.match(actions, /is_secret_like_arg/);
+  assert.doesNotMatch(actions, /is_dx_agents_command\(command, "run --json"\)/);
   assert.doesNotMatch(runtime, /pub\(super\) fn automations/);
   assert.doesNotMatch(runtime, /fn automation_row_actions/);
+  assert.match(commands, /AutomationSaveDraft/);
+  assert.match(commands, /AutomationEnable \{ automation_id: String \}/);
+  assert.match(commands, /AutomationRun \{ automation_id: String \}/);
+  assert.match(commands, /dx_agents_automation_args\("run", automation_id\)/);
 
   assert.match(rail, /dx_agent_automation_composer_contract/);
   assert.match(rail, /"dx agents automate list --json"/);
@@ -96,15 +115,29 @@ test("DX Automations remain receipt-backed and do not fake scheduled execution",
   assert.match(labels, /automation\.destination/);
   assert.match(rows, /automation\.last_run/);
   assert.match(rows, /automation\.next_run/);
+  assert.match(rows, /requested next/);
+  assert.match(labels, /Execution proof pending/);
   assert.match(labels, /automation\.receipts/);
   assert.match(labels, /automation\.history/);
   assert.match(configuration, /Button::new\("dx-agent-automation-save-draft", "Save Draft"\)/);
   assert.match(configuration, /Button::new\("dx-agent-automation-enable", "Enable"\)/);
-  assert.match(configuration, /\.disabled\(!composer\.save_draft_available\)/);
-  assert.match(configuration, /\.disabled\(!composer\.enable_available\)/);
+  assert.match(configuration, /let save_draft_action = dx_agent_row_action\(&composer\.actions, "save_draft"\)/);
+  assert.match(configuration, /let enable_action = dx_agent_row_action\(&composer\.actions, "enable"\)/);
+  assert.match(configuration, /automation_public_command_for_action/);
+  assert.match(actions, /DxAgentPublicCommand::AutomationSaveDraft/);
+  assert.match(actions, /DxAgentPublicCommand::AutomationEnable \{ automation_id \}/);
+  assert.match(actions, /DxAgentPublicCommand::AutomationRun \{ automation_id \}/);
+  assert.match(configuration, /automation\.status\.enabled && automation\.status\.runtime_available/);
+  assert.match(configuration, /Execution proof pending/);
   assert.match(
     configuration,
     /run_action\.map_or\(false, \|action\| action\.enabled\)\s*&& automation\.status\.runtime_available/,
+  );
+  assert.match(configuration, /let run_command = run_action\.and_then\(automation_public_command_for_action\)/);
+  assert.doesNotMatch(
+    configuration,
+    /dx-agent-automation-run-[\s\S]{0,700}DxAgentPublicCommand::Run/,
+    "Automation row run must never dispatch the generic runtime run command",
   );
 });
 
@@ -159,6 +192,8 @@ test("DX Automations have a first-class workspace tab contract", () => {
 test("DX Automation source stays split into focused files", () => {
   for (const file of [
     "crates/agent_ui/src/automation_screen.rs",
+    "crates/agent_ui/src/dx_agent_bridge/automation_actions.rs",
+    "crates/agent_ui/src/dx_agent_bridge/automation_actions_tests.rs",
     "crates/agent_ui/src/dx_agent_bridge/automation_contract.rs",
     "crates/agent_ui/src/dx_agent_bridge/automation_contract_tests.rs",
     "crates/agent_ui/src/dx_launch_workspace/automation_screen.rs",
@@ -172,6 +207,8 @@ test("DX Automation source stays split into focused files", () => {
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge.rs") < 880);
   assert.ok(lineCount("crates/agent_ui/src/automation_screen.rs") < 115);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/automation_screen.rs") < 120);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_actions.rs") < 230);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_actions_tests.rs") < 110);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_contract.rs") < 520);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_contract_tests.rs") < 150);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/automations.rs") < 70);
@@ -182,6 +219,6 @@ test("DX Automation source stays split into focused files", () => {
     lineCount("crates/agent_ui/src/dx_launch_workspace/agents/automations/labels.rs") < 70,
   );
   assert.ok(
-    lineCount("crates/agent_ui/src/dx_launch_workspace/agents/automations/rows.rs") < 145,
+    lineCount("crates/agent_ui/src/dx_launch_workspace/agents/automations/rows.rs") < 170,
   );
 });

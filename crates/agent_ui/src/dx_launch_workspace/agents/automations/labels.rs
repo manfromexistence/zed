@@ -31,7 +31,7 @@ pub(super) fn automation_destination_label(automation: &DxAgentAutomation) -> St
 
 pub(super) fn automation_receipt_label(automation: &DxAgentAutomation) -> String {
     if automation.receipts.is_empty() {
-        return String::new();
+        return "Execution proof pending: no automation run receipt yet".to_string();
     }
     let latest = &automation.receipts[0];
     format!(
@@ -44,7 +44,7 @@ pub(super) fn automation_receipt_label(automation: &DxAgentAutomation) -> String
 
 pub(super) fn automation_history_label(automation: &DxAgentAutomation) -> String {
     if automation.history.is_empty() {
-        return String::new();
+        return "Execution history pending".to_string();
     }
     let latest = &automation.history[0];
     format!(

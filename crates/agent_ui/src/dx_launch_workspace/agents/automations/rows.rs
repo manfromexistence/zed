@@ -15,15 +15,22 @@ pub(super) fn dx_agent_automation_row(
     automation: &DxAgentAutomation,
     cx: &App,
 ) -> AnyElement {
-    let state = if automation.status.enabled {
+    let state = if automation.status.enabled && automation.status.runtime_available {
         automation.status.state.clone()
+    } else if automation.status.enabled {
+        "runtime pending".to_string()
     } else {
         "paused".to_string()
     };
     let schedule = automation_schedule_label(automation);
     let destination = automation_destination_label(automation);
+    let next_label = if automation.status.runtime_available {
+        "next"
+    } else {
+        "requested next"
+    };
     let run_window = format!(
-        "last {} / next {}",
+        "last {} / {next_label} {}",
         automation.last_run, automation.next_run
     );
     let receipt_summary = automation_receipt_label(automation);

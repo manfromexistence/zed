@@ -157,7 +157,7 @@ const MAX_SKILL_URL_CLIPBOARD_BYTES: usize = 64 * 1024;
 const MAX_AGENT_PANEL_MESSAGE_EDITOR_TEXT_BYTES: usize = 16 * 1024 * 1024;
 const MAX_AGENT_PANEL_TITLE_EDITOR_TEXT_BYTES: usize = 16 * 1024;
 const DX_LAUNCH_RECIPE_PROMPT: &str = "Run the DX launch metasearch-to-reduced-context recipe for this workspace. First call list_dx_launch_demo_recipes with focus=\"metasearch\". Then, using only permissioned Agent tools and no local servers or builds, guide me through the next safe receipt step: inspect_dx_metasearch, search_dx_metasearch with write_source_pack_receipt=true, prepare_dx_source_attachment, prepare_dx_metasearch_context, plan_dx_serializer_rlm_execution, gate_dx_serializer_rlm_runner, write_dx_serializer_rlm_reduced_context, and preview_dx_serializer_rlm_reducer_execution. Stop before execute_dx_serializer_rlm_reducer, external serializer/RLM runner work, or model-call execution unless I explicitly approve a no-shell absolute command vector and managed receipt.";
-const DX_MEDIA_PROOF_PROMPT: &str = "Prepare the DX media proof flow for this workspace. First call list_dx_launch_demo_recipes with focus=\"media\". Then review any produced-file proof cards in the Sources rail and guide me through the next safe step using permissioned tools only: plan_dx_media_tool, gate_dx_media_tool_runner, execute_dx_media_tool only after an approved runner gate, and prepare_dx_source_attachment for produced files. Do not run local servers, builds, browser input, shell commands, unmanaged file writes, or media execution until I explicitly approve the tool request.";
+const DX_MEDIA_PROOF_PROMPT: &str = "Prepare the DX media provider proof flow for this workspace. Review provider readiness, media plan receipts, runner-gate receipts, and any produced-file proof cards in the Sources rail. Guide me through the next safe step using permissioned tools only: plan_dx_media_tool, gate_dx_media_tool_runner, and prepare_dx_source_attachment for produced files. Do not run local servers, builds, browser input, shell commands, unmanaged file writes, provider calls, or media execution until I explicitly approve the governed tool request and produced files can be verified from receipts.";
 const DX_REDUCER_GUARD_PROMPT: &str = "Prepare a DX serializer/RLM reducer execution guard review for this workspace. Review metasearch source packs, source attachments, context bundles, execution-plan receipts, runner-gate receipts, reduced-context receipts, execution-preview receipts, external-execution receipts, citation coverage, token budget, and model-call approval state. If I provide approval evidence, first use preview_dx_serializer_rlm_reducer_execution for the managed dry-run preview. Use execute_dx_serializer_rlm_reducer only when I explicitly provide a no-shell absolute command vector under approved DX serializer/RLM roots and require a managed execution receipt. Do not run cargo, package managers, local servers, browser input, shell commands, network, unmanaged file writes, or model calls unless the governed tool request explicitly covers them.";
 const KNOWN_TERMINAL_AGENT_COMMANDS: &[&str] = &[
     "agent", // Unfortunately, both Cursor cli + grok
@@ -6853,6 +6853,16 @@ impl AgentPanel {
                 ),
             )
             .child(
+                action_button(
+                    "dx-launch-connections",
+                    dx_icon(DxUiIcon::Connections),
+                    "Connections",
+                )
+                .on_click(|_event, window, cx| {
+                    window.dispatch_action(Box::new(zed_actions::agent::OpenSettings), cx);
+                }),
+            )
+            .child(
                 action_button("dx-launch-plugins", dx_icon(DxUiIcon::Plugins), "Plugins").on_click(
                     |_event, window, cx| {
                         window.dispatch_action(Box::new(zed_actions::AcpRegistry), cx);
@@ -7165,7 +7175,7 @@ impl AgentPanel {
                 "dx-media-proof-action",
                 dx_icon(DxUiIcon::Media),
                 "Media Proof",
-                "Plan, gate, execute, and attach produced media receipts.",
+                "Plan, gate, and attach media receipts; execution waits for an approved provider run gate.",
                 "Prepare Media",
                 DX_MEDIA_PROOF_PROMPT,
                 can_create_entries,
@@ -7395,7 +7405,7 @@ impl AgentPanel {
             };
 
             format!(
-                "Review DX Agents automation `{id}` from `{source}`. Status `{status}`, enabled={enabled}, schedule `{schedule}`. {actions} Next action: {next_action}. Use only the fixed public DX Agents automation receipt contracts such as `dx agents automate list --json` or `dx agents run --json` when explicitly approved. Do not run builds, local servers, browser input, shell commands, provider calls, secret import, social login, or unmanaged automation runners.",
+                "Review DX Agents automation `{id}` from `{source}`. Status `{status}`, enabled={enabled}, schedule `{schedule}`. {actions} Next action: {next_action}. Use only fixed public DX Agents automation receipt contracts such as `dx agents automate list --json` or the typed `dx agents automate run --id <automation_id> --json` action when explicitly approved. Do not run builds, local servers, browser input, shell commands, provider calls, secret import, social login, or unmanaged automation runners.",
                 id = automation.id.as_str(),
                 source = automation.source.as_str(),
                 status = automation.status.state.as_str(),

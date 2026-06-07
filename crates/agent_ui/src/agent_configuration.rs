@@ -53,9 +53,9 @@ use crate::{
     agent_connection_store::{AgentConnectionStatus, AgentConnectionStore},
     dx_agent_bridge::{
         DxAgentBridgeSnapshot, DxAgentMetadataCommand, DxAgentPublicCommand, DxAgentReceipt,
-        DxAgentRowAction, DxAgentSocialActionSummary, dx_agent_bridge_snapshot_for_roots,
-        dx_agent_cli_actions_allowed, dx_agent_cli_path, dx_agent_dx_home_for_roots,
-        dx_agent_receipt_root_for_roots, run_dx_agent_metadata_command,
+        DxAgentRowAction, DxAgentSocialActionSummary, automation_public_command_for_action,
+        dx_agent_bridge_snapshot_for_roots, dx_agent_cli_actions_allowed, dx_agent_cli_path,
+        dx_agent_dx_home_for_roots, dx_agent_receipt_root_for_roots, run_dx_agent_metadata_command,
         run_dx_agent_public_command,
     },
 };
@@ -924,6 +924,20 @@ impl AgentConfiguration {
                 }
             })
             .join(", ");
+        let save_draft_action = dx_agent_row_action(&composer.actions, "save_draft");
+        let save_draft_command = save_draft_action.and_then(automation_public_command_for_action);
+        let save_draft_available = composer.save_draft_available && save_draft_command.is_some();
+        let save_draft_tooltip = dx_agent_action_tooltip(
+            save_draft_action,
+            "Save Draft unavailable until DX Agents advertises a typed composer action",
+        );
+        let enable_action = dx_agent_row_action(&composer.actions, "enable");
+        let enable_command = enable_action.and_then(automation_public_command_for_action);
+        let enable_available = composer.enable_available && enable_command.is_some();
+        let enable_tooltip = dx_agent_action_tooltip(
+            enable_action,
+            "Enable unavailable until DX Agents advertises a typed automation runtime action",
+        );
 
         stack = stack
             .child(
@@ -950,23 +964,31 @@ impl AgentConfiguration {
                     Button::new("dx-agent-automation-save-draft", "Save Draft")
                         .style(ButtonStyle::Outlined)
                         .label_size(LabelSize::Small)
-                        .disabled(!composer.save_draft_available)
-                        .tooltip(Tooltip::text(if composer.save_draft_available {
-                            "Save an automation draft through the DX Agents composer contract"
-                        } else {
-                            "Save Draft unavailable until DX Agents emits a composer contract"
-                        })),
+                        .disabled(!save_draft_available)
+                        .tooltip(Tooltip::text(save_draft_tooltip))
+                        .on_click({
+                            let save_draft_command = save_draft_command.clone();
+                            cx.listener(move |this, _, _window, cx| {
+                                if let Some(command) = save_draft_command.clone() {
+                                    this.run_dx_agents_public_action(command, cx);
+                                }
+                            })
+                        }),
                 )
                 .action(
                     Button::new("dx-agent-automation-enable", "Enable")
                         .style(ButtonStyle::Outlined)
                         .label_size(LabelSize::Small)
-                        .disabled(!composer.enable_available)
-                        .tooltip(Tooltip::text(if composer.enable_available {
-                            "Enable the automation through the DX Agents runtime contract"
-                        } else {
-                            "Enable unavailable until the automation runtime is wired"
-                        })),
+                        .disabled(!enable_available)
+                        .tooltip(Tooltip::text(enable_tooltip))
+                        .on_click({
+                            let enable_command = enable_command.clone();
+                            cx.listener(move |this, _, _window, cx| {
+                                if let Some(command) = enable_command.clone() {
+                                    this.run_dx_agents_public_action(command, cx);
+                                }
+                            })
+                        }),
                 ),
             )
             .child(
@@ -988,25 +1010,37 @@ impl AgentConfiguration {
             );
         } else {
             for automation in snapshot.automations.iter().take(4) {
-                let ready_action_count = automation
+                let advertised_action_count = automation
                     .actions
                     .iter()
                     .filter(|action| action.enabled)
                     .count();
+                let execution_ready =
+                    automation.status.enabled && automation.status.runtime_available;
+                let execution_proven = execution_ready
+                    && (!automation.receipts.is_empty() || !automation.history.is_empty());
+                let execution_proof = if execution_proven {
+                    "Execution proof present"
+                } else {
+                    "Execution proof pending"
+                };
                 let detail = format!(
-                    "{} - {} - {} -> {} - {} ready action(s) - {}",
+                    "{} - {} - {} -> {} - {} advertised action(s) - {} - {}",
                     automation.source,
                     automation.schedule.summary,
                     automation.status.state,
                     automation.destination.label,
-                    ready_action_count,
+                    advertised_action_count,
+                    execution_proof,
                     automation.next_action
                 );
                 let mut item = AiSettingItem::new(
                     format!("dx-agent-automation-{}", automation.id),
                     automation.name.clone(),
-                    if automation.status.enabled {
+                    if execution_proven {
                         AiSettingItemStatus::Running
+                    } else if automation.status.enabled {
+                        AiSettingItemStatus::Starting
                     } else {
                         AiSettingItemStatus::Stopped
                     },
@@ -1021,7 +1055,10 @@ impl AgentConfiguration {
 
                 if snapshot.enabled && snapshot.cli_actions_allowed {
                     let refresh_action = dx_agent_row_action(&automation.actions, "refresh");
-                    let refresh_enabled = refresh_action.map_or(true, |action| action.enabled);
+                    let refresh_command =
+                        refresh_action.and_then(automation_public_command_for_action);
+                    let refresh_enabled = refresh_action.map_or(false, |action| action.enabled)
+                        && refresh_command.is_some();
                     let refresh_tooltip = dx_agent_action_tooltip(
                         refresh_action,
                         "Refresh redacted automation receipt",
@@ -1035,17 +1072,50 @@ impl AgentConfiguration {
                         .icon_size(IconSize::Small)
                         .disabled(!refresh_enabled)
                         .tooltip(Tooltip::text(refresh_tooltip))
-                        .on_click(cx.listener(|this, _, _window, cx| {
-                            this.run_dx_agents_public_action(
-                                DxAgentPublicCommand::AutomationsList,
-                                cx,
-                            );
-                        })),
+                        .on_click({
+                            let refresh_command = refresh_command.clone();
+                            cx.listener(move |this, _, _window, cx| {
+                                if let Some(command) = refresh_command.clone() {
+                                    this.run_dx_agents_public_action(command, cx);
+                                }
+                            })
+                        }),
+                    );
+
+                    let enable_action = dx_agent_row_action(&automation.actions, "enable");
+                    let enable_command =
+                        enable_action.and_then(automation_public_command_for_action);
+                    let enable_enabled = enable_action.map_or(false, |action| action.enabled)
+                        && automation.status.runtime_available
+                        && enable_command.is_some();
+                    let enable_tooltip = dx_agent_action_tooltip(
+                        enable_action,
+                        "Enable automation through a typed DX Agents receipt action",
+                    );
+                    item = item.action(
+                        IconButton::new(
+                            format!("dx-agent-automation-enable-{}", automation.id),
+                            IconName::Check,
+                        )
+                        .icon_color(Color::Muted)
+                        .icon_size(IconSize::Small)
+                        .disabled(!enable_enabled)
+                        .tooltip(Tooltip::text(enable_tooltip))
+                        .on_click({
+                            let enable_command = enable_command.clone();
+                            cx.listener(move |this, _, _window, cx| {
+                                if let Some(command) = enable_command.clone() {
+                                    this.run_dx_agents_public_action(command, cx);
+                                }
+                            })
+                        }),
                     );
 
                     let run_action = dx_agent_row_action(&automation.actions, "run");
+                    let run_command = run_action.and_then(automation_public_command_for_action);
                     let run_enabled = run_action.map_or(false, |action| action.enabled)
-                        && automation.status.runtime_available;
+                        && automation.status.runtime_available
+                        && run_command.is_some();
                     let run_tooltip = dx_agent_action_tooltip(
                         run_action,
                         "Write redacted automation run receipt when runtime is available",
@@ -1059,9 +1129,14 @@ impl AgentConfiguration {
                         .icon_size(IconSize::Small)
                         .disabled(!run_enabled)
                         .tooltip(Tooltip::text(run_tooltip))
-                        .on_click(cx.listener(|this, _, _window, cx| {
-                            this.run_dx_agents_public_action(DxAgentPublicCommand::Run, cx);
-                        })),
+                        .on_click({
+                            let run_command = run_command.clone();
+                            cx.listener(move |this, _, _window, cx| {
+                                if let Some(command) = run_command.clone() {
+                                    this.run_dx_agents_public_action(command, cx);
+                                }
+                            })
+                        }),
                     );
                 }
 
@@ -1075,11 +1150,16 @@ impl AgentConfiguration {
                 }
                 stack = stack.child(
                     Label::new(format!(
-                        "Schedule {} ({}) | destination {} | last {} | next {}",
+                        "Schedule {} ({}) | destination {} | last {} | {} {}",
                         automation.schedule.kind,
                         automation.schedule.timezone,
                         automation.destination.kind,
                         automation.last_run,
+                        if automation.status.runtime_available {
+                            "next"
+                        } else {
+                            "requested next"
+                        },
                         automation.next_run
                     ))
                     .size(LabelSize::Small)
@@ -1093,6 +1173,12 @@ impl AgentConfiguration {
                         ))
                         .size(LabelSize::Small)
                         .color(Color::Muted),
+                    );
+                } else {
+                    stack = stack.child(
+                        Label::new("Execution proof pending: no automation run receipt yet")
+                            .size(LabelSize::Small)
+                            .color(Color::Muted),
                     );
                 }
                 if let Some(history) = automation.history.first() {

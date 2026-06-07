@@ -12,7 +12,9 @@ const DEFAULT_DX_CLI: &str = "dx";
 const SNAPSHOT_CACHE_TTL: Duration = Duration::from_secs(5);
 const MAX_RECEIPT_BYTES: u64 = 128 * 1024;
 
+mod automation_actions;
 mod automation_contract;
+mod command_args;
 mod command_safety;
 mod commands;
 mod local_file_labels;
@@ -22,8 +24,9 @@ mod receipts;
 mod runtime;
 
 use self::command_safety::{
-    bridge_command_label, is_dx_agents_command, is_public_dx_agents_command, is_safe_platform_arg,
-    is_secret_like_arg, public_command_for_runtime, redact_action_scalar,
+    bridge_command_label, is_dx_agents_command, is_public_dx_agents_command,
+    is_safe_automation_id_arg, is_safe_platform_arg, is_secret_like_arg,
+    public_command_for_runtime, redact_action_scalar,
 };
 use self::local_files::{dx_home_from_receipt_root, latest_receipts, read_first_json, read_json};
 use self::paths::{
@@ -31,6 +34,7 @@ use self::paths::{
     default_provider_catalog_path,
 };
 
+pub(crate) use self::automation_actions::automation_public_command_for_action;
 pub(crate) use self::automation_contract::{
     DxAgentAutomation, DxAgentAutomationComposer, DxAgentAutomationComposerField,
     DxAgentAutomationDestination, DxAgentAutomationHistoryEntry, DxAgentAutomationReceiptRef,
@@ -121,6 +125,7 @@ pub(crate) struct DxAgentSocialAccount {
 pub(crate) struct DxAgentRowAction {
     pub id: String,
     pub label: String,
+    pub automation_id: Option<String>,
     pub command: String,
     pub public_command: String,
     pub enabled: bool,

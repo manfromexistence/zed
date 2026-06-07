@@ -3,11 +3,12 @@ IN PROGRESS:
 
 PENDING:
 - Run governed DX Agents runtime proof once authorized, covering real provider receipt ingestion, QR-flow receipt handling, trusted tool bridge import, and launch/settings visual behavior.
-- Wire the future DX Agents automation composer/runtime backend so `Save Draft`, `Enable`, and `Run` can graduate from disabled pending-runtime controls to receipt-backed create/update/execute actions.
+- Wire the DX Agents backend side of `dx agents automate save-draft --json`, `dx agents automate enable --id <automation_id> --json`, and `dx agents automate run --id <automation_id> --json`, then run governed create/update/enable/run receipt proof from Zed.
 - Run a governed runtime proof for AI Profiles once explicitly authorized, covering profile selector order, composer slot popovers, Search/Web Preview evidence routing, Study source attachment, and Media provider-pending states.
 - Continue the DX/Zed ecosystem integration with bounded source-only slices for remaining receipt scans, semantic icon hotspots, and governed runtime proof when explicitly authorized.
 
 COMPLETED:
+- DX Automations action wiring is source-verified: composer Save Draft/Enable and automation row refresh/enable/run controls now require validated receipt-advertised actions, run/enable actions are automation-id scoped, generic runtime run is no longer used for automation rows, and scheduled execution remains pending DX Agents backend receipts.
 - Project Panel generated media cache safety is source-verified: generated media metadata rejects unsafe source jobs before file/tool work, generated video frame extraction fails closed for oversized/relative/path-text-abusive inputs, and media preview/generated metadata async completions now require a current cache generation before repopulating cleared caches.
 - AI profile tool honesty is source-verified: profile slot copy now stays display-only until request preference persistence exists, Search uses runtime-status inspection instead of runtime setup, Media/Study defaults no longer grant demo/runtime execution tools, Manage Profiles uses canonical built-in display names, and the tool picker no longer recreates deleted profiles from stale state.
 - DX Automations now has a real first-class workspace tab: the title-bar dock, Agent launch rail, and sidebar Automations entry points dispatch `assistant::OpenAutomations`, opening a non-splittable receipt-backed Automations screen with composer, schedule/runtime-pending status, receipt rows, and history/handoff state. Source-only verification passed for focused automation/title/onboarding launch guards; live scheduler execution remains pending DX Agents runtime wiring.

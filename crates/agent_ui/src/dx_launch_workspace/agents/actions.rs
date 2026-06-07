@@ -5,7 +5,7 @@ pub(super) fn dx_agent_action_line(actions: &[DxAgentRowAction]) -> Option<Strin
         return None;
     }
 
-    let ready = actions.iter().filter(|action| action.enabled).count();
+    let enabled = actions.iter().filter(|action| action.enabled).count();
     let user_actions = actions
         .iter()
         .filter(|action| action.user_action_required)
@@ -22,7 +22,7 @@ pub(super) fn dx_agent_action_line(actions: &[DxAgentRowAction]) -> Option<Strin
         .join(", ");
 
     Some(format!(
-        "{ready}/{} action(s) ready, {public_bridges} public bridge(s), {user_actions} user action(s), receipts {receipts}",
+        "{enabled}/{} action(s) advertised, {public_bridges} public bridge(s), {user_actions} user action(s), receipts {receipts}",
         actions.len()
     ))
 }

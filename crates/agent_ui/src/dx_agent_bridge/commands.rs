@@ -8,9 +8,10 @@ use std::{
 use anyhow::{Context as _, Result, anyhow};
 use serde_json::{Value, json};
 
+use super::command_args::{dx_agents_args, dx_agents_automation_args, dx_agents_platform_args};
 use super::{
-    MAX_RECEIPT_BYTES, bridge_command_label, clear_snapshot_cache, is_safe_platform_arg,
-    is_secret_like_arg, redact_action_scalar, string_field,
+    MAX_RECEIPT_BYTES, bridge_command_label, clear_snapshot_cache, is_safe_automation_id_arg,
+    is_safe_platform_arg, is_secret_like_arg, redact_action_scalar, string_field,
 };
 
 const MAX_FAILED_COMMAND_STDERR_BYTES: usize = 2048;
@@ -23,6 +24,9 @@ pub(crate) enum DxAgentPublicCommand {
     Status,
     Run,
     ReceiptsList,
+    AutomationSaveDraft,
+    AutomationEnable { automation_id: String },
+    AutomationRun { automation_id: String },
     SocialList,
     SocialConnect { platform: String },
     SocialDisconnect { platform: String },
@@ -39,6 +43,13 @@ impl DxAgentPublicCommand {
             Self::Status => dx_agents_args(&["status"]),
             Self::Run => dx_agents_args(&["run"]),
             Self::ReceiptsList => dx_agents_args(&["receipts", "list"]),
+            Self::AutomationSaveDraft => dx_agents_args(&["automate", "save-draft"]),
+            Self::AutomationEnable { automation_id } => {
+                dx_agents_automation_args("enable", automation_id)
+            }
+            Self::AutomationRun { automation_id } => {
+                dx_agents_automation_args("run", automation_id)
+            }
             Self::SocialList => dx_agents_args(&["social", "list"]),
             Self::SocialConnect { platform } => {
                 dx_agents_platform_args("connect", platform.as_str())
@@ -57,6 +68,9 @@ impl DxAgentPublicCommand {
 
     fn is_safe(&self) -> bool {
         match self {
+            Self::AutomationEnable { automation_id } | Self::AutomationRun { automation_id } => {
+                is_safe_automation_id_arg(automation_id)
+            }
             Self::SocialConnect { platform } | Self::SocialDisconnect { platform } => {
                 is_safe_platform_arg(platform)
             }
@@ -144,25 +158,6 @@ pub(crate) fn run_dx_agent_metadata_command(
     clear_action_error_receipt(&receipt_root);
     clear_snapshot_cache();
     Ok(())
-}
-
-fn dx_agents_args(args: &[&str]) -> Vec<String> {
-    let mut command = Vec::with_capacity(args.len() + 2);
-    command.push("agents".to_string());
-    command.extend(args.iter().map(|arg| (*arg).to_string()));
-    command.push("--json".to_string());
-    command
-}
-
-fn dx_agents_platform_args(action: &str, platform: &str) -> Vec<String> {
-    vec![
-        "agents".to_string(),
-        "social".to_string(),
-        action.to_string(),
-        "--platform".to_string(),
-        platform.to_string(),
-        "--json".to_string(),
-    ]
 }
 
 fn run_bridge_command(
