@@ -6,13 +6,13 @@ mod summary;
 
 use self::freshness::launch_receipt_operator_summary;
 use self::paths::{launch_snapshot_paths, now_ms};
+use crate::dx_launch_receipt_roots::active_launch_receipt_root;
 use std::{
     path::PathBuf,
     sync::{Mutex, OnceLock},
     time::{Duration, Instant},
 };
 
-const DX_LAUNCH_RECEIPT_ROOT: &str = r"G:\Dx\.dx\receipts\launch";
 const DX_LAUNCH_RECEIPT_REVIEW_SCHEMA: &str = "dx.launch.receipts.v1";
 const DX_LAUNCH_RECEIPTS_COMMAND: &str = "dx launch receipts --json";
 const DX_LAUNCH_STATUS_LATEST: &str = "status-latest.json";
@@ -60,31 +60,34 @@ pub(crate) struct DxLaunchReceiptSummary {
     pub next_action: Option<String>,
 }
 
-static LAUNCH_RECEIPTS_CACHE: OnceLock<Mutex<Option<(Instant, DxLaunchReceiptReviewSnapshot)>>> =
-    OnceLock::new();
+static LAUNCH_RECEIPTS_CACHE: OnceLock<
+    Mutex<Option<(Instant, PathBuf, DxLaunchReceiptReviewSnapshot)>>,
+> = OnceLock::new();
 
-pub(crate) fn launch_receipt_review_snapshot() -> DxLaunchReceiptReviewSnapshot {
+pub(crate) fn launch_receipt_review_snapshot_for_roots(
+    workspace_roots: &[String],
+) -> DxLaunchReceiptReviewSnapshot {
+    let root = active_launch_receipt_root(workspace_roots);
     let cache = LAUNCH_RECEIPTS_CACHE.get_or_init(|| Mutex::new(None));
     let now = Instant::now();
 
     if let Ok(mut cache) = cache.lock() {
-        if let Some((cached_at, snapshot)) = cache.as_ref() {
-            if now.duration_since(*cached_at) <= LAUNCH_RECEIPTS_CACHE_TTL {
+        if let Some((cached_at, cached_root, snapshot)) = cache.as_ref() {
+            if cached_root == &root && now.duration_since(*cached_at) <= LAUNCH_RECEIPTS_CACHE_TTL {
                 return snapshot.clone();
             }
         }
 
-        let snapshot = scan_launch_receipts();
-        *cache = Some((now, snapshot.clone()));
+        let snapshot = scan_launch_receipts(root.clone());
+        *cache = Some((now, root, snapshot.clone()));
         return snapshot;
     }
 
-    scan_launch_receipts()
+    scan_launch_receipts(root)
 }
 
-fn scan_launch_receipts() -> DxLaunchReceiptReviewSnapshot {
+fn scan_launch_receipts(root: PathBuf) -> DxLaunchReceiptReviewSnapshot {
     let generated_at_ms = now_ms();
-    let root = PathBuf::from(DX_LAUNCH_RECEIPT_ROOT);
     let latest_path = root.join(DX_LAUNCH_STATUS_LATEST);
     let root_exists = root.is_dir();
 

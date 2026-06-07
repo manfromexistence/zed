@@ -3,7 +3,8 @@ IN PROGRESS:
 
 COMPLETED:
 - Project Panel DX Explorer now has a bounded cached storage drilldown strip that ranks the largest visible cached folders, shows heat levels, and clicks through to select/expand the real folder without render-path filesystem scans.
-- Shared DX project context spine is wired through Check, Style receipt roots, Deploy receipt roots, launch-check gate roots, DX hub fallback selection, and Web Preview DX Studio with local-first `.dx` paths and source guards.
+- Launch Status and Launch Receipt Review now use workspace-root-aware, shared-context launch receipt roots: project-local `.dx\receipts\launch` wins when present, then `G:\Dx\.dx\receipts\launch` remains the fallback.
+- Shared DX project context spine is wired through Check, Style receipt roots, Deploy receipt roots, Launch status/receipt roots, launch-check gate roots, DX hub fallback selection, and Web Preview DX Studio with local-first `.dx` paths and source guards.
 - DX icon rebrand now has semantic `DxUiIcon` aliases, `dx_loader`/`dx_cog` assets, and shell chrome mappings guarded by a source test.
 - DX semantic icon rollout now covers the rotating loader helper, button/thread/sidebar/agent loading indicators, sidebar plugin/extension/automation/settings chrome, Agent launch actions, launch diagnostics, Check sections, source helpers, and screen carousel browser icon.
 - Project Panel folder hover badges now use a bounded background direct-child storage summary cache, showing cached file count plus byte size without render-path filesystem scans.

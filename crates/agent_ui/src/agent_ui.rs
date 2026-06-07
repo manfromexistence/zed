@@ -57,6 +57,7 @@ mod dx_launch_binary_cache;
 mod dx_launch_contracts;
 mod dx_launch_prompts;
 mod dx_launch_readiness;
+mod dx_launch_receipt_roots;
 mod dx_launch_receipts;
 mod dx_launch_source_audit;
 mod dx_launch_status;

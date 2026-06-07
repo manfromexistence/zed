@@ -50,6 +50,7 @@ test("DX project context centralizes bounded local-first paths", () => {
   const receiptRoot = functionBody(source, "receipt_root");
   const receiptRootFor = functionBody(source, "receipt_root_for");
   const workspaceReceiptRoots = functionBody(source, "workspace_receipt_roots");
+  const receiptRootCandidates = functionBody(source, "receipt_root_candidates");
   const normalizeProjectRoot = functionBody(source, "normalize_project_root");
   const projectRootKey = functionBody(source, "project_root_key");
   const pathIsSameOrChild = functionBody(source, "path_is_same_or_child");
@@ -90,6 +91,15 @@ test("DX project context centralizes bounded local-first paths", () => {
   assert.match(workspaceReceiptRoots, /\.take\(DX_PROJECT_CONTEXT_WORKSPACE_ROOT_LIMIT\)/);
   assert.match(workspaceReceiptRoots, /\.filter_map\(\|root\| Self::detect\(root\)\)/);
   assert.match(workspaceReceiptRoots, /context\.receipt_root\(receipt_kind\)/);
+  assert.match(receiptRootCandidates, /contexts_for_workspace_roots\(workspace_roots\)/);
+  assert.match(receiptRootCandidates, /\.take\(DX_PROJECT_CONTEXT_WORKSPACE_ROOT_LIMIT\)/);
+  assertBefore(
+    receiptRootCandidates,
+    /context\.receipt_root\(receipt_kind\)/,
+    /fallback_workspace_root\.as_ref\(\)/,
+    "project-local receipt roots must be listed before shared fallback roots",
+  );
+  assert.match(receiptRootCandidates, /Self::receipt_root_for/);
 
   assert.match(normalizeProjectRoot, /for component in path\.components\(\)/);
   assert.match(
@@ -107,14 +117,17 @@ test("DX project context centralizes bounded local-first paths", () => {
 
 test("DX project context is wired into Check, Style, Deploy, and Web Preview DX Studio", () => {
   const agentRoot = read("crates/agent_ui/src/agent_ui.rs");
+  const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
   const checkReader = read("crates/agent_ui/src/dx_check_panel/reader.rs");
   const styleRoots = read("crates/agent_ui/src/dx_style_panel/receipt_roots.rs");
   const deployRoots = read("crates/agent_ui/src/dx_deploy_receipt_roots.rs");
   const deployCheckRoots = read("crates/agent_ui/src/dx_deploy_check_roots.rs");
   const deployHubRoots = read("crates/agent_ui/src/dx_deploy_hub_roots.rs");
+  const launchReceiptRoots = read("crates/agent_ui/src/dx_launch_receipt_roots.rs");
   const dxStudioProject = read("crates/web_preview/src/dx_studio/project.rs");
 
   assert.match(agentRoot, /pub mod dx_project_context;/);
+  assert.match(agentRoot, /^mod dx_launch_receipt_roots;$/m);
   assert.match(checkReader, /use crate::dx_project_context::DxProjectContext;/);
   assert.match(
     checkReader,
@@ -140,6 +153,12 @@ test("DX project context is wired into Check, Style, Deploy, and Web Preview DX 
   assert.match(deployHubRoots, /use crate::dx_project_context::DxProjectContext;/);
   assert.match(deployHubRoots, /DxProjectContext::shared_fallback_root/);
   assert.match(deployHubRoots, /DxProjectContext::receipt_root_for\(root, "deploy"\)/);
+  assert.match(launchReceiptRoots, /use crate::dx_project_context::DxProjectContext;/);
+  assert.match(launchReceiptRoots, /DxProjectContext::receipt_root_candidates/);
+  assert.match(launchReceiptRoots, /DxProjectContext::shared_fallback_root/);
+  assert.match(launchReceiptRoots, /\.find\(\|root\| root\.is_dir\(\)\)/);
+  assert.match(agentPanel, /launch_status_snapshot_for_roots\(&workspace_roots\)/);
+  assert.match(agentPanel, /launch_receipt_review_snapshot_for_roots\(&workspace_roots\)/);
   assert.match(dxStudioProject, /use agent_ui::dx_project_context::DxProjectContext;/);
   assert.match(dxStudioProject, /let project_context = DxProjectContext::detect\(root\);/);
   assert.match(dxStudioProject, /context\.dx_config_path/);
@@ -159,12 +178,12 @@ test("DX project context keeps IO out of render paths", () => {
   const agentPanelRender = functionBody(agentPanel, "render");
   assert.doesNotMatch(
     agentPanelRender,
-    /DxProjectContext|check_receipt_candidates|source_scoped_receipt_roots|workspace_receipt_roots/,
+    /DxProjectContext|check_receipt_candidates|source_scoped_receipt_roots|workspace_receipt_roots|receipt_root_candidates/,
   );
 
   const projectPanelRender = functionBody(projectPanel, "render");
   assert.doesNotMatch(
     projectPanelRender,
-    /DxProjectContext|check_receipt_candidates|source_scoped_receipt_roots|workspace_receipt_roots/,
+    /DxProjectContext|check_receipt_candidates|source_scoped_receipt_roots|workspace_receipt_roots|receipt_root_candidates/,
   );
 });

@@ -1,3 +1,20 @@
+[2026-06-07] - DX Launch Receipt Roots Use Project Context
+
+CHANGED:
+- `crates\agent_ui\src\dx_project_context.rs` now exposes a bounded shared receipt-root candidate helper for project-local roots followed by a fallback workspace root.
+- `crates\agent_ui\src\dx_launch_receipt_roots.rs` centralizes Launch receipt root selection, preferring an existing workspace `.dx\receipts\launch` directory before `G:\Dx\.dx\receipts\launch`.
+- Agent launch workspace status now passes active workspace roots into Launch Status and Launch Receipt Review snapshots, with root-aware cache keys.
+- `script\dx-project-context-source.test.ts`, `script\dx-launch-status-source.test.ts`, `script\dx-launch-receipts-source.test.ts`, `DX.md`, and `todo.txt` now guard and document the launch receipt context spine.
+
+PASSED:
+- `node --test script\dx-project-context-source.test.ts script\dx-launch-status-source.test.ts script\dx-launch-receipts-source.test.ts script\dx-launch-workspace-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true crates\agent_ui\src\dx_project_context.rs crates\agent_ui\src\dx_launch_receipt_roots.rs crates\agent_ui\src\dx_launch_status.rs crates\agent_ui\src\dx_launch_receipts.rs crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\agent_ui.rs`
+- `git diff --check -- crates/agent_ui/src/dx_project_context.rs crates/agent_ui/src/dx_launch_receipt_roots.rs crates/agent_ui/src/dx_launch_status.rs crates/agent_ui/src/dx_launch_receipts.rs crates/agent_ui/src/agent_panel.rs crates/agent_ui/src/agent_ui.rs script/dx-project-context-source.test.ts script/dx-launch-status-source.test.ts script/dx-launch-receipts-source.test.ts DX.md todo.txt changelog.txt`
+- Conflict-marker scan over the touched launch context files.
+
+NOTES:
+- This checkpoint is source-only. Runtime launch, browser/WebView proof, broad Cargo, and `just run` remain skipped by instruction.
+
 [2026-06-07] - DX Explorer Cached Storage Drilldown
 
 CHANGED:

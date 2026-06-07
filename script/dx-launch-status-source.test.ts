@@ -31,6 +31,11 @@ test("DX launch status keeps receipt IO, JSON helpers, review, and summaries foc
   assert.match(parent, /use self::receipts::read_json_receipt;/);
   assert.match(parent, /use self::review::redaction_requires_review;/);
   assert.match(parent, /use self::summaries::\{agents_summary, discovery_summary, tokens_summary\};/);
+  assert.match(parent, /use crate::dx_launch_receipt_roots::active_launch_receipt_root;/);
+  assert.match(parent, /pub\(crate\) fn launch_status_snapshot_for_roots/);
+  assert.match(parent, /let root = active_launch_receipt_root\(workspace_roots\);/);
+  assert.match(parent, /cached_root == &root/);
+  assert.doesNotMatch(parent, /DX_LAUNCH_RECEIPT_ROOT/);
   assert.doesNotMatch(parent, /fn read_json_receipt\(/);
   assert.doesNotMatch(parent, /fn redaction_requires_review\(/);
   assert.doesNotMatch(parent, /fn pointer_string\(/);

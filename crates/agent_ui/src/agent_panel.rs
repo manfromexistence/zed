@@ -56,9 +56,9 @@ use crate::dx_launch_prompts::{
     source_action_title, source_receipt_review_prompt,
 };
 use crate::dx_launch_readiness::launch_readiness_snapshot;
-use crate::dx_launch_receipts::launch_receipt_review_snapshot;
+use crate::dx_launch_receipts::launch_receipt_review_snapshot_for_roots;
 use crate::dx_launch_source_audit::launch_source_audit_snapshot;
-use crate::dx_launch_status::launch_status_snapshot;
+use crate::dx_launch_status::launch_status_snapshot_for_roots;
 use crate::dx_launch_workspace::{
     DxLaunchRailControls, DxLaunchRailSection, DxLaunchRailSide, DxLaunchRailState,
     DxLaunchWorkspaceStatus, DxSourceRowControl, render_workspace_chrome,
@@ -7502,8 +7502,8 @@ impl AgentPanel {
         let background_task_count = input.background_task_count;
 
         let receipt_snapshot = receipt_snapshot();
-        let launch_status = launch_status_snapshot();
-        let launch_receipts = launch_receipt_review_snapshot();
+        let launch_status = launch_status_snapshot_for_roots(&workspace_roots);
+        let launch_receipts = launch_receipt_review_snapshot_for_roots(&workspace_roots);
         let launch_contracts = launch_contract_snapshot();
         let launch_readiness = launch_readiness_snapshot();
         let launch_audit = launch_audit_snapshot();

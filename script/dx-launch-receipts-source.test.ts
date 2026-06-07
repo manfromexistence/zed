@@ -33,6 +33,11 @@ test("DX launch receipts keep IO, paths, fields, freshness, and summaries focuse
   assert.match(parent, /^mod summary;$/m);
   assert.match(parent, /use self::freshness::launch_receipt_operator_summary;/);
   assert.match(parent, /use self::paths::\{launch_snapshot_paths, now_ms\};/);
+  assert.match(parent, /use crate::dx_launch_receipt_roots::active_launch_receipt_root;/);
+  assert.match(parent, /pub\(crate\) fn launch_receipt_review_snapshot_for_roots/);
+  assert.match(parent, /let root = active_launch_receipt_root\(workspace_roots\);/);
+  assert.match(parent, /cached_root == &root/);
+  assert.doesNotMatch(parent, /DX_LAUNCH_RECEIPT_ROOT/);
   assert.doesNotMatch(parent, /fn read_json_receipt\(/);
   assert.doesNotMatch(parent, /fn launch_snapshot_paths\(/);
   assert.doesNotMatch(parent, /fn freshness_state\(/);

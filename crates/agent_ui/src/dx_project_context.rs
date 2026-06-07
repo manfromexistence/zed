@@ -156,6 +156,34 @@ impl DxProjectContext {
         roots
     }
 
+    pub fn receipt_root_candidates(
+        workspace_roots: &[String],
+        receipt_kind: &str,
+        fallback_workspace_root: impl AsRef<Path>,
+    ) -> Vec<PathBuf> {
+        let mut seen = HashSet::new();
+        let mut roots = Vec::new();
+
+        for context in Self::contexts_for_workspace_roots(workspace_roots)
+            .into_iter()
+            .take(DX_PROJECT_CONTEXT_WORKSPACE_ROOT_LIMIT)
+        {
+            push_unique_path(&mut roots, &mut seen, context.receipt_root(receipt_kind));
+        }
+
+        let fallback = Self::receipt_root_for(fallback_workspace_root.as_ref(), receipt_kind)
+            .unwrap_or_else(|| {
+                fallback_workspace_root
+                    .as_ref()
+                    .join(DX_METADATA_DIR_NAME)
+                    .join("receipts")
+                    .join(receipt_kind)
+            });
+        push_unique_path(&mut roots, &mut seen, fallback);
+
+        roots
+    }
+
     pub fn shared_fallback_root() -> PathBuf {
         PathBuf::from(DX_SHARED_FALLBACK_ROOT)
     }

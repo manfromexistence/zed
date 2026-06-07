@@ -7,6 +7,7 @@ use self::fields::string_field;
 use self::receipts::read_json_receipt;
 use self::review::redaction_requires_review;
 use self::summaries::{agents_summary, discovery_summary, tokens_summary};
+use crate::dx_launch_receipt_roots::active_launch_receipt_root;
 use serde_json::Value;
 use std::{
     path::PathBuf,
@@ -14,7 +15,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-const DX_LAUNCH_RECEIPT_ROOT: &str = r"G:\Dx\.dx\receipts\launch";
 const DX_LAUNCH_STATUS_LATEST: &str = "status-latest.json";
 const DX_LAUNCH_STATUS_SCHEMA: &str = "dx.launch.status.v1";
 const DX_LAUNCH_STATUS_COMMAND: &str = "dx launch status --json";
@@ -70,30 +70,32 @@ pub(crate) struct DxLaunchDiscoverySummary {
     pub next_action: String,
 }
 
-static LAUNCH_STATUS_CACHE: OnceLock<Mutex<Option<(Instant, DxLaunchStatusSnapshot)>>> =
+static LAUNCH_STATUS_CACHE: OnceLock<Mutex<Option<(Instant, PathBuf, DxLaunchStatusSnapshot)>>> =
     OnceLock::new();
 
-pub(crate) fn launch_status_snapshot() -> DxLaunchStatusSnapshot {
+pub(crate) fn launch_status_snapshot_for_roots(
+    workspace_roots: &[String],
+) -> DxLaunchStatusSnapshot {
+    let root = active_launch_receipt_root(workspace_roots);
     let cache = LAUNCH_STATUS_CACHE.get_or_init(|| Mutex::new(None));
     let now = Instant::now();
 
     if let Ok(mut cache) = cache.lock() {
-        if let Some((cached_at, snapshot)) = cache.as_ref() {
-            if now.duration_since(*cached_at) <= LAUNCH_STATUS_CACHE_TTL {
+        if let Some((cached_at, cached_root, snapshot)) = cache.as_ref() {
+            if cached_root == &root && now.duration_since(*cached_at) <= LAUNCH_STATUS_CACHE_TTL {
                 return snapshot.clone();
             }
         }
 
-        let snapshot = scan_launch_status();
-        *cache = Some((now, snapshot.clone()));
+        let snapshot = scan_launch_status(root.clone());
+        *cache = Some((now, root, snapshot.clone()));
         return snapshot;
     }
 
-    scan_launch_status()
+    scan_launch_status(root)
 }
 
-fn scan_launch_status() -> DxLaunchStatusSnapshot {
-    let root = PathBuf::from(DX_LAUNCH_RECEIPT_ROOT);
+fn scan_launch_status(root: PathBuf) -> DxLaunchStatusSnapshot {
     let latest_path = root.join(DX_LAUNCH_STATUS_LATEST);
     let root_exists = root.is_dir();
     let latest_present = latest_path.is_file();

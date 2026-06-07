@@ -28,6 +28,7 @@ This checkout is the Zed/DX editor surface. Worker chats here should focus on GP
 ## Current Verification Lane
 
 - Current Project Panel source slice: DX Explorer now derives a bounded largest-cached-folders drilldown during visible-entry refresh, using the existing background folder storage summaries. The strip renders before media shelves, shows heat-level bars and direct file/storage labels, and row clicks select/expand the real folder; no recursive storage proof, runtime visual proof, or `just run` has been performed.
+- Current launch receipt/status source slice: Launch Status and Launch Receipt Review now receive active workspace roots from the Agent launch workspace refresh, resolve project-local `.dx\receipts\launch` roots through the shared `DxProjectContext`, and fall back to `G:\Dx\.dx\receipts\launch` only when no workspace launch receipt root exists. Runtime visual/native proof remains deferred until the governed validation window.
 - Current DX/Zed ecosystem source slice: the shared `DxProjectContext` now also owns bounded project-local deploy/check receipt roots and the shared `G:\Dx` fallback used by deploy hub roots. Deploy capability and launch-gate scanners preserve workspace-first, then DX hub/www ordering; runtime proof remains deferred until the governed validation window.
 - Final source-only polish for the active DX Style/Zed goal was completed on 2026-05-31 without `just run`, Cargo, servers, WebView automation, or source mutation. The final proof set is fixture mirror sync, targeted Style panel/handoff/launch source guards, focused rustfmt, `git diff --check`, and conflict-marker scanning.
 - This production-readiness pass is no-`just run` and no-Cargo by direct instruction.
@@ -248,7 +249,7 @@ Current handoff and production-readiness guards:
 - `node --test script/dx-source-quality.test.ts` - DX Studio source/edit manifest and bridge source contracts.
 - `node --test script/dx-style-panel-source.test.ts` - DX Style plan/read-model, Web Preview generator split modules, trusted source-apply session, CSS declaration dry-run review contracts, and Zed Style panel source-truth contracts.
 - `node --test script/dx-forge-panel-source.test.ts` - DX Forge dock panel registration, real receipt/restore/media read-model wiring, left-dock identity, edge-case states, and no Git-panel copy/process-call regressions.
-- `node --test script/dx-project-context-source.test.ts` - shared DX project context path normalization, local-first receipt roots, and render-path scan boundaries.
+- `node --test script/dx-project-context-source.test.ts` - shared DX project context path normalization, local-first receipt roots across Check/Style/Deploy/Launch, and render-path scan boundaries.
 - `node G:\Dx\style\scripts\sync_zed_visual_generator_fixtures.mjs --check` - DX Style source fixture to Zed embedded visual-generator mirror freshness.
 - `node --test script/dx-studio-project-source.test.ts` - DX Studio project detection and source-edit bounded file-read contracts.
 - `node --test script/dx-buffer-codegen-source.test.ts` - inline assistant rewrite source-selection byte boundaries.
