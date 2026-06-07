@@ -9,9 +9,12 @@ use serde_json::Value;
 use crate::dx_project_context::DxProjectContext;
 
 use super::{
-    DX_FALLBACK_CHECK_RECEIPT, DxCheckPanelSnapshot, MAX_RECEIPT_BYTES,
+    DxCheckPanelSnapshot, MAX_RECEIPT_BYTES,
     parser::{malformed_snapshot, missing_snapshot, panel_from_receipt_value},
 };
+
+const CHECK_LATEST_RECEIPT_FILE_NAME: &str = "check-latest.json";
+
 pub(super) fn read_latest_check_panel(workspace_roots: &[String]) -> DxCheckPanelSnapshot {
     let candidates = check_receipt_candidates(workspace_roots);
     for candidate in &candidates {
@@ -24,12 +27,23 @@ pub(super) fn read_latest_check_panel(workspace_roots: &[String]) -> DxCheckPane
         candidates
             .first()
             .cloned()
-            .unwrap_or_else(|| PathBuf::from(DX_FALLBACK_CHECK_RECEIPT)),
+            .unwrap_or_else(fallback_check_receipt),
     )
 }
 
 fn check_receipt_candidates(workspace_roots: &[String]) -> Vec<PathBuf> {
-    DxProjectContext::check_receipt_candidates(workspace_roots, DX_FALLBACK_CHECK_RECEIPT)
+    DxProjectContext::check_receipt_candidates(workspace_roots, fallback_check_receipt())
+}
+
+fn fallback_check_receipt() -> PathBuf {
+    DxProjectContext::receipt_root_for(DxProjectContext::shared_fallback_root(), "check")
+        .unwrap_or_else(|| {
+            DxProjectContext::shared_fallback_root()
+                .join(".dx")
+                .join("receipts")
+                .join("check")
+        })
+        .join(CHECK_LATEST_RECEIPT_FILE_NAME)
 }
 
 fn read_check_receipt(path: &Path) -> DxCheckPanelSnapshot {

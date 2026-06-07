@@ -37,9 +37,15 @@ test("DX Check panel delegates receipt IO and panel parsing", () => {
   assert.match(parser, /pub\(super\) fn missing_snapshot/);
   assert.match(parser, /pub\(super\) fn malformed_snapshot/);
   assert.match(reader, /use crate::dx_project_context::DxProjectContext;/);
+  assert.doesNotMatch(parent, /DX_FALLBACK_CHECK_RECEIPT/);
   assert.match(
     reader,
-    /DxProjectContext::check_receipt_candidates\(workspace_roots, DX_FALLBACK_CHECK_RECEIPT\)/,
+    /DxProjectContext::check_receipt_candidates\(workspace_roots, fallback_check_receipt\(\)\)/,
+  );
+  assert.match(reader, /fn fallback_check_receipt\(\) -> PathBuf/);
+  assert.match(
+    reader,
+    /DxProjectContext::receipt_root_for\(DxProjectContext::shared_fallback_root\(\), "check"\)/,
   );
   assert.doesNotMatch(reader, /deploy_root_key|push_unique_path/);
   assert.ok(lineCount("crates/agent_ui/src/dx_check_panel/reader.rs") < 140);
