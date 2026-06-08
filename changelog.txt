@@ -1,3 +1,18 @@
+[2026-06-08] - Web Preview Navigation And Queue Guard
+
+CHANGED:
+- `crates\web_preview\src\web_preview_view.rs` now tracks active native browser navigation ids and ignores stale navigation-complete events before marking the tab ready or syncing the URL.
+- `crates\web_preview\src\windows_visual_webview.rs` now forwards WebView2 navigation ids and only refreshes favicon state for successful navigation completions.
+- `crates\web_preview_macos\src\web_preview_view.rs` and `crates\web_preview_linux\src\web_preview_view.rs` now prune only coalescible browser-state events from the native browser event cap, preserving IPC messages, IPC rejection notices, and mount failures for their own bounded handling paths.
+- `script\web-preview-platform-lifecycle.test.ts` now guards native navigation ids, stale-completion rejection, successful-navigation favicon refresh, platform pruning without generic FIFO removal, and non-prunable IPC/rejection/mount-failure events.
+
+PASSED:
+- `node --test script/web-preview-platform-lifecycle.test.ts`
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. Cargo, build, `just run`, native Zed launch, local servers, and runtime visual proof remain deferred.
+
 [2026-06-08] - Rainbow Caret Animation And Storage Sort Focus
 
 CHANGED:

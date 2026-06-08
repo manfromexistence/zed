@@ -680,14 +680,19 @@ fn attach_event_handlers(
         let event_queue = browser_events.clone();
         webview.add_NavigationStarting(
             &NavigationStartingEventHandler::create(Box::new(move |_, args| {
-                let url = if let Some(args) = args {
+                let (url, navigation_id) = if let Some(args) = args {
                     let mut uri = PWSTR::null();
                     args.Uri(&mut uri)?;
-                    Some(take_pwstr(uri))
+                    let mut navigation_id = 0;
+                    args.NavigationId(&mut navigation_id)?;
+                    (Some(take_pwstr(uri)), Some(navigation_id))
                 } else {
-                    None
+                    (None, None)
                 };
-                push_browser_event(&event_queue, BrowserEvent::NavigationStarted { url });
+                push_browser_event(
+                    &event_queue,
+                    BrowserEvent::NavigationStarted { url, navigation_id },
+                );
                 Ok(())
             })),
             &mut token,
@@ -695,9 +700,18 @@ fn attach_event_handlers(
 
         let event_queue = browser_events.clone();
         webview.add_NavigationCompleted(
-            &NavigationCompletedEventHandler::create(Box::new(move |webview, _| {
+            &NavigationCompletedEventHandler::create(Box::new(move |webview, args| {
                 let Some(webview) = webview else {
                     return Ok(());
+                };
+                let (navigation_id, navigation_succeeded) = if let Some(args) = args {
+                    let mut navigation_id = 0;
+                    args.NavigationId(&mut navigation_id)?;
+                    let mut is_success = BOOL(0);
+                    args.IsSuccess(&mut is_success)?;
+                    (Some(navigation_id), is_success.as_bool())
+                } else {
+                    (None, true)
                 };
                 let mut url = PWSTR::null();
                 webview.Source(&mut url)?;
@@ -706,9 +720,12 @@ fn attach_event_handlers(
                     &event_queue,
                     BrowserEvent::NavigationCompleted {
                         url: Some(current_url.clone()),
+                        navigation_id,
                     },
                 );
-                request_favicon_uri(&webview, event_queue.clone(), current_url);
+                if navigation_succeeded {
+                    request_favicon_uri(&webview, event_queue.clone(), current_url);
+                }
                 Ok(())
             })),
             &mut token,

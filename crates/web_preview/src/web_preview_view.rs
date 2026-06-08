@@ -567,9 +567,11 @@ pub(crate) enum BrowserEvent {
     },
     NavigationStarted {
         url: Option<String>,
+        navigation_id: Option<u64>,
     },
     NavigationCompleted {
         url: Option<String>,
+        navigation_id: Option<u64>,
     },
     IpcMessage(String),
     IpcMessageRejected(String),
@@ -797,6 +799,7 @@ pub struct WebPreviewView {
     detected_extensions: Vec<DetectedExtension>,
     extensions_scanned: bool,
     load_state: PreviewLoadState,
+    active_browser_navigation_id: Option<u64>,
     layout_bounds: Rc<RefCell<Option<Bounds<Pixels>>>>,
     host_bounds: Rc<RefCell<Option<Bounds<Pixels>>>>,
     #[cfg(target_os = "macos")]
@@ -1182,6 +1185,7 @@ impl WebPreviewView {
             detected_extensions: Vec::new(),
             extensions_scanned: false,
             load_state: PreviewLoadState::Loading,
+            active_browser_navigation_id: None,
             layout_bounds: Rc::new(RefCell::new(None)),
             host_bounds: Rc::new(RefCell::new(None)),
             #[cfg(target_os = "macos")]
@@ -1457,6 +1461,33 @@ impl WebPreviewView {
                 editor.set_text(display_url, window, cx);
             });
         }
+    }
+
+    fn browser_event_url_matches_active_url(&self, url: &str) -> bool {
+        if url.is_empty() {
+            return false;
+        }
+
+        let source_apply_session_active = self.dx_style_source_apply_session_token.is_some();
+        display_url_for_loaded_url(url, source_apply_session_active) == self.active_url.as_ref()
+    }
+
+    fn navigation_completion_matches_active_navigation(
+        &self,
+        navigation_id: Option<u64>,
+        url: Option<&str>,
+    ) -> bool {
+        if let Some(active_navigation_id) = self.active_browser_navigation_id {
+            return navigation_id == Some(active_navigation_id);
+        }
+
+        if matches!(self.load_state, PreviewLoadState::Loading)
+            && let Some(url) = url
+        {
+            return self.browser_event_url_matches_active_url(url);
+        }
+
+        true
     }
 
     fn update_favicon_uri(
@@ -30516,12 +30547,8 @@ impl WebPreviewView {
                         }
                         continue;
                     }
-                    let source_apply_session_active =
-                        self.dx_style_source_apply_session_token.is_some();
-                    let display_url =
-                        display_url_for_loaded_url(url.as_str(), source_apply_session_active);
                     if matches!(self.load_state, PreviewLoadState::Loading)
-                        && display_url != self.active_url.as_ref()
+                        && !self.browser_event_url_matches_active_url(url.as_str())
                     {
                         continue;
                     }
@@ -30546,8 +30573,9 @@ impl WebPreviewView {
                         tab_updated = true;
                     }
                 }
-                BrowserEvent::NavigationStarted { url } => {
+                BrowserEvent::NavigationStarted { url, navigation_id } => {
                     self.load_state = PreviewLoadState::Loading;
+                    self.active_browser_navigation_id = navigation_id;
                     self.page_title = None;
                     self.clear_favicon();
                     if let Some(url) = url {
@@ -30555,10 +30583,19 @@ impl WebPreviewView {
                     }
                     tab_updated = true;
                 }
-                BrowserEvent::NavigationCompleted { url } => {
+                BrowserEvent::NavigationCompleted { url, navigation_id } => {
+                    if !self
+                        .navigation_completion_matches_active_navigation(
+                            navigation_id,
+                            url.as_deref(),
+                        )
+                    {
+                        continue;
+                    }
                     if let Some(url) = url {
                         self.sync_active_url(url.as_str(), window, cx);
                     }
+                    self.active_browser_navigation_id = None;
                     self.load_state = PreviewLoadState::Ready;
                     refocus_after_navigation = true;
                 }
@@ -36155,6 +36192,7 @@ impl Item for WebPreviewView {
                 detected_extensions,
                 extensions_scanned: self.extensions_scanned,
                 load_state: PreviewLoadState::Loading,
+                active_browser_navigation_id: None,
                 layout_bounds: Rc::new(RefCell::new(None)),
                 host_bounds: Rc::new(RefCell::new(None)),
                 #[cfg(target_os = "macos")]
@@ -36703,7 +36741,10 @@ fn create_native_preview_for_macos_window(
                 if matches!(event, PageLoadEvent::Finished) {
                     push_browser_event(
                         &event_queue,
-                        BrowserEvent::NavigationCompleted { url: Some(url) },
+                        BrowserEvent::NavigationCompleted {
+                            url: Some(url),
+                            navigation_id: None,
+                        },
                     );
                 }
             }

@@ -2349,9 +2349,23 @@ fn coalesce_browser_event(queue: &mut Vec<BrowserEvent>, event: &BrowserEvent) {
 }
 
 fn prune_browser_event_queue(queue: &mut Vec<BrowserEvent>) {
-    while queue.len() > MAX_DEFERRED_WEB_PREVIEW_BROWSER_EVENTS {
-        queue.remove(0);
+    while queued_browser_event_count(queue) > MAX_DEFERRED_WEB_PREVIEW_BROWSER_EVENTS {
+        let Some(index) = queue.iter().position(is_prunable_browser_event) else {
+            return;
+        };
+        queue.remove(index);
     }
+}
+
+fn queued_browser_event_count(queue: &[BrowserEvent]) -> usize {
+    queue.iter().filter(|event| is_prunable_browser_event(event)).count()
+}
+
+fn is_prunable_browser_event(event: &BrowserEvent) -> bool {
+    matches!(
+        event,
+        BrowserEvent::UrlChanged(_) | BrowserEvent::TitleChanged(_)
+    )
 }
 
 fn ipc_message_capacity_error(message_len: usize) -> Option<&'static str> {
