@@ -6,11 +6,114 @@ use gpui::{
     point, px, quad, relative, size, transparent_black,
 };
 
-const DX_RAINBOW_STRIPE_COUNT: usize = 17;
+const DX_RAINBOW_STRIPE_COUNT: usize = 25;
+const DX_RAINBOW_STOP_LAST_INDEX: usize = DX_RAINBOW_STOPS.len() - 1;
 const DX_RAINBOW_CYCLE_NANOS: u128 = 2_400_000_000;
 const DX_RAINBOW_REDUCED_PHASE: f32 = 0.58;
-const DX_RAINBOW_SATURATION: f32 = 0.86;
-const DX_RAINBOW_LIGHTNESS: f32 = 0.62;
+const DX_RAINBOW_STOPS: [Hsla; 17] = [
+    Hsla {
+        h: 0.966503268,
+        s: 1.,
+        l: 0.6,
+        a: 1.,
+    },
+    Hsla {
+        h: 0.025773196,
+        s: 1.,
+        l: 0.619607843,
+        a: 1.,
+    },
+    Hsla {
+        h: 0.072916667,
+        s: 1.,
+        l: 0.592156863,
+        a: 1.,
+    },
+    Hsla {
+        h: 0.111413043,
+        s: 1.,
+        l: 0.639215686,
+        a: 1.,
+    },
+    Hsla {
+        h: 0.149888143,
+        s: 1.,
+        l: 0.707843137,
+        a: 1.,
+    },
+    Hsla {
+        h: 0.240165631,
+        s: 1.,
+        l: 0.684313725,
+        a: 1.,
+    },
+    Hsla {
+        h: 0.375502008,
+        s: 1.,
+        l: 0.674509804,
+        a: 1.,
+    },
+    Hsla {
+        h: 0.438888889,
+        s: 0.9,
+        l: 0.607843137,
+        a: 1.,
+    },
+    Hsla {
+        h: 0.512562814,
+        s: 1.,
+        l: 0.609803922,
+        a: 1.,
+    },
+    Hsla {
+        h: 0.559463987,
+        s: 1.,
+        l: 0.609803922,
+        a: 1.,
+    },
+    Hsla {
+        h: 0.626204239,
+        s: 1.,
+        l: 0.660784314,
+        a: 1.,
+    },
+    Hsla {
+        h: 0.685307018,
+        s: 1.,
+        l: 0.701960784,
+        a: 1.,
+    },
+    Hsla {
+        h: 0.738993711,
+        s: 1.,
+        l: 0.688235294,
+        a: 1.,
+    },
+    Hsla {
+        h: 0.793456033,
+        s: 1.,
+        l: 0.680392157,
+        a: 1.,
+    },
+    Hsla {
+        h: 0.880239521,
+        s: 1.,
+        l: 0.67254902,
+        a: 1.,
+    },
+    Hsla {
+        h: 0.940074906,
+        s: 1.,
+        l: 0.650980392,
+        a: 1.,
+    },
+    Hsla {
+        h: 0.966503268,
+        s: 1.,
+        l: 0.6,
+        a: 1.,
+    },
+];
 static DX_RAINBOW_STARTED_AT: OnceLock<Instant> = OnceLock::new();
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -163,12 +266,19 @@ impl IntoElement for DxRainbowGlow {
 }
 
 fn dx_rainbow_hsla(phase: f32, alpha: f32) -> Hsla {
-    hsla(
-        normalize_phase(phase),
-        DX_RAINBOW_SATURATION,
-        DX_RAINBOW_LIGHTNESS,
-        clamp_unit(alpha),
-    )
+    let phase = normalize_phase(phase);
+    let scaled_phase = phase * DX_RAINBOW_STOP_LAST_INDEX as f32;
+    let stop_ix = (scaled_phase.floor() as usize).min(DX_RAINBOW_STOP_LAST_INDEX - 1);
+    let mix = scaled_phase - stop_ix as f32;
+    let start = DX_RAINBOW_STOPS[stop_ix];
+    let end = DX_RAINBOW_STOPS[stop_ix + 1];
+
+    Hsla {
+        h: lerp_hue(start.h, end.h, mix),
+        s: lerp_unit(start.s, end.s, mix),
+        l: lerp_unit(start.l, end.l, mix),
+        a: clamp_unit(alpha),
+    }
 }
 
 fn dx_rainbow_phase_now(motion: DxRainbowMotion, phase_offset: f32) -> f32 {
@@ -351,6 +461,15 @@ fn clamp_radius(radius: Pixels, size: Size<Pixels>) -> Pixels {
     radius
         .max(Pixels::ZERO)
         .min(size.width.min(size.height) * 0.5)
+}
+
+fn lerp_hue(start: f32, end: f32, mix: f32) -> f32 {
+    let delta = (end - start + 0.5).rem_euclid(1.) - 0.5;
+    normalize_phase(start + delta * clamp_unit(mix))
+}
+
+fn lerp_unit(start: f32, end: f32, mix: f32) -> f32 {
+    start + (end - start) * clamp_unit(mix)
 }
 
 fn normalize_phase(phase: f32) -> f32 {

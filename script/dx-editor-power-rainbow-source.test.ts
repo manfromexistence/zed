@@ -85,6 +85,9 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
     uiComponents,
     /pub use dx_rainbow_glow::\{\s*DxRainbowGlow, DxRainbowMotion, DxRainbowPaintSample, dx_rainbow_paint_sample,\s*paint_dx_rainbow_caret_glow,\s*\};/s,
   );
+  assert.match(rainbowGlow, /const DX_RAINBOW_STRIPE_COUNT: usize = 25;/);
+  assert.match(rainbowGlow, /const DX_RAINBOW_STOPS: \[Hsla; 17\] = \[/);
+  assert.match(rainbowGlow, /h: 0\.966503268[\s\S]*h: 0\.025773196[\s\S]*h: 0\.512562814[\s\S]*h: 0\.940074906/s);
   assert.match(rainbowGlow, /pub enum DxRainbowMotion \{\s*Animated,\s*Reduced,\s*\}/s);
   assert.match(rainbowGlow, /motion: DxRainbowMotion::Reduced/);
   assert.match(rainbowGlow, /pub fn animated\(\) -> Self \{\s*Self::new\(\)\.motion\(DxRainbowMotion::Animated\)\s*\}/s);
@@ -119,6 +122,11 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
     rainbowGlow,
     /pub fn dx_rainbow_paint_sample\(\s*motion: DxRainbowMotion,\s*phase_offset: f32,\s*alpha: f32,\s*\) -> DxRainbowPaintSample/s,
   );
+  assert.match(
+    rainbowGlow,
+    /fn dx_rainbow_hsla\(phase: f32, alpha: f32\) -> Hsla \{[\s\S]*let start = DX_RAINBOW_STOPS\[stop_ix\];[\s\S]*let end = DX_RAINBOW_STOPS\[stop_ix \+ 1\];[\s\S]*h: lerp_hue\(start\.h, end\.h, mix\),[\s\S]*s: lerp_unit\(start\.s, end\.s, mix\),[\s\S]*l: lerp_unit\(start\.l, end\.l, mix\),[\s\S]*a: clamp_unit\(alpha\),/s,
+  );
+  assert.doesNotMatch(rainbowGlow, /DX_RAINBOW_SATURATION|DX_RAINBOW_LIGHTNESS/);
   assert.match(rainbowGlow, /should_request_animation_frame: motion\.is_animated\(\)/);
   assert.doesNotMatch(rainbowGlow, /pub fn request_animation_frame/);
   assert.match(
@@ -154,12 +162,17 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
   assert.match(rainbowGlow, /pub fn paint_dx_rainbow_caret_glow/);
   assert.match(
     editorElement,
-    /let rainbow_motion = if EditorSettings::get_global\(cx\)\.rainbow_caret_animation \{\s*DxRainbowMotion::Animated\s*\} else \{\s*DxRainbowMotion::Reduced\s*\};/s,
+    /let animate_rainbow_caret = EditorSettings::get_global\(cx\)\.rainbow_caret_animation\s*&& editor\.focus_handle\.contains_focused\(window, cx\);[\s\S]*let rainbow_motion = if animate_rainbow_caret \{\s*DxRainbowMotion::Animated\s*\} else \{\s*DxRainbowMotion::Reduced\s*\};/s,
   );
   assert.doesNotMatch(
     editorElement,
     /EditorSettings::get_global\(cx\)\.cursor_blink \{\s*DxRainbowMotion::Animated/s,
   );
+  const rainbowMotionStart = editorElement.indexOf("let show_local_cursors");
+  assert.ok(rainbowMotionStart >= 0, "expected rainbow motion setup slice");
+  const rainbowMotionEnd = editorElement.indexOf("for (player_color, selections)", rainbowMotionStart);
+  assert.ok(rainbowMotionEnd > rainbowMotionStart, "expected rainbow motion setup sentinel");
+  assert.doesNotMatch(editorElement.slice(rainbowMotionStart, rainbowMotionEnd), /cursor_blink/);
   assert.match(
     editorElement,
     /let supports_rainbow_caret = matches!\(\s*selection\.cursor_shape,\s*CursorShape::Bar \| CursorShape::Underline\s*\);/s,
@@ -178,12 +191,18 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
     editor,
     /rainbow_caret_contrast_cache: RainbowCaretContrastCache::default\(\),/,
   );
-  assert.match(rainbowCaret, /const RAINBOW_CARET_CONTRAST_CACHE_BUCKETS: usize = 120;/);
+  assert.match(rainbowCaret, /const RAINBOW_CARET_CONTRAST_CACHE_BUCKETS: usize = 240;/);
+  assert.match(rainbowCaret, /pub\(crate\) struct RainbowCaretContrastCache/);
   assert.match(
     rainbowCaret,
     /entries: \[Option<RainbowCaretContrastCacheEntry>; RAINBOW_CARET_CONTRAST_CACHE_BUCKETS\]/,
   );
   assert.match(rainbowCaret, /fn quantized_hue_bucket\(hue: f32\) -> usize/);
+  assert.match(rainbowCaret, /let bucket = quantized_hue_bucket\(foreground\.h\);[\s\S]*let foreground = canonicalize_rainbow_foreground\(foreground, bucket\);/s);
+  assert.match(rainbowCaret, /fn canonicalize_rainbow_foreground\(color: Hsla, bucket: usize\) -> Hsla/);
+  assert.match(rainbowCaret, /h: \(bucket as f32 \+ 0\.5\) \/ RAINBOW_CARET_CONTRAST_CACHE_BUCKETS as f32/);
+  assert.match(rainbowCaret, /foreground: QuantizedRainbowForeground::new\(foreground\)/);
+  assert.match(rainbowCaret, /h: quantize_phase\(color\.h\)/);
   assert.match(
     rainbowCaret,
     /ensure_minimum_contrast\(foreground, background, minimum_apca_contrast\)/,

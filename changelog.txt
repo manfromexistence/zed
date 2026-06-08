@@ -1,3 +1,20 @@
+[2026-06-09] - Rainbow Glow Identity Polish
+
+CHANGED:
+- `crates\ui\src\components\dx_rainbow_glow.rs` now samples the DX HelloGlow palette stops with a 25-stripe GPUI cadence instead of using generic synthetic HSL.
+- `crates\editor\src\rainbow_caret.rs` now canonicalizes animated caret contrast-cache colors to deterministic bucket centers and uses finer fixed buckets for smoother hue changes.
+- `crates\editor\src\element.rs` now animates rainbow carets only while the editor focus handle contains focus; visible unfocused editors keep a static reduced-motion rainbow caret.
+- `script\dx-editor-power-rainbow-source.test.ts` now guards palette sampling, bucket canonicalization, focus-gated animation, and scoped no-`cursor_blink` coupling.
+
+PASSED:
+- `node --test script/dx-editor-power-rainbow-source.test.ts`
+- `rustfmt --edition 2024 --check crates/editor/src/element.rs crates/editor/src/rainbow_caret.rs crates/ui/src/components/dx_rainbow_glow.rs`
+- `git diff --check`
+
+NOTES:
+- Six GPT-5.5 extra-high subagent audits covered cache correctness, GPUI paint lifecycle, HelloGlow/helper fidelity, reduced-motion settings, source-guard/docs hygiene, and render-path performance.
+- Source-only by instruction. Cargo, build, `just run`, native Zed launch, local servers, runtime visual proof, and WebView proof remain deferred.
+
 [2026-06-09] - Web Preview Favicon Navigation Safety
 
 CHANGED:

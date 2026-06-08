@@ -967,7 +967,9 @@ impl EditorElement {
 
             let show_local_cursors = editor.show_local_cursors(window, cx);
             let use_rainbow_caret = editor.leader_id.is_none();
-            let rainbow_motion = if EditorSettings::get_global(cx).rainbow_caret_animation {
+            let animate_rainbow_caret = EditorSettings::get_global(cx).rainbow_caret_animation
+                && editor.focus_handle.contains_focused(window, cx);
+            let rainbow_motion = if animate_rainbow_caret {
                 DxRainbowMotion::Animated
             } else {
                 DxRainbowMotion::Reduced
