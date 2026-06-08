@@ -9369,6 +9369,7 @@ impl Render for ProjectPanel {
                                             &media_preview,
                                             active_media_folder.worktree_id,
                                             active_media_folder.selected_media_entry_id,
+                                            self.focus_handle(cx),
                                             Some(
                                                 side_panel_header_controls(
                                                     "project-panel-media",

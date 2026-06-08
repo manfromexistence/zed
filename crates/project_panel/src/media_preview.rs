@@ -14,13 +14,13 @@ use std::{
 };
 
 use gpui::{
-    AnyElement, App, Context, Div, FontWeight, Hsla, MouseButton, MouseDownEvent, ObjectFit,
+    AnyElement, App, Context, Div, FocusHandle, Hsla, MouseButton, MouseDownEvent, ObjectFit,
     SharedString, Stateful, StatefulInteractiveElement, hsla, img, linear_color_stop,
     linear_gradient,
 };
 use project::{Entry, ProjectEntryId, WorktreeId};
 use settings::Settings;
-use ui::{ButtonLike, ContextMenu, PopoverMenu, Tooltip, prelude::*};
+use ui::{ButtonLike, ContextMenu, ListHeader, PopoverMenu, Tooltip, prelude::*};
 use workspace::{PreviewTabsSettings, SelectedEntry};
 
 pub(crate) const MAX_PROJECT_PANEL_MEDIA_CHILD_SCAN: usize = 512;
@@ -202,16 +202,9 @@ pub(crate) fn render_folder_media_gallery(
         .gap_2()
         .p_2()
         .child(
-            h_flex()
-                .items_center()
-                .justify_between()
-                .gap_2()
-                .child(
-                    Label::new("Media")
-                        .size(LabelSize::Small)
-                        .weight(FontWeight::SEMIBOLD),
-                )
-                .child(
+            ListHeader::new("Media")
+                .start_slot(Icon::new(dx_icon(DxUiIcon::Media)).size(IconSize::XSmall))
+                .end_slot(
                     Label::new(format!("{visible_count} shown / {summary}"))
                         .size(LabelSize::XSmall)
                         .color(Color::Muted)
@@ -233,6 +226,7 @@ pub(crate) fn render_folder_media_shelf(
     preview: &FolderMediaPreview,
     worktree_id: WorktreeId,
     selected_entry_id: Option<ProjectEntryId>,
+    focus_handle: FocusHandle,
     panel_controls: Option<AnyElement>,
     cx: &mut Context<super::ProjectPanel>,
 ) -> AnyElement {
@@ -262,7 +256,11 @@ pub(crate) fn render_folder_media_shelf(
         })
         .collect::<Vec<_>>();
     if has_overflow {
-        shelf_cards.push(render_media_shelf_overflow_card(preview, cx));
+        shelf_cards.push(render_media_shelf_overflow_card(
+            preview,
+            focus_handle.clone(),
+            cx,
+        ));
     }
 
     v_flex()
@@ -284,22 +282,9 @@ pub(crate) fn render_folder_media_shelf(
             })
         })
         .child(
-            h_flex()
-                .items_center()
-                .justify_between()
-                .gap_2()
-                .child(
-                    h_flex()
-                        .gap_1()
-                        .items_center()
-                        .child(Icon::new(dx_icon(DxUiIcon::Media)).size(IconSize::XSmall))
-                        .child(
-                            Label::new("Media")
-                                .size(LabelSize::Small)
-                                .weight(FontWeight::SEMIBOLD),
-                        ),
-                )
-                .when_some(panel_controls, |this, controls| this.child(controls)),
+            ListHeader::new("Media")
+                .start_slot(Icon::new(dx_icon(DxUiIcon::Media)).size(IconSize::XSmall))
+                .end_slot(panel_controls),
         )
         .child(
             div()
@@ -325,11 +310,20 @@ fn media_shelf_visible_slots(preview: &FolderMediaPreview) -> usize {
     }
 }
 
-fn render_media_shelf_overflow_card(preview: &FolderMediaPreview, cx: &mut App) -> AnyElement {
+fn render_media_shelf_overflow_card(
+    preview: &FolderMediaPreview,
+    focus_handle: FocusHandle,
+    cx: &mut App,
+) -> AnyElement {
     let summary = media_preview_summary(preview);
     let hidden_count = preview
         .total_count
         .saturating_sub(MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS.saturating_sub(1));
+    let tooltip = if hidden_count > 0 {
+        format!("Show {hidden_count} more media items")
+    } else {
+        "Show media gallery".to_string()
+    };
     let gallery_preview = preview.clone();
     let menu_id = format!(
         "project-panel-media-shelf-overflow-{:016x}",
@@ -341,11 +335,13 @@ fn render_media_shelf_overflow_card(preview: &FolderMediaPreview, cx: &mut App) 
     ));
 
     PopoverMenu::new(menu_id)
-        .trigger(
+        .trigger_with_tooltip(
             ButtonLike::new(trigger_id)
                 .full_width()
                 .height(px(PROJECT_PANEL_MEDIA_SHELF_CARD_TOTAL_HEIGHT).into())
                 .style(ButtonStyle::Subtle)
+                .tab_index(0)
+                .track_focus(&focus_handle)
                 .child(
                     div()
                         .min_w(px(PROJECT_PANEL_MEDIA_SHELF_CARD_MIN_WIDTH))
@@ -370,6 +366,7 @@ fn render_media_shelf_overflow_card(preview: &FolderMediaPreview, cx: &mut App) 
                             .single_line(),
                         ),
                 ),
+            move |_window, cx| Tooltip::with_meta("More media", None, tooltip.clone(), cx),
         )
         .anchor(gpui::Anchor::TopRight)
         .attach(gpui::Anchor::BottomRight)

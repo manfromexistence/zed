@@ -1325,6 +1325,9 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   const selectNext = functionBody(source, "select_next");
   const selectPrevious = functionBody(source, "select_previous");
   const selectMediaShelfEntry = functionBody(source, "select_media_shelf_entry");
+  const renderFolderMediaGallery = functionBody(media, "render_folder_media_gallery");
+  const renderFolderMediaShelf = functionBody(media, "render_folder_media_shelf");
+  const renderMediaShelfOverflowCard = functionBody(media, "render_media_shelf_overflow_card");
 
   assert.match(source, /mod media_preview;/);
   assert.match(source, /const MAX_PROJECT_PANEL_BACKGROUND_MEDIA_PREVIEW_FOLDERS: usize = 256;/);
@@ -1350,6 +1353,7 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   assert.match(media, /fn media_preview_card_tooltip_meta/);
   assert.match(media, /fn render_folder_media_gallery/);
   assert.match(media, /fn render_folder_media_shelf/);
+  assert.match(media, /fn render_media_shelf_overflow_card\([\s\S]*focus_handle: FocusHandle/);
   assert.match(media, /fn render_media_shelf_card/);
   assert.match(media, /fn render_media_gallery_card/);
   assert.match(media, /fn audio_gradient_background/);
@@ -1361,6 +1365,32 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   assert.match(media, /video_frame_preview:\s*Option<VideoFramePreview>/);
   assert.match(media, /duration_label:\s*Option<String>/);
   assert.match(media, /size:\s*u64/);
+  assert.match(media, /use ui::\{[\s\S]*ListHeader/);
+  assert.match(
+    renderFolderMediaGallery,
+    /ListHeader::new\("Media"\)[\s\S]*\.start_slot\(Icon::new\(dx_icon\(DxUiIcon::Media\)\)[\s\S]*\.end_slot(?:::<AnyElement>)?\([\s\S]*visible_count[\s\S]*summary/,
+    "media gallery popover should use the shared ListHeader component with DX media icon and summary slot",
+  );
+  assert.match(
+    renderFolderMediaShelf,
+    /ListHeader::new\("Media"\)[\s\S]*\.start_slot\(Icon::new\(dx_icon\(DxUiIcon::Media\)\)[\s\S]*\.end_slot(?:::<AnyElement>)?\(panel_controls\)/,
+    "top media shelf should use the shared ListHeader component and keep real panel controls in the end slot",
+  );
+  assert.match(
+    renderFolderMediaShelf,
+    /render_media_shelf_overflow_card\([\s\S]*preview,[\s\S]*focus_handle\.clone\(\),[\s\S]*cx/,
+    "top media shelf should pass the Project Panel focus handle into the overflow trigger",
+  );
+  assert.match(
+    renderMediaShelfOverflowCard,
+    /PopoverMenu::new\(menu_id\)[\s\S]*\.trigger_with_tooltip\([\s\S]*ButtonLike::new\(trigger_id\)[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&focus_handle\)[\s\S]*Tooltip::with_meta\("More media"/,
+    "media overflow should use a focusable ButtonLike popover trigger with a tooltip",
+  );
+  assert.doesNotMatch(
+    `${renderFolderMediaGallery}\n${renderFolderMediaShelf}`,
+    /Label::new\("Media"\)/,
+    "media preview headers should not rebuild title chrome with raw labels",
+  );
   assert.match(
     cachedFolderMediaPreview,
     /folder_media_previews[\s\S]*get\(&cache_key\)[\s\S]*cloned\(\)[\s\S]*flatten\(\)/,
@@ -1537,6 +1567,11 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
     renderProjectPanel,
     /active_media_folder\.worktree_id[\s\S]*active_media_folder\.selected_media_entry_id/,
     "media shelf must receive real worktree and selected media entry state",
+  );
+  assert.match(
+    renderProjectPanel,
+    /media_preview::render_folder_media_shelf\([\s\S]*active_media_folder\.selected_media_entry_id,[\s\S]*self\.focus_handle\(cx\)/,
+    "media shelf must receive the Project Panel focus handle for keyboard-reachable controls",
   );
   assertBefore({
     body: renderProjectPanel,
@@ -2044,7 +2079,12 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     renderFolderMediaShelf,
-    /Label::new\("Media"\)(?![\s\S]*format!\("\{visible_media_count\} shown \/ \{summary\}"\))/,
+    /ListHeader::new\("Media"\)[\s\S]*\.end_slot(?:::<AnyElement>)?\(panel_controls\)/,
+    "folder media shelf header must use shared GPUI chrome and keep only real panel controls in the end slot",
+  );
+  assert.doesNotMatch(
+    renderFolderMediaShelf,
+    /format!\("\{visible_media_count\} shown \/ \{summary\}"\)|format!\("\{visible_count\} shown \/ \{summary\}"\)/,
     "folder media shelf header must avoid sticky top-right count text",
   );
   assertBefore({
