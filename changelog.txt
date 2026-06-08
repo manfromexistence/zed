@@ -1,3 +1,20 @@
+[2026-06-08] - DX Rainbow Glow API Production Pass
+
+CHANGED:
+- `crates\ui\src\components\dx_rainbow_glow.rs` now keeps `DxRainbowPaintSample` internals private and exposes only accessor methods for the editor-facing Hsla color and animation-frame intent.
+- The private rainbow wash painter now guards empty snapped bounds before emitting GPUI quads, matching the public caret glow and full glow empty-bounds contract.
+- `crates\editor\src\element.rs` now uses the paint sample accessors while preserving paint-time Hsla cycling for animated local bar/underline cursors.
+- `crates\settings_content\src\editor.rs` now documents the shipped `cursor_blink` default as false, keeping reduced/static rainbow behavior aligned with generated settings docs.
+- `script\dx-editor-power-rainbow-source.test.ts` now guards that sampled rainbow Hsla reaches the actual cursor paint color, that frame intent uses the sealed accessor, and that sample internals stay private.
+
+PASSED:
+- `node --test script\dx-editor-power-rainbow-source.test.ts`
+- `git diff --check`
+
+NOTES:
+- The third production pass used six GPT-5.5 extra-high subagent audits for API/export hygiene, paint lifecycle, performance/allocation risk, reduced motion, editor cursor edge cases, and source-guard/git hygiene.
+- Cargo, `just run`, local servers, browser automation, native launch, and runtime visual proof remain skipped by instruction.
+
 [2026-06-08] - Web Preview Favicon And Brand Color Hardening
 
 CHANGED:

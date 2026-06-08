@@ -5747,14 +5747,14 @@ impl EditorElement {
 
         for cursor in &mut layout.visible_cursors {
             let rainbow_color = if cursor.rainbow_motion.is_some() {
-                rainbow_sample.map(|sample| sample.color)
+                rainbow_sample.map(|sample| sample.color())
             } else {
                 None
             };
             cursor.paint(layout.content_origin, window, cx, rainbow_color);
         }
 
-        if rainbow_sample.is_some_and(|sample| sample.request_animation_frame) {
+        if rainbow_sample.is_some_and(|sample| sample.request_animation_frame()) {
             window.request_animation_frame();
         }
     }

@@ -15,7 +15,7 @@ use crate::{
 pub struct EditorSettingsContent {
     /// Whether the cursor blinks in the editor.
     ///
-    /// Default: true
+    /// Default: false
     pub cursor_blink: Option<bool>,
     /// Cursor shape for the default editor.
     /// Can be "bar", "block", "underline", or "hollow".

@@ -26,9 +26,19 @@ impl DxRainbowMotion {
 
 #[derive(Debug, Clone, Copy)]
 pub struct DxRainbowPaintSample {
-    pub phase: f32,
-    pub color: Hsla,
-    pub request_animation_frame: bool,
+    phase: f32,
+    color: Hsla,
+    request_animation_frame: bool,
+}
+
+impl DxRainbowPaintSample {
+    pub fn color(self) -> Hsla {
+        self.color
+    }
+
+    pub fn request_animation_frame(self) -> bool {
+        self.request_animation_frame
+    }
 }
 
 #[derive(Clone)]
@@ -250,6 +260,10 @@ fn paint_dx_rainbow_wash(
     window: &mut Window,
 ) {
     let bounds = window.pixel_snap_bounds(bounds);
+    if bounds.size.width <= px(0.) || bounds.size.height <= px(0.) {
+        return;
+    }
+
     window.paint_quad(quad(
         bounds,
         Corners::all(clamp_radius(radius, bounds.size)),
