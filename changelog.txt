@@ -1,7 +1,8 @@
 [2026-06-08] - DX Forge Workflow Panel Polish
 
 CHANGED:
-- `crates\agent_ui\src\dx_forge_panel\workflow_rows.rs` now handles selectable row checkbox clicks from the GPUI event context before toggling selection state, keeps receipt/source paths in tooltips, and renders compact dense rows for the workflow lists.
+- `crates\agent_ui\src\dx_forge_panel\workflow_rows.rs` now handles selectable row checkbox clicks from the GPUI event context before toggling selection state, keeps receipt/source paths in tooltips, renders compact dense workflow rows, and groups row actions on the right.
+- `crates\agent_ui\src\dx_forge_panel\controls.rs` now stops row propagation from exact-path open buttons before opening source-owned paths.
 - `crates\agent_ui\src\dx_forge_panel\rows.rs` and `panel_view.rs` no longer carry the obsolete pre-selection receipt/source row shell or stale imports after the workflow-row migration.
 - `script\dx-forge-panel-source.test.ts` now guards the focused workflow-row/ListItem contract instead of the removed legacy row shell.
 - `DX.md` and `todo.txt` record the source-only Forge panel proof boundary.

@@ -126,47 +126,48 @@ fn selectable_row(
     let panel_for_row = panel.clone();
     let row_key = item_key.clone();
     let selection_checkbox = selection_checkbox(id.clone(), item_key, selected, panel);
-    let mut row = ListItem::new(id)
+    let row_actions = selectable_row_actions(open_button, selection_checkbox);
+    ListItem::new(id)
         .inset(true)
         .height(rems(1.75))
         .spacing(ListItemSpacing::Dense)
         .toggle_state(selected)
-        .start_slot(selection_checkbox)
+        .start_slot(Icon::new(icon).size(IconSize::Small).color(icon_color))
         .child(
             h_flex()
                 .w_full()
                 .min_w_0()
                 .flex_1()
-                .gap_2()
-                .child(Icon::new(icon).size(IconSize::Small).color(icon_color))
+                .gap_1p5()
+                .child(Label::new(title).size(LabelSize::Small).truncate())
                 .child(
-                    v_flex()
-                        .w_full()
-                        .min_w_0()
-                        .flex_1()
-                        .gap_0p5()
-                        .child(Label::new(title).size(LabelSize::Small).truncate())
-                        .child(
-                            Label::new(detail)
-                                .size(LabelSize::XSmall)
-                                .color(Color::Muted)
-                                .truncate(),
-                        ),
+                    Label::new(detail)
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted)
+                        .truncate(),
                 ),
         )
+        .end_slot(row_actions)
         .on_click(move |_, _, cx| {
             panel_for_row
                 .update(cx, |panel, cx| {
                     panel.toggle_item_selection(row_key.clone(), cx)
                 })
                 .ok();
-        });
+        })
+}
+
+fn selectable_row_actions(
+    open_button: Option<AnyElement>,
+    selection_checkbox: AnyElement,
+) -> AnyElement {
+    let mut actions = h_flex().flex_none().gap_1();
 
     if let Some(open_button) = open_button {
-        row = row.end_slot(open_button);
+        actions = actions.child(open_button);
     }
 
-    row
+    actions.child(selection_checkbox).into_any_element()
 }
 
 fn item_selected(panel: &WeakEntity<DxForgePanel>, item_key: &str, cx: &App) -> bool {

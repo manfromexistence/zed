@@ -86,6 +86,7 @@ pub(super) fn open_exact_abs_path_button(
         .on_click({
             let workspace = workspace.clone();
             move |_, window, cx| {
+                cx.stop_propagation();
                 if let Some(path) = path.clone().filter(|path| path.exists()) {
                     open_exact_abs_path(workspace.clone(), path, window, cx);
                 }

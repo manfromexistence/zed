@@ -553,8 +553,10 @@ test("Forge panel uses Git-style controls instead of metric cards", () => {
   assert.doesNotMatch(selectableRowBody, /\.height\(px\(52\.0\)\)/);
   assert.doesNotMatch(selectableRowBody, /\.spacing\(ListItemSpacing::Sparse\)/);
   assert.doesNotMatch(selectableRowBody, /\bpath: String\b/);
-  assert.match(selectableRowBody, /\.start_slot\(selection_checkbox\)/);
-  assert.match(selectableRowBody, /\.end_slot\(open_button\)/);
+  assert.match(selectableRowBody, /\.start_slot\(Icon::new\(icon\)/);
+  assert.match(selectableRowBody, /selectable_row_actions\(open_button, selection_checkbox\)/);
+  assert.match(selectableRowBody, /\.end_slot\(row_actions\)/);
+  assert.doesNotMatch(selectableRowBody, /\.start_slot\(selection_checkbox\)/);
   assert.match(emptyRowBody, /ListItem::new\(id\)/);
   assert.match(emptyRowBody, /\.inset\(true\)/);
   assert.match(emptyRowBody, /\.spacing\(ListItemSpacing::Sparse\)/);
@@ -567,6 +569,10 @@ test("Forge panel uses Git-style controls instead of metric cards", () => {
   assert.match(controls, /IconButton::new\("dx-forge-open-history", IconName::FolderOpen\)/);
   assert.match(controls, /IconButton::new\("dx-forge-refresh", IconName::RotateCw\)/);
   assert.match(controls, /IconButton::new\(id, IconName::ArrowUpRight\)/);
+  assert.match(
+    controls,
+    /move \|_, window, cx\| \{[\s\S]*cx\.stop_propagation\(\);[\s\S]*open_exact_abs_path/,
+  );
   assert.match(controls, /open_abs_path\(/);
   assert.match(controls, /OpenOptions/);
   assert.match(panel, /pub\(super\) fn refresh/);
@@ -615,7 +621,9 @@ test("Forge panel uses workflow tabs with Git-style selectable rows", () => {
   assert.match(workflowRows, /ListItem::new\(id/);
   assert.match(workflowRows, /\.height\(rems\(1\.75\)\)/);
   assert.match(workflowRows, /\.spacing\(ListItemSpacing::Dense\)/);
-  assert.match(workflowRows, /\.start_slot\(selection_checkbox/);
+  assert.match(workflowRows, /\.start_slot\(Icon::new\(icon\)/);
+  assert.match(workflowRows, /fn selectable_row_actions/);
+  assert.match(workflowRows, /\.child\(selection_checkbox\)/);
   assert.match(
     workflowRows,
     /panel\s*\.update\(cx, \|panel, cx\|[\s\S]*panel\.toggle_item_selection/,
@@ -763,6 +771,13 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.match(providerGroupControlsBody, /\.spacing\(ListItemSpacing::Dense\)/);
   assert.match(providerGroupControlsBody, /\.start_slot\(/);
   assert.match(providerGroupControlsBody, /\.end_slot\(open_button\)/);
+  assert.match(providerGroupControlsBody, /let row_key = item_key\.clone\(\)/);
+  assert.match(providerGroupControlsBody, /\.on_click\(move \|_, _, cx\|/);
+  assert.match(
+    providerGroupControlsBody,
+    /panel\s*\.update\(cx, \|panel, cx\|[\s\S]*panel\.toggle_item_selection\(row_key\.clone\(\), cx\)/,
+  );
+  assert.match(providerGroupControlsBody, /cx\.stop_propagation\(\);[\s\S]*open_exact_abs_path/);
   assert.doesNotMatch(
     providerGroupControlsBody,
     /\.border_1\(\)|\.border_r_\d+\(\)|ghost_element_(?:background|hover|active)/,
