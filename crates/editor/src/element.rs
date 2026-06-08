@@ -10435,10 +10435,6 @@ impl CursorLayout {
             fill(bounds, color)
         };
 
-        if let Some(name) = &mut self.cursor_name {
-            name.paint(window, cx);
-        }
-
         window.paint_quad(cursor);
 
         if let Some(block_text) = &self.block_text {
@@ -10452,6 +10448,10 @@ impl CursorLayout {
                     cx,
                 )
                 .log_err();
+        }
+
+        if let Some(name) = &mut self.cursor_name {
+            name.paint(window, cx);
         }
     }
 

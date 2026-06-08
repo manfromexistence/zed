@@ -56,7 +56,10 @@ pub use diff_stat::*;
 pub use disclosure::*;
 pub use divider::*;
 pub use dropdown_menu::*;
-pub use dx_rainbow_glow::*;
+pub use dx_rainbow_glow::{
+    DxRainbowGlow, DxRainbowMotion, DxRainbowPaintSample, dx_rainbow_paint_sample,
+    paint_dx_rainbow_caret_glow,
+};
 pub use facepile::*;
 pub use gradient_fade::*;
 pub use group::*;

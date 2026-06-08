@@ -17,21 +17,26 @@ NOTES:
 [2026-06-08] - Rainbow Caret Paint-Time Color Cycling
 
 CHANGED:
+- `crates\ui\src\components.rs` now explicitly re-exports only the intended DX rainbow API surface instead of wildcard-exporting future helper internals.
+- `DxRainbowGlow::new()` now defaults to reduced/static motion, while `DxRainbowGlow::animated()` and `.motion(DxRainbowMotion::Animated)` make continuous animated glow opt-in.
+- `DxRainbowGlow` now lower-bounds builder height/radius inputs, clamps radius against zero as well as the painted size, and the public caret glow painter returns early for empty bounds.
+- Cursor labels now paint after the cursor quad and block cursor text, keeping collaborator/name chips in the foreground instead of letting the cursor edge overpaint them.
 - `crates\ui\src\components\dx_rainbow_glow.rs` now exposes a reusable `DxRainbowPaintSample` helper with phase, Hsla color, and explicit animation-frame intent while keeping raw phase/color/full-glow internals private to the helper module.
 - `DxRainbowGlow` now paints soft rainbow washes with broad GPUI quads and keeps stripe work to the visible band without repeated heavy stripe passes.
 - `crates\editor\src\element.rs` now samples the local rainbow caret color during cursor painting instead of caching it during cursor layout, so requested animation frames repaint a fresh hue while remote and leader-follow cursors keep their existing player colors.
 - Rainbow caret styling is limited to bar and underline cursor shapes, and the extra glow is capped to the newest caret so multi-cursor editing keeps bounded per-frame paint work.
-- `script\dx-editor-power-rainbow-source.test.ts` now guards the paint-time sample path, explicit animation-frame flag, cursor-shape gate, and newest-caret glow contract.
+- `script\dx-editor-power-rainbow-source.test.ts` now guards the paint-time sample path, explicit animation-frame flag, cursor-shape gate, explicit rainbow exports, builder bounds, empty caret-glow bounds, and foreground cursor-label contract.
 - `todo.txt` records this focused source-only caret cycling and production-hardening fix.
 
 PASSED:
+- `node --test script\dx-editor-power-rainbow-source.test.ts`
 - `git diff --check`
 
 NOTES:
 - Root cause: the previous rainbow caret path scheduled repaint frames from `paint_cursors`, but the Hsla color was computed once in `layout_visible_cursors` and stored in `CursorLayout.color`.
-- Reduced motion remains tied to disabled cursor blinking through `DxRainbowMotion::Reduced`, which uses the stable rainbow phase and does not request animation frames.
+- Reduced motion remains tied to disabled cursor blinking through `DxRainbowMotion::Reduced`, which uses the stable rainbow phase and does not request animation frames; no global reduced-motion setting exists in the current repo settings surface.
+- The second production pass used six GPT-5.5 extra-high subagent audits for API surface, paint lifecycle, performance/allocation risk, reduced motion, cursor integration, and git hygiene.
 - Cargo, `just run`, local servers, browser automation, native launch, and runtime visual proof remain skipped by instruction.
-
 [2026-06-08] - Authorized J6 Build/Run Sync
 
 CHANGED:

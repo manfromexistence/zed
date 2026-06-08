@@ -53,8 +53,15 @@ test("Power Mode paints without permanently shifting editor layout", () => {
 
 test("DX rainbow glow helper is reusable and motion-aware", () => {
   assert.match(uiComponents, /mod dx_rainbow_glow;/);
-  assert.match(uiComponents, /pub use dx_rainbow_glow::\*;/);
+  assert.match(
+    uiComponents,
+    /pub use dx_rainbow_glow::\{\s*DxRainbowGlow, DxRainbowMotion, DxRainbowPaintSample, dx_rainbow_paint_sample,\s*paint_dx_rainbow_caret_glow,\s*\};/s,
+  );
   assert.match(rainbowGlow, /pub enum DxRainbowMotion \{\s*Animated,\s*Reduced,\s*\}/s);
+  assert.match(rainbowGlow, /motion: DxRainbowMotion::Reduced/);
+  assert.match(rainbowGlow, /pub fn animated\(\) -> Self \{\s*Self::new\(\)\.motion\(DxRainbowMotion::Animated\)\s*\}/s);
+  assert.match(rainbowGlow, /self\.height = height\.max\(Pixels::ZERO\);/);
+  assert.match(rainbowGlow, /self\.radius = radius\.max\(Pixels::ZERO\);/);
   assert.match(rainbowGlow, /DxRainbowMotion::Reduced => DX_RAINBOW_REDUCED_PHASE/);
   assert.match(
     rainbowGlow,
@@ -69,6 +76,7 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
   assert.match(rainbowGlow, /fn paint_dx_rainbow_wash/);
   assert.match(rainbowGlow, /paint_dx_rainbow_stripes\(bounds, radius, sample\.phase, 1\., window\);/);
   assert.match(rainbowGlow, /if bounds\.size\.width <= px\(0\.\) \|\| bounds\.size\.height <= px\(0\.\) \{/);
+  assert.match(rainbowGlow, /pub fn paint_dx_rainbow_caret_glow[\s\S]*if bounds\.size\.width <= px\(0\.\) \|\| bounds\.size\.height <= px\(0\.\) \{/);
   assert.doesNotMatch(rainbowGlow, /pub fn dx_rainbow_caret_color/);
   assert.doesNotMatch(rainbowGlow, /pub fn dx_rainbow_hsla/);
   assert.doesNotMatch(rainbowGlow, /pub fn dx_rainbow_phase_now/);
@@ -95,6 +103,10 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
   assert.match(
     editorElement,
     /if rainbow_color\.is_some\(\) && self\.rainbow_glow \{\s*paint_dx_rainbow_caret_glow\(bounds, color, window\);\s*\}/s,
+  );
+  assert.match(
+    editorElement,
+    /window\.paint_quad\(cursor\);[\s\S]*if let Some\(block_text\) = &self\.block_text[\s\S]*if let Some\(name\) = &mut self\.cursor_name/s,
   );
 });
 

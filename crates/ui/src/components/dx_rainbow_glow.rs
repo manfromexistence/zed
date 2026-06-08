@@ -46,9 +46,13 @@ impl DxRainbowGlow {
             id: None,
             height: px(125.),
             radius: px(12.),
-            motion: DxRainbowMotion::Animated,
+            motion: DxRainbowMotion::Reduced,
             phase_offset: 0.,
         }
+    }
+
+    pub fn animated() -> Self {
+        Self::new().motion(DxRainbowMotion::Animated)
     }
 
     pub fn id(mut self, id: impl Into<ElementId>) -> Self {
@@ -57,12 +61,12 @@ impl DxRainbowGlow {
     }
 
     pub fn height(mut self, height: Pixels) -> Self {
-        self.height = height;
+        self.height = height.max(Pixels::ZERO);
         self
     }
 
     pub fn radius(mut self, radius: Pixels) -> Self {
-        self.radius = radius;
+        self.radius = radius.max(Pixels::ZERO);
         self
     }
 
@@ -183,6 +187,10 @@ pub fn dx_rainbow_paint_sample(
 }
 
 pub fn paint_dx_rainbow_caret_glow(bounds: Bounds<Pixels>, color: Hsla, window: &mut Window) {
+    if bounds.size.width <= px(0.) || bounds.size.height <= px(0.) {
+        return;
+    }
+
     let outer = window.pixel_snap_bounds(bounds.dilate(px(5.)));
     let inner = window.pixel_snap_bounds(bounds.dilate(px(2.)));
     window.paint_quad(fill(outer, color.opacity(0.12)));
@@ -310,5 +318,5 @@ fn stripe_corners(ix: usize, last_ix: usize, radius: Pixels) -> Corners<Pixels> 
 }
 
 fn clamp_radius(radius: Pixels, size: Size<Pixels>) -> Pixels {
-    radius.min(size.width.min(size.height) * 0.5)
+    radius.max(Pixels::ZERO).min(size.width.min(size.height) * 0.5)
 }
