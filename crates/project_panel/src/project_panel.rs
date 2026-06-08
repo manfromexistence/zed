@@ -66,11 +66,11 @@ use std::{
 };
 use theme_settings::ThemeSettings;
 use ui::{
-    Color, ContextMenu, ContextMenuEntry, DecoratedIcon, Icon, IconButtonShape, IconDecoration,
-    IconDecorationKind, IndentGuideColors, IndentGuideLayout, Indicator, KeyBinding, Label,
-    LabelSize, ListItem, ListItemSpacing, PopoverMenu, ProjectEmptyState, ScrollAxes,
-    ScrollableHandle, Scrollbars, StickyCandidate, TintColor, Tooltip, WithScrollbar, prelude::*,
-    v_flex,
+    Chip, Color, ContextMenu, ContextMenuEntry, DecoratedIcon, Icon, IconButtonShape,
+    IconDecoration, IconDecorationKind, IndentGuideColors, IndentGuideLayout, Indicator,
+    KeyBinding, Label, LabelSize, ListItem, ListItemSpacing, PopoverMenu, ProjectEmptyState,
+    ScrollAxes, ScrollableHandle, Scrollbars, StickyCandidate, TintColor, Tooltip, WithScrollbar,
+    prelude::*, v_flex,
 };
 use util::{
     ResultExt, TakeUntilExt, TryFutureExt,
@@ -4935,22 +4935,14 @@ impl ProjectPanel {
                         };
 
                         this.child(
-                            h_flex()
+                            div()
                                 .id("project-panel-clipboard-operation-status")
                                 .min_w_0()
-                                .items_center()
-                                .gap_1()
-                                .px_1()
-                                .py_0p5()
-                                .rounded_sm()
-                                .border_1()
-                                .border_color(cx.theme().colors().border_variant.opacity(0.45))
-                                .bg(cx.theme().colors().element_background.opacity(0.35))
-                                .child(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted))
                                 .child(
-                                    Label::new(operation.status_label())
-                                        .size(LabelSize::XSmall)
-                                        .color(Color::Muted)
+                                    Chip::new(operation.status_label())
+                                        .icon(icon)
+                                        .icon_color(Color::Muted)
+                                        .label_color(Color::Muted)
                                         .truncate(),
                                 ),
                         )
@@ -7185,7 +7177,6 @@ impl ProjectPanel {
         size: u64,
         folder_storage_summary: Option<storage::FolderStorageSummary>,
         _absolute_path: &Path,
-        cx: &App,
     ) -> AnyElement {
         let label = if kind.is_dir() {
             let Some(summary) = folder_storage_summary else {
@@ -7211,17 +7202,7 @@ impl ProjectPanel {
             .visible_on_hover("list_item")
             .flex_none()
             .ml_1()
-            .border_1()
-            .border_color(cx.theme().colors().border_variant.opacity(0.55))
-            .px_1()
-            .py_0p5()
-            .rounded_sm()
-            .bg(cx.theme().colors().element_background.opacity(0.45))
-            .child(
-                Label::new(label)
-                    .size(LabelSize::XSmall)
-                    .color(Color::Muted),
-            )
+            .child(Chip::new(label).label_color(Color::Muted).truncate())
             .into_any_element()
     }
 
@@ -7299,7 +7280,6 @@ impl ProjectPanel {
             details.size,
             details.folder_storage_summary,
             &details.absolute_path,
-            cx,
         );
         let path_style = self.project.read(cx).path_style(cx);
         let path = details.path.clone();

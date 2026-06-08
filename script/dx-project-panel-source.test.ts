@@ -489,6 +489,15 @@ test("project panel selection toolbar exposes file-browser operation state", () 
   );
 
   assert.match(renderSelectedEntriesToolbar, /\.id\("project-panel-clipboard-operation-status"\)/);
+  assert.match(
+    renderSelectedEntriesToolbar,
+    /Chip::new\(operation\.status_label\(\)\)[\s\S]*\.icon\(icon\)[\s\S]*\.icon_color\(Color::Muted\)[\s\S]*\.label_color\(Color::Muted\)[\s\S]*\.truncate\(\)/,
+  );
+  assert.doesNotMatch(
+    renderSelectedEntriesToolbar,
+    /project-panel-clipboard-operation-status[\s\S]*(?:Label::new\(operation\.status_label\(\)|Icon::new\(icon\)|\.border_1\(\)|border_variant|element_background|\.rounded_sm\(\)|\.py_0p5\(\))/,
+    "clipboard operation status must use the shared Chip component instead of local pill chrome",
+  );
   assert.match(renderSelectedEntriesToolbar, /operation\.status_label\(\)/);
   assert.match(renderSelectedEntriesToolbar, /dx_icon\(DxUiIcon::Copy\)/);
   assert.match(renderSelectedEntriesToolbar, /dx_icon\(DxUiIcon::Move\)/);
@@ -717,6 +726,15 @@ test("project panel folder storage summaries are cache-only on the visible-row p
     renderEntryInfoBadge,
     /summary\.file_count[\s\S]*summary\.file_bytes[\s\S]*format_file_size\(summary\.file_bytes\)/,
     "folder hover badges must show direct child count plus cached storage bytes when available",
+  );
+  assert.match(
+    renderEntryInfoBadge,
+    /Chip::new\(label\)[\s\S]*\.label_color\(Color::Muted\)[\s\S]*\.truncate\(\)/,
+  );
+  assert.doesNotMatch(
+    renderEntryInfoBadge,
+    /(?:cx:\s*&App|Label::new\(label\)|\.size\(LabelSize::XSmall\)|\.border_1\(\)|border_variant|element_background|\.rounded_sm\(\)|\.px_1\(\)|\.py_0p5\(\)|cx\.theme\(\))/,
+    "entry storage badges must use the shared Chip component instead of custom badge chrome",
   );
   assert.match(
     updateVisibleEntries,
