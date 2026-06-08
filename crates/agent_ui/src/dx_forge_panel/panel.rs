@@ -55,7 +55,8 @@ pub(crate) struct DxForgePanel {
     focus_handle: FocusHandle,
     scroll_handle: ScrollHandle,
     active_tab: DxForgePanelTab,
-    selected_items: HashSet<String>,
+    active_item: Option<String>,
+    checked_items: HashSet<String>,
 }
 
 impl DxForgePanel {
@@ -65,7 +66,8 @@ impl DxForgePanel {
             focus_handle: cx.focus_handle(),
             scroll_handle: ScrollHandle::new(),
             active_tab: DxForgePanelTab::Repository,
-            selected_items: HashSet::default(),
+            active_item: None,
+            checked_items: HashSet::default(),
         }
     }
 
@@ -97,15 +99,26 @@ impl DxForgePanel {
         }
     }
 
-    pub(super) fn toggle_item_selection(&mut self, item_key: String, cx: &mut Context<Self>) {
-        if !self.selected_items.insert(item_key.clone()) {
-            self.selected_items.remove(&item_key);
+    pub(super) fn toggle_item_checked(&mut self, item_key: String, cx: &mut Context<Self>) {
+        if !self.checked_items.insert(item_key.clone()) {
+            self.checked_items.remove(&item_key);
         }
         cx.notify();
     }
 
-    pub(super) fn item_selected(&self, item_key: &str) -> bool {
-        self.selected_items.contains(item_key)
+    pub(super) fn activate_item(&mut self, item_key: String, cx: &mut Context<Self>) {
+        if self.active_item.as_deref() != Some(item_key.as_str()) {
+            self.active_item = Some(item_key);
+            cx.notify();
+        }
+    }
+
+    pub(super) fn item_checked(&self, item_key: &str) -> bool {
+        self.checked_items.contains(item_key)
+    }
+
+    pub(super) fn item_active(&self, item_key: &str) -> bool {
+        self.active_item.as_deref() == Some(item_key)
     }
 }
 

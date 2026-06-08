@@ -17,7 +17,8 @@ pub(super) fn selectable_receipt_row(
 ) -> AnyElement {
     let id = SharedString::from(format!("dx-forge-repository-receipt-{ix}"));
     let item_key = format!("receipt:{}", receipt.source_path);
-    let selected = item_selected(panel, &item_key, cx);
+    let checked = item_checked(panel, &item_key, cx);
+    let active = item_active(panel, &item_key, cx);
     let icon_color = if receipt.blocker_count > 0 {
         Color::Warning
     } else {
@@ -29,7 +30,8 @@ pub(super) fn selectable_receipt_row(
     selectable_row(
         id,
         item_key,
-        selected,
+        checked,
+        active,
         IconName::FileTextOutlined,
         icon_color,
         receipt.headline.clone(),
@@ -50,7 +52,8 @@ pub(super) fn selectable_source_row(
     cx: &App,
 ) -> AnyElement {
     let item_key = format!("source:{}", source.open_path);
-    let selected = item_selected(panel, &item_key, cx);
+    let checked = item_checked(panel, &item_key, cx);
+    let active = item_active(panel, &item_key, cx);
     let icon_color = if source.warnings.is_empty() {
         Color::Muted
     } else {
@@ -62,7 +65,8 @@ pub(super) fn selectable_source_row(
     selectable_row(
         id,
         item_key,
-        selected,
+        checked,
+        active,
         icon,
         icon_color,
         source.label.clone(),
@@ -77,10 +81,10 @@ pub(super) fn selectable_source_row(
 pub(super) fn selection_checkbox(
     id: SharedString,
     item_key: String,
-    selected: bool,
+    checked: bool,
     panel: &WeakEntity<DxForgePanel>,
 ) -> AnyElement {
-    let toggle_state = if selected {
+    let toggle_state = if checked {
         ToggleState::Selected
     } else {
         ToggleState::Unselected
@@ -101,12 +105,15 @@ pub(super) fn selection_checkbox(
                 cx.stop_propagation();
                 panel
                     .update(cx, |panel, cx| {
-                        panel.toggle_item_selection(checkbox_key.clone(), cx)
+                        panel.toggle_item_checked(checkbox_key.clone(), cx)
                     })
                     .ok();
             }),
         )
         .on_mouse_down(MouseButton::Left, |_, _, cx| {
+            cx.stop_propagation();
+        })
+        .on_click(|_, _, cx| {
             cx.stop_propagation();
         })
         .into_any_element()
@@ -115,7 +122,8 @@ pub(super) fn selection_checkbox(
 fn selectable_row(
     id: SharedString,
     item_key: String,
-    selected: bool,
+    checked: bool,
+    active: bool,
     icon: IconName,
     icon_color: Color,
     title: String,
@@ -125,13 +133,13 @@ fn selectable_row(
 ) -> ListItem {
     let panel_for_row = panel.clone();
     let row_key = item_key.clone();
-    let selection_checkbox = selection_checkbox(id.clone(), item_key, selected, panel);
+    let selection_checkbox = selection_checkbox(id.clone(), item_key, checked, panel);
     let row_actions = selectable_row_actions(open_button, selection_checkbox);
     ListItem::new(id)
         .inset(true)
         .height(rems(1.75))
         .spacing(ListItemSpacing::Dense)
-        .toggle_state(selected)
+        .toggle_state(active)
         .start_slot(Icon::new(icon).size(IconSize::Small).color(icon_color))
         .child(
             h_flex()
@@ -150,9 +158,7 @@ fn selectable_row(
         .end_slot(row_actions)
         .on_click(move |_, _, cx| {
             panel_for_row
-                .update(cx, |panel, cx| {
-                    panel.toggle_item_selection(row_key.clone(), cx)
-                })
+                .update(cx, |panel, cx| panel.activate_item(row_key.clone(), cx))
                 .ok();
         })
 }
@@ -161,7 +167,15 @@ fn selectable_row_actions(
     open_button: Option<AnyElement>,
     selection_checkbox: AnyElement,
 ) -> AnyElement {
-    let mut actions = h_flex().flex_none().gap_1();
+    let mut actions = h_flex()
+        .flex_none()
+        .gap_1()
+        .on_mouse_down(MouseButton::Left, |_, _, cx| {
+            cx.stop_propagation();
+        })
+        .on_click(|_, _, cx| {
+            cx.stop_propagation();
+        });
 
     if let Some(open_button) = open_button {
         actions = actions.child(open_button);
@@ -170,10 +184,16 @@ fn selectable_row_actions(
     actions.child(selection_checkbox).into_any_element()
 }
 
-fn item_selected(panel: &WeakEntity<DxForgePanel>, item_key: &str, cx: &App) -> bool {
+fn item_checked(panel: &WeakEntity<DxForgePanel>, item_key: &str, cx: &App) -> bool {
     panel
         .upgrade()
-        .is_some_and(|panel| panel.read(cx).item_selected(item_key))
+        .is_some_and(|panel| panel.read(cx).item_checked(item_key))
+}
+
+fn item_active(panel: &WeakEntity<DxForgePanel>, item_key: &str, cx: &App) -> bool {
+    panel
+        .upgrade()
+        .is_some_and(|panel| panel.read(cx).item_active(item_key))
 }
 
 fn receipt_tooltip(receipt: &DxForgeReceiptRow) -> String {

@@ -1,4 +1,4 @@
-use gpui::{AnyElement, App, SharedString, WeakEntity};
+use gpui::{AnyElement, App, MouseButton, SharedString, WeakEntity};
 use ui::{ButtonStyle, IconButtonShape, IconName, ListItem, ListItemSpacing, Tooltip, prelude::*};
 use workspace::Workspace;
 
@@ -86,15 +86,18 @@ fn provider_group_controls(
     let tooltip_meta = remote_target_tooltip(group, &state, target_path.as_deref(), enabled);
     let open_title = SharedString::from(format!("Open {}", group.title()));
     let item_key = format!("remote:{}", group.key());
-    let selected = panel
+    let checked = panel
         .upgrade()
-        .is_some_and(|panel| panel.read(cx).item_selected(&item_key));
+        .is_some_and(|panel| panel.read(cx).item_checked(&item_key));
+    let active = panel
+        .upgrade()
+        .is_some_and(|panel| panel.read(cx).item_active(&item_key));
     let row_key = item_key.clone();
     let panel_for_row = panel.clone();
     let selection_checkbox = selection_checkbox(
         SharedString::from(format!("remote-{}", group.key())),
         item_key,
-        selected,
+        checked,
         panel,
     );
     let open_button = IconButton::new(
@@ -126,7 +129,7 @@ fn provider_group_controls(
     )))
     .inset(true)
     .spacing(ListItemSpacing::Dense)
-    .toggle_state(selected)
+    .toggle_state(active)
     .start_slot(selection_checkbox)
     .child(
         h_flex()
@@ -158,13 +161,11 @@ fn provider_group_controls(
                     .color(state.color),
             ),
     )
-    .end_slot(open_button)
+    .end_slot(provider_group_actions(open_button.into_any_element()))
     .tooltip(move |_, cx| Tooltip::with_meta(tooltip_title.clone(), None, tooltip_meta.clone(), cx))
     .on_click(move |_, _, cx| {
         panel_for_row
-            .update(cx, |panel, cx| {
-                panel.toggle_item_selection(row_key.clone(), cx)
-            })
+            .update(cx, |panel, cx| panel.activate_item(row_key.clone(), cx))
             .ok();
     })
     .into_any_element()
@@ -183,10 +184,29 @@ fn provider_buttons_for_group(
         )))
         .flex_none()
         .gap_0p5()
+        .on_mouse_down(MouseButton::Left, |_, _, cx| {
+            cx.stop_propagation();
+        })
+        .on_click(|_, _, cx| {
+            cx.stop_propagation();
+        })
         .children(
             providers_for(group)
                 .map(|provider| provider_target_button(provider, snapshot, workspace, cx)),
         )
+        .into_any_element()
+}
+
+fn provider_group_actions(open_button: AnyElement) -> AnyElement {
+    h_flex()
+        .flex_none()
+        .on_mouse_down(MouseButton::Left, |_, _, cx| {
+            cx.stop_propagation();
+        })
+        .on_click(|_, _, cx| {
+            cx.stop_propagation();
+        })
+        .child(open_button)
         .into_any_element()
 }
 
