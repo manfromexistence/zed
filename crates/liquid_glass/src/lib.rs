@@ -13,6 +13,31 @@ pub use liquid_glass_view::LiquidGlassView;
 pub fn default_liquid_glass_style() -> LiquidGlassStyle {
     let state = ui_state::UiState::default();
 
+    liquid_glass_style_from_state(&state)
+}
+
+pub fn control_surface_liquid_glass_style() -> LiquidGlassStyle {
+    LiquidGlassStyle {
+        power_factor: 3.0,
+        a: 0.7,
+        b: 2.3,
+        c: 5.2,
+        d: 6.9,
+        f_power: 1.0,
+        noise: 0.06,
+        glow_weight: 0.25,
+        glow_edge0: 0.5,
+        glow_edge1: -0.5,
+        glow_bias: 0.0,
+        chromatic_aberration: 0.008,
+        aberration_samples: 5,
+        blur_radius: 2.0,
+        blur_iterations: 1,
+        blur_downscale: 0.5,
+    }
+}
+
+fn liquid_glass_style_from_state(state: &ui_state::UiState) -> LiquidGlassStyle {
     LiquidGlassStyle {
         power_factor: state.power_factor,
         a: state.a,

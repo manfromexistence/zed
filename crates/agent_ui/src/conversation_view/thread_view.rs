@@ -24,11 +24,13 @@ use language_model::{
     FastModeConfirmation, LanguageModelEffortLevel, LanguageModelId, LanguageModelProviderId,
     LanguageModelRegistry, Speed,
 };
-use liquid_glass::{default_liquid_glass_style, load_glass_surface, paint_liquid_glass_layer};
+use liquid_glass::{
+    control_surface_liquid_glass_style, load_glass_surface, paint_liquid_glass_layer,
+};
 use settings::update_settings_file;
 use ui::{
     ButtonLike, SpinnerLabel, SpinnerVariant, SplitButton, SplitButtonStyle, Tab,
-    theme_is_transparent,
+    theme_is_transparent, utils::apca_contrast,
 };
 use workspace::SERIALIZATION_THROTTLE_TIME;
 use workspace::notifications::NotificationId;
@@ -274,7 +276,7 @@ impl RenderOnce for GeneratingSpinnerElement {
 }
 
 fn render_composer_liquid_glass_layer(source_image: Arc<RenderImage>) -> AnyElement {
-    let style = default_liquid_glass_style();
+    let style = control_surface_liquid_glass_style();
 
     canvas(
         move |bounds, _, _| bounds,
@@ -288,29 +290,39 @@ fn render_composer_liquid_glass_layer(source_image: Arc<RenderImage>) -> AnyElem
     .into_any_element()
 }
 
-fn composer_glass_readability_background(cx: &mut App) -> Hsla {
+fn composer_glass_readability_background(cx: &mut App) -> Option<Hsla> {
+    if !composer_glass_needs_readability_fallback(cx) {
+        return None;
+    }
+
+    let is_transparent = theme_is_transparent(cx);
     let colors = cx.theme().colors();
     let base = colors
         .panel_background
         .blend(colors.editor_background.opacity(0.72));
 
-    if theme_is_transparent(cx) {
-        base.opacity(0.82)
+    Some(if is_transparent {
+        base.opacity(0.58)
     } else {
-        base.opacity(0.48)
-    }
+        base.opacity(0.42)
+    })
 }
 
 fn composer_glass_fallback_background(cx: &mut App) -> Hsla {
+    if !composer_glass_needs_readability_fallback(cx) {
+        return cx.theme().system().transparent;
+    }
+
+    let is_transparent = theme_is_transparent(cx);
     let colors = cx.theme().colors();
     let base = colors
         .panel_background
         .blend(colors.editor_background.opacity(0.86));
 
-    if theme_is_transparent(cx) {
-        base.opacity(0.92)
+    if is_transparent {
+        base.opacity(0.56)
     } else {
-        base.opacity(0.38)
+        base.opacity(0.24)
     }
 }
 
@@ -320,6 +332,20 @@ fn composer_glass_border_color(cx: &mut App) -> Hsla {
     } else {
         cx.theme().colors().border.opacity(0.68)
     }
+}
+
+fn composer_glass_needs_readability_fallback(cx: &mut App) -> bool {
+    if theme_is_transparent(cx) {
+        return true;
+    }
+
+    let colors = cx.theme().colors();
+    let candidate_background = colors
+        .panel_background
+        .blend(colors.editor_background.opacity(0.72));
+
+    apca_contrast(colors.text, candidate_background).abs() < 45.0
+        || apca_contrast(colors.text_muted, candidate_background).abs() < 45.0
 }
 
 pub enum AcpThreadViewEvent {
@@ -3957,13 +3983,15 @@ impl ThreadView {
                     .justify_between()
                     .gap_1()
                     .child(render_composer_liquid_glass_layer(glass_source))
-                    .child(
-                        div()
-                            .absolute()
-                            .inset_0()
-                            .size_full()
-                            .bg(readability_background),
-                    )
+                    .when_some(readability_background, |this, background| {
+                        this.child(
+                            div()
+                                .absolute()
+                                .inset_0()
+                                .size_full()
+                                .bg(background),
+                        )
+                    })
                     .child(
                         v_flex()
                             .relative()
