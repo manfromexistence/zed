@@ -38507,7 +38507,9 @@ fn favicon_uri_allowed_for_page(uri: &str, page_url: Option<&str>, allow_file_ur
         "http" | "https" => page_url
             .and_then(|page_url| url::Url::parse(page_url).ok())
             .is_some_and(|page_url| favicon_http_uri_matches_page_origin(&favicon_url, &page_url)),
-        "file" => allow_file_uri && favicon_page_allows_file_uri(page_url),
+        "file" if allow_file_uri => page_url
+            .and_then(|page_url| url::Url::parse(page_url).ok())
+            .is_some_and(|page_url| favicon_file_uri_matches_page_scope(&favicon_url, &page_url)),
         _ => false,
     }
 }
@@ -38523,6 +38525,48 @@ fn favicon_page_allows_file_uri(page_url: Option<&str>) -> bool {
     page_url
         .and_then(|page_url| url::Url::parse(page_url).ok())
         .is_some_and(|page_url| page_url.scheme() == "file")
+}
+
+fn favicon_file_uri_matches_page_scope(favicon_url: &url::Url, page_url: &url::Url) -> bool {
+    if favicon_url.scheme() != "file" || page_url.scheme() != "file" {
+        return false;
+    }
+
+    let Ok(favicon_path) = favicon_url.to_file_path() else {
+        return false;
+    };
+    let Ok(page_path) = page_url.to_file_path() else {
+        return false;
+    };
+    let Some(favicon_path) = normalized_favicon_file_path(favicon_path.as_path()) else {
+        return false;
+    };
+    let Some(page_path) = normalized_favicon_file_path(page_path.as_path()) else {
+        return false;
+    };
+
+    if favicon_path == page_path {
+        return true;
+    }
+
+    page_path
+        .parent()
+        .is_some_and(|page_parent| favicon_path.starts_with(page_parent))
+}
+
+fn normalized_favicon_file_path(path: &Path) -> Option<PathBuf> {
+    let mut normalized = PathBuf::new();
+    for component in path.components() {
+        match component {
+            std::path::Component::Prefix(_)
+            | std::path::Component::RootDir
+            | std::path::Component::Normal(_) => normalized.push(component.as_os_str()),
+            std::path::Component::CurDir => {}
+            std::path::Component::ParentDir => return None,
+        }
+    }
+
+    (!normalized.as_os_str().is_empty()).then_some(normalized)
 }
 
 fn favicon_cache_file_path(cache_dir: &Path, uri: &str) -> PathBuf {

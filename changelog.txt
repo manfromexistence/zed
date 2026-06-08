@@ -15,6 +15,28 @@ PASSED:
 NOTES:
 - Source-only by instruction. Cargo, build, `just run`, native Zed launch, local servers, runtime proof, and visual proof remain deferred.
 
+[2026-06-09] - Agent Toolbar Keyboard Reachability
+
+CHANGED:
+- `crates\agent_ui\src\agent_panel.rs` now keeps the overlay Back button, fullscreen Sources rail toggle, Progress rail toggle, non-fullscreen side-panel close button, and toolbar response indicator keyboard reachable through explicit GPUI tab stops without reusing the Agent panel focus handle as each button's focus id.
+- `crates\agent_ui\src\agent_panel.rs` now closes the Agent side panel by its captured panel id instead of dispatching the focus-dependent active-side-panel close action.
+- `crates\project_panel\src\project_panel.rs` now renders the DX Explorer header through the shared `ListHeader` component with action slots instead of rebuilding header chrome by hand.
+- `crates\web_preview\src\web_preview_view.rs` now scopes file favicons to the page file itself or files under that page file's parent directory before async cache/file work can read them.
+- `script\dx-workspace-ui-state-source.test.ts` now guards the Agent toolbar tab-stop contracts, panel-id close path, response-indicator focus affordances, and absence of shared panel-focus ids on individual toolbar buttons.
+- `script\dx-project-panel-source.test.ts` now guards the shared `ListHeader` DX Explorer header contract.
+- `script\web-preview-platform-lifecycle.test.ts` now guards the same-file/page-directory Web Preview favicon scope helper.
+- `DX.md` and `todo.txt` now record this as a source-only GPUI accessibility follow-up with runtime/build proof deferred.
+
+PASSED:
+- `node --test script\dx-workspace-ui-state-source.test.ts`
+- `node --test script\dx-project-panel-source.test.ts`
+- `node --test script\web-preview-platform-lifecycle.test.ts`
+- `rustfmt --edition 2024 --check crates\agent_ui\src\agent_panel.rs crates\project_panel\src\project_panel.rs crates\web_preview\src\web_preview_view.rs`
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. Cargo, build, `just run`, native Zed launch, local servers, runtime proof, and visual proof remain deferred.
+
 [2026-06-09] - Web Preview Completion And Project Panel Focus
 
 CHANGED:
@@ -24,10 +46,10 @@ CHANGED:
 - `crates\project_panel\src\media_preview.rs` now keeps media shelf cards on focusable `ButtonLike` chrome with a visible outer focus border.
 - `crates\project_panel\src\media_preview.rs` now renders audio media names and glyphs on a high-contrast editor-background plate over deterministic gradients.
 - `script\dx-project-panel-source.test.ts` now guards the media shelf card focus-visible ButtonLike contract.
-- `crates\project_panel\src\project_panel.rs` now renders storage drilldown rows as focusable `ButtonLike` controls with shared selected-state styling while preserving real folder expansion.
+- `crates\project_panel\src\project_panel.rs` now renders storage drilldown rows as focusable shared `ListItem` controls while preserving real folder expansion.
 - `crates\project_panel\src\storage_roots.rs` and `crates\project_panel\src\storage_roots_view.rs` now keep storage-root capacity ownership in the storage domain and render real drive-only capacity progress with the shared `ProgressBar`.
 - `crates\project_panel\src\storage_roots_view.rs` now uses the shared `ListHeader` chrome for the storage-root strip heading.
-- `script\dx-project-panel-source.test.ts` now guards the storage drilldown `ButtonLike` row contract, shared storage-root strip header, drive-only capacity progress, and audio-card readability plate.
+- `script\dx-project-panel-source.test.ts` now guards the storage drilldown `ListItem` row contract, shared storage-root strip header, drive-only capacity progress, and audio-card readability plate.
 - `crates\workspace\src\dock.rs` keeps side-panel close buttons keyboard reachable, and `crates\agent_ui\src\agent_panel.rs` uses a structured element id for response indicator page buttons.
 - `script\dx-workspace-ui-state-source.test.ts` now guards the dock close button tab order and the response-indicator id contract.
 - `crates\editor\src\element.rs` now only animates rainbow caret motion while the editor focus handle contains focus, falling back to reduced motion otherwise.

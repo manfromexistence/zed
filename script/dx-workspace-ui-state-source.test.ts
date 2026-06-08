@@ -132,6 +132,14 @@ const sourceWindow = (
   return source.slice(Math.max(0, index - before), index + needle.length + after);
 };
 
+const sourceBetween = (source: string, startNeedle: string, endNeedle: string) => {
+  const start = source.indexOf(startNeedle);
+  assert.ok(start >= 0, `missing ${startNeedle}`);
+  const end = source.indexOf(endNeedle, start + startNeedle.length);
+  assert.ok(end > start, `missing ${endNeedle}`);
+  return source.slice(start, end);
+};
+
 const objectBlock = (source: string, key: string, fromIndex = 0) => {
   const keyIndex = source.indexOf(`"${key}": {`, fromIndex);
   assert.ok(keyIndex >= 0, `expected object key ${key}`);
@@ -431,6 +439,8 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
     "render",
   );
   const toolbar = functionBody(agentPanel, "render_toolbar");
+  const toolbarBackButton = functionBody(agentPanel, "render_toolbar_back_button");
+  const panelOptionsMenu = functionBody(agentPanel, "render_panel_options_menu");
   const responseIndicator = functionBody(agentPanel, "render_toolbar_response_indicator");
   const responseIndicatorAnchors = functionBody(agentPanel, "toolbar_response_indicator_anchors");
   const responseSegment = functionBody(agentPanel, "toolbar_response_indicator_segment");
@@ -495,14 +505,62 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   const focusAgentPanel = functionBody(agentPanel, "focus");
   const toggleAgentPanel = functionBody(agentPanel, "toggle");
   const profilesSupported = functionBody(conversationView, "profiles_supported");
+  const sourcesRailButton = sourceBetween(
+    toolbar,
+    "let agent_sources_rail_button",
+    "let agent_progress_rail_button",
+  );
+  const progressRailButton = sourceBetween(
+    toolbar,
+    "let agent_progress_rail_button",
+    "let close_panel_button",
+  );
+  const closePanelButton = sourceBetween(
+    toolbar,
+    "let panel_id = cx.entity().entity_id();",
+    "let max_content_width",
+  );
+  const panelOptionsTrigger = sourceWindow(
+    panelOptionsMenu,
+    'IconButton::new("agent-options-menu", IconName::Ellipsis)',
+    0,
+    260,
+  );
   assert.match(agentPanel, /"agent-toolbar-toggle-sources-rail"/);
+  assert.match(agentPanel, /"agent-toolbar-toggle-progress-rail"/);
+  for (const [button, label] of [
+    [toolbarBackButton, "Agent toolbar overlay back button"],
+    [sourcesRailButton, "Agent sources rail toggle"],
+    [progressRailButton, "Agent progress rail toggle"],
+    [closePanelButton, "Agent side-panel close button"],
+    [panelOptionsTrigger, "Agent options menu trigger"],
+  ] as const) {
+    assert.match(button, /\.tab_index\(0\)/, `${label} must be tabbable`);
+  }
+  for (const [button, label] of [
+    [toolbarBackButton, "Agent toolbar overlay back button"],
+    [sourcesRailButton, "Agent sources rail toggle"],
+    [progressRailButton, "Agent progress rail toggle"],
+    [closePanelButton, "Agent side-panel close button"],
+    [panelOptionsTrigger, "Agent options menu trigger"],
+  ] as const) {
+    assert.doesNotMatch(
+      button,
+      /\.track_focus\(&focus_handle\)/,
+      `${label} must not reuse the panel focus handle as its button focus id`,
+    );
+  }
+  assert.match(closePanelButton, /let panel_id = cx\.entity\(\)\.entity_id\(\);/);
+  assert.match(closePanelButton, /let workspace = self\.workspace\.clone\(\);/);
+  assert.match(closePanelButton, /if let Some\(workspace\) = workspace\.upgrade\(\)/);
+  assert.match(closePanelButton, /workspace\.close_side_panel_by_id\(panel_id, window, cx\)/);
+  assert.doesNotMatch(closePanelButton, /CloseActiveSidePanel/);
   assert.match(agentPanel, /enum AgentPanelHostKind \{/);
   assert.match(agentPanel, /Sidechat,/);
   assert.match(agentPanel, /BuilderWorkspace,/);
   assert.match(agentPanel, /AutomationWorkspace,/);
   assert.match(agentPanel, /host_kind: AgentPanelHostKind/);
   assert.match(agentPanel, /host_kind: AgentPanelHostKind::Sidechat,[\s\S]*?manual_zoom_override: Some\(false\)/);
-  assert.match(agentPanel, /"agent-toolbar-toggle-progress-rail"/);
   assert.match(agentPanel, /fullscreen_sources_rail_open/);
   assert.match(agentPanel, /fullscreen_progress_rail_open/);
   assert.match(agentPanel, /fullscreen_sources_rail_open: true/);
@@ -824,6 +882,7 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
     responsePageButton,
     /IconButton::new\(\s*\("agent-toolbar-response-indicator-page", label, entry_ix\),\s*icon,\s*\)/,
   );
+  assert.match(responsePageButton, /\.tab_index\(0\)/);
   assert.match(responsePageButton, /thread\.scroll_to_response_anchor\(entry_ix, window, cx\)/);
   assert.match(responsePageButton, /cx\.stop_propagation\(\)/);
   assert.match(agentPanel, /AcpThreadViewEvent::ScrollPositionChanged => \{\s*cx\.notify\(\);\s*\}/);
@@ -834,6 +893,8 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(responseIndicator, /\.gap_0\(\)/);
   assert.match(responseIndicator, /\.px_0p5\(\)/);
   assert.match(responseSegment, /\.w\(px\(9\.0\)\)/);
+  assert.match(responseSegment, /\.tab_index\(0\)/);
+  assert.match(responseSegment, /\.focus_visible\(/);
   assert.match(responseSegment, /\.cursor_pointer\(\)/);
   assert.doesNotMatch(responseSegment, /CursorStyle::PointingHand/);
   assert.match(responseSegment, /\.w\(px\(2\.0\)\)\.h\(height\)/);

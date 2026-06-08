@@ -208,3 +208,19 @@ test("current handoff names the no-runtime-proof production-readiness boundary",
   assert.match(todo, /Production-readiness source audit/);
   assert.match(todo, /Skipped by direct instruction: Cargo build\/check\/test\/clippy, `just run`, local servers, browser automation, and live editor runtime proof\./);
 });
+
+test("current Project Panel handoff names the storage drilldown ListItem contract", () => {
+  const dx = read("DX.md");
+  const currentProjectPanelLane =
+    dx.match(/Current Web Preview completion[\s\S]*?visual proof remain deferred\./)?.[0] ?? "";
+
+  assert.ok(currentProjectPanelLane, "expected current Web Preview and Project Panel handoff lane");
+  assert.match(
+    currentProjectPanelLane,
+    /storage drilldown rows use focusable shared `ListItem` chrome/,
+  );
+  assert.doesNotMatch(
+    currentProjectPanelLane,
+    /storage drilldown rows use focusable shared `ButtonLike` chrome/,
+  );
+});

@@ -131,9 +131,8 @@ use ui::{
 };
 use util::ResultExt as _;
 use workspace::{
-    CloseActiveSidePanel, CollaboratorId, DraggedSelection, DraggedTab, MultiWorkspace, PathList,
-    SerializedPathList, ToggleWorkspaceSidebar, ToggleZoom, Workspace, WorkspaceId,
-    WorkspaceScreenKind,
+    CollaboratorId, DraggedSelection, DraggedTab, MultiWorkspace, PathList, SerializedPathList,
+    ToggleWorkspaceSidebar, ToggleZoom, Workspace, WorkspaceId, WorkspaceScreenKind,
     dock::{DockPosition, Panel, PanelEvent},
     item::ItemEvent,
 };
@@ -5584,7 +5583,8 @@ impl AgentPanel {
         PopoverMenu::new("agent-options-menu")
             .trigger_with_tooltip(
                 IconButton::new("agent-options-menu", IconName::Ellipsis)
-                    .icon_size(IconSize::Small),
+                    .icon_size(IconSize::Small)
+                    .tab_index(0),
                 move |_window, cx| {
                     Tooltip::for_action_in(
                         "Toggle Agent Menu",
@@ -5741,6 +5741,7 @@ impl AgentPanel {
 
         IconButton::new("go-back", IconName::ArrowLeft)
             .icon_size(IconSize::Small)
+            .tab_index(0)
             .on_click(cx.listener(|this, _, window, cx| {
                 this.go_back(&workspace::GoBack, window, cx);
             }))
@@ -6084,6 +6085,7 @@ impl AgentPanel {
             IconName::ThreadsSidebarLeftClosed,
         )
         .icon_size(IconSize::Small)
+        .tab_index(0)
         .toggle_state(self.fullscreen_sources_rail_open)
         .tooltip(Tooltip::text(if self.fullscreen_sources_rail_open {
             "Hide sources rail"
@@ -6099,6 +6101,7 @@ impl AgentPanel {
             IconName::ThreadsSidebarRightClosed,
         )
         .icon_size(IconSize::Small)
+        .tab_index(0)
         .toggle_state(self.fullscreen_progress_rail_open)
         .tooltip(Tooltip::text(if self.fullscreen_progress_rail_open {
             "Hide progress rail"
@@ -6109,11 +6112,18 @@ impl AgentPanel {
             this.fullscreen_progress_rail_open = !this.fullscreen_progress_rail_open;
             cx.notify();
         }));
+        let panel_id = cx.entity().entity_id();
+        let workspace = self.workspace.clone();
         let close_panel_button = IconButton::new("agent-panel-close-side-panel", IconName::Close)
             .icon_size(IconSize::Small)
+            .tab_index(0)
             .tooltip(Tooltip::text("Close Panel"))
-            .on_click(|_, window, cx| {
-                window.dispatch_action(Box::new(CloseActiveSidePanel), cx);
+            .on_click(move |_, window, cx| {
+                if let Some(workspace) = workspace.upgrade() {
+                    workspace.update(cx, |workspace, cx| {
+                        workspace.close_side_panel_by_id(panel_id, window, cx);
+                    });
+                }
             });
 
         let max_content_width = AgentSettings::get_global(cx).max_content_width;
@@ -6372,6 +6382,7 @@ impl AgentPanel {
         )
         .icon_size(IconSize::XSmall)
         .icon_color(Color::Muted)
+        .tab_index(0)
         .tooltip(Tooltip::text(label))
         .on_click(move |_event, window, cx| {
             cx.stop_propagation();
@@ -6405,8 +6416,10 @@ impl AgentPanel {
             .items_center()
             .justify_center()
             .rounded_sm()
+            .tab_index(0)
             .cursor_pointer()
             .hover(|style| style.bg(cx.theme().colors().element_hover.opacity(0.72)))
+            .focus_visible(|style| style.bg(cx.theme().colors().element_hover.opacity(0.72)))
             .tooltip(move |_window, cx| Tooltip::with_meta(label.clone(), None, detail.clone(), cx))
             .on_click(move |_event, window, cx| {
                 cx.stop_propagation();
