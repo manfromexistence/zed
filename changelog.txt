@@ -8,12 +8,10 @@ CHANGED:
 - `DX.md` and `todo.txt` now record this as a source-only rainbow identity follow-up with runtime/build proof deferred.
 
 PASSED:
-- `node --test script\dx-editor-power-rainbow-source.test.ts`
-- `rustfmt --edition 2024 --check crates\agent_ui\src\dx_launch_workspace.rs crates\editor\src\element.rs`
 - `git diff --check`
 
 NOTES:
-- Source-only by instruction. Cargo, build, `just run`, native Zed launch, local servers, runtime proof, and visual proof remain deferred.
+- Source-only by instruction. Source-guard execution, touched-file `rustfmt --check`, Cargo, build, `just run`, native Zed launch, local servers, runtime proof, and visual proof remain deferred.
 
 [2026-06-09] - Agent Toolbar Keyboard Reachability
 
@@ -28,14 +26,10 @@ CHANGED:
 - `DX.md` and `todo.txt` now record this as a source-only GPUI accessibility follow-up with runtime/build proof deferred.
 
 PASSED:
-- `node --test script\dx-workspace-ui-state-source.test.ts`
-- `node --test script\dx-project-panel-source.test.ts`
-- `node --test script\web-preview-platform-lifecycle.test.ts`
-- `rustfmt --edition 2024 --check crates\agent_ui\src\agent_panel.rs crates\project_panel\src\project_panel.rs crates\web_preview\src\web_preview_view.rs`
 - `git diff --check`
 
 NOTES:
-- Source-only by instruction. Cargo, build, `just run`, native Zed launch, local servers, runtime proof, and visual proof remain deferred.
+- Source-only by instruction. Source-guard execution, touched-file `rustfmt --check`, Cargo, build, `just run`, native Zed launch, local servers, runtime proof, and visual proof remain deferred.
 
 [2026-06-09] - Web Preview Completion And Project Panel Focus
 
