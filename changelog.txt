@@ -1,3 +1,24 @@
+[2026-06-08] - Project Panel Storage And Operation Polish
+
+CHANGED:
+- `crates\project_panel\src\project_panel.rs` now scopes cached folder storage overview totals to the same visible folder candidates used by the drilldown, renders the active storage sort state, marks the current sort menu choice, and adds heat labels plus largest-file tooltips to folder storage rows.
+- `crates\project_panel\src\project_panel.rs` now converts cut clipboard state to copy only after at least one async move succeeds, suppresses internal clipboard status when external OS-file paste takes precedence, keeps Paste Here available for external file clipboards, and preserves single-root drag moves for worktree reordering.
+- `crates\project_panel\src\storage.rs` now owns storage sort status/menu labels and heat-level labels.
+- `script\dx-project-panel-source.test.ts` now guards the storage visualizer labels, visible-candidate storage totals, delayed cut conversion, external paste precedence, tuple-variant cut detection, and root-drag move reachability.
+- `DX.md` and `todo.txt` record the source-only proof boundary for this Project Panel polish pass.
+
+PASSED:
+- `rustfmt --edition 2024 crates\project_panel\src\project_panel.rs crates\project_panel\src\storage.rs`
+- `node --test script\dx-project-panel-source.test.ts`
+- `node --test script\dx-icon-system-source.test.ts`
+- `node --test script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check crates\project_panel\src\project_panel.rs crates\project_panel\src\storage.rs`
+- `git diff --check -- crates/project_panel/src/project_panel.rs crates/project_panel/src/storage.rs script/dx-project-panel-source.test.ts DX.md todo.txt changelog.txt`
+- Focused conflict-marker scan on touched Project Panel/docs files
+
+NOTES:
+- Source-only by instruction. Cargo, build, `just run`, native Zed launch, browser automation, recursive disk scans, and runtime visual proof remain deferred.
+
 [2026-06-08] - Project Panel File Operation Toolbar
 
 ADDED:

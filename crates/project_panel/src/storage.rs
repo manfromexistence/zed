@@ -121,6 +121,18 @@ impl StorageSortMode {
             Self::Modified => "Modified",
         }
     }
+
+    pub(crate) fn status_label(self) -> String {
+        format!("Sorted by {}", self.label())
+    }
+
+    pub(crate) fn menu_label(self, current: Self) -> String {
+        if self == current {
+            format!("{} (current)", self.label())
+        } else {
+            self.label().to_string()
+        }
+    }
 }
 
 pub(crate) fn rank_storage_folder_items(
@@ -153,6 +165,16 @@ pub(crate) fn storage_heat_level(file_bytes: u64, max_file_bytes: u64) -> u8 {
     let scaled = ((u128::from(file_bytes) * 4) + (u128::from(max_file_bytes) - 1))
         / u128::from(max_file_bytes);
     scaled.clamp(1, 4) as u8
+}
+
+pub(crate) fn heat_label(heat_level: u8) -> &'static str {
+    match heat_level {
+        4 => "largest",
+        3 => "large",
+        2 => "medium",
+        1 => "small",
+        _ => "empty",
+    }
 }
 
 pub(crate) fn format_modified_label(mtime: Option<MTime>) -> Option<String> {

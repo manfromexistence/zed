@@ -3470,8 +3470,14 @@ impl ProjectPanel {
                     }
                 }
 
+                let completed_cut_paste = clip_is_cut && !changes.is_empty();
                 project_panel
-                    .update(cx, |this, _| {
+                    .update(cx, |this, cx| {
+                        if completed_cut_paste {
+                            this.clipboard =
+                                this.clipboard.take().map(ClipboardEntry::into_copy_entry);
+                            cx.notify();
+                        }
                         this.undo_manager.record(changes).log_err();
                     })
                     .ok();
@@ -3513,11 +3519,6 @@ impl ProjectPanel {
                 anyhow::Ok(())
             })
             .detach_and_log_err(cx);
-
-            if clip_is_cut {
-                // Convert the clipboard cut entry to a copy entry after the first paste.
-                self.clipboard = self.clipboard.take().map(ClipboardEntry::into_copy_entry);
-            }
 
             self.expand_entry(worktree_id, entry.id, cx);
             Some(())
@@ -4077,6 +4078,23 @@ impl ProjectPanel {
         sanitized_entries
     }
 
+    fn drag_move_entries(
+        &self,
+        entries: BTreeSet<SelectedEntry>,
+        cx: &App,
+    ) -> BTreeSet<SelectedEntry> {
+        let project = self.project.read(cx);
+        if entries.len() == 1
+            && let Some(entry) = entries.iter().next().copied()
+            && project.entry_is_worktree_root(entry.entry_id, cx)
+        {
+            return BTreeSet::from([entry]);
+        }
+        drop(project);
+
+        self.disjoint_entries(entries, cx)
+    }
+
     fn effective_entries(&self) -> BTreeSet<SelectedEntry> {
         if let Some(selection) = self.selection {
             let selection = SelectedEntry {
@@ -4192,12 +4210,15 @@ impl ProjectPanel {
         for visible_worktree in &state.visible_entries {
             for entry in &visible_worktree.entries {
                 overview.record_visible_file(entry.as_ref());
-            }
-        }
 
-        for summary in folder_storage_summaries.values() {
-            if summary.file_count > 0 || summary.file_bytes > 0 {
-                overview.record_cached_folder(summary);
+                if entry.kind.is_dir() {
+                    let cache_key = (visible_worktree.worktree_id, entry.id);
+                    if let Some(summary) = folder_storage_summaries.get(&cache_key)
+                        && (summary.file_count > 0 || summary.file_bytes > 0)
+                    {
+                        overview.record_cached_folder(summary);
+                    }
+                }
             }
         }
 
@@ -4342,6 +4363,7 @@ impl ProjectPanel {
                                         .size(LabelSize::XSmall)
                                         .color(Color::Muted),
                                 )
+                                .child(Self::render_dx_explorer_metric(sort_mode.status_label()))
                                 .children(metrics),
                         )
                         .child(
@@ -4366,7 +4388,7 @@ impl ProjectPanel {
                                                 menu.header("Sort Folders"),
                                                 |menu, mode| {
                                                     let panel = panel.clone();
-                                                    let label = mode.label();
+                                                    let label = mode.menu_label(sort_mode);
                                                     menu.entry(label, None, move |_window, cx| {
                                                         panel
                                                             .update_in(cx, |this, window, cx| {
@@ -4405,12 +4427,21 @@ impl ProjectPanel {
         let file_count = Self::dx_explorer_count_label(item.file_count, "file", "files");
         let storage_label = format_file_size(item.file_bytes);
         let modified_label = storage::format_modified_label(item.latest_modified_at);
+        let heat_label = storage::heat_label(item.heat_level);
         let largest_files = item
             .largest_files
             .iter()
             .map(|file| format!("{} {}", file.label, format_file_size(file.file_bytes)))
             .collect::<Vec<_>>();
         let bar_width = px(12. + f32::from(item.heat_level.max(1)) * 8.);
+        let tooltip = if largest_files.is_empty() {
+            format!("{file_count} / {storage_label} / {heat_label}")
+        } else {
+            format!(
+                "{file_count} / {storage_label} / {heat_label} / Largest: {}",
+                largest_files.join(" / ")
+            )
+        };
 
         h_flex()
             .id(SharedString::from(format!(
@@ -4436,6 +4467,9 @@ impl ProjectPanel {
             } else {
                 cx.theme().colors().element_background.opacity(0.35)
             })
+            .tooltip(move |_window, cx| {
+                Tooltip::with_meta("Folder file summary", None, tooltip.clone(), cx)
+            })
             .hover(|style| style.bg(heat_color.opacity(0.12)))
             .on_click(cx.listener(move |this, _, window, cx| {
                 this.focus_handle(cx).focus(window, cx);
@@ -4454,6 +4488,12 @@ impl ProjectPanel {
                     .w(bar_width)
                     .rounded_sm()
                     .bg(heat_color.opacity(0.8)),
+            )
+            .child(
+                Label::new(heat_label)
+                    .size(LabelSize::XSmall)
+                    .color(Color::Muted)
+                    .truncate(),
             )
             .child(
                 Label::new(item.label)
@@ -4922,11 +4962,21 @@ impl ProjectPanel {
         selected_count: usize,
         is_read_only: bool,
         is_remote: bool,
+        has_external_paste_paths: bool,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        let clipboard_operation = self.clipboard_operation_summary();
+        let clipboard_operation = if has_external_paste_paths {
+            None
+        } else {
+            self.clipboard_operation_summary()
+        };
         let clipboard_operation_for_status = clipboard_operation;
         let clipboard_operation_for_paste = clipboard_operation;
+        let can_paste_to_selection =
+            has_external_paste_paths || clipboard_operation_for_paste.is_some();
+        let paste_tooltip = clipboard_operation_for_paste
+            .map(|operation| operation.mode.paste_tooltip())
+            .unwrap_or("Paste files here");
 
         h_flex()
             .id("project-panel-selection-toolbar")
@@ -5029,25 +5079,23 @@ impl ProjectPanel {
                             )),
                         )
                     })
-                    .when_some(clipboard_operation_for_paste, |this, operation| {
-                        this.when(!is_read_only, |this| {
-                            this.child(
-                                IconButton::new(
-                                    "project-panel-paste-selection-target",
-                                    dx_icon(DxUiIcon::PasteInto),
-                                )
-                                .shape(IconButtonShape::Square)
-                                .style(ButtonStyle::Subtle)
-                                .icon_size(IconSize::Small)
-                                .tooltip(Tooltip::text(operation.mode.paste_tooltip()))
-                                .on_click(cx.listener(
-                                    |this, _, window, cx| {
-                                        this.focus_handle(cx).focus(window, cx);
-                                        this.paste(&Paste {}, window, cx);
-                                    },
-                                )),
+                    .when(!is_read_only && can_paste_to_selection, |this| {
+                        this.child(
+                            IconButton::new(
+                                "project-panel-paste-selection-target",
+                                dx_icon(DxUiIcon::PasteInto),
                             )
-                        })
+                            .shape(IconButtonShape::Square)
+                            .style(ButtonStyle::Subtle)
+                            .icon_size(IconSize::Small)
+                            .tooltip(Tooltip::text(paste_tooltip))
+                            .on_click(cx.listener(
+                                |this, _, window, cx| {
+                                    this.focus_handle(cx).focus(window, cx);
+                                    this.paste(&Paste {}, window, cx);
+                                },
+                            )),
+                        )
                     })
                     .when(!is_read_only && !is_remote, |this| {
                         this.child(
@@ -6267,7 +6315,11 @@ impl ProjectPanel {
         else {
             return;
         };
-        let entries = self.disjoint_entries(resolved_selections, cx);
+        let entries = if Self::is_copy_modifier_set(&window.modifiers()) {
+            self.disjoint_entries(resolved_selections, cx)
+        } else {
+            self.drag_move_entries(resolved_selections, cx)
+        };
         let Some(entries) = cap_project_panel_entry_set(entries, "drag-disjoint-selection") else {
             return;
         };
@@ -8942,7 +8994,14 @@ impl Render for ProjectPanel {
         let selected_entries_toolbar = (selected_entry_count > 0
             && self.state.edit_state.is_none())
         .then(|| {
-            self.render_selected_entries_toolbar(selected_entry_count, is_read_only, is_remote, cx)
+            let has_external_paste_paths = self.external_paths_from_system_clipboard(cx).is_some();
+            self.render_selected_entries_toolbar(
+                selected_entry_count,
+                is_read_only,
+                is_remote,
+                has_external_paste_paths,
+                cx,
+            )
         });
         let active_media_preview = (has_worktree && is_local_or_wsl)
             .then(|| self.top_folder_media_preview(cx))
@@ -9812,7 +9871,7 @@ impl Focusable for ProjectPanel {
 
 impl ClipboardEntry {
     fn is_cut(&self) -> bool {
-        matches!(self, Self::Cut { .. })
+        matches!(self, Self::Cut(_))
     }
 
     fn items(&self) -> &BTreeSet<SelectedEntry> {

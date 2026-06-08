@@ -426,6 +426,10 @@ test("project panel selection toolbar exposes file-browser operation state", () 
   const dxIcons = read("crates/ui/src/dx_icons.rs");
   const clipboardOperationSummary = functionBody(source, "clipboard_operation_summary");
   const renderSelectedEntriesToolbar = functionBody(source, "render_selected_entries_toolbar");
+  const paste = functionBody(source, "paste");
+  const dragMoveEntries = functionBody(source, "drag_move_entries");
+  const dragOnto = functionBody(source, "drag_onto");
+  const clipboardEntryIsCut = functionBody(source, "is_cut");
 
   assert.match(source, /mod operation_status;/);
   assert.match(operationStatus, /pub\(crate\) enum ClipboardOperationMode/);
@@ -453,6 +457,11 @@ test("project panel selection toolbar exposes file-browser operation state", () 
     /ClipboardOperationSummary::new\(mode, clipboard\.items\(\)\.len\(\)\)/,
     "empty clipboard state must not render an operation chip",
   );
+  assert.match(
+    clipboardEntryIsCut,
+    /matches!\(self, Self::Cut\(_\)\)/,
+    "cut clipboard detection must match the tuple variant shape",
+  );
 
   assert.match(renderSelectedEntriesToolbar, /\.id\("project-panel-clipboard-operation-status"\)/);
   assert.match(renderSelectedEntriesToolbar, /operation\.status_label\(\)/);
@@ -464,8 +473,25 @@ test("project panel selection toolbar exposes file-browser operation state", () 
     renderSelectedEntriesToolbar,
     /IconButton::new\([\s\S]*"project-panel-paste-selection-target"/,
   );
+  assert.match(
+    renderSelectedEntriesToolbar,
+    /let clipboard_operation = if has_external_paste_paths[\s\S]*None[\s\S]*self\.clipboard_operation_summary\(\)/,
+    "external OS-file paste must take precedence over the internal clipboard status chip",
+  );
+  assert.match(
+    renderSelectedEntriesToolbar,
+    /let can_paste_to_selection =[\s\S]*has_external_paste_paths \|\| clipboard_operation_for_paste\.is_some\(\)/,
+    "toolbar paste visibility must include the same external path source that paste uses",
+  );
   assert.match(renderSelectedEntriesToolbar, /operation\.mode\.paste_tooltip\(\)/);
+  assert.match(renderSelectedEntriesToolbar, /unwrap_or\("Paste files here"\)/);
+  assert.match(renderSelectedEntriesToolbar, /\.when\(!is_read_only && can_paste_to_selection/);
   assert.match(renderSelectedEntriesToolbar, /this\.paste\(&Paste \{\}, window, cx\)/);
+  assert.match(
+    source,
+    /let has_external_paste_paths = self\.external_paths_from_system_clipboard\(cx\)\.is_some\(\);[\s\S]*render_selected_entries_toolbar\([\s\S]*has_external_paste_paths/,
+    "toolbar render must compute external paste availability next to the actual toolbar render",
+  );
   assert.doesNotMatch(
     renderSelectedEntriesToolbar,
     /IconName::(?:Copy|Scissors|BookCopy)/,
@@ -477,6 +503,34 @@ test("project panel selection toolbar exposes file-browser operation state", () 
     after: "project-panel-paste-selection-target",
     message: "selection toolbar should show clipboard operation state before the paste target action",
   });
+
+  assert.match(paste, /let clip_is_cut = clipboard_entries\.is_cut\(\)/);
+  assert.match(
+    paste,
+    /let completed_cut_paste = clip_is_cut && !changes\.is_empty\(\);/,
+    "cut paste must only convert clipboard state after at least one successful rename",
+  );
+  assert.match(
+    paste,
+    /if completed_cut_paste[\s\S]*this\.clipboard =[\s\S]*ClipboardEntry::into_copy_entry[\s\S]*cx\.notify\(\);/,
+    "successful cut paste must refresh the toolbar after converting to copy state",
+  );
+  assert.doesNotMatch(
+    paste,
+    /if clip_is_cut[\s\S]*self\.clipboard = self\.clipboard\.take\(\)\.map\(ClipboardEntry::into_copy_entry\)/,
+    "cut clipboard state must not flip before async paste tasks finish",
+  );
+
+  assert.match(
+    dragMoveEntries,
+    /project\.entry_is_worktree_root\(entry\.entry_id, cx\)[\s\S]*BTreeSet::from\(\[entry\]\)/,
+    "single worktree-root drags must reach move_entry for root reordering",
+  );
+  assert.match(
+    dragOnto,
+    /Self::is_copy_modifier_set\(&window\.modifiers\(\)\)[\s\S]*self\.disjoint_entries\(resolved_selections, cx\)[\s\S]*self\.drag_move_entries\(resolved_selections, cx\)/,
+    "copy drags must keep the normal file sanitizer while move drags preserve root reorder intent",
+  );
 
   assert.match(dxIcons, /DxUiIcon::Copy => IconName::Copy/);
   assert.match(dxIcons, /DxUiIcon::Move => IconName::ArrowRightLeft/);
@@ -708,6 +762,9 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(storage, /StorageSortMode::Size/);
   assert.match(storage, /StorageSortMode::FileCount/);
   assert.match(storage, /StorageSortMode::Modified/);
+  assert.match(storage, /pub\(crate\) fn status_label\(self\) -> String/);
+  assert.match(storage, /pub\(crate\) fn menu_label\(self, current: Self\) -> String/);
+  assert.match(storage, /pub\(crate\) fn heat_label\(heat_level: u8\) -> &'static str/);
   assert.match(storage, /pub\(crate\) struct FolderStorageSummary/);
   assert.match(storage, /largest_files:\s*Vec<FolderStorageFile>/);
   assert.match(storage, /latest_modified_at:\s*Option<MTime>/);
@@ -740,8 +797,13 @@ test("project panel storage overview and root shortcuts stay cached and professi
   );
   assert.match(
     storageOverview,
-    /folder_storage_summaries[\s\S]*\.values\(\)[\s\S]*summary\.file_bytes/,
-    "storage overview must use warmed folder summaries",
+    /let cache_key = \(visible_worktree\.worktree_id, entry\.id\);[\s\S]*folder_storage_summaries\.get\(&cache_key\)/,
+    "storage overview cached-folder totals must stay scoped to visible drilldown candidates",
+  );
+  assert.doesNotMatch(
+    storageOverview,
+    /folder_storage_summaries\.values\(\)/,
+    "storage overview must not aggregate stale warmed folders outside the visible tree",
   );
   assertBefore({
     body: updateVisibleEntries,
@@ -767,8 +829,12 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(renderStorageDrilldown, /Label::new\("Folder files"\)/);
   assert.match(renderStorageDrilldown, /StorageSortMode::ALL/);
   assert.match(renderStorageDrilldown, /PopoverMenu::new\("dx-explorer-storage-sort-menu"\)/);
+  assert.match(renderStorageDrilldown, /sort_mode\.status_label\(\)/);
+  assert.match(renderStorageDrilldown, /mode\.menu_label\(sort_mode\)/);
   assert.match(renderStorageDrilldownRow, /format_file_size\(item\.file_bytes\)/);
   assert.match(renderStorageDrilldownRow, /storage::format_modified_label\(item\.latest_modified_at\)/);
+  assert.match(renderStorageDrilldownRow, /storage::heat_label\(item\.heat_level\)/);
+  assert.match(renderStorageDrilldownRow, /Tooltip::with_meta\("Folder file summary"/);
   assert.match(renderStorageDrilldownRow, /item\s*\.\s*largest_files/);
 
   assert.match(renderRootStrip, /\.id\("dx-explorer-storage-root-strip"\)/);
