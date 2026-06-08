@@ -1,3 +1,18 @@
+[2026-06-08] - Rainbow Caret Theme Contrast Hardening
+
+CHANGED:
+- `crates\editor\src\element.rs` now runs the sampled paint-time rainbow caret color through the existing APCA contrast helper against the editor background before painting the cursor and glow.
+- `crates\editor\src\element.rs` now derives the rainbow color and animation-frame intent once per cursor paint pass, then reuses the result for eligible local cursors.
+- `crates\ui\src\components\dx_rainbow_glow.rs` now clamps externally supplied Hsla channels before painting the public caret glow helper.
+- `script\dx-editor-power-rainbow-source.test.ts` now guards theme-contrast adjustment, bounded frame intent, and caret-glow Hsla clamping.
+- `script\dx-project-panel-source.test.ts` now guards action-aware focused GPUI header controls for Open Project and Open File in DX Explorer.
+
+PASSED:
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. Cargo, build, `just run`, native Zed launch, local servers, source-guard execution, and runtime visual proof remain deferred.
+
 [2026-06-08] - Web Preview Navigation And Queue Guard
 
 CHANGED:

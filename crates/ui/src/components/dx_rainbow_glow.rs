@@ -201,10 +201,20 @@ pub fn paint_dx_rainbow_caret_glow(bounds: Bounds<Pixels>, color: Hsla, window: 
         return;
     }
 
+    let color = clamp_hsla_channels(color);
     let outer = window.pixel_snap_bounds(bounds.dilate(px(5.)));
     let inner = window.pixel_snap_bounds(bounds.dilate(px(2.)));
     window.paint_quad(fill(outer, color.opacity(0.12)));
     window.paint_quad(fill(inner, color.opacity(0.22)));
+}
+
+fn clamp_hsla_channels(color: Hsla) -> Hsla {
+    hsla(
+        normalize_phase(color.h),
+        clamp_unit(color.s),
+        clamp_unit(color.l),
+        clamp_unit(color.a),
+    )
 }
 
 fn paint_dx_rainbow_glow(

@@ -97,6 +97,8 @@ use workspace::{
     item::{Item, ItemBufferKind},
 };
 
+const RAINBOW_CARET_MIN_APCA_CONTRAST: f32 = 45.0;
+
 /// Determines what kinds of highlights should be applied to a lines background.
 #[derive(Clone, Copy, Default)]
 struct LineHighlightSpec {
@@ -5740,20 +5742,30 @@ impl EditorElement {
     }
 
     fn paint_cursors(&mut self, layout: &mut EditorLayout, window: &mut Window, cx: &mut App) {
-        let rainbow_sample = layout
+        let editor_background = cx.theme().colors().editor_background;
+        let (rainbow_color, should_request_rainbow_frame) = layout
             .rainbow_cursor_motion
-            .map(|motion| dx_rainbow_paint_sample(motion, 0., 1.));
+            .map(|motion| {
+                let sample = dx_rainbow_paint_sample(motion, 0., 1.);
+                let color = ensure_minimum_contrast(
+                    sample.color(),
+                    editor_background,
+                    RAINBOW_CARET_MIN_APCA_CONTRAST,
+                );
+                (Some(color), sample.should_request_animation_frame())
+            })
+            .unwrap_or((None, false));
 
         for cursor in &mut layout.visible_cursors {
-            let rainbow_color = if cursor.rainbow_motion.is_some() {
-                rainbow_sample.map(|sample| sample.color())
+            let cursor_rainbow_color = if cursor.rainbow_motion.is_some() {
+                rainbow_color
             } else {
                 None
             };
-            cursor.paint(layout.content_origin, window, cx, rainbow_color);
+            cursor.paint(layout.content_origin, window, cx, cursor_rainbow_color);
         }
 
-        if rainbow_sample.is_some_and(|sample| sample.should_request_animation_frame()) {
+        if should_request_rainbow_frame {
             window.request_animation_frame();
         }
     }

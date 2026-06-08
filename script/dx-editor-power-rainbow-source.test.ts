@@ -131,7 +131,11 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
   const caretGlow = rainbowGlow.slice(caretGlowStart, caretGlowEnd);
   assert.match(
     caretGlow,
-    /if bounds\.size\.width <= px\(0\.\) \|\| bounds\.size\.height <= px\(0\.\) \{\s*return;\s*\}[\s\S]*let outer =/,
+    /if bounds\.size\.width <= px\(0\.\) \|\| bounds\.size\.height <= px\(0\.\) \{\s*return;\s*\}[\s\S]*let color = clamp_hsla_channels\(color\);[\s\S]*let outer =/,
+  );
+  assert.match(
+    rainbowGlow,
+    /fn clamp_hsla_channels\(color: Hsla\) -> Hsla \{\s*hsla\(\s*normalize_phase\(color\.h\),\s*clamp_unit\(color\.s\),\s*clamp_unit\(color\.l\),\s*clamp_unit\(color\.a\),\s*\)\s*\}/s,
   );
   assert.doesNotMatch(rainbowGlow, /pub fn dx_rainbow_caret_color/);
   assert.doesNotMatch(rainbowGlow, /pub fn dx_rainbow_hsla/);
@@ -162,11 +166,11 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
   );
   assert.match(
     editorElement,
-    /let rainbow_sample = layout\s*\.rainbow_cursor_motion\s*\.map\(\|motion\| dx_rainbow_paint_sample\(motion, 0\., 1\.\)\);[\s\S]*let rainbow_color = if cursor\.rainbow_motion\.is_some\(\) \{\s*rainbow_sample\.map\(\|sample\| sample\.color\(\)\)\s*\} else \{\s*None\s*\};[\s\S]*cursor\.paint\(layout\.content_origin, window, cx, rainbow_color\);/s,
+    /const RAINBOW_CARET_MIN_APCA_CONTRAST: f32 = 45\.0;[\s\S]*let editor_background = cx\.theme\(\)\.colors\(\)\.editor_background;[\s\S]*let \(rainbow_color, should_request_rainbow_frame\) = layout\s*\.rainbow_cursor_motion\s*\.map\(\|motion\| \{\s*let sample = dx_rainbow_paint_sample\(motion, 0\., 1\.\);[\s\S]*ensure_minimum_contrast\(\s*sample\.color\(\),\s*editor_background,\s*RAINBOW_CARET_MIN_APCA_CONTRAST,\s*\)[\s\S]*\(Some\(color\), sample\.should_request_animation_frame\(\)\)\s*\}\)\s*\.unwrap_or\(\(None, false\)\);[\s\S]*let cursor_rainbow_color = if cursor\.rainbow_motion\.is_some\(\) \{\s*rainbow_color\s*\} else \{\s*None\s*\};[\s\S]*cursor\.paint\(layout\.content_origin, window, cx, cursor_rainbow_color\);/s,
   );
   assert.match(
     editorElement,
-    /rainbow_sample\.is_some_and\(\|sample\| sample\.should_request_animation_frame\(\)\)/,
+    /if should_request_rainbow_frame \{\s*window\.request_animation_frame\(\);\s*\}/,
   );
   assert.match(
     editorElement,
