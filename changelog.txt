@@ -1,3 +1,22 @@
+[2026-06-08] - AI Screen Response Indicator Navigation
+
+CHANGED:
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now derives fullscreen response-marker state from the visible viewport reference, preserves pending marker click targets until the list settles, resyncs direct jump-list scroll shortcuts, and builds bounded prompt-marker windows without allocating every prompt label on each toolbar refresh.
+- `crates\agent_ui\src\agent_panel.rs` now requests a small response-marker edge context and renders previous/next chevrons for long prompt histories while keeping the visible toolbar capped.
+- `script\dx-workspace-ui-state-source.test.ts` now guards the stable message-entry anchors, pending click lock, viewport/manual-scroll synchronization, direct jump-list sync, bounded prompt windowing, and toolbar edge-context controls.
+- `DX.md` and `todo.txt` record this source-only runtime-proof boundary.
+
+PASSED:
+- `rustfmt --edition 2024 crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\agent_panel.rs`
+- `node --test script\dx-workspace-ui-state-source.test.ts`
+- `node --test script\dx-handoff-source-guard-registry.test.ts`
+- `git diff --check`
+- Focused conflict-marker scan on touched files
+
+NOTES:
+- Source-only by instruction; no Cargo, build, or native runtime commands were run.
+- Cargo, build, `just run`, local servers, browser automation, native Zed launch, and runtime visual proof remain skipped.
+
 [2026-06-08] - Authorized J6 Validation Repair
 
 CHANGED:

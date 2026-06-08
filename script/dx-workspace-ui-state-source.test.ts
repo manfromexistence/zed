@@ -429,6 +429,7 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   const responseIndicator = functionBody(agentPanel, "render_toolbar_response_indicator");
   const responseIndicatorAnchors = functionBody(agentPanel, "toolbar_response_indicator_anchors");
   const responseSegment = functionBody(agentPanel, "toolbar_response_indicator_segment");
+  const responsePageButton = functionBody(agentPanel, "toolbar_response_indicator_page_button");
   const activeVisibleThread = functionBody(agentPanel, "active_visible_thread_view");
   const visibleThreadForConversation = functionBody(
     agentPanel,
@@ -440,8 +441,12 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   const scrollRequest = functionBody(threadView, "apply_response_anchor_scroll_request");
   const applyScrollAnchor = functionBody(threadView, "apply_response_anchor_scroll");
   const isResponseAnchorEntry = functionBody(threadView, "is_response_anchor_entry");
+  const responseAnchorStruct = sourceWindow(threadView, "pub(crate) struct AgentResponseAnchor", 0, 260);
+  const responseAnchorRequest = sourceWindow(threadView, "struct ResponseAnchorScrollRequest", 0, 180);
   const visibleRangeAnchor = functionBody(threadView, "response_anchor_for_visible_range");
+  const currentScrollAnchor = functionBody(threadView, "response_anchor_for_current_scroll_position");
   const responseAnchors = functionBody(threadView, "response_anchors");
+  const viewportReferenceAnchor = functionBody(threadView, "response_anchor_viewport_reference_ix");
   const syncResponseAnchor = functionBody(threadView, "sync_response_anchor_from_scroll_position");
   const scrollToEnd = functionBody(threadView, "scroll_to_end");
   const scrollToTop = functionBody(threadView, "scroll_to_top");
@@ -509,7 +514,7 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(agentScreen, /AgentPanel::new_builder_workspace\(workspace, window, cx\)/);
   assert.match(agentScreen, /pub\(crate\) fn open_or_focus\(/);
   assert.match(agentScreen, /workspace\.dismiss_zoomed_agent_panel\(window, cx\);/);
-  assert.match(agentScreen, /workspace\.pane_for_screen_kind\(WorkspaceScreenKind::Agent, cx\)/);
+  assert.match(agentScreen, /workspace[\s\S]*?\.pane_for_screen_kind\(WorkspaceScreenKind::Agent, cx\)/);
   assert.match(agentScreen, /item\.screen_kind\(cx\) == WorkspaceScreenKind::Agent/);
   assert.match(agentScreen, /workspace\.activate_item\(&\*item, true, true, window, cx\);/);
   assert.match(agentScreen, /workspace\.screen_host_pane\(\)/);
@@ -520,7 +525,10 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(automationScreen, /pub struct AutomationScreen \{\s*panel: Entity<AgentPanel>,\s*\}/);
   assert.match(automationScreen, /AgentPanel::new_automation_workspace\(workspace, window, cx\)/);
   assert.match(automationScreen, /pub\(crate\) fn open_or_focus\(/);
-  assert.match(automationScreen, /workspace\.pane_for_screen_kind\(WorkspaceScreenKind::Automations, cx\)/);
+  assert.match(
+    automationScreen,
+    /workspace[\s\S]*?\.pane_for_screen_kind\(WorkspaceScreenKind::Automations, cx\)/,
+  );
   assert.match(automationScreen, /item\.screen_kind\(cx\) == WorkspaceScreenKind::Automations/);
   assert.match(automationScreen, /fn screen_kind\(&self\) -> WorkspaceScreenKind \{\s*WorkspaceScreenKind::Automations\s*\}/);
   assert.match(automationScreen, /fn tab_content_text\(&self,[\s\S]*"Automations"\.into\(\)/);
@@ -641,17 +649,27 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(threadView, /struct ResponseAnchorScrollRequest/);
   assert.match(threadView, /response_anchor_scroll_request: Option<ResponseAnchorScrollRequest>/);
   assert.match(threadView, /active_response_anchor_entry_ix: Option<usize>/);
+  assert.match(responseAnchorStruct, /pub\(crate\) entry_ix: usize/);
+  assert.doesNotMatch(responseAnchorStruct, /Range<|ListOffset|scroll_position|message_id/);
+  assert.match(responseAnchorRequest, /entry_ix: usize/);
+  assert.match(responseAnchorRequest, /frames_remaining: usize/);
+  assert.doesNotMatch(responseAnchorRequest, /Range<|ListOffset|scroll_position|offset_in_item/);
   assert.match(threadView, /visible_entry_range: Option<Range<usize>>/);
   assert.match(threadView, /let visible_range = event\.visible_range\.clone\(\)/);
   assert.match(threadView, /this\.visible_entry_range = Some\(visible_range\.clone\(\)\)/);
   assert.match(
     threadView,
-    /if let Some\(request\) = this\.response_anchor_scroll_request[\s\S]*?let request_is_visible = visible_range\.contains\(&request\.entry_ix\);[\s\S]*?if request_is_visible \{[\s\S]*?this\.response_anchor_scroll_request = None;[\s\S]*?this\.active_response_anchor_entry_ix = Some\(request\.entry_ix\);[\s\S]*?preserve_response_anchor = true;[\s\S]*?\} else if scroll_top\.item_ix != request\.entry_ix/s,
-    "programmatic response-anchor retries should not cancel while the requested anchor is already visible",
+    /if let Some\(request\) = this\.response_anchor_scroll_request[\s\S]*?let request_is_visible = visible_range\.contains\(&request\.entry_ix\);[\s\S]*?if request_is_visible \{[\s\S]*?this\.response_anchor_scroll_request = None;[\s\S]*?this\.active_response_anchor_entry_ix = Some\(request\.entry_ix\);[\s\S]*?preserve_response_anchor = true;[\s\S]*?\} else \{[\s\S]*?this\.active_response_anchor_entry_ix = Some\(request\.entry_ix\);[\s\S]*?preserve_response_anchor = true;[\s\S]*?\}/s,
+    "programmatic response-anchor retries should preserve the requested anchor until the list settles or the retry window expires",
+  );
+  assert.doesNotMatch(
+    threadView,
+    /else if scroll_top\.item_ix != request\.entry_ix[\s\S]*?response_anchor_scroll_request = None/,
+    "manual scroll drift should not unlock a pending response-anchor click before the target resolves",
   );
   assert.match(
     threadView,
-    /this\.active_response_anchor_entry_ix\s*=\s*this\s*\.response_anchor_for_scroll_position\(\s*visible_range\.clone\(\),\s*scroll_top\.item_ix,\s*cx,\s*\)/s,
+    /this\.active_response_anchor_entry_ix\s*=\s*this\.response_anchor_for_visible_range\(visible_range\.clone\(\), cx\)/s,
   );
   assert.match(activeVisibleThread, /Self::active_visible_thread_view_for_conversation\(server_view, cx\)/);
   assert.match(visibleThreadForConversation, /\.active_thread\(\)\s*\.cloned\(\)\s*\.or_else\(\|\| server_view\.root_thread_view\(\)\)/);
@@ -662,40 +680,59 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
     /pub\(crate\) fn response_anchors\(\s*&self,\s*max_anchors: usize,\s*cx: &App,\s*\) -> Vec<AgentResponseAnchor>/s,
   );
   assert.match(threadView, /if max_anchors == 0 \{\s*return Vec::new\(\);\s*\}/);
-  assert.match(threadView, /let prompt_entries = entries[\s\S]*?\.enumerate\(\)[\s\S]*?prompt_ix \+ 1/);
-  assert.match(threadView, /let current_prompt_position = current_prompt_ix/);
-  assert.match(threadView, /prompt_entries\[start\.\.end\]/);
+  assert.match(threadView, /let mut prompt_count = 0usize;[\s\S]*?for \(entry_ix, entry\) in entries\.iter\(\)\.enumerate\(\)/);
+  assert.match(threadView, /prompt_count \+= 1/);
+  assert.match(threadView, /if prompt_count == 0 \{\s*return Vec::new\(\);/);
+  assert.match(threadView, /let mut current_prompt_position = None;/);
+  assert.match(threadView, /if current_prompt_ix == Some\(entry_ix\) \{[\s\S]*?current_prompt_position = Some\(prompt_count\);/);
+  assert.match(threadView, /current_prompt_position\.unwrap_or_else\(\|\| prompt_count\.saturating_sub\(1\)\)/);
+  assert.match(threadView, /let mut prompt_ix = 0usize;/);
+  assert.match(threadView, /let prompt_ordinal = prompt_ix \+ 1;/);
+  assert.match(threadView, /let is_in_window = \(start\.\.end\)\.contains\(&prompt_ix\);/);
+  assert.doesNotMatch(
+    responseAnchors,
+    /collect::<Vec<_>>\(\)/,
+    "response anchor rendering should not allocate every prompt label just to draw a small toolbar window",
+  );
   assert.match(threadView, /fn response_anchor_for_visible_range\(/);
+  assert.match(threadView, /fn response_anchor_for_current_scroll_position\(/);
   assert.match(threadView, /fn response_anchor_for_scroll_position\(/);
+  assert.match(threadView, /fn response_anchor_viewport_reference_ix\(/);
   assert.match(threadView, /fn is_response_anchor_entry\(/);
   assert.match(visibleRangeAnchor, /logical_scroll_top\(\)\.item_ix/);
   assert.doesNotMatch(visibleRangeAnchor, /\.take\(end\.saturating_add\(1\)\)/);
+  assert.match(currentScrollAnchor, /let scroll_top = self\.list_state\.logical_scroll_top\(\);/);
+  assert.match(currentScrollAnchor, /visible_entry_range[\s\S]*?filter\(\|range\| range\.contains\(&scroll_top\.item_ix\)\)[\s\S]*?unwrap_or_else\(\|\| scroll_top\.item_ix\.\.scroll_top\.item_ix\.saturating_add\(1\)\)/);
   const scrollPositionAnchor = functionBody(threadView, "response_anchor_for_scroll_position");
   assert.match(scrollPositionAnchor, /scroll_item_ix: usize/);
-  assert.doesNotMatch(scrollPositionAnchor, /visible_span/);
-  assert.match(scrollPositionAnchor, /let reference_ix = scroll_item_ix\.min\(entries\.len\(\)\.saturating_sub\(1\)\);/);
+  assert.match(scrollPositionAnchor, /Self::response_anchor_viewport_reference_ix\(start\.\.end, scroll_item_ix, entries\.len\(\)\)/);
   assert.doesNotMatch(scrollPositionAnchor, /entry_ix\.abs_diff\(reference_ix\)/);
   assert.doesNotMatch(scrollPositionAnchor, /\.min_by_key/);
   assert.match(scrollPositionAnchor, /\.take\(reference_ix\.saturating_add\(1\)\.min\(entries\.len\(\)\)\)/);
   assert.match(scrollPositionAnchor, /\.rev\(\)[\s\S]*?\.find_map/);
   assert.match(scrollPositionAnchor, /\.skip\(start\)[\s\S]*?\.take\(end\.saturating_sub\(start\)\)[\s\S]*?\.find_map/);
-  assert.ok(
-    scrollPositionAnchor.indexOf(".take(reference_ix.saturating_add(1).min(entries.len()))") <
-      scrollPositionAnchor.indexOf(".skip(start)"),
-    "manual scroll marker selection should prefer the prompt governing the logical top before lower visible prompts",
-  );
+  assert.match(viewportReferenceAnchor, /let visible_span = end\.saturating_sub\(start\);/);
+  assert.match(viewportReferenceAnchor, /start \+ visible_span \/ 2/);
+  assert.match(viewportReferenceAnchor, /scroll_item_ix\.min\(entries_len\.saturating_sub\(1\)\)/);
   assert.match(isResponseAnchorEntry, /matches!\(entry, AgentThreadEntry::UserMessage\(_\)\)/);
-  assert.match(threadView, /active_response_anchor_entry_ix[\s\S]*?visible_entry_range[\s\S]*?logical_scroll_top\(\)\.item_ix/);
+  assert.match(threadView, /active_response_anchor_entry_ix[\s\S]*?response_anchor_for_current_scroll_position/);
   assert.match(responseAnchors, /let selected_prompt_ix = self[\s\S]*?active_response_anchor_entry_ix[\s\S]*?is_response_anchor_entry/);
-  assert.match(responseAnchors, /let current_ix = self\.list_state\.logical_scroll_top\(\)\.item_ix/);
-  assert.match(responseAnchors, /let logical_prompt_ix = entries[\s\S]*?\.take\(current_ix\.saturating_add\(1\)\)[\s\S]*?\.rev\(\)[\s\S]*?\.find_map/);
-  assert.match(threadView, /let visible_prompt_ix = self[\s\S]*?response_anchor_for_visible_range\(range, cx\)/);
-  assert.match(responseAnchors, /let scroll_prompt_ix = logical_prompt_ix\.or_else\(\|\| \{/);
-  assert.match(responseAnchors, /\.skip\(current_ix\)[\s\S]*?\.take\(1\)[\s\S]*?\.or\(visible_prompt_ix\)/);
-  assert.match(responseAnchors, /if self\.response_anchor_scroll_request\.is_some\(\) \{[\s\S]*?selected_prompt_ix\.or\(scroll_prompt_ix\)[\s\S]*?\} else \{[\s\S]*?scroll_prompt_ix\.or\(selected_prompt_ix\)/);
+  assert.match(responseAnchors, /let scroll_prompt_ix = self\.response_anchor_for_current_scroll_position\(cx\);/);
+  assert.doesNotMatch(responseAnchors, /let current_ix = self\.list_state\.logical_scroll_top\(\)\.item_ix/);
+  assert.match(
+    responseAnchors,
+    /if self\.response_anchor_scroll_request\.is_some\(\) \{[\s\S]*?selected_prompt_ix\.or\(scroll_prompt_ix\)[\s\S]*?\} else \{[\s\S]*?scroll_prompt_ix\.or\(selected_prompt_ix\)/,
+    "a pending indicator click should lock the active target until the requested prompt resolves",
+  );
+  assert.match(
+    responseAnchors,
+    /Some\(AgentResponseAnchor \{[\s\S]*?(entry_ix: \*entry_ix|entry_ix,)[\s\S]*?is_current: current_prompt_ix == Some\(\*?entry_ix\),[\s\S]*?\}\)/,
+    "response indicators should be stable message-entry anchors, not transient scroll offsets",
+  );
   assert.match(threadView, /fn sync_response_anchor_from_scroll_position\(/);
   assert.match(syncResponseAnchor, /if self\.response_anchor_scroll_request\.is_some\(\) \{[\s\S]*?return;/);
-  assert.match(syncResponseAnchor, /let visible_range = scroll_top\.item_ix\.\.scroll_top\.item_ix\.saturating_add\(1\)/);
+  assert.match(syncResponseAnchor, /visible_entry_range[\s\S]*?filter\(\|range\| range\.contains\(&scroll_top\.item_ix\)\)/);
+  assert.match(syncResponseAnchor, /unwrap_or_else\(\|\| scroll_top\.item_ix\.\.scroll_top\.item_ix\.saturating_add\(1\)\)/);
   assert.match(syncResponseAnchor, /self\.response_anchor_for_scroll_position\(visible_range, scroll_top\.item_ix, cx\)/);
   assert.match(syncResponseAnchor, /self\.active_response_anchor_entry_ix = next_anchor/);
   assert.match(syncResponseAnchor, /cx\.emit\(AcpThreadViewEvent::ScrollPositionChanged\)/);
@@ -715,6 +752,16 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
       `${name} should keep the fullscreen response marker in sync after non-wheel manual scrolling`,
     );
   }
+  assert.match(
+    threadView,
+    /Label::new\("Scroll to Subagent"\)[\s\S]*?this\.list_state\.scroll_to\(ListOffset \{[\s\S]*?this\.sync_response_anchor_from_scroll_position\(cx\);/s,
+    "subagent progress jump-list clicks should keep the fullscreen response marker in sync",
+  );
+  assert.match(
+    threadView,
+    /Button::new\("main-agent-permission-scroll-to", "Scroll"\)[\s\S]*?this\.list_state\.scroll_to\(ListOffset \{[\s\S]*?this\.sync_response_anchor_from_scroll_position\(cx\);/s,
+    "awaiting-permission jump-list clicks should keep the fullscreen response marker in sync",
+  );
   assert.match(threadView, /pub\(crate\) fn scroll_to_response_anchor\(/);
   assert.match(scrollAnchor, /window: &mut Window/);
   assert.match(scrollAnchor, /if !self\.is_response_anchor_entry\(entry_ix, cx\)/);
@@ -742,11 +789,36 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(applyScrollAnchor, /cx\.emit\(AcpThreadViewEvent::ScrollPositionChanged\)/);
   assert.match(responseIndicator, /self\.active_visible_thread_view\(cx\)/);
   assert.doesNotMatch(responseIndicator, /self\.active_thread_view\(cx\)/);
-  assert.match(responseIndicator, /response_anchors\(MAX_TOOLBAR_RESPONSE_INDICATORS, cx\)/);
   assert.match(agentPanel, /const MAX_TOOLBAR_RESPONSE_INDICATORS: usize = 32;/);
+  assert.match(agentPanel, /const TOOLBAR_RESPONSE_INDICATOR_EDGE_CONTEXT: usize = 2;/);
+  assert.match(
+    responseIndicator,
+    /response_anchors\(\s*MAX_TOOLBAR_RESPONSE_INDICATORS \+ TOOLBAR_RESPONSE_INDICATOR_EDGE_CONTEXT,\s*cx,\s*\)/s,
+    "the toolbar should request edge context so previous/next controls know when a bounded prompt window can page",
+  );
+  assert.match(agentPanel, /struct ToolbarResponseIndicatorAnchors \{/);
+  assert.match(agentPanel, /previous_entry_ix: Option<usize>/);
+  assert.match(agentPanel, /next_entry_ix: Option<usize>/);
+  assert.match(responseIndicator, /indicator_anchors\.anchors\.is_empty\(\)/);
+  assert.match(responseIndicator, /when_some\(indicator_anchors\.previous_entry_ix/);
+  assert.match(responseIndicator, /when_some\(indicator_anchors\.next_entry_ix/);
   assert.match(responseIndicatorAnchors, /anchors\.len\(\) <= MAX_TOOLBAR_RESPONSE_INDICATORS/);
   assert.match(responseIndicatorAnchors, /position\(\|anchor\| anchor\.is_current\)/);
+  assert.match(responseIndicatorAnchors, /let half_window = MAX_TOOLBAR_RESPONSE_INDICATORS \/ 2;/);
+  assert.match(responseIndicatorAnchors, /current_index\.saturating_sub\(half_window\)/);
+  assert.match(responseIndicatorAnchors, /previous_entry_ix/);
+  assert.match(responseIndicatorAnchors, /next_entry_ix/);
+  assert.match(responseIndicatorAnchors, /anchors\.drain\(\.\.start\)/);
   assert.match(responseIndicatorAnchors, /anchors\.truncate\(MAX_TOOLBAR_RESPONSE_INDICATORS\)/);
+  assert.match(responseIndicator, /toolbar_response_indicator_page_button/);
+  assert.match(agentPanel, /IconName::ChevronLeft/);
+  assert.match(agentPanel, /IconName::ChevronRight/);
+  assert.match(
+    responsePageButton,
+    /IconButton::new\(\s*\("agent-toolbar-response-indicator-page", label, entry_ix\),\s*icon,\s*\)/,
+  );
+  assert.match(responsePageButton, /thread\.scroll_to_response_anchor\(entry_ix, window, cx\)/);
+  assert.match(responsePageButton, /cx\.stop_propagation\(\)/);
   assert.match(agentPanel, /AcpThreadViewEvent::ScrollPositionChanged => \{\s*cx\.notify\(\);\s*\}/);
   assert.match(agentPanel, /Tooltip::with_meta\(label\.clone\(\), None, detail\.clone\(\), cx\)/);
   assert.match(responseSegment, /thread\.scroll_to_response_anchor\(entry_ix, window, cx\)/);

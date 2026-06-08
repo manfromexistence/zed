@@ -1108,21 +1108,16 @@ impl ThreadView {
                                 this.response_anchor_scroll_request = None;
                                 this.active_response_anchor_entry_ix = Some(request.entry_ix);
                                 preserve_response_anchor = true;
-                            } else if scroll_top.item_ix != request.entry_ix
-                                || scroll_top.offset_in_item != px(0.0)
-                            {
-                                this.response_anchor_scroll_request = None;
+                            } else {
+                                this.active_response_anchor_entry_ix = Some(request.entry_ix);
+                                preserve_response_anchor = true;
                             }
                         }
                         if this.response_anchor_scroll_request.is_none()
                             && !preserve_response_anchor
                         {
-                            this.active_response_anchor_entry_ix = this
-                                .response_anchor_for_scroll_position(
-                                    visible_range.clone(),
-                                    scroll_top.item_ix,
-                                    cx,
-                                );
+                            this.active_response_anchor_entry_ix =
+                                this.response_anchor_for_visible_range(visible_range.clone(), cx);
                         }
                         this.thread.update(cx, |thread, _cx| {
                             thread.set_ui_scroll_position(Some(scroll_top));
@@ -3238,6 +3233,7 @@ impl ThreadView {
                                         item_ix: entry_ix,
                                         offset_in_item: px(0.0),
                                     });
+                                    this.sync_response_anchor_from_scroll_position(cx);
                                     cx.notify();
                                 }))
                         },
@@ -3322,6 +3318,7 @@ impl ThreadView {
                             item_ix: entry_ix,
                             offset_in_item: px(0.0),
                         });
+                        this.sync_response_anchor_from_scroll_position(cx);
                         cx.notify();
                     })),
             );
@@ -6722,71 +6719,58 @@ impl ThreadView {
         let selected_prompt_ix = self
             .active_response_anchor_entry_ix
             .filter(|entry_ix| self.is_response_anchor_entry(*entry_ix, cx));
-        let current_ix = self.list_state.logical_scroll_top().item_ix;
-        let logical_prompt_ix = entries
-            .iter()
-            .enumerate()
-            .take(current_ix.saturating_add(1))
-            .rev()
-            .find_map(|(entry_ix, entry)| {
-                matches!(entry, AgentThreadEntry::UserMessage(_)).then_some(entry_ix)
-            });
-        let visible_prompt_ix = self
-            .visible_entry_range
-            .clone()
-            .and_then(|range| self.response_anchor_for_visible_range(range, cx));
-        let scroll_prompt_ix = logical_prompt_ix.or_else(|| {
-            entries
-                .iter()
-                .enumerate()
-                .skip(current_ix)
-                .take(1)
-                .find_map(|(entry_ix, entry)| {
-                    matches!(entry, AgentThreadEntry::UserMessage(_)).then_some(entry_ix)
-                })
-                .or(visible_prompt_ix)
-        });
+        let scroll_prompt_ix = self.response_anchor_for_current_scroll_position(cx);
         let current_prompt_ix = if self.response_anchor_scroll_request.is_some() {
             selected_prompt_ix.or(scroll_prompt_ix)
         } else {
             scroll_prompt_ix.or(selected_prompt_ix)
         };
 
-        let prompt_entries = entries
-            .iter()
-            .enumerate()
-            .filter_map(|(entry_ix, entry)| {
-                matches!(entry, AgentThreadEntry::UserMessage(_)).then_some(entry_ix)
-            })
-            .enumerate()
-            .map(|(prompt_ix, entry_ix)| (entry_ix, prompt_ix + 1))
-            .collect::<Vec<_>>();
+        let mut prompt_count = 0usize;
+        let mut current_prompt_position = None;
+        for (entry_ix, entry) in entries.iter().enumerate() {
+            if !matches!(entry, AgentThreadEntry::UserMessage(_)) {
+                continue;
+            }
 
-        let current_prompt_position = current_prompt_ix
-            .and_then(|current_prompt_ix| {
-                prompt_entries
-                    .iter()
-                    .position(|(entry_ix, _)| *entry_ix == current_prompt_ix)
-            })
-            .unwrap_or_else(|| prompt_entries.len().saturating_sub(1));
+            if current_prompt_ix == Some(entry_ix) {
+                current_prompt_position = Some(prompt_count);
+            }
+            prompt_count += 1;
+        }
+        if prompt_count == 0 {
+            return Vec::new();
+        }
 
-        let start = if prompt_entries.len() <= max_anchors {
+        let current_prompt_position =
+            current_prompt_position.unwrap_or_else(|| prompt_count.saturating_sub(1));
+
+        let start = if prompt_count <= max_anchors {
             0
         } else {
             let half_window = max_anchors / 2;
             let mut start = current_prompt_position.saturating_sub(half_window);
-            let end = (start + max_anchors).min(prompt_entries.len());
+            let end = (start + max_anchors).min(prompt_count);
             start = end.saturating_sub(max_anchors);
             start
         };
-        let end = (start + max_anchors).min(prompt_entries.len());
+        let end = (start + max_anchors).min(prompt_count);
 
-        prompt_entries[start..end]
+        let mut prompt_ix = 0usize;
+        entries
             .iter()
-            .filter_map(|(entry_ix, prompt_ordinal)| {
-                let AgentThreadEntry::UserMessage(message) = &entries[*entry_ix] else {
+            .enumerate()
+            .filter_map(|(entry_ix, entry)| {
+                let AgentThreadEntry::UserMessage(message) = entry else {
                     return None;
                 };
+                let prompt_ordinal = prompt_ix + 1;
+                let is_in_window = (start..end).contains(&prompt_ix);
+                prompt_ix += 1;
+                if !is_in_window {
+                    return None;
+                }
+
                 let raw_label = message
                     .content
                     .to_markdown(cx)
@@ -6803,10 +6787,10 @@ impl ThreadView {
                     SharedString::from(format!("Prompt {} - click to scroll", prompt_ordinal));
 
                 Some(AgentResponseAnchor {
-                    entry_ix: *entry_ix,
+                    entry_ix,
                     label,
                     detail,
-                    is_current: current_prompt_ix == Some(*entry_ix),
+                    is_current: current_prompt_ix == Some(entry_ix),
                 })
             })
             .collect()
@@ -6824,6 +6808,17 @@ impl ThreadView {
         )
     }
 
+    fn response_anchor_for_current_scroll_position(&self, cx: &App) -> Option<usize> {
+        let scroll_top = self.list_state.logical_scroll_top();
+        let visible_range = self
+            .visible_entry_range
+            .clone()
+            .filter(|range| range.contains(&scroll_top.item_ix))
+            .unwrap_or_else(|| scroll_top.item_ix..scroll_top.item_ix.saturating_add(1));
+
+        self.response_anchor_for_scroll_position(visible_range, scroll_top.item_ix, cx)
+    }
+
     fn response_anchor_for_scroll_position(
         &self,
         visible_range: Range<usize>,
@@ -6831,9 +6826,14 @@ impl ThreadView {
         cx: &App,
     ) -> Option<usize> {
         let entries = self.thread.read(cx).entries();
+        if entries.is_empty() {
+            return None;
+        }
+
         let start = visible_range.start.min(entries.len());
         let end = visible_range.end.min(entries.len());
-        let reference_ix = scroll_item_ix.min(entries.len().saturating_sub(1));
+        let reference_ix =
+            Self::response_anchor_viewport_reference_ix(start..end, scroll_item_ix, entries.len());
 
         entries
             .iter()
@@ -6853,6 +6853,25 @@ impl ThreadView {
                         matches!(entry, AgentThreadEntry::UserMessage(_)).then_some(entry_ix)
                     })
             })
+    }
+
+    fn response_anchor_viewport_reference_ix(
+        visible_range: Range<usize>,
+        scroll_item_ix: usize,
+        entries_len: usize,
+    ) -> usize {
+        if entries_len == 0 {
+            return 0;
+        }
+
+        let start = visible_range.start.min(entries_len);
+        let end = visible_range.end.min(entries_len);
+        if start < end {
+            let visible_span = end.saturating_sub(start);
+            return (start + visible_span / 2).min(entries_len.saturating_sub(1));
+        }
+
+        scroll_item_ix.min(entries_len.saturating_sub(1))
     }
 
     fn is_response_anchor_entry(&self, entry_ix: usize, cx: &App) -> bool {
@@ -6971,7 +6990,11 @@ impl ThreadView {
         }
 
         let scroll_top = self.list_state.logical_scroll_top();
-        let visible_range = scroll_top.item_ix..scroll_top.item_ix.saturating_add(1);
+        let visible_range = self
+            .visible_entry_range
+            .clone()
+            .filter(|range| range.contains(&scroll_top.item_ix))
+            .unwrap_or_else(|| scroll_top.item_ix..scroll_top.item_ix.saturating_add(1));
         let next_anchor =
             self.response_anchor_for_scroll_position(visible_range, scroll_top.item_ix, cx);
         if self.active_response_anchor_entry_ix != next_anchor {

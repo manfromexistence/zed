@@ -144,6 +144,7 @@ const DX_CODING_PANEL_WIDTH: Pixels = px(360.);
 const LAST_USED_AGENT_KEY: &str = "agent_panel__last_used_external_agent";
 const LAST_CREATED_ENTRY_KIND_KEY: &str = "agent_panel__last_created_entry_kind";
 const MAX_TOOLBAR_RESPONSE_INDICATORS: usize = 32;
+const TOOLBAR_RESPONSE_INDICATOR_EDGE_CONTEXT: usize = 2;
 const TERMINAL_AGENT_TELEMETRY_ID: &str = "terminal";
 const MAX_LAST_USED_AGENT_JSON_BYTES: usize = 16 * 1024;
 const DX_LAUNCH_WORKSPACE_STATUS_CACHE_TTL: Duration = Duration::from_secs(30);
@@ -160,6 +161,13 @@ const MAX_AGENT_PANEL_TITLE_EDITOR_TEXT_BYTES: usize = 16 * 1024;
 const DX_LAUNCH_RECIPE_PROMPT: &str = "Run the DX launch metasearch-to-reduced-context recipe for this workspace. First call list_dx_launch_demo_recipes with focus=\"metasearch\". Then, using only permissioned Agent tools and no local servers or builds, guide me through the next safe receipt step: inspect_dx_metasearch, search_dx_metasearch with write_source_pack_receipt=true, prepare_dx_source_attachment, prepare_dx_metasearch_context, plan_dx_serializer_rlm_execution, gate_dx_serializer_rlm_runner, write_dx_serializer_rlm_reduced_context, and preview_dx_serializer_rlm_reducer_execution. Stop before execute_dx_serializer_rlm_reducer, external serializer/RLM runner work, or model-call execution unless I explicitly approve a no-shell absolute command vector and managed receipt.";
 const DX_MEDIA_PROOF_PROMPT: &str = "Prepare the DX media provider proof flow for this workspace. Review provider readiness, media plan receipts, runner-gate receipts, and any produced-file proof cards in the Sources rail. Guide me through the next safe step using permissioned tools only: plan_dx_media_tool, gate_dx_media_tool_runner, and prepare_dx_source_attachment for produced files. Do not run local servers, builds, browser input, shell commands, unmanaged file writes, provider calls, or media execution until I explicitly approve the governed tool request and produced files can be verified from receipts.";
 const DX_REDUCER_GUARD_PROMPT: &str = "Prepare a DX serializer/RLM reducer execution guard review for this workspace. Review metasearch source packs, source attachments, context bundles, execution-plan receipts, runner-gate receipts, reduced-context receipts, execution-preview receipts, external-execution receipts, citation coverage, token budget, and model-call approval state. If I provide approval evidence, first use preview_dx_serializer_rlm_reducer_execution for the managed dry-run preview. Use execute_dx_serializer_rlm_reducer only when I explicitly provide a no-shell absolute command vector under approved DX serializer/RLM roots and require a managed execution receipt. Do not run cargo, package managers, local servers, browser input, shell commands, network, unmanaged file writes, or model calls unless the governed tool request explicitly covers them.";
+
+struct ToolbarResponseIndicatorAnchors {
+    anchors: Vec<AgentResponseAnchor>,
+    previous_entry_ix: Option<usize>,
+    next_entry_ix: Option<usize>,
+}
+
 const KNOWN_TERMINAL_AGENT_COMMANDS: &[&str] = &[
     "agent", // Unfortunately, both Cursor cli + grok
     "agy",
@@ -6268,12 +6276,12 @@ impl AgentPanel {
         let Some(active_thread) = self.active_visible_thread_view(cx) else {
             return div().into_any_element();
         };
-        let anchors = Self::toolbar_response_indicator_anchors(
-            active_thread
-                .read(cx)
-                .response_anchors(MAX_TOOLBAR_RESPONSE_INDICATORS, cx),
-        );
-        if anchors.is_empty() {
+        let indicator_anchors =
+            Self::toolbar_response_indicator_anchors(active_thread.read(cx).response_anchors(
+                MAX_TOOLBAR_RESPONSE_INDICATORS + TOOLBAR_RESPONSE_INDICATOR_EDGE_CONTEXT,
+                cx,
+            ));
+        if indicator_anchors.anchors.is_empty() {
             return div().into_any_element();
         }
 
@@ -6294,18 +6302,40 @@ impl AgentPanel {
                     .items_center()
                     .gap_0()
                     .px_0p5()
-                    .children(anchors.into_iter().map(|anchor| {
+                    .when_some(indicator_anchors.previous_entry_ix, |this, entry_ix| {
+                        this.child(Self::toolbar_response_indicator_page_button(
+                            entry_ix,
+                            IconName::ChevronLeft,
+                            "Previous prompts",
+                            active_thread.clone(),
+                            cx,
+                        ))
+                    })
+                    .children(indicator_anchors.anchors.into_iter().map(|anchor| {
                         Self::toolbar_response_indicator_segment(anchor, active_thread.clone(), cx)
-                    })),
+                    }))
+                    .when_some(indicator_anchors.next_entry_ix, |this, entry_ix| {
+                        this.child(Self::toolbar_response_indicator_page_button(
+                            entry_ix,
+                            IconName::ChevronRight,
+                            "Next prompts",
+                            active_thread.clone(),
+                            cx,
+                        ))
+                    }),
             )
             .into_any_element()
     }
 
     fn toolbar_response_indicator_anchors(
         mut anchors: Vec<AgentResponseAnchor>,
-    ) -> Vec<AgentResponseAnchor> {
+    ) -> ToolbarResponseIndicatorAnchors {
         if anchors.len() <= MAX_TOOLBAR_RESPONSE_INDICATORS {
-            return anchors;
+            return ToolbarResponseIndicatorAnchors {
+                anchors,
+                previous_entry_ix: None,
+                next_entry_ix: None,
+            };
         }
 
         let current_index = anchors
@@ -6316,9 +6346,41 @@ impl AgentPanel {
         let mut start = current_index.saturating_sub(half_window);
         let end = (start + MAX_TOOLBAR_RESPONSE_INDICATORS).min(anchors.len());
         start = end.saturating_sub(MAX_TOOLBAR_RESPONSE_INDICATORS);
+        let previous_entry_ix = start
+            .checked_sub(1)
+            .and_then(|index| anchors.get(index))
+            .map(|anchor| anchor.entry_ix);
+        let next_entry_ix = anchors.get(end).map(|anchor| anchor.entry_ix);
         anchors.drain(..start);
         anchors.truncate(MAX_TOOLBAR_RESPONSE_INDICATORS);
-        anchors
+        ToolbarResponseIndicatorAnchors {
+            anchors,
+            previous_entry_ix,
+            next_entry_ix,
+        }
+    }
+
+    fn toolbar_response_indicator_page_button(
+        entry_ix: usize,
+        icon: IconName,
+        label: &'static str,
+        active_thread: Entity<ThreadView>,
+        cx: &App,
+    ) -> AnyElement {
+        IconButton::new(
+            ("agent-toolbar-response-indicator-page", label, entry_ix),
+            icon,
+        )
+        .icon_size(IconSize::XSmall)
+        .icon_color(Color::Muted)
+        .tooltip(Tooltip::text(label))
+        .on_click(move |_event, window, cx| {
+            cx.stop_propagation();
+            active_thread.update(cx, |thread, cx| {
+                thread.scroll_to_response_anchor(entry_ix, window, cx);
+            });
+        })
+        .into_any_element()
     }
 
     fn toolbar_response_indicator_segment(
