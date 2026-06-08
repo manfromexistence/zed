@@ -30584,12 +30584,10 @@ impl WebPreviewView {
                     tab_updated = true;
                 }
                 BrowserEvent::NavigationCompleted { url, navigation_id } => {
-                    if !self
-                        .navigation_completion_matches_active_navigation(
-                            navigation_id,
-                            url.as_deref(),
-                        )
-                    {
+                    if !self.navigation_completion_matches_active_navigation(
+                        navigation_id,
+                        url.as_deref(),
+                    ) {
                         continue;
                     }
                     if let Some(url) = url {

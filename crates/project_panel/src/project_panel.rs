@@ -4657,6 +4657,10 @@ impl ProjectPanel {
         let show_ignored_entries = !project_panel_settings.hide_gitignore;
         let show_hidden_entries = !project_panel_settings.hide_hidden;
         let source_label = summary.source_kind.label();
+        let header_focus_handle = self.focus_handle(cx);
+        let open_project_focus_handle = header_focus_handle.clone();
+        let open_file_focus_handle = header_focus_handle.clone();
+        let open_file_tooltip_focus_handle = open_file_focus_handle.clone();
 
         h_flex()
             .id("dx-explorer-header")
@@ -4771,7 +4775,16 @@ impl ProjectPanel {
                                 .shape(IconButtonShape::Square)
                                 .style(ButtonStyle::Subtle)
                                 .icon_size(IconSize::Small)
-                                .tooltip(Tooltip::text("Open project"))
+                                .tab_index(0)
+                                .track_focus(&open_project_focus_handle)
+                                .tooltip(move |_window, cx| {
+                                    Tooltip::for_action_in(
+                                        "Open project",
+                                        &workspace::Open::default(),
+                                        &open_project_focus_handle,
+                                        cx,
+                                    )
+                                })
                                 .on_click(move |_, window, cx| {
                                     window.dispatch_action(
                                         workspace::Open::default().boxed_clone(),
@@ -4788,7 +4801,17 @@ impl ProjectPanel {
                                 .style(ButtonStyle::Subtle)
                                 .icon_size(IconSize::Small)
                                 .disabled(!has_worktree)
-                                .tooltip(Tooltip::text("Open file"))
+                                .when(has_worktree, |button| {
+                                    button.tab_index(0).track_focus(&open_file_focus_handle)
+                                })
+                                .tooltip(move |_window, cx| {
+                                    Tooltip::for_action_in(
+                                        "Open file",
+                                        &ToggleFileFinder::default(),
+                                        &open_file_tooltip_focus_handle,
+                                        cx,
+                                    )
+                                })
                                 .on_click(move |_, window, cx| {
                                     window.dispatch_action(
                                         ToggleFileFinder::default().boxed_clone(),

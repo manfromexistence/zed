@@ -2502,7 +2502,10 @@ fn prune_browser_event_queue(queue: &mut Vec<BrowserEvent>) {
 }
 
 fn queued_browser_event_count(queue: &[BrowserEvent]) -> usize {
-    queue.iter().filter(|event| is_prunable_browser_event(event)).count()
+    queue
+        .iter()
+        .filter(|event| is_prunable_browser_event(event))
+        .count()
 }
 
 fn is_prunable_browser_event(event: &BrowserEvent) -> bool {

@@ -186,6 +186,27 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
     /"dx-explorer-open-file",\s*dx_icon\(DxUiIcon::Search\)/,
     "Open File must use its own DX semantic icon instead of the broader Search icon",
   );
+  assert.match(renderDxExplorerHeader, /let header_focus_handle = self\.focus_handle\(cx\);/);
+  assert.match(
+    renderDxExplorerHeader,
+    /"dx-explorer-open-project"[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&open_project_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"Open project",\s*&workspace::Open::default\(\),\s*&open_project_focus_handle,[\s\S]*cx/,
+    "Open Project should use the shared focused IconButton plus action-aware tooltip",
+  );
+  assert.match(
+    renderDxExplorerHeader,
+    /"dx-explorer-open-file"[\s\S]*\.when\(has_worktree,[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&open_file_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"Open file",\s*&ToggleFileFinder::default\(\),\s*&open_file_tooltip_focus_handle,[\s\S]*cx/,
+    "Open File should only enter tab order when enabled and should expose its action keybinding",
+  );
+  assert.doesNotMatch(
+    renderDxExplorerHeader,
+    /"dx-explorer-open-project"[\s\S]*Tooltip::text\("Open project"\)/,
+    "Open Project should not keep a plain tooltip when the action binding is exact",
+  );
+  assert.doesNotMatch(
+    renderDxExplorerHeader,
+    /"dx-explorer-open-file"[\s\S]*Tooltip::text\("Open file"\)/,
+    "Open File should not keep a plain tooltip when the action binding is exact",
+  );
   assert.match(renderDxExplorerHeader, /IconName::ListX/);
   assert.match(renderDxExplorerHeader, /IconName::ListFilter/);
   assert.match(renderDxExplorerHeader, /workspace::Open::default\(\)\.boxed_clone\(\)/);
