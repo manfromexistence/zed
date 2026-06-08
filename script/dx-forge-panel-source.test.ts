@@ -528,7 +528,8 @@ test("Forge panel renders real receipt, restore, and media states", () => {
   assert.match(rows, /DxForgePanelState::NoWorkspace/);
   assert.match(rows, /\.min_w_0\(\)/);
   assert.match(workflowRows, /Tooltip::with_meta/);
-  assert.match(workflowRows, /truncate_start\(\)/);
+  assert.match(workflowRows, /fn receipt_tooltip/);
+  assert.match(workflowRows, /fn source_tooltip/);
 });
 
 test("Forge panel uses Git-style controls instead of metric cards", () => {
@@ -547,7 +548,11 @@ test("Forge panel uses Git-style controls instead of metric cards", () => {
   assert.match(selectableRowBody, /\)\s*->\s*ListItem\s*\{/);
   assert.match(selectableRowBody, /ListItem::new\(id\)/);
   assert.match(selectableRowBody, /\.inset\(true\)/);
-  assert.match(selectableRowBody, /\.spacing\(ListItemSpacing::Sparse\)/);
+  assert.match(selectableRowBody, /\.height\(rems\(1\.75\)\)/);
+  assert.match(selectableRowBody, /\.spacing\(ListItemSpacing::Dense\)/);
+  assert.doesNotMatch(selectableRowBody, /\.height\(px\(52\.0\)\)/);
+  assert.doesNotMatch(selectableRowBody, /\.spacing\(ListItemSpacing::Sparse\)/);
+  assert.doesNotMatch(selectableRowBody, /\bpath: String\b/);
   assert.match(selectableRowBody, /\.start_slot\(selection_checkbox\)/);
   assert.match(selectableRowBody, /\.end_slot\(open_button\)/);
   assert.match(emptyRowBody, /ListItem::new\(id\)/);
@@ -608,8 +613,8 @@ test("Forge panel uses workflow tabs with Git-style selectable rows", () => {
   assert.match(workflowRows, /ToggleState::Unselected/);
   assert.match(workflowRows, /ElevationIndex::Surface/);
   assert.match(workflowRows, /ListItem::new\(id/);
-  assert.match(workflowRows, /\.height\(px\(52\.0\)\)/);
-  assert.match(workflowRows, /\.spacing\(ListItemSpacing::Sparse\)/);
+  assert.match(workflowRows, /\.height\(rems\(1\.75\)\)/);
+  assert.match(workflowRows, /\.spacing\(ListItemSpacing::Dense\)/);
   assert.match(workflowRows, /\.start_slot\(selection_checkbox/);
   assert.match(
     workflowRows,

@@ -1,4 +1,4 @@
-use gpui::{AnyElement, App, MouseButton, SharedString, WeakEntity, px};
+use gpui::{AnyElement, App, MouseButton, SharedString, WeakEntity, rems};
 use ui::{
     Checkbox, ElevationIndex, IconName, ListItem, ListItemSpacing, ToggleState, Tooltip, prelude::*,
 };
@@ -34,7 +34,6 @@ pub(super) fn selectable_receipt_row(
         icon_color,
         receipt.headline.clone(),
         receipt.detail.clone(),
-        receipt.source_path.clone(),
         panel,
         open_button,
     )
@@ -68,7 +67,6 @@ pub(super) fn selectable_source_row(
         icon_color,
         source.label.clone(),
         source.detail.clone(),
-        source.path.clone(),
         panel,
         open_button,
     )
@@ -122,7 +120,6 @@ fn selectable_row(
     icon_color: Color,
     title: String,
     detail: String,
-    path: String,
     panel: &WeakEntity<DxForgePanel>,
     open_button: Option<AnyElement>,
 ) -> ListItem {
@@ -131,8 +128,8 @@ fn selectable_row(
     let selection_checkbox = selection_checkbox(id.clone(), item_key, selected, panel);
     let mut row = ListItem::new(id)
         .inset(true)
-        .height(px(52.0))
-        .spacing(ListItemSpacing::Sparse)
+        .height(rems(1.75))
+        .spacing(ListItemSpacing::Dense)
         .toggle_state(selected)
         .start_slot(selection_checkbox)
         .child(
@@ -154,12 +151,6 @@ fn selectable_row(
                                 .size(LabelSize::XSmall)
                                 .color(Color::Muted)
                                 .truncate(),
-                        )
-                        .child(
-                            Label::new(path)
-                                .size(LabelSize::XSmall)
-                                .color(Color::Muted)
-                                .truncate_start(),
                         ),
                 ),
         )
