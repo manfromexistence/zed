@@ -32,6 +32,11 @@ test("Power Mode setting is typed, default-off, and import-safe", () => {
 });
 
 test("Power Mode only queues bounded committed typing effects", () => {
+  assert.equal(
+    ((editor + editorInput).match(/queue_power_mode_insert_effect/g) ?? []).length,
+    2,
+    "expected one method definition and one guarded input call site",
+  );
   assert.match(editor, /const POWER_MODE_MAX_PARTICLES: usize = 48;/);
   assert.match(editor, /const POWER_MODE_MAX_PENDING_BURSTS: usize = 4;/);
   assert.match(editor, /const POWER_MODE_PARTICLES_PER_BURST: usize = 5;/);
@@ -86,9 +91,11 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
     /pub use dx_rainbow_glow::\{\s*DxRainbowGlow, DxRainbowMotion, DxRainbowPaintSample, dx_rainbow_paint_sample,\s*paint_dx_rainbow_caret_glow,\s*\};/s,
   );
   assert.match(rainbowGlow, /const DX_RAINBOW_STRIPE_COUNT: usize = 25;/);
-  assert.match(rainbowGlow, /const DX_RAINBOW_STOPS: \[Hsla; 17\] = \[/);
+  assert.match(rainbowGlow, /const DX_RAINBOW_STOP_COUNT: usize = 17;/);
+  assert.match(rainbowGlow, /const DX_RAINBOW_STOPS: \[Hsla; DX_RAINBOW_STOP_COUNT\] = \[/);
   assert.match(rainbowGlow, /h: 0\.966503268[\s\S]*h: 0\.025773196[\s\S]*h: 0\.512562814[\s\S]*h: 0\.940074906/s);
   assert.match(rainbowGlow, /pub enum DxRainbowMotion \{\s*Animated,\s*Reduced,\s*\}/s);
+  assert.match(rainbowGlow, /enum DxRainbowDirection \{\s*Forward,\s*Reverse,\s*\}/s);
   assert.match(rainbowGlow, /motion: DxRainbowMotion::Reduced/);
   assert.match(rainbowGlow, /pub fn animated\(\) -> Self \{\s*Self::new\(\)\.motion\(DxRainbowMotion::Animated\)\s*\}/s);
   assert.match(rainbowGlow, /self\.height = height\.max\(Pixels::ZERO\);/);
@@ -96,13 +103,20 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
   assert.match(rainbowGlow, /self\.phase_offset = normalize_phase\(offset\);/);
   assert.doesNotMatch(rainbowGlow, /SystemTime|UNIX_EPOCH/);
   assert.doesNotMatch(rainbowGlow, /as_secs_f64|DX_RAINBOW_CYCLE_SECONDS/);
-  assert.match(rainbowGlow, /const DX_RAINBOW_CYCLE_NANOS: u128 = 2_400_000_000;/);
+  assert.match(rainbowGlow, /const DX_RAINBOW_CARET_CYCLE_NANOS: u128 = 2_400_000_000;/);
+  assert.match(rainbowGlow, /const DX_RAINBOW_GLOW_STRIPE_CYCLE_NANOS: u128 = 6_000_000_000;/);
+  assert.match(rainbowGlow, /const DX_RAINBOW_GLOW_NEAR_WASH_CYCLE_NANOS: u128 = 7_200_000_000;/);
+  assert.match(rainbowGlow, /const DX_RAINBOW_GLOW_OUTER_WASH_CYCLE_NANOS: u128 = 8_400_000_000;/);
   assert.match(rainbowGlow, /static DX_RAINBOW_STARTED_AT: OnceLock<Instant> = OnceLock::new\(\);/);
   assert.match(
     rainbowGlow,
-    /fn dx_rainbow_animated_phase\(\) -> f32 \{[\s\S]*let cycle_position = DX_RAINBOW_STARTED_AT[\s\S]*get_or_init\(Instant::now\)[\s\S]*elapsed\(\)[\s\S]*as_nanos\(\)[\s\S]*% DX_RAINBOW_CYCLE_NANOS;[\s\S]*cycle_position as f32 \/ DX_RAINBOW_CYCLE_NANOS as f32/s,
+    /fn dx_rainbow_elapsed_nanos\(\) -> u128 \{[\s\S]*DX_RAINBOW_STARTED_AT[\s\S]*get_or_init\(Instant::now\)[\s\S]*elapsed\(\)[\s\S]*as_nanos\(\)[\s\S]*\}/s,
   );
-  assert.match(rainbowGlow, /DxRainbowMotion::Animated => dx_rainbow_animated_phase\(\)/);
+  assert.match(
+    rainbowGlow,
+    /fn dx_rainbow_cycle_phase\(elapsed_nanos: u128, cycle_nanos: u128\) -> f32 \{[\s\S]*let cycle_position = elapsed_nanos % cycle_nanos;[\s\S]*cycle_position as f32 \/ cycle_nanos as f32/s,
+  );
+  assert.match(rainbowGlow, /DxRainbowMotion::Animated => \{[\s\S]*let phase = dx_rainbow_cycle_phase\(elapsed_nanos, cycle_nanos\);[\s\S]*DxRainbowDirection::Forward => phase,[\s\S]*DxRainbowDirection::Reverse => -phase,/s);
   assert.match(rainbowGlow, /DxRainbowMotion::Reduced => DX_RAINBOW_REDUCED_PHASE/);
   assert.doesNotMatch(rainbowGlow, /pub fn is_animated/);
   assert.match(
@@ -124,15 +138,20 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
   );
   assert.match(
     rainbowGlow,
+    /dx_rainbow_phase_now\(\s*motion,\s*phase_offset,\s*DX_RAINBOW_CARET_CYCLE_NANOS,\s*DxRainbowDirection::Forward,\s*\)/s,
+  );
+  assert.match(
+    rainbowGlow,
+    /fn dx_rainbow_paint_sample_for_cycle\(\s*motion: DxRainbowMotion,\s*phase_offset: f32,\s*alpha: f32,\s*cycle_nanos: u128,\s*direction: DxRainbowDirection,\s*elapsed_nanos: u128,\s*\) -> DxRainbowPaintSample/s,
+  );
+  assert.match(
+    rainbowGlow,
     /fn dx_rainbow_hsla\(phase: f32, alpha: f32\) -> Hsla \{[\s\S]*let start = DX_RAINBOW_STOPS\[stop_ix\];[\s\S]*let end = DX_RAINBOW_STOPS\[stop_ix \+ 1\];[\s\S]*h: lerp_hue\(start\.h, end\.h, mix\),[\s\S]*s: lerp_unit\(start\.s, end\.s, mix\),[\s\S]*l: lerp_unit\(start\.l, end\.l, mix\),[\s\S]*a: clamp_unit\(alpha\),/s,
   );
   assert.doesNotMatch(rainbowGlow, /DX_RAINBOW_SATURATION|DX_RAINBOW_LIGHTNESS/);
   assert.match(rainbowGlow, /should_request_animation_frame: motion\.is_animated\(\)/);
   assert.doesNotMatch(rainbowGlow, /pub fn request_animation_frame/);
-  assert.match(
-    rainbowGlow,
-    /if sample\.should_request_animation_frame \{\s*window\.request_animation_frame\(\);\s*\}/s,
-  );
+  assert.match(rainbowGlow, /if stripe_sample\.should_request_animation_frame \{\s*window\.request_animation_frame\(\);\s*\}/s);
   assert.match(rainbowGlow, /fn normalize_phase\(phase: f32\) -> f32 \{[\s\S]*phase\.is_finite\(\)[\s\S]*phase\.rem_euclid\(1\.\)[\s\S]*0\./s);
   assert.match(rainbowGlow, /fn clamp_unit\(value: f32\) -> f32 \{[\s\S]*value\.is_finite\(\)[\s\S]*value\.clamp\(0\., 1\.\)[\s\S]*0\./s);
   assert.match(rainbowGlow, /fn paint_dx_rainbow_wash/);
@@ -140,7 +159,11 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
     rainbowGlow,
     /fn paint_dx_rainbow_wash[\s\S]*let bounds = window\.pixel_snap_bounds\(bounds\);\s*if bounds\.size\.width <= px\(0\.\) \|\| bounds\.size\.height <= px\(0\.\) \{\s*return;\s*\}/s,
   );
-  assert.match(rainbowGlow, /paint_dx_rainbow_stripes\(bounds, radius, sample\.phase, 1\., window\);/);
+  assert.match(rainbowGlow, /let elapsed_nanos = dx_rainbow_elapsed_nanos\(\);/);
+  assert.match(rainbowGlow, /DX_RAINBOW_GLOW_STRIPE_CYCLE_NANOS,[\s\S]*DxRainbowDirection::Forward,[\s\S]*elapsed_nanos,/s);
+  assert.match(rainbowGlow, /DX_RAINBOW_GLOW_NEAR_WASH_CYCLE_NANOS,[\s\S]*DxRainbowDirection::Forward,[\s\S]*elapsed_nanos,/s);
+  assert.match(rainbowGlow, /DX_RAINBOW_GLOW_OUTER_WASH_CYCLE_NANOS,[\s\S]*DxRainbowDirection::Reverse,[\s\S]*elapsed_nanos,/s);
+  assert.match(rainbowGlow, /paint_dx_rainbow_stripes\(bounds, radius, stripe_sample\.phase, 1\., window\);/);
   assert.match(rainbowGlow, /if bounds\.size\.width <= px\(0\.\) \|\| bounds\.size\.height <= px\(0\.\) \{/);
   const caretGlowStart = rainbowGlow.indexOf("pub fn paint_dx_rainbow_caret_glow");
   assert.ok(caretGlowStart >= 0, "expected caret glow helper");
@@ -201,6 +224,7 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
   assert.match(rainbowCaret, /let bucket = quantized_hue_bucket\(foreground\.h\);[\s\S]*let foreground = canonicalize_rainbow_foreground\(foreground, bucket\);/s);
   assert.match(rainbowCaret, /fn canonicalize_rainbow_foreground\(color: Hsla, bucket: usize\) -> Hsla/);
   assert.match(rainbowCaret, /h: \(bucket as f32 \+ 0\.5\) \/ RAINBOW_CARET_CONTRAST_CACHE_BUCKETS as f32/);
+  assert.match(rainbowCaret, /fn clamp_unit\(value: f32\) -> f32 \{[\s\S]*value\.is_finite\(\)[\s\S]*value\.clamp\(0\., 1\.\)[\s\S]*0\./s);
   assert.match(rainbowCaret, /foreground: QuantizedRainbowForeground::new\(foreground\)/);
   assert.match(rainbowCaret, /h: quantize_phase\(color\.h\)/);
   assert.match(

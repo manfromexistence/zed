@@ -412,6 +412,11 @@ test("core side panels expose dock close controls in visible headers", () => {
   );
   assert.match(
     sidePanelHeaderControls,
+    /format!\("\{id_prefix\}-close-side-panel"\)[\s\S]*\.tab_index\(0\)/,
+    "core side-panel close buttons must stay keyboard reachable in visible headers",
+  );
+  assert.match(
+    sidePanelHeaderControls,
     /contains_side_panel_by_id\(panel_id, cx\)/,
     "close tooltip should still use real side-panel registration state",
   );

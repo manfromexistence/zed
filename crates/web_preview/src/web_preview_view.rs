@@ -32662,20 +32662,30 @@ impl WebPreviewView {
         cx.notify();
     }
 
-    fn render_tab_bar_add_menu(&self) -> impl IntoElement {
+    fn render_tab_bar_add_menu(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let focus_handle = self.focus_handle(cx);
         IconButton::new("web-preview-tab-bar-add-trigger", IconName::Plus)
             .icon_size(IconSize::Small)
+            .tab_index(0)
+            .track_focus(&focus_handle)
             .tooltip(Tooltip::text("New Web Preview"))
             .on_click(|_, window, cx| {
                 window.dispatch_action(NewWebPreview.boxed_clone(), cx);
             })
     }
 
-    fn render_tab_bar_extensions_menu(&self, entity: Entity<Self>) -> impl IntoElement {
+    fn render_tab_bar_extensions_menu(
+        &self,
+        entity: Entity<Self>,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
+        let focus_handle = self.focus_handle(cx);
         PopoverMenu::new("web-preview-tab-bar-extensions-menu")
             .trigger_with_tooltip(
                 IconButton::new("web-preview-tab-bar-extensions-trigger", IconName::Blocks)
-                    .icon_size(IconSize::Small),
+                    .icon_size(IconSize::Small)
+                    .tab_index(0)
+                    .track_focus(&focus_handle),
                 Tooltip::text("Extensions"),
             )
             .anchor(Anchor::TopRight)
@@ -32722,11 +32732,18 @@ impl WebPreviewView {
             })
     }
 
-    fn render_tab_bar_more_menu(&self, entity: Entity<Self>) -> impl IntoElement {
+    fn render_tab_bar_more_menu(
+        &self,
+        entity: Entity<Self>,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
+        let focus_handle = self.focus_handle(cx);
         PopoverMenu::new("web-preview-tab-bar-more-menu")
             .trigger_with_tooltip(
                 IconButton::new("web-preview-tab-bar-more-trigger", IconName::Ellipsis)
-                    .icon_size(IconSize::Small),
+                    .icon_size(IconSize::Small)
+                    .tab_index(0)
+                    .track_focus(&focus_handle),
                 Tooltip::text("More"),
             )
             .anchor(Anchor::TopRight)
@@ -35383,12 +35400,15 @@ impl WebPreviewView {
     }
 
     fn render_tab_bar_start_controls(&self, cx: &mut Context<Self>) -> AnyElement {
+        let focus_handle = self.focus_handle(cx);
         h_flex()
             .items_center()
             .gap_1()
             .child(
                 IconButton::new("web-preview-tab-bar-back", IconName::ArrowLeft)
                     .icon_size(IconSize::Small)
+                    .tab_index(0)
+                    .track_focus(&focus_handle)
                     .tooltip(Tooltip::text("Back"))
                     .on_click(cx.listener(|this, _, _, cx| {
                         this.go_back_in_history(cx);
@@ -35397,6 +35417,8 @@ impl WebPreviewView {
             .child(
                 IconButton::new("web-preview-tab-bar-forward", IconName::ArrowRight)
                     .icon_size(IconSize::Small)
+                    .tab_index(0)
+                    .track_focus(&focus_handle)
                     .tooltip(Tooltip::text("Forward"))
                     .on_click(cx.listener(|this, _, _, cx| {
                         this.go_forward_in_history(cx);
@@ -35405,6 +35427,8 @@ impl WebPreviewView {
             .child(
                 IconButton::new("web-preview-tab-bar-reload", IconName::RotateCw)
                     .icon_size(IconSize::Small)
+                    .tab_index(0)
+                    .track_focus(&focus_handle)
                     .tooltip(Tooltip::text("Reload"))
                     .on_click(cx.listener(|this, _, window, cx| {
                         this.reload_page(window, cx);
@@ -35416,14 +35440,14 @@ impl WebPreviewView {
     fn render_tab_bar_end_controls(
         &self,
         entity: Entity<Self>,
-        _cx: &mut Context<Self>,
+        cx: &mut Context<Self>,
     ) -> AnyElement {
         h_flex()
             .items_center()
             .gap_1()
-            .child(self.render_tab_bar_add_menu())
-            .child(self.render_tab_bar_extensions_menu(entity.clone()))
-            .child(self.render_tab_bar_more_menu(entity))
+            .child(self.render_tab_bar_add_menu(cx))
+            .child(self.render_tab_bar_extensions_menu(entity.clone(), cx))
+            .child(self.render_tab_bar_more_menu(entity, cx))
             .into_any_element()
     }
 

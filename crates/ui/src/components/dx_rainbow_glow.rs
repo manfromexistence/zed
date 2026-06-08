@@ -6,11 +6,15 @@ use gpui::{
     point, px, quad, relative, size, transparent_black,
 };
 
+const DX_RAINBOW_STOP_COUNT: usize = 17;
+const DX_RAINBOW_STOP_LAST_INDEX: usize = DX_RAINBOW_STOP_COUNT - 1;
 const DX_RAINBOW_STRIPE_COUNT: usize = 25;
-const DX_RAINBOW_STOP_LAST_INDEX: usize = DX_RAINBOW_STOPS.len() - 1;
-const DX_RAINBOW_CYCLE_NANOS: u128 = 2_400_000_000;
+const DX_RAINBOW_CARET_CYCLE_NANOS: u128 = 2_400_000_000;
+const DX_RAINBOW_GLOW_STRIPE_CYCLE_NANOS: u128 = 6_000_000_000;
+const DX_RAINBOW_GLOW_NEAR_WASH_CYCLE_NANOS: u128 = 7_200_000_000;
+const DX_RAINBOW_GLOW_OUTER_WASH_CYCLE_NANOS: u128 = 8_400_000_000;
 const DX_RAINBOW_REDUCED_PHASE: f32 = 0.58;
-const DX_RAINBOW_STOPS: [Hsla; 17] = [
+const DX_RAINBOW_STOPS: [Hsla; DX_RAINBOW_STOP_COUNT] = [
     Hsla {
         h: 0.966503268,
         s: 1.,
@@ -126,6 +130,12 @@ impl DxRainbowMotion {
     fn is_animated(self) -> bool {
         matches!(self, Self::Animated)
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DxRainbowDirection {
+    Forward,
+    Reverse,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -281,22 +291,52 @@ fn dx_rainbow_hsla(phase: f32, alpha: f32) -> Hsla {
     }
 }
 
-fn dx_rainbow_phase_now(motion: DxRainbowMotion, phase_offset: f32) -> f32 {
+fn dx_rainbow_phase_now(
+    motion: DxRainbowMotion,
+    phase_offset: f32,
+    cycle_nanos: u128,
+    direction: DxRainbowDirection,
+) -> f32 {
+    dx_rainbow_phase_at(
+        motion,
+        phase_offset,
+        cycle_nanos,
+        direction,
+        dx_rainbow_elapsed_nanos(),
+    )
+}
+
+fn dx_rainbow_phase_at(
+    motion: DxRainbowMotion,
+    phase_offset: f32,
+    cycle_nanos: u128,
+    direction: DxRainbowDirection,
+    elapsed_nanos: u128,
+) -> f32 {
     let base_phase = match motion {
-        DxRainbowMotion::Animated => dx_rainbow_animated_phase(),
+        DxRainbowMotion::Animated => {
+            let phase = dx_rainbow_cycle_phase(elapsed_nanos, cycle_nanos);
+            match direction {
+                DxRainbowDirection::Forward => phase,
+                DxRainbowDirection::Reverse => -phase,
+            }
+        }
         DxRainbowMotion::Reduced => DX_RAINBOW_REDUCED_PHASE,
     };
 
     normalize_phase(base_phase + phase_offset)
 }
 
-fn dx_rainbow_animated_phase() -> f32 {
-    let cycle_position = DX_RAINBOW_STARTED_AT
+fn dx_rainbow_elapsed_nanos() -> u128 {
+    DX_RAINBOW_STARTED_AT
         .get_or_init(Instant::now)
         .elapsed()
         .as_nanos()
-        % DX_RAINBOW_CYCLE_NANOS;
-    cycle_position as f32 / DX_RAINBOW_CYCLE_NANOS as f32
+}
+
+fn dx_rainbow_cycle_phase(elapsed_nanos: u128, cycle_nanos: u128) -> f32 {
+    let cycle_position = elapsed_nanos % cycle_nanos;
+    cycle_position as f32 / cycle_nanos as f32
 }
 
 pub fn dx_rainbow_paint_sample(
@@ -304,7 +344,28 @@ pub fn dx_rainbow_paint_sample(
     phase_offset: f32,
     alpha: f32,
 ) -> DxRainbowPaintSample {
-    let phase = dx_rainbow_phase_now(motion, phase_offset);
+    let phase = dx_rainbow_phase_now(
+        motion,
+        phase_offset,
+        DX_RAINBOW_CARET_CYCLE_NANOS,
+        DxRainbowDirection::Forward,
+    );
+    DxRainbowPaintSample {
+        phase,
+        color: dx_rainbow_hsla(phase, alpha),
+        should_request_animation_frame: motion.is_animated(),
+    }
+}
+
+fn dx_rainbow_paint_sample_for_cycle(
+    motion: DxRainbowMotion,
+    phase_offset: f32,
+    alpha: f32,
+    cycle_nanos: u128,
+    direction: DxRainbowDirection,
+    elapsed_nanos: u128,
+) -> DxRainbowPaintSample {
+    let phase = dx_rainbow_phase_at(motion, phase_offset, cycle_nanos, direction, elapsed_nanos);
     DxRainbowPaintSample {
         phase,
         color: dx_rainbow_hsla(phase, alpha),
@@ -345,37 +406,59 @@ fn paint_dx_rainbow_glow(
         return;
     }
 
-    let sample = dx_rainbow_paint_sample(motion, phase_offset, 0.18);
-    if sample.should_request_animation_frame {
+    let elapsed_nanos = dx_rainbow_elapsed_nanos();
+    let stripe_sample = dx_rainbow_paint_sample_for_cycle(
+        motion,
+        phase_offset,
+        0.18,
+        DX_RAINBOW_GLOW_STRIPE_CYCLE_NANOS,
+        DxRainbowDirection::Forward,
+        elapsed_nanos,
+    );
+    if stripe_sample.should_request_animation_frame {
         window.request_animation_frame();
     }
 
     let radius = clamp_radius(radius, bounds.size);
     let corners = Corners::all(radius);
+    let near_wash_phase = dx_rainbow_phase_at(
+        motion,
+        phase_offset - 0.03,
+        DX_RAINBOW_GLOW_NEAR_WASH_CYCLE_NANOS,
+        DxRainbowDirection::Forward,
+        elapsed_nanos,
+    );
+    let outer_wash_phase = dx_rainbow_phase_at(
+        motion,
+        phase_offset - 0.08,
+        DX_RAINBOW_GLOW_OUTER_WASH_CYCLE_NANOS,
+        DxRainbowDirection::Reverse,
+        elapsed_nanos,
+    );
 
     paint_dx_rainbow_wash(
         bounds.dilate(px(28.)),
         radius + px(28.),
-        sample.phase - 0.08,
+        outer_wash_phase,
         0.1,
         window,
     );
     paint_dx_rainbow_wash(
         bounds.dilate(px(10.)),
         radius + px(10.),
-        sample.phase - 0.03,
+        near_wash_phase,
         0.22,
         window,
     );
     window.paint_quad(quad(
         bounds,
         corners,
-        sample.color,
+        stripe_sample.color,
         Edges::default(),
         transparent_black(),
         BorderStyle::default(),
     ));
-    paint_dx_rainbow_stripes(bounds, radius, sample.phase, 1., window);
+    paint_dx_rainbow_stripes(bounds, radius, stripe_sample.phase, 1., window);
 }
 
 fn paint_dx_rainbow_wash(

@@ -65,6 +65,7 @@ pub fn side_panel_header_controls(
             IconButton::new(format!("{id_prefix}-close-side-panel"), IconName::Close)
                 .shape(IconButtonShape::Square)
                 .icon_size(IconSize::Small)
+                .tab_index(0)
                 .tooltip(if panel_is_registered {
                     Tooltip::text("Close Panel")
                 } else {

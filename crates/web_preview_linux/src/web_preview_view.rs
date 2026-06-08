@@ -1319,11 +1319,18 @@ impl WebPreviewView {
         self.open_extension_location("Browser".into(), path, window, cx);
     }
 
-    fn render_tab_bar_extensions_menu(&self, entity: Entity<Self>) -> impl IntoElement {
+    fn render_tab_bar_extensions_menu(
+        &self,
+        entity: Entity<Self>,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
+        let focus_handle = self.focus_handle(cx);
         PopoverMenu::new("web-preview-tab-bar-extensions-menu")
             .trigger_with_tooltip(
                 IconButton::new("web-preview-tab-bar-extensions-trigger", IconName::Blocks)
-                    .icon_size(IconSize::Small),
+                    .icon_size(IconSize::Small)
+                    .tab_index(0)
+                    .track_focus(&focus_handle),
                 Tooltip::text("Extensions"),
             )
             .anchor(Anchor::TopRight)
@@ -1873,11 +1880,18 @@ impl WebPreviewView {
         ))
     }
 
-    fn render_tab_bar_more_menu(&self, entity: Entity<Self>) -> impl IntoElement {
+    fn render_tab_bar_more_menu(
+        &self,
+        entity: Entity<Self>,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
+        let focus_handle = self.focus_handle(cx);
         PopoverMenu::new("web-preview-tab-bar-more-menu")
             .trigger_with_tooltip(
                 IconButton::new("web-preview-tab-bar-more-trigger", IconName::Ellipsis)
-                    .icon_size(IconSize::Small),
+                    .icon_size(IconSize::Small)
+                    .tab_index(0)
+                    .track_focus(&focus_handle),
                 Tooltip::text("More"),
             )
             .anchor(Anchor::TopRight)
@@ -1939,9 +1953,12 @@ impl WebPreviewView {
             })
     }
 
-    fn render_tab_bar_add_menu(&self) -> impl IntoElement {
+    fn render_tab_bar_add_menu(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let focus_handle = self.focus_handle(cx);
         IconButton::new("web-preview-tab-bar-add-trigger", IconName::Plus)
             .icon_size(IconSize::Small)
+            .tab_index(0)
+            .track_focus(&focus_handle)
             .tooltip(Tooltip::text("New Web Preview"))
             .on_click(|_, window, cx| {
                 window.dispatch_action(NewWebPreview.boxed_clone(), cx);
@@ -1949,32 +1966,43 @@ impl WebPreviewView {
     }
 
     fn render_tab_bar_start_controls(&self, cx: &mut Context<Self>) -> AnyElement {
+        let focus_handle = self.focus_handle(cx);
         h_flex()
             .items_center()
             .gap_1()
             .child(
                 IconButton::new("web-preview-tab-bar-back", IconName::ArrowLeft)
                     .icon_size(IconSize::Small)
+                    .tab_index(0)
+                    .track_focus(&focus_handle)
                     .tooltip(Tooltip::text("Back"))
                     .on_click(cx.listener(Self::go_back)),
             )
             .child(
                 IconButton::new("web-preview-tab-bar-forward", IconName::ArrowRight)
                     .icon_size(IconSize::Small)
+                    .tab_index(0)
+                    .track_focus(&focus_handle)
                     .tooltip(Tooltip::text("Forward"))
                     .on_click(cx.listener(Self::go_forward)),
             )
             .child(
                 IconButton::new("web-preview-tab-bar-reload", IconName::RotateCw)
                     .icon_size(IconSize::Small)
+                    .tab_index(0)
+                    .track_focus(&focus_handle)
                     .tooltip(Tooltip::text("Reload"))
                     .on_click(cx.listener(Self::reload)),
             )
             .into_any_element()
     }
 
-    fn render_tab_bar_end_controls(&self, cx: &mut Context<Self>) -> AnyElement {
-        let entity = cx.entity();
+    fn render_tab_bar_end_controls(
+        &self,
+        entity: Entity<Self>,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let focus_handle = self.focus_handle(cx);
         let is_bookmarked = self.is_active_url_bookmarked();
         let bookmark_icon = if is_bookmarked {
             IconName::StarFilled
@@ -1990,18 +2018,20 @@ impl WebPreviewView {
         h_flex()
             .items_center()
             .gap_1()
-            .child(self.render_tab_bar_add_menu())
+            .child(self.render_tab_bar_add_menu(cx))
             .child(
                 IconButton::new("web-preview-tab-bar-bookmark", bookmark_icon)
                     .icon_size(IconSize::Small)
+                    .tab_index(0)
+                    .track_focus(&focus_handle)
                     .icon_color(Color::Muted)
                     .toggle_state(is_bookmarked)
                     .selected_icon_color(bookmark_color)
                     .tooltip(Tooltip::text("Bookmark Page"))
                     .on_click(cx.listener(Self::toggle_bookmark)),
             )
-            .child(self.render_tab_bar_extensions_menu(entity.clone()))
-            .child(self.render_tab_bar_more_menu(entity))
+            .child(self.render_tab_bar_extensions_menu(entity.clone(), cx))
+            .child(self.render_tab_bar_more_menu(entity, cx))
             .into_any_element()
     }
 
@@ -2178,9 +2208,10 @@ impl Item for WebPreviewView {
         _window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<PaneTabBarControls> {
+        let entity = cx.entity();
         Some(PaneTabBarControls::new(
             Some(self.render_tab_bar_start_controls(cx)),
-            Some(self.render_tab_bar_end_controls(cx)),
+            Some(self.render_tab_bar_end_controls(entity, cx)),
         ))
     }
 

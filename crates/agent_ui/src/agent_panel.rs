@@ -6367,9 +6367,7 @@ impl AgentPanel {
         _cx: &App,
     ) -> AnyElement {
         IconButton::new(
-            SharedString::from(format!(
-                "agent-toolbar-response-indicator-page-{label}-{entry_ix}"
-            )),
+            ("agent-toolbar-response-indicator-page", label, entry_ix),
             icon,
         )
         .icon_size(IconSize::XSmall)

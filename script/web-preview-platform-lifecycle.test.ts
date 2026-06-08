@@ -715,6 +715,11 @@ test("Windows Web Preview favicon updates are bounded and page-scoped", () => {
   const renderStart = source.indexOf("impl Render for WebPreviewView");
   assert.ok(renderStart >= 0, "expected Web Preview render impl");
   const render = functionBody(source.slice(renderStart), "render");
+  const renderTabBarAddMenu = functionBody(source, "render_tab_bar_add_menu");
+  const renderTabBarExtensionsMenu = functionBody(source, "render_tab_bar_extensions_menu");
+  const renderTabBarMoreMenu = functionBody(source, "render_tab_bar_more_menu");
+  const renderTabBarStartControls = functionBody(source, "render_tab_bar_start_controls");
+  const renderTabBarEndControls = functionBody(source, "render_tab_bar_end_controls");
   const tabIcon = functionBody(source, "tab_icon");
   const cloneOnSplit = functionBody(source, "clone_on_split");
   const requestFavicon = functionBody(windowsHost, "request_favicon_uri");
@@ -815,6 +820,19 @@ test("Windows Web Preview favicon updates are bounded and page-scoped", () => {
   assert.match(startEventPump, /\.update_in\(cx, move \|this, window, cx\| \{/);
   assert.match(startEventPump, /this\.apply_browser_events\(pending_events, window, cx\);/);
   assert.doesNotMatch(render, /browser_events|apply_browser_events|take_queued_browser_events|cache_favicon_uri/);
+  assert.match(renderTabBarAddMenu, /let focus_handle = self\.focus_handle\(cx\);/);
+  assert.match(renderTabBarAddMenu, /"web-preview-tab-bar-add-trigger"[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&focus_handle\)/);
+  assert.match(renderTabBarExtensionsMenu, /let focus_handle = self\.focus_handle\(cx\);/);
+  assert.match(renderTabBarExtensionsMenu, /"web-preview-tab-bar-extensions-trigger"[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&focus_handle\)/);
+  assert.match(renderTabBarMoreMenu, /let focus_handle = self\.focus_handle\(cx\);/);
+  assert.match(renderTabBarMoreMenu, /"web-preview-tab-bar-more-trigger"[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&focus_handle\)/);
+  assert.match(renderTabBarStartControls, /let focus_handle = self\.focus_handle\(cx\);/);
+  assert.match(renderTabBarStartControls, /"web-preview-tab-bar-back"[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&focus_handle\)/);
+  assert.match(renderTabBarStartControls, /"web-preview-tab-bar-forward"[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&focus_handle\)/);
+  assert.match(renderTabBarStartControls, /"web-preview-tab-bar-reload"[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&focus_handle\)/);
+  assert.match(renderTabBarEndControls, /render_tab_bar_add_menu\(cx\)/);
+  assert.match(renderTabBarEndControls, /render_tab_bar_extensions_menu\(entity\.clone\(\), cx\)/);
+  assert.match(renderTabBarEndControls, /render_tab_bar_more_menu\(entity, cx\)/);
   assert.match(
     applyBrowserEvents,
     /BrowserEvent::FaviconUriChanged \{\s*uri,\s*page_url,\s*navigation_id,\s*\} => \{/,
@@ -906,22 +924,22 @@ for (const [name, path] of platformViews) {
     const source = read(path);
 
     assert.match(source, /fn render_tab_bar_start_controls\(&self, cx: &mut Context<Self>\) -> AnyElement/);
-    assert.match(source, /fn render_tab_bar_end_controls\(&self, cx: &mut Context<Self>\) -> AnyElement/);
+    assert.match(source, /fn render_tab_bar_end_controls\(\s*&self,\s*entity: Entity<Self>,\s*cx: &mut Context<Self>,\s*\) -> AnyElement/);
     assert.match(source, /IconButton::new\("web-preview-tab-bar-add-trigger", IconName::Plus\)/);
     assert.match(source, /window\.dispatch_action\(NewWebPreview\.boxed_clone\(\), cx\);/);
     assert.match(source, /IconButton::new\("web-preview-tab-bar-back", IconName::ArrowLeft\)/);
     assert.match(source, /IconButton::new\("web-preview-tab-bar-forward", IconName::ArrowRight\)/);
     assert.match(source, /IconButton::new\("web-preview-tab-bar-reload", IconName::RotateCw\)/);
     assert.match(source, /IconButton::new\("web-preview-tab-bar-bookmark", bookmark_icon\)/);
-    assert.match(source, /fn render_tab_bar_extensions_menu\(&self, entity: Entity<Self>\) -> impl IntoElement/);
+    assert.match(source, /fn render_tab_bar_extensions_menu\(\s*&self,\s*entity: Entity<Self>,\s*cx: &mut Context<Self>,\s*\) -> impl IntoElement/);
     assert.match(source, /PopoverMenu::new\("web-preview-tab-bar-extensions-menu"\)/);
-    assert.match(source, /fn render_tab_bar_more_menu\(&self, entity: Entity<Self>\) -> impl IntoElement/);
+    assert.match(source, /fn render_tab_bar_more_menu\(\s*&self,\s*entity: Entity<Self>,\s*cx: &mut Context<Self>,\s*\) -> impl IntoElement/);
     assert.match(source, /PopoverMenu::new\("web-preview-tab-bar-more-menu"\)/);
     assert.match(source, /ContextMenuEntry::new\("Capture Screenshot"\)/);
     assert.match(source, /ContextMenuEntry::new\("Inspect Element"\)/);
     assert.match(source, /ContextMenuEntry::new\("Open DevTools"\)/);
     assert.match(source, /ContextMenuEntry::new\("Clear Cache"\)/);
-    assert.match(source, /Some\(PaneTabBarControls::new\(\s+Some\(self\.render_tab_bar_start_controls\(cx\)\),\s+Some\(self\.render_tab_bar_end_controls\(cx\)\),\s+\)\)/);
+    assert.match(source, /Some\(PaneTabBarControls::new\(\s+Some\(self\.render_tab_bar_start_controls\(cx\)\),\s+Some\(self\.render_tab_bar_end_controls\(cx\.entity\(\), cx\)\),\s+\)\)/);
     assert.doesNotMatch(source, /\.id\("web-preview-toolbar"\)/);
     assert.doesNotMatch(source, /fn render_toolbar_action_button\(/);
     assert.doesNotMatch(source, /web-preview-zoom-in|web-preview-zoom-out/);
