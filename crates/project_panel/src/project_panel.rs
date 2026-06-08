@@ -4981,12 +4981,7 @@ impl ProjectPanel {
                             })),
                     ),
             )
-            .child(side_panel_header_controls(
-                "dx-explorer",
-                self.workspace.clone(),
-                cx.entity().entity_id(),
-                cx,
-            ));
+            .child(self.render_side_panel_header_controls("dx-explorer", cx));
 
         v_flex()
             .id("dx-explorer-header")
@@ -5015,6 +5010,19 @@ impl ProjectPanel {
                     ),
             )
             .into_any_element()
+    }
+
+    fn render_side_panel_header_controls(
+        &self,
+        id_prefix: &'static str,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
+        div().pr_1().child(side_panel_header_controls(
+            id_prefix,
+            self.workspace.clone(),
+            cx.entity().entity_id(),
+            cx,
+        ))
     }
 
     fn render_selected_entries_toolbar(
@@ -5220,12 +5228,7 @@ impl ProjectPanel {
                                 cx.notify();
                             })),
                     )
-                    .child(side_panel_header_controls(
-                        "project-panel-selection",
-                        self.workspace.clone(),
-                        cx.entity().entity_id(),
-                        cx,
-                    )),
+                    .child(self.render_side_panel_header_controls("project-panel-selection", cx)),
             )
             .into_any_element()
     }
@@ -7983,12 +7986,12 @@ impl ProjectPanel {
                             })
                             .child(hover_badge)
                             .when(is_sticky && sticky_index == Some(0), |this| {
-                                this.child(side_panel_header_controls(
-                                    "project-panel-sticky",
-                                    self.workspace.clone(),
-                                    cx.entity().entity_id(),
-                                    cx,
-                                ))
+                                this.child(
+                                    self.render_side_panel_header_controls(
+                                        "project-panel-sticky",
+                                        cx,
+                                    ),
+                                )
                             })
                             .into_any_element(),
                     )
@@ -9420,10 +9423,8 @@ impl Render for ProjectPanel {
                                             active_media_folder.selected_media_entry_id,
                                             self.focus_handle(cx),
                                             Some(
-                                                side_panel_header_controls(
+                                                self.render_side_panel_header_controls(
                                                     "project-panel-media",
-                                                    self.workspace.clone(),
-                                                    cx.entity().entity_id(),
                                                     cx,
                                                 )
                                                 .into_any_element(),

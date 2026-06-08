@@ -80,6 +80,10 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   const dxIcons = read("crates/ui/src/dx_icons.rs");
   const dxExplorerSummary = functionBody(source, "dx_explorer_summary");
   const renderDxExplorerHeader = functionBody(source, "render_dx_explorer_header");
+  const renderSidePanelHeaderControls = functionBody(
+    source,
+    "render_side_panel_header_controls",
+  );
   const updateVisibleEntries = functionBody(source, "update_visible_entries");
 
   assert.match(source, /struct DxExplorerSummary/);
@@ -186,7 +190,29 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-filter-controls"\)/);
   assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-view-controls"\)/);
   assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-edit-controls"\)/);
-  assert.match(renderDxExplorerHeader, /side_panel_header_controls\(\s*"dx-explorer"/);
+  assert.match(
+    renderSidePanelHeaderControls,
+    /side_panel_header_controls\(\s*id_prefix,[\s\S]*self\.workspace\.clone\(\),[\s\S]*cx\.entity\(\)\.entity_id\(\),[\s\S]*cx,/,
+    "Project Panel side-panel chrome must stay routed through Zed's shared Dock controls",
+  );
+  assert.match(
+    renderDxExplorerHeader,
+    /self\.render_side_panel_header_controls\("dx-explorer", cx\)/,
+  );
+  assert.doesNotMatch(
+    renderDxExplorerHeader,
+    /(?<!render_)side_panel_header_controls\(\s*"dx-explorer"/,
+  );
+  assert.equal(
+    source.match(/\bself\.render_side_panel_header_controls\(/g)?.length,
+    4,
+    "Project Panel should reuse the side-panel chrome helper for header, selection, sticky, and media controls",
+  );
+  assert.equal(
+    source.match(/\bside_panel_header_controls\(/g)?.length,
+    1,
+    "Project Panel should call the shared Dock controls only from the helper",
+  );
   assert.match(renderDxExplorerHeader, /dx_icon\(DxUiIcon::OpenProject\)/);
   assert.match(dxIcons, /DxUiIcon::OpenProject => IconName::OpenFolder/);
   assert.match(renderDxExplorerHeader, /dx_icon\(DxUiIcon::OpenFile\)/);
@@ -199,42 +225,42 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   assert.match(renderDxExplorerHeader, /let header_focus_handle = self\.focus_handle\(cx\);/);
   assert.match(
     renderDxExplorerHeader,
-    /"dx-explorer-open-project"[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&open_project_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"Open project",\s*&workspace::Open::default\(\),\s*&open_project_focus_handle,[\s\S]*cx/,
+    /"dx-explorer-open-project"[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&open_project_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"Open project",\s*&workspace::Open::default\(\),\s*&open_project_focus_handle,[\s\S]*cx/,
     "Open Project should use the shared focused IconButton plus action-aware tooltip",
   );
   assert.match(
     renderDxExplorerHeader,
-    /"dx-explorer-open-file"[\s\S]*\.when\(has_worktree,[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&open_file_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"Open file",\s*&ToggleFileFinder::default\(\),\s*&open_file_tooltip_focus_handle,[\s\S]*cx/,
+    /"dx-explorer-open-file"[\s\S]*\.when\(has_worktree,[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&open_file_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"Open file",\s*&ToggleFileFinder::default\(\),\s*&open_file_tooltip_focus_handle,[\s\S]*cx/,
     "Open File should only enter tab order when enabled and should expose its action keybinding",
   );
   assert.match(
     renderDxExplorerHeader,
-    /"dx-explorer-toggle-ignored"[\s\S]*\.when\(has_worktree,[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&toggle_ignored_focus_handle\)[\s\S]*Tooltip::for_action_in\([\s\S]*if show_ignored_entries[\s\S]*"Hide ignored files"[\s\S]*"Show ignored files"[\s\S]*&ToggleHideGitIgnore,[\s\S]*&toggle_ignored_tooltip_focus_handle,[\s\S]*cx/,
+    /"dx-explorer-toggle-ignored"[\s\S]*\.when\(has_worktree,[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&toggle_ignored_focus_handle\)[\s\S]*Tooltip::for_action_in\([\s\S]*if show_ignored_entries[\s\S]*"Hide ignored files"[\s\S]*"Show ignored files"[\s\S]*&ToggleHideGitIgnore,[\s\S]*&toggle_ignored_tooltip_focus_handle,[\s\S]*cx/,
     "Ignored-files toggle should be focus-tracked only when enabled and expose its action keybinding",
   );
   assert.match(
     renderDxExplorerHeader,
-    /"dx-explorer-toggle-hidden"[\s\S]*\.when\(has_worktree,[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&toggle_hidden_focus_handle\)[\s\S]*Tooltip::for_action_in\([\s\S]*if show_hidden_entries[\s\S]*"Hide hidden files"[\s\S]*"Show hidden files"[\s\S]*&ToggleHideHidden,[\s\S]*&toggle_hidden_tooltip_focus_handle,[\s\S]*cx/,
+    /"dx-explorer-toggle-hidden"[\s\S]*\.when\(has_worktree,[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&toggle_hidden_focus_handle\)[\s\S]*Tooltip::for_action_in\([\s\S]*if show_hidden_entries[\s\S]*"Hide hidden files"[\s\S]*"Show hidden files"[\s\S]*&ToggleHideHidden,[\s\S]*&toggle_hidden_tooltip_focus_handle,[\s\S]*cx/,
     "Hidden-files toggle should be focus-tracked only when enabled and expose its action keybinding",
   );
   assert.match(
     renderDxExplorerHeader,
-    /"dx-explorer-project-symbols"[\s\S]*\.when\(has_worktree,[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&project_symbols_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"Project symbols",\s*&ToggleProjectSymbols,[\s\S]*&project_symbols_tooltip_focus_handle,[\s\S]*cx/,
+    /"dx-explorer-project-symbols"[\s\S]*\.when\(has_worktree,[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&project_symbols_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"Project symbols",\s*&ToggleProjectSymbols,[\s\S]*&project_symbols_tooltip_focus_handle,[\s\S]*cx/,
     "Project Symbols should be focus-tracked only when enabled and expose its action keybinding",
   );
   assert.match(
     renderDxExplorerHeader,
-    /"dx-explorer-collapse-all"[\s\S]*\.when\(has_worktree,[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&collapse_all_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"Collapse all",\s*&CollapseAllEntries,[\s\S]*&collapse_all_tooltip_focus_handle,[\s\S]*cx/,
+    /"dx-explorer-collapse-all"[\s\S]*\.when\(has_worktree,[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&collapse_all_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"Collapse all",\s*&CollapseAllEntries,[\s\S]*&collapse_all_tooltip_focus_handle,[\s\S]*cx/,
     "Collapse All should be focus-tracked only when enabled and expose its action keybinding",
   );
   assert.match(
     renderDxExplorerHeader,
-    /"dx-explorer-new-file"[\s\S]*\.when\(!is_read_only && has_worktree,[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&new_file_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"New file",\s*&NewFile,[\s\S]*&new_file_tooltip_focus_handle,[\s\S]*cx/,
+    /"dx-explorer-new-file"[\s\S]*\.when\(!is_read_only && has_worktree,[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&new_file_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"New file",\s*&NewFile,[\s\S]*&new_file_tooltip_focus_handle,[\s\S]*cx/,
     "New File should be focus-tracked only when writable and expose its action keybinding",
   );
   assert.match(
     renderDxExplorerHeader,
-    /"dx-explorer-new-folder"[\s\S]*\.when\(!is_read_only && has_worktree,[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&new_folder_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"New folder",\s*&NewDirectory,[\s\S]*&new_folder_tooltip_focus_handle,[\s\S]*cx/,
+    /"dx-explorer-new-folder"[\s\S]*\.when\(!is_read_only && has_worktree,[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&new_folder_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"New folder",\s*&NewDirectory,[\s\S]*&new_folder_tooltip_focus_handle,[\s\S]*cx/,
     "New Folder should be focus-tracked only when writable and expose its action keybinding",
   );
   assert.doesNotMatch(
@@ -599,32 +625,32 @@ test("project panel selection toolbar exposes file-browser operation state", () 
   );
   assert.match(
     renderSelectedEntriesToolbar,
-    /"project-panel-copy-selection"[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&copy_selection_focus_handle\)[\s\S]*Tooltip::text\("Copy selected"\)/,
+    /"project-panel-copy-selection"[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&copy_selection_focus_handle\)[\s\S]*Tooltip::text\("Copy selected"\)/,
     "Copy selected should stay keyboard reachable without advertising unavailable read-only keybinding state",
   );
   assert.match(
     renderSelectedEntriesToolbar,
-    /"project-panel-cut-selection"[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&cut_selection_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"Prepare selected items to move",\s*&Cut \{\},\s*&cut_selection_tooltip_focus_handle,[\s\S]*cx/,
+    /"project-panel-cut-selection"[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&cut_selection_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"Prepare selected items to move",\s*&Cut \{\},\s*&cut_selection_tooltip_focus_handle,[\s\S]*cx/,
     "Cut selected should be keyboard reachable and expose its Project Panel action keybinding",
   );
   assert.match(
     renderSelectedEntriesToolbar,
-    /"project-panel-duplicate-selection"[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&duplicate_selection_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"Duplicate selected",\s*&Duplicate \{\},\s*&duplicate_selection_tooltip_focus_handle,[\s\S]*cx/,
+    /"project-panel-duplicate-selection"[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&duplicate_selection_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"Duplicate selected",\s*&Duplicate \{\},\s*&duplicate_selection_tooltip_focus_handle,[\s\S]*cx/,
     "Duplicate selected should be keyboard reachable and expose its Project Panel action keybinding",
   );
   assert.match(
     renderSelectedEntriesToolbar,
-    /"project-panel-paste-selection-target"[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&paste_selection_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*paste_tooltip,\s*&Paste \{\},\s*&paste_selection_tooltip_focus_handle,[\s\S]*cx/,
+    /"project-panel-paste-selection-target"[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&paste_selection_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*paste_tooltip,\s*&Paste \{\},\s*&paste_selection_tooltip_focus_handle,[\s\S]*cx/,
     "Paste Here should be keyboard reachable and expose its Project Panel action keybinding",
   );
   assert.match(
     renderSelectedEntriesToolbar,
-    /"project-panel-trash-selection"[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&trash_selection_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"Trash selected",\s*&Trash \{ skip_prompt: false \},\s*&trash_selection_tooltip_focus_handle,[\s\S]*cx/,
+    /"project-panel-trash-selection"[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&trash_selection_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"Trash selected",\s*&Trash \{ skip_prompt: false \},\s*&trash_selection_tooltip_focus_handle,[\s\S]*cx/,
     "Trash selected should be keyboard reachable and expose its Project Panel action keybinding",
   );
   assert.match(
     renderSelectedEntriesToolbar,
-    /"project-panel-clear-selection"[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&clear_selection_focus_handle\)[\s\S]*Tooltip::text\("Clear selection"\)/,
+    /"project-panel-clear-selection"[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&clear_selection_focus_handle\)[\s\S]*Tooltip::text\("Clear selection"\)/,
     "Clear selection should remain keyboard reachable even though it is local toolbar state",
   );
   assert.doesNotMatch(
@@ -741,7 +767,10 @@ test("project panel display strings, sticky rows, and undo batches are bounded",
   assert.match(undo, /const MAX_PROJECT_PANEL_UNDO_BATCH_CHANGES: usize = 4_096;/);
   assert.match(detailsForEntry, /utils::bounded_project_panel_label\(filename\)/);
   assert.match(renderEntry, /is_sticky && sticky_index == Some\(0\)/);
-  assert.match(renderEntry, /side_panel_header_controls\(\s*"project-panel-sticky",/);
+  assert.match(
+    renderEntry,
+    /self\.render_side_panel_header_controls\(\s*"project-panel-sticky",[\s\S]*cx,\s*\)/,
+  );
   assertBefore({
     body: renderStickyEntries,
     before: "sticky_parents.len() >= MAX_PROJECT_PANEL_STICKY_PARENTS",
@@ -942,7 +971,7 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   );
   assert.match(
     renderStorageDrilldown,
-    /IconButton::new\(\s*"dx-explorer-storage-sort-button",[\s\S]*IconName::ListFilter,[\s\S]*\)[\s\S]*\.shape\(IconButtonShape::Square\)[\s\S]*\.style\(ButtonStyle::Subtle\)[\s\S]*\.icon_size\(IconSize::Small\)[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&self\.focus_handle\(cx\)\)/,
+    /IconButton::new\(\s*"dx-explorer-storage-sort-button",[\s\S]*IconName::ListFilter,[\s\S]*\)[\s\S]*\.shape\(IconButtonShape::Square\)[\s\S]*\.style\(ButtonStyle::Subtle\)[\s\S]*\.icon_size\(IconSize::Small\)[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&self\.focus_handle\(cx\)\)/,
   );
   assert.match(
     renderStorageDrilldown,
@@ -1165,7 +1194,7 @@ test("project panel storage overview and root shortcuts stay cached and professi
   );
   assert.match(renderStorageDrilldownRow, /\.spacing\(ListItemSpacing::ExtraDense\)/);
   assert.match(renderStorageDrilldownRow, /\.toggle_state\(is_selected\)/);
-  assert.match(renderStorageDrilldownRow, /\.tab_index\(0\)/);
+  assert.match(renderStorageDrilldownRow, /\.tab_index\(0(?:_isize)?\)/);
   assert.match(renderStorageDrilldownRow, /\.track_focus\(&self\.focus_handle\(cx\)\)/);
   assert.match(renderStorageDrilldownRow, /\.start_slot::<AnyElement>\(/);
   assert.match(renderStorageDrilldownRow, /\.end_slot::<AnyElement>\(/);
@@ -1230,11 +1259,14 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(renderRootStripRow, /ButtonLike::new\(/);
   assert.match(renderRootStripRow, /\.style\(ButtonStyle::Subtle\)/);
   assert.match(renderRootStripRow, /\.size\(ButtonSize::Compact\)/);
-  assert.match(renderRootStripRow, /\.max_w\(rems\(18\.\)\)/);
-  assert.match(renderRootStripRow, /\.when\(available,[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&row_focus_handle\)/);
+  assert.match(renderRootStripRow, /\.(?:width|max_w)\(rems\(18\.\)\)/);
+  assert.match(
+    renderRootStripRow,
+    /\.when\(available,[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&row_focus_handle\)/,
+  );
   assert.doesNotMatch(
     renderRootStripRow,
-    /\.size\(ButtonSize::Compact\)\s*\.tab_index\(0\)\s*\.track_focus\(&focus_handle\)/,
+    /\.size\(ButtonSize::Compact\)\s*\.tab_index\(0(?:_isize)?\)\s*\.track_focus\(&focus_handle\)/,
     "unavailable storage roots must not remain in keyboard tab order",
   );
   assert.match(renderRootStripRow, /Icon::new\(icon\)/);
@@ -1493,7 +1525,7 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   );
   assert.match(
     renderMediaShelfOverflowCard,
-    /PopoverMenu::new\(menu_id\)[\s\S]*\.trigger_with_tooltip\([\s\S]*ButtonLike::new\(trigger_id\)[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&focus_handle\)[\s\S]*Tooltip::with_meta\("More media"/,
+    /PopoverMenu::new\(menu_id\)[\s\S]*\.trigger_with_tooltip\([\s\S]*ButtonLike::new\(trigger_id\)[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&focus_handle\)[\s\S]*Tooltip::with_meta\("More media"/,
     "media overflow should use a focusable ButtonLike popover trigger with a tooltip",
   );
   assert.doesNotMatch(
@@ -2241,7 +2273,7 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     mediaShelfCardContainer,
-    /ButtonLike::new\(SharedString::from\(format!\([\s\S]*"\{id_prefix\}-\{:\?\}-\{:\?\}"[\s\S]*item\.kind,[\s\S]*item\.entry_id[\s\S]*\.full_width\(\)[\s\S]*\.height\(px\(PROJECT_PANEL_MEDIA_SHELF_CARD_TOTAL_HEIGHT\)\.into\(\)\)[\s\S]*\.style\(ButtonStyle::OutlinedGhost\)[\s\S]*\.selected_style\(ButtonStyle::Tinted\(TintColor::Accent\)\)[\s\S]*\.toggle_state\(is_selected\)[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&focus_handle\)/,
+    /ButtonLike::new\(SharedString::from\(format!\([\s\S]*"\{id_prefix\}-\{:\?\}-\{:\?\}"[\s\S]*item\.kind,[\s\S]*item\.entry_id[\s\S]*\.full_width\(\)[\s\S]*\.height\(px\(PROJECT_PANEL_MEDIA_SHELF_CARD_TOTAL_HEIGHT\)\.into\(\)\)[\s\S]*\.style\(ButtonStyle::OutlinedGhost\)[\s\S]*\.selected_style\(ButtonStyle::Tinted\(TintColor::Accent\)\)[\s\S]*\.toggle_state\(is_selected\)[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&focus_handle\)/,
     "media shelf cards must use a focusable ButtonLike with a visible outer focus border and Zed selected-state styling",
   );
   assert.match(
