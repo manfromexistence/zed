@@ -51,6 +51,10 @@ test("DX semantic icon layer owns rebrand-specific aliases", () => {
   assert.match(dxIcons, /DxUiIcon::Evidence => IconName::Public/);
   assert.match(dxIcons, /DxUiIcon::Source => IconName::FolderSearch/);
   assert.match(dxIcons, /DxUiIcon::Storage => IconName::DatabaseZap/);
+  assert.match(dxIcons, /DxUiIcon::Copy => IconName::Copy/);
+  assert.match(dxIcons, /DxUiIcon::Move => IconName::ArrowRightLeft/);
+  assert.match(dxIcons, /DxUiIcon::Duplicate => IconName::BookCopy/);
+  assert.match(dxIcons, /DxUiIcon::PasteInto => IconName::ReplyArrowRight/);
   assert.match(dxIcons, /with_rotate_animation\(duration_secs\)/);
   assert.doesNotMatch(dxIcons, /LoadCircle|Settings => IconName::Settings/);
 });

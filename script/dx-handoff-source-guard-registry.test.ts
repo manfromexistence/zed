@@ -166,6 +166,10 @@ test("DX.md exposes the lightweight source guard registry", () => {
     dx,
     /script\/dx-style-panel-source\.test\.ts` - DX Style .*source-apply session/,
   );
+  assert.match(
+    dx,
+    /script\/dx-project-panel-source\.test\.ts` - project panel .*file-browser operation toolbar.*cached storage roots.*folder storage overview.*storage ranking/,
+  );
 });
 
 test("handoff docs keep source-only proof separate from runtime readiness", () => {

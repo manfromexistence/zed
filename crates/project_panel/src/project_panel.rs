@@ -1,4 +1,5 @@
 mod media_preview;
+mod operation_status;
 pub mod project_panel_settings;
 mod storage;
 mod storage_roots;
@@ -4122,6 +4123,16 @@ impl ProjectPanel {
         }
     }
 
+    fn clipboard_operation_summary(&self) -> Option<operation_status::ClipboardOperationSummary> {
+        let clipboard = self.clipboard.as_ref()?;
+        let mode = if clipboard.is_cut() {
+            operation_status::ClipboardOperationMode::Move
+        } else {
+            operation_status::ClipboardOperationMode::Copy
+        };
+        operation_status::ClipboardOperationSummary::new(mode, clipboard.items().len())
+    }
+
     fn dx_explorer_summary(
         &self,
         selected_entry_count: usize,
@@ -4913,6 +4924,10 @@ impl ProjectPanel {
         is_remote: bool,
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        let clipboard_operation = self.clipboard_operation_summary();
+        let clipboard_operation_for_status = clipboard_operation;
+        let clipboard_operation_for_paste = clipboard_operation;
+
         h_flex()
             .id("project-panel-selection-toolbar")
             .w_full()
@@ -4925,16 +4940,55 @@ impl ProjectPanel {
             .border_color(cx.theme().colors().border.opacity(0.6))
             .bg(cx.theme().colors().panel_background)
             .child(
-                Label::new(Self::selected_entries_count_label(selected_count))
-                    .size(LabelSize::Small)
-                    .color(Color::Muted),
+                h_flex()
+                    .min_w_0()
+                    .flex_1()
+                    .items_center()
+                    .gap_1()
+                    .child(
+                        Label::new(Self::selected_entries_count_label(selected_count))
+                            .size(LabelSize::Small)
+                            .color(Color::Muted),
+                    )
+                    .when_some(clipboard_operation_for_status, |this, operation| {
+                        let icon = match operation.mode {
+                            operation_status::ClipboardOperationMode::Copy => {
+                                dx_icon(DxUiIcon::Copy)
+                            }
+                            operation_status::ClipboardOperationMode::Move => {
+                                dx_icon(DxUiIcon::Move)
+                            }
+                        };
+
+                        this.child(
+                            h_flex()
+                                .id("project-panel-clipboard-operation-status")
+                                .min_w_0()
+                                .items_center()
+                                .gap_1()
+                                .px_1()
+                                .py_0p5()
+                                .rounded_sm()
+                                .border_1()
+                                .border_color(cx.theme().colors().border_variant.opacity(0.45))
+                                .bg(cx.theme().colors().element_background.opacity(0.35))
+                                .child(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted))
+                                .child(
+                                    Label::new(operation.status_label())
+                                        .size(LabelSize::XSmall)
+                                        .color(Color::Muted)
+                                        .truncate(),
+                                ),
+                        )
+                    }),
             )
             .child(
                 h_flex()
+                    .flex_none()
                     .items_center()
                     .gap_0p5()
                     .child(
-                        IconButton::new("project-panel-copy-selection", IconName::Copy)
+                        IconButton::new("project-panel-copy-selection", dx_icon(DxUiIcon::Copy))
                             .shape(IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
                             .icon_size(IconSize::Small)
@@ -4946,11 +5000,11 @@ impl ProjectPanel {
                     )
                     .when(!is_read_only, |this| {
                         this.child(
-                            IconButton::new("project-panel-cut-selection", IconName::Scissors)
+                            IconButton::new("project-panel-cut-selection", dx_icon(DxUiIcon::Move))
                                 .shape(IconButtonShape::Square)
                                 .style(ButtonStyle::Subtle)
                                 .icon_size(IconSize::Small)
-                                .tooltip(Tooltip::text("Cut selected for move"))
+                                .tooltip(Tooltip::text("Prepare selected items to move"))
                                 .on_click(cx.listener(|this, _, window, cx| {
                                     this.focus_handle(cx).focus(window, cx);
                                     this.cut(&Cut {}, window, cx);
@@ -4961,7 +5015,7 @@ impl ProjectPanel {
                         this.child(
                             IconButton::new(
                                 "project-panel-duplicate-selection",
-                                IconName::BookCopy,
+                                dx_icon(DxUiIcon::Duplicate),
                             )
                             .shape(IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
@@ -4974,6 +5028,26 @@ impl ProjectPanel {
                                 },
                             )),
                         )
+                    })
+                    .when_some(clipboard_operation_for_paste, |this, operation| {
+                        this.when(!is_read_only, |this| {
+                            this.child(
+                                IconButton::new(
+                                    "project-panel-paste-selection-target",
+                                    dx_icon(DxUiIcon::PasteInto),
+                                )
+                                .shape(IconButtonShape::Square)
+                                .style(ButtonStyle::Subtle)
+                                .icon_size(IconSize::Small)
+                                .tooltip(Tooltip::text(operation.mode.paste_tooltip()))
+                                .on_click(cx.listener(
+                                    |this, _, window, cx| {
+                                        this.focus_handle(cx).focus(window, cx);
+                                        this.paste(&Paste {}, window, cx);
+                                    },
+                                )),
+                            )
+                        })
                     })
                     .when(!is_read_only && !is_remote, |this| {
                         this.child(
@@ -7469,9 +7543,11 @@ impl ProjectPanel {
                             this.hover_scroll_task.take();
                             this.hover_expand_task.take();
                             if folded_directory_drag_target.is_some() {
+                                cx.stop_propagation();
                                 return;
                             }
                             this.drag_onto(selections, entry_id, kind.is_file(), window, cx);
+                            cx.stop_propagation();
                         },
                     ))
                 })
@@ -7883,6 +7959,7 @@ impl ProjectPanel {
                                                     cx,
                                                 );
                                             }
+                                            cx.stop_propagation();
                                         },
                                     ))
                                     .when(
@@ -7977,6 +8054,7 @@ impl ProjectPanel {
                             if let Some(target_entry_id) = target_entry_id {
                                 this.drag_onto(selections, target_entry_id, is_file, window, cx);
                             }
+                            cx.stop_propagation();
                         },
                     ))
                     .on_drag_move(cx.listener(
@@ -8716,16 +8794,6 @@ fn format_file_size(bytes: u64) -> String {
     } else {
         format!("{value:.1} {}", UNITS[unit_ix])
     }
-}
-
-fn dx_explorer_storage_heat_level(file_bytes: u64, max_file_bytes: u64) -> u8 {
-    if file_bytes == 0 || max_file_bytes == 0 {
-        return 0;
-    }
-
-    let scaled = ((u128::from(file_bytes) * 4) + (u128::from(max_file_bytes) - 1))
-        / u128::from(max_file_bytes);
-    scaled.clamp(1, 4) as u8
 }
 
 fn dx_explorer_storage_heat_color(heat_level: u8, cx: &App) -> Hsla {

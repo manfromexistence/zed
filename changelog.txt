@@ -1,3 +1,23 @@
+[2026-06-08] - Project Panel File Operation Toolbar
+
+ADDED:
+- `crates\project_panel\src\operation_status.rs` adds typed clipboard operation summaries for move/copy-ready selection toolbar state.
+
+CHANGED:
+- `crates\project_panel\src\project_panel.rs` now shows the active move/copy clipboard state in the selection toolbar, adds a Paste Here action for the selected target, stops propagation after internal dragged-selection drops, and keeps the existing cut/copy/paste/drag move implementation intact.
+- `crates\ui\src\dx_icons.rs` now owns semantic DX icon aliases for copy, move, duplicate, and paste-into operation chrome.
+- `script\dx-project-panel-source.test.ts` and `script\dx-icon-system-source.test.ts` now guard the file-browser operation toolbar and operation icon mappings.
+
+FIXED:
+- Removed the stale Project Panel storage heat-level helper after heat calculation moved into the storage domain module.
+
+PASSED:
+- `node --test script\dx-project-panel-source.test.ts`
+- `node --test script\dx-icon-system-source.test.ts`
+
+NOTES:
+- Source-only by instruction. Cargo, build, `just run`, native Zed launch, browser automation, and runtime visual proof remain deferred.
+
 [2026-06-08] - Project Panel Storage Explorer
 
 ADDED:

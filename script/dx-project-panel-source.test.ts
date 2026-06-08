@@ -360,10 +360,25 @@ test("project panel drag, drop, and download materialization is bounded", () => 
   const dragOnto = functionBody(source, "drag_onto");
   const paste = functionBody(source, "paste");
   const downloadFromRemote = functionBody(source, "download_from_remote");
+  const moveEntry = functionBody(source, "move_entry");
+  const moveWorktreeRoot = functionBody(source, "move_worktree_root");
+  const renderEntry = functionBody(source, "render_entry");
+  const renderFolderElements = functionBody(source, "render_folder_elements");
+  const renderEntryPathSeparator = functionBody(source, "render_entry_path_separator");
 
   assert.match(source, /const MAX_PROJECT_PANEL_EXTERNAL_DROP_PATHS: usize = 4_096;/);
   assert.match(source, /const MAX_PROJECT_PANEL_DRAG_SELECTION_ENTRIES: usize = 4_096;/);
   assert.match(source, /const MAX_PROJECT_PANEL_DOWNLOAD_FILES: usize = 10_000;/);
+  assert.match(
+    moveEntry,
+    /entry_is_worktree_root\(entry_to_move, cx\)[\s\S]*self\.move_worktree_root\(entry_to_move, destination, cx\)[\s\S]*None/,
+    "worktree-root moves must stay routed through the dedicated worktree move path",
+  );
+  assert.match(
+    moveWorktreeRoot,
+    /worktree_for_entry\(entry_to_move, cx\)[\s\S]*worktree_for_entry\(destination, cx\)[\s\S]*move_worktree\(worktree_id, destination_id, cx\)/,
+    "worktree-root moving must use Project worktree ordering rather than entry rename semantics",
+  );
   assertBefore({
     body: dropExternalFiles,
     before: ".take(MAX_PROJECT_PANEL_EXTERNAL_DROP_PATHS)",
@@ -388,6 +403,85 @@ test("project panel drag, drop, and download materialization is bounded", () => 
     after: "files_to_download.push",
     message: "remote download lists must be bounded before recursive file collection",
   });
+  assert.match(
+    renderEntry,
+    /move \|this, selections: &DraggedSelection, window, cx\|[\s\S]*this\.drag_onto\(selections, entry_id, kind\.is_file\(\), window, cx\);[\s\S]*cx\.stop_propagation\(\);/,
+    "internal row drops must stop propagation after move/copy handling",
+  );
+  assert.match(
+    renderFolderElements,
+    /move \|this, selections: &DraggedSelection, window, cx\|[\s\S]*this\.drag_onto\([\s\S]*target_entry_id,[\s\S]*is_file,[\s\S]*window,[\s\S]*cx,[\s\S]*\);[\s\S]*cx\.stop_propagation\(\);/,
+    "folded path component drops must stop propagation after move/copy handling",
+  );
+  assert.match(
+    renderEntryPathSeparator,
+    /move \|this, selections: &DraggedSelection, window, cx\|[\s\S]*this\.drag_onto\(selections, target_entry_id, is_file, window, cx\);[\s\S]*cx\.stop_propagation\(\);/,
+    "folded path separator drops must stop propagation after move/copy handling",
+  );
+});
+
+test("project panel selection toolbar exposes file-browser operation state", () => {
+  const source = read("crates/project_panel/src/project_panel.rs");
+  const operationStatus = read("crates/project_panel/src/operation_status.rs");
+  const dxIcons = read("crates/ui/src/dx_icons.rs");
+  const clipboardOperationSummary = functionBody(source, "clipboard_operation_summary");
+  const renderSelectedEntriesToolbar = functionBody(source, "render_selected_entries_toolbar");
+
+  assert.match(source, /mod operation_status;/);
+  assert.match(operationStatus, /pub\(crate\) enum ClipboardOperationMode/);
+  assert.match(operationStatus, /Copy/);
+  assert.match(operationStatus, /Move/);
+  assert.match(operationStatus, /pub\(crate\) struct ClipboardOperationSummary/);
+  assert.match(operationStatus, /pub\(crate\) fn new\(mode: ClipboardOperationMode, item_count: usize\) -> Option<Self>/);
+  assert.match(operationStatus, /\(item_count > 0\)\.then_some/);
+  assert.match(operationStatus, /pub\(crate\) fn status_label\(self\) -> String/);
+  assert.match(operationStatus, /pub\(crate\) fn paste_tooltip\(self\) -> &'static str/);
+  assert.doesNotMatch(operationStatus, /\b(?:prototype|dummy|magic|slop|v1)\b/i);
+
+  assert.match(
+    clipboardOperationSummary,
+    /let clipboard = self\.clipboard\.as_ref\(\)\?/,
+    "clipboard operation status must derive from the panel clipboard state",
+  );
+  assert.match(
+    clipboardOperationSummary,
+    /clipboard\.is_cut\(\)[\s\S]*ClipboardOperationMode::Move[\s\S]*ClipboardOperationMode::Copy/,
+    "cut clipboard entries must be presented as move operations",
+  );
+  assert.match(
+    clipboardOperationSummary,
+    /ClipboardOperationSummary::new\(mode, clipboard\.items\(\)\.len\(\)\)/,
+    "empty clipboard state must not render an operation chip",
+  );
+
+  assert.match(renderSelectedEntriesToolbar, /\.id\("project-panel-clipboard-operation-status"\)/);
+  assert.match(renderSelectedEntriesToolbar, /operation\.status_label\(\)/);
+  assert.match(renderSelectedEntriesToolbar, /dx_icon\(DxUiIcon::Copy\)/);
+  assert.match(renderSelectedEntriesToolbar, /dx_icon\(DxUiIcon::Move\)/);
+  assert.match(renderSelectedEntriesToolbar, /dx_icon\(DxUiIcon::Duplicate\)/);
+  assert.match(renderSelectedEntriesToolbar, /dx_icon\(DxUiIcon::PasteInto\)/);
+  assert.match(
+    renderSelectedEntriesToolbar,
+    /IconButton::new\([\s\S]*"project-panel-paste-selection-target"/,
+  );
+  assert.match(renderSelectedEntriesToolbar, /operation\.mode\.paste_tooltip\(\)/);
+  assert.match(renderSelectedEntriesToolbar, /this\.paste\(&Paste \{\}, window, cx\)/);
+  assert.doesNotMatch(
+    renderSelectedEntriesToolbar,
+    /IconName::(?:Copy|Scissors|BookCopy)/,
+    "selection toolbar operation icons must use DX semantic mappings",
+  );
+  assertBefore({
+    body: renderSelectedEntriesToolbar,
+    before: "project-panel-clipboard-operation-status",
+    after: "project-panel-paste-selection-target",
+    message: "selection toolbar should show clipboard operation state before the paste target action",
+  });
+
+  assert.match(dxIcons, /DxUiIcon::Copy => IconName::Copy/);
+  assert.match(dxIcons, /DxUiIcon::Move => IconName::ArrowRightLeft/);
+  assert.match(dxIcons, /DxUiIcon::Duplicate => IconName::BookCopy/);
+  assert.match(dxIcons, /DxUiIcon::PasteInto => IconName::ReplyArrowRight/);
 });
 
 test("project panel display strings, sticky rows, and undo batches are bounded", () => {
@@ -432,7 +526,7 @@ test("project panel folder storage summaries are cache-only on the visible-row p
     source,
     "render_dx_explorer_storage_drilldown_row",
   );
-  const storageHeatLevel = functionBody(source, "dx_explorer_storage_heat_level");
+  const storageHeatLevel = functionBody(storage, "storage_heat_level");
   const updateVisibleEntries = functionBody(source, "update_visible_entries");
   const cachedFolderStorageSummary = functionBody(source, "cached_folder_storage_summary");
 
@@ -454,7 +548,7 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   assert.match(source, /fn dx_explorer_storage_drilldown_items\(/);
   assert.match(source, /fn render_dx_explorer_storage_drilldown\(/);
   assert.match(source, /fn render_dx_explorer_storage_drilldown_row\(/);
-  assert.match(source, /fn dx_explorer_storage_heat_level\(/);
+  assert.doesNotMatch(source, /fn dx_explorer_storage_heat_level\(/);
   assert.match(source, /fn dx_explorer_storage_heat_color\(/);
   assert.match(
     cachedFolderStorageSummary,
@@ -571,6 +665,7 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   );
   assert.match(storageHeatLevel, /u128::from\(file_bytes\) \* 4/);
   assert.match(storageHeatLevel, /scaled\.clamp\(1, 4\) as u8/);
+  assert.match(storage, /item\.heat_level = storage_heat_level\(item\.file_bytes, max_file_bytes\)/);
   assertBefore({
     body: renderProjectPanel,
     before: /media_preview::render_folder_media_shelf/,
