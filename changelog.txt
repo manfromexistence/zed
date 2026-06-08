@@ -1,3 +1,18 @@
+[2026-06-08] - Rainbow Caret Monotonic Phase Clock
+
+CHANGED:
+- `crates\ui\src\components\dx_rainbow_glow.rs` now derives animated rainbow hue phase from a private monotonic `Instant` start point instead of wall-clock `SystemTime`, so time-of-day changes cannot jump the caret color cycle.
+- `crates\editor\src\element.rs` now flattens translucent editor backgrounds before APCA-adjusting the rainbow caret color, keeping glass/blurred themes honest.
+- `script\dx-editor-power-rainbow-source.test.ts` now guards the monotonic phase source, translucent-background flattening, and blocks `SystemTime`/`UNIX_EPOCH` from returning to the rainbow paint helper.
+
+PASSED:
+- `node --test script\dx-editor-power-rainbow-source.test.ts`
+- `git diff --check`
+
+NOTES:
+- Six GPT-5.5 extra-high subagent audits were used for GPUI API shape, editor lifecycle, animation clock, visual/theme quality, render-path performance, and settings/source-guard/git hygiene.
+- Source-only by instruction. Cargo, build, `just run`, native Zed launch, local servers, and runtime visual proof remain deferred.
+
 [2026-06-08] - Rainbow Caret Theme Contrast Hardening
 
 CHANGED:

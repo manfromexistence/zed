@@ -5743,13 +5743,22 @@ impl EditorElement {
 
     fn paint_cursors(&mut self, layout: &mut EditorLayout, window: &mut Window, cx: &mut App) {
         let editor_background = cx.theme().colors().editor_background;
+        let contrast_background = if editor_background.a < 1.0 {
+            let base = match cx.theme().appearance {
+                Appearance::Dark => Hsla::black(),
+                Appearance::Light => Hsla::white(),
+            };
+            base.blend(editor_background)
+        } else {
+            editor_background
+        };
         let (rainbow_color, should_request_rainbow_frame) = layout
             .rainbow_cursor_motion
             .map(|motion| {
                 let sample = dx_rainbow_paint_sample(motion, 0., 1.);
                 let color = ensure_minimum_contrast(
                     sample.color(),
-                    editor_background,
+                    contrast_background,
                     RAINBOW_CARET_MIN_APCA_CONTRAST,
                 );
                 (Some(color), sample.should_request_animation_frame())

@@ -1,4 +1,4 @@
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{sync::OnceLock, time::Instant};
 
 use gpui::{
     App, BorderStyle, Bounds, Corners, Edges, Element, ElementId, GlobalElementId, Hsla,
@@ -7,10 +7,11 @@ use gpui::{
 };
 
 const DX_RAINBOW_STRIPE_COUNT: usize = 17;
-const DX_RAINBOW_CYCLE_NANOS: u128 = 2_400_000_000;
+const DX_RAINBOW_CYCLE_SECONDS: f64 = 2.4;
 const DX_RAINBOW_REDUCED_PHASE: f32 = 0.58;
 const DX_RAINBOW_SATURATION: f32 = 0.86;
 const DX_RAINBOW_LIGHTNESS: f32 = 0.62;
+static DX_RAINBOW_STARTED_AT: OnceLock<Instant> = OnceLock::new();
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DxRainbowMotion {
@@ -172,15 +173,19 @@ fn dx_rainbow_hsla(phase: f32, alpha: f32) -> Hsla {
 
 fn dx_rainbow_phase_now(motion: DxRainbowMotion, phase_offset: f32) -> f32 {
     let base_phase = match motion {
-        DxRainbowMotion::Animated => SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|duration| (duration.as_nanos() % DX_RAINBOW_CYCLE_NANOS) as f32)
-            .map(|cycle_position| cycle_position / DX_RAINBOW_CYCLE_NANOS as f32)
-            .unwrap_or(DX_RAINBOW_REDUCED_PHASE),
+        DxRainbowMotion::Animated => dx_rainbow_animated_phase(),
         DxRainbowMotion::Reduced => DX_RAINBOW_REDUCED_PHASE,
     };
 
     normalize_phase(base_phase + phase_offset)
+}
+
+fn dx_rainbow_animated_phase() -> f32 {
+    let elapsed_seconds = DX_RAINBOW_STARTED_AT
+        .get_or_init(Instant::now)
+        .elapsed()
+        .as_secs_f64();
+    ((elapsed_seconds % DX_RAINBOW_CYCLE_SECONDS) / DX_RAINBOW_CYCLE_SECONDS) as f32
 }
 
 pub fn dx_rainbow_paint_sample(

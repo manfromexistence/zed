@@ -90,6 +90,13 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
   assert.match(rainbowGlow, /self\.height = height\.max\(Pixels::ZERO\);/);
   assert.match(rainbowGlow, /self\.radius = radius\.max\(Pixels::ZERO\);/);
   assert.match(rainbowGlow, /self\.phase_offset = normalize_phase\(offset\);/);
+  assert.doesNotMatch(rainbowGlow, /SystemTime|UNIX_EPOCH/);
+  assert.match(rainbowGlow, /static DX_RAINBOW_STARTED_AT: OnceLock<Instant> = OnceLock::new\(\);/);
+  assert.match(
+    rainbowGlow,
+    /fn dx_rainbow_animated_phase\(\) -> f32 \{[\s\S]*get_or_init\(Instant::now\)[\s\S]*elapsed\(\)[\s\S]*as_secs_f64\(\)[\s\S]*DX_RAINBOW_CYCLE_SECONDS/s,
+  );
+  assert.match(rainbowGlow, /DxRainbowMotion::Animated => dx_rainbow_animated_phase\(\)/);
   assert.match(rainbowGlow, /DxRainbowMotion::Reduced => DX_RAINBOW_REDUCED_PHASE/);
   assert.doesNotMatch(rainbowGlow, /pub fn is_animated/);
   assert.match(
@@ -166,7 +173,7 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
   );
   assert.match(
     editorElement,
-    /const RAINBOW_CARET_MIN_APCA_CONTRAST: f32 = 45\.0;[\s\S]*let editor_background = cx\.theme\(\)\.colors\(\)\.editor_background;[\s\S]*let \(rainbow_color, should_request_rainbow_frame\) = layout\s*\.rainbow_cursor_motion\s*\.map\(\|motion\| \{\s*let sample = dx_rainbow_paint_sample\(motion, 0\., 1\.\);[\s\S]*ensure_minimum_contrast\(\s*sample\.color\(\),\s*editor_background,\s*RAINBOW_CARET_MIN_APCA_CONTRAST,\s*\)[\s\S]*\(Some\(color\), sample\.should_request_animation_frame\(\)\)\s*\}\)\s*\.unwrap_or\(\(None, false\)\);[\s\S]*let cursor_rainbow_color = if cursor\.rainbow_motion\.is_some\(\) \{\s*rainbow_color\s*\} else \{\s*None\s*\};[\s\S]*cursor\.paint\(layout\.content_origin, window, cx, cursor_rainbow_color\);/s,
+    /const RAINBOW_CARET_MIN_APCA_CONTRAST: f32 = 45\.0;[\s\S]*let editor_background = cx\.theme\(\)\.colors\(\)\.editor_background;[\s\S]*let contrast_background = if editor_background\.a < 1\.0 \{[\s\S]*Appearance::Dark => Hsla::black\(\),[\s\S]*Appearance::Light => Hsla::white\(\),[\s\S]*base\.blend\(editor_background\)[\s\S]*\} else \{\s*editor_background\s*\};[\s\S]*let \(rainbow_color, should_request_rainbow_frame\) = layout\s*\.rainbow_cursor_motion\s*\.map\(\|motion\| \{\s*let sample = dx_rainbow_paint_sample\(motion, 0\., 1\.\);[\s\S]*ensure_minimum_contrast\(\s*sample\.color\(\),\s*contrast_background,\s*RAINBOW_CARET_MIN_APCA_CONTRAST,\s*\)[\s\S]*\(Some\(color\), sample\.should_request_animation_frame\(\)\)\s*\}\)\s*\.unwrap_or\(\(None, false\)\);[\s\S]*let cursor_rainbow_color = if cursor\.rainbow_motion\.is_some\(\) \{\s*rainbow_color\s*\} else \{\s*None\s*\};[\s\S]*cursor\.paint\(layout\.content_origin, window, cx, cursor_rainbow_color\);/s,
   );
   assert.match(
     editorElement,
