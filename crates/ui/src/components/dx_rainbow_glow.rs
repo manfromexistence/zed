@@ -3,7 +3,7 @@ use std::{sync::OnceLock, time::Instant};
 use gpui::{
     App, BorderStyle, Bounds, Corners, Edges, Element, ElementId, GlobalElementId, Hsla,
     InspectorElementId, IntoElement, LayoutId, Pixels, Position, Size, Style, Window, fill, hsla,
-    point, px, quad, relative, size, transparent_black,
+    linear_color_stop, linear_gradient, point, px, quad, relative, size, transparent_black,
 };
 
 const DX_RAINBOW_STOP_COUNT: usize = 17;
@@ -496,6 +496,7 @@ fn paint_dx_rainbow_stripes(
 
     let stripe_width = px(bounds.size.width.as_f32() / DX_RAINBOW_STRIPE_COUNT as f32);
     let last_ix = DX_RAINBOW_STRIPE_COUNT - 1;
+    let phase_step = 1. / DX_RAINBOW_STRIPE_COUNT as f32;
 
     for ix in 0..DX_RAINBOW_STRIPE_COUNT {
         let left = bounds.origin.x + stripe_width * ix;
@@ -508,13 +509,18 @@ fn paint_dx_rainbow_stripes(
             point(left, bounds.origin.y),
             size(width, bounds.size.height),
         );
-        let stripe_phase = phase + ix as f32 / last_ix as f32;
+        let stripe_phase = phase + ix as f32 * phase_step;
+        let next_stripe_phase = stripe_phase + phase_step;
         let corners = stripe_corners(ix, last_ix, clamp_radius(radius, stripe_bounds.size));
 
         window.paint_quad(quad(
             window.pixel_snap_bounds(stripe_bounds),
             corners,
-            dx_rainbow_hsla(stripe_phase, alpha),
+            linear_gradient(
+                90.,
+                linear_color_stop(dx_rainbow_hsla(stripe_phase, alpha), 0.),
+                linear_color_stop(dx_rainbow_hsla(next_stripe_phase, alpha), 1.),
+            ),
             Edges::default(),
             transparent_black(),
             BorderStyle::default(),

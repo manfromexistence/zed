@@ -237,15 +237,21 @@ impl VsCodeSettings {
     }
 
     fn editor_settings_content(&self) -> EditorSettingsContent {
+        let cursor_blink = self.read_enum("editor.cursorBlinking", |s| match s {
+            "blink" | "phase" | "expand" | "smooth" => Some(true),
+            "solid" => Some(false),
+            _ => None,
+        });
+        let rainbow_caret_animation = match cursor_blink {
+            Some(false) => Some(false),
+            _ => None,
+        };
+
         EditorSettingsContent {
             auto_signature_help: self.read_bool("editor.parameterHints.enabled"),
             autoscroll_on_clicks: None,
-            cursor_blink: self.read_enum("editor.cursorBlinking", |s| match s {
-                "blink" | "phase" | "expand" | "smooth" => Some(true),
-                "solid" => Some(false),
-                _ => None,
-            }),
-            rainbow_caret_animation: None,
+            cursor_blink,
+            rainbow_caret_animation,
             cursor_shape: self.read_enum("editor.cursorStyle", |s| match s {
                 "block" => Some(CursorShape::Block),
                 "block-outline" => Some(CursorShape::Hollow),

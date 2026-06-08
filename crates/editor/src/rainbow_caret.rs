@@ -113,17 +113,20 @@ fn quantize_phase(value: f32) -> u16 {
 }
 
 fn quantize_unit(value: f32) -> u16 {
-    let value = if value.is_finite() {
-        value.clamp(0., 1.)
-    } else {
-        0.
-    };
-    (value * RAINBOW_CARET_COLOR_QUANTIZATION).round() as u16
+    (clamp_unit(value) * RAINBOW_CARET_COLOR_QUANTIZATION).round() as u16
 }
 
 fn normalize_phase(phase: f32) -> f32 {
     if phase.is_finite() {
         phase.rem_euclid(1.)
+    } else {
+        0.
+    }
+}
+
+fn clamp_unit(value: f32) -> f32 {
+    if value.is_finite() {
+        value.clamp(0., 1.)
     } else {
         0.
     }

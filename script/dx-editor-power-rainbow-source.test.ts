@@ -19,6 +19,7 @@ const registry = read("script/dx-handoff-source-guard-registry.test.ts");
 const allSettings = read("docs/src/reference/all-settings.md");
 const vimDocs = read("docs/src/vim.md");
 const visualCustomizationDocs = read("docs/src/visual-customization.md");
+const vscodeMigrationDocs = read("docs/src/migrate/vs-code.md");
 
 test("Power Mode setting is typed, default-off, and import-safe", () => {
   assert.match(defaultSettings, /"power_mode": \{\s*"enabled": false,\s*\}/s);
@@ -74,7 +75,12 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
     editorSettings,
     /rainbow_caret_animation: editor\.rainbow_caret_animation\.unwrap\(\)/,
   );
-  assert.match(vscodeImport, /rainbow_caret_animation: None/);
+  assert.match(vscodeImport, /let cursor_blink = self\.read_enum\("editor\.cursorBlinking"/);
+  assert.match(
+    vscodeImport,
+    /let rainbow_caret_animation = match cursor_blink \{\s*Some\(false\) => Some\(false\),\s*_ => None,\s*\};/s,
+  );
+  assert.match(vscodeImport, /cursor_blink,\s*rainbow_caret_animation,/s);
   assert.match(
     settingsPageData,
     /title: "Rainbow Caret Animation"[\s\S]*json_path: Some\("rainbow_caret_animation"\)[\s\S]*settings_content\.editor\.rainbow_caret_animation/s,
@@ -85,6 +91,10 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
   );
   assert.match(vimDocs, /\| rainbow_caret_animation \|[\s\S]*\| `true`\s*\|/);
   assert.match(visualCustomizationDocs, /"rainbow_caret_animation": true/);
+  assert.match(
+    vscodeMigrationDocs,
+    /\| `editor\.cursorBlinking`\s*\|\s*`cursor_blink`, `rainbow_caret_animation` for `"solid"`\s*\|/,
+  );
   assert.match(uiComponents, /mod dx_rainbow_glow;/);
   assert.match(
     uiComponents,
@@ -94,6 +104,7 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
   assert.match(rainbowGlow, /const DX_RAINBOW_STOP_COUNT: usize = 17;/);
   assert.match(rainbowGlow, /const DX_RAINBOW_STOPS: \[Hsla; DX_RAINBOW_STOP_COUNT\] = \[/);
   assert.match(rainbowGlow, /h: 0\.966503268[\s\S]*h: 0\.025773196[\s\S]*h: 0\.512562814[\s\S]*h: 0\.940074906/s);
+  assert.match(rainbowGlow, /linear_color_stop, linear_gradient/);
   assert.match(rainbowGlow, /pub enum DxRainbowMotion \{\s*Animated,\s*Reduced,\s*\}/s);
   assert.match(rainbowGlow, /enum DxRainbowDirection \{\s*Forward,\s*Reverse,\s*\}/s);
   assert.match(rainbowGlow, /motion: DxRainbowMotion::Reduced/);
@@ -163,6 +174,12 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
   assert.match(rainbowGlow, /DX_RAINBOW_GLOW_STRIPE_CYCLE_NANOS,[\s\S]*DxRainbowDirection::Forward,[\s\S]*elapsed_nanos,/s);
   assert.match(rainbowGlow, /DX_RAINBOW_GLOW_NEAR_WASH_CYCLE_NANOS,[\s\S]*DxRainbowDirection::Forward,[\s\S]*elapsed_nanos,/s);
   assert.match(rainbowGlow, /DX_RAINBOW_GLOW_OUTER_WASH_CYCLE_NANOS,[\s\S]*DxRainbowDirection::Reverse,[\s\S]*elapsed_nanos,/s);
+  assert.match(rainbowGlow, /let phase_step = 1\. \/ DX_RAINBOW_STRIPE_COUNT as f32;/);
+  assert.match(rainbowGlow, /let next_stripe_phase = stripe_phase \+ phase_step;/);
+  assert.match(
+    rainbowGlow,
+    /linear_gradient\(\s*90\.,\s*linear_color_stop\(dx_rainbow_hsla\(stripe_phase, alpha\), 0\.\),\s*linear_color_stop\(dx_rainbow_hsla\(next_stripe_phase, alpha\), 1\.\),\s*\)/s,
+  );
   assert.match(rainbowGlow, /paint_dx_rainbow_stripes\(bounds, radius, stripe_sample\.phase, 1\., window\);/);
   assert.match(rainbowGlow, /if bounds\.size\.width <= px\(0\.\) \|\| bounds\.size\.height <= px\(0\.\) \{/);
   const caretGlowStart = rainbowGlow.indexOf("pub fn paint_dx_rainbow_caret_glow");

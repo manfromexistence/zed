@@ -43,7 +43,7 @@ The following VS Code settings are automatically imported when you use **Import 
 | `editor.wordWrap`                           | `soft_wrap`                                    |
 | `editor.wordWrapColumn`                     | `preferred_line_length`                        |
 | `editor.cursorStyle`                        | `cursor_shape`                                 |
-| `editor.cursorBlinking`                     | `cursor_blink`                                 |
+| `editor.cursorBlinking`                     | `cursor_blink`, `rainbow_caret_animation` for `"solid"` |
 | `editor.renderLineHighlight`                | `current_line_highlight`                       |
 | `editor.lineNumbers`                        | `gutter.line_numbers`, `relative_line_numbers` |
 | `editor.showFoldingControls`                | `gutter.folds`                                 |
