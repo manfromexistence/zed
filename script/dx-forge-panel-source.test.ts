@@ -36,6 +36,10 @@ const workflowRowsPath = "crates/agent_ui/src/dx_forge_panel/workflow_rows.rs";
 const workflowRows = existsSync(workflowRowsPath)
   ? readFileSync(workflowRowsPath, "utf8")
   : "";
+const visibleRowsPath = "crates/agent_ui/src/dx_forge_panel/visible_rows.rs";
+const visibleRows = existsSync(visibleRowsPath)
+  ? readFileSync(visibleRowsPath, "utf8")
+  : "";
 const providersRootPath = "crates/agent_ui/src/dx_forge_panel/providers/mod.rs";
 const providersCatalogPath = "crates/agent_ui/src/dx_forge_panel/providers/catalog.rs";
 const providersStatePath = "crates/agent_ui/src/dx_forge_panel/providers/state.rs";
@@ -129,6 +133,7 @@ const forgeSources = [
   roots,
   providers,
   sourceSection,
+  visibleRows,
   workflowRows,
   snapshot,
   snapshotState,
@@ -620,31 +625,49 @@ test("Forge panel uses workflow tabs with Git-style selectable rows", () => {
     existsSync(workflowRowsPath),
     "Forge workflow rows should live in a focused module",
   );
+  assert.ok(
+    existsSync(visibleRowsPath),
+    "Forge visible row state should live in a focused module",
+  );
   assert.match(moduleRoot, /mod workflow_rows;/);
+  assert.match(moduleRoot, /mod visible_rows;/);
   assert.match(panel, /active_tab: DxForgePanelTab::Repository/);
   for (const tab of ["Repository", "Packages", "Media", "Remotes"]) {
     assert.match(panel, new RegExp(`\\b${tab},`));
     assert.match(tabs, new RegExp(`DxForgePanelTab::${tab}`));
     assert.match(tabs, new RegExp(`"${tab}"`));
   }
-  assert.match(
+  for (const tab of ["Repository", "Packages", "Media", "Remotes"]) {
+    assert.match(
+      tabs,
+      new RegExp(
+        `visible_row_count_for_tab\\(snapshot, DxForgePanelTab::${tab}\\)`,
+      ),
+    );
+  }
+  assert.doesNotMatch(
     tabs,
-    /snapshot\.package_statuses\.len\(\) \+ snapshot\.machine_caches\.len\(\)/,
+    /snapshot\.(latest_receipts|package_statuses|machine_caches|media_outputs|restore_previews|remote_registries|remote_providers)\.len\(\)/,
   );
   for (const oldTab of ["Targets", "Sources", "Receipts"]) {
     assert.doesNotMatch(panel, new RegExp(`DxForgePanelTab::${oldTab}`));
     assert.doesNotMatch(tabs, new RegExp(`"${oldTab}"`));
   }
 
-  assert.match(panel, /active_item: Option<String>/);
-  assert.match(panel, /checked_items: HashSet<String>/);
+  assert.match(panel, /active_item: Option<DxForgeRowKey>/);
+  assert.match(panel, /checked_items: HashSet<DxForgeRowKey>/);
+  assert.match(panel, /visible_rows: Vec<DxForgeVisibleRow>/);
   const clearActiveItemBody = extractRustMethod(panel, "clear_active_item");
+  const syncVisibleRowsBody = extractRustMethod(panel, "sync_visible_rows");
   const refreshBody = extractRustMethod(panel, "refresh");
   const setActiveTabBody = extractRustMethod(panel, "set_active_tab");
   const checkedItemReset =
     /(?:self\.checked_items\s*(?:\.clear\(\)|\.drain\(\)|=\s*(?:HashSet::default\(\)|HashSet::new\(\)|Default::default\(\)))|std::mem::take\(&mut self\.checked_items\))/;
   assert.match(clearActiveItemBody, /self\.active_item\s*=\s*None;/);
   assert.doesNotMatch(clearActiveItemBody, /checked_items/);
+  assert.match(syncVisibleRowsBody, /visible_rows\.iter\(\)\.any\(\|row\| row\.item_key\(\) == item_key\)/);
+  assert.match(syncVisibleRowsBody, /self\.visible_rows\s*=\s*visible_rows;/);
+  assert.doesNotMatch(syncVisibleRowsBody, checkedItemReset);
   assert.match(refreshBody, /self\.clear_active_item\(\);[\s\S]*cx\.notify\(\);/);
   assert.doesNotMatch(refreshBody, checkedItemReset);
   assert.match(
@@ -654,11 +677,44 @@ test("Forge panel uses workflow tabs with Git-style selectable rows", () => {
   assert.doesNotMatch(setActiveTabBody, checkedItemReset);
   assert.match(panel, /activate_item/);
   assert.match(panel, /item_active/);
+  assert.match(panel, /visible_rows_for_tab\(&snapshot, self\.active_tab\)/);
+  assert.match(panel, /self\.sync_visible_rows\(visible_rows\)/);
   assert.match(panel, /toggle_item_checked/);
   assert.match(panel, /item_checked/);
+  assert.doesNotMatch(
+    panel,
+    /active_item: Option<String>|checked_items: HashSet<String>|item_key: String|item_key: &str/,
+  );
   assert.doesNotMatch(panel, /\bselected_items\b|toggle_item_selection|item_selected/);
+  assert.match(visibleRows, /pub\(super\) struct DxForgeVisibleRow/);
+  assert.match(visibleRows, /pub\(super\) enum DxForgeVisibleRowKind/);
+  assert.match(visibleRows, /pub\(super\) enum DxForgeRowKey/);
+  assert.match(visibleRows, /#\[derive\(Clone, Debug, PartialEq, Eq, Hash\)\]/);
+  assert.match(visibleRows, /Receipt\(String\)/);
+  assert.match(visibleRows, /Source\(String\)/);
+  assert.match(visibleRows, /RemoteGroup\(String\)/);
+  assert.match(visibleRows, /pub\(super\) fn receipt_item_key\(receipt: &DxForgeReceiptRow\) -> DxForgeRowKey/);
+  assert.match(visibleRows, /pub\(super\) fn source_item_key\(source: &DxForgeSourceRow\) -> DxForgeRowKey/);
+  assert.match(visibleRows, /pub\(super\) fn remote_target_item_key\(group_key: &str\) -> DxForgeRowKey/);
+  assert.match(visibleRows, /pub\(super\) fn visible_row_count_for_tab/);
+  assert.match(visibleRows, /pub\(super\) fn visible_rows_for_tab/);
+  assert.match(visibleRows, /DxForgePanelTab::Repository[\s\S]*snapshot\.latest_receipts/);
+  assert.match(visibleRows, /DxForgePanelTab::Packages[\s\S]*snapshot\.package_statuses[\s\S]*snapshot\.machine_caches/);
+  assert.match(visibleRows, /DxForgePanelTab::Media[\s\S]*snapshot\.media_outputs[\s\S]*snapshot\.restore_previews/);
+  assert.match(visibleRows, /DxForgePanelTab::Remotes[\s\S]*REMOTE_TARGET_GROUP_KEYS[\s\S]*snapshot\.remote_registries/);
+  assert.doesNotMatch(
+    visibleRows,
+    /gpui::|ui::|ListItem|Label::|Checkbox|IconButton|h_flex|v_flex|Tooltip/,
+  );
   assert.match(workflowRows, /pub\(super\) fn selectable_source_row/);
   assert.match(workflowRows, /pub\(super\) fn selectable_receipt_row/);
+  assert.match(workflowRows, /receipt_item_key\(receipt\)/);
+  assert.match(workflowRows, /source_item_key\(source\)/);
+  assert.match(providersView, /remote_target_item_key\(group\.key\(\)\)/);
+  assert.doesNotMatch(
+    `${workflowRows}\n${providersView}`,
+    /format!\("(?:source|receipt|remote):/,
+  );
   assert.match(workflowRows, /Checkbox::new/);
   assert.match(workflowRows, /ToggleState::Selected/);
   assert.match(workflowRows, /ToggleState::Unselected/);
@@ -935,6 +991,7 @@ test("Forge panel files stay small and professionally named", () => {
     ["providers/tooltips.rs", providersTooltips],
     ["providers/view.rs", providersView],
     ["source_section.rs", sourceSection],
+    ["visible_rows.rs", visibleRows],
     ["snapshot.rs", snapshot],
     ["snapshot_state.rs", snapshotState],
     ["panel_view.rs", panelView],

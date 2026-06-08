@@ -6,6 +6,7 @@ use ui::{
 use super::{
     panel::DxForgePanel,
     snapshot::{DxForgeReceiptRow, DxForgeSourceRow},
+    visible_rows::{DxForgeRowKey, receipt_item_key, source_item_key},
 };
 
 pub(super) fn selectable_receipt_row(
@@ -16,7 +17,7 @@ pub(super) fn selectable_receipt_row(
     cx: &App,
 ) -> AnyElement {
     let id = SharedString::from(format!("dx-forge-repository-receipt-{ix}"));
-    let item_key = format!("receipt:{}", receipt.source_path);
+    let item_key = receipt_item_key(receipt);
     let checked = item_checked(panel, &item_key, cx);
     let active = item_active(panel, &item_key, cx);
     let icon_color = if receipt.blocker_count > 0 {
@@ -51,7 +52,7 @@ pub(super) fn selectable_source_row(
     open_button: Option<AnyElement>,
     cx: &App,
 ) -> AnyElement {
-    let item_key = format!("source:{}", source.open_path);
+    let item_key = source_item_key(source);
     let checked = item_checked(panel, &item_key, cx);
     let active = item_active(panel, &item_key, cx);
     let icon_color = if source.warnings.is_empty() {
@@ -80,7 +81,7 @@ pub(super) fn selectable_source_row(
 
 pub(super) fn selection_checkbox(
     id: SharedString,
-    item_key: String,
+    item_key: DxForgeRowKey,
     checked: bool,
     panel: &WeakEntity<DxForgePanel>,
 ) -> AnyElement {
@@ -121,7 +122,7 @@ pub(super) fn selection_checkbox(
 
 fn selectable_row(
     id: SharedString,
-    item_key: String,
+    item_key: DxForgeRowKey,
     checked: bool,
     active: bool,
     icon: IconName,
@@ -184,13 +185,13 @@ fn selectable_row_actions(
     actions.child(selection_checkbox).into_any_element()
 }
 
-fn item_checked(panel: &WeakEntity<DxForgePanel>, item_key: &str, cx: &App) -> bool {
+fn item_checked(panel: &WeakEntity<DxForgePanel>, item_key: &DxForgeRowKey, cx: &App) -> bool {
     panel
         .upgrade()
         .is_some_and(|panel| panel.read(cx).item_checked(item_key))
 }
 
-fn item_active(panel: &WeakEntity<DxForgePanel>, item_key: &str, cx: &App) -> bool {
+fn item_active(panel: &WeakEntity<DxForgePanel>, item_key: &DxForgeRowKey, cx: &App) -> bool {
     panel
         .upgrade()
         .is_some_and(|panel| panel.read(cx).item_active(item_key))

@@ -4,6 +4,7 @@ use ui::{Divider, Tab, prelude::*};
 use super::{
     panel::{DxForgePanel, DxForgePanelTab},
     snapshot::DxForgePanelSnapshot,
+    visible_rows::visible_row_count_for_tab,
 };
 
 pub(super) fn render_tab_bar(
@@ -21,7 +22,7 @@ pub(super) fn render_tab_bar(
         .child(forge_tab(
             "dx-forge-tab-repository",
             "Repository",
-            snapshot.latest_receipts.len(),
+            visible_row_count_for_tab(snapshot, DxForgePanelTab::Repository),
             DxForgePanelTab::Repository,
             active_tab,
             panel,
@@ -31,7 +32,7 @@ pub(super) fn render_tab_bar(
         .child(forge_tab(
             "dx-forge-tab-packages",
             "Packages",
-            snapshot.package_statuses.len() + snapshot.machine_caches.len(),
+            visible_row_count_for_tab(snapshot, DxForgePanelTab::Packages),
             DxForgePanelTab::Packages,
             active_tab,
             panel,
@@ -41,7 +42,7 @@ pub(super) fn render_tab_bar(
         .child(forge_tab(
             "dx-forge-tab-media",
             "Media",
-            snapshot.media_outputs.len() + snapshot.restore_previews.len(),
+            visible_row_count_for_tab(snapshot, DxForgePanelTab::Media),
             DxForgePanelTab::Media,
             active_tab,
             panel,
@@ -51,7 +52,7 @@ pub(super) fn render_tab_bar(
         .child(forge_tab(
             "dx-forge-tab-remotes",
             "Remotes",
-            snapshot.remote_registries.len() + snapshot.remote_providers.len(),
+            visible_row_count_for_tab(snapshot, DxForgePanelTab::Remotes),
             DxForgePanelTab::Remotes,
             active_tab,
             panel,

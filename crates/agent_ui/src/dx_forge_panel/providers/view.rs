@@ -11,6 +11,7 @@ use crate::dx_forge_panel::{
     controls::{exact_abs_path, open_exact_abs_path},
     panel::DxForgePanel,
     snapshot::DxForgePanelSnapshot,
+    visible_rows::remote_target_item_key,
     workflow_rows::selection_checkbox,
 };
 
@@ -85,7 +86,7 @@ fn provider_group_controls(
     let tooltip_title = SharedString::from(group.title());
     let tooltip_meta = remote_target_tooltip(group, &state, target_path.as_deref(), enabled);
     let open_title = SharedString::from(format!("Open {}", group.title()));
-    let item_key = format!("remote:{}", group.key());
+    let item_key = remote_target_item_key(group.key());
     let checked = panel
         .upgrade()
         .is_some_and(|panel| panel.read(cx).item_checked(&item_key));

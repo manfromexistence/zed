@@ -14,8 +14,11 @@ use workspace::{
 use zed_actions::dx_forge::TogglePanel;
 
 use super::{
-    machine_cache::invalidate_machine_cache_snapshot_cache, panel_view,
-    remote_registry::invalidate_remote_registry_snapshot_cache, snapshot,
+    machine_cache::invalidate_machine_cache_snapshot_cache,
+    panel_view,
+    remote_registry::invalidate_remote_registry_snapshot_cache,
+    snapshot,
+    visible_rows::{DxForgeRowKey, DxForgeVisibleRow, visible_rows_for_tab},
 };
 
 const DX_FORGE_PANEL_KEY: &str = "dx_forge_panel";
@@ -55,8 +58,9 @@ pub(crate) struct DxForgePanel {
     focus_handle: FocusHandle,
     scroll_handle: ScrollHandle,
     active_tab: DxForgePanelTab,
-    active_item: Option<String>,
-    checked_items: HashSet<String>,
+    active_item: Option<DxForgeRowKey>,
+    checked_items: HashSet<DxForgeRowKey>,
+    visible_rows: Vec<DxForgeVisibleRow>,
 }
 
 impl DxForgePanel {
@@ -68,6 +72,7 @@ impl DxForgePanel {
             active_tab: DxForgePanelTab::Repository,
             active_item: None,
             checked_items: HashSet::default(),
+            visible_rows: Vec::new(),
         }
     }
 
@@ -88,6 +93,18 @@ impl DxForgePanel {
         self.active_item = None;
     }
 
+    fn sync_visible_rows(&mut self, visible_rows: Vec<DxForgeVisibleRow>) {
+        let active_item_is_visible = self
+            .active_item
+            .as_ref()
+            .is_none_or(|item_key| visible_rows.iter().any(|row| row.item_key() == item_key));
+        if !active_item_is_visible {
+            self.clear_active_item();
+        }
+
+        self.visible_rows = visible_rows;
+    }
+
     pub(super) fn refresh(&mut self, cx: &mut Context<Self>) {
         invalidate_machine_cache_snapshot_cache();
         invalidate_remote_registry_snapshot_cache();
@@ -105,26 +122,26 @@ impl DxForgePanel {
         }
     }
 
-    pub(super) fn toggle_item_checked(&mut self, item_key: String, cx: &mut Context<Self>) {
+    pub(super) fn toggle_item_checked(&mut self, item_key: DxForgeRowKey, cx: &mut Context<Self>) {
         if !self.checked_items.insert(item_key.clone()) {
             self.checked_items.remove(&item_key);
         }
         cx.notify();
     }
 
-    pub(super) fn activate_item(&mut self, item_key: String, cx: &mut Context<Self>) {
-        if self.active_item.as_deref() != Some(item_key.as_str()) {
+    pub(super) fn activate_item(&mut self, item_key: DxForgeRowKey, cx: &mut Context<Self>) {
+        if self.active_item.as_ref() != Some(&item_key) {
             self.active_item = Some(item_key);
             cx.notify();
         }
     }
 
-    pub(super) fn item_checked(&self, item_key: &str) -> bool {
+    pub(super) fn item_checked(&self, item_key: &DxForgeRowKey) -> bool {
         self.checked_items.contains(item_key)
     }
 
-    pub(super) fn item_active(&self, item_key: &str) -> bool {
-        self.active_item.as_deref() == Some(item_key)
+    pub(super) fn item_active(&self, item_key: &DxForgeRowKey) -> bool {
+        self.active_item.as_ref() == Some(item_key)
     }
 }
 
@@ -200,6 +217,8 @@ impl Render for DxForgePanel {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let workspace_roots = self.workspace_roots(cx);
         let snapshot = snapshot::forge_panel_snapshot(&workspace_roots);
+        let visible_rows = visible_rows_for_tab(&snapshot, self.active_tab);
+        self.sync_visible_rows(visible_rows);
 
         panel_view::render_panel(
             &snapshot,
