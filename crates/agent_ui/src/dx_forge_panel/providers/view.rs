@@ -9,12 +9,15 @@ use super::{
 };
 use crate::dx_forge_panel::{
     controls::{exact_abs_path, open_exact_abs_path},
+    panel::DxForgePanel,
     snapshot::DxForgePanelSnapshot,
+    workflow_rows::selection_checkbox,
 };
 
 pub(in crate::dx_forge_panel) fn remote_target_strip(
     snapshot: &DxForgePanelSnapshot,
     workspace: &WeakEntity<Workspace>,
+    panel: &WeakEntity<DxForgePanel>,
     cx: &App,
 ) -> AnyElement {
     let mut strip = v_flex()
@@ -25,7 +28,9 @@ pub(in crate::dx_forge_panel) fn remote_target_strip(
         .border_color(cx.theme().colors().border);
 
     for group in ProviderGroup::ALL {
-        strip = strip.child(provider_group_controls(group, snapshot, workspace, cx));
+        strip = strip.child(provider_group_controls(
+            group, snapshot, workspace, panel, cx,
+        ));
     }
 
     strip.into_any_element()
@@ -69,6 +74,7 @@ fn provider_group_controls(
     group: ProviderGroup,
     snapshot: &DxForgePanelSnapshot,
     workspace: &WeakEntity<Workspace>,
+    panel: &WeakEntity<DxForgePanel>,
     cx: &App,
 ) -> AnyElement {
     let state = remote_target_state(group, snapshot);
@@ -78,6 +84,16 @@ fn provider_group_controls(
     let tooltip_title = SharedString::from(group.title());
     let tooltip_meta = remote_target_tooltip(group, &state, target_path.as_deref(), enabled);
     let open_title = SharedString::from(format!("Open {}", group.title()));
+    let item_key = format!("remote:{}", group.key());
+    let selected = panel
+        .upgrade()
+        .is_some_and(|panel| panel.read(cx).item_selected(&item_key));
+    let selection_checkbox = selection_checkbox(
+        SharedString::from(format!("remote-{}", group.key())),
+        item_key,
+        selected,
+        panel,
+    );
     let open_button = IconButton::new(
         format!("dx-forge-open-provider-group-{}", group.key()),
         IconName::ArrowUpRight,
@@ -106,16 +122,18 @@ fn provider_group_controls(
     )))
     .inset(true)
     .spacing(ListItemSpacing::Dense)
-    .start_slot(
-        Icon::new(group_icon(group))
-            .size(IconSize::Small)
-            .color(Color::Muted),
-    )
+    .toggle_state(selected)
+    .start_slot(selection_checkbox)
     .child(
         h_flex()
             .w_full()
             .min_w_0()
             .gap_1p5()
+            .child(
+                Icon::new(group_icon(group))
+                    .size(IconSize::Small)
+                    .color(Color::Muted),
+            )
             .child(provider_buttons_for_group(group, snapshot, workspace, cx))
             .child(
                 Label::new(group.title())

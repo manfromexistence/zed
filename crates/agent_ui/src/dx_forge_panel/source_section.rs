@@ -4,8 +4,10 @@ use workspace::Workspace;
 
 use super::{
     controls::open_exact_abs_path_button,
-    rows::{empty_row, section_header, source_row},
+    panel::DxForgePanel,
+    rows::{empty_row, section_header},
     snapshot::{DxForgePanelSnapshot, DxForgeSourceRow},
+    workflow_rows::selectable_source_row,
 };
 
 pub(super) struct SourceSection {
@@ -25,6 +27,7 @@ pub(super) fn source_section(
     rows: &[DxForgeSourceRow],
     snapshot: &DxForgePanelSnapshot,
     workspace: &WeakEntity<Workspace>,
+    panel: &WeakEntity<DxForgePanel>,
     cx: &App,
 ) -> AnyElement {
     let mut stack = v_flex().w_full().min_w_0().child(section_header(
@@ -41,10 +44,11 @@ pub(super) fn source_section(
         stack = stack.child(empty_row(section.empty_id, section.empty, cx));
     } else {
         for (ix, row) in rows.iter().enumerate() {
-            stack = stack.child(source_row(
+            stack = stack.child(selectable_source_row(
                 SharedString::from(format!("{}-{ix}", section.row_id)),
                 section.icon,
                 row,
+                panel,
                 Some(open_exact_abs_path_button(
                     format!("{}-{ix}", section.open_id),
                     section.open_tooltip,

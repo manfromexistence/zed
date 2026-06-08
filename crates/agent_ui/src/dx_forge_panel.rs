@@ -12,3 +12,4 @@ mod snapshot;
 mod snapshot_state;
 mod source_section;
 mod tabs;
+mod workflow_rows;

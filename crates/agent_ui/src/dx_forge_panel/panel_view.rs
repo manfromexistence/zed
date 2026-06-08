@@ -12,6 +12,7 @@ use super::{
     snapshot::DxForgePanelSnapshot,
     source_section::{SourceSection, source_section},
     tabs::render_tab_bar,
+    workflow_rows::selectable_receipt_row,
 };
 
 pub(super) fn render_panel(
@@ -54,19 +55,22 @@ pub(super) fn render_panel(
                         .min_w_0()
                         .py_1()
                         .children(match active_tab {
-                            DxForgePanelTab::Targets => vec![
-                                remote_target_strip(snapshot, workspace, cx).into_any_element(),
-                                remote_registry_section(snapshot, workspace, cx),
-                            ],
-                            DxForgePanelTab::Sources => vec![
-                                package_status_section(snapshot, workspace, cx),
-                                machine_cache_section(snapshot, workspace, cx),
-                                restore_section(snapshot, workspace, cx),
-                                media_section(snapshot, workspace, cx),
-                            ],
-                            DxForgePanelTab::Receipts => {
-                                vec![receipt_section(snapshot, workspace, cx)]
+                            DxForgePanelTab::Repository => {
+                                vec![repository_section(snapshot, workspace, panel, cx)]
                             }
+                            DxForgePanelTab::Packages => vec![
+                                package_status_section(snapshot, workspace, panel, cx),
+                                machine_cache_section(snapshot, workspace, panel, cx),
+                            ],
+                            DxForgePanelTab::Media => vec![
+                                media_section(snapshot, workspace, panel, cx),
+                                restore_section(snapshot, workspace, panel, cx),
+                            ],
+                            DxForgePanelTab::Remotes => vec![
+                                remote_target_strip(snapshot, workspace, panel, cx)
+                                    .into_any_element(),
+                                remote_registry_section(snapshot, workspace, panel, cx),
+                            ],
                         })
                         .vertical_scrollbar_for(scroll_handle, window, cx),
                 ),
@@ -102,6 +106,7 @@ fn panel_header(
 fn remote_registry_section(
     snapshot: &DxForgePanelSnapshot,
     workspace: &WeakEntity<Workspace>,
+    panel: &WeakEntity<DxForgePanel>,
     cx: &App,
 ) -> AnyElement {
     source_section(
@@ -119,6 +124,7 @@ fn remote_registry_section(
         &snapshot.remote_registries,
         snapshot,
         workspace,
+        panel,
         cx,
     )
 }
@@ -126,6 +132,7 @@ fn remote_registry_section(
 fn package_status_section(
     snapshot: &DxForgePanelSnapshot,
     workspace: &WeakEntity<Workspace>,
+    panel: &WeakEntity<DxForgePanel>,
     cx: &App,
 ) -> AnyElement {
     source_section(
@@ -143,6 +150,7 @@ fn package_status_section(
         &snapshot.package_statuses,
         snapshot,
         workspace,
+        panel,
         cx,
     )
 }
@@ -150,6 +158,7 @@ fn package_status_section(
 fn machine_cache_section(
     snapshot: &DxForgePanelSnapshot,
     workspace: &WeakEntity<Workspace>,
+    panel: &WeakEntity<DxForgePanel>,
     cx: &App,
 ) -> AnyElement {
     source_section(
@@ -167,18 +176,29 @@ fn machine_cache_section(
         &snapshot.machine_caches,
         snapshot,
         workspace,
+        panel,
         cx,
     )
+}
+
+fn repository_section(
+    snapshot: &DxForgePanelSnapshot,
+    workspace: &WeakEntity<Workspace>,
+    panel: &WeakEntity<DxForgePanel>,
+    cx: &App,
+) -> AnyElement {
+    receipt_section(snapshot, workspace, panel, cx)
 }
 
 fn receipt_section(
     snapshot: &DxForgePanelSnapshot,
     workspace: &WeakEntity<Workspace>,
+    panel: &WeakEntity<DxForgePanel>,
     cx: &App,
 ) -> AnyElement {
     let mut stack = v_flex().w_full().min_w_0().child(section_header(
         "dx-forge-receipts-header",
-        "Receipts",
+        "Repository History",
         IconName::FileTextOutlined,
         snapshot.receipt_count,
         cx,
@@ -200,9 +220,10 @@ fn receipt_section(
         ));
     } else {
         for (ix, receipt) in snapshot.latest_receipts.iter().enumerate() {
-            stack = stack.child(receipt_row(
+            stack = stack.child(selectable_receipt_row(
                 ix,
                 receipt,
+                panel,
                 Some(open_exact_abs_path_button(
                     format!("dx-forge-open-receipt-{ix}"),
                     "Open receipt",
@@ -220,6 +241,7 @@ fn receipt_section(
 fn restore_section(
     snapshot: &DxForgePanelSnapshot,
     workspace: &WeakEntity<Workspace>,
+    panel: &WeakEntity<DxForgePanel>,
     cx: &App,
 ) -> AnyElement {
     source_section(
@@ -237,6 +259,7 @@ fn restore_section(
         &snapshot.restore_previews,
         snapshot,
         workspace,
+        panel,
         cx,
     )
 }
@@ -244,6 +267,7 @@ fn restore_section(
 fn media_section(
     snapshot: &DxForgePanelSnapshot,
     workspace: &WeakEntity<Workspace>,
+    panel: &WeakEntity<DxForgePanel>,
     cx: &App,
 ) -> AnyElement {
     source_section(
@@ -261,6 +285,7 @@ fn media_section(
         &snapshot.media_outputs,
         snapshot,
         workspace,
+        panel,
         cx,
     )
 }

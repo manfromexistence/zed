@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::dx_receipt_history::invalidate_tool_history_snapshot_cache;
 use crate::dx_source_sets::invalidate_source_set_snapshot_cache;
 use gpui::{
@@ -53,6 +55,7 @@ pub(crate) struct DxForgePanel {
     focus_handle: FocusHandle,
     scroll_handle: ScrollHandle,
     active_tab: DxForgePanelTab,
+    selected_items: HashSet<String>,
 }
 
 impl DxForgePanel {
@@ -61,7 +64,8 @@ impl DxForgePanel {
             workspace,
             focus_handle: cx.focus_handle(),
             scroll_handle: ScrollHandle::new(),
-            active_tab: DxForgePanelTab::Targets,
+            active_tab: DxForgePanelTab::Repository,
+            selected_items: HashSet::default(),
         }
     }
 
@@ -92,13 +96,25 @@ impl DxForgePanel {
             cx.notify();
         }
     }
+
+    pub(super) fn toggle_item_selection(&mut self, item_key: String, cx: &mut Context<Self>) {
+        if !self.selected_items.insert(item_key.clone()) {
+            self.selected_items.remove(&item_key);
+        }
+        cx.notify();
+    }
+
+    pub(super) fn item_selected(&self, item_key: &str) -> bool {
+        self.selected_items.contains(item_key)
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(super) enum DxForgePanelTab {
-    Targets,
-    Receipts,
-    Sources,
+    Repository,
+    Packages,
+    Media,
+    Remotes,
 }
 
 impl Focusable for DxForgePanel {

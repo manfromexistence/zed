@@ -32,6 +32,10 @@ const sourceSectionPath = "crates/agent_ui/src/dx_forge_panel/source_section.rs"
 const sourceSection = existsSync(sourceSectionPath)
   ? readFileSync(sourceSectionPath, "utf8")
   : "";
+const workflowRowsPath = "crates/agent_ui/src/dx_forge_panel/workflow_rows.rs";
+const workflowRows = existsSync(workflowRowsPath)
+  ? readFileSync(workflowRowsPath, "utf8")
+  : "";
 const providersRootPath = "crates/agent_ui/src/dx_forge_panel/providers/mod.rs";
 const providersCatalogPath = "crates/agent_ui/src/dx_forge_panel/providers/catalog.rs";
 const providersStatePath = "crates/agent_ui/src/dx_forge_panel/providers/state.rs";
@@ -70,6 +74,7 @@ const snapshotState = existsSync(snapshotStatePath)
   : "";
 const panelView = readFileSync("crates/agent_ui/src/dx_forge_panel/panel_view.rs", "utf8");
 const rows = readFileSync("crates/agent_ui/src/dx_forge_panel/rows.rs", "utf8");
+const tabs = readFileSync("crates/agent_ui/src/dx_forge_panel/tabs.rs", "utf8");
 const icons = readFileSync("crates/icons/src/icons.rs", "utf8");
 const receiptHistoryRoot = readFileSync("crates/agent_ui/src/dx_receipt_history.rs", "utf8");
 const sourceSetsRoot = readFileSync("crates/agent_ui/src/dx_source_sets.rs", "utf8");
@@ -102,6 +107,7 @@ const forgeSources = [
   roots,
   providers,
   sourceSection,
+  workflowRows,
   snapshot,
   snapshotState,
   panelView,
@@ -129,7 +135,7 @@ test("Forge panel is wired through agent UI without touching Git panel ownership
   assert.doesNotMatch(forgeSources, /git_panel|GitPanel|git_ui::/);
   assert.doesNotMatch(
     forgeSources,
-    /\bgit::|GitStore|git_store|Repository|GitRepository/,
+    /\bgit::|GitStore|git_store|GitRepository/,
   );
 });
 
@@ -245,9 +251,9 @@ test("Forge panel reads package-status without runtime overclaims", () => {
   assert.match(snapshot, /PACKAGE_STATUS_LABEL/);
   assert.match(panelView, /fn package_status_section/);
   assert.ok(
-    panelView.indexOf("package_status_section(snapshot, workspace, cx)") <
-      panelView.indexOf("receipt_section(snapshot, workspace, cx)"),
-    "package status should be visible before raw receipts",
+    panelView.indexOf("package_status_section(snapshot, workspace, panel, cx)") <
+      panelView.indexOf("machine_cache_section(snapshot, workspace, panel, cx)"),
+    "package status should be visible before machine cache evidence",
   );
   assert.match(panelView, /"Package Status"/);
   assert.match(panelView, /No Forge package status found/);
@@ -326,11 +332,11 @@ test("Forge panel surfaces bounded machine-cache evidence without freshness over
   assert.match(snapshot, /MACHINE_CACHES_LABEL/);
   assert.match(panelView, /fn machine_cache_section/);
   assert.ok(
-    panelView.indexOf("package_status_section(snapshot, workspace, cx)") <
-      panelView.indexOf("machine_cache_section(snapshot, workspace, cx)") &&
-      panelView.indexOf("machine_cache_section(snapshot, workspace, cx)") <
-        panelView.indexOf("receipt_section(snapshot, workspace, cx)"),
-    "machine cache evidence should sit between package status and raw receipts",
+    panelView.indexOf("package_status_section(snapshot, workspace, panel, cx)") <
+      panelView.indexOf("machine_cache_section(snapshot, workspace, panel, cx)") &&
+      panelView.indexOf("media_section(snapshot, workspace, panel, cx)") <
+        panelView.indexOf("restore_section(snapshot, workspace, panel, cx)"),
+    "package and media workflow sections should keep their source-backed order",
   );
   assert.match(panelView, /"Machine Caches"/);
   assert.match(panelView, /No Forge machine caches found/);
@@ -408,10 +414,14 @@ test("Forge panel reads Forge remote registry and makes provider targets concret
   assert.match(panelView, /fn remote_registry_section/);
   assert.match(panelView, /"Remote Registry"/);
   assert.match(panelView, /No Forge remote registry found/);
+  const remotesBranch =
+    panelView.match(/DxForgePanelTab::Remotes => vec!\[[\s\S]*?\],/)?.[0] ?? "";
+  assert.match(remotesBranch, /remote_target_strip\(snapshot, workspace, panel, cx\)/);
+  assert.match(remotesBranch, /remote_registry_section\(snapshot, workspace, panel, cx\)/);
   assert.ok(
-    panelView.indexOf("remote_registry_section(snapshot, workspace, cx)") <
-      panelView.indexOf("package_status_section(snapshot, workspace, cx)"),
-    "remote registry should be visible before package/cache evidence",
+    remotesBranch.indexOf("remote_target_strip(snapshot, workspace, panel, cx)") <
+      remotesBranch.indexOf("remote_registry_section(snapshot, workspace, panel, cx)"),
+    "remote targets should be visible before remote registry evidence",
   );
 
   assert.match(remoteRegistry, /const REMOTE_REGISTRY_CACHE_TTL: Duration = Duration::from_secs\(5\);/);
@@ -567,9 +577,62 @@ test("Forge panel uses Git-style controls instead of metric cards", () => {
   assert.doesNotMatch(panelView, /\.p_2\(\)[\s\S]*receipt_section/);
 });
 
+test("Forge panel uses workflow tabs with Git-style selectable rows", () => {
+  assert.ok(
+    existsSync(workflowRowsPath),
+    "Forge workflow rows should live in a focused module",
+  );
+  assert.match(moduleRoot, /mod workflow_rows;/);
+  assert.match(panel, /active_tab: DxForgePanelTab::Repository/);
+  for (const tab of ["Repository", "Packages", "Media", "Remotes"]) {
+    assert.match(panel, new RegExp(`\\b${tab},`));
+    assert.match(tabs, new RegExp(`DxForgePanelTab::${tab}`));
+    assert.match(tabs, new RegExp(`"${tab}"`));
+  }
+  assert.match(
+    tabs,
+    /snapshot\.package_statuses\.len\(\) \+ snapshot\.machine_caches\.len\(\)/,
+  );
+  for (const oldTab of ["Targets", "Sources", "Receipts"]) {
+    assert.doesNotMatch(panel, new RegExp(`DxForgePanelTab::${oldTab}`));
+    assert.doesNotMatch(tabs, new RegExp(`"${oldTab}"`));
+  }
+
+  assert.match(panel, /selected_items: HashSet<String>/);
+  assert.match(panel, /toggle_item_selection/);
+  assert.match(panel, /item_selected/);
+  assert.match(workflowRows, /pub\(super\) fn selectable_source_row/);
+  assert.match(workflowRows, /pub\(super\) fn selectable_receipt_row/);
+  assert.match(workflowRows, /Checkbox::new/);
+  assert.match(workflowRows, /ToggleState::Selected/);
+  assert.match(workflowRows, /ToggleState::Unselected/);
+  assert.match(workflowRows, /ElevationIndex::Surface/);
+  assert.match(workflowRows, /ListItem::new\(id/);
+  assert.match(workflowRows, /\.height\(px\(52\.0\)\)/);
+  assert.match(workflowRows, /\.spacing\(ListItemSpacing::Sparse\)/);
+  assert.match(workflowRows, /\.start_slot\(selection_checkbox/);
+  assert.match(
+    workflowRows,
+    /panel\s*\.update\(cx, \|panel, cx\|[\s\S]*panel\.toggle_item_selection/,
+  );
+  assert.match(workflowRows, /cx\.stop_propagation\(\)/);
+  assert.match(panelView, /DxForgePanelTab::Repository/);
+  assert.match(panelView, /DxForgePanelTab::Packages/);
+  assert.match(panelView, /DxForgePanelTab::Media/);
+  assert.match(panelView, /DxForgePanelTab::Remotes/);
+  assert.match(panelView, /repository_section\(snapshot, workspace, panel, cx\)/);
+  assert.match(panelView, /package_status_section\(snapshot, workspace, panel, cx\)/);
+  assert.match(panelView, /media_section\(snapshot, workspace, panel, cx\)/);
+  assert.match(panelView, /remote_target_strip\(snapshot, workspace, panel, cx\)/);
+  assert.doesNotMatch(
+    workflowRows,
+    /\b(?:Badge|Chip|Pill|Tag|StatusBadge|BadgeCluster)\b/i,
+  );
+});
+
 test("Forge panel renders DX icon provider targets with snapshot-driven readiness", () => {
   assert.match(moduleRoot, /mod providers;/);
-  assert.match(panelView, /remote_target_strip\(snapshot, workspace, cx\)/);
+  assert.match(panelView, /remote_target_strip\(snapshot, workspace, panel, cx\)/);
   assert.ok(existsSync(providersRootPath), "Forge provider module boundary must live in providers/mod.rs");
   assert.ok(existsSync(providersCatalogPath), "Forge provider metadata must live in catalog.rs");
   assert.ok(existsSync(providersStatePath), "Forge provider state must live in state.rs");

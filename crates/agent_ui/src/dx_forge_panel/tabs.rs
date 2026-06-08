@@ -19,33 +19,40 @@ pub(super) fn render_tab_bar(
         .border_b_1()
         .border_color(cx.theme().colors().border.opacity(0.6))
         .child(forge_tab(
-            "dx-forge-tab-targets",
-            "Targets",
-            snapshot.remote_registries.len() + snapshot.remote_providers.len(),
-            DxForgePanelTab::Targets,
-            active_tab,
-            panel,
-            cx,
-        ))
-        .child(Divider::vertical().color(ui::DividerColor::BorderFaded))
-        .child(forge_tab(
-            "dx-forge-tab-sources",
-            "Sources",
-            snapshot.package_statuses.len()
-                + snapshot.machine_caches.len()
-                + snapshot.restore_previews.len()
-                + snapshot.media_outputs.len(),
-            DxForgePanelTab::Sources,
-            active_tab,
-            panel,
-            cx,
-        ))
-        .child(Divider::vertical().color(ui::DividerColor::BorderFaded))
-        .child(forge_tab(
-            "dx-forge-tab-receipts",
-            "Receipts",
+            "dx-forge-tab-repository",
+            "Repository",
             snapshot.latest_receipts.len(),
-            DxForgePanelTab::Receipts,
+            DxForgePanelTab::Repository,
+            active_tab,
+            panel,
+            cx,
+        ))
+        .child(Divider::vertical().color(ui::DividerColor::BorderFaded))
+        .child(forge_tab(
+            "dx-forge-tab-packages",
+            "Packages",
+            snapshot.package_statuses.len() + snapshot.machine_caches.len(),
+            DxForgePanelTab::Packages,
+            active_tab,
+            panel,
+            cx,
+        ))
+        .child(Divider::vertical().color(ui::DividerColor::BorderFaded))
+        .child(forge_tab(
+            "dx-forge-tab-media",
+            "Media",
+            snapshot.media_outputs.len() + snapshot.restore_previews.len(),
+            DxForgePanelTab::Media,
+            active_tab,
+            panel,
+            cx,
+        ))
+        .child(Divider::vertical().color(ui::DividerColor::BorderFaded))
+        .child(forge_tab(
+            "dx-forge-tab-remotes",
+            "Remotes",
+            snapshot.remote_registries.len() + snapshot.remote_providers.len(),
+            DxForgePanelTab::Remotes,
             active_tab,
             panel,
             cx,
