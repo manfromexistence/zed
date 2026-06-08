@@ -1,3 +1,24 @@
+[2026-06-08] - Project Panel Storage Domain Follow-Up
+
+CHANGED:
+- `crates\project_panel\src\storage.rs` now owns storage overview projection, folder drilldown projection, the drilldown cap, the cached-folder predicate, and bounded folder path labels for duplicate-name clarity.
+- `crates\project_panel\src\project_panel.rs` now passes materialized visible storage entries into the storage domain helpers, bounds/prunes the folder storage summary cache to visible folder keys, caps per-folder direct-child storage warming, keeps async cut-paste conversion tied to the original cut set, and renders the selection-toolbar Paste action only for an internal Project Panel clipboard.
+- `crates\project_panel\src\storage_roots.rs` now owns the storage-root strip cap instead of depending on folder storage statistics.
+- `script\dx-project-panel-source.test.ts` now guards the storage-domain projection helpers, path-label tooltips, filtered storage cache snapshots, child-file warming cap, storage-root activation guards, and paste external-path early return.
+- `DX.md` and `todo.txt` record the source-only proof boundary for this follow-up.
+
+PASSED:
+- `rustfmt --edition 2024 crates\project_panel\src\project_panel.rs crates\project_panel\src\storage.rs crates\project_panel\src\storage_roots.rs`
+- `node --test script\dx-project-panel-source.test.ts`
+- `node --test script\dx-icon-system-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check crates\project_panel\src\project_panel.rs crates\project_panel\src\storage.rs crates\project_panel\src\storage_roots.rs`
+- `git diff --check -- crates/project_panel/src/project_panel.rs crates/project_panel/src/storage.rs crates/project_panel/src/storage_roots.rs script/dx-project-panel-source.test.ts`
+- Focused conflict-marker scan on touched Project Panel source/guard files
+
+NOTES:
+- Source-only by instruction. Cargo, build, `just run`, native Zed launch, browser automation, recursive disk scans, and runtime visual proof remain deferred.
+- Unrelated Forge panel dirty files were left unstaged for a separate focused commit.
+
 [2026-06-08] - Project Panel Storage And Operation Polish
 
 CHANGED:

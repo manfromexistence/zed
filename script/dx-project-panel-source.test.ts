@@ -475,23 +475,39 @@ test("project panel selection toolbar exposes file-browser operation state", () 
   );
   assert.match(
     renderSelectedEntriesToolbar,
-    /let clipboard_operation = if has_external_paste_paths[\s\S]*None[\s\S]*self\.clipboard_operation_summary\(\)/,
-    "external OS-file paste must take precedence over the internal clipboard status chip",
+    /let clipboard_operation = self\.clipboard_operation_summary\(\);/,
+    "selection toolbar status must derive from cached Project Panel clipboard state",
   );
   assert.match(
     renderSelectedEntriesToolbar,
-    /let can_paste_to_selection =[\s\S]*has_external_paste_paths \|\| clipboard_operation_for_paste\.is_some\(\)/,
-    "toolbar paste visibility must include the same external path source that paste uses",
+    /let can_paste_to_selection = clipboard_operation_for_paste\.is_some\(\);/,
+    "toolbar paste visibility must follow the internal Project Panel clipboard without reading the OS clipboard during render",
+  );
+  assert.doesNotMatch(
+    renderSelectedEntriesToolbar,
+    /has_external_paste_paths|external_paths_from_system_clipboard|read_from_clipboard/,
+    "selection toolbar render must not query the OS clipboard",
   );
   assert.match(renderSelectedEntriesToolbar, /operation\.mode\.paste_tooltip\(\)/);
   assert.match(renderSelectedEntriesToolbar, /unwrap_or\("Paste files here"\)/);
   assert.match(renderSelectedEntriesToolbar, /\.when\(!is_read_only && can_paste_to_selection/);
   assert.match(renderSelectedEntriesToolbar, /this\.paste\(&Paste \{\}, window, cx\)/);
-  assert.match(
+  assert.doesNotMatch(
     source,
-    /let has_external_paste_paths = self\.external_paths_from_system_clipboard\(cx\)\.is_some\(\);[\s\S]*render_selected_entries_toolbar\([\s\S]*has_external_paste_paths/,
-    "toolbar render must compute external paste availability next to the actual toolbar render",
+    /let has_external_paste_paths = self\.external_paths_from_system_clipboard\(cx\)\.is_some\(\);[\s\S]*render_selected_entries_toolbar\(/,
+    "Project Panel render must not compute external paste availability from the OS clipboard",
   );
+  assert.match(
+    paste,
+    /if let Some\(external_paths\) = self\.external_paths_from_system_clipboard\(cx\)[\s\S]*self\.drop_external_files\(external_paths\.paths\(\), entry_id, window, cx\);[\s\S]*return;/,
+    "paste must give external OS file paths precedence before reading the internal clipboard",
+  );
+  assertBefore({
+    body: paste,
+    before: /if let Some\(external_paths\) = self\.external_paths_from_system_clipboard\(cx\)/,
+    after: /let \(worktree, entry\) = self\.selected_entry_handle\(cx\)\?/,
+    message: "external file paste must return before the Project Panel clipboard path is read",
+  });
   assert.doesNotMatch(
     renderSelectedEntriesToolbar,
     /IconName::(?:Copy|Scissors|BookCopy)/,
@@ -507,18 +523,23 @@ test("project panel selection toolbar exposes file-browser operation state", () 
   assert.match(paste, /let clip_is_cut = clipboard_entries\.is_cut\(\)/);
   assert.match(
     paste,
+    /let original_cut_entries = clip_is_cut\.then\(\|\| clipboard_entries\.items\(\)\.clone\(\)\);/,
+    "cut paste must capture the exact source cut set before async tasks run",
+  );
+  assert.match(
+    paste,
     /let completed_cut_paste = clip_is_cut && !changes\.is_empty\(\);/,
     "cut paste must only convert clipboard state after at least one successful rename",
   );
   assert.match(
     paste,
-    /if completed_cut_paste[\s\S]*this\.clipboard =[\s\S]*ClipboardEntry::into_copy_entry[\s\S]*cx\.notify\(\);/,
-    "successful cut paste must refresh the toolbar after converting to copy state",
+    /if completed_cut_paste[\s\S]*original_cut_entries\.as_ref\(\)\.filter[\s\S]*Some\(ClipboardEntry::Cut\(current_entries\)\)[\s\S]*current_entries == \*cut_entries[\s\S]*this\.clipboard = Some\(ClipboardEntry::Copied\(cut_entries\.clone\(\)\)\)[\s\S]*cx\.notify\(\);/,
+    "successful cut paste must only convert the original still-current cut clipboard to copy state",
   );
   assert.doesNotMatch(
     paste,
-    /if clip_is_cut[\s\S]*self\.clipboard = self\.clipboard\.take\(\)\.map\(ClipboardEntry::into_copy_entry\)/,
-    "cut clipboard state must not flip before async paste tasks finish",
+    /this\.clipboard\.take\(\)|ClipboardEntry::into_copy_entry/,
+    "async cut paste completion must not mutate a newer clipboard entry",
   );
 
   assert.match(
@@ -573,7 +594,8 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   const storage = read("crates/project_panel/src/storage.rs");
   const detailsForEntry = functionBody(source, "details_for_entry");
   const renderEntryInfoBadge = functionBody(source, "render_entry_info_badge");
-  const storageDrilldownItems = functionBody(source, "dx_explorer_storage_drilldown_items");
+  const storageOverview = functionBody(storage, "storage_overview");
+  const storageDrilldownItems = functionBody(storage, "storage_folder_items");
   const renderStorageDrilldown = functionBody(source, "render_dx_explorer_storage_drilldown");
   const renderProjectPanel = functionBody(source, "render");
   const renderStorageDrilldownRow = functionBody(
@@ -590,16 +612,31 @@ test("project panel folder storage summaries are cache-only on the visible-row p
     "folder storage warming must have a named background cap",
   );
   assert.match(
-    source,
-    /const MAX_PROJECT_PANEL_STORAGE_DRILLDOWN_ITEMS: usize = 5;/,
+    storage,
+    /pub\(crate\) const MAX_PROJECT_PANEL_STORAGE_DRILLDOWN_ITEMS: usize = 5;/,
     "storage drilldown must stay visually bounded",
+  );
+  assert.match(
+    source,
+    /const MAX_PROJECT_PANEL_FOLDER_STORAGE_SUMMARY_CACHE: usize = 4_096;/,
+    "folder storage summaries must have a persistent session cache cap",
+  );
+  assert.match(
+    source,
+    /const MAX_PROJECT_PANEL_FOLDER_STORAGE_CHILD_FILES: usize = 512;/,
+    "direct-child folder storage warming must be capped per folder",
   );
   assert.match(storage, /pub\(crate\) struct FolderStorageSummary/);
   assert.match(storage, /pub\(crate\) struct StorageFolderItem/);
+  assert.match(storage, /pub path_label: String/);
+  assert.match(storage, /pub\(crate\) fn from_entry\(/);
+  assert.match(storage, /pub\(crate\) fn has_recorded_files\(&self\) -> bool/);
   assert.match(source, /dx_explorer_storage_drilldown:\s*Vec<storage::StorageFolderItem>/);
   assert.match(storage, /pub\(crate\) fn record_file\(&mut self, entry: &Entry\)/);
   assert.match(source, /fn cached_folder_storage_summary\(/);
-  assert.match(source, /fn dx_explorer_storage_drilldown_items\(/);
+  assert.match(source, /fn visible_storage_entries\(/);
+  assert.doesNotMatch(source, /fn dx_explorer_storage_drilldown_items\(/);
+  assert.doesNotMatch(source, /fn dx_explorer_storage_overview\(/);
   assert.match(source, /fn render_dx_explorer_storage_drilldown\(/);
   assert.match(source, /fn render_dx_explorer_storage_drilldown_row\(/);
   assert.doesNotMatch(source, /fn dx_explorer_storage_heat_level\(/);
@@ -636,8 +673,13 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   );
   assert.match(
     updateVisibleEntries,
-    /let cached_folder_storage_summaries = self\.folder_storage_summaries\.borrow\(\)\.clone\(\);/,
-    "visible-entry refresh must snapshot the storage cache before moving work to the background job",
+    /let visible_folder_storage_summary_keys =[\s\S]*Self::visible_folder_storage_summary_keys\(&self\.state\);[\s\S]*let cached_folder_storage_summaries =[\s\S]*self\.cached_folder_storage_summaries_for_keys\(&visible_folder_storage_summary_keys\);/,
+    "visible-entry refresh must snapshot only cache entries relevant to currently visible folder rows",
+  );
+  assert.match(
+    source,
+    /fn cached_folder_storage_summaries_for_keys\([\s\S]*visible_folder_keys: &HashSet<\(WorktreeId, ProjectEntryId\)>[\s\S]*filter_map\(\|key\|[\s\S]*folder_storage_summaries[\s\S]*get\(key\)[\s\S]*cloned\(\)/,
+    "folder storage cache snapshots must be filtered by visible folder keys before background work",
   );
   assert.match(
     updateVisibleEntries,
@@ -646,7 +688,7 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   );
   assert.match(
     updateVisibleEntries,
-    /folder_storage_summary_updates\.len\(\)[\s\S]*MAX_PROJECT_PANEL_BACKGROUND_FOLDER_STORAGE_DIRS[\s\S]*let mut summary = storage::FolderStorageSummary::default\(\)[\s\S]*child_entries_with_options[\s\S]*include_files: true[\s\S]*include_dirs: false[\s\S]*summary\.record_file\(child\.entry\)[\s\S]*folder_storage_summary_updates\.push\(\(cache_key, summary\)\)/,
+    /folder_storage_summary_updates\.len\(\)[\s\S]*MAX_PROJECT_PANEL_BACKGROUND_FOLDER_STORAGE_DIRS[\s\S]*let mut summary = storage::FolderStorageSummary::default\(\)[\s\S]*let mut child_file_count = 0usize;[\s\S]*child_entries_with_options[\s\S]*include_files: true[\s\S]*include_dirs: false[\s\S]*child_file_count[\s\S]*MAX_PROJECT_PANEL_FOLDER_STORAGE_CHILD_FILES[\s\S]*summary\.record_file\(child\.entry\)[\s\S]*child_file_count \+= 1;[\s\S]*folder_storage_summary_updates\.push\(\(cache_key, summary\)\)/,
     "background folder storage warming must count direct file children, bytes, and mtimes under a named cap",
   );
   assert.match(
@@ -655,18 +697,23 @@ test("project panel folder storage summaries are cache-only on the visible-row p
     "background folder storage results must populate cache misses without overwriting fresher summaries",
   );
   assert.match(
+    updateVisibleEntries,
+    /Self::retain_visible_folder_storage_summaries\([\s\S]*&mut folder_storage_summaries,[\s\S]*&visible_folder_storage_summary_keys[\s\S]*\);/,
+    "folder storage summary cache must be pruned back to visible folder keys after refresh",
+  );
+  assert.match(
     storageDrilldownItems,
-    /folder_storage_summaries: &HashMap<\s*\(WorktreeId, ProjectEntryId\),\s*storage::FolderStorageSummary,\s*>/,
+    /folder_storage_summaries: &HashMap<\(WorktreeId, ProjectEntryId\), FolderStorageSummary>/,
     "storage drilldown must receive the warmed cache from the visible-entry refresh job",
   );
   assert.match(
     storageDrilldownItems,
-    /for visible_worktree in &state\.visible_entries[\s\S]*for entry in &visible_worktree\.entries[\s\S]*!entry\.kind\.is_dir\(\)[\s\S]*folder_storage_summaries\.get\(&cache_key\)/,
+    /for \(worktree_id, entry\) in visible_entries[\s\S]*!entry\.kind\.is_dir\(\)[\s\S]*folder_storage_summaries\.get\(&cache_key\)/,
     "storage drilldown must derive candidate folders from materialized visible rows and cached summaries",
   );
   assert.match(
     storageDrilldownItems,
-    /storage::rank_storage_folder_items\(items, storage_sort_mode\)/,
+    /rank_storage_folder_items\(items, storage_sort_mode\)/,
     "storage drilldown must rank cached folders through the storage domain helper",
   );
   assert.match(
@@ -676,8 +723,13 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   );
   assert.match(
     storageDrilldownItems,
-    /summary\.latest_modified_at[\s\S]*summary\.largest_files\.clone\(\)/,
+    /StorageFolderItem::from_entry\(worktree_id, entry, summary\)/,
     "storage drilldown must precompute heat-map levels outside render rows",
+  );
+  assert.match(
+    storageOverview,
+    /visible_file_bytes,[\s\S]*for \(worktree_id, entry\) in visible_entries[\s\S]*overview\.record_visible_file\(entry\)[\s\S]*summary\.has_recorded_files\(\)/,
+    "storage overview projection must live in the storage domain and use visible entry candidates",
   );
   assert.doesNotMatch(
     storageDrilldownItems,
@@ -689,13 +741,13 @@ test("project panel folder storage summaries are cache-only on the visible-row p
     before:
       /folder_storage_summary_cache[\s\S]*\.entry\(\*cache_key\)[\s\S]*\.or_insert_with\(\|\| summary\.clone\(\)\)/,
     after:
-      /new_state\.dx_explorer_storage_overview =[\s\S]*Self::dx_explorer_storage_overview/,
+      /new_state\.dx_explorer_storage_overview =[\s\S]*storage::storage_overview/,
     message: "storage drilldown must merge fresh background summaries before ranking cached folders",
   });
   assertBefore({
     body: updateVisibleEntries,
     before:
-      /new_state\.dx_explorer_storage_drilldown =[\s\S]*Self::dx_explorer_storage_drilldown_items\([\s\S]*&new_state,[\s\S]*&folder_storage_summary_cache,[\s\S]*storage_sort_mode/,
+      /new_state\.dx_explorer_storage_drilldown =[\s\S]*storage::storage_folder_items\([\s\S]*Self::visible_storage_entries\(&new_state\),[\s\S]*&folder_storage_summary_cache,[\s\S]*storage_sort_mode/,
     after: /\(new_state, media_preview_updates, folder_storage_summary_updates\)\s*\}\)\s*\.await;/,
     message: "storage drilldown must be ranked in the background job before state is installed",
   });
@@ -711,6 +763,7 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   );
   assert.match(renderStorageDrilldownRow, /dx_explorer_storage_heat_color\(item\.heat_level, cx\)/);
   assert.match(renderStorageDrilldownRow, /format_file_size\(item\.file_bytes\)/);
+  assert.match(renderStorageDrilldownRow, /item\.path_label/);
   assert.match(renderStorageDrilldownRow, /this\.expand_entry\(target\.worktree_id, target\.entry_id, cx\)/);
   assert.match(
     renderStorageDrilldownRow,
@@ -735,8 +788,8 @@ test("project panel storage overview and root shortcuts stay cached and professi
   const dxIcons = read("crates/ui/src/dx_icons.rs");
   const media = read("crates/project_panel/src/media_preview.rs");
   const updateVisibleEntries = functionBody(source, "update_visible_entries");
-  const storageOverview = functionBody(source, "dx_explorer_storage_overview");
-  const storageDrilldownItems = functionBody(source, "dx_explorer_storage_drilldown_items");
+  const storageOverview = functionBody(storage, "storage_overview");
+  const storageDrilldownItems = functionBody(storage, "storage_folder_items");
   const renderStorageDrilldown = functionBody(source, "render_dx_explorer_storage_drilldown");
   const renderStorageDrilldownRow = functionBody(
     source,
@@ -754,10 +807,8 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(source, /mod storage;/);
   assert.match(source, /mod storage_roots;/);
   assert.match(storage, /pub\(crate\) const MAX_PROJECT_PANEL_STORAGE_LARGEST_FILES: usize = 3;/);
-  assert.match(
-    storage,
-    /pub\(crate\) const MAX_PROJECT_PANEL_STORAGE_ROOT_STRIP_ITEMS: usize = 16;/,
-  );
+  assert.match(storage, /pub\(crate\) const MAX_PROJECT_PANEL_STORAGE_DRILLDOWN_ITEMS: usize = 5;/);
+  assert.match(storageRoots, /pub\(crate\) const MAX_PROJECT_PANEL_STORAGE_ROOT_STRIP_ITEMS: usize = 16;/);
   assert.match(storage, /pub\(crate\) enum StorageSortMode/);
   assert.match(storage, /StorageSortMode::Size/);
   assert.match(storage, /StorageSortMode::FileCount/);
@@ -769,6 +820,9 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(storage, /largest_files:\s*Vec<FolderStorageFile>/);
   assert.match(storage, /latest_modified_at:\s*Option<MTime>/);
   assert.match(storage, /pub\(crate\) fn record_file\(&mut self, entry: &Entry\)/);
+  assert.match(storage, /pub\(crate\) fn has_recorded_files\(&self\) -> bool/);
+  assert.match(storage, /pub path_label: String/);
+  assert.match(storage, /fn folder_path_label\(entry: &Entry\) -> String/);
   assert.match(storage, /utils::bounded_project_panel_label/);
   assert.match(storage, /timestamp_for_user\(\)/);
   assert.doesNotMatch(storage, /\b(?:prototype|dummy|magic|slop|v1)\b/i);
@@ -792,13 +846,18 @@ test("project panel storage overview and root shortcuts stay cached and professi
   );
   assert.match(
     storageOverview,
-    /visible_file_bytes:[\s\S]*visible_summary\.file_bytes/,
+    /visible_file_count,[\s\S]*visible_file_bytes,/,
     "storage overview must read visible summary bytes",
   );
   assert.match(
     storageOverview,
-    /let cache_key = \(visible_worktree\.worktree_id, entry\.id\);[\s\S]*folder_storage_summaries\.get\(&cache_key\)/,
+    /let cache_key = \(worktree_id, entry\.id\);[\s\S]*folder_storage_summaries\.get\(&cache_key\)/,
     "storage overview cached-folder totals must stay scoped to visible drilldown candidates",
+  );
+  assert.match(
+    storageOverview,
+    /summary\.has_recorded_files\(\)/,
+    "storage overview should use the storage-domain predicate for cached folder totals",
   );
   assert.doesNotMatch(
     storageOverview,
@@ -810,22 +869,22 @@ test("project panel storage overview and root shortcuts stay cached and professi
     before:
       /folder_storage_summary_cache[\s\S]*\.entry\(\*cache_key\)[\s\S]*\.or_insert_with\(\|\| summary\.clone\(\)\)/,
     after:
-      /new_state\.dx_explorer_storage_overview =[\s\S]*Self::dx_explorer_storage_overview/,
+      /new_state\.dx_explorer_storage_overview =[\s\S]*storage::storage_overview/,
     message: "storage overview must use merged cached folder summaries",
   });
   assert.match(
     updateVisibleEntries,
-    /new_state\.dx_explorer_storage_drilldown =[\s\S]*Self::dx_explorer_storage_drilldown_items\([\s\S]*&new_state,[\s\S]*&folder_storage_summary_cache,[\s\S]*storage_sort_mode/,
+    /new_state\.dx_explorer_storage_drilldown =[\s\S]*storage::storage_folder_items\([\s\S]*Self::visible_storage_entries\(&new_state\),[\s\S]*&folder_storage_summary_cache,[\s\S]*storage_sort_mode/,
     "storage drilldown ranking must run in the background with the chosen sort mode",
   );
 
   assert.match(
     storageDrilldownItems,
-    /folder_storage_summaries: &HashMap<\s*\(WorktreeId, ProjectEntryId\),\s*storage::FolderStorageSummary,\s*>/,
+    /folder_storage_summaries: &HashMap<\(WorktreeId, ProjectEntryId\), FolderStorageSummary>/,
   );
-  assert.match(storageDrilldownItems, /storage::StorageFolderItem/);
-  assert.match(storageDrilldownItems, /storage::rank_storage_folder_items\(items, storage_sort_mode\)/);
-  assert.match(storageDrilldownItems, /summary\.largest_files\.clone\(\)/);
+  assert.match(storageDrilldownItems, /StorageFolderItem/);
+  assert.match(storageDrilldownItems, /StorageFolderItem::from_entry/);
+  assert.match(storageDrilldownItems, /rank_storage_folder_items\(items, storage_sort_mode\)/);
   assert.match(renderStorageDrilldown, /Label::new\("Folder files"\)/);
   assert.match(renderStorageDrilldown, /StorageSortMode::ALL/);
   assert.match(renderStorageDrilldown, /PopoverMenu::new\("dx-explorer-storage-sort-menu"\)/);
@@ -834,6 +893,7 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(renderStorageDrilldownRow, /format_file_size\(item\.file_bytes\)/);
   assert.match(renderStorageDrilldownRow, /storage::format_modified_label\(item\.latest_modified_at\)/);
   assert.match(renderStorageDrilldownRow, /storage::heat_label\(item\.heat_level\)/);
+  assert.match(renderStorageDrilldownRow, /item\.path_label/);
   assert.match(renderStorageDrilldownRow, /Tooltip::with_meta\("Folder file summary"/);
   assert.match(renderStorageDrilldownRow, /item\s*\.\s*largest_files/);
 
@@ -846,7 +906,23 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(renderRootStripRow, /dx_icon\(DxUiIcon::DriveProvider\)/);
   assert.match(renderRootStripRow, /dx_icon\(DxUiIcon::DropboxProvider\)/);
   assert.match(renderRootStripRow, /this\.open_dx_explorer_storage_root\(path\.clone\(\), window, cx\)/);
+  assert.match(
+    renderRootStripRow,
+    /let available = shortcut\.is_available\(\);[\s\S]*\.when\(available,[\s\S]*\.on_click\(/,
+    "storage root rows must only wire activation for available absolute roots",
+  );
+  assert.match(
+    renderRootStripRow,
+    /\.when\(!available,[\s\S]*cursor_not_allowed\(\)[\s\S]*opacity\(0\.55\)/,
+    "unavailable storage roots must render disabled instead of opening paths",
+  );
   assert.match(openStorageRoot, /open_workspace_for_paths\([\s\S]*OpenMode::Activate,[\s\S]*vec!\[path\]/);
+  assertBefore({
+    body: openStorageRoot,
+    before: /if !path\.is_absolute\(\) \|\| !path\.exists\(\)[\s\S]*return;/,
+    after: /open_workspace_for_paths\([\s\S]*OpenMode::Activate,[\s\S]*vec!\[path\]/,
+    message: "storage root activation must reject relative or missing paths before opening",
+  });
   assert.match(refreshStorageRoots, /storage_root_refresh_generation/);
   assert.match(refreshStorageRoots, /background_spawn\(async move \{[\s\S]*storage_roots::collect_storage_root_shortcuts\(\)/);
   assert.match(refreshStorageRoots, /this\.storage_root_refresh_generation\.get\(\) != generation/);

@@ -1,5 +1,6 @@
 use std::{
     cmp::Ordering,
+    collections::HashMap,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
@@ -9,7 +10,7 @@ use project::{Entry, ProjectEntryId, WorktreeId};
 use crate::utils;
 
 pub(crate) const MAX_PROJECT_PANEL_STORAGE_LARGEST_FILES: usize = 3;
-pub(crate) const MAX_PROJECT_PANEL_STORAGE_ROOT_STRIP_ITEMS: usize = 16;
+pub(crate) const MAX_PROJECT_PANEL_STORAGE_DRILLDOWN_ITEMS: usize = 5;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct FolderStorageFile {
@@ -39,6 +40,10 @@ pub(crate) struct FolderStorageSummary {
 }
 
 impl FolderStorageSummary {
+    pub(crate) fn has_recorded_files(&self) -> bool {
+        self.file_count > 0 || self.file_bytes > 0
+    }
+
     pub(crate) fn record_file(&mut self, entry: &Entry) {
         self.file_count += 1;
         self.file_bytes = self.file_bytes.saturating_add(entry.size);
@@ -96,11 +101,36 @@ pub(crate) struct StorageFolderItem {
     pub worktree_id: WorktreeId,
     pub entry_id: ProjectEntryId,
     pub label: String,
+    pub path_label: String,
     pub file_count: usize,
     pub file_bytes: u64,
     pub latest_modified_at: Option<MTime>,
     pub largest_files: Vec<FolderStorageFile>,
     pub heat_level: u8,
+}
+
+impl StorageFolderItem {
+    pub(crate) fn from_entry(
+        worktree_id: WorktreeId,
+        entry: &Entry,
+        summary: &FolderStorageSummary,
+    ) -> Option<Self> {
+        if !entry.kind.is_dir() || !summary.has_recorded_files() {
+            return None;
+        }
+
+        Some(Self {
+            worktree_id,
+            entry_id: entry.id,
+            label: folder_label(entry),
+            path_label: folder_path_label(entry),
+            file_count: summary.file_count,
+            file_bytes: summary.file_bytes,
+            latest_modified_at: summary.latest_modified_at,
+            largest_files: summary.largest_files.clone(),
+            heat_level: 0,
+        })
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -157,6 +187,60 @@ pub(crate) fn rank_storage_folder_items(
     items
 }
 
+pub(crate) fn storage_overview<'a>(
+    visible_file_count: usize,
+    visible_file_bytes: u64,
+    visible_entries: impl IntoIterator<Item = (WorktreeId, &'a Entry)>,
+    folder_storage_summaries: &HashMap<(WorktreeId, ProjectEntryId), FolderStorageSummary>,
+) -> StorageOverview {
+    let mut overview = StorageOverview {
+        visible_file_count,
+        visible_file_bytes,
+        ..Default::default()
+    };
+
+    for (worktree_id, entry) in visible_entries {
+        overview.record_visible_file(entry);
+
+        if entry.kind.is_dir() {
+            let cache_key = (worktree_id, entry.id);
+            if let Some(summary) = folder_storage_summaries.get(&cache_key)
+                && summary.has_recorded_files()
+            {
+                overview.record_cached_folder(summary);
+            }
+        }
+    }
+
+    overview
+}
+
+pub(crate) fn storage_folder_items<'a>(
+    visible_entries: impl IntoIterator<Item = (WorktreeId, &'a Entry)>,
+    folder_storage_summaries: &HashMap<(WorktreeId, ProjectEntryId), FolderStorageSummary>,
+    storage_sort_mode: StorageSortMode,
+) -> Vec<StorageFolderItem> {
+    let mut items = Vec::new();
+
+    for (worktree_id, entry) in visible_entries {
+        if !entry.kind.is_dir() {
+            continue;
+        }
+
+        let cache_key = (worktree_id, entry.id);
+        let Some(summary) = folder_storage_summaries.get(&cache_key) else {
+            continue;
+        };
+        if let Some(item) = StorageFolderItem::from_entry(worktree_id, entry, summary) {
+            items.push(item);
+        }
+    }
+
+    let mut items = rank_storage_folder_items(items, storage_sort_mode);
+    items.truncate(MAX_PROJECT_PANEL_STORAGE_DRILLDOWN_ITEMS);
+    items
+}
+
 pub(crate) fn storage_heat_level(file_bytes: u64, max_file_bytes: u64) -> u8 {
     if file_bytes == 0 || max_file_bytes == 0 {
         return 0;
@@ -175,6 +259,20 @@ pub(crate) fn heat_label(heat_level: u8) -> &'static str {
         1 => "small",
         _ => "empty",
     }
+}
+
+fn folder_label(entry: &Entry) -> String {
+    utils::bounded_project_panel_label(
+        entry
+            .path
+            .file_name()
+            .map(|name| name.to_string())
+            .unwrap_or_else(|| entry.path.as_unix_str().to_string()),
+    )
+}
+
+fn folder_path_label(entry: &Entry) -> String {
+    utils::bounded_project_panel_label(entry.path.as_unix_str().to_string())
 }
 
 pub(crate) fn format_modified_label(mtime: Option<MTime>) -> Option<String> {

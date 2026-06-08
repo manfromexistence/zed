@@ -114,8 +114,8 @@ const MAX_PROJECT_PANEL_STICKY_PARENTS: usize = 128;
 const MAX_PROJECT_PANEL_SIBLING_ENTRIES: usize = 20_000;
 const MAX_PROJECT_PANEL_BACKGROUND_MEDIA_PREVIEW_FOLDERS: usize = 256;
 const MAX_PROJECT_PANEL_BACKGROUND_FOLDER_STORAGE_DIRS: usize = 4_096;
-const MAX_PROJECT_PANEL_STORAGE_DRILLDOWN_ITEMS: usize = 5;
-
+const MAX_PROJECT_PANEL_FOLDER_STORAGE_SUMMARY_CACHE: usize = 4_096;
+const MAX_PROJECT_PANEL_FOLDER_STORAGE_CHILD_FILES: usize = 512;
 fn project_panel_cap_hit(boundary: &'static str, cap: usize) {
     telemetry::event!(
         "Project Panel Materialization Capped",
@@ -3442,6 +3442,7 @@ impl ProjectPanel {
 
             let item_count = paste_tasks.len();
             let workspace = self.workspace.clone();
+            let original_cut_entries = clip_is_cut.then(|| clipboard_entries.items().clone());
 
             cx.spawn_in(window, async move |project_panel, mut cx| {
                 let mut last_succeed = None;
@@ -3474,9 +3475,18 @@ impl ProjectPanel {
                 project_panel
                     .update(cx, |this, cx| {
                         if completed_cut_paste {
-                            this.clipboard =
-                                this.clipboard.take().map(ClipboardEntry::into_copy_entry);
-                            cx.notify();
+                            if let Some(cut_entries) =
+                                original_cut_entries.as_ref().filter(|cut_entries| {
+                                    matches!(
+                                        this.clipboard.as_ref(),
+                                        Some(ClipboardEntry::Cut(current_entries))
+                                            if current_entries == *cut_entries
+                                    )
+                                })
+                            {
+                                this.clipboard = Some(ClipboardEntry::Copied(cut_entries.clone()));
+                                cx.notify();
+                            }
                         }
                         this.undo_manager.record(changes).log_err();
                     })
@@ -4193,83 +4203,13 @@ impl ProjectPanel {
         }
     }
 
-    fn dx_explorer_storage_overview(
-        state: &State,
-        folder_storage_summaries: &HashMap<
-            (WorktreeId, ProjectEntryId),
-            storage::FolderStorageSummary,
-        >,
-    ) -> storage::StorageOverview {
-        let visible_summary = state.dx_explorer_visible_summary;
-        let mut overview = storage::StorageOverview {
-            visible_file_count: visible_summary.file_count,
-            visible_file_bytes: visible_summary.file_bytes,
-            ..Default::default()
-        };
-
-        for visible_worktree in &state.visible_entries {
-            for entry in &visible_worktree.entries {
-                overview.record_visible_file(entry.as_ref());
-
-                if entry.kind.is_dir() {
-                    let cache_key = (visible_worktree.worktree_id, entry.id);
-                    if let Some(summary) = folder_storage_summaries.get(&cache_key)
-                        && (summary.file_count > 0 || summary.file_bytes > 0)
-                    {
-                        overview.record_cached_folder(summary);
-                    }
-                }
-            }
-        }
-
-        overview
-    }
-
-    fn dx_explorer_storage_drilldown_items(
-        state: &State,
-        folder_storage_summaries: &HashMap<
-            (WorktreeId, ProjectEntryId),
-            storage::FolderStorageSummary,
-        >,
-        storage_sort_mode: storage::StorageSortMode,
-    ) -> Vec<storage::StorageFolderItem> {
-        let mut items = Vec::new();
-
-        for visible_worktree in &state.visible_entries {
-            for entry in &visible_worktree.entries {
-                if !entry.kind.is_dir() {
-                    continue;
-                }
-
-                let cache_key = (visible_worktree.worktree_id, entry.id);
-                let Some(summary) = folder_storage_summaries.get(&cache_key) else {
-                    continue;
-                };
-                if summary.file_count == 0 && summary.file_bytes == 0 {
-                    continue;
-                }
-
-                let label = entry
-                    .path
-                    .file_name()
-                    .map(|name| name.to_string())
-                    .unwrap_or_else(|| entry.path.as_unix_str().to_string());
-                items.push(storage::StorageFolderItem {
-                    worktree_id: visible_worktree.worktree_id,
-                    entry_id: entry.id,
-                    label,
-                    file_count: summary.file_count,
-                    file_bytes: summary.file_bytes,
-                    latest_modified_at: summary.latest_modified_at,
-                    largest_files: summary.largest_files.clone(),
-                    heat_level: 0,
-                });
-            }
-        }
-
-        let mut items = storage::rank_storage_folder_items(items, storage_sort_mode);
-        items.truncate(MAX_PROJECT_PANEL_STORAGE_DRILLDOWN_ITEMS);
-        items
+    fn visible_storage_entries(state: &State) -> impl Iterator<Item = (WorktreeId, &Entry)> + '_ {
+        state.visible_entries.iter().flat_map(|visible_worktree| {
+            visible_worktree
+                .entries
+                .iter()
+                .map(move |entry| (visible_worktree.worktree_id, entry.as_ref()))
+        })
     }
 
     fn dx_explorer_count_label(value: usize, singular: &str, plural: &str) -> String {
@@ -4435,10 +4375,14 @@ impl ProjectPanel {
             .collect::<Vec<_>>();
         let bar_width = px(12. + f32::from(item.heat_level.max(1)) * 8.);
         let tooltip = if largest_files.is_empty() {
-            format!("{file_count} / {storage_label} / {heat_label}")
+            format!(
+                "{} / {file_count} / {storage_label} / {heat_label}",
+                item.path_label
+            )
         } else {
             format!(
-                "{file_count} / {storage_label} / {heat_label} / Largest: {}",
+                "{} / {file_count} / {storage_label} / {heat_label} / Largest: {}",
+                item.path_label,
                 largest_files.join(" / ")
             )
         };
@@ -4962,18 +4906,12 @@ impl ProjectPanel {
         selected_count: usize,
         is_read_only: bool,
         is_remote: bool,
-        has_external_paste_paths: bool,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        let clipboard_operation = if has_external_paste_paths {
-            None
-        } else {
-            self.clipboard_operation_summary()
-        };
+        let clipboard_operation = self.clipboard_operation_summary();
         let clipboard_operation_for_status = clipboard_operation;
         let clipboard_operation_for_paste = clipboard_operation;
-        let can_paste_to_selection =
-            has_external_paste_paths || clipboard_operation_for_paste.is_some();
+        let can_paste_to_selection = clipboard_operation_for_paste.is_some();
         let paste_tooltip = clipboard_operation_for_paste
             .map(|operation| operation.mode.paste_tooltip())
             .unwrap_or("Paste files here");
@@ -5512,6 +5450,52 @@ impl ProjectPanel {
         self.clear_dx_explorer_media_caches();
     }
 
+    fn visible_folder_storage_summary_keys(state: &State) -> HashSet<(WorktreeId, ProjectEntryId)> {
+        let mut keys = HashSet::default();
+        for visible_worktree in &state.visible_entries {
+            for entry in &visible_worktree.entries {
+                if !entry.kind.is_dir() {
+                    continue;
+                }
+                if keys.len() >= MAX_PROJECT_PANEL_FOLDER_STORAGE_SUMMARY_CACHE {
+                    project_panel_cap_hit(
+                        "folder-storage-summary-cache",
+                        MAX_PROJECT_PANEL_FOLDER_STORAGE_SUMMARY_CACHE,
+                    );
+                    return keys;
+                }
+                keys.insert((visible_worktree.worktree_id, entry.id));
+            }
+        }
+        keys
+    }
+
+    fn cached_folder_storage_summaries_for_keys(
+        &self,
+        visible_folder_keys: &HashSet<(WorktreeId, ProjectEntryId)>,
+    ) -> HashMap<(WorktreeId, ProjectEntryId), storage::FolderStorageSummary> {
+        let folder_storage_summaries = self.folder_storage_summaries.borrow();
+        visible_folder_keys
+            .iter()
+            .filter_map(|key| {
+                folder_storage_summaries
+                    .get(key)
+                    .cloned()
+                    .map(|summary| (*key, summary))
+            })
+            .collect()
+    }
+
+    fn retain_visible_folder_storage_summaries(
+        folder_storage_summaries: &mut HashMap<
+            (WorktreeId, ProjectEntryId),
+            storage::FolderStorageSummary,
+        >,
+        visible_folder_keys: &HashSet<(WorktreeId, ProjectEntryId)>,
+    ) {
+        folder_storage_summaries.retain(|cache_key, _| visible_folder_keys.contains(cache_key));
+    }
+
     fn update_visible_entries(
         &mut self,
         new_selected_entry: Option<(WorktreeId, ProjectEntryId)>,
@@ -5560,7 +5544,10 @@ impl ProjectPanel {
             .keys()
             .copied()
             .collect::<HashSet<_>>();
-        let cached_folder_storage_summaries = self.folder_storage_summaries.borrow().clone();
+        let visible_folder_storage_summary_keys =
+            Self::visible_folder_storage_summary_keys(&self.state);
+        let cached_folder_storage_summaries =
+            self.cached_folder_storage_summaries_for_keys(&visible_folder_storage_summary_keys);
         let cached_folder_storage_summary_keys = cached_folder_storage_summaries
             .keys()
             .copied()
@@ -5602,6 +5589,7 @@ impl ProjectPanel {
                     let mut folder_storage_summary_updates = Vec::new();
                     let mut media_preview_background_cap_reported = false;
                     let mut folder_storage_background_cap_reported = false;
+                    let mut folder_storage_child_cap_reported = false;
                     let mut folder_storage_summary_cache = cached_folder_storage_summaries;
                     for worktree_snapshot in visible_worktrees {
                         if visible_entries_total >= MAX_PROJECT_PANEL_VISIBLE_ENTRIES {
@@ -5729,6 +5717,7 @@ impl ProjectPanel {
                                     < MAX_PROJECT_PANEL_BACKGROUND_FOLDER_STORAGE_DIRS
                                 {
                                     let mut summary = storage::FolderStorageSummary::default();
+                                    let mut child_file_count = 0usize;
                                     for child in worktree_snapshot
                                         .child_entries_with_options(
                                             &entry.path,
@@ -5740,7 +5729,20 @@ impl ProjectPanel {
                                         )
                                         .filter(|child| !hide_hidden || !child.is_hidden)
                                     {
+                                        if child_file_count
+                                            >= MAX_PROJECT_PANEL_FOLDER_STORAGE_CHILD_FILES
+                                        {
+                                            if !folder_storage_child_cap_reported {
+                                                folder_storage_child_cap_reported = true;
+                                                project_panel_cap_hit(
+                                                    "folder-storage-child-files",
+                                                    MAX_PROJECT_PANEL_FOLDER_STORAGE_CHILD_FILES,
+                                                );
+                                            }
+                                            break;
+                                        }
                                         summary.record_file(child.entry);
+                                        child_file_count += 1;
                                     }
                                     folder_storage_summary_updates.push((cache_key, summary));
                                 } else if !folder_storage_background_cap_reported {
@@ -6024,27 +6026,34 @@ impl ProjectPanel {
                             .entry(*cache_key)
                             .or_insert_with(|| summary.clone());
                     }
-                    new_state.dx_explorer_storage_overview =
-                        Self::dx_explorer_storage_overview(
-                            &new_state,
-                            &folder_storage_summary_cache,
-                        );
-                    new_state.dx_explorer_storage_drilldown =
-                        Self::dx_explorer_storage_drilldown_items(
-                            &new_state,
-                            &folder_storage_summary_cache,
-                            storage_sort_mode,
-                        );
+                    let visible_summary = new_state.dx_explorer_visible_summary;
+                    new_state.dx_explorer_storage_overview = storage::storage_overview(
+                        visible_summary.file_count,
+                        visible_summary.file_bytes,
+                        Self::visible_storage_entries(&new_state),
+                        &folder_storage_summary_cache,
+                    );
+                    new_state.dx_explorer_storage_drilldown = storage::storage_folder_items(
+                        Self::visible_storage_entries(&new_state),
+                        &folder_storage_summary_cache,
+                        storage_sort_mode,
+                    );
                     (new_state, media_preview_updates, folder_storage_summary_updates)
                 })
                 .await;
             this.update_in(cx, |this, window, cx| {
-                if !folder_storage_summary_updates.is_empty() {
+                let visible_folder_storage_summary_keys =
+                    Self::visible_folder_storage_summary_keys(&new_state);
+                {
                     let mut folder_storage_summaries =
                         this.folder_storage_summaries.borrow_mut();
                     for (cache_key, summary) in folder_storage_summary_updates {
                         folder_storage_summaries.entry(cache_key).or_insert(summary);
                     }
+                    Self::retain_visible_folder_storage_summaries(
+                        &mut folder_storage_summaries,
+                        &visible_folder_storage_summary_keys,
+                    );
                 }
                 if !media_preview_updates.is_empty()
                     && this.media_preview_cache_generation.get() == media_preview_cache_generation
@@ -8994,14 +9003,7 @@ impl Render for ProjectPanel {
         let selected_entries_toolbar = (selected_entry_count > 0
             && self.state.edit_state.is_none())
         .then(|| {
-            let has_external_paste_paths = self.external_paths_from_system_clipboard(cx).is_some();
-            self.render_selected_entries_toolbar(
-                selected_entry_count,
-                is_read_only,
-                is_remote,
-                has_external_paste_paths,
-                cx,
-            )
+            self.render_selected_entries_toolbar(selected_entry_count, is_read_only, is_remote, cx)
         });
         let active_media_preview = (has_worktree && is_local_or_wsl)
             .then(|| self.top_folder_media_preview(cx))
@@ -9877,13 +9879,6 @@ impl ClipboardEntry {
     fn items(&self) -> &BTreeSet<SelectedEntry> {
         match self {
             ClipboardEntry::Copied(entries) | ClipboardEntry::Cut(entries) => entries,
-        }
-    }
-
-    fn into_copy_entry(self) -> Self {
-        match self {
-            ClipboardEntry::Copied(_) => self,
-            ClipboardEntry::Cut(entries) => ClipboardEntry::Copied(entries),
         }
     }
 }
