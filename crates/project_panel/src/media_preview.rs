@@ -292,7 +292,7 @@ pub(crate) fn render_folder_media_shelf(
                     h_flex()
                         .gap_1()
                         .items_center()
-                        .child(Icon::new(IconName::Blocks).size(IconSize::XSmall))
+                        .child(Icon::new(dx_icon(DxUiIcon::Media)).size(IconSize::XSmall))
                         .child(
                             Label::new("Media")
                                 .size(LabelSize::Small)

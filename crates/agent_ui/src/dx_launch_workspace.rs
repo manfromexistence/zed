@@ -225,7 +225,7 @@ impl Render for DxLaunchDiagnosticsMenu {
             ))
             .child(section_title("Launch Audit", IconName::Sparkle))
             .child(audit::launch_audit_state(&self.status.launch_audit, cx))
-            .child(section_title("Source Audit", IconName::Book))
+            .child(section_title("Source Audit", dx_icon(DxUiIcon::Source)))
             .child(source_audit::launch_source_audit_state(
                 &self.status.source_audit,
                 cx,
@@ -533,7 +533,7 @@ fn rail_section(
 fn diagnostics_menu(status: DxLaunchWorkspaceStatus) -> AnyElement {
     PopoverMenu::new("dx-launch-diagnostics-trigger")
         .trigger_with_tooltip(
-            IconButton::new("dx-launch-diagnostics-button", dx_icon(DxUiIcon::Source))
+            IconButton::new("dx-launch-diagnostics-button", dx_icon(DxUiIcon::Settings))
                 .icon_size(IconSize::Small)
                 .icon_color(Color::Muted),
             Tooltip::text("Open diagnostics"),

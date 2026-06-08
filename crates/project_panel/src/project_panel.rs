@@ -1,5 +1,7 @@
 mod media_preview;
 pub mod project_panel_settings;
+mod storage;
+mod storage_roots;
 mod undo;
 mod utils;
 
@@ -90,6 +92,7 @@ use crate::{
     project_panel_settings::ProjectPanelScrollbarProxy,
     undo::{Change, UndoManager},
 };
+use storage::StorageSortMode;
 
 const PROJECT_PANEL_KEY: &str = "ProjectPanel";
 const NEW_ENTRY_ID: ProjectEntryId = ProjectEntryId::MAX;
@@ -235,29 +238,6 @@ impl DxExplorerVisibleSummary {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-struct FolderStorageSummary {
-    file_count: usize,
-    file_bytes: u64,
-}
-
-impl FolderStorageSummary {
-    fn record_file(&mut self, size: u64) {
-        self.file_count += 1;
-        self.file_bytes = self.file_bytes.saturating_add(size);
-    }
-}
-
-#[derive(Clone)]
-struct DxExplorerStorageDrilldownItem {
-    worktree_id: WorktreeId,
-    entry_id: ProjectEntryId,
-    label: String,
-    file_count: usize,
-    file_bytes: u64,
-    heat_level: u8,
-}
-
 struct State {
     last_worktree_root_id: Option<ProjectEntryId>,
     /// Maps from leaf project entry ID to the currently selected ancestor.
@@ -271,7 +251,8 @@ struct State {
     unfolded_dir_ids: HashSet<ProjectEntryId>,
     expanded_dir_ids: HashMap<WorktreeId, Vec<ProjectEntryId>>,
     dx_explorer_visible_summary: DxExplorerVisibleSummary,
-    dx_explorer_storage_drilldown: Vec<DxExplorerStorageDrilldownItem>,
+    dx_explorer_storage_overview: storage::StorageOverview,
+    dx_explorer_storage_drilldown: Vec<storage::StorageFolderItem>,
 }
 
 impl State {
@@ -293,6 +274,7 @@ impl State {
             unfolded_dir_ids: old.unfolded_dir_ids.clone(),
             expanded_dir_ids: old.expanded_dir_ids.clone(),
             dx_explorer_visible_summary: Default::default(),
+            dx_explorer_storage_overview: Default::default(),
             dx_explorer_storage_drilldown: Vec::new(),
         }
     }
@@ -326,7 +308,12 @@ pub struct ProjectPanel {
     mouse_down: bool,
     hover_expand_task: Option<Task<()>>,
     previous_drag_position: Option<Point<Pixels>>,
-    folder_storage_summaries: RefCell<HashMap<(WorktreeId, ProjectEntryId), FolderStorageSummary>>,
+    folder_storage_summaries:
+        RefCell<HashMap<(WorktreeId, ProjectEntryId), storage::FolderStorageSummary>>,
+    storage_root_shortcuts: Vec<storage_roots::StorageRootShortcut>,
+    storage_root_refresh_generation: Cell<u64>,
+    storage_root_refresh_task: Task<()>,
+    storage_sort_mode: storage::StorageSortMode,
     generated_media_metadata:
         RefCell<HashMap<(WorktreeId, ProjectEntryId), media_preview::GeneratedMediaMetadataIndex>>,
     media_metadata_generation_tasks: RefCell<HashMap<(WorktreeId, ProjectEntryId), Task<()>>>,
@@ -466,7 +453,7 @@ impl DiagnosticCount {
 struct EntryDetails {
     filename: String,
     size: u64,
-    folder_storage_summary: Option<FolderStorageSummary>,
+    folder_storage_summary: Option<storage::FolderStorageSummary>,
     media_preview: Option<media_preview::FolderMediaPreview>,
     icon: Option<SharedString>,
     path: Arc<RelPath>,
@@ -1063,6 +1050,10 @@ impl ProjectPanel {
                 hover_expand_task: None,
                 previous_drag_position: None,
                 folder_storage_summaries: Default::default(),
+                storage_root_shortcuts: Vec::new(),
+                storage_root_refresh_generation: Cell::new(0),
+                storage_root_refresh_task: Task::ready(()),
+                storage_sort_mode: storage::StorageSortMode::default(),
                 generated_media_metadata: Default::default(),
                 media_metadata_generation_tasks: Default::default(),
                 folder_media_previews: Default::default(),
@@ -1079,11 +1070,13 @@ impl ProjectPanel {
                     expanded_dir_ids: Default::default(),
                     unfolded_dir_ids: Default::default(),
                     dx_explorer_visible_summary: Default::default(),
+                    dx_explorer_storage_overview: Default::default(),
                     dx_explorer_storage_drilldown: Default::default(),
                 },
                 update_visible_entries_task: Default::default(),
                 undo_manager: UndoManager::new(workspace.weak_handle(), weak_project_panel, &cx),
             };
+            this.refresh_dx_explorer_storage_roots(cx);
             this.update_visible_entries(None, false, false, window, cx);
 
             this
@@ -4171,10 +4164,43 @@ impl ProjectPanel {
         }
     }
 
+    fn dx_explorer_storage_overview(
+        state: &State,
+        folder_storage_summaries: &HashMap<
+            (WorktreeId, ProjectEntryId),
+            storage::FolderStorageSummary,
+        >,
+    ) -> storage::StorageOverview {
+        let visible_summary = state.dx_explorer_visible_summary;
+        let mut overview = storage::StorageOverview {
+            visible_file_count: visible_summary.file_count,
+            visible_file_bytes: visible_summary.file_bytes,
+            ..Default::default()
+        };
+
+        for visible_worktree in &state.visible_entries {
+            for entry in &visible_worktree.entries {
+                overview.record_visible_file(entry.as_ref());
+            }
+        }
+
+        for summary in folder_storage_summaries.values() {
+            if summary.file_count > 0 || summary.file_bytes > 0 {
+                overview.record_cached_folder(summary);
+            }
+        }
+
+        overview
+    }
+
     fn dx_explorer_storage_drilldown_items(
         state: &State,
-        folder_storage_summaries: &HashMap<(WorktreeId, ProjectEntryId), FolderStorageSummary>,
-    ) -> Vec<DxExplorerStorageDrilldownItem> {
+        folder_storage_summaries: &HashMap<
+            (WorktreeId, ProjectEntryId),
+            storage::FolderStorageSummary,
+        >,
+        storage_sort_mode: storage::StorageSortMode,
+    ) -> Vec<storage::StorageFolderItem> {
         let mut items = Vec::new();
 
         for visible_worktree in &state.visible_entries {
@@ -4184,7 +4210,7 @@ impl ProjectPanel {
                 }
 
                 let cache_key = (visible_worktree.worktree_id, entry.id);
-                let Some(summary) = folder_storage_summaries.get(&cache_key).copied() else {
+                let Some(summary) = folder_storage_summaries.get(&cache_key) else {
                     continue;
                 };
                 if summary.file_count == 0 && summary.file_bytes == 0 {
@@ -4196,34 +4222,21 @@ impl ProjectPanel {
                     .file_name()
                     .map(|name| name.to_string())
                     .unwrap_or_else(|| entry.path.as_unix_str().to_string());
-                items.push(DxExplorerStorageDrilldownItem {
+                items.push(storage::StorageFolderItem {
                     worktree_id: visible_worktree.worktree_id,
                     entry_id: entry.id,
                     label,
                     file_count: summary.file_count,
                     file_bytes: summary.file_bytes,
+                    latest_modified_at: summary.latest_modified_at,
+                    largest_files: summary.largest_files.clone(),
                     heat_level: 0,
                 });
             }
         }
 
-        items.sort_by(|left, right| {
-            right
-                .file_bytes
-                .cmp(&left.file_bytes)
-                .then_with(|| right.file_count.cmp(&left.file_count))
-                .then_with(|| left.label.cmp(&right.label))
-        });
+        let mut items = storage::rank_storage_folder_items(items, storage_sort_mode);
         items.truncate(MAX_PROJECT_PANEL_STORAGE_DRILLDOWN_ITEMS);
-
-        let max_file_bytes = items
-            .first()
-            .map(|item| item.file_bytes)
-            .unwrap_or_default();
-        for item in &mut items {
-            item.heat_level = dx_explorer_storage_heat_level(item.file_bytes, max_file_bytes);
-        }
-
         items
     }
 
@@ -4244,8 +4257,10 @@ impl ProjectPanel {
     }
 
     fn render_dx_explorer_storage_drilldown(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let overview = self.state.dx_explorer_storage_overview.clone();
         let items = self.state.dx_explorer_storage_drilldown.clone();
-        if items.is_empty() {
+        if items.is_empty() && overview.visible_file_count == 0 && overview.cached_folder_count == 0
+        {
             return None;
         }
 
@@ -4253,6 +4268,38 @@ impl ProjectPanel {
             .into_iter()
             .map(|item| self.render_dx_explorer_storage_drilldown_row(item, cx))
             .collect::<Vec<_>>();
+        let sort_mode = self.storage_sort_mode;
+        let panel = cx.entity().downgrade();
+        let mut metrics = Vec::new();
+        if overview.visible_file_count > 0 {
+            metrics.push(Self::render_dx_explorer_metric(
+                Self::dx_explorer_count_label(
+                    overview.visible_file_count,
+                    "visible file",
+                    "visible files",
+                ),
+            ));
+            metrics.push(Self::render_dx_explorer_metric(format!(
+                "{} visible",
+                format_file_size(overview.visible_file_bytes)
+            )));
+        }
+        if overview.cached_direct_file_count > 0 {
+            metrics.push(Self::render_dx_explorer_metric(
+                Self::dx_explorer_count_label(
+                    overview.cached_direct_file_count,
+                    "cached child file",
+                    "cached child files",
+                ),
+            ));
+            metrics.push(Self::render_dx_explorer_metric(format!(
+                "{} cached",
+                format_file_size(overview.cached_direct_file_bytes)
+            )));
+        }
+        if let Some(modified_label) = storage::format_modified_label(overview.latest_modified_at) {
+            metrics.push(Self::render_dx_explorer_metric(modified_label));
+        }
 
         Some(
             v_flex()
@@ -4267,16 +4314,65 @@ impl ProjectPanel {
                 .child(
                     h_flex()
                         .items_center()
-                        .gap_1()
+                        .justify_between()
+                        .gap_2()
                         .child(
-                            Icon::new(dx_icon(DxUiIcon::Storage))
-                                .size(IconSize::XSmall)
-                                .color(Color::Muted),
+                            h_flex()
+                                .min_w_0()
+                                .items_center()
+                                .gap_1()
+                                .child(
+                                    Icon::new(dx_icon(DxUiIcon::Storage))
+                                        .size(IconSize::XSmall)
+                                        .color(Color::Muted),
+                                )
+                                .child(
+                                    Label::new("Folder files")
+                                        .size(LabelSize::XSmall)
+                                        .color(Color::Muted),
+                                )
+                                .children(metrics),
                         )
                         .child(
-                            Label::new("Folder storage")
-                                .size(LabelSize::XSmall)
-                                .color(Color::Muted),
+                            PopoverMenu::new("dx-explorer-storage-sort-menu")
+                                .trigger_with_tooltip(
+                                    IconButton::new(
+                                        "dx-explorer-storage-sort-button",
+                                        IconName::ListFilter,
+                                    )
+                                    .icon_size(IconSize::Small)
+                                    .icon_color(Color::Muted),
+                                    Tooltip::text(format!("Sort by {}", sort_mode.label())),
+                                )
+                                .anchor(gpui::Anchor::TopRight)
+                                .menu(move |window, cx| {
+                                    let panel = panel.clone();
+                                    Some(ContextMenu::build(
+                                        window,
+                                        cx,
+                                        move |menu, _window, _cx| {
+                                            StorageSortMode::ALL.into_iter().fold(
+                                                menu.header("Sort Folders"),
+                                                |menu, mode| {
+                                                    let panel = panel.clone();
+                                                    let label = mode.label();
+                                                    menu.entry(label, None, move |_window, cx| {
+                                                        panel
+                                                            .update_in(cx, |this, window, cx| {
+                                                                this.storage_sort_mode = mode;
+                                                                this.update_visible_entries(
+                                                                    None, false, false, window, cx,
+                                                                );
+                                                                cx.notify();
+                                                            })
+                                                            .log_err();
+                                                    })
+                                                },
+                                            )
+                                        },
+                                    ))
+                                })
+                                .into_any_element(),
                         ),
                 )
                 .children(rows)
@@ -4286,7 +4382,7 @@ impl ProjectPanel {
 
     fn render_dx_explorer_storage_drilldown_row(
         &self,
-        item: DxExplorerStorageDrilldownItem,
+        item: storage::StorageFolderItem,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let target = SelectedEntry {
@@ -4297,6 +4393,12 @@ impl ProjectPanel {
         let heat_color = dx_explorer_storage_heat_color(item.heat_level, cx);
         let file_count = Self::dx_explorer_count_label(item.file_count, "file", "files");
         let storage_label = format_file_size(item.file_bytes);
+        let modified_label = storage::format_modified_label(item.latest_modified_at);
+        let largest_files = item
+            .largest_files
+            .iter()
+            .map(|file| format!("{} {}", file.label, format_file_size(file.file_bytes)))
+            .collect::<Vec<_>>();
         let bar_width = px(12. + f32::from(item.heat_level.max(1)) * 8.);
 
         h_flex()
@@ -4349,6 +4451,22 @@ impl ProjectPanel {
                     .truncate(),
             )
             .child(div().flex_1())
+            .when_some(modified_label, |this, modified_label| {
+                this.child(
+                    Label::new(modified_label)
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted)
+                        .truncate(),
+                )
+            })
+            .when(!largest_files.is_empty(), |this| {
+                this.child(
+                    Label::new(largest_files.join(" / "))
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted)
+                        .truncate(),
+                )
+            })
             .child(
                 Label::new(format!("{file_count} / {storage_label}"))
                     .size(LabelSize::XSmall)
@@ -4356,6 +4474,165 @@ impl ProjectPanel {
                     .truncate(),
             )
             .into_any_element()
+    }
+
+    fn render_dx_explorer_storage_root_strip(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let shortcuts = self.storage_root_shortcuts.clone();
+        if shortcuts.is_empty() {
+            return None;
+        }
+
+        let rows = shortcuts
+            .into_iter()
+            .map(|shortcut| self.render_dx_explorer_storage_root_strip_row(shortcut, cx))
+            .collect::<Vec<_>>();
+
+        Some(
+            v_flex()
+                .id("dx-explorer-storage-root-strip")
+                .w_full()
+                .gap_1()
+                .px_2()
+                .py_1()
+                .border_b_1()
+                .border_color(cx.theme().colors().border.opacity(0.6))
+                .bg(cx.theme().colors().panel_background)
+                .child(
+                    h_flex()
+                        .items_center()
+                        .gap_1()
+                        .child(
+                            Icon::new(dx_icon(DxUiIcon::Storage))
+                                .size(IconSize::XSmall)
+                                .color(Color::Muted),
+                        )
+                        .child(
+                            Label::new("Storage roots")
+                                .size(LabelSize::XSmall)
+                                .color(Color::Muted),
+                        ),
+                )
+                .child(
+                    div()
+                        .w_full()
+                        .overflow_x_scroll()
+                        .child(h_flex().gap_1().children(rows)),
+                )
+                .into_any_element(),
+        )
+    }
+
+    fn render_dx_explorer_storage_root_strip_row(
+        &self,
+        shortcut: storage_roots::StorageRootShortcut,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let icon = match shortcut.kind {
+            storage_roots::StorageRootKind::Drive => dx_icon(DxUiIcon::Storage),
+            storage_roots::StorageRootKind::DxHub => dx_icon(DxUiIcon::Source),
+            storage_roots::StorageRootKind::OneDrive => dx_icon(DxUiIcon::CloudStorage),
+            storage_roots::StorageRootKind::GoogleDrive => dx_icon(DxUiIcon::DriveProvider),
+            storage_roots::StorageRootKind::Dropbox => dx_icon(DxUiIcon::DropboxProvider),
+        };
+        let path = shortcut.path.clone();
+        let available = shortcut.is_available();
+        let tooltip = shortcut.tooltip.clone();
+        let capacity_label = shortcut.capacity.as_ref().map(|capacity| {
+            format!(
+                "{} free / {}",
+                format_file_size(capacity.available_bytes),
+                format_file_size(capacity.total_bytes)
+            )
+        });
+
+        h_flex()
+            .id(SharedString::from(format!(
+                "dx-explorer-storage-root-{}",
+                shortcut.id
+            )))
+            .flex_none()
+            .items_center()
+            .gap_1()
+            .px_1()
+            .py_0p5()
+            .rounded_sm()
+            .border_1()
+            .border_color(cx.theme().colors().border_variant.opacity(0.5))
+            .bg(cx.theme().colors().element_background.opacity(0.35))
+            .tooltip(move |_window, cx| {
+                Tooltip::with_meta("Storage root", None, tooltip.clone(), cx)
+            })
+            .when(available, |this| {
+                this.cursor_pointer()
+                    .hover(|style| style.bg(cx.theme().colors().element_hover.opacity(0.6)))
+                    .on_click(cx.listener(move |this, _, window, cx| {
+                        this.open_dx_explorer_storage_root(path.clone(), window, cx);
+                    }))
+            })
+            .when(!available, |this| this.cursor_not_allowed().opacity(0.55))
+            .child(Icon::new(icon).size(IconSize::XSmall).color(if available {
+                Color::Muted
+            } else {
+                Color::Disabled
+            }))
+            .child(
+                Label::new(shortcut.label)
+                    .size(LabelSize::XSmall)
+                    .color(if available {
+                        Color::Default
+                    } else {
+                        Color::Muted
+                    })
+                    .single_line(),
+            )
+            .when_some(capacity_label, |this, capacity_label| {
+                this.child(
+                    Label::new(capacity_label)
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted)
+                        .single_line(),
+                )
+            })
+            .into_any_element()
+    }
+
+    fn refresh_dx_explorer_storage_roots(&mut self, cx: &mut Context<Self>) {
+        let generation = self.storage_root_refresh_generation.get().saturating_add(1);
+        self.storage_root_refresh_generation.set(generation);
+        self.storage_root_refresh_task = cx.spawn(async move |this, cx| {
+            let shortcuts = cx
+                .background_spawn(async move { storage_roots::collect_storage_root_shortcuts() })
+                .await;
+            this.update(cx, move |this, cx| {
+                if this.storage_root_refresh_generation.get() != generation {
+                    return;
+                }
+                this.storage_root_shortcuts = shortcuts;
+                cx.notify();
+            })
+            .log_err();
+        });
+    }
+
+    fn open_dx_explorer_storage_root(
+        &self,
+        path: PathBuf,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if !path.is_absolute() || !path.exists() {
+            return;
+        }
+
+        if let Some(task) = self
+            .workspace
+            .update(cx, |workspace, cx| {
+                workspace.open_workspace_for_paths(OpenMode::Activate, vec![path], window, cx)
+            })
+            .log_err()
+        {
+            task.detach_and_log_err(cx);
+        }
     }
 
     fn render_dx_explorer_header(
@@ -5166,6 +5443,7 @@ impl ProjectPanel {
             .keys()
             .copied()
             .collect::<HashSet<_>>();
+        let storage_sort_mode = self.storage_sort_mode;
         let generated_media_metadata = self.generated_media_metadata.borrow().clone();
         let media_preview_cache_generation = self.media_preview_cache_generation.get();
         let project = self.project.read(cx);
@@ -5328,7 +5606,7 @@ impl ProjectPanel {
                                 if folder_storage_summary_updates.len()
                                     < MAX_PROJECT_PANEL_BACKGROUND_FOLDER_STORAGE_DIRS
                                 {
-                                    let mut summary = FolderStorageSummary::default();
+                                    let mut summary = storage::FolderStorageSummary::default();
                                     for child in worktree_snapshot
                                         .child_entries_with_options(
                                             &entry.path,
@@ -5340,7 +5618,7 @@ impl ProjectPanel {
                                         )
                                         .filter(|child| !hide_hidden || !child.is_hidden)
                                     {
-                                        summary.record_file(child.size);
+                                        summary.record_file(child.entry);
                                     }
                                     folder_storage_summary_updates.push((cache_key, summary));
                                 } else if !folder_storage_background_cap_reported {
@@ -5622,12 +5900,18 @@ impl ProjectPanel {
                     for (cache_key, summary) in &folder_storage_summary_updates {
                         folder_storage_summary_cache
                             .entry(*cache_key)
-                            .or_insert(*summary);
+                            .or_insert_with(|| summary.clone());
                     }
+                    new_state.dx_explorer_storage_overview =
+                        Self::dx_explorer_storage_overview(
+                            &new_state,
+                            &folder_storage_summary_cache,
+                        );
                     new_state.dx_explorer_storage_drilldown =
                         Self::dx_explorer_storage_drilldown_items(
                             &new_state,
                             &folder_storage_summary_cache,
+                            storage_sort_mode,
                         );
                     (new_state, media_preview_updates, folder_storage_summary_updates)
                 })
@@ -6746,7 +7030,7 @@ impl ProjectPanel {
         &self,
         kind: EntryKind,
         size: u64,
-        folder_storage_summary: Option<FolderStorageSummary>,
+        folder_storage_summary: Option<storage::FolderStorageSummary>,
         _absolute_path: &Path,
         cx: &App,
     ) -> AnyElement {
@@ -7743,12 +8027,12 @@ impl ProjectPanel {
         &self,
         worktree_id: WorktreeId,
         entry_id: ProjectEntryId,
-    ) -> Option<FolderStorageSummary> {
+    ) -> Option<storage::FolderStorageSummary> {
         let cache_key = (worktree_id, entry_id);
         self.folder_storage_summaries
             .borrow()
             .get(&cache_key)
-            .copied()
+            .cloned()
     }
 
     fn active_media_folder_for_selection(&self, cx: &App) -> Option<ActiveMediaFolder> {
@@ -8788,6 +9072,10 @@ impl Render for ProjectPanel {
                             is_read_only,
                             cx,
                         ))
+                        .when_some(
+                            self.render_dx_explorer_storage_root_strip(cx),
+                            |this, root_strip| this.child(root_strip),
+                        )
                         .map(|this| {
                             if let Some(toolbar) = selected_entries_toolbar {
                                 this.child(toolbar)
@@ -8795,10 +9083,6 @@ impl Render for ProjectPanel {
                                 this
                             }
                         })
-                        .when_some(
-                            self.render_dx_explorer_storage_drilldown(cx),
-                            |this, drilldown| this.child(drilldown),
-                        )
                         .when(show_active_media_preview, |this| {
                             this.when_some(active_media_preview, |this, media_preview| {
                                 let (active_media_folder, media_preview) = media_preview;
@@ -8843,6 +9127,10 @@ impl Render for ProjectPanel {
                                 )
                             })
                         })
+                        .when_some(
+                            self.render_dx_explorer_storage_drilldown(cx),
+                            |this, drilldown| this.child(drilldown),
+                        )
                         .child(
                             uniform_list("entries", item_count, {
                                 cx.processor(|this, range: Range<usize>, window, cx| {
@@ -9261,6 +9549,10 @@ impl Render for ProjectPanel {
                     is_read_only,
                     cx,
                 ))
+                .when_some(
+                    self.render_dx_explorer_storage_root_strip(cx),
+                    |this, root_strip| this.child(root_strip),
+                )
                 .child(
                     ProjectEmptyState::new(
                         "Project Panel",

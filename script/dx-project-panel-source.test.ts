@@ -422,10 +422,12 @@ test("project panel display strings, sticky rows, and undo batches are bounded",
 
 test("project panel folder storage summaries are cache-only on the visible-row path", () => {
   const source = read("crates/project_panel/src/project_panel.rs");
+  const storage = read("crates/project_panel/src/storage.rs");
   const detailsForEntry = functionBody(source, "details_for_entry");
   const renderEntryInfoBadge = functionBody(source, "render_entry_info_badge");
   const storageDrilldownItems = functionBody(source, "dx_explorer_storage_drilldown_items");
   const renderStorageDrilldown = functionBody(source, "render_dx_explorer_storage_drilldown");
+  const renderProjectPanel = functionBody(source, "render");
   const renderStorageDrilldownRow = functionBody(
     source,
     "render_dx_explorer_storage_drilldown_row",
@@ -444,10 +446,10 @@ test("project panel folder storage summaries are cache-only on the visible-row p
     /const MAX_PROJECT_PANEL_STORAGE_DRILLDOWN_ITEMS: usize = 5;/,
     "storage drilldown must stay visually bounded",
   );
-  assert.match(source, /struct FolderStorageSummary/);
-  assert.match(source, /struct DxExplorerStorageDrilldownItem/);
-  assert.match(source, /dx_explorer_storage_drilldown:\s*Vec<DxExplorerStorageDrilldownItem>/);
-  assert.match(source, /fn record_file\(&mut self, size: u64\)/);
+  assert.match(storage, /pub\(crate\) struct FolderStorageSummary/);
+  assert.match(storage, /pub\(crate\) struct StorageFolderItem/);
+  assert.match(source, /dx_explorer_storage_drilldown:\s*Vec<storage::StorageFolderItem>/);
+  assert.match(storage, /pub\(crate\) fn record_file\(&mut self, entry: &Entry\)/);
   assert.match(source, /fn cached_folder_storage_summary\(/);
   assert.match(source, /fn dx_explorer_storage_drilldown_items\(/);
   assert.match(source, /fn render_dx_explorer_storage_drilldown\(/);
@@ -456,7 +458,7 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   assert.match(source, /fn dx_explorer_storage_heat_color\(/);
   assert.match(
     cachedFolderStorageSummary,
-    /folder_storage_summaries[\s\S]*get\(&cache_key\)[\s\S]*copied\(\)/,
+    /folder_storage_summaries[\s\S]*get\(&cache_key\)[\s\S]*cloned\(\)/,
     "render-facing folder storage lookup must be cache-only",
   );
   assert.match(
@@ -496,8 +498,8 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   );
   assert.match(
     updateVisibleEntries,
-    /folder_storage_summary_updates\.len\(\)[\s\S]*MAX_PROJECT_PANEL_BACKGROUND_FOLDER_STORAGE_DIRS[\s\S]*let mut summary = FolderStorageSummary::default\(\)[\s\S]*child_entries_with_options[\s\S]*include_files: true[\s\S]*include_dirs: false[\s\S]*summary\.record_file\(child\.size\)[\s\S]*folder_storage_summary_updates\.push\(\(cache_key, summary\)\)/,
-    "background folder storage warming must count direct file children and bytes under a named cap",
+    /folder_storage_summary_updates\.len\(\)[\s\S]*MAX_PROJECT_PANEL_BACKGROUND_FOLDER_STORAGE_DIRS[\s\S]*let mut summary = storage::FolderStorageSummary::default\(\)[\s\S]*child_entries_with_options[\s\S]*include_files: true[\s\S]*include_dirs: false[\s\S]*summary\.record_file\(child\.entry\)[\s\S]*folder_storage_summary_updates\.push\(\(cache_key, summary\)\)/,
+    "background folder storage warming must count direct file children, bytes, and mtimes under a named cap",
   );
   assert.match(
     updateVisibleEntries,
@@ -506,18 +508,18 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   );
   assert.match(
     storageDrilldownItems,
-    /folder_storage_summaries: &HashMap<\(WorktreeId, ProjectEntryId\), FolderStorageSummary>/,
+    /folder_storage_summaries: &HashMap<\s*\(WorktreeId, ProjectEntryId\),\s*storage::FolderStorageSummary,\s*>/,
     "storage drilldown must receive the warmed cache from the visible-entry refresh job",
   );
   assert.match(
     storageDrilldownItems,
-    /for visible_worktree in &state\.visible_entries[\s\S]*for entry in &visible_worktree\.entries[\s\S]*!entry\.kind\.is_dir\(\)[\s\S]*folder_storage_summaries\.get\(&cache_key\)\.copied\(\)/,
+    /for visible_worktree in &state\.visible_entries[\s\S]*for entry in &visible_worktree\.entries[\s\S]*!entry\.kind\.is_dir\(\)[\s\S]*folder_storage_summaries\.get\(&cache_key\)/,
     "storage drilldown must derive candidate folders from materialized visible rows and cached summaries",
   );
   assert.match(
     storageDrilldownItems,
-    /items\.sort_by\(\|left, right\|[\s\S]*right[\s\S]*\.file_bytes[\s\S]*\.cmp\(&left\.file_bytes\)[\s\S]*right\.file_count\.cmp\(&left\.file_count\)/,
-    "storage drilldown must list biggest cached folders first",
+    /storage::rank_storage_folder_items\(items, storage_sort_mode\)/,
+    "storage drilldown must rank cached folders through the storage domain helper",
   );
   assert.match(
     storageDrilldownItems,
@@ -526,7 +528,7 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   );
   assert.match(
     storageDrilldownItems,
-    /item\.heat_level = dx_explorer_storage_heat_level\(item\.file_bytes, max_file_bytes\)/,
+    /summary\.latest_modified_at[\s\S]*summary\.largest_files\.clone\(\)/,
     "storage drilldown must precompute heat-map levels outside render rows",
   );
   assert.doesNotMatch(
@@ -537,21 +539,21 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   assertBefore({
     body: updateVisibleEntries,
     before:
-      /folder_storage_summary_cache[\s\S]*\.entry\(\*cache_key\)[\s\S]*\.or_insert\(\*summary\)/,
+      /folder_storage_summary_cache[\s\S]*\.entry\(\*cache_key\)[\s\S]*\.or_insert_with\(\|\| summary\.clone\(\)\)/,
     after:
-      /new_state\.dx_explorer_storage_drilldown =[\s\S]*Self::dx_explorer_storage_drilldown_items\([\s\S]*&new_state,[\s\S]*&folder_storage_summary_cache/,
+      /new_state\.dx_explorer_storage_overview =[\s\S]*Self::dx_explorer_storage_overview/,
     message: "storage drilldown must merge fresh background summaries before ranking cached folders",
   });
   assertBefore({
     body: updateVisibleEntries,
     before:
-      /new_state\.dx_explorer_storage_drilldown =[\s\S]*Self::dx_explorer_storage_drilldown_items\([\s\S]*&new_state,[\s\S]*&folder_storage_summary_cache/,
-    after: /\(new_state, media_preview_updates, folder_storage_summary_updates\)/,
+      /new_state\.dx_explorer_storage_drilldown =[\s\S]*Self::dx_explorer_storage_drilldown_items\([\s\S]*&new_state,[\s\S]*&folder_storage_summary_cache,[\s\S]*storage_sort_mode/,
+    after: /\(new_state, media_preview_updates, folder_storage_summary_updates\)\s*\}\)\s*\.await;/,
     message: "storage drilldown must be ranked in the background job before state is installed",
   });
   assert.match(renderStorageDrilldown, /\.id\("dx-explorer-storage-drilldown"\)/);
   assert.match(renderStorageDrilldown, /dx_icon\(DxUiIcon::Storage\)/);
-  assert.match(renderStorageDrilldown, /Label::new\("Folder storage"\)/);
+  assert.match(renderStorageDrilldown, /Label::new\("Folder files"\)/);
   assert.match(renderStorageDrilldown, /\.children\(rows\)/);
   assert.doesNotMatch(renderStorageDrilldown, /\bread_dir\(|\bFile::open\(|child_entries/);
   assert.match(
@@ -570,11 +572,164 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   assert.match(storageHeatLevel, /u128::from\(file_bytes\) \* 4/);
   assert.match(storageHeatLevel, /scaled\.clamp\(1, 4\) as u8/);
   assertBefore({
-    body: source,
-    before: /self\.render_dx_explorer_storage_drilldown\(cx\)/,
-    after: /media_preview::render_folder_media_shelf/,
-    message: "storage drilldown should render before the media shelf and tree rows",
+    body: renderProjectPanel,
+    before: /media_preview::render_folder_media_shelf/,
+    after: /self\.render_dx_explorer_storage_drilldown\(cx\)/,
+    message: "media shelf should render before storage drilldown and tree rows",
   });
+});
+
+test("project panel storage overview and root shortcuts stay cached and professionally named", () => {
+  const source = read("crates/project_panel/src/project_panel.rs");
+  const storage = read("crates/project_panel/src/storage.rs");
+  const storageRoots = read("crates/project_panel/src/storage_roots.rs");
+  const dxIcons = read("crates/ui/src/dx_icons.rs");
+  const media = read("crates/project_panel/src/media_preview.rs");
+  const updateVisibleEntries = functionBody(source, "update_visible_entries");
+  const storageOverview = functionBody(source, "dx_explorer_storage_overview");
+  const storageDrilldownItems = functionBody(source, "dx_explorer_storage_drilldown_items");
+  const renderStorageDrilldown = functionBody(source, "render_dx_explorer_storage_drilldown");
+  const renderStorageDrilldownRow = functionBody(
+    source,
+    "render_dx_explorer_storage_drilldown_row",
+  );
+  const renderRootStrip = functionBody(source, "render_dx_explorer_storage_root_strip");
+  const renderRootStripRow = functionBody(source, "render_dx_explorer_storage_root_strip_row");
+  const refreshStorageRoots = functionBody(source, "refresh_dx_explorer_storage_roots");
+  const openStorageRoot = functionBody(source, "open_dx_explorer_storage_root");
+  const cmpWorktreeEntries = functionBody(source, "cmp_worktree_entries");
+  const sortWorktreeEntries = functionBody(source, "sort_worktree_entries");
+  const parSortWorktreeEntries = functionBody(source, "par_sort_worktree_entries");
+  const renderFolderMediaShelf = functionBody(media, "render_folder_media_shelf");
+
+  assert.match(source, /mod storage;/);
+  assert.match(source, /mod storage_roots;/);
+  assert.match(storage, /pub\(crate\) const MAX_PROJECT_PANEL_STORAGE_LARGEST_FILES: usize = 3;/);
+  assert.match(
+    storage,
+    /pub\(crate\) const MAX_PROJECT_PANEL_STORAGE_ROOT_STRIP_ITEMS: usize = 16;/,
+  );
+  assert.match(storage, /pub\(crate\) enum StorageSortMode/);
+  assert.match(storage, /StorageSortMode::Size/);
+  assert.match(storage, /StorageSortMode::FileCount/);
+  assert.match(storage, /StorageSortMode::Modified/);
+  assert.match(storage, /pub\(crate\) struct FolderStorageSummary/);
+  assert.match(storage, /largest_files:\s*Vec<FolderStorageFile>/);
+  assert.match(storage, /latest_modified_at:\s*Option<MTime>/);
+  assert.match(storage, /pub\(crate\) fn record_file\(&mut self, entry: &Entry\)/);
+  assert.match(storage, /utils::bounded_project_panel_label/);
+  assert.match(storage, /timestamp_for_user\(\)/);
+  assert.doesNotMatch(storage, /\b(?:prototype|dummy|magic|slop|v1)\b/i);
+
+  assert.match(source, /folder_storage_summaries:\s*RefCell<HashMap<\(WorktreeId, ProjectEntryId\), storage::FolderStorageSummary>>/);
+  assert.match(source, /storage_root_shortcuts:\s*Vec<storage_roots::StorageRootShortcut>/);
+  assert.match(source, /storage_root_refresh_generation:\s*Cell<u64>/);
+  assert.match(source, /storage_root_refresh_task:\s*Task<\(\)>/);
+  assert.match(source, /storage_sort_mode:\s*storage::StorageSortMode/);
+  assert.match(source, /dx_explorer_storage_overview:\s*storage::StorageOverview/);
+
+  assert.match(
+    updateVisibleEntries,
+    /let storage_sort_mode = self\.storage_sort_mode;/,
+    "visible-entry refresh must snapshot the storage sort mode outside render",
+  );
+  assert.match(
+    updateVisibleEntries,
+    /let mut summary = storage::FolderStorageSummary::default\(\)[\s\S]*summary\.record_file\(child\.entry\)/,
+    "background folder storage warming must record direct child entries with size and mtime",
+  );
+  assert.match(
+    storageOverview,
+    /visible_file_bytes:[\s\S]*visible_summary\.file_bytes/,
+    "storage overview must read visible summary bytes",
+  );
+  assert.match(
+    storageOverview,
+    /folder_storage_summaries[\s\S]*\.values\(\)[\s\S]*summary\.file_bytes/,
+    "storage overview must use warmed folder summaries",
+  );
+  assertBefore({
+    body: updateVisibleEntries,
+    before:
+      /folder_storage_summary_cache[\s\S]*\.entry\(\*cache_key\)[\s\S]*\.or_insert_with\(\|\| summary\.clone\(\)\)/,
+    after:
+      /new_state\.dx_explorer_storage_overview =[\s\S]*Self::dx_explorer_storage_overview/,
+    message: "storage overview must use merged cached folder summaries",
+  });
+  assert.match(
+    updateVisibleEntries,
+    /new_state\.dx_explorer_storage_drilldown =[\s\S]*Self::dx_explorer_storage_drilldown_items\([\s\S]*&new_state,[\s\S]*&folder_storage_summary_cache,[\s\S]*storage_sort_mode/,
+    "storage drilldown ranking must run in the background with the chosen sort mode",
+  );
+
+  assert.match(
+    storageDrilldownItems,
+    /folder_storage_summaries: &HashMap<\s*\(WorktreeId, ProjectEntryId\),\s*storage::FolderStorageSummary,\s*>/,
+  );
+  assert.match(storageDrilldownItems, /storage::StorageFolderItem/);
+  assert.match(storageDrilldownItems, /storage::rank_storage_folder_items\(items, storage_sort_mode\)/);
+  assert.match(storageDrilldownItems, /summary\.largest_files\.clone\(\)/);
+  assert.match(renderStorageDrilldown, /Label::new\("Folder files"\)/);
+  assert.match(renderStorageDrilldown, /StorageSortMode::ALL/);
+  assert.match(renderStorageDrilldown, /PopoverMenu::new\("dx-explorer-storage-sort-menu"\)/);
+  assert.match(renderStorageDrilldownRow, /format_file_size\(item\.file_bytes\)/);
+  assert.match(renderStorageDrilldownRow, /storage::format_modified_label\(item\.latest_modified_at\)/);
+  assert.match(renderStorageDrilldownRow, /item\s*\.\s*largest_files/);
+
+  assert.match(renderRootStrip, /\.id\("dx-explorer-storage-root-strip"\)/);
+  assert.match(renderRootStrip, /dx_icon\(DxUiIcon::Storage\)/);
+  assert.match(renderRootStrip, /Label::new\("Storage roots"\)/);
+  assert.match(renderRootStrip, /self\.storage_root_shortcuts\.clone\(\)/);
+  assert.match(renderRootStripRow, /storage_roots::StorageRootKind::Drive/);
+  assert.match(renderRootStripRow, /dx_icon\(DxUiIcon::CloudStorage\)/);
+  assert.match(renderRootStripRow, /dx_icon\(DxUiIcon::DriveProvider\)/);
+  assert.match(renderRootStripRow, /dx_icon\(DxUiIcon::DropboxProvider\)/);
+  assert.match(renderRootStripRow, /this\.open_dx_explorer_storage_root\(path\.clone\(\), window, cx\)/);
+  assert.match(openStorageRoot, /open_workspace_for_paths\([\s\S]*OpenMode::Activate,[\s\S]*vec!\[path\]/);
+  assert.match(refreshStorageRoots, /storage_root_refresh_generation/);
+  assert.match(refreshStorageRoots, /background_spawn\(async move \{[\s\S]*storage_roots::collect_storage_root_shortcuts\(\)/);
+  assert.match(refreshStorageRoots, /this\.storage_root_refresh_generation\.get\(\) != generation/);
+
+  assert.match(storageRoots, /sysinfo::Disks::new_with_refreshed_list\(\)/);
+  assert.match(storageRoots, /MAX_PROJECT_PANEL_STORAGE_ROOT_STRIP_ITEMS/);
+  assert.match(storageRoots, /DX_HOME/);
+  assert.match(storageRoots, /OneDriveConsumer/);
+  assert.match(storageRoots, /GOOGLE_DRIVE_ROOT/);
+  assert.match(storageRoots, /DROPBOX_ROOT/);
+  assert.doesNotMatch(storageRoots, /\bread_dir\(|walkdir|glob|recursive|home.*scan/i);
+  assert.doesNotMatch(source, /sysinfo::Disks|GetDiskFreeSpaceExW/);
+
+  assert.match(dxIcons, /CloudStorage/);
+  assert.match(dxIcons, /DriveProvider/);
+  assert.match(dxIcons, /DropboxProvider/);
+  assert.match(dxIcons, /DxUiIcon::CloudStorage => IconName::CloudDownload/);
+  assert.match(dxIcons, /DxUiIcon::DriveProvider => IconName::DxForgeProviderDrive/);
+  assert.match(dxIcons, /DxUiIcon::DropboxProvider => IconName::DxForgeProviderDropbox/);
+  assert.match(renderFolderMediaShelf, /dx_icon\(DxUiIcon::Media\)/);
+  assert.doesNotMatch(renderFolderMediaShelf, /IconName::Blocks/);
+
+  for (const body of [
+    storageOverview,
+    storageDrilldownItems,
+    renderStorageDrilldown,
+    renderStorageDrilldownRow,
+    renderRootStrip,
+    renderRootStripRow,
+  ]) {
+    assert.doesNotMatch(
+      body,
+      /\bread_dir\(|\bFile::open\(|read_to_string|std::fs::|fs::metadata|canonicalize\(|child_entries_with_options|cx\.spawn|background_spawn|sysinfo::/,
+      "render-facing storage helpers must stay cache/materialized-state only",
+    );
+  }
+
+  for (const body of [cmpWorktreeEntries, sortWorktreeEntries, parSortWorktreeEntries]) {
+    assert.doesNotMatch(
+      body,
+      /storage_sort_mode|StorageSortMode|folder_storage|FolderStorage|file_bytes|file_count|mtime|latest_modified_at|size/,
+      "tree sorting must remain path/kind based until a separate tree-sort contract exists",
+    );
+  }
 });
 
 test("project panel media preview is lazy, bounded, and preserves normal tree rows", () => {

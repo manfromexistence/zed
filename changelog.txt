@@ -1,3 +1,25 @@
+[2026-06-08] - Project Panel Storage Explorer
+
+ADDED:
+- `crates\project_panel\src\storage.rs` adds cached folder storage summaries with largest-file and latest-modified metadata plus size, file-count, and modified ranking.
+- `crates\project_panel\src\storage_roots.rs` adds bounded drive/cloud/root shortcut discovery with drive capacity labels and no recursive scanning.
+
+CHANGED:
+- `crates\project_panel\src\project_panel.rs` now renders storage roots above the tree, keeps the media shelf before folder storage intelligence, opens real drive/cloud roots through workspace path activation, and ranks cached folder file summaries without render-path filesystem scans.
+- `crates\project_panel\src\media_preview.rs`, `crates\ui\src\dx_icons.rs`, and `crates\agent_ui\src\dx_launch_workspace.rs` now route the affected media, cloud drive, Dropbox, diagnostics, and source-audit icons through semantic DX icon mappings.
+- `script\dx-project-panel-source.test.ts` and `script\dx-icon-system-source.test.ts` now guard the storage-root, storage-ranking, media-order, and semantic-icon contracts.
+
+PASSED:
+- `node --test script\dx-project-panel-source.test.ts`
+- `node --test script\dx-icon-system-source.test.ts`
+- `node --test script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check crates\project_panel\src\project_panel.rs crates\project_panel\src\media_preview.rs crates\project_panel\src\storage.rs crates\project_panel\src\storage_roots.rs crates\ui\src\dx_icons.rs crates\agent_ui\src\dx_launch_workspace.rs`
+- `git diff --check`
+- Focused conflict-marker scan on touched Project Panel/icon files
+
+NOTES:
+- Source-only by instruction. Cargo, build, `just run`, native Zed launch, browser automation, recursive folder sizing, and runtime visual proof remain deferred.
+
 [2026-06-08] - DX Forge Workflow Panel Polish
 
 CHANGED:
