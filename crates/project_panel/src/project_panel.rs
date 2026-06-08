@@ -4382,7 +4382,8 @@ impl ProjectPanel {
                                 .child(Self::render_dx_explorer_metric(sort_mode.status_label()))
                                 .children(metrics)
                                 .child(
-                                    PopoverMenu::new("dx-explorer-storage-sort-menu")
+                                    div().flex_none().child(
+                                        PopoverMenu::new("dx-explorer-storage-sort-menu")
                                         .trigger_with_tooltip(
                                             IconButton::new(
                                                 "dx-explorer-storage-sort-button",
@@ -4436,6 +4437,7 @@ impl ProjectPanel {
                                         })
                                         .into_any_element(),
                                     )
+                                )
                                 .into_any_element(),
                         ),
                 )
