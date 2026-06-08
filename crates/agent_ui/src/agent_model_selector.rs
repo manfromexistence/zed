@@ -116,14 +116,13 @@ impl Render for AgentModelSelector {
                 .label_size(LabelSize::Small)
                 .color(color)
                 .when_some(provider_icon, |this, icon| {
-                    this.start_icon(
-                        match icon {
-                            IconOrSvg::Svg(path) => Icon::from_external_svg(path),
-                            IconOrSvg::Icon(name) => Icon::new(name),
+                    this.start_icon(match icon {
+                        IconOrSvg::Svg(path) => Icon::from_external_svg_with_original_colors(path)
+                            .size(IconSize::XSmall),
+                        IconOrSvg::Icon(name) => {
+                            Icon::new(name).color(color).size(IconSize::XSmall)
                         }
-                        .color(color)
-                        .size(IconSize::XSmall),
-                    )
+                    })
                 })
                 .end_icon(
                     Icon::new(IconName::ChevronDown)

@@ -137,6 +137,8 @@ enum IconSource {
     External(Arc<Path>),
     /// An SVG not embedded in the Zed binary.
     ExternalSvg(SharedString),
+    /// An external SVG that must keep its embedded brand colors.
+    OriginalColorExternalSvg(Arc<Path>),
 }
 
 #[derive(Clone, IntoElement, RegisterComponent)]
@@ -181,6 +183,16 @@ impl Icon {
     pub fn from_external_svg(svg: SharedString) -> Self {
         Self {
             source: IconSource::ExternalSvg(svg),
+            color: Color::default(),
+            size: IconSize::default().rems(),
+            transformation: Transformation::default(),
+            opacity: 1.0,
+        }
+    }
+
+    pub fn from_external_svg_with_original_colors(svg: SharedString) -> Self {
+        Self {
+            source: IconSource::OriginalColorExternalSvg(Arc::from(PathBuf::from(svg.as_ref()))),
             color: Color::default(),
             size: IconSize::default().rems(),
             transformation: Transformation::default(),
@@ -264,6 +276,11 @@ impl RenderOnce for Icon {
                 .size(self.size)
                 .flex_none()
                 .text_color(self.color.color(cx))
+                .opacity(self.opacity)
+                .into_any_element(),
+            IconSource::OriginalColorExternalSvg(path) => img(path)
+                .size(self.size)
+                .flex_none()
                 .opacity(self.opacity)
                 .into_any_element(),
             IconSource::External(path) => img(path)

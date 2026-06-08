@@ -1807,14 +1807,15 @@ impl AgentConfiguration {
                                 h_flex()
                                     .w_full()
                                     .gap_1p5()
-                                    .child(
-                                        match provider.icon() {
-                                            IconOrSvg::Svg(path) => Icon::from_external_svg(path),
-                                            IconOrSvg::Icon(name) => Icon::new(name),
+                                    .child(match provider.icon() {
+                                        IconOrSvg::Svg(path) => {
+                                            Icon::from_external_svg_with_original_colors(path)
+                                                .size(IconSize::Small)
                                         }
-                                        .size(IconSize::Small)
-                                        .color(Color::Muted),
-                                    )
+                                        IconOrSvg::Icon(name) => Icon::new(name)
+                                            .size(IconSize::Small)
+                                            .color(Color::Muted),
+                                    })
                                     .child(
                                         h_flex()
                                             .w_full()

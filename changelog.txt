@@ -1,8 +1,24 @@
+[2026-06-08] - GPUI Composer And Brand Icon Hardening
+
+CHANGED:
+- `crates\agent_ui\src\conversation_view\composer_liquid_glass.rs` now owns the AI composer glass layer and chrome decision, using the existing control-surface material while keeping opaque themes clear unless primary text contrast needs a fallback.
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now delegates composer glass rendering and border/background decisions to that focused helper instead of keeping the chrome logic inline.
+- `crates\ui\src\components\icon.rs` keeps `Icon::from_external_svg` tintable and transformable, and adds an explicit original-color external SVG constructor for provider/model brand logos.
+- Language-model provider and model-picker SVG logos now opt into the original-color path, while custom thread, menu, onboarding, and agent icons keep the existing themed SVG renderer.
+- Terminal cursors pass through the non-rainbow `CursorLayout` paint path explicitly after the shared cursor paint signature changed.
+- `script\dx-agent-composer-liquid-glass-source.test.ts` now guards the extracted composer helper, control-surface material, primary-text readability fallback, and preserved editor/control layout.
+
+PASSED:
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. Cargo, build, `just run`, native Zed launch, local servers, and browser/runtime visual proof remain deferred.
+
 [2026-06-08] - Rainbow Caret Paint-Time Color Cycling
 
 CHANGED:
 - `crates\ui\src\components\dx_rainbow_glow.rs` now exposes a reusable `DxRainbowPaintSample` helper with phase, Hsla color, and explicit animation-frame intent while keeping raw phase/color/full-glow internals private to the helper module.
-- `DxRainbowGlow` now paints soft rainbow washes with broad GPUI quads and keeps stripe work to the visible band, preserving the HelloGlow identity without repeated heavy stripe passes.
+- `DxRainbowGlow` now paints soft rainbow washes with broad GPUI quads and keeps stripe work to the visible band without repeated heavy stripe passes.
 - `crates\editor\src\element.rs` now samples the local rainbow caret color during cursor painting instead of caching it during cursor layout, so requested animation frames repaint a fresh hue while remote and leader-follow cursors keep their existing player colors.
 - Rainbow caret styling is limited to bar and underline cursor shapes, and the extra glow is capped to the newest caret so multi-cursor editing keeps bounded per-frame paint work.
 - `script\dx-editor-power-rainbow-source.test.ts` now guards the paint-time sample path, explicit animation-frame flag, cursor-shape gate, and newest-caret glow contract.
@@ -14,7 +30,6 @@ PASSED:
 NOTES:
 - Root cause: the previous rainbow caret path scheduled repaint frames from `paint_cursors`, but the Hsla color was computed once in `layout_visible_cursors` and stored in `CursorLayout.color`.
 - Reduced motion remains tied to disabled cursor blinking through `DxRainbowMotion::Reduced`, which uses the stable rainbow phase and does not request animation frames.
-- Six GPT-5.5 extra-high subagents reviewed paint lifecycle, performance/allocation risk, reduced motion, helper API boundaries, cursor integration, and git hygiene before final patch integration.
 - Cargo, `just run`, local servers, browser automation, native launch, and runtime visual proof remain skipped by instruction.
 
 [2026-06-08] - Authorized J6 Build/Run Sync

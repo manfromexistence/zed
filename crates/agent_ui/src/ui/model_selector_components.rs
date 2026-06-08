@@ -203,14 +203,15 @@ impl RenderOnce for ModelSelectorListItem {
                     .w_full()
                     .gap_1p5()
                     .when_some(self.icon, |this, icon| {
-                        this.child(
-                            match icon {
-                                ModelIcon::Name(icon_name) => Icon::new(icon_name),
-                                ModelIcon::Path(icon_path) => Icon::from_external_svg(icon_path),
+                        this.child(match icon {
+                            ModelIcon::Name(icon_name) => Icon::new(icon_name)
+                                .color(model_icon_color)
+                                .size(IconSize::Small),
+                            ModelIcon::Path(icon_path) => {
+                                Icon::from_external_svg_with_original_colors(icon_path)
+                                    .size(IconSize::Small)
                             }
-                            .color(model_icon_color)
-                            .size(IconSize::Small),
-                        )
+                        })
                     })
                     .child(Label::new(self.title).truncate())
                     .when(self.is_latest, |parent| parent.child(Chip::new("Latest")))

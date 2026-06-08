@@ -1557,7 +1557,7 @@ impl Element for TerminalElement {
                         && marked_text_cloned.is_none()
                         && let Some(mut cursor) = original_cursor
                     {
-                        cursor.paint(origin, window, cx);
+                        cursor.paint(origin, window, cx, None);
                     }
 
                     if let Some(mut element) = block_below_cursor_element {

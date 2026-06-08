@@ -81,14 +81,15 @@ impl Render for ModelSelectorPopover {
                 .label_size(LabelSize::Small)
                 .color(color)
                 .when_some(model_icon, |this, icon| {
-                    this.start_icon(
-                        match icon {
-                            AgentModelIcon::Path(path) => Icon::from_external_svg(path),
-                            AgentModelIcon::Named(icon_name) => Icon::new(icon_name),
+                    this.start_icon(match icon {
+                        AgentModelIcon::Path(path) => {
+                            Icon::from_external_svg_with_original_colors(path)
+                                .size(IconSize::XSmall)
                         }
-                        .color(color)
-                        .size(IconSize::XSmall),
-                    )
+                        AgentModelIcon::Named(icon_name) => {
+                            Icon::new(icon_name).color(color).size(IconSize::XSmall)
+                        }
+                    })
                 })
                 .end_icon(Icon::new(icon).color(Color::Muted).size(IconSize::XSmall)),
             tooltip,
