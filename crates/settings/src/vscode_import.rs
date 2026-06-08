@@ -245,6 +245,7 @@ impl VsCodeSettings {
                 "solid" => Some(false),
                 _ => None,
             }),
+            rainbow_caret_animation: None,
             cursor_shape: self.read_enum("editor.cursorStyle", |s| match s {
                 "block" => Some(CursorShape::Block),
                 "block-outline" => Some(CursorShape::Hollow),

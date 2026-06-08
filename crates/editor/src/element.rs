@@ -957,14 +957,15 @@ impl EditorElement {
         redacted_ranges: &[Range<DisplayPoint>],
         window: &mut Window,
         cx: &mut App,
-    ) -> Vec<CursorLayout> {
+    ) -> (Vec<CursorLayout>, Option<DxRainbowMotion>) {
         let mut autoscroll_bounds = None;
-        let cursor_layouts = self.editor.update(cx, |editor, cx| {
+        let (cursor_layouts, rainbow_cursor_motion) = self.editor.update(cx, |editor, cx| {
             let mut cursors = Vec::new();
+            let mut rainbow_cursor_motion = None;
 
             let show_local_cursors = editor.show_local_cursors(window, cx);
             let use_rainbow_caret = editor.leader_id.is_none();
-            let rainbow_motion = if EditorSettings::get_global(cx).cursor_blink {
+            let rainbow_motion = if EditorSettings::get_global(cx).rainbow_caret_animation {
                 DxRainbowMotion::Animated
             } else {
                 DxRainbowMotion::Reduced
@@ -1109,6 +1110,13 @@ impl EditorElement {
                     let rainbow_motion =
                         (selection.is_local && use_rainbow_caret && supports_rainbow_caret)
                             .then_some(rainbow_motion);
+                    if let Some(motion) = rainbow_motion {
+                        rainbow_cursor_motion = match (rainbow_cursor_motion, motion) {
+                            (Some(DxRainbowMotion::Animated), _)
+                            | (_, DxRainbowMotion::Animated) => Some(DxRainbowMotion::Animated),
+                            _ => Some(DxRainbowMotion::Reduced),
+                        };
+                    }
                     let mut cursor = CursorLayout {
                         color: player_color.cursor,
                         block_width,
@@ -1130,14 +1138,14 @@ impl EditorElement {
                 }
             }
 
-            cursors
+            (cursors, rainbow_cursor_motion)
         });
 
         if let Some(bounds) = autoscroll_bounds {
             window.request_autoscroll(bounds);
         }
 
-        cursor_layouts
+        (cursor_layouts, rainbow_cursor_motion)
     }
 
     fn layout_navigation_overlays(
@@ -5732,18 +5740,9 @@ impl EditorElement {
     }
 
     fn paint_cursors(&mut self, layout: &mut EditorLayout, window: &mut Window, cx: &mut App) {
-        let rainbow_motion = layout.visible_cursors.iter().fold(None, |motion, cursor| {
-            match (motion, cursor.rainbow_motion) {
-                (Some(DxRainbowMotion::Animated), _) | (_, Some(DxRainbowMotion::Animated)) => {
-                    Some(DxRainbowMotion::Animated)
-                }
-                (Some(DxRainbowMotion::Reduced), _) | (_, Some(DxRainbowMotion::Reduced)) => {
-                    Some(DxRainbowMotion::Reduced)
-                }
-                (None, None) => None,
-            }
-        });
-        let rainbow_sample = rainbow_motion.map(|motion| dx_rainbow_paint_sample(motion, 0., 1.));
+        let rainbow_sample = layout
+            .rainbow_cursor_motion
+            .map(|motion| dx_rainbow_paint_sample(motion, 0., 1.));
 
         for cursor in &mut layout.visible_cursors {
             let rainbow_color = if cursor.rainbow_motion.is_some() {
@@ -5754,7 +5753,7 @@ impl EditorElement {
             cursor.paint(layout.content_origin, window, cx, rainbow_color);
         }
 
-        if rainbow_sample.is_some_and(|sample| sample.request_animation_frame()) {
+        if rainbow_sample.is_some_and(|sample| sample.should_request_animation_frame()) {
             window.request_animation_frame();
         }
     }
@@ -8962,7 +8961,7 @@ impl Element for EditorElement {
                         .iter()
                         .any(|c| !visible_row_range.contains(&c.0.row()));
 
-                    let visible_cursors = self.layout_visible_cursors(
+                    let (visible_cursors, rainbow_cursor_motion) = self.layout_visible_cursors(
                         &snapshot,
                         &selections,
                         &row_block_types,
@@ -9378,6 +9377,7 @@ impl Element for EditorElement {
                         spacer_blocks,
                         cursors,
                         visible_cursors,
+                        rainbow_cursor_motion,
                         navigation_overlay_paint_commands,
                         selections,
                         edit_prediction_popover,
@@ -9615,6 +9615,7 @@ pub struct EditorLayout {
     redacted_ranges: Vec<Range<DisplayPoint>>,
     cursors: Vec<(DisplayPoint, Hsla)>,
     visible_cursors: Vec<CursorLayout>,
+    rainbow_cursor_motion: Option<DxRainbowMotion>,
     navigation_overlay_paint_commands: Vec<NavigationOverlayPaintCommand>,
     selections: Vec<(PlayerColor, Vec<SelectionLayout>)>,
     test_indicators: Vec<AnyElement>,

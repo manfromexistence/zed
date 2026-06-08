@@ -19,7 +19,7 @@ pub enum DxRainbowMotion {
 }
 
 impl DxRainbowMotion {
-    pub fn is_animated(self) -> bool {
+    fn is_animated(self) -> bool {
         matches!(self, Self::Animated)
     }
 }
@@ -28,7 +28,7 @@ impl DxRainbowMotion {
 pub struct DxRainbowPaintSample {
     phase: f32,
     color: Hsla,
-    request_animation_frame: bool,
+    should_request_animation_frame: bool,
 }
 
 impl DxRainbowPaintSample {
@@ -36,8 +36,8 @@ impl DxRainbowPaintSample {
         self.color
     }
 
-    pub fn request_animation_frame(self) -> bool {
-        self.request_animation_frame
+    pub fn should_request_animation_frame(self) -> bool {
+        self.should_request_animation_frame
     }
 }
 
@@ -86,7 +86,7 @@ impl DxRainbowGlow {
     }
 
     pub fn phase_offset(mut self, offset: f32) -> Self {
-        self.phase_offset = offset;
+        self.phase_offset = normalize_phase(offset);
         self
     }
 }
@@ -163,10 +163,10 @@ impl IntoElement for DxRainbowGlow {
 
 fn dx_rainbow_hsla(phase: f32, alpha: f32) -> Hsla {
     hsla(
-        phase.rem_euclid(1.),
+        normalize_phase(phase),
         DX_RAINBOW_SATURATION,
         DX_RAINBOW_LIGHTNESS,
-        alpha,
+        clamp_unit(alpha),
     )
 }
 
@@ -180,7 +180,7 @@ fn dx_rainbow_phase_now(motion: DxRainbowMotion, phase_offset: f32) -> f32 {
         DxRainbowMotion::Reduced => DX_RAINBOW_REDUCED_PHASE,
     };
 
-    (base_phase + phase_offset).rem_euclid(1.)
+    normalize_phase(base_phase + phase_offset)
 }
 
 pub fn dx_rainbow_paint_sample(
@@ -192,7 +192,7 @@ pub fn dx_rainbow_paint_sample(
     DxRainbowPaintSample {
         phase,
         color: dx_rainbow_hsla(phase, alpha),
-        request_animation_frame: motion.is_animated(),
+        should_request_animation_frame: motion.is_animated(),
     }
 }
 
@@ -220,7 +220,7 @@ fn paint_dx_rainbow_glow(
     }
 
     let sample = dx_rainbow_paint_sample(motion, phase_offset, 0.18);
-    if sample.request_animation_frame {
+    if sample.should_request_animation_frame {
         window.request_animation_frame();
     }
 
@@ -332,5 +332,23 @@ fn stripe_corners(ix: usize, last_ix: usize, radius: Pixels) -> Corners<Pixels> 
 }
 
 fn clamp_radius(radius: Pixels, size: Size<Pixels>) -> Pixels {
-    radius.max(Pixels::ZERO).min(size.width.min(size.height) * 0.5)
+    radius
+        .max(Pixels::ZERO)
+        .min(size.width.min(size.height) * 0.5)
+}
+
+fn normalize_phase(phase: f32) -> f32 {
+    if phase.is_finite() {
+        phase.rem_euclid(1.)
+    } else {
+        0.
+    }
+}
+
+fn clamp_unit(value: f32) -> f32 {
+    if value.is_finite() {
+        value.clamp(0., 1.)
+    } else {
+        0.
+    }
 }

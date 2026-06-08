@@ -175,7 +175,10 @@ TBD: Centered layout related settings
 
 ```json [settings]
   // Whether the cursor blinks in the editor.
-  "cursor_blink": true,
+  "cursor_blink": false,
+
+  // Whether the DX rainbow caret cycles hue while painting.
+  "rainbow_caret_animation": true,
 
   // Cursor shape for the default editor: bar, block, underline, hollow
   "cursor_shape": null,

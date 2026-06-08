@@ -220,6 +220,9 @@
   "use_system_prompts": true,
   // Whether the cursor blinks in the editor.
   "cursor_blink": false,
+  // Whether the DX rainbow caret cycles hue while painting.
+  // Disable this for a static rainbow caret without changing cursor blink behavior.
+  "rainbow_caret_animation": true,
   // Cursor shape for the default editor.
   //  1. A vertical bar
   //     "bar"

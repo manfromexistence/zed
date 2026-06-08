@@ -733,6 +733,16 @@ List of `string` values
 
 - Description: Whether or not the cursor blinks.
 - Setting: `cursor_blink`
+- Default: `false`
+
+**Options**
+
+`boolean` values
+
+## Rainbow Caret Animation
+
+- Description: Whether the DX rainbow caret cycles hue while painting.
+- Setting: `rainbow_caret_animation`
 - Default: `true`
 
 **Options**

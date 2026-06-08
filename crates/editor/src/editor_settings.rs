@@ -18,6 +18,7 @@ use ui::scrollbars::ShowScrollbar;
 #[derive(Clone, RegisterSetting)]
 pub struct EditorSettings {
     pub cursor_blink: bool,
+    pub rainbow_caret_animation: bool,
     pub cursor_shape: Option<CursorShape>,
     pub power_mode: PowerMode,
     pub current_line_highlight: CurrentLineHighlight,
@@ -212,6 +213,7 @@ impl Settings for EditorSettings {
         let sticky_scroll = editor.sticky_scroll.unwrap();
         Self {
             cursor_blink: editor.cursor_blink.unwrap(),
+            rainbow_caret_animation: editor.rainbow_caret_animation.unwrap(),
             cursor_shape: editor.cursor_shape.map(Into::into),
             power_mode: PowerMode {
                 enabled: power_mode.enabled.unwrap(),

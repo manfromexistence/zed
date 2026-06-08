@@ -17,6 +17,12 @@ pub struct EditorSettingsContent {
     ///
     /// Default: false
     pub cursor_blink: Option<bool>,
+    /// Whether the DX rainbow caret cycles hue while painting.
+    ///
+    /// Disable this for a static rainbow caret without changing cursor blink behavior.
+    ///
+    /// Default: true
+    pub rainbow_caret_animation: Option<bool>,
     /// Cursor shape for the default editor.
     /// Can be "bar", "block", "underline", or "hollow".
     ///

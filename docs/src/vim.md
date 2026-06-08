@@ -637,7 +637,8 @@ Here are a few general Zed settings that can help you fine-tune your Vim experie
 
 | Property                | Description                                                                                                                                                   | Default Value        |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
-| cursor_blink            | If `true`, the cursor blinks.                                                                                                                                 | `true`               |
+| cursor_blink            | If `true`, the cursor blinks.                                                                                                                                 | `false`              |
+| rainbow_caret_animation | If `true`, the DX rainbow caret cycles hue while painting.                                                                                                    | `true`               |
 | relative_line_numbers   | If `"enabled"`, line numbers in the left gutter are relative to the cursor. If `"wrapped"`, they also display for wrapped lines.                              | `"disabled"`         |
 | scrollbar               | Object that controls the scrollbar display. Set to `{ "show": "never" }` to hide the scroll bar.                                                              | `{ "show": "auto" }` |
 | scroll_beyond_last_line | If set to `"one_page"`, allows scrolling up to one page beyond the last line. Set to `"off"` to prevent this behavior.                                        | `"one_page"`         |
@@ -651,6 +652,8 @@ Here's an example of these settings changed:
 {
   // Disable cursor blink
   "cursor_blink": false,
+  // Keep the DX rainbow caret static
+  "rainbow_caret_animation": false,
   // Use relative line numbers
   "relative_line_numbers": "enabled",
   // Hide the scroll bar

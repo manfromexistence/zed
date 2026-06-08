@@ -834,6 +834,10 @@ test("project panel folder storage summaries are cache-only on the visible-row p
     renderStorageDrilldown,
     /ListHeader::new\("Folder files"\)[\s\S]*\.end_slot(?:::<[^>]+>)?\([\s\S]*sort_mode\.status_label\(\)[\s\S]*\.children\(metrics\)[\s\S]*PopoverMenu::new\("dx-explorer-storage-sort-menu"\)/,
   );
+  assert.match(
+    renderStorageDrilldown,
+    /IconButton::new\(\s*"dx-explorer-storage-sort-button",[\s\S]*IconName::ListFilter,[\s\S]*\)[\s\S]*\.shape\(IconButtonShape::Square\)[\s\S]*\.style\(ButtonStyle::Subtle\)[\s\S]*\.icon_size\(IconSize::Small\)[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&self\.focus_handle\(cx\)\)/,
+  );
   assert.doesNotMatch(
     renderStorageDrilldown,
     /Label::new\("Folder files"\)/,

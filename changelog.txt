@@ -1,3 +1,20 @@
+[2026-06-08] - Rainbow Caret Animation And Storage Sort Focus
+
+CHANGED:
+- `assets\settings\default.json`, `crates\editor\src\editor_settings.rs`, `crates\settings_content\src\editor.rs`, `crates\settings\src\vscode_import.rs`, and `crates\settings_ui\src\page_data.rs` now expose an explicit `rainbow_caret_animation` setting so rainbow caret hue cycling is no longer coupled to cursor blink.
+- `docs\src\reference\all-settings.md`, `docs\src\vim.md`, and `docs\src\visual-customization.md` document the new rainbow caret animation setting and the current cursor blink default.
+- `crates\editor\src\element.rs` carries the active rainbow-caret motion through `EditorLayout`, avoiding a paint-time scan across every visible cursor before requesting the next frame.
+- `crates\ui\src\components\dx_rainbow_glow.rs` keeps the animation-frame accessor intentionally named, normalizes phase offsets, and clamps alpha inputs before painting.
+- `crates\project_panel\src\project_panel.rs` gives the folder-storage sort button square subtle chrome plus a real focus target, and the Project Panel source guard pins that affordance.
+
+PASSED:
+- `node --test script/dx-agent-composer-liquid-glass-source.test.ts script/dx-agent-ui-selector-source.test.ts script/dx-icon-system-source.test.ts script/dx-project-panel-source.test.ts script/dx-editor-power-rainbow-source.test.ts script/dx-terminal-view-source.test.ts script/web-preview-platform-lifecycle.test.ts script/dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check crates/editor/src/editor_settings.rs crates/editor/src/element.rs crates/project_panel/src/project_panel.rs crates/settings/src/vscode_import.rs crates/settings_content/src/editor.rs crates/settings_ui/src/page_data.rs crates/ui/src/components/dx_rainbow_glow.rs`
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. Cargo, build, `just run`, native Zed launch, local servers, and runtime visual proof remain deferred.
+
 [2026-06-08] - GPUI Web Preview Navigation And Chrome Follow-Up
 
 CHANGED:
@@ -14,6 +31,26 @@ PASSED:
 NOTES:
 - Six GPT-5.5 extra-high subagent audits were used for Web Preview favicon/native events, brand SVG color preservation, GPUI tab/chrome behavior, platform queue parity, source-guard precision, and git handoff hygiene.
 - Source-only by instruction. Cargo, build, `just run`, native Zed launch, local servers, and runtime visual proof remain deferred.
+
+[2026-06-08] - Native Rainbow Caret Animation Setting
+
+ADDED:
+- `rainbow_caret_animation` is now a first-class editor setting, defaulting to true so the DX rainbow caret cycles hue independently of cursor blink.
+- The Settings UI cursor section and docs now expose the rainbow caret animation toggle, including the static/reduced-motion escape hatch.
+
+CHANGED:
+- `crates\editor\src\element.rs` now drives rainbow caret motion from `rainbow_caret_animation`, carries the aggregated rainbow cursor motion through `EditorLayout`, and avoids rescanning visible cursors during cursor paint.
+- `crates\ui\src\components\dx_rainbow_glow.rs` now normalizes phase offsets and alpha inputs before producing Hsla samples, keeps `DxRainbowMotion::is_animated` private, and uses `should_request_animation_frame` naming for frame intent.
+- VS Code settings import no longer maps cursor blinking preferences onto rainbow hue animation.
+- Cursor blink docs now match the shipped default of false.
+
+PASSED:
+- `node --test script\dx-editor-power-rainbow-source.test.ts`
+- `git diff --check`
+
+NOTES:
+- The fourth production pass used six GPT-5.5 extra-high subagent audits for API shape, paint lifecycle, performance, reduced motion, editor cursor edges, and source-guard/git hygiene.
+- Cargo, `just run`, local servers, browser automation, native launch, and runtime visual proof remain skipped by instruction.
 
 [2026-06-08] - DX Rainbow Glow API Production Pass
 

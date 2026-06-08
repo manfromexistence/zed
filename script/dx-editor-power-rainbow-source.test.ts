@@ -10,10 +10,14 @@ const editorElement = read("crates/editor/src/element.rs");
 const editorInput = read("crates/editor/src/input.rs");
 const editorSettings = read("crates/editor/src/editor_settings.rs");
 const settingsContent = read("crates/settings_content/src/editor.rs");
+const settingsPageData = read("crates/settings_ui/src/page_data.rs");
 const vscodeImport = read("crates/settings/src/vscode_import.rs");
 const uiComponents = read("crates/ui/src/components.rs");
 const rainbowGlow = read("crates/ui/src/components/dx_rainbow_glow.rs");
 const registry = read("script/dx-handoff-source-guard-registry.test.ts");
+const allSettings = read("docs/src/reference/all-settings.md");
+const vimDocs = read("docs/src/vim.md");
+const visualCustomizationDocs = read("docs/src/visual-customization.md");
 
 test("Power Mode setting is typed, default-off, and import-safe", () => {
   assert.match(defaultSettings, /"power_mode": \{\s*"enabled": false,\s*\}/s);
@@ -53,7 +57,28 @@ test("Power Mode paints without permanently shifting editor layout", () => {
 
 test("DX rainbow glow helper is reusable and motion-aware", () => {
   assert.match(defaultSettings, /"cursor_blink": false/);
+  assert.match(defaultSettings, /"rainbow_caret_animation": true/);
   assert.match(settingsContent, /\/\/\/ Default: false\s*pub cursor_blink: Option<bool>,/);
+  assert.match(
+    settingsContent,
+    /\/\/\/ Default: true\s*pub rainbow_caret_animation: Option<bool>,/s,
+  );
+  assert.match(editorSettings, /pub rainbow_caret_animation: bool/);
+  assert.match(
+    editorSettings,
+    /rainbow_caret_animation: editor\.rainbow_caret_animation\.unwrap\(\)/,
+  );
+  assert.match(vscodeImport, /rainbow_caret_animation: None/);
+  assert.match(
+    settingsPageData,
+    /title: "Rainbow Caret Animation"[\s\S]*json_path: Some\("rainbow_caret_animation"\)[\s\S]*settings_content\.editor\.rainbow_caret_animation/s,
+  );
+  assert.match(
+    allSettings,
+    /## Cursor Blink[\s\S]*- Setting: `cursor_blink`[\s\S]*- Default: `false`[\s\S]*## Rainbow Caret Animation[\s\S]*- Setting: `rainbow_caret_animation`[\s\S]*- Default: `true`/s,
+  );
+  assert.match(vimDocs, /\| rainbow_caret_animation \|[\s\S]*\| `true`\s*\|/);
+  assert.match(visualCustomizationDocs, /"rainbow_caret_animation": true/);
   assert.match(uiComponents, /mod dx_rainbow_glow;/);
   assert.match(
     uiComponents,
@@ -64,23 +89,34 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
   assert.match(rainbowGlow, /pub fn animated\(\) -> Self \{\s*Self::new\(\)\.motion\(DxRainbowMotion::Animated\)\s*\}/s);
   assert.match(rainbowGlow, /self\.height = height\.max\(Pixels::ZERO\);/);
   assert.match(rainbowGlow, /self\.radius = radius\.max\(Pixels::ZERO\);/);
+  assert.match(rainbowGlow, /self\.phase_offset = normalize_phase\(offset\);/);
   assert.match(rainbowGlow, /DxRainbowMotion::Reduced => DX_RAINBOW_REDUCED_PHASE/);
+  assert.doesNotMatch(rainbowGlow, /pub fn is_animated/);
   assert.match(
     rainbowGlow,
-    /pub struct DxRainbowPaintSample \{\s*phase: f32,\s*color: Hsla,\s*request_animation_frame: bool,\s*\}/s,
+    /pub struct DxRainbowPaintSample \{\s*phase: f32,\s*color: Hsla,\s*should_request_animation_frame: bool,\s*\}/s,
   );
   assert.match(rainbowGlow, /pub fn color\(self\) -> Hsla \{\s*self\.color\s*\}/s);
   assert.match(
     rainbowGlow,
-    /pub fn request_animation_frame\(self\) -> bool \{\s*self\.request_animation_frame\s*\}/s,
+    /pub fn should_request_animation_frame\(self\) -> bool \{\s*self\.should_request_animation_frame\s*\}/s,
   );
-  assert.doesNotMatch(rainbowGlow, /pub phase: f32|pub color: Hsla|pub request_animation_frame: bool/);
+  assert.doesNotMatch(
+    rainbowGlow,
+    /pub phase: f32|pub color: Hsla|pub should_request_animation_frame: bool/,
+  );
   assert.match(
     rainbowGlow,
     /pub fn dx_rainbow_paint_sample\(\s*motion: DxRainbowMotion,\s*phase_offset: f32,\s*alpha: f32,\s*\) -> DxRainbowPaintSample/s,
   );
-  assert.match(rainbowGlow, /request_animation_frame: motion\.is_animated\(\)/);
-  assert.match(rainbowGlow, /if sample\.request_animation_frame \{\s*window\.request_animation_frame\(\);\s*\}/s);
+  assert.match(rainbowGlow, /should_request_animation_frame: motion\.is_animated\(\)/);
+  assert.doesNotMatch(rainbowGlow, /pub fn request_animation_frame/);
+  assert.match(
+    rainbowGlow,
+    /if sample\.should_request_animation_frame \{\s*window\.request_animation_frame\(\);\s*\}/s,
+  );
+  assert.match(rainbowGlow, /fn normalize_phase\(phase: f32\) -> f32 \{[\s\S]*phase\.is_finite\(\)[\s\S]*phase\.rem_euclid\(1\.\)[\s\S]*0\./s);
+  assert.match(rainbowGlow, /fn clamp_unit\(value: f32\) -> f32 \{[\s\S]*value\.is_finite\(\)[\s\S]*value\.clamp\(0\., 1\.\)[\s\S]*0\./s);
   assert.match(rainbowGlow, /fn paint_dx_rainbow_wash/);
   assert.match(
     rainbowGlow,
@@ -104,7 +140,11 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
   assert.match(rainbowGlow, /pub fn paint_dx_rainbow_caret_glow/);
   assert.match(
     editorElement,
-    /let rainbow_motion = if EditorSettings::get_global\(cx\)\.cursor_blink \{\s*DxRainbowMotion::Animated\s*\} else \{\s*DxRainbowMotion::Reduced\s*\};/s,
+    /let rainbow_motion = if EditorSettings::get_global\(cx\)\.rainbow_caret_animation \{\s*DxRainbowMotion::Animated\s*\} else \{\s*DxRainbowMotion::Reduced\s*\};/s,
+  );
+  assert.doesNotMatch(
+    editorElement,
+    /EditorSettings::get_global\(cx\)\.cursor_blink \{\s*DxRainbowMotion::Animated/s,
   );
   assert.match(
     editorElement,
@@ -115,13 +155,18 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
     /selection\.is_local\s*&& use_rainbow_caret\s*&& supports_rainbow_caret/s,
   );
   assert.match(editorElement, /rainbow_glow: rainbow_motion\.is_some\(\) && selection\.is_newest/);
+  assert.match(editorElement, /rainbow_cursor_motion: Option<DxRainbowMotion>/);
   assert.match(
     editorElement,
-    /let rainbow_sample = rainbow_motion\.map\(\|motion\| dx_rainbow_paint_sample\(motion, 0\., 1\.\)\);[\s\S]*let rainbow_color = if cursor\.rainbow_motion\.is_some\(\) \{\s*rainbow_sample\.map\(\|sample\| sample\.color\(\)\)\s*\} else \{\s*None\s*\};[\s\S]*cursor\.paint\(layout\.content_origin, window, cx, rainbow_color\);/s,
+    /let \(cursor_layouts, rainbow_cursor_motion\) = self\.editor\.update[\s\S]*\(cursors, rainbow_cursor_motion\)[\s\S]*\(cursor_layouts, rainbow_cursor_motion\)/s,
   );
   assert.match(
     editorElement,
-    /rainbow_sample\.is_some_and\(\|sample\| sample\.request_animation_frame\(\)\)/,
+    /let rainbow_sample = layout\s*\.rainbow_cursor_motion\s*\.map\(\|motion\| dx_rainbow_paint_sample\(motion, 0\., 1\.\)\);[\s\S]*let rainbow_color = if cursor\.rainbow_motion\.is_some\(\) \{\s*rainbow_sample\.map\(\|sample\| sample\.color\(\)\)\s*\} else \{\s*None\s*\};[\s\S]*cursor\.paint\(layout\.content_origin, window, cx, rainbow_color\);/s,
+  );
+  assert.match(
+    editorElement,
+    /rainbow_sample\.is_some_and\(\|sample\| sample\.should_request_animation_frame\(\)\)/,
   );
   assert.match(
     editorElement,

@@ -1100,7 +1100,7 @@ fn appearance_page() -> SettingsPage {
         ]
     }
 
-    fn cursor_section() -> [SettingsPageItem; 5] {
+    fn cursor_section() -> [SettingsPageItem; 6] {
         [
             SettingsPageItem::SectionHeader("Cursor"),
             SettingsPageItem::SettingItem(SettingItem {
@@ -1124,6 +1124,21 @@ fn appearance_page() -> SettingsPage {
                     pick: |settings_content| settings_content.editor.cursor_blink.as_ref(),
                     write: |settings_content, value, _| {
                         settings_content.editor.cursor_blink = value;
+                    },
+                }),
+                metadata: None,
+                files: USER,
+            }),
+            SettingsPageItem::SettingItem(SettingItem {
+                title: "Rainbow Caret Animation",
+                description: "Whether the DX rainbow caret cycles hue while painting.",
+                field: Box::new(SettingField {
+                    json_path: Some("rainbow_caret_animation"),
+                    pick: |settings_content| {
+                        settings_content.editor.rainbow_caret_animation.as_ref()
+                    },
+                    write: |settings_content, value, _| {
+                        settings_content.editor.rainbow_caret_animation = value;
                     },
                 }),
                 metadata: None,

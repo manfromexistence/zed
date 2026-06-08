@@ -4388,8 +4388,12 @@ impl ProjectPanel {
                                                 "dx-explorer-storage-sort-button",
                                                 IconName::ListFilter,
                                             )
+                                            .shape(IconButtonShape::Square)
+                                            .style(ButtonStyle::Subtle)
                                             .icon_size(IconSize::Small)
-                                            .icon_color(Color::Muted),
+                                            .icon_color(Color::Muted)
+                                            .tab_index(0)
+                                            .track_focus(&self.focus_handle(cx)),
                                             Tooltip::text(format!(
                                                 "Sort by {}",
                                                 sort_mode.label()
