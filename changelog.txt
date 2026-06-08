@@ -1,3 +1,18 @@
+[2026-06-08] - Web Preview Favicon And Brand Color Hardening
+
+CHANGED:
+- `crates\web_preview\src\web_preview_view.rs` now applies native browser events from the GPUI window task instead of the render path, coalesces bounded browser events, and resolves favicon cache hits/downloads asynchronously before updating tab icons.
+- Web Preview favicon cache writes now prune old `.favicon` files by count and total bytes while keeping URI and image byte caps.
+- `crates\web_preview_macos\src\web_preview_view.rs` and `crates\web_preview_linux\src\web_preview_view.rs` now mirror the bounded/coalesced native browser event queue contract.
+- Provider/model brand SVG logos now use `Icon::from_external_svg_with_original_colors`, preserving embedded brand colors without changing the default tintable external SVG path for generic custom icons.
+- Source guards now cover the async favicon/cache contract, native event queue bounds, original-color brand icon path, and the tightened rainbow caret empty-bounds guard.
+
+PASSED:
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. Cargo, build, `just run`, native Zed launch, local servers, and browser/runtime visual proof remain deferred.
+
 [2026-06-08] - GPUI Composer And Selector Hardening
 
 CHANGED:

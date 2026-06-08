@@ -76,7 +76,16 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
   assert.match(rainbowGlow, /fn paint_dx_rainbow_wash/);
   assert.match(rainbowGlow, /paint_dx_rainbow_stripes\(bounds, radius, sample\.phase, 1\., window\);/);
   assert.match(rainbowGlow, /if bounds\.size\.width <= px\(0\.\) \|\| bounds\.size\.height <= px\(0\.\) \{/);
-  assert.match(rainbowGlow, /pub fn paint_dx_rainbow_caret_glow[\s\S]*if bounds\.size\.width <= px\(0\.\) \|\| bounds\.size\.height <= px\(0\.\) \{/);
+  const caretGlowStart = rainbowGlow.indexOf("pub fn paint_dx_rainbow_caret_glow");
+  assert.ok(caretGlowStart >= 0, "expected caret glow helper");
+  const caretGlow = rainbowGlow.slice(
+    caretGlowStart,
+    rainbowGlow.indexOf("fn paint_dx_rainbow_glow", caretGlowStart),
+  );
+  assert.match(
+    caretGlow,
+    /if bounds\.size\.width <= px\(0\.\) \|\| bounds\.size\.height <= px\(0\.\) \{\s*return;\s*\}[\s\S]*let outer =/,
+  );
   assert.doesNotMatch(rainbowGlow, /pub fn dx_rainbow_caret_color/);
   assert.doesNotMatch(rainbowGlow, /pub fn dx_rainbow_hsla/);
   assert.doesNotMatch(rainbowGlow, /pub fn dx_rainbow_phase_now/);

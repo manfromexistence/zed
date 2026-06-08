@@ -84,8 +84,7 @@ impl Render for ModelSelectorPopover {
                 .when_some(model_icon, |this, icon| {
                     this.start_icon(match icon {
                         AgentModelIcon::Path(path) => {
-                            Icon::from_external_svg(path)
-                                .color(color)
+                            Icon::from_external_svg_with_original_colors(path)
                                 .size(IconSize::XSmall)
                         }
                         AgentModelIcon::Named(icon_name) => {

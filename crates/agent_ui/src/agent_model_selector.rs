@@ -118,9 +118,10 @@ impl Render for AgentModelSelector {
                 .truncate(true)
                 .when_some(provider_icon, |this, icon| {
                     this.start_icon(match icon {
-                        IconOrSvg::Svg(path) => Icon::from_external_svg(path)
-                            .color(color)
-                            .size(IconSize::XSmall),
+                        IconOrSvg::Svg(path) => {
+                            Icon::from_external_svg_with_original_colors(path)
+                                .size(IconSize::XSmall)
+                        }
                         IconOrSvg::Icon(name) => {
                             Icon::new(name).color(color).size(IconSize::XSmall)
                         }

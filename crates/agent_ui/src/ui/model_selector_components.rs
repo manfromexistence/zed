@@ -220,8 +220,7 @@ impl RenderOnce for ModelSelectorListItem {
                                 .color(model_icon_color)
                                 .size(IconSize::Small),
                             ModelIcon::Path(icon_path) => {
-                                Icon::from_external_svg(icon_path)
-                                    .color(model_icon_color)
+                                Icon::from_external_svg_with_original_colors(icon_path)
                                     .size(IconSize::Small)
                             }
                         })

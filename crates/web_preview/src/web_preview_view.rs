@@ -77,6 +77,9 @@ const BOOKMARKS_FILE_NAME: &str = "bookmarks.json";
 const FAVICONS_DIR_NAME: &str = "favicons";
 const MAX_WEB_PREVIEW_FAVICON_URI_BYTES: usize = 4096;
 const MAX_WEB_PREVIEW_FAVICON_IMAGE_BYTES: usize = 512 * 1024;
+const MAX_WEB_PREVIEW_FAVICON_CACHE_BYTES: u64 = 16 * 1024 * 1024;
+const MAX_WEB_PREVIEW_FAVICON_CACHE_FILES: usize = 128;
+const MAX_DEFERRED_WEB_PREVIEW_BROWSER_EVENTS: usize = 128;
 const MAX_AGENT_BROWSER_ACTION_PAYLOAD_IMPORT_BYTES: u64 = 256 * 1024;
 const MAX_AGENT_BROWSER_CLIPBOARD_JSON_IMPORT_BYTES: u64 = 256 * 1024;
 const MAX_WEB_PREVIEW_IPC_MESSAGE_BYTES: usize = 1024 * 1024;
@@ -785,6 +788,7 @@ pub struct WebPreviewView {
     active_url: SharedString,
     favicon_uri: Option<SharedString>,
     favicon_image_path: Option<SharedString>,
+    favicon_cache_request_uri: Option<SharedString>,
     bookmarks: Vec<String>,
     detected_extensions: Vec<DetectedExtension>,
     extensions_scanned: bool,
@@ -1169,6 +1173,7 @@ impl WebPreviewView {
             active_url: current_url.into(),
             favicon_uri: None,
             favicon_image_path: None,
+            favicon_cache_request_uri: None,
             bookmarks: load_bookmarks(&workspace_context.profile_dir).unwrap_or_default(),
             detected_extensions: Vec::new(),
             extensions_scanned: false,
@@ -1275,29 +1280,30 @@ impl WebPreviewView {
         this
     }
 
-    fn start_event_pump(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
+    fn start_event_pump(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let browser_events = self.browser_events.clone();
-        self.event_pump_task = Some(cx.spawn(async move |this, cx| {
+        self.event_pump_task = Some(cx.spawn_in(window, async move |this, cx| {
             loop {
                 if this.upgrade().is_none() {
                     break;
                 }
 
-                let has_events = browser_events
-                    .lock()
-                    .map(|events| !events.is_empty())
-                    .unwrap_or(false);
-
-                if has_events {
-                    if this.update(cx, |_, cx| cx.notify()).is_err() {
+                let pending_events = take_queued_browser_events(&browser_events);
+                if pending_events.is_empty() {
+                    cx.background_executor()
+                        .timer(Duration::from_millis(50))
+                        .await;
+                } else {
+                    if this
+                        .update_in(cx, move |this, window, cx| {
+                            this.apply_browser_events(pending_events, window, cx);
+                        })
+                        .is_err()
+                    {
                         break;
                     }
                     cx.background_executor()
                         .timer(Duration::from_millis(16))
-                        .await;
-                } else {
-                    cx.background_executor()
-                        .timer(Duration::from_millis(50))
                         .await;
                 }
             }
@@ -1388,6 +1394,7 @@ impl WebPreviewView {
         let had_favicon = self.favicon_uri.is_some() || self.favicon_image_path.is_some();
         self.favicon_uri = None;
         self.favicon_image_path = None;
+        self.favicon_cache_request_uri = None;
         had_favicon
     }
 
@@ -1430,38 +1437,34 @@ impl WebPreviewView {
             return false;
         };
 
-        let cache_dir = self.favicon_cache_dir();
-        let cached_path = favicon_cache_file_path(&cache_dir, uri.as_str());
         if self
             .favicon_uri
             .as_ref()
             .is_some_and(|current| current.as_ref() == uri.as_str())
         {
             if self.favicon_image_path.is_none() {
-                if cached_path.exists() {
-                    self.favicon_image_path =
-                        Some(cached_path.to_string_lossy().to_string().into());
-                    return true;
-                }
-
                 self.cache_favicon_uri(uri, allow_file_uri, cx);
             }
             return false;
         }
 
         self.favicon_uri = Some(uri.clone().into());
-        self.favicon_image_path = cached_path
-            .exists()
-            .then(|| cached_path.to_string_lossy().to_string().into());
-
-        if self.favicon_image_path.is_none() {
-            self.cache_favicon_uri(uri, allow_file_uri, cx);
-        }
+        self.favicon_image_path = None;
+        self.cache_favicon_uri(uri, allow_file_uri, cx);
 
         true
     }
 
-    fn cache_favicon_uri(&self, uri: String, allow_file_uri: bool, cx: &mut Context<Self>) {
+    fn cache_favicon_uri(&mut self, uri: String, allow_file_uri: bool, cx: &mut Context<Self>) {
+        if self
+            .favicon_cache_request_uri
+            .as_ref()
+            .is_some_and(|current| current.as_ref() == uri.as_str())
+        {
+            return;
+        }
+
+        self.favicon_cache_request_uri = Some(uri.clone().into());
         let http_client = cx.http_client();
         let cache_dir = self.favicon_cache_dir();
         let task = cx.background_spawn(cache_web_preview_favicon_uri(
@@ -1474,6 +1477,13 @@ impl WebPreviewView {
         cx.spawn(async move |this, cx| {
             let result = task.await;
             let _ = this.update(cx, |this, cx| {
+                if this
+                    .favicon_cache_request_uri
+                    .as_ref()
+                    .is_some_and(|current| current.as_ref() == uri.as_str())
+                {
+                    this.favicon_cache_request_uri = None;
+                }
                 match result {
                     Ok(path)
                         if this
@@ -36115,6 +36125,7 @@ impl Item for WebPreviewView {
                 active_url: current_url.clone().into(),
                 favicon_uri,
                 favicon_image_path,
+                favicon_cache_request_uri: None,
                 bookmarks,
                 detected_extensions,
                 extensions_scanned: self.extensions_scanned,
@@ -36307,16 +36318,6 @@ impl Item for WebPreviewView {
 impl Render for WebPreviewView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.is_active_item = true;
-        let pending_events = {
-            let mut events = self
-                .browser_events
-                .lock()
-                .expect("browser event queue lock poisoned");
-            std::mem::take(&mut *events)
-        };
-        if !pending_events.is_empty() {
-            self.apply_browser_events(pending_events, window, cx);
-        }
 
         #[cfg(any(target_os = "windows", target_os = "macos"))]
         {
@@ -36421,7 +36422,71 @@ pub(crate) fn push_browser_event(event_queue: &Arc<Mutex<Vec<BrowserEvent>>>, ev
     let mut queue = event_queue
         .lock()
         .expect("browser event queue lock poisoned");
+    coalesce_browser_event(&mut queue, &event);
     queue.push(event);
+    prune_browser_event_queue(&mut queue);
+}
+
+fn take_queued_browser_events(event_queue: &Arc<Mutex<Vec<BrowserEvent>>>) -> Vec<BrowserEvent> {
+    let mut events = event_queue
+        .lock()
+        .expect("browser event queue lock poisoned");
+    std::mem::take(&mut *events)
+}
+
+fn coalesce_browser_event(queue: &mut Vec<BrowserEvent>, event: &BrowserEvent) {
+    match event {
+        BrowserEvent::UrlChanged(_) => {
+            queue.retain(|queued| !matches!(queued, BrowserEvent::UrlChanged(_)));
+        }
+        BrowserEvent::TitleChanged(_) => {
+            queue.retain(|queued| !matches!(queued, BrowserEvent::TitleChanged(_)));
+        }
+        BrowserEvent::FaviconUriChanged { .. } => {
+            queue.retain(|queued| !matches!(queued, BrowserEvent::FaviconUriChanged { .. }));
+        }
+        BrowserEvent::NavigationStarted => {
+            queue.retain(|queued| {
+                !matches!(
+                    queued,
+                    BrowserEvent::NavigationStarted
+                        | BrowserEvent::NavigationCompleted
+                        | BrowserEvent::TitleChanged(_)
+                        | BrowserEvent::FaviconUriChanged { .. }
+                )
+            });
+        }
+        BrowserEvent::NavigationCompleted => {
+            queue.retain(|queued| !matches!(queued, BrowserEvent::NavigationCompleted));
+        }
+        BrowserEvent::MountFailed(_) => {
+            queue.retain(|queued| !matches!(queued, BrowserEvent::MountFailed(_)));
+        }
+        BrowserEvent::IpcMessage(_) | BrowserEvent::IpcMessageRejected(_) => {}
+    }
+}
+
+fn prune_browser_event_queue(queue: &mut Vec<BrowserEvent>) {
+    while queued_browser_event_count(queue) > MAX_DEFERRED_WEB_PREVIEW_BROWSER_EVENTS {
+        let Some(index) = queue.iter().position(is_bounded_browser_event) else {
+            return;
+        };
+        queue.remove(index);
+    }
+}
+
+fn queued_browser_event_count(queue: &[BrowserEvent]) -> usize {
+    queue
+        .iter()
+        .filter(|event| is_bounded_browser_event(*event))
+        .count()
+}
+
+fn is_bounded_browser_event(event: &BrowserEvent) -> bool {
+    !matches!(
+        event,
+        BrowserEvent::IpcMessage(_) | BrowserEvent::IpcMessageRejected(_)
+    )
 }
 
 fn is_onboarding_complete_fallback_url(url: &str) -> bool {
@@ -38261,6 +38326,13 @@ fn favicon_cache_file_path(cache_dir: &Path, uri: &str) -> PathBuf {
     cache_dir.join(format!("{:016x}.favicon", fnv1a64(uri.as_bytes())))
 }
 
+#[derive(Clone, Debug)]
+struct FaviconCacheEntry {
+    path: PathBuf,
+    modified_at: SystemTime,
+    len: u64,
+}
+
 async fn cache_web_preview_favicon_uri(
     http_client: Arc<dyn http_client::HttpClient>,
     cache_dir: PathBuf,
@@ -38272,6 +38344,7 @@ async fn cache_web_preview_favicon_uri(
     let parsed = url::Url::parse(uri.as_str())?;
     let cache_path = favicon_cache_file_path(&cache_dir, uri.as_str());
     if cache_path.exists() {
+        prune_favicon_cache(cache_dir.as_path(), cache_path.as_path());
         return Ok(cache_path);
     }
 
@@ -38351,6 +38424,7 @@ fn write_cached_favicon(cache_dir: &Path, cache_path: &Path, bytes: &[u8]) -> Re
     fs::create_dir_all(cache_dir)
         .with_context(|| format!("Failed to prepare {}", cache_dir.display()))?;
     if cache_path.exists() {
+        prune_favicon_cache(cache_dir, cache_path);
         return Ok(());
     }
 
@@ -38363,10 +38437,14 @@ fn write_cached_favicon(cache_dir: &Path, cache_path: &Path, bytes: &[u8]) -> Re
         .with_context(|| format!("Failed to write {}", temp_path.display()))?;
 
     match fs::rename(&temp_path, cache_path) {
-        Ok(()) => Ok(()),
+        Ok(()) => {
+            prune_favicon_cache(cache_dir, cache_path);
+            Ok(())
+        }
         Err(error) if cache_path.exists() => {
             let _ = fs::remove_file(&temp_path);
             let _ = error;
+            prune_favicon_cache(cache_dir, cache_path);
             Ok(())
         }
         Err(error) => {
@@ -38375,6 +38453,58 @@ fn write_cached_favicon(cache_dir: &Path, cache_path: &Path, bytes: &[u8]) -> Re
                 .with_context(|| format!("Failed to cache favicon at {}", cache_path.display()))
         }
     }
+}
+
+fn prune_favicon_cache(cache_dir: &Path, protected_path: &Path) {
+    let Ok(entries) = favicon_cache_entries(cache_dir) else {
+        return;
+    };
+
+    let mut entries = entries;
+    entries.sort_by_key(|entry| entry.modified_at);
+    let mut total_bytes = entries.iter().map(|entry| entry.len).sum::<u64>();
+    let mut excess_files = entries
+        .len()
+        .saturating_sub(MAX_WEB_PREVIEW_FAVICON_CACHE_FILES);
+
+    for entry in entries {
+        if excess_files == 0 && total_bytes <= MAX_WEB_PREVIEW_FAVICON_CACHE_BYTES {
+            break;
+        }
+        if entry.path == protected_path {
+            continue;
+        }
+
+        if fs::remove_file(&entry.path).is_ok() {
+            excess_files = excess_files.saturating_sub(1);
+            total_bytes = total_bytes.saturating_sub(entry.len);
+        }
+    }
+}
+
+fn favicon_cache_entries(cache_dir: &Path) -> Result<Vec<FaviconCacheEntry>> {
+    let mut entries = Vec::new();
+    for entry in fs::read_dir(cache_dir)
+        .with_context(|| format!("Failed to inspect {}", cache_dir.display()))?
+    {
+        let entry = entry?;
+        let path = entry.path();
+        if path.extension().and_then(|extension| extension.to_str()) != Some("favicon") {
+            continue;
+        }
+
+        let metadata = entry.metadata()?;
+        if !metadata.is_file() {
+            continue;
+        }
+
+        entries.push(FaviconCacheEntry {
+            path,
+            modified_at: metadata.modified().unwrap_or(UNIX_EPOCH),
+            len: metadata.len(),
+        });
+    }
+    Ok(entries)
 }
 
 fn fnv1a64(bytes: &[u8]) -> u64 {

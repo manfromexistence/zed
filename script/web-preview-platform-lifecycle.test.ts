@@ -606,6 +606,20 @@ for (const [name, path] of platformViews) {
     assert.match(source, /fn on_tab_confirm\(&mut self, window: &mut Window, cx: &mut Context<Self>\) -> bool/);
     assert.match(source, /self\.confirm_navigation\(&Confirm, window, cx\);/);
   });
+
+  test(`${name} web preview native browser event queue is bounded`, () => {
+    const source = read(path);
+    const pushBrowserEvent = functionBody(source, "push_browser_event");
+    const coalesceBrowserEvent = functionBody(source, "coalesce_browser_event");
+    const pruneBrowserEventQueue = functionBody(source, "prune_browser_event_queue");
+
+    assert.match(source, /const MAX_DEFERRED_WEB_PREVIEW_BROWSER_EVENTS: usize = 128;/);
+    assert.match(pushBrowserEvent, /coalesce_browser_event\(&mut queue, &event\);/);
+    assert.match(pushBrowserEvent, /prune_browser_event_queue\(&mut queue\);/);
+    assert.match(coalesceBrowserEvent, /BrowserEvent::UrlChanged\(_\)/);
+    assert.match(coalesceBrowserEvent, /BrowserEvent::TitleChanged\(_\)/);
+    assert.match(pruneBrowserEventQueue, /queue\.len\(\) > MAX_DEFERRED_WEB_PREVIEW_BROWSER_EVENTS/);
+  });
 }
 
 test("Windows Web Preview favicon updates are bounded and page-scoped", () => {
@@ -625,8 +639,14 @@ test("Windows Web Preview favicon updates are bounded and page-scoped", () => {
   const readFileBytes = functionBody(source, "read_favicon_file_bytes");
   const imageCheck = functionBody(source, "favicon_bytes_look_like_image");
   const writeCache = functionBody(source, "write_cached_favicon");
+  const pruneCache = functionBody(source, "prune_favicon_cache");
+  const pushBrowserEvent = functionBody(source, "push_browser_event");
+  const startEventPump = functionBody(source, "start_event_pump");
   const applyBrowserEvents = functionBody(source, "apply_browser_events");
   const handleIpc = functionBody(source, "handle_ipc_message");
+  const renderStart = source.indexOf("impl Render for WebPreviewView");
+  assert.ok(renderStart >= 0, "expected Web Preview render impl");
+  const render = functionBody(source.slice(renderStart), "render");
   const tabIcon = functionBody(source, "tab_icon");
   const cloneOnSplit = functionBody(source, "clone_on_split");
   const requestFavicon = functionBody(windowsHost, "request_favicon_uri");
@@ -634,9 +654,13 @@ test("Windows Web Preview favicon updates are bounded and page-scoped", () => {
   assert.match(source, /const FAVICONS_DIR_NAME: &str = "favicons";/);
   assert.match(source, /const MAX_WEB_PREVIEW_FAVICON_URI_BYTES: usize = 4096;/);
   assert.match(source, /const MAX_WEB_PREVIEW_FAVICON_IMAGE_BYTES: usize = 512 \* 1024;/);
+  assert.match(source, /const MAX_WEB_PREVIEW_FAVICON_CACHE_BYTES: u64 = 16 \* 1024 \* 1024;/);
+  assert.match(source, /const MAX_WEB_PREVIEW_FAVICON_CACHE_FILES: usize = 128;/);
+  assert.match(source, /const MAX_DEFERRED_WEB_PREVIEW_BROWSER_EVENTS: usize = 128;/);
   assert.match(eventEnum, /FaviconUriChanged\s*\{\s*uri: String,\s*page_url: Option<String>,\s*\}/);
   assert.match(source, /favicon_uri: Option<SharedString>/);
   assert.match(source, /favicon_image_path: Option<SharedString>/);
+  assert.match(source, /favicon_cache_request_uri: Option<SharedString>/);
 
   assert.match(updateForPage, /favicon_page_url_matches_active_url\(page_url\)/);
   assert.match(updateForPage, /favicon_page_allows_file_uri\(page_url\)/);
@@ -647,9 +671,9 @@ test("Windows Web Preview favicon updates are bounded and page-scoped", () => {
     /display_url_for_loaded_url\(page_url, source_apply_session_active\)\s*== self\.active_url\.as_ref\(\)/,
   );
   assert.match(updateUri, /validated_favicon_uri\(uri\.as_str\(\), allow_file_uri\)/);
-  assert.match(updateUri, /favicon_cache_file_path\(&cache_dir, uri\.as_str\(\)\)/);
-  assert.match(updateUri, /cached_path\.exists\(\)/);
+  assert.doesNotMatch(updateUri, /favicon_cache_file_path|cached_path\.exists|\.exists\(\)/);
   assert.match(updateUri, /self\.cache_favicon_uri\(uri, allow_file_uri, cx\);/);
+  assert.match(cacheUri, /favicon_cache_request_uri/);
   assert.match(cacheUri, /cx\.background_spawn\(cache_web_preview_favicon_uri/);
   assert.match(cacheUri, /allow_file_uri/);
   assert.match(cacheUri, /cx\.emit\(ItemEvent::UpdateTab\);/);
@@ -662,6 +686,8 @@ test("Windows Web Preview favicon updates are bounded and page-scoped", () => {
   assert.match(source, /fn favicon_page_allows_file_uri\(page_url: Option<&str>\) -> bool/);
   assert.match(source, /page_url\.scheme\(\) == "file"/);
   assert.match(cacheTask, /validated_favicon_uri\(uri\.as_str\(\), allow_file_uri\)/);
+  assert.match(cacheTask, /let cache_path = favicon_cache_file_path\(&cache_dir, uri\.as_str\(\)\);/);
+  assert.match(cacheTask, /if cache_path\.exists\(\) \{[\s\S]*prune_favicon_cache\(cache_dir\.as_path\(\), cache_path\.as_path\(\)\);[\s\S]*return Ok\(cache_path\);/);
   assert.match(cacheTask, /"http" \| "https" => download_favicon_bytes/);
   assert.match(cacheTask, /"file" =>/);
   assert.match(cacheTask, /favicon_bytes_look_like_image\(&bytes\)/);
@@ -672,9 +698,20 @@ test("Windows Web Preview favicon updates are bounded and page-scoped", () => {
   assert.match(imageCheck, /prefix\.contains\("<svg"\)/);
   assert.match(writeCache, /fs::write\(&temp_path, bytes\)/);
   assert.match(writeCache, /fs::rename\(&temp_path, cache_path\)/);
+  assert.match(writeCache, /prune_favicon_cache\(cache_dir, cache_path\);/);
+  assert.match(pruneCache, /MAX_WEB_PREVIEW_FAVICON_CACHE_FILES/);
+  assert.match(pruneCache, /MAX_WEB_PREVIEW_FAVICON_CACHE_BYTES/);
+  assert.match(pruneCache, /protected_path/);
   assert.match(source, /fn favicon_cache_file_path\(cache_dir: &Path, uri: &str\) -> PathBuf/);
   assert.match(source, /fn fnv1a64\(bytes: &\[u8\]\) -> u64/);
 
+  assert.match(pushBrowserEvent, /coalesce_browser_event\(&mut queue, &event\);/);
+  assert.match(pushBrowserEvent, /prune_browser_event_queue\(&mut queue\);/);
+  assert.match(startEventPump, /if this\.upgrade\(\)\.is_none\(\) \{\s*break;\s*\}/);
+  assert.match(startEventPump, /take_queued_browser_events\(&browser_events\)/);
+  assert.match(startEventPump, /\.update_in\(cx, move \|this, window, cx\| \{/);
+  assert.match(startEventPump, /this\.apply_browser_events\(pending_events, window, cx\);/);
+  assert.doesNotMatch(render, /browser_events|apply_browser_events|take_queued_browser_events|cache_favicon_uri/);
   assert.match(applyBrowserEvents, /BrowserEvent::FaviconUriChanged \{ uri, page_url \} => \{/);
   assert.match(applyBrowserEvents, /self\.update_favicon_uri_for_page\(uri, page_url\.as_deref\(\), cx\)/);
   assert.match(applyBrowserEvents, /BrowserEvent::NavigationStarted[\s\S]*self\.clear_favicon\(\)/);

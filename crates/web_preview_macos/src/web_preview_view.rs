@@ -69,6 +69,7 @@ use wry::{
 const DEFAULT_WEB_PREVIEW_URL: &str = "https://www.google.com/";
 const GOOGLE_SEARCH_URL: &str = "https://www.google.com/search";
 const BOOKMARKS_FILE_NAME: &str = "bookmarks.json";
+const MAX_DEFERRED_WEB_PREVIEW_BROWSER_EVENTS: usize = 128;
 
 pub type OnboardingCompleteCallback = Rc<dyn Fn(&mut Window, &mut App)>;
 
@@ -2275,7 +2276,30 @@ pub(crate) fn push_browser_event(event_queue: &Arc<Mutex<Vec<BrowserEvent>>>, ev
     let mut queue = event_queue
         .lock()
         .expect("browser event queue lock poisoned");
+    coalesce_browser_event(&mut queue, &event);
     queue.push(event);
+    prune_browser_event_queue(&mut queue);
+}
+
+fn coalesce_browser_event(queue: &mut Vec<BrowserEvent>, event: &BrowserEvent) {
+    match event {
+        BrowserEvent::UrlChanged(_) => {
+            queue.retain(|queued| !matches!(queued, BrowserEvent::UrlChanged(_)));
+        }
+        BrowserEvent::TitleChanged(_) => {
+            queue.retain(|queued| !matches!(queued, BrowserEvent::TitleChanged(_)));
+        }
+        BrowserEvent::MountFailed(_) => {
+            queue.retain(|queued| !matches!(queued, BrowserEvent::MountFailed(_)));
+        }
+        BrowserEvent::IpcMessage(_) => {}
+    }
+}
+
+fn prune_browser_event_queue(queue: &mut Vec<BrowserEvent>) {
+    while queue.len() > MAX_DEFERRED_WEB_PREVIEW_BROWSER_EVENTS {
+        queue.remove(0);
+    }
 }
 
 #[cfg(target_os = "windows")]

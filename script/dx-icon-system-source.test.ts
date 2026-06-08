@@ -59,7 +59,7 @@ test("DX semantic icon layer owns rebrand-specific aliases", () => {
   assert.doesNotMatch(dxIcons, /LoadCircle|Settings => IconName::Settings/);
 });
 
-test("provider and model path SVGs stay tintable until a brand color mode is explicit", () => {
+test("provider and model brand SVGs preserve original colors without retinting every external SVG", () => {
   const icon = read("crates/ui/src/components/icon.rs");
   const agentConfiguration = read("crates/agent_ui/src/agent_configuration.rs");
   const agentModelSelector = read("crates/agent_ui/src/agent_model_selector.rs");
@@ -80,21 +80,15 @@ test("provider and model path SVGs stay tintable until a brand color mode is exp
     /IconSource::OriginalColorExternalSvg\(path\) => img\(path\)[\s\S]*\.opacity\(self\.opacity\)/,
   );
 
-  assert.match(agentConfiguration, /IconOrSvg::Svg\(path\) => \{[\s\S]*Icon::from_external_svg\(path\)[\s\S]*\.color\(Color::Muted\)/);
-  assert.match(agentModelSelector, /IconOrSvg::Svg\(path\) => Icon::from_external_svg\(path\)[\s\S]*\.color\(color\)/);
-  assert.match(modelSelectorPopover, /AgentModelIcon::Path\(path\) => \{[\s\S]*Icon::from_external_svg\(path\)[\s\S]*\.color\(color\)/);
-  assert.match(modelSelectorComponents, /ModelIcon::Path\(icon_path\) => \{[\s\S]*Icon::from_external_svg\(icon_path\)[\s\S]*\.color\(model_icon_color\)/);
-  assert.match(apiKeysOnboarding, /IconOrSvg::Svg\(icon_path\) => \{[\s\S]*Icon::from_external_svg\(icon_path\)[\s\S]*\.color\(Color::Muted\)/);
-  assert.doesNotMatch(
-    [
-      agentConfiguration,
-      agentModelSelector,
-      modelSelectorPopover,
-      modelSelectorComponents,
-      apiKeysOnboarding,
-    ].join("\n"),
-    /from_external_svg_with_original_colors/,
-  );
+  for (const source of [
+    agentConfiguration,
+    agentModelSelector,
+    modelSelectorPopover,
+    modelSelectorComponents,
+    apiKeysOnboarding,
+  ]) {
+    assert.match(source, /Icon::from_external_svg_with_original_colors/);
+  }
 
   assert.match(agentConfiguration, /AgentIcon::Path\(icon_path\) => Icon::from_external_svg\(icon_path\)/);
 });
