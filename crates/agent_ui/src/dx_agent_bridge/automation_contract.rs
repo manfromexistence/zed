@@ -237,6 +237,7 @@ fn automation_row(automation: &Value) -> DxAgentAutomation {
     let schedule = automation_schedule(automation);
     let status = automation_status(automation);
     let destination = automation_destination(automation);
+    let actions = automation_row_actions(automation, &id);
 
     DxAgentAutomation {
         id,
@@ -256,7 +257,7 @@ fn automation_row(automation: &Value) -> DxAgentAutomation {
             .unwrap_or_else(|| "pending runtime".to_string()),
         receipts: automation_receipts(automation),
         history: automation_history(automation),
-        actions: automation_row_actions(automation, &id),
+        actions,
         next_action: automation_text_field(automation, &["next_action"]).unwrap_or_default(),
     }
 }

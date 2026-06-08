@@ -27,11 +27,14 @@ impl ToolsScreen {
     ) {
         workspace.dismiss_zoomed_agent_panel(window, cx);
 
-        if let Some(pane) = workspace.pane_for_screen_kind(WorkspaceScreenKind::Tools, cx)
-            && let Some(item) = pane.read(cx).items().find_map(|item| {
-                (item.screen_kind(cx) == WorkspaceScreenKind::Tools).then(|| item.boxed_clone())
-            })
-        {
+        let existing_item = workspace
+            .pane_for_screen_kind(WorkspaceScreenKind::Tools, cx)
+            .and_then(|pane| {
+                pane.read(cx).items().find_map(|item| {
+                    (item.screen_kind(cx) == WorkspaceScreenKind::Tools).then(|| item.boxed_clone())
+                })
+            });
+        if let Some(item) = existing_item {
             workspace.activate_item(&*item, true, true, window, cx);
             return;
         }

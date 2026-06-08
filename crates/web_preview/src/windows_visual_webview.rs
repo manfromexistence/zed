@@ -696,7 +696,7 @@ fn attach_event_handlers(
                 webview.Source(&mut url)?;
                 let current_url = take_pwstr(url);
                 push_browser_event(&event_queue, BrowserEvent::UrlChanged(current_url.clone()));
-                request_favicon_uri(webview, event_queue.clone(), current_url);
+                request_favicon_uri(&webview, event_queue.clone(), current_url);
                 push_browser_event(&event_queue, BrowserEvent::NavigationCompleted);
                 Ok(())
             })),
@@ -731,7 +731,6 @@ fn request_favicon_uri(
             return Ok(());
         }
 
-        let result = take_pwstr(result);
         if let Ok(Some(uri)) = serde_json::from_str::<Option<String>>(result.as_str()) {
             push_browser_event(
                 &event_queue,

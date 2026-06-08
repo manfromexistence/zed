@@ -7719,7 +7719,7 @@ impl AgentPanel {
         DxLaunchWorkspaceStatus {
             active_status: input.active_status,
             visible_worktree_count,
-            background_thread_count,
+            background_thread_count: background_task_count,
             subagent_rows,
             agent_bridge,
             launch_status,

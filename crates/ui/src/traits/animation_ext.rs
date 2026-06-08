@@ -112,10 +112,7 @@ impl IconHoverEffect {
         let progress = progress.clamp(0.0, 1.0);
         let scale = 1.0 + (self.scale - 1.0) * progress;
         let rotation = self.rotation_degrees.to_radians() * progress;
-        let translation = point(
-            px(self.translation.x.0 * progress),
-            px(self.translation.y.0 * progress),
-        );
+        let translation = point(self.translation.x * progress, self.translation.y * progress);
 
         base.then(
             Transformation::default()

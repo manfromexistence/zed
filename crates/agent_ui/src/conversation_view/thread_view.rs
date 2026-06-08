@@ -55,7 +55,9 @@ struct FlowTextToSpeechRequest {
     text: String,
     source_label: &'static str,
     empty_message: &'static str,
+    #[cfg(feature = "audio")]
     speaking_message: &'static str,
+    #[cfg(feature = "audio")]
     finished_message: &'static str,
 }
 
@@ -65,7 +67,9 @@ impl FlowTextToSpeechRequest {
             text,
             source_label: "composer",
             empty_message: "Type text in the composer before using Kokoro read-aloud",
+            #[cfg(feature = "audio")]
             speaking_message: "Kokoro is reading the composer",
+            #[cfg(feature = "audio")]
             finished_message: "Kokoro finished reading the composer",
         }
     }
@@ -75,7 +79,9 @@ impl FlowTextToSpeechRequest {
             text,
             source_label: "latest agent response",
             empty_message: "No agent response is available for Kokoro read-aloud",
+            #[cfg(feature = "audio")]
             speaking_message: "Kokoro is reading the latest agent response",
+            #[cfg(feature = "audio")]
             finished_message: "Kokoro finished reading the latest agent response",
         }
     }
@@ -4530,7 +4536,9 @@ impl ThreadView {
         let playback_id = self.flow_playback_id;
         let cancellation = FlowSpeechCancellation::new();
         self.flow_speech_cancellation = Some(cancellation.clone());
+        #[cfg(feature = "audio")]
         let speaking_message = request.speaking_message;
+        #[cfg(feature = "audio")]
         let finished_message = request.finished_message;
         cx.notify();
 

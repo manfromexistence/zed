@@ -76,7 +76,7 @@ use util::{
 };
 use workspace::{
     DraggedSelection, OpenInTerminal, OpenMode, OpenOptions, OpenVisible, PreviewTabsSettings,
-    SelectedEntry, SplitDirection, Workspace,
+    SelectedEntry, SplitDirection, ToggleFileFinder, ToggleProjectSymbols, Workspace,
     dock::{DockPosition, Panel, PanelEvent, side_panel_header_controls},
     notifications::{DetachAndPromptErr, NotifyResultExt, NotifyTaskExt},
 };
@@ -1079,6 +1079,7 @@ impl ProjectPanel {
                     expanded_dir_ids: Default::default(),
                     unfolded_dir_ids: Default::default(),
                     dx_explorer_visible_summary: Default::default(),
+                    dx_explorer_storage_drilldown: Default::default(),
                 },
                 update_visible_entries_task: Default::default(),
                 undo_manager: UndoManager::new(workspace.weak_handle(), weak_project_panel, &cx),
@@ -5193,7 +5194,7 @@ impl ProjectPanel {
         let hide_hidden = settings.hide_hidden;
 
         let visible_entries_task = cx.spawn_in(window, async move |this, cx| {
-            let (mut new_state, media_preview_updates, folder_storage_summary_updates) = cx
+            let (new_state, media_preview_updates, folder_storage_summary_updates) = cx
                 .background_spawn(async move {
                     let mut visible_entries_total = 0usize;
                     let mut active_media_shelf_entry_ids = active_media_shelf_entry_ids;

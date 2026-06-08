@@ -30,8 +30,8 @@ use std::{
 #[cfg(target_os = "windows")]
 use std::{io::Cursor, num::NonZeroIsize};
 use ui::{
-    Color, CommonAnimationExt, ContextMenu, ContextMenuEntry, IconButton, IconName, IconSize,
-    Label, LabelSize, PopoverMenu, Tooltip, prelude::*,
+    Color, ContextMenu, ContextMenuEntry, IconButton, IconName, IconSize, Label, LabelSize,
+    PopoverMenu, Tooltip, prelude::*,
 };
 use uuid::Uuid;
 use workspace::item::{
@@ -1473,7 +1473,7 @@ impl WebPreviewView {
 
         cx.spawn(async move |this, cx| {
             let result = task.await;
-            this.update(cx, |this, cx| {
+            let _ = this.update(cx, |this, cx| {
                 match result {
                     Ok(path)
                         if this
@@ -1486,12 +1486,11 @@ impl WebPreviewView {
                     }
                     Ok(_) => {}
                     Err(error) => {
-                        log::debug!("Failed to cache web preview favicon for {uri}: {error}");
+                        let _ = (uri, error);
                     }
                 }
                 cx.notify();
-            })
-            .log_err();
+            });
         })
         .detach();
     }
@@ -38325,7 +38324,7 @@ fn read_favicon_file_bytes(path: &Path) -> Result<Vec<u8>> {
         bail!("Favicon file exceeds cache size limit");
     }
 
-    let mut file =
+    let file =
         fs::File::open(path).with_context(|| format!("Failed to read {}", path.display()))?;
     let mut bytes = Vec::new();
     file.take((MAX_WEB_PREVIEW_FAVICON_IMAGE_BYTES + 1) as u64)
@@ -38367,10 +38366,7 @@ fn write_cached_favicon(cache_dir: &Path, cache_path: &Path, bytes: &[u8]) -> Re
         Ok(()) => Ok(()),
         Err(error) if cache_path.exists() => {
             let _ = fs::remove_file(&temp_path);
-            log::debug!(
-                "Skipped replacing existing cached web preview favicon {}: {error}",
-                cache_path.display()
-            );
+            let _ = error;
             Ok(())
         }
         Err(error) => {

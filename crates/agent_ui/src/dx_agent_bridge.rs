@@ -39,9 +39,7 @@ use self::paths::{
 
 pub(crate) use self::automation_actions::automation_public_command_for_action;
 pub(crate) use self::automation_contract::{
-    DxAgentAutomation, DxAgentAutomationComposer, DxAgentAutomationComposerField,
-    DxAgentAutomationDestination, DxAgentAutomationHistoryEntry, DxAgentAutomationReceiptRef,
-    DxAgentAutomationSchedule, DxAgentAutomationStatus,
+    DxAgentAutomation, DxAgentAutomationComposer, DxAgentAutomationHistoryEntry,
 };
 pub(crate) use self::catalog_active_provider_label::{
     catalog_active_provider_label, catalog_active_provider_value_label,

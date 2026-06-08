@@ -556,10 +556,6 @@ fn string_at(value: &Value, path: &[&str]) -> Option<String> {
         .map(ToOwned::to_owned)
 }
 
-fn bool_at(value: &Value, path: &[&str]) -> Option<bool> {
-    value_at(value, path).and_then(Value::as_bool)
-}
-
 fn usize_at(value: &Value, path: &[&str]) -> Option<usize> {
     value_at(value, path)
         .and_then(Value::as_u64)

@@ -1,3 +1,21 @@
+[2026-06-08] - Authorized J6 Validation Repair
+
+CHANGED:
+- `Cargo.lock` now includes the local `liquid_glass` package dependency needed by the current Zed workspace without regenerating unrelated lockfile entries.
+- `justfile` keeps `CARGO_INCREMENTAL` caller-controllable for tight-disk validation while preserving incremental builds by default.
+- `crates\agent_ui`, `crates\project_panel`, `crates\web_preview`, `crates\onboarding`, `crates\sidebar`, `crates\agent`, and `crates\ui` compile cleanly after focused fixes for moved values, borrow ordering, visibility, missing imports, feature-gated audio state, warning-prone staged DX modules, favicon WebView plumbing, and pixel animation arithmetic.
+- `G:\Dx\media\src\tools\archive\native.rs` and `G:\Dx\media\src\providers\listing.rs` now gate archive-only helpers and staged listing helpers so Zed validation does not inherit noisy path-dependency warnings.
+
+PASSED:
+- `cargo build --locked -p agent_ui`
+- `cargo build --locked -p web_preview`
+- `cargo build --locked -p zed --bin zed`
+- `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=0 just run`
+
+NOTES:
+- The authorized `just run` pass finished the Zed dev build in 24m 46s and launched Zed process `16472`, with the main window detected.
+- DX Media warning cleanup lives in the separate `G:\Dx\media` repository and should be committed separately from the Zed validation repair.
+
 [2026-06-08] - DX Agents Clean Workspace Taxonomy
 
 ADDED:

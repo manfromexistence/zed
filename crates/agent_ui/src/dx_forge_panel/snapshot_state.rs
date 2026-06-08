@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use super::snapshot::DxForgePanelState;
 
 const MAX_WORKSPACE_ROOTS: usize = 4;

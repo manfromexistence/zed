@@ -15,44 +15,66 @@ mod context_server_configuration;
 pub(crate) mod conversation_view;
 mod diagnostics;
 pub mod draft_prompt_store;
+#[allow(dead_code)]
 mod dx_agent_bridge;
 mod dx_check_panel;
 mod dx_check_panel_view;
 mod dx_check_score;
+#[allow(dead_code)]
 mod dx_deploy_capabilities;
 mod dx_deploy_check_roots;
+#[allow(dead_code)]
 mod dx_deploy_gate_rail;
 mod dx_deploy_hub_roots;
 mod dx_deploy_invalid_receipts;
+#[allow(dead_code)]
 mod dx_deploy_launch_action_labels;
 mod dx_deploy_launch_actions;
+#[allow(dead_code)]
 mod dx_deploy_launch_actions_rail;
+#[allow(dead_code)]
 mod dx_deploy_launch_approval_evidence;
+#[allow(dead_code)]
 mod dx_deploy_launch_buckets;
+#[allow(dead_code)]
 mod dx_deploy_launch_evidence;
+#[allow(dead_code)]
 mod dx_deploy_launch_evidence_rail;
+#[allow(dead_code)]
 mod dx_deploy_launch_gate;
+#[allow(dead_code)]
 mod dx_deploy_launch_gate_rail;
+#[allow(dead_code)]
 mod dx_deploy_launch_notices;
+#[allow(dead_code)]
 mod dx_deploy_launch_outcome;
 mod dx_deploy_launch_prompts;
+#[allow(dead_code)]
 mod dx_deploy_launch_scope;
 mod dx_deploy_launch_score;
 mod dx_deploy_local_files;
+#[allow(dead_code)]
 mod dx_deploy_matrix_rail;
 mod dx_deploy_prompts;
+#[allow(dead_code)]
 mod dx_deploy_provider_gate_summary;
+#[allow(dead_code)]
 mod dx_deploy_rail;
+#[allow(dead_code)]
 mod dx_deploy_rail_ui;
+#[allow(dead_code)]
 mod dx_deploy_receipt_buckets;
 mod dx_deploy_receipt_extract;
 mod dx_deploy_receipt_fields;
 mod dx_deploy_receipt_files;
 mod dx_deploy_receipt_rank;
 mod dx_deploy_receipt_roots;
+#[allow(dead_code)]
 mod dx_deploy_receipt_summary;
 mod dx_deploy_root_key;
+#[allow(dead_code)]
 mod dx_deploy_target_detection;
+#[allow(dead_code)]
 mod dx_deploy_targets;
 mod dx_evidence_basket;
 mod dx_forge_panel;
@@ -62,9 +84,11 @@ mod dx_launch_contracts;
 mod dx_launch_prompts;
 mod dx_launch_readiness;
 mod dx_launch_receipt_roots;
+#[allow(dead_code)]
 mod dx_launch_receipts;
 mod dx_launch_source_audit;
 mod dx_launch_status;
+#[allow(dead_code)]
 mod dx_launch_workspace;
 pub mod dx_project_context;
 mod dx_proof_freshness;

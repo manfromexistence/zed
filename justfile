@@ -24,8 +24,8 @@ launch-zed:
 run: ensure-build-headroom
     @echo "Running Zed with fast incremental G-drive build settings..."
     @echo "Building the zed binary"
-    @$jobs = if ([string]::IsNullOrWhiteSpace($env:CARGO_BUILD_JOBS)) { "6" } else { $env:CARGO_BUILD_JOBS }; $env:CARGO_BUILD_JOBS = $jobs; Write-Host "Using Cargo config: locked Cargo.lock, $jobs job(s), G:/Zed/target, rust-lld linker, no debug info, incremental cache enabled"
-    $env:CARGO_INCREMENTAL = "1"; cargo build --locked -p zed --bin zed
+    @$jobs = if ([string]::IsNullOrWhiteSpace($env:CARGO_BUILD_JOBS)) { "6" } else { $env:CARGO_BUILD_JOBS }; $incremental = if ([string]::IsNullOrWhiteSpace($env:CARGO_INCREMENTAL)) { "1" } else { $env:CARGO_INCREMENTAL }; $env:CARGO_BUILD_JOBS = $jobs; $env:CARGO_INCREMENTAL = $incremental; Write-Host "Using Cargo config: locked Cargo.lock, $jobs job(s), G:/Zed/target, rust-lld linker, no debug info, incremental=$incremental"
+    cargo build --locked -p zed --bin zed
     @echo "Build complete! Launching Zed once..."
     @just launch-zed
 
@@ -33,9 +33,9 @@ run: ensure-build-headroom
 run-full: ensure-build-headroom
     @echo "Running Zed with full incremental G-drive build settings..."
     @echo "Building the zed binary plus the development CLI companion"
-    @$jobs = if ([string]::IsNullOrWhiteSpace($env:CARGO_BUILD_JOBS)) { "6" } else { $env:CARGO_BUILD_JOBS }; $env:CARGO_BUILD_JOBS = $jobs; Write-Host "Using Cargo config: locked Cargo.lock, $jobs job(s), G:/Zed/target, rust-lld linker, no debug info, incremental cache enabled"
-    $env:CARGO_INCREMENTAL = "1"; cargo build --locked -p zed --bin zed
-    $env:CARGO_INCREMENTAL = "1"; cargo build --locked -p cli --bin cli
+    @$jobs = if ([string]::IsNullOrWhiteSpace($env:CARGO_BUILD_JOBS)) { "6" } else { $env:CARGO_BUILD_JOBS }; $incremental = if ([string]::IsNullOrWhiteSpace($env:CARGO_INCREMENTAL)) { "1" } else { $env:CARGO_INCREMENTAL }; $env:CARGO_BUILD_JOBS = $jobs; $env:CARGO_INCREMENTAL = $incremental; Write-Host "Using Cargo config: locked Cargo.lock, $jobs job(s), G:/Zed/target, rust-lld linker, no debug info, incremental=$incremental"
+    cargo build --locked -p zed --bin zed
+    cargo build --locked -p cli --bin cli
     @echo "Build complete! Launching Zed once..."
     @just launch-zed
 
@@ -51,8 +51,8 @@ run-cranelift: ensure-build-headroom
 # Continue interrupted build
 continue: ensure-build-headroom
     @echo "Continuing interrupted build..."
-    @$jobs = if ([string]::IsNullOrWhiteSpace($env:CARGO_BUILD_JOBS)) { "6" } else { $env:CARGO_BUILD_JOBS }; $env:CARGO_BUILD_JOBS = $jobs
-    $env:CARGO_INCREMENTAL = "1"; cargo build --locked -p zed --bin zed
+    @$jobs = if ([string]::IsNullOrWhiteSpace($env:CARGO_BUILD_JOBS)) { "6" } else { $env:CARGO_BUILD_JOBS }; $incremental = if ([string]::IsNullOrWhiteSpace($env:CARGO_INCREMENTAL)) { "1" } else { $env:CARGO_INCREMENTAL }; $env:CARGO_BUILD_JOBS = $jobs; $env:CARGO_INCREMENTAL = $incremental
+    cargo build --locked -p zed --bin zed
     @echo "Build complete! Running Zed..."
     @just launch-zed
 

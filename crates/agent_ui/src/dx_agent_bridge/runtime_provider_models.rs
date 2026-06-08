@@ -38,10 +38,11 @@ pub(in super::super) fn models(value: &Value) -> Vec<DxAgentModel> {
 
 fn provider_row(provider: &Value, root_status: Option<&str>) -> Option<DxAgentProvider> {
     let id = display_string_field(provider, &["id"])?;
+    let display_name =
+        display_string_field(provider, &["display_name"]).unwrap_or_else(|| id.clone());
     Some(DxAgentProvider {
         id,
-        display_name: display_string_field(provider, &["display_name"])
-            .unwrap_or_else(|| id.clone()),
+        display_name,
         status: display_string_field(provider, &["status"])
             .or_else(|| root_status.map(ToString::to_string))
             .unwrap_or_else(|| "unknown".to_string()),

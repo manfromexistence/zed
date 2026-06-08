@@ -9095,6 +9095,7 @@ impl Sidebar {
         });
     }
 
+    #[allow(dead_code)]
     fn draft_dx_automation_action(&self, window: &mut Window, cx: &mut Context<Self>) {
         self.update_agent_panel(window, cx, |panel, window, cx| {
             panel.draft_dx_automation_action_from_sidebar(window, cx);

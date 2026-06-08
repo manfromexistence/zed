@@ -22,6 +22,7 @@ pub(super) enum ComposerVoicePhase {
     Recording,
     Transcribing,
     Synthesizing,
+    #[allow(dead_code)]
     Speaking,
     Error,
 }
@@ -126,6 +127,7 @@ impl ComposerVoiceState {
         self.input_level = 0.0;
     }
 
+    #[allow(dead_code)]
     pub(super) fn set_speaking(&mut self, message: impl Into<SharedString>) {
         self.phase = ComposerVoicePhase::Speaking;
         self.message = message.into();

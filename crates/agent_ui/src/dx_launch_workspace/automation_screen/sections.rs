@@ -11,7 +11,7 @@ use super::super::{metric_row, muted_card};
 
 mod rows;
 
-pub(super) fn drafts_state(snapshot: &DxAgentBridgeSnapshot, cx: &App) -> AnyElement {
+pub(super) fn drafts_state(snapshot: &DxAgentBridgeSnapshot, _cx: &App) -> AnyElement {
     let composer = &snapshot.automation_composer;
     let status = if composer.save_draft_available {
         AiSettingItemStatus::Running

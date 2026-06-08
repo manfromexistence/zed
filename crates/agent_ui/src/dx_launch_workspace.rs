@@ -50,6 +50,8 @@ mod tool_history;
 mod tools_screen;
 mod www_evidence;
 
+use self::list_labels::{bounded_items, yes_no};
+
 pub(crate) use automation_screen::render_automation_screen;
 pub(crate) use connections_screen::render_connections_screen;
 pub(crate) use tools_screen::render_tools_screen;
@@ -641,11 +643,11 @@ fn subagent_row(id: SharedString, row: &DxSubagentStatusRow, cx: &App) -> AnyEle
                 .truncate(),
         )
         .child(div().flex_1())
-        .child(subagent_status_badge(row.status, cx))
+        .child(subagent_status_badge(row.status))
         .into_any_element()
 }
 
-fn subagent_status_badge(status: DxSubagentStatus, cx: &App) -> AnyElement {
+fn subagent_status_badge(status: DxSubagentStatus) -> AnyElement {
     let color = subagent_status_color(status);
 
     h_flex()
