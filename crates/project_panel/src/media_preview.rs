@@ -14,13 +14,14 @@ use std::{
 };
 
 use gpui::{
-    AnyElement, App, Context, Div, FocusHandle, Hsla, MouseButton, MouseDownEvent, ObjectFit,
-    SharedString, Stateful, StatefulInteractiveElement, hsla, img, linear_color_stop,
-    linear_gradient,
+    AnyElement, App, Context, Div, FocusHandle, Hsla, ObjectFit, SharedString, Stateful, hsla, img,
+    linear_color_stop, linear_gradient,
 };
 use project::{Entry, ProjectEntryId, WorktreeId};
 use settings::Settings;
-use ui::{ButtonLike, ContextMenu, ListHeader, PopoverMenu, Tooltip, prelude::*};
+use ui::{
+    ButtonLike, ButtonSize, ContextMenu, ListHeader, PopoverMenu, TintColor, Tooltip, prelude::*,
+};
 use workspace::{PreviewTabsSettings, SelectedEntry};
 
 pub(crate) const MAX_PROJECT_PANEL_MEDIA_CHILD_SCAN: usize = 512;
@@ -251,6 +252,7 @@ pub(crate) fn render_folder_media_shelf(
                 item,
                 worktree_id,
                 selected_entry_id == Some(item.entry_id),
+                focus_handle.clone(),
                 cx,
             )
         })
@@ -385,67 +387,72 @@ fn render_media_shelf_card(
     item: &MediaPreviewItem,
     worktree_id: WorktreeId,
     is_selected: bool,
+    focus_handle: FocusHandle,
     cx: &mut Context<super::ProjectPanel>,
 ) -> AnyElement {
     let entry_id = item.entry_id;
-    media_shelf_card_container("project-panel-media-shelf-card", item, is_selected, cx)
-        .cursor_pointer()
-        .on_click(
-            cx.listener(move |panel, event: &gpui::ClickEvent, window, cx| {
-                cx.stop_propagation();
-                window.focus(&panel.focus_handle, cx);
-                let selection = SelectedEntry {
-                    worktree_id,
-                    entry_id,
-                };
+    media_shelf_card_container(
+        "project-panel-media-shelf-card",
+        item,
+        is_selected,
+        focus_handle,
+        cx,
+    )
+    .on_click(
+        cx.listener(move |panel, event: &gpui::ClickEvent, window, cx| {
+            cx.stop_propagation();
+            window.focus(&panel.focus_handle, cx);
+            let selection = SelectedEntry {
+                worktree_id,
+                entry_id,
+            };
 
-                if event.modifiers().secondary() {
-                    panel.selection = Some(selection);
-                    if let Some(position) = panel
-                        .marked_entries
-                        .iter()
-                        .position(|entry| *entry == selection)
-                    {
-                        panel.marked_entries.remove(position);
-                    } else {
-                        panel.marked_entries.push(selection);
-                    }
-                    cx.notify();
-                    return;
+            if event.modifiers().secondary() {
+                panel.selection = Some(selection);
+                if let Some(position) = panel
+                    .marked_entries
+                    .iter()
+                    .position(|entry| *entry == selection)
+                {
+                    panel.marked_entries.remove(position);
+                } else {
+                    panel.marked_entries.push(selection);
                 }
+                cx.notify();
+                return;
+            }
 
+            panel.marked_entries.clear();
+            panel.selection = Some(selection);
+            let preview_tabs_enabled =
+                PreviewTabsSettings::get_global(cx).enable_preview_from_project_panel;
+            let click_count = event.click_count();
+            panel.open_entry(
+                entry_id,
+                click_count > 1,
+                preview_tabs_enabled && click_count == 1,
+                cx,
+            );
+            cx.notify();
+        }),
+    )
+    .on_right_click(
+        cx.listener(move |panel, event: &gpui::ClickEvent, window, cx| {
+            cx.stop_propagation();
+            window.focus(&panel.focus_handle, cx);
+            let selection = SelectedEntry {
+                worktree_id,
+                entry_id,
+            };
+            if !panel.marked_entries.contains(&selection) {
                 panel.marked_entries.clear();
-                panel.selection = Some(selection);
-                let preview_tabs_enabled =
-                    PreviewTabsSettings::get_global(cx).enable_preview_from_project_panel;
-                let click_count = event.click_count();
-                panel.open_entry(
-                    entry_id,
-                    click_count > 1,
-                    preview_tabs_enabled && click_count == 1,
-                    cx,
-                );
-                cx.notify();
-            }),
-        )
-        .on_mouse_down(
-            MouseButton::Right,
-            cx.listener(move |panel, event: &MouseDownEvent, window, cx| {
-                cx.stop_propagation();
-                window.focus(&panel.focus_handle, cx);
-                let selection = SelectedEntry {
-                    worktree_id,
-                    entry_id,
-                };
-                if !panel.marked_entries.contains(&selection) {
-                    panel.marked_entries.clear();
-                }
-                panel.selection = Some(selection);
-                panel.deploy_context_menu(event.position, entry_id, window, cx);
-                cx.notify();
-            }),
-        )
-        .into_any_element()
+            }
+            panel.selection = Some(selection);
+            panel.deploy_context_menu(event.position(), entry_id, window, cx);
+            cx.notify();
+        }),
+    )
+    .into_any_element()
 }
 
 fn render_media_gallery_card(
@@ -460,43 +467,49 @@ fn media_shelf_card_container(
     id_prefix: &'static str,
     item: &MediaPreviewItem,
     is_selected: bool,
+    focus_handle: FocusHandle,
     cx: &mut App,
-) -> Stateful<Div> {
+) -> ButtonLike {
     let colors = cx.theme().colors();
     let tooltip_title = item.name.clone();
     let tooltip_meta = media_preview_card_tooltip_meta(item);
-    let card = div()
-        .id(SharedString::from(format!(
-            "{id_prefix}-{:?}-{:?}",
-            item.kind, item.entry_id
-        )))
-        .min_w(px(PROJECT_PANEL_MEDIA_SHELF_CARD_MIN_WIDTH))
-        .h(px(PROJECT_PANEL_MEDIA_SHELF_CARD_TOTAL_HEIGHT))
-        .w_full()
-        .v_flex()
-        .p_0()
-        .rounded_sm()
-        .border_1()
-        .overflow_hidden()
-        .border_color(if is_selected {
-            colors.border_focused
-        } else {
-            colors.border_variant
-        })
-        .bg(if is_selected {
-            colors.element_selected
-        } else {
-            colors.element_background
-        })
-        .when(!is_selected, |this| {
-            this.hover(|style| style.bg(colors.element_hover))
-        })
-        .tooltip(move |_window, cx| {
-            Tooltip::with_meta(tooltip_title.clone(), None, tooltip_meta.clone(), cx)
-        })
-        .child(render_media_shelf_card_body(item, cx));
-
-    card
+    ButtonLike::new(SharedString::from(format!(
+        "{id_prefix}-{:?}-{:?}",
+        item.kind, item.entry_id
+    )))
+    .full_width()
+    .height(px(PROJECT_PANEL_MEDIA_SHELF_CARD_TOTAL_HEIGHT).into())
+    .style(ButtonStyle::Subtle)
+    .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+    .toggle_state(is_selected)
+    .size(ButtonSize::None)
+    .tab_index(0)
+    .track_focus(&focus_handle)
+    .tooltip(move |_window, cx| {
+        Tooltip::with_meta(tooltip_title.clone(), None, tooltip_meta.clone(), cx)
+    })
+    .child(
+        div()
+            .min_w(px(PROJECT_PANEL_MEDIA_SHELF_CARD_MIN_WIDTH))
+            .h(px(PROJECT_PANEL_MEDIA_SHELF_CARD_TOTAL_HEIGHT))
+            .w_full()
+            .v_flex()
+            .p_0()
+            .rounded_sm()
+            .border_1()
+            .overflow_hidden()
+            .border_color(if is_selected {
+                colors.border_focused
+            } else {
+                colors.border_variant
+            })
+            .bg(if is_selected {
+                colors.element_selected
+            } else {
+                colors.element_background
+            })
+            .child(render_media_shelf_card_body(item, cx)),
+    )
 }
 
 fn render_media_shelf_card_body(item: &MediaPreviewItem, cx: &mut App) -> Div {

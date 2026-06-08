@@ -2144,23 +2144,38 @@ test("project panel media preview renders direct image previews and video frames
     "folder media shelf cards must have a distinct element id prefix",
   );
   assert.match(
+    renderFolderMediaShelf,
+    /render_media_shelf_card\([\s\S]*item,[\s\S]*worktree_id,[\s\S]*selected_entry_id == Some\(item\.entry_id\),[\s\S]*focus_handle\.clone\(\),[\s\S]*cx/,
+    "folder media shelf cards must receive the Project Panel focus handle for keyboard focus tracking",
+  );
+  assert.match(
     renderMediaShelfCard,
-    /media_shelf_card_container\([\s\S]*cursor_pointer\(\)[\s\S]*SelectedEntry[\s\S]*worktree_id[\s\S]*entry_id[\s\S]*PreviewTabsSettings::get_global\(cx\)[\s\S]*panel\.open_entry/,
+    /media_shelf_card_container\([\s\S]*focus_handle[\s\S]*cx[\s\S]*SelectedEntry[\s\S]*worktree_id[\s\S]*entry_id[\s\S]*PreviewTabsSettings::get_global\(cx\)[\s\S]*panel\.open_entry/,
     "media shelf cards must select and open real project entries",
   );
   assert.match(
     renderMediaShelfCard,
-    /MouseButton::Right[\s\S]*panel\.deploy_context_menu\(event\.position, entry_id, window, cx\)/,
-    "media shelf cards must use the real project-panel context menu on right click",
+    /\.on_right_click\([\s\S]*panel\.deploy_context_menu\(event\.position\(\), entry_id, window, cx\)/,
+    "media shelf cards must use ButtonLike right-click handling and the real project-panel context menu",
+  );
+  assert.match(
+    media,
+    /use ui::\{[\s\S]*ButtonLike[\s\S]*TintColor/,
+    "media shelf cards should use shared ButtonLike selection styling instead of custom div-only state",
   );
   assert.match(
     mediaShelfCardContainer,
-    /is_selected[\s\S]*colors\.border_focused[\s\S]*colors\.element_selected/,
-    "media shelf cards must show selected state through the shelf card container",
+    /\) -> ButtonLike/,
+    "media shelf card containers should return ButtonLike instead of raw clickable Divs",
   );
   assert.match(
     mediaShelfCardContainer,
-    /\.h\(px\(PROJECT_PANEL_MEDIA_SHELF_CARD_TOTAL_HEIGHT\)\)[\s\S]*\.w_full\(\)[\s\S]*\.v_flex\(\)[\s\S]*\.p_0\(\)[\s\S]*\.overflow_hidden\(\)/,
+    /ButtonLike::new\(SharedString::from\(format!\([\s\S]*"\{id_prefix\}-\{:\?\}-\{:\?\}"[\s\S]*item\.kind,[\s\S]*item\.entry_id[\s\S]*\.full_width\(\)[\s\S]*\.height\(px\(PROJECT_PANEL_MEDIA_SHELF_CARD_TOTAL_HEIGHT\)\.into\(\)\)[\s\S]*\.style\(ButtonStyle::Subtle\)[\s\S]*\.selected_style\(ButtonStyle::Tinted\(TintColor::Accent\)\)[\s\S]*\.toggle_state\(is_selected\)[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&focus_handle\)/,
+    "media shelf cards must use a focusable ButtonLike with Zed selected-state styling",
+  );
+  assert.match(
+    mediaShelfCardContainer,
+    /\.child\([\s\S]*\.min_w\(px\(PROJECT_PANEL_MEDIA_SHELF_CARD_MIN_WIDTH\)\)[\s\S]*\.h\(px\(PROJECT_PANEL_MEDIA_SHELF_CARD_TOTAL_HEIGHT\)\)[\s\S]*\.w_full\(\)[\s\S]*\.v_flex\(\)[\s\S]*\.p_0\(\)[\s\S]*\.overflow_hidden\(\)/,
     "media shelf cards must use fixed-height icon-panel-like tiles instead of full-width list rows",
   );
   assert.match(
