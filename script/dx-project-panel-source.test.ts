@@ -77,6 +77,7 @@ test("project panel visible tree materialization has named caps before collectio
 
 test("project panel DX Explorer header is source-backed and action-wired", () => {
   const source = read("crates/project_panel/src/project_panel.rs");
+  const dxIcons = read("crates/ui/src/dx_icons.rs");
   const dxExplorerSummary = functionBody(source, "dx_explorer_summary");
   const renderDxExplorerHeader = functionBody(source, "render_dx_explorer_header");
   const updateVisibleEntries = functionBody(source, "update_visible_entries");
@@ -169,15 +170,18 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   assert.match(renderDxExplorerHeader, /summary\.skipped_entry_count/);
   assert.match(renderDxExplorerHeader, /summary\.visible_file_count/);
   assert.match(renderDxExplorerHeader, /summary\.visible_folder_count/);
-  assert.match(renderDxExplorerHeader, /format_file_size\(summary\.visible_file_bytes\)/);
+  assert.match(renderDxExplorerHeader, /storage::format_file_size\(summary\.visible_file_bytes\)/);
   assert.match(renderDxExplorerHeader, /summary\.cached_media_item_count/);
   assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-source-controls"\)/);
   assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-filter-controls"\)/);
   assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-view-controls"\)/);
   assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-edit-controls"\)/);
   assert.match(renderDxExplorerHeader, /side_panel_header_controls\(\s*"dx-explorer"/);
-  assert.match(renderDxExplorerHeader, /dx_icon\(DxUiIcon::Source\)/);
+  assert.match(renderDxExplorerHeader, /dx_icon\(DxUiIcon::OpenProject\)/);
+  assert.match(dxIcons, /DxUiIcon::OpenProject => IconName::OpenFolder/);
   assert.match(renderDxExplorerHeader, /dx_icon\(DxUiIcon::Search\)/);
+  assert.match(renderDxExplorerHeader, /IconName::ListX/);
+  assert.match(renderDxExplorerHeader, /IconName::ListFilter/);
   assert.match(renderDxExplorerHeader, /workspace::Open::default\(\)\.boxed_clone\(\)/);
   assert.match(renderDxExplorerHeader, /ToggleFileFinder::default\(\)\.boxed_clone\(\)/);
   assert.match(renderDxExplorerHeader, /ToggleHideGitIgnore\.boxed_clone\(\)/);
@@ -358,6 +362,7 @@ test("project panel drag, drop, and download materialization is bounded", () => 
   const source = read("crates/project_panel/src/project_panel.rs");
   const dropExternalFiles = functionBody(source, "drop_external_files");
   const dragOnto = functionBody(source, "drag_onto");
+  const createPastePath = functionBody(source, "create_paste_path");
   const paste = functionBody(source, "paste");
   const downloadFromRemote = functionBody(source, "download_from_remote");
   const moveEntry = functionBody(source, "move_entry");
@@ -385,12 +390,24 @@ test("project panel drag, drop, and download materialization is bounded", () => 
     after: "paths_to_replace.push",
     message: "external drops must be bounded before replacement and copy vectors",
   });
+  assert.doesNotMatch(createPastePath, /RelPath::unix\([^)]*\)\.unwrap\(\)/);
+  assert.doesNotMatch(dropExternalFiles, /RelPath::unix\(name\)\.unwrap\(\)/);
+  assert.match(
+    dropExternalFiles,
+    /let Ok\(name\) = RelPath::unix\(name\) else \{[\s\S]*continue;[\s\S]*\};[\s\S]*target_directory\.join\(name\)/,
+    "external drop filename conversion must skip invalid rel-path names instead of panicking",
+  );
   assertBefore({
     body: dragOnto,
     before: "cap_project_panel_entry_set(",
     after: "copy_tasks.push(task)",
     message: "drag selections must be bounded before copy task fanout",
   });
+  assert.match(
+    dragOnto,
+    /if folded_selection_info\.is_empty\(\) \{[\s\S]*let mut last_moved_entry = None;[\s\S]*last_moved_entry = Some\(SelectedEntry[\s\S]*entry_id: new_entry\.id[\s\S]*this\.selection = Some\(selection\);[\s\S]*this\.expand_entry\(selection\.worktree_id, selection\.entry_id, cx\);[\s\S]*this\.update_visible_entries\(\s*Some\(\(selection\.worktree_id, selection\.entry_id\)\),\s*false,\s*true,\s*window,\s*cx/,
+    "successful plain drag moves must keep the moved entry visible and selected",
+  );
   assertBefore({
     body: paste,
     before: ".take(MAX_PROJECT_PANEL_DRAG_SELECTION_ENTRIES)",
@@ -427,6 +444,8 @@ test("project panel selection toolbar exposes file-browser operation state", () 
   const clipboardOperationSummary = functionBody(source, "clipboard_operation_summary");
   const renderSelectedEntriesToolbar = functionBody(source, "render_selected_entries_toolbar");
   const paste = functionBody(source, "paste");
+  const createMovePath = functionBody(source, "create_move_path");
+  const moveWorktreeEntry = functionBody(source, "move_worktree_entry");
   const dragMoveEntries = functionBody(source, "drag_move_entries");
   const dragOnto = functionBody(source, "drag_onto");
   const clipboardEntryIsCut = functionBody(source, "is_cut");
@@ -540,6 +559,33 @@ test("project panel selection toolbar exposes file-browser operation state", () 
     paste,
     /this\.clipboard\.take\(\)|ClipboardEntry::into_copy_entry/,
     "async cut paste completion must not mutate a newer clipboard entry",
+  );
+
+  assert.match(
+    createMovePath,
+    /destination_path\.worktree_id == source_path\.worktree_id[\s\S]*new_path\.as_rel_path\(\) == source_path\.path\.as_ref\(\)[\s\S]*return None;/,
+    "drag moves into the same parent must stay a no-op instead of creating a copy-suffixed rename",
+  );
+  assert.match(
+    createMovePath,
+    /while destination_worktree\.entry_for_path\(&new_path\)\.is_some\(\)[\s\S]*let disambiguation = " copy";[\s\S]*ix \+= 1;/,
+    "drag moves into conflicting destinations must disambiguate with the same copy suffix pattern as paste",
+  );
+  assertBefore({
+    body: createMovePath,
+    before: /return None;/,
+    after: /while destination_worktree\.entry_for_path\(&new_path\)\.is_some\(\)/,
+    message: "same-parent drag moves must be checked before conflict disambiguation",
+  });
+  assert.match(
+    moveWorktreeEntry,
+    /Self::create_move_path\([\s\S]*source_entry,[\s\S]*&source_path,[\s\S]*&destination_path,[\s\S]*destination_is_file,[\s\S]*&destination_worktree/,
+    "normal drag moves must compute conflict-safe destination paths through the move helper",
+  );
+  assert.match(
+    moveWorktreeEntry,
+    /project\.rename_entry\([\s\S]*entry_to_move,[\s\S]*\(destination_worktree_id, new_path\)\.into\(\),[\s\S]*cx/,
+    "normal drag moves must still dispatch through the real project rename operation",
   );
 
   assert.match(
@@ -785,6 +831,7 @@ test("project panel storage overview and root shortcuts stay cached and professi
   const source = read("crates/project_panel/src/project_panel.rs");
   const storage = read("crates/project_panel/src/storage.rs");
   const storageRoots = read("crates/project_panel/src/storage_roots.rs");
+  const storageRootsView = read("crates/project_panel/src/storage_roots_view.rs");
   const dxIcons = read("crates/ui/src/dx_icons.rs");
   const media = read("crates/project_panel/src/media_preview.rs");
   const updateVisibleEntries = functionBody(source, "update_visible_entries");
@@ -795,10 +842,24 @@ test("project panel storage overview and root shortcuts stay cached and professi
     source,
     "render_dx_explorer_storage_drilldown_row",
   );
-  const renderRootStrip = functionBody(source, "render_dx_explorer_storage_root_strip");
-  const renderRootStripRow = functionBody(source, "render_dx_explorer_storage_root_strip_row");
+  const renderRootStripCall = functionBody(source, "render_dx_explorer_storage_root_strip");
+  const renderRootStrip = functionBody(storageRootsView, "render_storage_root_strip");
+  const renderRootStripRow = functionBody(storageRootsView, "render_storage_root_strip_row");
   const refreshStorageRoots = functionBody(source, "refresh_dx_explorer_storage_roots");
+  const refreshStorageRootsAfterInterval = functionBody(
+    source,
+    "refresh_dx_explorer_storage_roots_after_interval",
+  );
+  const focusIn = functionBody(source, "focus_in");
   const openStorageRoot = functionBody(source, "open_dx_explorer_storage_root");
+  const collectStorageRootShortcuts = functionBody(storageRoots, "collect_storage_root_shortcuts");
+  const knownRootShortcuts = functionBody(storageRoots, "known_root_shortcuts");
+  const knownRootShortcut = functionBody(storageRoots, "known_root_shortcut");
+  const rootStatusLabel = functionBody(storageRoots, "status_label");
+  const compareBySize = functionBody(storage, "compare_by_size");
+  const compareByFileCount = functionBody(storage, "compare_by_file_count");
+  const compareByModified = functionBody(storage, "compare_by_modified");
+  const compareLargestFiles = functionBody(storage, "compare_largest_files");
   const cmpWorktreeEntries = functionBody(source, "cmp_worktree_entries");
   const sortWorktreeEntries = functionBody(source, "sort_worktree_entries");
   const parSortWorktreeEntries = functionBody(source, "par_sort_worktree_entries");
@@ -806,6 +867,7 @@ test("project panel storage overview and root shortcuts stay cached and professi
 
   assert.match(source, /mod storage;/);
   assert.match(source, /mod storage_roots;/);
+  assert.match(source, /mod storage_roots_view;/);
   assert.match(storage, /pub\(crate\) const MAX_PROJECT_PANEL_STORAGE_LARGEST_FILES: usize = 3;/);
   assert.match(storage, /pub\(crate\) const MAX_PROJECT_PANEL_STORAGE_DRILLDOWN_ITEMS: usize = 5;/);
   assert.match(storageRoots, /pub\(crate\) const MAX_PROJECT_PANEL_STORAGE_ROOT_STRIP_ITEMS: usize = 16;/);
@@ -816,6 +878,7 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(storage, /pub\(crate\) fn status_label\(self\) -> String/);
   assert.match(storage, /pub\(crate\) fn menu_label\(self, current: Self\) -> String/);
   assert.match(storage, /pub\(crate\) fn heat_label\(heat_level: u8\) -> &'static str/);
+  assert.match(storage, /pub\(crate\) fn format_file_size\(bytes: u64\) -> String/);
   assert.match(storage, /pub\(crate\) struct FolderStorageSummary/);
   assert.match(storage, /largest_files:\s*Vec<FolderStorageFile>/);
   assert.match(storage, /latest_modified_at:\s*Option<MTime>/);
@@ -830,8 +893,11 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(source, /folder_storage_summaries:\s*RefCell<HashMap<\(WorktreeId, ProjectEntryId\), storage::FolderStorageSummary>>/);
   assert.match(source, /storage_root_shortcuts:\s*Vec<storage_roots::StorageRootShortcut>/);
   assert.match(source, /storage_root_refresh_generation:\s*Cell<u64>/);
+  assert.match(source, /storage_root_refresh_requested_at:\s*Cell<Option<Instant>>/);
   assert.match(source, /storage_root_refresh_task:\s*Task<\(\)>/);
   assert.match(source, /storage_sort_mode:\s*storage::StorageSortMode/);
+  assert.match(source, /folder_storage_cache_generation:\s*Cell<u64>/);
+  assert.match(source, /fn bump_folder_storage_cache_generation\(&self\)/);
   assert.match(source, /dx_explorer_storage_overview:\s*storage::StorageOverview/);
 
   assert.match(
@@ -841,8 +907,23 @@ test("project panel storage overview and root shortcuts stay cached and professi
   );
   assert.match(
     updateVisibleEntries,
+    /let folder_storage_cache_generation = self\.folder_storage_cache_generation\.get\(\);/,
+    "visible-entry refresh must snapshot folder storage generation before background warming",
+  );
+  assert.match(
+    updateVisibleEntries,
     /let mut summary = storage::FolderStorageSummary::default\(\)[\s\S]*summary\.record_file\(child\.entry\)/,
     "background folder storage warming must record direct child entries with size and mtime",
+  );
+  assert.match(
+    updateVisibleEntries,
+    /let mut new_state = new_state;[\s\S]*let\s+folder_storage_cache_current\s*=\s*this\.folder_storage_cache_generation\.get\(\)\s*==\s*folder_storage_cache_generation;/,
+    "foreground install must compare the current folder-storage generation before accepting warmed data",
+  );
+  assert.match(
+    updateVisibleEntries,
+    /if folder_storage_cache_current[\s\S]*for \(cache_key, summary\) in folder_storage_summary_updates[\s\S]*folder_storage_summaries\.entry\(cache_key\)\.or_insert\(summary\)[\s\S]*else[\s\S]*new_state\.dx_explorer_storage_overview = Default::default\(\);[\s\S]*new_state\.dx_explorer_storage_drilldown\.clear\(\);/,
+    "stale folder-storage jobs must not merge warmed summaries or install stale storage projections",
   );
   assert.match(
     storageOverview,
@@ -890,6 +971,11 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(renderStorageDrilldown, /PopoverMenu::new\("dx-explorer-storage-sort-menu"\)/);
   assert.match(renderStorageDrilldown, /sort_mode\.status_label\(\)/);
   assert.match(renderStorageDrilldown, /mode\.menu_label\(sort_mode\)/);
+  assert.match(
+    renderStorageDrilldown,
+    /this\.storage_sort_mode = mode;[\s\S]*this\.update_visible_entries\(\s*None,\s*false,\s*false,[\s\S]*cx\.notify\(\);/,
+    "storage sort menu must immediately refresh visible storage projections",
+  );
   assert.match(renderStorageDrilldownRow, /format_file_size\(item\.file_bytes\)/);
   assert.match(renderStorageDrilldownRow, /storage::format_modified_label\(item\.latest_modified_at\)/);
   assert.match(renderStorageDrilldownRow, /storage::heat_label\(item\.heat_level\)/);
@@ -898,14 +984,37 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(renderStorageDrilldownRow, /item\s*\.\s*largest_files/);
 
   assert.match(renderRootStrip, /\.id\("dx-explorer-storage-root-strip"\)/);
+  assert.match(
+    renderRootStripCall,
+    /storage_roots_view::render_storage_root_strip\([\s\S]*self\.storage_root_shortcuts\.clone\(\),[\s\S]*cx\.entity\(\)\.downgrade\(\),[\s\S]*cx/,
+    "Project Panel should delegate storage-root strip rendering to the focused view module",
+  );
   assert.match(renderRootStrip, /dx_icon\(DxUiIcon::Storage\)/);
   assert.match(renderRootStrip, /Label::new\("Storage roots"\)/);
-  assert.match(renderRootStrip, /self\.storage_root_shortcuts\.clone\(\)/);
+  assert.match(renderRootStrip, /shortcuts[\s\S]*\.map\(\|shortcut\| render_storage_root_strip_row\(shortcut, panel\.clone\(\), cx\)\)/);
+  assert.doesNotMatch(source, /fn render_dx_explorer_storage_root_strip_row\(/);
   assert.match(renderRootStripRow, /storage_roots::StorageRootKind::Drive/);
+  assert.match(
+    renderRootStripRow,
+    /StorageRootKind::OneDrive => dx_icon\(DxUiIcon::CloudStorage\)[\s\S]*StorageRootKind::GoogleDrive => dx_icon\(DxUiIcon::DriveProvider\)[\s\S]*StorageRootKind::Dropbox => dx_icon\(DxUiIcon::DropboxProvider\)/,
+    "cloud storage variants must stay tied to provider-specific buttons",
+  );
   assert.match(renderRootStripRow, /dx_icon\(DxUiIcon::CloudStorage\)/);
   assert.match(renderRootStripRow, /dx_icon\(DxUiIcon::DriveProvider\)/);
   assert.match(renderRootStripRow, /dx_icon\(DxUiIcon::DropboxProvider\)/);
   assert.match(renderRootStripRow, /this\.open_dx_explorer_storage_root\(path\.clone\(\), window, cx\)/);
+  assert.match(renderRootStripRow, /let status_label = shortcut\.status_label\(\);/);
+  assert.match(renderRootStripRow, /Label::new\(status_label\)/);
+  assert.doesNotMatch(
+    renderRootStripRow,
+    /format_file_size\(capacity\.available_bytes\)|format_file_size\(capacity\.total_bytes\)/,
+    "storage root capacity copy must come from the storage-root domain, not inline panel formatting",
+  );
+  assert.doesNotMatch(
+    source,
+    /(?:pub(?:\([^)]*\))?\s+)?fn\s+format_file_size\s*\(/,
+    "storage byte formatting must live in the storage domain instead of the large panel file",
+  );
   assert.match(
     renderRootStripRow,
     /let available = shortcut\.is_available\(\);[\s\S]*\.when\(available,[\s\S]*\.on_click\(/,
@@ -919,16 +1028,51 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(openStorageRoot, /open_workspace_for_paths\([\s\S]*OpenMode::Activate,[\s\S]*vec!\[path\]/);
   assertBefore({
     body: openStorageRoot,
-    before: /if !path\.is_absolute\(\) \|\| !path\.exists\(\)[\s\S]*return;/,
+    before: /if !path\.is_absolute\(\) \|\| !path\.is_dir\(\)[\s\S]*return;/,
     after: /open_workspace_for_paths\([\s\S]*OpenMode::Activate,[\s\S]*vec!\[path\]/,
-    message: "storage root activation must reject relative or missing paths before opening",
+    message: "storage root activation must reject relative, missing, or file paths before opening",
   });
+  assert.doesNotMatch(openStorageRoot, /path\.exists\(\)/);
   assert.match(refreshStorageRoots, /storage_root_refresh_generation/);
+  assert.match(refreshStorageRoots, /self\.storage_root_refresh_requested_at[\s\S]*\.set\(Some\(Instant::now\(\)\)\)/);
   assert.match(refreshStorageRoots, /background_spawn\(async move \{[\s\S]*storage_roots::collect_storage_root_shortcuts\(\)/);
   assert.match(refreshStorageRoots, /this\.storage_root_refresh_generation\.get\(\) != generation/);
+  assert.match(
+    refreshStorageRootsAfterInterval,
+    /PROJECT_PANEL_STORAGE_ROOT_REFRESH_INTERVAL[\s\S]*self\.refresh_dx_explorer_storage_roots\(cx\)/,
+    "focus refresh must reuse the existing generation-guarded storage-root refresh path",
+  );
+  assert.match(
+    focusIn,
+    /self\.refresh_dx_explorer_storage_roots_after_interval\(cx\)/,
+    "Project Panel focus must throttle-refresh drive capacity labels for long sessions",
+  );
 
   assert.match(storageRoots, /sysinfo::Disks::new_with_refreshed_list\(\)/);
   assert.match(storageRoots, /MAX_PROJECT_PANEL_STORAGE_ROOT_STRIP_ITEMS/);
+  assert.match(storageRoots, /use crate::storage;/);
+  assert.match(storageRoots, /pub\(crate\) fn capacity_label\(&self\) -> String/);
+  assert.match(storageRoots, /pub\(crate\) fn status_label\(&self\) -> String/);
+  assert.match(
+    collectStorageRootShortcuts,
+    /let known_roots = known_root_shortcuts\(\);[\s\S]*saturating_sub\(known_roots\.len\(\)\)[\s\S]*collect_drive_shortcuts\(&mut shortcuts, drive_limit\);[\s\S]*shortcuts\.extend\(known_roots\);[\s\S]*dedupe_and_cap\(shortcuts\)/,
+    "drive shortcuts must reserve strip slots for DX/cloud roots before capping",
+  );
+  assert.match(
+    knownRootShortcuts,
+    /StorageRootKind::OneDrive[\s\S]*"OneDrive"[\s\S]*"onedrive"[\s\S]*OneDriveConsumer[\s\S]*StorageRootKind::GoogleDrive[\s\S]*"Google Drive"[\s\S]*"google-drive"[\s\S]*GOOGLE_DRIVE_ROOT[\s\S]*StorageRootKind::Dropbox[\s\S]*"Dropbox"[\s\S]*"dropbox"[\s\S]*DROPBOX_ROOT/,
+    "cloud drive buttons must keep named provider shortcuts",
+  );
+  assert.match(
+    knownRootShortcut,
+    /find_map\(env_path\)[\s\S]*fallbacks\.iter\(\)\.find\(\|path\| path\.is_dir\(\)\)\.cloned\(\)[\s\S]*fallbacks\.first\(\)\.cloned\(\)[\s\S]*let available = path\.is_absolute\(\) && path\.is_dir\(\);/,
+    "known roots must prefer env paths but only mark absolute directories available",
+  );
+  assert.match(
+    rootStatusLabel,
+    /Some\(capacity\)[\s\S]*capacity\.capacity_label\(\)[\s\S]*self\.is_available\(\)[\s\S]*"Available"[\s\S]*"Not configured"/,
+    "storage root rows must show honest capacity/available/not-configured status",
+  );
   assert.match(storageRoots, /DX_HOME/);
   assert.match(storageRoots, /OneDriveConsumer/);
   assert.match(storageRoots, /GOOGLE_DRIVE_ROOT/);
@@ -944,6 +1088,27 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(dxIcons, /DxUiIcon::DropboxProvider => IconName::DxForgeProviderDropbox/);
   assert.match(renderFolderMediaShelf, /dx_icon\(DxUiIcon::Media\)/);
   assert.doesNotMatch(renderFolderMediaShelf, /IconName::Blocks/);
+
+  assert.match(
+    compareBySize,
+    /right[\s\S]*\.file_bytes[\s\S]*\.cmp\(&left\.file_bytes\)[\s\S]*right\.file_count\.cmp\(&left\.file_count\)[\s\S]*compare_mtime_desc\(left\.latest_modified_at, right\.latest_modified_at\)[\s\S]*left\.label\.cmp\(&right\.label\)/,
+    "size sorting must tie-break by file count, modified time, then label",
+  );
+  assert.match(
+    compareByFileCount,
+    /right[\s\S]*\.file_count[\s\S]*\.cmp\(&left\.file_count\)[\s\S]*right\.file_bytes\.cmp\(&left\.file_bytes\)[\s\S]*compare_mtime_desc\(left\.latest_modified_at, right\.latest_modified_at\)[\s\S]*left\.label\.cmp\(&right\.label\)/,
+    "file-count sorting must tie-break by size, modified time, then label",
+  );
+  assert.match(
+    compareByModified,
+    /compare_mtime_desc\(left\.latest_modified_at, right\.latest_modified_at\)[\s\S]*right\.file_bytes\.cmp\(&left\.file_bytes\)[\s\S]*right\.file_count\.cmp\(&left\.file_count\)[\s\S]*left\.label\.cmp\(&right\.label\)/,
+    "modified sorting must tie-break by size, file count, then label",
+  );
+  assert.match(
+    compareLargestFiles,
+    /right[\s\S]*\.file_bytes[\s\S]*\.cmp\(&left\.file_bytes\)[\s\S]*compare_mtime_desc\(left\.modified_at, right\.modified_at\)[\s\S]*left\.label\.cmp\(&right\.label\)/,
+    "largest-file chips must keep deterministic size, modified, and label ordering",
+  );
 
   for (const body of [
     storageOverview,
@@ -1757,8 +1922,8 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     renderMediaShelfCardBody,
-    /MediaPreviewKind::Audio[\s\S]*w_full\(\)[\s\S]*flex_1\(\)[\s\S]*audio_gradient_background\(&item\.name\)[\s\S]*items_center\(\)[\s\S]*justify_center\(\)[\s\S]*Label::new\(item\.name\.clone\(\)\)[\s\S]*truncate\(\)/,
-    "shelf audio cards must use full-height deterministic gradient rectangles with centered truncated filenames",
+    /MediaPreviewKind::Audio[\s\S]*w_full\(\)[\s\S]*flex_1\(\)[\s\S]*audio_gradient_background\(&item\.name\)[\s\S]*items_center\(\)[\s\S]*justify_center\(\)[\s\S]*Icon::new\(IconName::AudioOn\)[\s\S]*Label::new\(item\.name\.clone\(\)\)[\s\S]*truncate\(\)/,
+    "shelf audio cards must use full-height deterministic gradient rectangles with an audio glyph and centered truncated filenames",
   );
   assert.doesNotMatch(
     media,

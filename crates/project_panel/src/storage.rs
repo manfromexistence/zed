@@ -261,6 +261,24 @@ pub(crate) fn heat_label(heat_level: u8) -> &'static str {
     }
 }
 
+pub(crate) fn format_file_size(bytes: u64) -> String {
+    const UNITS: [&str; 5] = ["B", "KB", "MB", "GB", "TB"];
+    let mut value = bytes as f64;
+    let mut unit_ix = 0usize;
+    while value >= 1024.0 && unit_ix < UNITS.len() - 1 {
+        value /= 1024.0;
+        unit_ix += 1;
+    }
+
+    if unit_ix == 0 {
+        format!("{} {}", bytes, UNITS[unit_ix])
+    } else if value >= 10.0 {
+        format!("{value:.0} {}", UNITS[unit_ix])
+    } else {
+        format!("{value:.1} {}", UNITS[unit_ix])
+    }
+}
+
 fn folder_label(entry: &Entry) -> String {
     utils::bounded_project_panel_label(
         entry

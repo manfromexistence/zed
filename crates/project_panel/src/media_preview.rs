@@ -568,7 +568,13 @@ fn render_media_shelf_card_body(item: &MediaPreviewItem, cx: &mut App) -> Div {
             .flex()
             .items_center()
             .justify_center()
+            .gap_1()
             .px_2()
+            .child(
+                Icon::new(IconName::AudioOn)
+                    .size(IconSize::Small)
+                    .color(Color::Muted),
+            )
             .child(
                 Label::new(item.name.clone())
                     .size(LabelSize::XSmall)

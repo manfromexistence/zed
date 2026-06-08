@@ -3,6 +3,7 @@ mod operation_status;
 pub mod project_panel_settings;
 mod storage;
 mod storage_roots;
+mod storage_roots_view;
 mod undo;
 mod utils;
 
@@ -116,6 +117,7 @@ const MAX_PROJECT_PANEL_BACKGROUND_MEDIA_PREVIEW_FOLDERS: usize = 256;
 const MAX_PROJECT_PANEL_BACKGROUND_FOLDER_STORAGE_DIRS: usize = 4_096;
 const MAX_PROJECT_PANEL_FOLDER_STORAGE_SUMMARY_CACHE: usize = 4_096;
 const MAX_PROJECT_PANEL_FOLDER_STORAGE_CHILD_FILES: usize = 512;
+const PROJECT_PANEL_STORAGE_ROOT_REFRESH_INTERVAL: Duration = Duration::from_secs(60);
 fn project_panel_cap_hit(boundary: &'static str, cap: usize) {
     telemetry::event!(
         "Project Panel Materialization Capped",
@@ -311,8 +313,10 @@ pub struct ProjectPanel {
     previous_drag_position: Option<Point<Pixels>>,
     folder_storage_summaries:
         RefCell<HashMap<(WorktreeId, ProjectEntryId), storage::FolderStorageSummary>>,
+    folder_storage_cache_generation: Cell<u64>,
     storage_root_shortcuts: Vec<storage_roots::StorageRootShortcut>,
     storage_root_refresh_generation: Cell<u64>,
+    storage_root_refresh_requested_at: Cell<Option<Instant>>,
     storage_root_refresh_task: Task<()>,
     storage_sort_mode: storage::StorageSortMode,
     generated_media_metadata:
@@ -867,6 +871,7 @@ impl ProjectPanel {
                         this.folder_storage_summaries
                             .borrow_mut()
                             .retain(|(worktree_id, _), _| *worktree_id != *id);
+                        this.bump_folder_storage_cache_generation();
                         this.folder_media_previews
                             .borrow_mut()
                             .retain(|(worktree_id, _), _| *worktree_id != *id);
@@ -1051,8 +1056,10 @@ impl ProjectPanel {
                 hover_expand_task: None,
                 previous_drag_position: None,
                 folder_storage_summaries: Default::default(),
+                folder_storage_cache_generation: Cell::new(0),
                 storage_root_shortcuts: Vec::new(),
                 storage_root_refresh_generation: Cell::new(0),
+                storage_root_refresh_requested_at: Cell::new(None),
                 storage_root_refresh_task: Task::ready(()),
                 storage_sort_mode: storage::StorageSortMode::default(),
                 generated_media_metadata: Default::default(),
@@ -1252,6 +1259,7 @@ impl ProjectPanel {
     }
 
     fn focus_in(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.refresh_dx_explorer_storage_roots_after_interval(cx);
         if !self.focus_handle.contains_focused(window, cx) {
             cx.emit(Event::Focus);
         }
@@ -3326,7 +3334,10 @@ impl ProjectPanel {
         let source_entry = source_worktree.read(cx).entry_for_id(source.entry_id)?;
 
         let clipboard_entry_file_name = source_entry.path.file_name()?.to_string();
-        new_path.push(RelPath::unix(&clipboard_entry_file_name).unwrap());
+        let Ok(clipboard_entry_file_name_path) = RelPath::unix(&clipboard_entry_file_name) else {
+            return None;
+        };
+        new_path.push(clipboard_entry_file_name_path);
 
         let (extension, file_name_without_extension) = if source_entry.is_file() {
             (
@@ -3362,13 +3373,77 @@ impl ProjectPanel {
                     new_file_name.push_str(extension);
                 }
 
-                new_path.push(RelPath::unix(&new_file_name).unwrap());
+                let Ok(new_file_name_path) = RelPath::unix(&new_file_name) else {
+                    return None;
+                };
+                new_path.push(new_file_name_path);
 
                 disambiguation_range = Some(0..(file_name_len + disambiguation_len));
                 ix += 1;
             }
         }
         Some((new_path.as_rel_path().into(), disambiguation_range))
+    }
+
+    fn create_move_path(
+        source_entry: &Entry,
+        source_path: &ProjectPath,
+        destination_path: &ProjectPath,
+        destination_is_file: bool,
+        destination_worktree: &Worktree,
+    ) -> Option<RelPathBuf> {
+        let destination_dir = if destination_is_file {
+            destination_path.path.parent().unwrap_or(RelPath::empty())
+        } else {
+            destination_path.path.as_ref()
+        };
+
+        let source_name = source_path.path.file_name()?;
+        let Ok(source_name_path) = RelPath::unix(source_name) else {
+            return None;
+        };
+
+        let mut new_path = destination_dir.to_rel_path_buf();
+        new_path.push(source_name_path);
+        if destination_path.worktree_id == source_path.worktree_id
+            && new_path.as_rel_path() == source_path.path.as_ref()
+        {
+            return None;
+        }
+
+        let (extension, file_name_without_extension) = if source_entry.is_file() {
+            (
+                new_path.extension().map(|extension| extension.to_string()),
+                new_path.file_stem()?.to_string(),
+            )
+        } else {
+            (None, source_name.to_string())
+        };
+
+        let mut ix = 0;
+        while destination_worktree.entry_for_path(&new_path).is_some() {
+            new_path.pop();
+
+            let mut new_file_name = file_name_without_extension.to_string();
+            let disambiguation = " copy";
+            new_file_name.push_str(disambiguation);
+
+            if ix > 0 {
+                new_file_name.push_str(&format!(" {}", ix));
+            }
+            if let Some(extension) = extension.as_ref() {
+                new_file_name.push('.');
+                new_file_name.push_str(extension);
+            }
+
+            let Ok(new_file_name_path) = RelPath::unix(&new_file_name) else {
+                return None;
+            };
+            new_path.push(new_file_name_path);
+            ix += 1;
+        }
+
+        Some(new_path)
     }
 
     fn paste(&mut self, _: &Paste, window: &mut Window, cx: &mut Context<Self>) {
@@ -3988,23 +4063,31 @@ impl ProjectPanel {
                 return (None, None);
             };
             let destination_worktree_id = destination_path.worktree_id;
-
-            let destination_dir = if destination_is_file {
-                destination_path.path.parent().unwrap_or(RelPath::empty())
-            } else {
-                destination_path.path.as_ref()
-            };
-
-            let Some(source_name) = source_path.path.file_name() else {
+            let Some(source_worktree) = project.worktree_for_entry(entry_to_move, cx) else {
                 return (None, None);
             };
-            let Ok(source_name) = RelPath::unix(source_name) else {
+            let Some(destination_worktree) = project.worktree_for_id(destination_worktree_id, cx)
+            else {
                 return (None, None);
             };
-
-            let mut new_path = destination_dir.to_rel_path_buf();
-            new_path.push(source_name);
-            let rename_task = (new_path.as_rel_path() != source_path.path.as_ref()).then(|| {
+            let new_path = {
+                let source_worktree = source_worktree.read(cx);
+                let Some(source_entry) = source_worktree.entry_for_id(entry_to_move) else {
+                    return (Some(destination_worktree_id), None);
+                };
+                let destination_worktree = destination_worktree.read(cx);
+                let Some(new_path) = Self::create_move_path(
+                    source_entry,
+                    &source_path,
+                    &destination_path,
+                    destination_is_file,
+                    &destination_worktree,
+                ) else {
+                    return (Some(destination_worktree_id), None);
+                };
+                new_path
+            };
+            let rename_task = Some({
                 project.rename_entry(
                     entry_to_move,
                     (destination_worktree_id, new_path).into(),
@@ -4012,10 +4095,7 @@ impl ProjectPanel {
                 )
             });
 
-            (
-                project.worktree_id_for_entry(destination_entry, cx),
-                rename_task,
-            )
+            (Some(destination_worktree_id), rename_task)
         });
 
         if let Some(destination_worktree) = destination_worktree {
@@ -4253,7 +4333,7 @@ impl ProjectPanel {
             ));
             metrics.push(Self::render_dx_explorer_metric(format!(
                 "{} visible",
-                format_file_size(overview.visible_file_bytes)
+                storage::format_file_size(overview.visible_file_bytes)
             )));
         }
         if overview.cached_direct_file_count > 0 {
@@ -4266,7 +4346,7 @@ impl ProjectPanel {
             ));
             metrics.push(Self::render_dx_explorer_metric(format!(
                 "{} cached",
-                format_file_size(overview.cached_direct_file_bytes)
+                storage::format_file_size(overview.cached_direct_file_bytes)
             )));
         }
         if let Some(modified_label) = storage::format_modified_label(overview.latest_modified_at) {
@@ -4365,13 +4445,19 @@ impl ProjectPanel {
         let is_selected = self.selection == Some(target);
         let heat_color = dx_explorer_storage_heat_color(item.heat_level, cx);
         let file_count = Self::dx_explorer_count_label(item.file_count, "file", "files");
-        let storage_label = format_file_size(item.file_bytes);
+        let storage_label = storage::format_file_size(item.file_bytes);
         let modified_label = storage::format_modified_label(item.latest_modified_at);
         let heat_label = storage::heat_label(item.heat_level);
         let largest_files = item
             .largest_files
             .iter()
-            .map(|file| format!("{} {}", file.label, format_file_size(file.file_bytes)))
+            .map(|file| {
+                format!(
+                    "{} {}",
+                    file.label,
+                    storage::format_file_size(file.file_bytes)
+                )
+            })
             .collect::<Vec<_>>();
         let bar_width = px(12. + f32::from(item.heat_level.max(1)) * 8.);
         let tooltip = if largest_files.is_empty() {
@@ -4472,128 +4558,18 @@ impl ProjectPanel {
     }
 
     fn render_dx_explorer_storage_root_strip(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
-        let shortcuts = self.storage_root_shortcuts.clone();
-        if shortcuts.is_empty() {
-            return None;
-        }
-
-        let rows = shortcuts
-            .into_iter()
-            .map(|shortcut| self.render_dx_explorer_storage_root_strip_row(shortcut, cx))
-            .collect::<Vec<_>>();
-
-        Some(
-            v_flex()
-                .id("dx-explorer-storage-root-strip")
-                .w_full()
-                .gap_1()
-                .px_2()
-                .py_1()
-                .border_b_1()
-                .border_color(cx.theme().colors().border.opacity(0.6))
-                .bg(cx.theme().colors().panel_background)
-                .child(
-                    h_flex()
-                        .items_center()
-                        .gap_1()
-                        .child(
-                            Icon::new(dx_icon(DxUiIcon::Storage))
-                                .size(IconSize::XSmall)
-                                .color(Color::Muted),
-                        )
-                        .child(
-                            Label::new("Storage roots")
-                                .size(LabelSize::XSmall)
-                                .color(Color::Muted),
-                        ),
-                )
-                .child(
-                    div()
-                        .w_full()
-                        .overflow_x_scroll()
-                        .child(h_flex().gap_1().children(rows)),
-                )
-                .into_any_element(),
+        storage_roots_view::render_storage_root_strip(
+            self.storage_root_shortcuts.clone(),
+            cx.entity().downgrade(),
+            cx,
         )
-    }
-
-    fn render_dx_explorer_storage_root_strip_row(
-        &self,
-        shortcut: storage_roots::StorageRootShortcut,
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
-        let icon = match shortcut.kind {
-            storage_roots::StorageRootKind::Drive => dx_icon(DxUiIcon::Storage),
-            storage_roots::StorageRootKind::DxHub => dx_icon(DxUiIcon::Source),
-            storage_roots::StorageRootKind::OneDrive => dx_icon(DxUiIcon::CloudStorage),
-            storage_roots::StorageRootKind::GoogleDrive => dx_icon(DxUiIcon::DriveProvider),
-            storage_roots::StorageRootKind::Dropbox => dx_icon(DxUiIcon::DropboxProvider),
-        };
-        let path = shortcut.path.clone();
-        let available = shortcut.is_available();
-        let tooltip = shortcut.tooltip.clone();
-        let capacity_label = shortcut.capacity.as_ref().map(|capacity| {
-            format!(
-                "{} free / {}",
-                format_file_size(capacity.available_bytes),
-                format_file_size(capacity.total_bytes)
-            )
-        });
-
-        h_flex()
-            .id(SharedString::from(format!(
-                "dx-explorer-storage-root-{}",
-                shortcut.id
-            )))
-            .flex_none()
-            .items_center()
-            .gap_1()
-            .px_1()
-            .py_0p5()
-            .rounded_sm()
-            .border_1()
-            .border_color(cx.theme().colors().border_variant.opacity(0.5))
-            .bg(cx.theme().colors().element_background.opacity(0.35))
-            .tooltip(move |_window, cx| {
-                Tooltip::with_meta("Storage root", None, tooltip.clone(), cx)
-            })
-            .when(available, |this| {
-                this.cursor_pointer()
-                    .hover(|style| style.bg(cx.theme().colors().element_hover.opacity(0.6)))
-                    .on_click(cx.listener(move |this, _, window, cx| {
-                        this.open_dx_explorer_storage_root(path.clone(), window, cx);
-                    }))
-            })
-            .when(!available, |this| this.cursor_not_allowed().opacity(0.55))
-            .child(Icon::new(icon).size(IconSize::XSmall).color(if available {
-                Color::Muted
-            } else {
-                Color::Disabled
-            }))
-            .child(
-                Label::new(shortcut.label)
-                    .size(LabelSize::XSmall)
-                    .color(if available {
-                        Color::Default
-                    } else {
-                        Color::Muted
-                    })
-                    .single_line(),
-            )
-            .when_some(capacity_label, |this, capacity_label| {
-                this.child(
-                    Label::new(capacity_label)
-                        .size(LabelSize::XSmall)
-                        .color(Color::Muted)
-                        .single_line(),
-                )
-            })
-            .into_any_element()
     }
 
     fn refresh_dx_explorer_storage_roots(&mut self, cx: &mut Context<Self>) {
         let generation = self.storage_root_refresh_generation.get().saturating_add(1);
         self.storage_root_refresh_generation.set(generation);
+        self.storage_root_refresh_requested_at
+            .set(Some(Instant::now()));
         self.storage_root_refresh_task = cx.spawn(async move |this, cx| {
             let shortcuts = cx
                 .background_spawn(async move { storage_roots::collect_storage_root_shortcuts() })
@@ -4609,13 +4585,27 @@ impl ProjectPanel {
         });
     }
 
-    fn open_dx_explorer_storage_root(
+    fn refresh_dx_explorer_storage_roots_after_interval(&mut self, cx: &mut Context<Self>) {
+        if self
+            .storage_root_refresh_requested_at
+            .get()
+            .is_some_and(|requested_at| {
+                requested_at.elapsed() < PROJECT_PANEL_STORAGE_ROOT_REFRESH_INTERVAL
+            })
+        {
+            return;
+        }
+
+        self.refresh_dx_explorer_storage_roots(cx);
+    }
+
+    pub(crate) fn open_dx_explorer_storage_root(
         &self,
         path: PathBuf,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        if !path.is_absolute() || !path.exists() {
+        if !path.is_absolute() || !path.is_dir() {
             return;
         }
 
@@ -4699,7 +4689,7 @@ impl ProjectPanel {
                     .when(summary.visible_file_bytes > 0, |this| {
                         this.child(Self::render_dx_explorer_metric(format!(
                             "{} storage",
-                            format_file_size(summary.visible_file_bytes)
+                            storage::format_file_size(summary.visible_file_bytes)
                         )))
                     })
                     .when(summary.selected_entry_count > 0, |this| {
@@ -4750,7 +4740,7 @@ impl ProjectPanel {
                             .child(
                                 IconButton::new(
                                     "dx-explorer-open-project",
-                                    dx_icon(DxUiIcon::Source),
+                                    dx_icon(DxUiIcon::OpenProject),
                                 )
                                 .shape(IconButtonShape::Square)
                                 .style(ButtonStyle::Subtle)
@@ -4786,9 +4776,9 @@ impl ProjectPanel {
                                 IconButton::new(
                                     "dx-explorer-toggle-ignored",
                                     if show_ignored_entries {
-                                        IconName::Eye
+                                        IconName::ListX
                                     } else {
-                                        IconName::EyeOff
+                                        IconName::ListFilter
                                     },
                                 )
                                 .shape(IconButtonShape::Square)
@@ -5438,6 +5428,11 @@ impl ProjectPanel {
             .set(self.media_preview_cache_generation.get().wrapping_add(1));
     }
 
+    fn bump_folder_storage_cache_generation(&self) {
+        self.folder_storage_cache_generation
+            .set(self.folder_storage_cache_generation.get().wrapping_add(1));
+    }
+
     fn clear_dx_explorer_media_caches(&self) {
         self.bump_media_preview_cache_generation();
         self.generated_media_metadata.borrow_mut().clear();
@@ -5446,6 +5441,7 @@ impl ProjectPanel {
     }
 
     fn clear_dx_explorer_media_and_storage_caches(&self) {
+        self.bump_folder_storage_cache_generation();
         self.folder_storage_summaries.borrow_mut().clear();
         self.clear_dx_explorer_media_caches();
     }
@@ -5552,6 +5548,7 @@ impl ProjectPanel {
             .keys()
             .copied()
             .collect::<HashSet<_>>();
+        let folder_storage_cache_generation = self.folder_storage_cache_generation.get();
         let storage_sort_mode = self.storage_sort_mode;
         let generated_media_metadata = self.generated_media_metadata.borrow().clone();
         let media_preview_cache_generation = self.media_preview_cache_generation.get();
@@ -6042,9 +6039,12 @@ impl ProjectPanel {
                 })
                 .await;
             this.update_in(cx, |this, window, cx| {
+                let mut new_state = new_state;
+                let folder_storage_cache_current =
+                    this.folder_storage_cache_generation.get() == folder_storage_cache_generation;
                 let visible_folder_storage_summary_keys =
                     Self::visible_folder_storage_summary_keys(&new_state);
-                {
+                if folder_storage_cache_current {
                     let mut folder_storage_summaries =
                         this.folder_storage_summaries.borrow_mut();
                     for (cache_key, summary) in folder_storage_summary_updates {
@@ -6054,6 +6054,9 @@ impl ProjectPanel {
                         &mut folder_storage_summaries,
                         &visible_folder_storage_summary_keys,
                     );
+                } else {
+                    new_state.dx_explorer_storage_overview = Default::default();
+                    new_state.dx_explorer_storage_drilldown.clear();
                 }
                 if !media_preview_updates.is_empty()
                     && this.media_preview_cache_generation.get() == media_preview_cache_generation
@@ -6178,7 +6181,10 @@ impl ProjectPanel {
             if let Some(name) = path.file_name()
                 && let Some(name) = name.to_str()
             {
-                let target_path = target_directory.join(RelPath::unix(name).unwrap());
+                let Ok(name) = RelPath::unix(name) else {
+                    continue;
+                };
+                let target_path = target_directory.join(name);
                 if worktree.read(cx).entry_for_path(&target_path).is_some() {
                     paths_to_replace.push((
                         utils::bounded_project_panel_label(name.to_string()),
@@ -6466,6 +6472,7 @@ impl ProjectPanel {
             if folded_selection_info.is_empty() {
                 cx.spawn_in(window, async move |project_panel, mut cx| {
                     let mut changes = Vec::new();
+                    let mut last_moved_entry = None;
                     for (entry_id, task) in move_tasks {
                         if let Some(CreatedEntry::Included(new_entry)) = task
                             .await
@@ -6476,14 +6483,29 @@ impl ProjectPanel {
                             {
                                 changes.push(Change::Renamed(
                                     old_path.clone(),
-                                    (worktree_id, new_entry.path).into(),
+                                    (worktree_id, new_entry.path.clone()).into(),
                                 ));
+                                last_moved_entry = Some(SelectedEntry {
+                                    worktree_id,
+                                    entry_id: new_entry.id,
+                                });
                             }
                         }
                     }
                     project_panel
-                        .update(cx, |this, _| {
+                        .update_in(cx, |this, window, cx| {
                             this.undo_manager.record(changes).log_err();
+                            if let Some(selection) = last_moved_entry {
+                                this.selection = Some(selection);
+                                this.expand_entry(selection.worktree_id, selection.entry_id, cx);
+                                this.update_visible_entries(
+                                    Some((selection.worktree_id, selection.entry_id)),
+                                    false,
+                                    true,
+                                    window,
+                                    cx,
+                                );
+                            }
                         })
                         .ok();
                 })
@@ -7179,12 +7201,15 @@ impl ProjectPanel {
                 format!("{} files", summary.file_count)
             };
             SharedString::from(if summary.file_bytes > 0 {
-                format!("{file_count} / {}", format_file_size(summary.file_bytes))
+                format!(
+                    "{file_count} / {}",
+                    storage::format_file_size(summary.file_bytes)
+                )
             } else {
                 file_count
             })
         } else {
-            SharedString::from(format_file_size(size))
+            SharedString::from(storage::format_file_size(size))
         };
         div()
             .visible_on_hover("list_item")
@@ -8837,24 +8862,6 @@ fn render_file_label(file_name: String, color: Color) -> AnyElement {
         .truncate()
         .color(color)
         .into_any_element()
-}
-
-fn format_file_size(bytes: u64) -> String {
-    const UNITS: [&str; 5] = ["B", "KB", "MB", "GB", "TB"];
-    let mut value = bytes as f64;
-    let mut unit_ix = 0usize;
-    while value >= 1024.0 && unit_ix < UNITS.len() - 1 {
-        value /= 1024.0;
-        unit_ix += 1;
-    }
-
-    if unit_ix == 0 {
-        format!("{} {}", bytes, UNITS[unit_ix])
-    } else if value >= 10.0 {
-        format!("{value:.0} {}", UNITS[unit_ix])
-    } else {
-        format!("{value:.1} {}", UNITS[unit_ix])
-    }
 }
 
 fn dx_explorer_storage_heat_color(heat_level: u8, cx: &App) -> Hsla {

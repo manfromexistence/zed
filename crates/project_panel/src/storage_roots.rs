@@ -4,6 +4,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use crate::storage;
+
 pub(crate) const MAX_PROJECT_PANEL_STORAGE_ROOT_STRIP_ITEMS: usize = 16;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -21,6 +23,16 @@ pub(crate) struct DriveCapacity {
     pub total_bytes: u64,
 }
 
+impl DriveCapacity {
+    pub(crate) fn capacity_label(&self) -> String {
+        format!(
+            "{} free / {}",
+            storage::format_file_size(self.available_bytes),
+            storage::format_file_size(self.total_bytes)
+        )
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct StorageRootShortcut {
     pub id: String,
@@ -35,6 +47,16 @@ pub(crate) struct StorageRootShortcut {
 impl StorageRootShortcut {
     pub(crate) fn is_available(&self) -> bool {
         self.available && self.path.is_absolute()
+    }
+
+    pub(crate) fn status_label(&self) -> String {
+        if let Some(capacity) = self.capacity.as_ref() {
+            capacity.capacity_label()
+        } else if self.is_available() {
+            "Available".to_string()
+        } else {
+            "Not configured".to_string()
+        }
     }
 }
 
@@ -94,17 +116,23 @@ fn collect_drive_shortcuts(shortcuts: &mut Vec<StorageRootShortcut>, limit: usiz
         }
 
         let label = drive_label(&path);
+        let capacity = DriveCapacity {
+            available_bytes: disk.available_space(),
+            total_bytes: disk.total_space(),
+        };
+        let tooltip = format!(
+            "Open drive root at {} ({})",
+            path.display(),
+            capacity.capacity_label()
+        );
         shortcuts.push(StorageRootShortcut {
             id: format!("drive-{}", storage_root_id_part(&label)),
             label,
             path,
             kind: StorageRootKind::Drive,
-            capacity: Some(DriveCapacity {
-                available_bytes: disk.available_space(),
-                total_bytes: disk.total_space(),
-            }),
+            capacity: Some(capacity),
             available: true,
-            tooltip: "Open drive root".to_string(),
+            tooltip,
         });
         if shortcuts.len() >= limit {
             break;
