@@ -1,5 +1,7 @@
+use std::cmp::Ordering;
+
 use gpui::{App, IntoElement, WeakEntity};
-use ui::{Divider, Tab, prelude::*};
+use ui::{DxUiIcon, IconName, Tab, TabBar, TabPosition, Tooltip, dx_icon, prelude::*};
 
 use super::{
     panel::{DxForgePanel, DxForgePanelTab},
@@ -13,12 +15,7 @@ pub(super) fn render_tab_bar(
     panel: &WeakEntity<DxForgePanel>,
     cx: &App,
 ) -> impl IntoElement {
-    h_flex()
-        .id("dx-forge-tab-bar")
-        .h(Tab::container_height(cx))
-        .w_full()
-        .border_b_1()
-        .border_color(cx.theme().colors().border.opacity(0.6))
+    TabBar::new("dx-forge-tab-bar")
         .child(forge_tab(
             "dx-forge-tab-repository",
             "Repository",
@@ -28,7 +25,6 @@ pub(super) fn render_tab_bar(
             panel,
             cx,
         ))
-        .child(Divider::vertical().color(ui::DividerColor::BorderFaded))
         .child(forge_tab(
             "dx-forge-tab-packages",
             "Packages",
@@ -38,7 +34,6 @@ pub(super) fn render_tab_bar(
             panel,
             cx,
         ))
-        .child(Divider::vertical().color(ui::DividerColor::BorderFaded))
         .child(forge_tab(
             "dx-forge-tab-media",
             "Media",
@@ -48,7 +43,6 @@ pub(super) fn render_tab_bar(
             panel,
             cx,
         ))
-        .child(Divider::vertical().color(ui::DividerColor::BorderFaded))
         .child(forge_tab(
             "dx-forge-tab-remotes",
             "Remotes",
@@ -71,39 +65,70 @@ fn forge_tab(
 ) -> impl IntoElement {
     let selected = active_tab == tab;
     let panel = panel.clone();
+    let title = format!("{label} - {count} items");
 
-    h_flex()
-        .id(id)
-        .h_full()
-        .flex_1()
-        .min_w_0()
-        .justify_center()
-        .gap_1()
-        .px_1()
-        .cursor_pointer()
-        .border_b_1()
-        .when(selected, |this| {
-            this.border_color(cx.theme().colors().text_accent)
-        })
-        .when(!selected, |this| {
-            this.bg(cx.theme().colors().editor_background.opacity(0.6))
-                .border_color(cx.theme().colors().border.opacity(0.6))
-        })
-        .hover(|this| this.bg(cx.theme().colors().element_hover))
+    Tab::new(id)
+        .position(tab_position(tab, active_tab))
+        .toggle_state(selected)
+        .selected_bottom_border(true)
+        .start_slot(
+            Icon::new(tab_icon(tab))
+                .size(IconSize::XSmall)
+                .color(if selected {
+                    Color::Default
+                } else {
+                    Color::Muted
+                }),
+        )
+        .end_slot(
+            Label::new(count.to_string())
+                .size(LabelSize::XSmall)
+                .color(Color::Muted),
+        )
         .child(
             Label::new(label)
                 .size(LabelSize::Small)
                 .when(!selected, |this| this.color(Color::Muted))
                 .truncate(),
         )
-        .child(
-            Label::new(count.to_string())
-                .size(LabelSize::XSmall)
-                .color(Color::Muted),
-        )
-        .on_click(move |_, _, cx| {
+        .tooltip(Tooltip::text(title))
+        .on_click(move |_, window, cx| {
             panel
-                .update(cx, |panel, cx| panel.set_active_tab(tab, cx))
+                .update(cx, |panel, cx| {
+                    panel.focus_panel(window, cx);
+                    panel.set_active_tab(tab, cx);
+                })
                 .ok();
         })
+}
+
+fn tab_position(tab: DxForgePanelTab, active_tab: DxForgePanelTab) -> TabPosition {
+    let tab_index = tab_index(tab);
+    let active_index = tab_index(active_tab);
+
+    match tab_index {
+        0 => TabPosition::First,
+        3 => TabPosition::Last,
+        _ if tab_index == active_index => TabPosition::Middle(Ordering::Equal),
+        _ if tab_index < active_index => TabPosition::Middle(Ordering::Less),
+        _ => TabPosition::Middle(Ordering::Greater),
+    }
+}
+
+fn tab_index(tab: DxForgePanelTab) -> usize {
+    match tab {
+        DxForgePanelTab::Repository => 0,
+        DxForgePanelTab::Packages => 1,
+        DxForgePanelTab::Media => 2,
+        DxForgePanelTab::Remotes => 3,
+    }
+}
+
+fn tab_icon(tab: DxForgePanelTab) -> IconName {
+    match tab {
+        DxForgePanelTab::Repository => IconName::GitBranch,
+        DxForgePanelTab::Packages => IconName::Box,
+        DxForgePanelTab::Media => dx_icon(DxUiIcon::Media),
+        DxForgePanelTab::Remotes => IconName::CloudDownload,
+    }
 }

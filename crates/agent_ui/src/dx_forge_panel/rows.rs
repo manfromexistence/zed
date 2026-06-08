@@ -1,5 +1,5 @@
-use gpui::{AnyElement, App, px};
-use ui::{IconName, ListItem, ListItemSpacing, prelude::*};
+use gpui::{AnyElement, App};
+use ui::{IconName, ListHeader, ListItem, ListItemSpacing, prelude::*};
 
 use super::snapshot::DxForgePanelState;
 
@@ -7,37 +7,38 @@ pub(super) fn status_strip(
     state: DxForgePanelState,
     detail: String,
     workspace_scope: String,
-    cx: &App,
+    _cx: &App,
 ) -> AnyElement {
     let (icon, color, label) = state_presentation(state);
 
-    h_flex()
-        .id("dx-forge-status")
-        .h(px(32.0))
-        .w_full()
-        .min_w_0()
-        .gap_2()
-        .px_2()
-        .border_y_1()
-        .border_color(cx.theme().colors().border)
-        .child(Icon::new(icon).size(IconSize::Small).color(color))
+    ListItem::new("dx-forge-status")
+        .selectable(false)
+        .spacing(ListItemSpacing::Dense)
+        .start_slot(Icon::new(icon).size(IconSize::Small).color(color))
         .child(
-            Label::new(label)
-                .size(LabelSize::Small)
-                .color(color)
-                .truncate(),
+            h_flex()
+                .w_full()
+                .min_w_0()
+                .gap_1p5()
+                .child(
+                    Label::new(label)
+                        .size(LabelSize::Small)
+                        .color(color)
+                        .truncate(),
+                )
+                .child(
+                    Label::new(detail)
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted)
+                        .truncate()
+                        .flex_1(),
+                ),
         )
-        .child(
-            Label::new(detail)
-                .size(LabelSize::XSmall)
-                .color(Color::Muted)
-                .truncate(),
-        )
-        .child(div().flex_1())
-        .child(
+        .end_slot(
             Label::new(workspace_scope)
                 .size(LabelSize::XSmall)
                 .color(Color::Muted)
+                .single_line()
                 .truncate(),
         )
         .into_any_element()
@@ -48,36 +49,19 @@ pub(super) fn section_header(
     title: &'static str,
     icon: IconName,
     count: usize,
-    cx: &App,
+    _cx: &App,
 ) -> AnyElement {
-    h_flex()
+    div()
         .id(id)
-        .h(px(28.0))
-        .w_full()
-        .min_w_0()
-        .pl_3()
-        .pr_1()
-        .gap_2()
-        .justify_between()
-        .border_1()
-        .border_r_2()
-        .hover(|style| style.bg(cx.theme().colors().ghost_element_hover))
         .child(
-            h_flex()
-                .min_w_0()
-                .gap_1()
-                .child(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted))
-                .child(
-                    Label::new(title)
-                        .size(LabelSize::Small)
-                        .color(Color::Muted)
-                        .truncate(),
+            ListHeader::new(title)
+                .inset(true)
+                .start_slot(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted))
+                .end_slot(
+                    Label::new(count.to_string())
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted),
                 ),
-        )
-        .child(
-            Label::new(count.to_string())
-                .size(LabelSize::XSmall)
-                .color(Color::Muted),
         )
         .into_any_element()
 }

@@ -193,6 +193,9 @@ fn selectable_row_actions(
         .gap_1()
         .on_mouse_down(MouseButton::Left, |_, _, cx| {
             cx.stop_propagation();
+        })
+        .on_click(|_, _, cx| {
+            cx.stop_propagation();
         });
 
     if let Some(open_button) = open_button {

@@ -1,5 +1,8 @@
 use gpui::{AnyElement, App, MouseButton, SharedString, WeakEntity};
-use ui::{ButtonStyle, IconButtonShape, IconName, ListItem, ListItemSpacing, Tooltip, prelude::*};
+use ui::{
+    ButtonStyle, IconButtonShape, IconName, Indicator, ListItem, ListItemSpacing, Tooltip,
+    prelude::*,
+};
 use workspace::Workspace;
 
 use super::{
@@ -56,8 +59,9 @@ fn provider_target_button(
     IconButton::new(format!("dx-forge-provider-{}", provider.id), provider.icon)
         .shape(IconButtonShape::Square)
         .icon_size(IconSize::Small)
-        .icon_color(provider_icon_color(&state))
-        .style(provider_button_style(&state))
+        .icon_color(Color::Muted)
+        .indicator(provider_target_indicator(&state))
+        .style(ButtonStyle::Transparent)
         .disabled(!enabled)
         .tooltip(move |_, cx| Tooltip::with_meta(title.clone(), None, meta.clone(), cx))
         .on_click({
@@ -193,6 +197,9 @@ fn provider_buttons_for_group(
         .on_mouse_down(MouseButton::Left, |_, _, cx| {
             cx.stop_propagation();
         })
+        .on_click(|_, _, cx| {
+            cx.stop_propagation();
+        })
         .children(
             providers_for(group)
                 .map(|provider| provider_target_button(provider, snapshot, workspace, cx)),
@@ -204,6 +211,9 @@ fn provider_group_actions(open_button: AnyElement) -> AnyElement {
     h_flex()
         .flex_none()
         .on_mouse_down(MouseButton::Left, |_, _, cx| {
+            cx.stop_propagation();
+        })
+        .on_click(|_, _, cx| {
             cx.stop_propagation();
         })
         .child(open_button)
@@ -262,14 +272,10 @@ fn target_open_path_for_provider<'a>(
         .map(|remote| remote.registry_open_path.as_str())
 }
 
-fn provider_button_style(_state: &RemoteTargetState) -> ButtonStyle {
-    ButtonStyle::Transparent
-}
-
-fn provider_icon_color(state: &RemoteTargetState) -> Color {
+fn provider_target_indicator(state: &RemoteTargetState) -> Indicator {
     match state.color {
-        Color::Success | Color::Warning => state.color,
-        _ => Color::Muted,
+        Color::Success | Color::Warning => Indicator::dot().color(state.color),
+        _ => Indicator::dot().color(Color::Muted),
     }
 }
 

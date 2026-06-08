@@ -102,6 +102,28 @@ const extractRustMethod = (source: string, name: string): string => {
 
   assert.fail(`unterminated Rust method body for ${name}`);
 };
+
+const extractRustFunction = (source: string, name: string): string => {
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const signature = new RegExp(
+    `(?:^|\\n)(?:pub(?:\\([^)]*\\))?\\s+)?fn\\s+${escapedName}\\b`,
+  );
+  const match = signature.exec(source);
+  assert.ok(match, `missing Rust function ${name}`);
+
+  const bodyStart = source.indexOf("{", match.index);
+  assert.notEqual(bodyStart, -1, `missing Rust function body for ${name}`);
+
+  let depth = 0;
+  for (let index = bodyStart; index < source.length; index++) {
+    const character = source[index];
+    if (character === "{") depth++;
+    if (character === "}") depth--;
+    if (depth === 0) return source.slice(match.index, index + 1);
+  }
+
+  assert.fail(`unterminated Rust function body for ${name}`);
+};
 const snapshot = readFileSync("crates/agent_ui/src/dx_forge_panel/snapshot.rs", "utf8");
 const snapshotStatePath = "crates/agent_ui/src/dx_forge_panel/snapshot_state.rs";
 const snapshotState = existsSync(snapshotStatePath)
@@ -590,16 +612,32 @@ test("Forge panel renders real receipt, restore, and media states", () => {
 });
 
 test("Forge panel uses Git-style controls instead of metric cards", () => {
-  const selectableRowBody =
-    workflowRows.match(/fn selectable_row\([\s\S]*?\r?\n}\r?\n\r?\nfn selectable_row_actions/)?.[0] ?? "";
-  const emptyRowBody =
-    rows.match(/pub\(super\) fn empty_row\([\s\S]*?\r?\n}\r?\n\r?\npub\(super\) fn state_presentation/)?.[0] ?? "";
-  const evidenceRowBodies = `${selectableRowBody}\n${emptyRowBody}`;
+  const selectableRowBody = extractRustFunction(workflowRows, "selectable_row");
+  const selectableRowActionsBody = extractRustFunction(workflowRows, "selectable_row_actions");
+  const statusStripBody = extractRustFunction(rows, "status_strip");
+  const sectionHeaderBody = extractRustFunction(rows, "section_header");
+  const emptyRowBody = extractRustFunction(rows, "empty_row");
+  const evidenceRowBodies = `${statusStripBody}\n${sectionHeaderBody}\n${selectableRowBody}\n${emptyRowBody}`;
 
   assert.match(moduleRoot, /mod controls;/);
   assert.match(panelView, /toolbar\(snapshot, workspace, panel, cx\)/);
   assert.match(panelView, /section_header\(/);
   assert.match(rows, /pub\(super\) fn section_header/);
+  assert.match(statusStripBody, /ListItem::new\("dx-forge-status"\)/);
+  assert.match(statusStripBody, /\.selectable\(false\)/);
+  assert.match(statusStripBody, /\.spacing\(ListItemSpacing::Dense\)/);
+  assert.match(statusStripBody, /\.start_slot\(/);
+  assert.match(statusStripBody, /\.end_slot\(/);
+  assert.match(rows, /ListHeader/);
+  assert.match(sectionHeaderBody, /ListHeader::new\(title\)/);
+  assert.match(sectionHeaderBody, /div\(\)[\s\S]*\.id\(id\)/);
+  assert.match(sectionHeaderBody, /\.inset\(true\)/);
+  assert.match(sectionHeaderBody, /\.start_slot\(/);
+  assert.match(sectionHeaderBody, /\.end_slot\(/);
+  assert.doesNotMatch(
+    `${statusStripBody}\n${sectionHeaderBody}`,
+    /\.h\(px\((?:28|32)\.0\)\)|\.border_1\(\)|\.border_y_1\(\)|\.border_r_2\(\)|ghost_element_hover/,
+  );
   assert.match(workflowRows, /ListItem/);
   assert.match(rows, /ListItemSpacing/);
   assert.match(selectableRowBody, /\)\s*->\s*ListItem\s*\{/);
@@ -615,10 +653,9 @@ test("Forge panel uses Git-style controls instead of metric cards", () => {
   assert.match(selectableRowBody, /\.end_slot\(row_actions\)/);
   assert.doesNotMatch(selectableRowBody, /\.start_slot\(selection_checkbox\)/);
   assert.match(workflowRows, /fn selectable_row_actions/);
-  assert.match(
-    workflowRows,
-    /fn selectable_row_actions\([\s\S]*\.on_mouse_down\(MouseButton::Left,[\s\S]*cx\.stop_propagation\(\);[\s\S]*\.on_click\(\|_, _, cx\|[\s\S]*cx\.stop_propagation\(\);/,
-  );
+  assert.match(selectableRowActionsBody, /\.on_mouse_down\(MouseButton::Left/);
+  assert.match(selectableRowActionsBody, /\.on_click\(\|_, _, cx\|/);
+  assert.match(selectableRowActionsBody, /cx\.stop_propagation\(\);/);
   assert.match(emptyRowBody, /ListItem::new\(id\)/);
   assert.match(emptyRowBody, /\.inset\(true\)/);
   assert.match(emptyRowBody, /\.spacing\(ListItemSpacing::Sparse\)/);
@@ -627,7 +664,6 @@ test("Forge panel uses Git-style controls instead of metric cards", () => {
     evidenceRowBodies,
     /Stateful<Div>|\bDiv\b|\.border_1\(\)|ghost_element_(?:background|hover|active)/,
   );
-  assert.match(rows, /ghost_element_hover/);
   assert.match(controls, /IconButton::new\("dx-forge-open-history", IconName::FolderOpen\)/);
   assert.match(controls, /IconButton::new\("dx-forge-refresh", IconName::RotateCw\)/);
   assert.match(controls, /IconButton::new\(id, IconName::ArrowUpRight\)/);
@@ -667,6 +703,29 @@ test("Forge panel uses workflow tabs with Git-style selectable rows", () => {
     assert.match(tabs, new RegExp(`DxForgePanelTab::${tab}`));
     assert.match(tabs, new RegExp(`"${tab}"`));
   }
+  assert.match(tabs, /TabBar/);
+  assert.match(tabs, /TabPosition/);
+  assert.match(tabs, /TabBar::new\("dx-forge-tab-bar"\)/);
+  const forgeTabBody = extractRustFunction(tabs, "forge_tab");
+  assert.match(forgeTabBody, /Tab::new\(id\)/);
+  assert.match(forgeTabBody, /\.position\(tab_position\(tab, active_tab\)\)/);
+  assert.match(forgeTabBody, /\.toggle_state\(selected\)/);
+  assert.match(forgeTabBody, /\.selected_bottom_border\(true\)/);
+  assert.match(forgeTabBody, /\.start_slot\(\s*Icon::new\(tab_icon\(tab\)\)/);
+  assert.match(forgeTabBody, /\.end_slot\(\s*Label::new\(count\.to_string\(\)\)/);
+  assert.match(
+    forgeTabBody,
+    /panel\.focus_panel\(window, cx\)[\s\S]*panel\.set_active_tab\(tab, cx\)/,
+  );
+  const tabPositionBody = extractRustFunction(tabs, "tab_position");
+  assert.match(tabPositionBody, /TabPosition::First/);
+  assert.match(tabPositionBody, /TabPosition::Last/);
+  assert.match(tabPositionBody, /TabPosition::Middle/);
+  assert.match(tabs, /fn tab_icon/);
+  assert.doesNotMatch(
+    forgeTabBody,
+    /h_flex\(\)|\.border_b_1\(\)|ghost_element|editor_background/,
+  );
   for (const tab of ["Repository", "Packages", "Media", "Remotes"]) {
     assert.match(
       tabs,
@@ -1055,6 +1114,11 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.match(providersView, /fn target_path_for_group/);
   assert.match(providers, /fn provider_tooltip_meta/);
   assert.match(providersView, /IconButton::new\(format!\("dx-forge-provider-\{\}", provider\.id\), provider\.icon\)/);
+  assert.match(providersView, /\.indicator\(provider_target_indicator\(&state\)\)/);
+  assert.match(providersView, /fn provider_target_indicator/);
+  assert.match(providersView, /Indicator::dot\(\)\.color\(state\.color\)/);
+  assert.doesNotMatch(providersView, /fn provider_button_style/);
+  assert.doesNotMatch(providersView, /fn provider_icon_color/);
   assert.match(providersView, /provider_buttons_for_group\(group, snapshot, workspace, cx\)/);
   const remoteTargetStripBody =
     providersView.match(
@@ -1115,6 +1179,7 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.match(providerGroupActionsBody, /cx\.stop_propagation\(\);/);
   assert.match(providersView, /IconButtonShape::Square/);
   assert.match(providersView, /ButtonStyle::Transparent/);
+  assert.match(providersView, /Indicator/);
   assert.doesNotMatch(providersView, /ButtonStyle::Tinted|TintColor/);
   assert.match(providersView, /open_exact_abs_path\(/);
   assert.match(providersState, /fn code_target_state/);
