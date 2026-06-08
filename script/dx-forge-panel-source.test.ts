@@ -67,6 +67,28 @@ const collectRustFiles = (root: string): string[] =>
       return entry.name.endsWith(".rs") ? [normalizedPath(child)] : [];
     })
     .sort();
+
+const extractRustMethod = (source: string, name: string): string => {
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const signature = new RegExp(
+    `\\n    (?:pub\\(super\\)\\s+)?fn\\s+${escapedName}\\b`,
+  );
+  const match = signature.exec(source);
+  assert.ok(match, `missing Rust method ${name}`);
+
+  const bodyStart = source.indexOf("{", match.index);
+  assert.notEqual(bodyStart, -1, `missing Rust method body for ${name}`);
+
+  let depth = 0;
+  for (let index = bodyStart; index < source.length; index++) {
+    const character = source[index];
+    if (character === "{") depth++;
+    if (character === "}") depth--;
+    if (depth === 0) return source.slice(match.index, index + 1);
+  }
+
+  assert.fail(`unterminated Rust method body for ${name}`);
+};
 const snapshot = readFileSync("crates/agent_ui/src/dx_forge_panel/snapshot.rs", "utf8");
 const snapshotStatePath = "crates/agent_ui/src/dx_forge_panel/snapshot_state.rs";
 const snapshotState = existsSync(snapshotStatePath)
@@ -616,6 +638,20 @@ test("Forge panel uses workflow tabs with Git-style selectable rows", () => {
 
   assert.match(panel, /active_item: Option<String>/);
   assert.match(panel, /checked_items: HashSet<String>/);
+  const clearActiveItemBody = extractRustMethod(panel, "clear_active_item");
+  const refreshBody = extractRustMethod(panel, "refresh");
+  const setActiveTabBody = extractRustMethod(panel, "set_active_tab");
+  const checkedItemReset =
+    /(?:self\.checked_items\s*(?:\.clear\(\)|\.drain\(\)|=\s*(?:HashSet::default\(\)|HashSet::new\(\)|Default::default\(\)))|std::mem::take\(&mut self\.checked_items\))/;
+  assert.match(clearActiveItemBody, /self\.active_item\s*=\s*None;/);
+  assert.doesNotMatch(clearActiveItemBody, /checked_items/);
+  assert.match(refreshBody, /self\.clear_active_item\(\);[\s\S]*cx\.notify\(\);/);
+  assert.doesNotMatch(refreshBody, checkedItemReset);
+  assert.match(
+    setActiveTabBody,
+    /if\s+self\.active_tab\s*!=\s*tab\s*\{[\s\S]*self\.active_tab\s*=\s*tab;[\s\S]*self\.clear_active_item\(\);[\s\S]*cx\.notify\(\);/,
+  );
+  assert.doesNotMatch(setActiveTabBody, checkedItemReset);
   assert.match(panel, /activate_item/);
   assert.match(panel, /item_active/);
   assert.match(panel, /toggle_item_checked/);

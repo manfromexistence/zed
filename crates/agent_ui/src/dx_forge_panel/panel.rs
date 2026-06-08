@@ -84,17 +84,23 @@ impl DxForgePanel {
             .collect()
     }
 
+    fn clear_active_item(&mut self) {
+        self.active_item = None;
+    }
+
     pub(super) fn refresh(&mut self, cx: &mut Context<Self>) {
         invalidate_machine_cache_snapshot_cache();
         invalidate_remote_registry_snapshot_cache();
         invalidate_tool_history_snapshot_cache();
         invalidate_source_set_snapshot_cache();
+        self.clear_active_item();
         cx.notify();
     }
 
     pub(super) fn set_active_tab(&mut self, tab: DxForgePanelTab, cx: &mut Context<Self>) {
         if self.active_tab != tab {
             self.active_tab = tab;
+            self.clear_active_item();
             cx.notify();
         }
     }
