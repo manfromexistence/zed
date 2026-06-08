@@ -794,7 +794,7 @@ test("Windows Web Preview favicon updates are bounded and page-scoped", () => {
   );
   assert.match(
     applyBrowserEvents,
-    /self\.update_favicon_uri_for_page\(\s*uri,\s*page_url\.as_deref\(\),\s*navigation_id,\s*cx,\s*\)/,
+    /self\.update_favicon_uri_for_page\(\s*uri,\s*page_url\.as_deref\(\),\s*navigation_id,\s*cx,?\s*\)/,
   );
   assert.match(
     applyBrowserEvents,
