@@ -5744,30 +5744,30 @@ impl EditorElement {
     }
 
     fn paint_cursors(&mut self, layout: &mut EditorLayout, window: &mut Window, cx: &mut App) {
-        let editor_background = cx.theme().colors().editor_background;
-        let contrast_background = if editor_background.a < 1.0 {
-            let appearance_base = match cx.theme().appearance {
-                Appearance::Dark => Hsla::black(),
-                Appearance::Light => Hsla::white(),
-            };
-            let background_base = match cx.theme().window_background_appearance() {
-                WindowBackgroundAppearance::Opaque => {
-                    let background = cx.theme().colors().background;
-                    if background.a < 1.0 {
-                        appearance_base.blend(background)
-                    } else {
-                        background
-                    }
-                }
-                _ => appearance_base,
-            };
-            background_base.blend(editor_background)
-        } else {
-            editor_background
-        };
         let (rainbow_color, should_request_rainbow_frame) = layout
             .rainbow_cursor_motion
             .map(|motion| {
+                let editor_background = cx.theme().colors().editor_background;
+                let contrast_background = if editor_background.a < 1.0 {
+                    let appearance_base = match cx.theme().appearance {
+                        Appearance::Dark => Hsla::black(),
+                        Appearance::Light => Hsla::white(),
+                    };
+                    let background_base = match cx.theme().window_background_appearance() {
+                        WindowBackgroundAppearance::Opaque => {
+                            let background = cx.theme().colors().background;
+                            if background.a < 1.0 {
+                                appearance_base.blend(background)
+                            } else {
+                                background
+                            }
+                        }
+                        _ => appearance_base,
+                    };
+                    background_base.blend(editor_background)
+                } else {
+                    editor_background
+                };
                 let sample = dx_rainbow_paint_sample(motion, 0., 1.);
                 let color = self.editor.update(cx, |editor, _| {
                     editor.rainbow_caret_contrast_cache.adjusted_color(

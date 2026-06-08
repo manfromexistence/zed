@@ -4,7 +4,7 @@ use gpui::{
     AnyElement, App, ClickEvent, Context, DismissEvent, EventEmitter, FocusHandle, Focusable,
     Render, SharedString, Window, prelude::*,
 };
-use ui::{Disclosure, IconName, PopoverMenu, Tooltip, prelude::*};
+use ui::{Disclosure, DxRainbowGlow, IconName, PopoverMenu, Tooltip, prelude::*};
 
 use crate::dx_agent_bridge::DxAgentBridgeSnapshot;
 use crate::dx_check_score::DxCheckScoreSnapshot;
@@ -359,6 +359,7 @@ fn render_sources_rail(
             DxLaunchRailSide::Sources,
             rail_controls,
         ))
+        .child(rail_rainbow_glow("dx-sources-rail-rainbow-glow", 0.))
         .child(rail_section(
             "dx-sources-commands-section",
             "Commands",
@@ -422,6 +423,7 @@ fn render_right_rail(
             DxLaunchRailSide::Progress,
             rail_controls,
         ))
+        .child(rail_rainbow_glow("dx-progress-rail-rainbow-glow", 0.18))
         .child(diagnostics_menu(status.clone()))
         .child(rail_section(
             "dx-agent-overview-section",
@@ -473,6 +475,22 @@ fn render_right_rail(
             false,
             cx,
         ))
+        .into_any_element()
+}
+
+fn rail_rainbow_glow(id: &'static str, phase_offset: f32) -> AnyElement {
+    div()
+        .h(px(8.0))
+        .w_full()
+        .flex_none()
+        .overflow_hidden()
+        .child(
+            DxRainbowGlow::new()
+                .id(id)
+                .height(px(3.0))
+                .radius(px(2.0))
+                .phase_offset(phase_offset),
+        )
         .into_any_element()
 }
 

@@ -1,3 +1,20 @@
+[2026-06-09] - DX Launch Rail Rainbow Identity
+
+CHANGED:
+- `crates\agent_ui\src\dx_launch_workspace.rs` now mounts the shared GPUI `DxRainbowGlow` helper in the real fullscreen Sources and Agents launch rails with clipped, fixed-height chrome accents.
+- `crates\editor\src\element.rs` now computes rainbow caret contrast-background flattening only when an active rainbow cursor motion sample exists, preserving the paint result while avoiding unused background work on non-rainbow frames.
+- `docs\src\migrate\vs-code.md` now states the VS Code solid cursor import behavior directly: `"solid"` disables rainbow caret animation.
+- `script\dx-editor-power-rainbow-source.test.ts` now guards the rail glow call sites, reduced/static default path, bounded wrapper, solid-cursor import wording, and lazy contrast-background branch so the reusable helper stays mounted in production GPUI chrome without returning unnecessary paint work.
+- `DX.md` and `todo.txt` now record this as a source-only rainbow identity follow-up with runtime/build proof deferred.
+
+PASSED:
+- `node --test script\dx-editor-power-rainbow-source.test.ts`
+- `rustfmt --edition 2024 --check crates\agent_ui\src\dx_launch_workspace.rs crates\editor\src\element.rs`
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. Cargo, build, `just run`, native Zed launch, local servers, runtime proof, and visual proof remain deferred.
+
 [2026-06-09] - Web Preview Completion And Project Panel Focus
 
 CHANGED:

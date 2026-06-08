@@ -15,6 +15,7 @@ const settingsPageData = read("crates/settings_ui/src/page_data.rs");
 const vscodeImport = read("crates/settings/src/vscode_import.rs");
 const uiComponents = read("crates/ui/src/components.rs");
 const rainbowGlow = read("crates/ui/src/components/dx_rainbow_glow.rs");
+const dxLaunchWorkspace = read("crates/agent_ui/src/dx_launch_workspace.rs");
 const registry = read("script/dx-handoff-source-guard-registry.test.ts");
 const allSettings = read("docs/src/reference/all-settings.md");
 const vimDocs = read("docs/src/vim.md");
@@ -76,6 +77,8 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
     /rainbow_caret_animation: editor\.rainbow_caret_animation\.unwrap\(\)/,
   );
   assert.match(vscodeImport, /let cursor_blink = self\.read_enum\("editor\.cursorBlinking"/);
+  assert.match(vscodeImport, /"blink" \| "phase" \| "expand" \| "smooth" => Some\(true\)/);
+  assert.match(vscodeImport, /"solid" => Some\(false\)/);
   assert.match(
     vscodeImport,
     /let rainbow_caret_animation = match cursor_blink \{\s*Some\(false\) => Some\(false\),\s*_ => None,\s*\};/s,
@@ -93,7 +96,7 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
   assert.match(visualCustomizationDocs, /"rainbow_caret_animation": true/);
   assert.match(
     vscodeMigrationDocs,
-    /\| `editor\.cursorBlinking`\s*\|\s*`cursor_blink`, `rainbow_caret_animation` for `"solid"`\s*\|/,
+    /\| `editor\.cursorBlinking`\s*\|\s*`cursor_blink`, disables `rainbow_caret_animation` for `"solid"`\s*\|/,
   );
   assert.match(uiComponents, /mod dx_rainbow_glow;/);
   assert.match(
@@ -255,7 +258,17 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
   );
   assert.match(
     editorElement,
-    /const RAINBOW_CARET_MIN_APCA_CONTRAST: f32 = 45\.0;[\s\S]*let editor_background = cx\.theme\(\)\.colors\(\)\.editor_background;[\s\S]*let contrast_background = if editor_background\.a < 1\.0 \{[\s\S]*let appearance_base = match cx\.theme\(\)\.appearance \{[\s\S]*Appearance::Dark => Hsla::black\(\),[\s\S]*Appearance::Light => Hsla::white\(\),[\s\S]*let background_base = match cx\.theme\(\)\.window_background_appearance\(\) \{[\s\S]*WindowBackgroundAppearance::Opaque => \{[\s\S]*let background = cx\.theme\(\)\.colors\(\)\.background;[\s\S]*appearance_base\.blend\(background\)[\s\S]*_ => appearance_base,[\s\S]*background_base\.blend\(editor_background\)[\s\S]*\} else \{\s*editor_background\s*\};[\s\S]*let \(rainbow_color, should_request_rainbow_frame\) = layout\s*\.rainbow_cursor_motion\s*\.map\(\|motion\| \{\s*let sample = dx_rainbow_paint_sample\(motion, 0\., 1\.\);[\s\S]*editor\.rainbow_caret_contrast_cache\.adjusted_color\(\s*sample\.color\(\),\s*contrast_background,\s*RAINBOW_CARET_MIN_APCA_CONTRAST,\s*\)[\s\S]*\(Some\(color\), sample\.should_request_animation_frame\(\)\)\s*\}\)\s*\.unwrap_or\(\(None, false\)\);[\s\S]*let cursor_rainbow_color = if cursor\.rainbow_motion\.is_some\(\) \{\s*rainbow_color\s*\} else \{\s*None\s*\};[\s\S]*cursor\.paint\(layout\.content_origin, window, cx, cursor_rainbow_color\);/s,
+    /const RAINBOW_CARET_MIN_APCA_CONTRAST: f32 = 45\.0;[\s\S]*let \(rainbow_color, should_request_rainbow_frame\) = layout\s*\.rainbow_cursor_motion\s*\.map\(\|motion\| \{\s*let editor_background = cx\.theme\(\)\.colors\(\)\.editor_background;[\s\S]*let contrast_background = if editor_background\.a < 1\.0 \{[\s\S]*let appearance_base = match cx\.theme\(\)\.appearance \{[\s\S]*Appearance::Dark => Hsla::black\(\),[\s\S]*Appearance::Light => Hsla::white\(\),[\s\S]*let background_base = match cx\.theme\(\)\.window_background_appearance\(\) \{[\s\S]*WindowBackgroundAppearance::Opaque => \{[\s\S]*let background = cx\.theme\(\)\.colors\(\)\.background;[\s\S]*appearance_base\.blend\(background\)[\s\S]*_ => appearance_base,[\s\S]*background_base\.blend\(editor_background\)[\s\S]*\} else \{\s*editor_background\s*\};[\s\S]*let sample = dx_rainbow_paint_sample\(motion, 0\., 1\.\);[\s\S]*editor\.rainbow_caret_contrast_cache\.adjusted_color\(\s*sample\.color\(\),\s*contrast_background,\s*RAINBOW_CARET_MIN_APCA_CONTRAST,\s*\)[\s\S]*\(Some\(color\), sample\.should_request_animation_frame\(\)\)\s*\}\)\s*\.unwrap_or\(\(None, false\)\);[\s\S]*let cursor_rainbow_color = if cursor\.rainbow_motion\.is_some\(\) \{\s*rainbow_color\s*\} else \{\s*None\s*\};[\s\S]*cursor\.paint\(layout\.content_origin, window, cx, cursor_rainbow_color\);/s,
+  );
+  const paintCursorsStart = editorElement.indexOf("fn paint_cursors(");
+  assert.ok(paintCursorsStart >= 0, "expected paint_cursors");
+  const rainbowMotionMapStart = editorElement.indexOf(".rainbow_cursor_motion", paintCursorsStart);
+  assert.ok(rainbowMotionMapStart > paintCursorsStart, "expected rainbow motion map in paint_cursors");
+  const beforeRainbowMotionMap = editorElement.slice(paintCursorsStart, rainbowMotionMapStart);
+  assert.doesNotMatch(
+    beforeRainbowMotionMap,
+    /let (?:editor_background|contrast_background) =/,
+    "rainbow contrast-background work must stay lazy until rainbow cursor motion is active",
   );
   assert.match(
     editorElement,
@@ -273,6 +286,36 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
     editorElement,
     /window\.paint_quad\(cursor\);[\s\S]*if let Some\(block_text\) = &self\.block_text[\s\S]*if let Some\(name\) = &mut self\.cursor_name/s,
   );
+});
+
+test("DX launch rail chrome mounts the shared rainbow glow", () => {
+  const sourcesRailStart = dxLaunchWorkspace.indexOf("fn render_sources_rail");
+  const progressRailStart = dxLaunchWorkspace.indexOf("fn render_right_rail");
+  const railGlowStart = dxLaunchWorkspace.indexOf("fn rail_rainbow_glow");
+  const railPinStart = dxLaunchWorkspace.indexOf("fn rail_pin_header");
+  assert.ok(sourcesRailStart >= 0, "expected sources rail renderer");
+  assert.ok(progressRailStart > sourcesRailStart, "expected progress rail renderer");
+  assert.ok(railGlowStart > progressRailStart, "expected rail rainbow glow helper");
+  assert.ok(railPinStart > railGlowStart, "expected rail pin helper after glow helper");
+
+  const sourcesRail = dxLaunchWorkspace.slice(sourcesRailStart, progressRailStart);
+  const progressRail = dxLaunchWorkspace.slice(progressRailStart, railGlowStart);
+  const railGlow = dxLaunchWorkspace.slice(railGlowStart, railPinStart);
+
+  assert.match(dxLaunchWorkspace, /use ui::\{[\s\S]*DxRainbowGlow/);
+  assert.match(
+    sourcesRail,
+    /rail_pin_header\([\s\S]*"dx-sources-rail-pin"[\s\S]*\)\)\s*\.child\(rail_rainbow_glow\("dx-sources-rail-rainbow-glow", 0\.\)\)/s,
+  );
+  assert.match(
+    progressRail,
+    /rail_pin_header\([\s\S]*"dx-progress-rail-pin"[\s\S]*\)\)\s*\.child\(rail_rainbow_glow\("dx-progress-rail-rainbow-glow", 0\.18\)\)/s,
+  );
+  assert.match(
+    railGlow,
+    /div\(\)[\s\S]*\.h\(px\(8\.0\)\)[\s\S]*\.flex_none\(\)[\s\S]*\.overflow_hidden\(\)[\s\S]*DxRainbowGlow::new\(\)[\s\S]*\.id\(id\)[\s\S]*\.height\(px\(3\.0\)\)[\s\S]*\.radius\(px\(2\.0\)\)[\s\S]*\.phase_offset\(phase_offset\)/s,
+  );
+  assert.doesNotMatch(dxLaunchWorkspace, /DxRainbowGlow::animated|DxRainbowMotion::Animated/);
 });
 
 test("editor visual effects guard is discoverable", () => {
