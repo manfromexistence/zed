@@ -1,3 +1,21 @@
+[2026-06-08] - Rainbow Caret Contrast Cache
+
+ADDED:
+- `crates\editor\src\rainbow_caret.rs` now owns a fixed-size rainbow caret contrast cache keyed by hue bucket, foreground channels, background, and APCA target.
+
+CHANGED:
+- `crates\editor\src\editor.rs` now stores the editor-local rainbow caret contrast cache with the rest of persistent editor visual state.
+- `crates\editor\src\element.rs` now reuses cached APCA-adjusted rainbow caret colors during animated paint frames instead of running contrast correction on every frame.
+- `script\dx-editor-power-rainbow-source.test.ts` now guards the fixed-size cache and paint-path usage so the render path stays bounded.
+
+PASSED:
+- `node --test script/dx-editor-power-rainbow-source.test.ts`
+- `rustfmt --edition 2024 --check crates/editor/src/editor.rs crates/editor/src/element.rs crates/editor/src/rainbow_caret.rs`
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. Cargo, build, `just run`, native Zed launch, local servers, and runtime visual proof remain deferred.
+
 [2026-06-08] - Rainbow Caret Opaque Background Contrast
 
 CHANGED:

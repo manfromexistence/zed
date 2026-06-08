@@ -38,6 +38,7 @@ mod lsp_ext;
 mod mouse_context_menu;
 pub mod movement;
 mod persistence;
+mod rainbow_caret;
 mod runnables;
 mod rust_analyzer_ext;
 pub mod scroll;
@@ -217,6 +218,7 @@ use project::{
     },
     project_settings::{DiagnosticSeverity, GoToDiagnosticSeverityFilter, ProjectSettings},
 };
+use rainbow_caret::RainbowCaretContrastCache;
 use rand::seq::SliceRandom;
 use regex::Regex;
 use rpc::{ErrorCode, ErrorExt, proto::PeerId};
@@ -1126,6 +1128,7 @@ pub struct Editor {
     _subscriptions: Vec<Subscription>,
     pixel_position_of_newest_cursor: Option<gpui::Point<Pixels>>,
     power_mode_effects: PowerModeEffects,
+    rainbow_caret_contrast_cache: RainbowCaretContrastCache,
     gutter_dimensions: GutterDimensions,
     style: Option<EditorStyle>,
     text_style_refinement: Option<TextStyleRefinement>,
@@ -2338,6 +2341,7 @@ impl Editor {
             gutter_hovered: false,
             pixel_position_of_newest_cursor: None,
             power_mode_effects: PowerModeEffects::default(),
+            rainbow_caret_contrast_cache: RainbowCaretContrastCache::default(),
             last_bounds: None,
             last_position_map: None,
             expect_bounds_change: None,

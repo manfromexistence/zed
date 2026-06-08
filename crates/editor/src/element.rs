@@ -5767,11 +5767,13 @@ impl EditorElement {
             .rainbow_cursor_motion
             .map(|motion| {
                 let sample = dx_rainbow_paint_sample(motion, 0., 1.);
-                let color = ensure_minimum_contrast(
-                    sample.color(),
-                    contrast_background,
-                    RAINBOW_CARET_MIN_APCA_CONTRAST,
-                );
+                let color = self.editor.update(cx, |editor, _| {
+                    editor.rainbow_caret_contrast_cache.adjusted_color(
+                        sample.color(),
+                        contrast_background,
+                        RAINBOW_CARET_MIN_APCA_CONTRAST,
+                    )
+                });
                 (Some(color), sample.should_request_animation_frame())
             })
             .unwrap_or((None, false));
