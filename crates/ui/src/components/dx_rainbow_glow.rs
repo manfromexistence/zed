@@ -196,14 +196,14 @@ fn paint_dx_rainbow_glow(
     phase_offset: f32,
     window: &mut Window,
 ) {
-    let sample = dx_rainbow_paint_sample(motion, phase_offset, 0.18);
-    if sample.request_animation_frame {
-        window.request_animation_frame();
-    }
-
     let bounds = window.pixel_snap_bounds(bounds);
     if bounds.size.width <= px(0.) || bounds.size.height <= px(0.) {
         return;
+    }
+
+    let sample = dx_rainbow_paint_sample(motion, phase_offset, 0.18);
+    if sample.request_animation_frame {
+        window.request_animation_frame();
     }
 
     let radius = clamp_radius(radius, bounds.size);
