@@ -1019,6 +1019,8 @@ test("project panel storage overview and root shortcuts stay cached and professi
   const knownRootShortcuts = functionBody(storageRoots, "known_root_shortcuts");
   const knownRootShortcut = functionBody(storageRoots, "known_root_shortcut");
   const rootStatusLabel = functionBody(storageRoots, "status_label");
+  const capacityUsedBytes = functionBody(storageRoots, "used_bytes");
+  const driveCapacityProgress = functionBody(storageRootsView, "drive_capacity_progress");
   const compareBySize = functionBody(storage, "compare_by_size");
   const compareByFileCount = functionBody(storage, "compare_by_file_count");
   const compareByModified = functionBody(storage, "compare_by_modified");
@@ -1185,13 +1187,14 @@ test("project panel storage overview and root shortcuts stay cached and professi
   );
   assert.match(
     renderRootStrip,
-    /shortcuts[\s\S]*\.map\(\|shortcut\|[\s\S]*render_storage_root_strip_row\(shortcut, panel\.clone\(\), focus_handle\.clone\(\)\)[\s\S]*\)/,
+    /shortcuts[\s\S]*\.map\(\|shortcut\|[\s\S]*render_storage_root_strip_row\(shortcut, panel\.clone\(\), focus_handle\.clone\(\), cx\)[\s\S]*\)/,
   );
   assert.doesNotMatch(source, /fn render_dx_explorer_storage_root_strip_row\(/);
   assert.match(renderRootStripRow, /storage_roots::StorageRootKind::Drive/);
   assert.match(storageRootsView, /ButtonLike/);
   assert.match(storageRootsView, /ButtonSize/);
   assert.match(storageRootsView, /ButtonStyle/);
+  assert.match(storageRootsView, /ProgressBar/);
   assert.match(renderRootStripRow, /ButtonLike::new\(/);
   assert.match(renderRootStripRow, /\.style\(ButtonStyle::Subtle\)/);
   assert.match(renderRootStripRow, /\.size\(ButtonSize::Compact\)/);
@@ -1221,9 +1224,24 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(renderRootStripRow, /this\.open_dx_explorer_storage_root\(path\.clone\(\), window, cx\)/);
   assert.match(renderRootStripRow, /let status_label = shortcut\.status_label\(\);/);
   assert.match(renderRootStripRow, /Label::new\(status_label\)/);
+  assert.match(
+    capacityUsedBytes,
+    /self\.total_bytes\s*\.saturating_sub\(self\.available_bytes\.min\(self\.total_bytes\)\)/,
+    "drive capacity progress must derive used bytes from real disk capacity",
+  );
+  assert.match(
+    driveCapacityProgress,
+    /matches!\(shortcut\.kind, storage_roots::StorageRootKind::Drive\)[\s\S]*shortcut\.capacity\.as_ref\(\)[\s\S]*capacity\.used_bytes\(\) as f32[\s\S]*capacity\.total_bytes as f32[\s\S]*100\.0[\s\S]*\.clamp\(0\.0, 100\.0\)/,
+    "storage root capacity progress must be real drive-only capacity derived from cached sysinfo data",
+  );
+  assert.match(
+    renderRootStripRow,
+    /ProgressBar::new\([\s\S]*capacity_progress\.id[\s\S]*capacity_progress\.used_percent[\s\S]*100\.0_f32[\s\S]*cx,?\s*\)/,
+    "storage root capacity should render a shared ProgressBar component",
+  );
   assert.doesNotMatch(
     renderRootStripRow,
-    /format_file_size\(capacity\.available_bytes\)|format_file_size\(capacity\.total_bytes\)/,
+    /storage::format_file_size|format_file_size\(capacity\.|capacity\.capacity_label\(\)|format!\([\s\S]{0,120}(?:free|quota|GB|MB|TB)/i,
     "storage root capacity copy must come from the storage-root domain, not inline panel formatting",
   );
   assert.doesNotMatch(
@@ -1273,7 +1291,18 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(storageRoots, /MAX_PROJECT_PANEL_STORAGE_ROOT_STRIP_ITEMS/);
   assert.match(storageRoots, /use crate::storage;/);
   assert.match(storageRoots, /pub\(crate\) fn capacity_label\(&self\) -> String/);
+  assert.match(storageRoots, /pub\(crate\) fn used_bytes\(&self\) -> u64/);
   assert.match(storageRoots, /pub\(crate\) fn status_label\(&self\) -> String/);
+  assert.doesNotMatch(
+    knownRootShortcut,
+    /capacity:\s*Some|DriveCapacity|available_bytes|total_bytes/,
+    "named cloud roots must not invent quota or capacity values",
+  );
+  assert.doesNotMatch(
+    storageRoots,
+    /\b(?:cloud quota|free tier|quota|15\s*GB|2\s*GB|1\s*TB)\b/i,
+    "storage roots must not encode fake provider quota copy",
+  );
   assert.match(
     collectStorageRootShortcuts,
     /let known_roots = known_root_shortcuts\(\);[\s\S]*saturating_sub\(known_roots\.len\(\)\)[\s\S]*collect_drive_shortcuts\(&mut shortcuts, drive_limit\);[\s\S]*shortcuts\.extend\(known_roots\);[\s\S]*dedupe_and_cap\(shortcuts\)/,

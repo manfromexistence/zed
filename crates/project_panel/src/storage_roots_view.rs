@@ -4,11 +4,16 @@ use gpui::{
 };
 use ui::{
     ButtonLike, ButtonSize, ButtonStyle, Color, DxUiIcon, Icon, IconSize, Label, LabelSize,
-    ListHeader, Tooltip, dx_icon, prelude::*, v_flex,
+    ListHeader, ProgressBar, Tooltip, dx_icon, prelude::*, v_flex,
 };
 use util::ResultExt;
 
 use crate::{ProjectPanel, storage_roots};
+
+struct DriveCapacityProgress {
+    id: String,
+    used_percent: f32,
+}
 
 pub(crate) fn render_storage_root_strip(
     shortcuts: Vec<storage_roots::StorageRootShortcut>,
@@ -23,7 +28,7 @@ pub(crate) fn render_storage_root_strip(
     let rows = shortcuts
         .into_iter()
         .map(|shortcut| {
-            render_storage_root_strip_row(shortcut, panel.clone(), focus_handle.clone())
+            render_storage_root_strip_row(shortcut, panel.clone(), focus_handle.clone(), cx)
         })
         .collect::<Vec<_>>();
 
@@ -56,6 +61,7 @@ fn render_storage_root_strip_row(
     shortcut: storage_roots::StorageRootShortcut,
     panel: WeakEntity<ProjectPanel>,
     focus_handle: FocusHandle,
+    cx: &mut Context<ProjectPanel>,
 ) -> AnyElement {
     let icon = match shortcut.kind {
         storage_roots::StorageRootKind::Drive => dx_icon(DxUiIcon::Storage),
@@ -68,6 +74,7 @@ fn render_storage_root_strip_row(
     let available = shortcut.is_available();
     let tooltip = shortcut.tooltip.clone();
     let status_label = shortcut.status_label();
+    let capacity_progress = drive_capacity_progress(&shortcut);
 
     ButtonLike::new(SharedString::from(format!(
         "dx-explorer-storage-root-{}",
@@ -98,7 +105,7 @@ fn render_storage_root_strip_row(
         Color::Disabled
     }))
     .child(
-        div().min_w_0().child(
+        div().min_w_0().flex_1().child(
             Label::new(shortcut.label)
                 .size(LabelSize::XSmall)
                 .color(if available {
@@ -109,6 +116,28 @@ fn render_storage_root_strip_row(
                 .truncate(),
         ),
     )
+    .when_some(capacity_progress, |this, capacity_progress| {
+        let progress_color = if capacity_progress.used_percent >= 95.0 {
+            Color::Error.color(cx)
+        } else if capacity_progress.used_percent >= 85.0 {
+            Color::Warning.color(cx)
+        } else {
+            Color::Info.color(cx)
+        };
+
+        this.child(
+            div().w(rems(3.5)).flex_none().child(
+                ProgressBar::new(
+                    capacity_progress.id,
+                    capacity_progress.used_percent,
+                    100.0_f32,
+                    cx,
+                )
+                .fg_color(progress_color)
+                .bg_color(cx.theme().colors().border.opacity(0.35)),
+            ),
+        )
+    })
     .child(
         Label::new(status_label)
             .size(LabelSize::XSmall)
@@ -116,4 +145,25 @@ fn render_storage_root_strip_row(
             .truncate(),
     )
     .into_any_element()
+}
+
+fn drive_capacity_progress(
+    shortcut: &storage_roots::StorageRootShortcut,
+) -> Option<DriveCapacityProgress> {
+    if !matches!(shortcut.kind, storage_roots::StorageRootKind::Drive) {
+        return None;
+    }
+
+    let capacity = shortcut.capacity.as_ref()?;
+    if capacity.total_bytes == 0 {
+        return None;
+    }
+
+    let used_percent =
+        ((capacity.used_bytes() as f32 / capacity.total_bytes as f32) * 100.0).clamp(0.0, 100.0);
+
+    Some(DriveCapacityProgress {
+        id: format!("dx-explorer-storage-root-{}-capacity", shortcut.id),
+        used_percent,
+    })
 }

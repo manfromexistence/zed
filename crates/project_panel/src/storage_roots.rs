@@ -24,6 +24,11 @@ pub(crate) struct DriveCapacity {
 }
 
 impl DriveCapacity {
+    pub(crate) fn used_bytes(&self) -> u64 {
+        self.total_bytes
+            .saturating_sub(self.available_bytes.min(self.total_bytes))
+    }
+
     pub(crate) fn capacity_label(&self) -> String {
         format!(
             "{} free / {}",
