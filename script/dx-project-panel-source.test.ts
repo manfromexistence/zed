@@ -701,6 +701,8 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   assert.match(source, /fn render_dx_explorer_storage_drilldown\(/);
   assert.match(source, /fn render_dx_explorer_storage_drilldown_row\(/);
   assert.doesNotMatch(source, /fn dx_explorer_storage_heat_level\(/);
+  assert.match(source, /fn render_dx_explorer_storage_heat_indicator\(/);
+  assert.match(source, /fn dx_explorer_storage_heat_indicator_width\(/);
   assert.match(source, /fn dx_explorer_storage_heat_color\(/);
   assert.match(
     cachedFolderStorageSummary,
@@ -831,7 +833,27 @@ test("project panel folder storage summaries are cache-only on the visible-row p
     /SelectedEntry \{[\s\S]*worktree_id: item\.worktree_id,[\s\S]*entry_id: item\.entry_id/,
     "storage drilldown rows must target real project entries",
   );
-  assert.match(renderStorageDrilldownRow, /dx_explorer_storage_heat_color\(item\.heat_level, cx\)/);
+  const renderStorageHeatIndicator = functionBody(source, "render_dx_explorer_storage_heat_indicator");
+  const storageHeatIndicatorWidth = functionBody(source, "dx_explorer_storage_heat_indicator_width");
+  const storageHeatColor = functionBody(source, "dx_explorer_storage_heat_color");
+
+  assert.match(
+    renderStorageDrilldownRow,
+    /render_dx_explorer_storage_heat_indicator\(item\.heat_level\)/,
+  );
+  assert.match(renderStorageHeatIndicator, /\.flex_none\(\)/);
+  assert.match(renderStorageHeatIndicator, /Indicator::bar\(\)\.color\(dx_explorer_storage_heat_color\(heat_level\)\)/);
+  assert.match(renderStorageHeatIndicator, /dx_explorer_storage_heat_indicator_width\(heat_level\)/);
+  assert.match(storageHeatIndicatorWidth, /f32::from\(heat_level\.max\(1\)\) \* 8\./);
+  assert.match(storageHeatColor, /4 => Color::Warning/);
+  assert.match(storageHeatColor, /3 => Color::Accent/);
+  assert.match(storageHeatColor, /2 => Color::Info/);
+  assert.match(storageHeatColor, /_ => Color::Muted/);
+  assert.doesNotMatch(
+    renderStorageDrilldownRow,
+    /\.h\(px\(4\.\)\)[\s\S]*\.rounded_sm\(\)[\s\S]*\.bg\(heat_color\.opacity\(0\.8\)\)/,
+    "storage heat marks should use the shared Indicator bar component",
+  );
   assert.match(renderStorageDrilldownRow, /format_file_size\(item\.file_bytes\)/);
   assert.match(renderStorageDrilldownRow, /item\.path_label/);
   assert.match(renderStorageDrilldownRow, /this\.expand_entry\(target\.worktree_id, target\.entry_id, cx\)/);

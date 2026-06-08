@@ -4445,7 +4445,6 @@ impl ProjectPanel {
             entry_id: item.entry_id,
         };
         let is_selected = self.selection == Some(target);
-        let heat_color = dx_explorer_storage_heat_color(item.heat_level, cx);
         let file_count = Self::dx_explorer_count_label(item.file_count, "file", "files");
         let storage_label = storage::format_file_size(item.file_bytes);
         let modified_label = storage::format_modified_label(item.latest_modified_at);
@@ -4461,7 +4460,6 @@ impl ProjectPanel {
                 )
             })
             .collect::<Vec<_>>();
-        let bar_width = px(12. + f32::from(item.heat_level.max(1)) * 8.);
         let tooltip = if largest_files.is_empty() {
             format!(
                 "{} / {file_count} / {storage_label} / {heat_label}",
@@ -4499,13 +4497,7 @@ impl ProjectPanel {
         .start_slot::<AnyElement>(
             h_flex()
                 .gap_1()
-                .child(
-                    div()
-                        .h(px(4.))
-                        .w(bar_width)
-                        .rounded_sm()
-                        .bg(heat_color.opacity(0.8)),
-                )
+                .child(render_dx_explorer_storage_heat_indicator(item.heat_level))
                 .child(
                     Label::new(heat_label)
                         .size(LabelSize::XSmall)
@@ -8850,12 +8842,24 @@ fn render_file_label(file_name: String, color: Color) -> AnyElement {
         .into_any_element()
 }
 
-fn dx_explorer_storage_heat_color(heat_level: u8, cx: &App) -> Hsla {
+fn render_dx_explorer_storage_heat_indicator(heat_level: u8) -> AnyElement {
+    div()
+        .w(dx_explorer_storage_heat_indicator_width(heat_level))
+        .flex_none()
+        .child(Indicator::bar().color(dx_explorer_storage_heat_color(heat_level)))
+        .into_any_element()
+}
+
+fn dx_explorer_storage_heat_indicator_width(heat_level: u8) -> Pixels {
+    px(12. + f32::from(heat_level.max(1)) * 8.)
+}
+
+fn dx_explorer_storage_heat_color(heat_level: u8) -> Color {
     match heat_level {
-        4 => cx.theme().status().warning,
-        3 => cx.theme().colors().text_accent,
-        2 => cx.theme().status().info,
-        _ => cx.theme().colors().text_muted,
+        4 => Color::Warning,
+        3 => Color::Accent,
+        2 => Color::Info,
+        _ => Color::Muted,
     }
 }
 

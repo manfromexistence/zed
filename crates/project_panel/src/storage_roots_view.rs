@@ -1,6 +1,6 @@
 use gpui::{
-    AnyElement, Context, FocusHandle, InteractiveElement, IntoElement, ParentElement,
-    SharedString, Styled, WeakEntity,
+    AnyElement, Context, FocusHandle, InteractiveElement, IntoElement, ParentElement, SharedString,
+    Styled, WeakEntity,
 };
 use ui::{
     ButtonLike, ButtonSize, ButtonStyle, Color, DxUiIcon, Icon, IconSize, Label, LabelSize,
