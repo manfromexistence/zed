@@ -24,6 +24,13 @@ impl DxRainbowMotion {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct DxRainbowPaintSample {
+    pub phase: f32,
+    pub color: Hsla,
+    pub request_animation_frame: bool,
+}
+
 #[derive(Clone)]
 pub struct DxRainbowGlow {
     id: Option<ElementId>,
@@ -140,7 +147,7 @@ impl IntoElement for DxRainbowGlow {
     }
 }
 
-pub fn dx_rainbow_hsla(phase: f32, alpha: f32) -> Hsla {
+fn dx_rainbow_hsla(phase: f32, alpha: f32) -> Hsla {
     hsla(
         phase.rem_euclid(1.),
         DX_RAINBOW_SATURATION,
@@ -149,7 +156,7 @@ pub fn dx_rainbow_hsla(phase: f32, alpha: f32) -> Hsla {
     )
 }
 
-pub fn dx_rainbow_phase_now(motion: DxRainbowMotion, phase_offset: f32) -> f32 {
+fn dx_rainbow_phase_now(motion: DxRainbowMotion, phase_offset: f32) -> f32 {
     let base_phase = match motion {
         DxRainbowMotion::Animated => SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -162,8 +169,17 @@ pub fn dx_rainbow_phase_now(motion: DxRainbowMotion, phase_offset: f32) -> f32 {
     (base_phase + phase_offset).rem_euclid(1.)
 }
 
-pub fn dx_rainbow_caret_color(motion: DxRainbowMotion) -> Hsla {
-    dx_rainbow_hsla(dx_rainbow_phase_now(motion, 0.), 1.)
+pub fn dx_rainbow_paint_sample(
+    motion: DxRainbowMotion,
+    phase_offset: f32,
+    alpha: f32,
+) -> DxRainbowPaintSample {
+    let phase = dx_rainbow_phase_now(motion, phase_offset);
+    DxRainbowPaintSample {
+        phase,
+        color: dx_rainbow_hsla(phase, alpha),
+        request_animation_frame: motion.is_animated(),
+    }
 }
 
 pub fn paint_dx_rainbow_caret_glow(bounds: Bounds<Pixels>, color: Hsla, window: &mut Window) {
@@ -173,45 +189,67 @@ pub fn paint_dx_rainbow_caret_glow(bounds: Bounds<Pixels>, color: Hsla, window: 
     window.paint_quad(fill(inner, color.opacity(0.22)));
 }
 
-pub fn paint_dx_rainbow_glow(
+fn paint_dx_rainbow_glow(
     bounds: Bounds<Pixels>,
     radius: Pixels,
     motion: DxRainbowMotion,
     phase_offset: f32,
     window: &mut Window,
 ) {
-    if motion.is_animated() {
+    let sample = dx_rainbow_paint_sample(motion, phase_offset, 0.18);
+    if sample.request_animation_frame {
         window.request_animation_frame();
     }
 
-    let phase = dx_rainbow_phase_now(motion, phase_offset);
     let bounds = window.pixel_snap_bounds(bounds);
+    if bounds.size.width <= px(0.) || bounds.size.height <= px(0.) {
+        return;
+    }
+
     let radius = clamp_radius(radius, bounds.size);
     let corners = Corners::all(radius);
 
-    paint_dx_rainbow_stripes(
+    paint_dx_rainbow_wash(
         bounds.dilate(px(28.)),
         radius + px(28.),
-        phase - 0.08,
+        sample.phase - 0.08,
         0.1,
         window,
     );
-    paint_dx_rainbow_stripes(
+    paint_dx_rainbow_wash(
         bounds.dilate(px(10.)),
         radius + px(10.),
-        phase - 0.03,
+        sample.phase - 0.03,
         0.22,
         window,
     );
     window.paint_quad(quad(
         bounds,
         corners,
-        dx_rainbow_hsla(phase, 0.18),
+        sample.color,
         Edges::default(),
         transparent_black(),
         BorderStyle::default(),
     ));
-    paint_dx_rainbow_stripes(bounds, radius, phase, 1., window);
+    paint_dx_rainbow_stripes(bounds, radius, sample.phase, 1., window);
+}
+
+fn paint_dx_rainbow_wash(
+    bounds: Bounds<Pixels>,
+    radius: Pixels,
+    phase: f32,
+    alpha: f32,
+    window: &mut Window,
+) {
+    let bounds = window.pixel_snap_bounds(bounds);
+    window.paint_quad(quad(
+        bounds,
+        Corners::all(clamp_radius(radius, bounds.size)),
+        dx_rainbow_hsla(phase, alpha),
+        Edges::default(),
+        transparent_black(),
+        BorderStyle::default(),
+    ));
 }
 
 fn paint_dx_rainbow_stripes(
@@ -221,6 +259,10 @@ fn paint_dx_rainbow_stripes(
     alpha: f32,
     window: &mut Window,
 ) {
+    if bounds.size.width <= px(0.) || bounds.size.height <= px(0.) {
+        return;
+    }
+
     let stripe_width = px(bounds.size.width.as_f32() / DX_RAINBOW_STRIPE_COUNT as f32);
     let last_ix = DX_RAINBOW_STRIPE_COUNT - 1;
 

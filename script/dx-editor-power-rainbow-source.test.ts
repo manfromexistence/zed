@@ -56,13 +56,46 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
   assert.match(uiComponents, /pub use dx_rainbow_glow::\*;/);
   assert.match(rainbowGlow, /pub enum DxRainbowMotion \{\s*Animated,\s*Reduced,\s*\}/s);
   assert.match(rainbowGlow, /DxRainbowMotion::Reduced => DX_RAINBOW_REDUCED_PHASE/);
-  assert.match(rainbowGlow, /if motion\.is_animated\(\) \{\s*window\.request_animation_frame\(\);\s*\}/s);
-  assert.match(rainbowGlow, /pub fn dx_rainbow_caret_color\(motion: DxRainbowMotion\) -> Hsla/);
+  assert.match(
+    rainbowGlow,
+    /pub struct DxRainbowPaintSample \{\s*pub phase: f32,\s*pub color: Hsla,\s*pub request_animation_frame: bool,\s*\}/s,
+  );
+  assert.match(
+    rainbowGlow,
+    /pub fn dx_rainbow_paint_sample\(\s*motion: DxRainbowMotion,\s*phase_offset: f32,\s*alpha: f32,\s*\) -> DxRainbowPaintSample/s,
+  );
+  assert.match(rainbowGlow, /request_animation_frame: motion\.is_animated\(\)/);
+  assert.match(rainbowGlow, /if sample\.request_animation_frame \{\s*window\.request_animation_frame\(\);\s*\}/s);
+  assert.match(rainbowGlow, /fn paint_dx_rainbow_wash/);
+  assert.match(rainbowGlow, /paint_dx_rainbow_stripes\(bounds, radius, sample\.phase, 1\., window\);/);
+  assert.match(rainbowGlow, /if bounds\.size\.width <= px\(0\.\) \|\| bounds\.size\.height <= px\(0\.\) \{/);
+  assert.doesNotMatch(rainbowGlow, /pub fn dx_rainbow_caret_color/);
+  assert.doesNotMatch(rainbowGlow, /pub fn dx_rainbow_hsla/);
+  assert.doesNotMatch(rainbowGlow, /pub fn dx_rainbow_phase_now/);
+  assert.doesNotMatch(rainbowGlow, /pub fn paint_dx_rainbow_glow/);
   assert.match(rainbowGlow, /pub fn paint_dx_rainbow_caret_glow/);
-  assert.match(editorElement, /let rainbow_motion = if EditorSettings::get_global\(cx\)\.cursor_blink \{\s*DxRainbowMotion::Animated\s*\} else \{\s*DxRainbowMotion::Reduced\s*\};/s);
-  assert.match(editorElement, /\(selection\.is_local && use_rainbow_caret\)\.then_some\(rainbow_motion\)/);
-  assert.match(editorElement, /refresh_rainbow_caret \|= cursor\s*\.rainbow_motion\s*\.is_some_and\(DxRainbowMotion::is_animated\);/s);
-  assert.match(editorElement, /paint_dx_rainbow_caret_glow\(bounds, self\.color, window\);/);
+  assert.match(
+    editorElement,
+    /let rainbow_motion = if EditorSettings::get_global\(cx\)\.cursor_blink \{\s*DxRainbowMotion::Animated\s*\} else \{\s*DxRainbowMotion::Reduced\s*\};/s,
+  );
+  assert.match(
+    editorElement,
+    /let supports_rainbow_caret = matches!\(\s*selection\.cursor_shape,\s*CursorShape::Bar \| CursorShape::Underline\s*\);/s,
+  );
+  assert.match(
+    editorElement,
+    /selection\.is_local\s*&& use_rainbow_caret\s*&& supports_rainbow_caret/s,
+  );
+  assert.match(editorElement, /rainbow_glow: rainbow_motion\.is_some\(\) && selection\.is_newest/);
+  assert.match(editorElement, /dx_rainbow_paint_sample\(motion, 0\., 1\.\)/);
+  assert.match(
+    editorElement,
+    /rainbow_sample\.is_some_and\(\|sample\| sample\.request_animation_frame\)/,
+  );
+  assert.match(
+    editorElement,
+    /if rainbow_color\.is_some\(\) && self\.rainbow_glow \{\s*paint_dx_rainbow_caret_glow\(bounds, color, window\);\s*\}/s,
+  );
 });
 
 test("editor visual effects guard is discoverable", () => {

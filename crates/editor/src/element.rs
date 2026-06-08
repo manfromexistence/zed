@@ -87,7 +87,7 @@ use theme::{ActiveTheme, Appearance, PlayerColor};
 use theme_settings::BufferLineHeight;
 use ui::utils::ensure_minimum_contrast;
 use ui::{
-    ButtonLike, DxRainbowMotion, POPOVER_Y_PADDING, Tooltip, dx_rainbow_caret_color,
+    ButtonLike, DxRainbowMotion, POPOVER_Y_PADDING, Tooltip, dx_rainbow_paint_sample,
     paint_dx_rainbow_caret_glow, prelude::*, scrollbars::ShowScrollbar,
 };
 use unicode_segmentation::UnicodeSegmentation;
@@ -969,7 +969,6 @@ impl EditorElement {
             } else {
                 DxRainbowMotion::Reduced
             };
-            let rainbow_cursor_color = dx_rainbow_caret_color(rainbow_motion);
 
             for (player_color, selections) in selections {
                 for selection in selections {
@@ -1103,12 +1102,15 @@ impl EditorElement {
                         }
                     }
 
+                    let supports_rainbow_caret = matches!(
+                        selection.cursor_shape,
+                        CursorShape::Bar | CursorShape::Underline
+                    );
                     let rainbow_motion =
-                        (selection.is_local && use_rainbow_caret).then_some(rainbow_motion);
+                        (selection.is_local && use_rainbow_caret && supports_rainbow_caret)
+                            .then_some(rainbow_motion);
                     let mut cursor = CursorLayout {
-                        color: rainbow_motion
-                            .map(|_| rainbow_cursor_color)
-                            .unwrap_or(player_color.cursor),
+                        color: player_color.cursor,
                         block_width,
                         origin: point(x, y),
                         line_height,
@@ -1116,6 +1118,7 @@ impl EditorElement {
                         block_text,
                         cursor_name: None,
                         rainbow_motion,
+                        rainbow_glow: rainbow_motion.is_some() && selection.is_newest,
                     };
                     let cursor_name = selection.user_name.clone().map(|name| CursorName {
                         string: name,
@@ -5729,14 +5732,29 @@ impl EditorElement {
     }
 
     fn paint_cursors(&mut self, layout: &mut EditorLayout, window: &mut Window, cx: &mut App) {
-        let mut refresh_rainbow_caret = false;
+        let rainbow_motion = layout.visible_cursors.iter().fold(None, |motion, cursor| {
+            match (motion, cursor.rainbow_motion) {
+                (Some(DxRainbowMotion::Animated), _) | (_, Some(DxRainbowMotion::Animated)) => {
+                    Some(DxRainbowMotion::Animated)
+                }
+                (Some(DxRainbowMotion::Reduced), _) | (_, Some(DxRainbowMotion::Reduced)) => {
+                    Some(DxRainbowMotion::Reduced)
+                }
+                (None, None) => None,
+            }
+        });
+        let rainbow_sample = rainbow_motion.map(|motion| dx_rainbow_paint_sample(motion, 0., 1.));
+
         for cursor in &mut layout.visible_cursors {
-            refresh_rainbow_caret |= cursor
-                .rainbow_motion
-                .is_some_and(DxRainbowMotion::is_animated);
-            cursor.paint(layout.content_origin, window, cx);
+            let rainbow_color = if cursor.rainbow_motion.is_some() {
+                rainbow_sample.map(|sample| sample.color)
+            } else {
+                None
+            };
+            cursor.paint(layout.content_origin, window, cx, rainbow_color);
         }
-        if refresh_rainbow_caret {
+
+        if rainbow_sample.is_some_and(|sample| sample.request_animation_frame) {
             window.request_animation_frame();
         }
     }
@@ -10299,6 +10317,7 @@ pub struct CursorLayout {
     block_text: Option<ShapedLine>,
     cursor_name: Option<AnyElement>,
     rainbow_motion: Option<DxRainbowMotion>,
+    rainbow_glow: bool,
 }
 
 #[derive(Debug)]
@@ -10326,6 +10345,7 @@ impl CursorLayout {
             block_text,
             cursor_name: None,
             rainbow_motion: None,
+            rainbow_glow: false,
         }
     }
 
@@ -10395,17 +10415,24 @@ impl CursorLayout {
         }
     }
 
-    pub fn paint(&mut self, origin: gpui::Point<Pixels>, window: &mut Window, cx: &mut App) {
+    pub fn paint(
+        &mut self,
+        origin: gpui::Point<Pixels>,
+        window: &mut Window,
+        cx: &mut App,
+        rainbow_color: Option<Hsla>,
+    ) {
         let bounds = window.pixel_snap_bounds(self.bounds(origin));
-        if self.rainbow_motion.is_some() {
-            paint_dx_rainbow_caret_glow(bounds, self.color, window);
+        let color = rainbow_color.unwrap_or(self.color);
+        if rainbow_color.is_some() && self.rainbow_glow {
+            paint_dx_rainbow_caret_glow(bounds, color, window);
         }
 
         //Draw background or border quad
         let cursor = if matches!(self.shape, CursorShape::Hollow) {
-            outline(bounds, self.color, BorderStyle::Solid)
+            outline(bounds, color, BorderStyle::Solid)
         } else {
-            fill(bounds, self.color)
+            fill(bounds, color)
         };
 
         if let Some(name) = &mut self.cursor_name {
