@@ -179,7 +179,13 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   assert.match(renderDxExplorerHeader, /side_panel_header_controls\(\s*"dx-explorer"/);
   assert.match(renderDxExplorerHeader, /dx_icon\(DxUiIcon::OpenProject\)/);
   assert.match(dxIcons, /DxUiIcon::OpenProject => IconName::OpenFolder/);
-  assert.match(renderDxExplorerHeader, /dx_icon\(DxUiIcon::Search\)/);
+  assert.match(renderDxExplorerHeader, /dx_icon\(DxUiIcon::OpenFile\)/);
+  assert.match(dxIcons, /DxUiIcon::OpenFile => IconName::MagnifyingGlass/);
+  assert.doesNotMatch(
+    renderDxExplorerHeader,
+    /"dx-explorer-open-file",\s*dx_icon\(DxUiIcon::Search\)/,
+    "Open File must use its own DX semantic icon instead of the broader Search icon",
+  );
   assert.match(renderDxExplorerHeader, /IconName::ListX/);
   assert.match(renderDxExplorerHeader, /IconName::ListFilter/);
   assert.match(renderDxExplorerHeader, /workspace::Open::default\(\)\.boxed_clone\(\)/);
@@ -1065,8 +1071,13 @@ test("project panel storage overview and root shortcuts stay cached and professi
   );
   assert.match(
     knownRootShortcut,
-    /find_map\(env_path\)[\s\S]*fallbacks\.iter\(\)\.find\(\|path\| path\.is_dir\(\)\)\.cloned\(\)[\s\S]*fallbacks\.first\(\)\.cloned\(\)[\s\S]*let available = path\.is_absolute\(\) && path\.is_dir\(\);/,
-    "known roots must prefer env paths but only mark absolute directories available",
+    /find_map\(valid_env_dir_path\)[\s\S]*fallbacks\.iter\(\)\.find\(\|path\| path\.is_dir\(\)\)\.cloned\(\)[\s\S]*fallbacks\.first\(\)\.cloned\(\)[\s\S]*let available = path\.is_absolute\(\) && path\.is_dir\(\);/,
+    "known roots must prefer valid env directory paths before falling back to user-profile roots",
+  );
+  assert.match(
+    storageRoots,
+    /fn valid_env_dir_path\(name: &&str\) -> Option<PathBuf>[\s\S]*env_path\(name\)[\s\S]*\.filter\(\|path\| path\.is_absolute\(\) && path\.is_dir\(\)\)/,
+    "cloud-drive env roots must reject stale, relative, or file paths before suppressing fallbacks",
   );
   assert.match(
     rootStatusLabel,

@@ -1,3 +1,22 @@
+[2026-06-08] - Project Panel Cloud Root And Icon Semantics
+
+CHANGED:
+- `crates\project_panel\src\storage_roots.rs` now validates cloud-drive environment paths as absolute existing directories before letting them override user-profile fallback roots.
+- `crates\ui\src\dx_icons.rs` now owns a semantic `DxUiIcon::OpenFile` mapping, and `crates\project_panel\src\project_panel.rs` uses it for the DX Explorer Open File button instead of reusing the broader Search icon.
+- `script\dx-project-panel-source.test.ts` now guards the cloud-drive fallback contract and the Open File semantic icon contract.
+- `DX.md` and `todo.txt` record the source-only proof boundary for this Project Panel slice.
+
+PASSED:
+- `node --test script\dx-project-panel-source.test.ts`
+- `node --test script\dx-icon-system-source.test.ts`
+- `rustfmt --edition 2024 --check crates\project_panel\src\project_panel.rs crates\project_panel\src\storage_roots.rs crates\ui\src\dx_icons.rs`
+- `git diff --check -- crates\project_panel\src\project_panel.rs crates\project_panel\src\storage_roots.rs crates\ui\src\dx_icons.rs script\dx-project-panel-source.test.ts`
+- Focused conflict-marker scan on touched Project Panel source/guard files
+
+NOTES:
+- Source-only by instruction. Cargo, build, `just run`, native Zed launch, browser automation, local servers, and runtime visual proof remain deferred.
+- Unrelated Agent/Automation dirty files were left unstaged for separate focused work.
+
 [2026-06-08] - Source-Only Response, Storage, And Forge Cache Polish
 
 CHANGED:

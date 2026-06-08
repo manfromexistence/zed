@@ -147,7 +147,7 @@ fn known_root_shortcut(
     env_names: &[&str],
     fallbacks: &[PathBuf],
 ) -> StorageRootShortcut {
-    let configured = env_names.iter().find_map(env_path);
+    let configured = env_names.iter().find_map(valid_env_dir_path);
     let path = configured
         .or_else(|| fallbacks.iter().find(|path| path.is_dir()).cloned())
         .or_else(|| fallbacks.first().cloned())
@@ -177,6 +177,10 @@ fn env_path(name: &&str) -> Option<PathBuf> {
     env::var_os(name)
         .filter(|value| !value.is_empty())
         .map(PathBuf::from)
+}
+
+fn valid_env_dir_path(name: &&str) -> Option<PathBuf> {
+    env_path(name).filter(|path| path.is_absolute() && path.is_dir())
 }
 
 fn user_profile_fallbacks(children: &[&str]) -> Vec<PathBuf> {

@@ -4754,18 +4754,21 @@ impl ProjectPanel {
                                 }),
                             )
                             .child(
-                                IconButton::new("dx-explorer-open-file", dx_icon(DxUiIcon::Search))
-                                    .shape(IconButtonShape::Square)
-                                    .style(ButtonStyle::Subtle)
-                                    .icon_size(IconSize::Small)
-                                    .disabled(!has_worktree)
-                                    .tooltip(Tooltip::text("Open file"))
-                                    .on_click(move |_, window, cx| {
-                                        window.dispatch_action(
-                                            ToggleFileFinder::default().boxed_clone(),
-                                            cx,
-                                        );
-                                    }),
+                                IconButton::new(
+                                    "dx-explorer-open-file",
+                                    dx_icon(DxUiIcon::OpenFile),
+                                )
+                                .shape(IconButtonShape::Square)
+                                .style(ButtonStyle::Subtle)
+                                .icon_size(IconSize::Small)
+                                .disabled(!has_worktree)
+                                .tooltip(Tooltip::text("Open file"))
+                                .on_click(move |_, window, cx| {
+                                    window.dispatch_action(
+                                        ToggleFileFinder::default().boxed_clone(),
+                                        cx,
+                                    );
+                                }),
                             ),
                     )
                     .child(
