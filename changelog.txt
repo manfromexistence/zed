@@ -1,3 +1,22 @@
+[2026-06-08] - DX Forge Workflow Panel Polish
+
+CHANGED:
+- `crates\agent_ui\src\dx_forge_panel\workflow_rows.rs` now handles selectable row checkbox clicks from the GPUI event context before toggling selection state, keeping row and checkbox interactions separated cleanly.
+- `crates\agent_ui\src\dx_forge_panel\rows.rs` and `panel_view.rs` no longer carry the obsolete pre-selection receipt/source row shell or stale imports after the workflow-row migration.
+- `script\dx-forge-panel-source.test.ts` now guards the focused workflow-row/ListItem contract instead of the removed legacy row shell.
+- `DX.md` and `todo.txt` record the source-only Forge panel proof boundary.
+
+PASSED:
+- `rustfmt --edition 2024 crates\agent_ui\src\dx_forge_panel\workflow_rows.rs crates\agent_ui\src\dx_forge_panel\panel_view.rs crates\agent_ui\src\dx_forge_panel\rows.rs`
+- `node --test script\dx-forge-panel-source.test.ts`
+- `node --test script\dx-handoff-source-guard-registry.test.ts`
+- `git diff --check`
+- Focused conflict-marker scan on touched files
+
+NOTES:
+- Source-only by instruction; no Cargo, build, `just run`, local servers, browser automation, native Zed launch, or live Forge panel runtime proof was run.
+- Fresh six-subagent dispatch was requested but blocked by the current Codex Desktop subagent thread limit; this pass used local source review plus the focused guard suite and records that limitation honestly.
+
 [2026-06-08] - AI Screen Response Indicator Navigation
 
 CHANGED:

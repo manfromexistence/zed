@@ -8,7 +8,7 @@ use super::{
     controls::{open_exact_abs_path_button, toolbar},
     panel::{DxForgePanel, DxForgePanelTab},
     providers::remote_target_strip,
-    rows::{empty_row, receipt_row, section_header, status_strip},
+    rows::{empty_row, section_header, status_strip},
     snapshot::DxForgePanelSnapshot,
     source_section::{SourceSection, source_section},
     tabs::render_tab_bar,

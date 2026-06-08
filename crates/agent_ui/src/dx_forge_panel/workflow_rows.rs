@@ -100,10 +100,10 @@ pub(super) fn selection_checkbox(
             .fill()
             .elevation(ElevationIndex::Surface)
             .on_click(move |_, _, cx| {
+                cx.stop_propagation();
                 panel
                     .update(cx, |panel, cx| {
-                        panel.toggle_item_selection(checkbox_key.clone(), cx);
-                        cx.stop_propagation();
+                        panel.toggle_item_selection(checkbox_key.clone(), cx)
                     })
                     .ok();
             }),
