@@ -62,6 +62,7 @@ fn provider_target_button(
         .on_click({
             let workspace = workspace.clone();
             move |_, window, cx| {
+                cx.stop_propagation();
                 if let Some(path) = local_path.clone().filter(|path| path.exists()) {
                     open_exact_abs_path(workspace.clone(), path, window, cx);
                 }
@@ -88,6 +89,8 @@ fn provider_group_controls(
     let selected = panel
         .upgrade()
         .is_some_and(|panel| panel.read(cx).item_selected(&item_key));
+    let row_key = item_key.clone();
+    let panel_for_row = panel.clone();
     let selection_checkbox = selection_checkbox(
         SharedString::from(format!("remote-{}", group.key())),
         item_key,
@@ -110,6 +113,7 @@ fn provider_group_controls(
     .on_click({
         let workspace = workspace.clone();
         move |_, window, cx| {
+            cx.stop_propagation();
             if let Some(path) = local_path.clone().filter(|path| path.exists()) {
                 open_exact_abs_path(workspace.clone(), path, window, cx);
             }
@@ -156,6 +160,13 @@ fn provider_group_controls(
     )
     .end_slot(open_button)
     .tooltip(move |_, cx| Tooltip::with_meta(tooltip_title.clone(), None, tooltip_meta.clone(), cx))
+    .on_click(move |_, _, cx| {
+        panel_for_row
+            .update(cx, |panel, cx| {
+                panel.toggle_item_selection(row_key.clone(), cx)
+            })
+            .ok();
+    })
     .into_any_element()
 }
 

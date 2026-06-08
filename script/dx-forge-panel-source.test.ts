@@ -775,7 +775,7 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.match(providerGroupControlsBody, /\.on_click\(move \|_, _, cx\|/);
   assert.match(
     providerGroupControlsBody,
-    /panel\s*\.update\(cx, \|panel, cx\|[\s\S]*panel\.toggle_item_selection\(row_key\.clone\(\), cx\)/,
+    /panel_for_row\s*\.update\(cx, \|panel, cx\|[\s\S]*panel\.toggle_item_selection\(row_key\.clone\(\), cx\)/,
   );
   assert.match(providerGroupControlsBody, /cx\.stop_propagation\(\);[\s\S]*open_exact_abs_path/);
   assert.doesNotMatch(
