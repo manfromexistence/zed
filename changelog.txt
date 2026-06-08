@@ -7,6 +7,8 @@ CHANGED:
 - Source guards now pin stale-navigation rejection, cross-platform IPC bounds, branch-scoped original-color brand SVG rendering, composer empty-state sizing, selector truncation, and storage-root shortcut availability.
 
 PASSED:
+- `node --test script/dx-agent-composer-liquid-glass-source.test.ts script/dx-agent-ui-selector-source.test.ts script/dx-icon-system-source.test.ts script/dx-project-panel-source.test.ts script/dx-editor-power-rainbow-source.test.ts script/dx-terminal-view-source.test.ts script/web-preview-platform-lifecycle.test.ts script/dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check crates/agent_ui/src/conversation_view/thread_view.rs crates/agent_ui/src/ui/model_selector_components.rs crates/project_panel/src/project_panel.rs crates/project_panel/src/storage_roots_view.rs crates/web_preview/src/web_preview_view.rs crates/web_preview/src/windows_visual_webview.rs crates/web_preview_linux/src/web_preview_view.rs crates/web_preview_macos/src/web_preview_view.rs`
 - `git diff --check`
 
 NOTES:
