@@ -14,15 +14,21 @@ CHANGED:
 - `crates\workspace\src\dock.rs` keeps side-panel close buttons keyboard reachable, and `crates\agent_ui\src\agent_panel.rs` uses a structured element id for response indicator page buttons.
 - `script\dx-workspace-ui-state-source.test.ts` now guards the dock close button tab order and the response-indicator id contract.
 - `crates\editor\src\element.rs` now only animates rainbow caret motion while the editor focus handle contains focus, falling back to reduced motion otherwise.
-- `crates\ui\src\components\dx_rainbow_glow.rs` now samples the rainbow wash with 25 stripes, and `crates\editor\src\rainbow_caret.rs` uses 240 fixed contrast-cache buckets for smoother animated caret color reuse without unbounded cache growth.
-- `script\dx-editor-power-rainbow-source.test.ts` now guards those bounded rainbow visual quality constants.
+- `crates\settings\src\vscode_import.rs` now maps VS Code solid cursor blinking to disabled rainbow caret animation instead of importing a contradictory animated rainbow cursor state.
+- `docs\src\migrate\vs-code.md` now documents that VS Code `editor.cursorBlinking` can affect both `cursor_blink` and `rainbow_caret_animation`.
+- `crates\ui\src\components\dx_rainbow_glow.rs` now samples the rainbow wash with 25 gradient-blended stripes, and `crates\editor\src\rainbow_caret.rs` uses shared unit clamping with 240 fixed contrast-cache buckets for smoother animated caret color reuse without unbounded cache growth.
+- `script\dx-editor-power-rainbow-source.test.ts` now guards those bounded rainbow visual quality constants, gradient stripes, and VS Code import behavior.
 
 PASSED:
+- `node --test script\dx-project-panel-source.test.ts`
+- `node --test script\web-preview-platform-lifecycle.test.ts script\dx-editor-power-rainbow-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- `node --test script\dx-workspace-ui-state-source.test.ts`
+- `rustfmt --edition 2024 --check crates\agent_ui\src\agent_panel.rs crates\project_panel\src\project_panel.rs crates\project_panel\src\storage_roots.rs crates\project_panel\src\storage_roots_view.rs crates\project_panel\src\media_preview.rs crates\editor\src\element.rs crates\editor\src\rainbow_caret.rs crates\settings\src\vscode_import.rs crates\ui\src\components\dx_rainbow_glow.rs crates\web_preview\src\web_preview_view.rs crates\web_preview_macos\src\web_preview_view.rs crates\web_preview_linux\src\web_preview_view.rs crates\workspace\src\dock.rs`
 - `git diff --check`
 
 NOTES:
 - Focused source audits and guard updates covered Project Panel GPUI focus behavior, rainbow caret paint behavior, Web Preview navigation identity, workspace chrome reachability, source-guard consistency, handoff wording, and git hygiene.
-- Source-only by instruction. Source-guard execution, touched-file `rustfmt --check`, Cargo, build, `just run`, native Zed launch, local servers, WebView runtime proof, and visual proof remain deferred.
+- Source-only by instruction. Cargo, build, `just run`, native Zed launch, local servers, WebView runtime proof, and visual proof remain deferred.
 
 [2026-06-09] - Web Preview Favicon Navigation Safety
 

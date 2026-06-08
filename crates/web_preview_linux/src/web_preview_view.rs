@@ -2208,10 +2208,9 @@ impl Item for WebPreviewView {
         _window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<PaneTabBarControls> {
-        let entity = cx.entity();
         Some(PaneTabBarControls::new(
             Some(self.render_tab_bar_start_controls(cx)),
-            Some(self.render_tab_bar_end_controls(entity, cx)),
+            Some(self.render_tab_bar_end_controls(cx.entity(), cx)),
         ))
     }
 
