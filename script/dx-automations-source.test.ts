@@ -88,6 +88,11 @@ test("DX Automations remain receipt-backed and do not fake scheduled execution",
 
   assert.match(contract, /pub\(super\) fn automation_composer/);
   assert.match(contract, /pub\(super\) fn automations\(value: &Value\)/);
+  assert.match(contract, /pub receipt_present: bool/);
+  assert.match(contract, /pub fields_receipt_backed: bool/);
+  assert.match(contract, /fn field_summary\(&self, limit: usize\)/);
+  assert.match(contract, /fn field_summary_label\(&self\)/);
+  assert.match(contract, /Field template pending receipt/);
   assert.match(contract, /pub actions: Vec<DxAgentRowAction>/);
   assert.match(contract, /array_field\(value, &\["automations"\]\)[\s\S]*\.take\(12\)/);
   assert.match(actions, /pub\(super\) fn automation_composer_actions/);
@@ -126,6 +131,8 @@ test("DX Automations remain receipt-backed and do not fake scheduled execution",
   for (const section of ["Drafts", "Schedules", "Runs", "History", "Failures"]) {
     assert.match(automationScreenView, new RegExp(`section_title\\("${section}"`));
   }
+  assert.match(automationScreenView, /Composer receipt state, schedule contracts, history, and handoff evidence/);
+  assert.doesNotMatch(automationScreenView, /Receipt-backed composer/);
   for (const state of [
     "drafts_state",
     "schedules_state",
@@ -152,6 +159,15 @@ test("DX Automations remain receipt-backed and do not fake scheduled execution",
   assert.match(composer, /"pending runtime"/);
   assert.match(composer, /composer\.receipt_filename/);
   assert.match(composer, /composer\.unavailable_reason/);
+  assert.match(composer, /composer\.field_summary\(4\)/);
+  assert.match(composer, /composer\.field_summary_label\(\)/);
+  assert.match(automationScreenSections, /composer\.field_summary\(5\)/);
+  assert.match(automationScreenSections, /composer\.field_summary_label\(\)/);
+  assert.match(automationScreenSections, /composer\.empty_field_summary_label\(\)/);
+  assert.match(configuration, /composer\.field_summary\(4\)/);
+  assert.match(configuration, /composer\.field_summary_label\(\)/);
+  assert.doesNotMatch(composer, /Fields: \{field_summary\}/);
+  assert.doesNotMatch(configuration, /Fields: \{composer_fields\}/);
   assert.match(rows, /automation\.name/);
   assert.match(rows, /automation\.prompt/);
   assert.match(labels, /automation\.destination/);
@@ -221,7 +237,7 @@ test("DX Automations have a first-class workspace tab contract", () => {
   assert.match(automationScreen, /AgentPanel::new_automation_workspace\(workspace, window, cx\)/);
   assert.match(automationScreen, /pub\(crate\) fn open_or_focus\(/);
   assert.match(automationScreen, /workspace\.dismiss_zoomed_agent_panel\(window, cx\);/);
-  assert.match(automationScreen, /workspace\.pane_for_screen_kind\(WorkspaceScreenKind::Automations, cx\)/);
+  assert.match(automationScreen, /\.pane_for_screen_kind\(WorkspaceScreenKind::Automations, cx\)/);
   assert.match(automationScreen, /item\.screen_kind\(cx\) == WorkspaceScreenKind::Automations/);
   assert.match(automationScreen, /workspace\.add_item\(target_pane, Box::new\(item\), None, true, true, window, cx\);/);
   assert.match(automationScreen, /fn tab_content_text\(&self,[\s\S]*"Automations"\.into\(\)/);
@@ -279,7 +295,7 @@ test("DX Automation source stays split into focused files", () => {
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_actions_tests.rs") < 110);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_contract.rs") < 520);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_contract_safety_tests.rs") < 130);
-  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_contract_tests.rs") < 150);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_contract_tests.rs") < 180);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/command_args_tests.rs") < 50);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/automations.rs") < 70);
   assert.ok(

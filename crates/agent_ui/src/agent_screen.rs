@@ -1,7 +1,7 @@
 use gpui::{
     App, Context, Entity, EventEmitter, FocusHandle, Focusable, Render, SharedString, Window,
 };
-use ui::{Icon, IconName, prelude::*};
+use ui::{Icon, prelude::*};
 use workspace::{
     Item, Workspace,
     item::{ItemEvent, WorkspaceScreenKind},
@@ -60,7 +60,7 @@ impl Item for AgentScreen {
     }
 
     fn tab_icon(&self, _window: &Window, _cx: &App) -> Option<Icon> {
-        Some(Icon::new(IconName::ZedAgent))
+        Some(Icon::new(dx_icon(DxUiIcon::Agent)))
     }
 
     fn telemetry_event_text(&self) -> Option<&'static str> {

@@ -85,7 +85,7 @@ test("DX launch workspace UI stays split by rail ownership", () => {
   assert.match(parent, /PopoverMenu::new\("dx-launch-diagnostics-trigger"\)/);
   assert.match(
     parent,
-    /IconButton::new\("dx-launch-diagnostics-button", dx_icon\(DxUiIcon::Source\)\)/,
+    /IconButton::new\("dx-launch-diagnostics-button", dx_icon\(DxUiIcon::Settings\)\)/,
   );
   assert.ok(
     lineCount("crates/agent_ui/src/dx_launch_workspace.rs") < 1050,
@@ -657,6 +657,7 @@ test("DX launch workspace delegates Binary Cache rail rendering", () => {
 
 test("DX launch workspace delegates agents and source rails", () => {
   const parent = read("crates/agent_ui/src/dx_launch_workspace.rs");
+  const agentWorkspace = read("crates/agent_ui/src/dx_launch_workspace/agent_workspace.rs");
   const agents = read("crates/agent_ui/src/dx_launch_workspace/agents.rs");
   const agentActions = read("crates/agent_ui/src/dx_launch_workspace/agents/actions.rs");
   const agentAutomations = read(
@@ -765,12 +766,18 @@ test("DX launch workspace delegates agents and source rails", () => {
   );
   const sourceKinds = read("crates/agent_ui/src/dx_launch_workspace/sources/kinds.rs");
 
-  assert.match(parent, /agents::dx_agent_bridge_state/);
+  assert.match(parent, /^mod agent_workspace;$/m);
   assert.match(parent, /^mod agents;$/m);
-  assert.match(parent, /agents::dx_agent_automation_state/);
+  assert.match(parent, /agent_workspace::agent_overview_section/);
+  assert.match(parent, /agent_workspace::agent_tasks_section/);
   assert.match(parent, /sources::source_set_stack/);
+  assert.match(parent, /sources::source_set_stack\(&status\.source_sets, source_row_controls, cx\)/);
+  assert.match(parent, /sidebar_actions/);
+  assert.match(parent, /source_actions/);
   assert.doesNotMatch(parent, /fn dx_agent_bridge_state/);
   assert.doesNotMatch(parent, /fn source_set_stack/);
+  assert.match(agentWorkspace, /status\.agent_bridge\.status/);
+  assert.match(agentWorkspace, /status\.agent_bridge\.automation_count/);
   assert.match(agents, /^mod actions;$/m);
   assert.match(agents, /^mod automations;$/m);
   assert.match(agents, /^mod bridge;$/m);
@@ -779,8 +786,8 @@ test("DX launch workspace delegates agents and source rails", () => {
   assert.match(agents, /^mod receipts;$/m);
   assert.match(agents, /^mod social;$/m);
   assert.match(agents, /^mod social_actions;$/m);
-  assert.match(agents, /pub\(super\) use automations::dx_agent_automation_state/);
-  assert.match(agents, /pub\(super\) use bridge::dx_agent_bridge_state/);
+  assert.doesNotMatch(agents, /pub\(super\) use automations::dx_agent_automation_state/);
+  assert.doesNotMatch(agents, /pub\(super\) use bridge::dx_agent_bridge_state/);
   assert.match(agents, /pub\(super\) use providers::dx_agent_provider_state/);
   assert.match(agents, /pub\(super\) use receipts::dx_agent_receipt_state/);
   assert.match(agents, /pub\(super\) use social::dx_agent_social_state/);
@@ -1351,6 +1358,7 @@ test("DX launch workspace delegates bounded list labels", () => {
 
 test("DX launch workspace delegates Check rail rendering", () => {
   const parent = read("crates/agent_ui/src/dx_launch_workspace.rs");
+  const agentWorkspace = read("crates/agent_ui/src/dx_launch_workspace/agent_workspace.rs");
   const check = read("crates/agent_ui/src/dx_launch_workspace/check.rs");
   const checkRows = read("crates/agent_ui/src/dx_launch_workspace/check/rows.rs");
   const checkSummary = read(
@@ -1361,7 +1369,7 @@ test("DX launch workspace delegates Check rail rendering", () => {
   const labelRun = read("crates/agent_ui/src/dx_launch_workspace/check_labels/run.rs");
   const labelTests = read("crates/agent_ui/src/dx_launch_workspace/check_labels_tests.rs");
 
-  assert.match(parent, /check::check_score_state/);
+  assert.match(agentWorkspace, /check::check_score_state/);
   assert.doesNotMatch(parent, /fn check_score_state/);
   assert.doesNotMatch(parent, /fn check_outcome_label/);
   assert.match(check, /^mod rows;$/m);
@@ -1475,6 +1483,7 @@ test("DX launch workspace delegates Tool History rail rendering", () => {
 
 test("DX launch workspace delegates Proof rail rendering", () => {
   const parent = read("crates/agent_ui/src/dx_launch_workspace.rs");
+  const agentWorkspace = read("crates/agent_ui/src/dx_launch_workspace/agent_workspace.rs");
   const proof = read("crates/agent_ui/src/dx_launch_workspace/proof.rs");
   const proofFreshness = read("crates/agent_ui/src/dx_launch_workspace/proof/freshness.rs");
   const proofLabels = read("crates/agent_ui/src/dx_launch_workspace/proof_labels.rs");
@@ -1497,8 +1506,8 @@ test("DX launch workspace delegates Proof rail rendering", () => {
     "crates/agent_ui/src/dx_launch_workspace/proof/runtime_rows/receipt_details.rs",
   );
 
-  assert.match(parent, /proof::proof_freshness_state/);
-  assert.match(parent, /proof::runtime_proof_status_state/);
+  assert.match(agentWorkspace, /proof::proof_freshness_state/);
+  assert.match(agentWorkspace, /proof::runtime_proof_status_state/);
   assert.doesNotMatch(parent, /fn proof_freshness_state/);
   assert.doesNotMatch(parent, /fn runtime_proof_status_state/);
   assert.doesNotMatch(parent, /fn runtime_proof_plan_row/);

@@ -20,19 +20,7 @@ pub(super) fn drafts_state(snapshot: &DxAgentBridgeSnapshot, _cx: &App) -> AnyEl
     } else {
         AiSettingItemStatus::Stopped
     };
-    let field_summary = composer
-        .fields
-        .iter()
-        .take(5)
-        .map(|field| {
-            if field.required {
-                format!("{}*", field.label)
-            } else {
-                field.label.clone()
-            }
-        })
-        .collect::<Vec<_>>()
-        .join(", ");
+    let field_summary = composer.field_summary(5);
 
     AiSettingItem::new(
         "dx-automation-drafts-composer",
@@ -60,9 +48,9 @@ pub(super) fn drafts_state(snapshot: &DxAgentBridgeSnapshot, _cx: &App) -> AnyEl
         detail_row(
             "dx-automation-drafts-fields".into(),
             IconName::TextSnippet,
-            "Fields",
+            composer.field_summary_label(),
             if field_summary.is_empty() {
-                "No composer fields in receipt".to_string()
+                composer.empty_field_summary_label().to_string()
             } else {
                 field_summary
             },

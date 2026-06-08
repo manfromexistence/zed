@@ -84,10 +84,16 @@ fn automation_composer_falls_back_to_pending_backend_contract() {
     let composer = automation_composer(None, true);
 
     assert_eq!(composer.status, "waiting_for_automation_composer_contract");
+    assert!(!composer.receipt_present);
     assert!(!composer.runtime_available);
     assert!(!composer.save_draft_available);
     assert!(!composer.enable_available);
     assert_eq!(composer.receipt_filename, "automate-composer-latest.json");
+    assert!(!composer.fields_receipt_backed);
+    assert_eq!(
+        composer.field_summary_label(),
+        "Field template pending receipt"
+    );
     assert_eq!(composer.fields.len(), 4);
     assert!(
         composer
@@ -95,6 +101,31 @@ fn automation_composer_falls_back_to_pending_backend_contract() {
             .iter()
             .any(|field| field.id == "prompt" && field.required)
     );
+}
+
+#[test]
+fn automation_composer_marks_receipt_fields_as_receipt_backed() {
+    let receipt = json!({
+        "status": "ready",
+        "runtime_available": true,
+        "receipt_filename": "automate-composer-latest.json",
+        "fields": [{
+            "id": "prompt",
+            "label": "Prompt",
+            "kind": "textarea",
+            "required": true,
+            "placeholder": "What should DX Agents run?",
+            "status": "ready"
+        }]
+    });
+
+    let composer = automation_composer(Some(&receipt), true);
+
+    assert!(composer.receipt_present);
+    assert!(composer.fields_receipt_backed);
+    assert_eq!(composer.field_summary_label(), "Receipt fields");
+    assert_eq!(composer.fields.len(), 1);
+    assert_eq!(composer.fields[0].id, "prompt");
 }
 
 #[test]

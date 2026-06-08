@@ -60,6 +60,7 @@ test("DX semantic icon layer owns rebrand-specific aliases", () => {
 });
 
 test("DX shell chrome uses semantic icons instead of scattered literals", () => {
+  const dxIcons = read("crates/ui/src/dx_icons.rs");
   const titleBar = read("crates/title_bar/src/title_bar.rs");
   const forgePanel = read("crates/agent_ui/src/dx_forge_panel/panel.rs");
   const forgePanelView = read("crates/agent_ui/src/dx_forge_panel/panel_view.rs");
@@ -70,13 +71,15 @@ test("DX shell chrome uses semantic icons instead of scattered literals", () => 
   const screenKindIcon = functionBody(titleBar, "screen_kind_icon");
   const hiddenButtons = functionBody(titleBar, "render_hidden_feature_buttons");
 
-  for (const icon of ["Ai", "Browser", "Icons", "Fonts", "Media", "Ui", "Check"]) {
+  for (const icon of ["Agent", "Browser", "Icons", "Fonts", "Media", "Ui", "Check"]) {
     assert.ok(
       titleBar.includes(`dx_icon(DxUiIcon::${icon})`),
       `title bar should use semantic DX icon ${icon}`,
     );
   }
 
+  assert.match(dxIcons, /DxUiIcon::Agent => IconName::ZedAgent/);
+  assert.match(dxIcons, /DxUiIcon::Ai => IconName::ZedAssistant/);
   assert.match(forgePanel, /dx_icon\(DxUiIcon::Forge\)/);
   assert.match(forgePanelView, /icon: dx_icon\(DxUiIcon::Media\)/);
   assert.match(forgeProviderView, /ProviderGroup::Media => dx_icon\(DxUiIcon::Media\)/);
@@ -86,6 +89,7 @@ test("DX shell chrome uses semantic icons instead of scattered literals", () => 
   assert.match(launchStylePanel, /dx_icon\(DxUiIcon::Style\)/);
   assert.doesNotMatch(launchStylePanel, /IconName::Sliders/);
   assert.doesNotMatch(agentButton, /IconName::ZedAssistant/);
+  assert.match(agentButton, /dx_icon\(DxUiIcon::Agent\)/);
   assert.doesNotMatch(screenKindIcon, /IconName::ToolWeb/);
   assert.doesNotMatch(
     hiddenButtons,

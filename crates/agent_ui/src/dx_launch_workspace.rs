@@ -328,9 +328,9 @@ pub(crate) fn render_workspace_chrome(
 }
 
 fn render_sources_rail(
-    _sidebar_actions: AnyElement,
-    _source_row_controls: Vec<DxSourceRowControl>,
-    _source_actions: AnyElement,
+    sidebar_actions: AnyElement,
+    source_row_controls: Vec<DxSourceRowControl>,
+    source_actions: AnyElement,
     status: &DxLaunchWorkspaceStatus,
     rail_controls: &DxLaunchRailControls,
     window: &mut Window,
@@ -360,12 +360,32 @@ fn render_sources_rail(
             rail_controls,
         ))
         .child(rail_section(
+            "dx-sources-commands-section",
+            "Commands",
+            IconName::Terminal,
+            DxLaunchRailSection::SourceCommands,
+            rail_controls,
+            sidebar_actions,
+            true,
+            cx,
+        ))
+        .child(rail_section(
             "dx-sources-stack-section",
             "Sources",
             IconName::Book,
             DxLaunchRailSection::SourceStack,
             rail_controls,
-            sources::source_set_stack(&status.source_sets, Vec::new(), cx),
+            sources::source_set_stack(&status.source_sets, source_row_controls, cx),
+            true,
+            cx,
+        ))
+        .child(rail_section(
+            "dx-sources-tools-section",
+            "Source Tools",
+            dx_icon(DxUiIcon::Source),
+            DxLaunchRailSection::SourceTools,
+            rail_controls,
+            source_actions,
             false,
             cx,
         ))
@@ -406,7 +426,7 @@ fn render_right_rail(
         .child(rail_section(
             "dx-agent-overview-section",
             "Overview",
-            IconName::ZedAgent,
+            dx_icon(DxUiIcon::Agent),
             DxLaunchRailSection::AgentOverview,
             rail_controls,
             agent_workspace::agent_overview_section(status, guided_cards, cx),
@@ -436,7 +456,7 @@ fn render_right_rail(
         .child(rail_section(
             "dx-agent-subagents-section",
             "Subagents",
-            IconName::ZedAgent,
+            dx_icon(DxUiIcon::Agent),
             DxLaunchRailSection::AgentSubagents,
             rail_controls,
             agent_workspace::agent_subagents_section(status, cx),

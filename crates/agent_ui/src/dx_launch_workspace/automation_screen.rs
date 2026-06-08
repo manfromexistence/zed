@@ -56,7 +56,7 @@ pub(crate) fn render_automation_screen(
                                 )
                                 .child(
                                     Label::new(
-                                        "Receipt-backed composer, schedule contract, history, and handoff state.",
+                                        "Composer receipt state, schedule contracts, history, and handoff evidence.",
                                     )
                                     .size(LabelSize::XSmall)
                                     .color(Color::Muted),

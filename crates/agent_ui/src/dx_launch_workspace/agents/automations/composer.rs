@@ -15,19 +15,7 @@ pub(super) fn dx_agent_automation_composer_contract(
         "pending runtime"
     };
 
-    let field_summary = composer
-        .fields
-        .iter()
-        .take(4)
-        .map(|field| {
-            if field.required {
-                format!("{}*", field.label)
-            } else {
-                field.label.clone()
-            }
-        })
-        .collect::<Vec<_>>()
-        .join(", ");
+    let field_summary = composer.field_summary(4);
 
     v_flex()
         .gap_0p5()
@@ -40,10 +28,13 @@ pub(super) fn dx_agent_automation_composer_contract(
         .child(metric_row("Receipt", composer.receipt_filename.clone()))
         .when(!field_summary.is_empty(), |this| {
             this.child(
-                Label::new(format!("Fields: {field_summary}"))
-                    .size(LabelSize::XSmall)
-                    .color(Color::Muted)
-                    .truncate(),
+                Label::new(format!(
+                    "{}: {field_summary}",
+                    composer.field_summary_label()
+                ))
+                .size(LabelSize::XSmall)
+                .color(Color::Muted)
+                .truncate(),
             )
         })
         .child(muted_card(composer.unavailable_reason.clone(), cx))

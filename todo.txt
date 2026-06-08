@@ -2,15 +2,13 @@ IN PROGRESS:
 - None. Zed native runtime proof remains deferred until an explicit governed validation pass allows `just run`, local servers, browser automation, native editor launch, or live scheduled execution.
 
 PENDING:
-- Fix the DX launch workspace Sources rail so real source sidebar actions, row controls, and source actions are forwarded instead of allocated and dropped; keep this as its own focused Agent workspace pass with source guards.
-- Tighten DX Automations composer copy so fallback fields cannot look receipt-backed when the composer receipt is missing.
-- Normalize Agent semantic icons between title-bar Agent screen entries and the Agent screen/carousel surfaces.
 - Run governed DX Agents connection/tool runtime proof once authorized, covering main sidebar Connections and Tools routing, real social/provider receipts, QR payload display, credential expiry/error visuals, trusted tool bridge approvals, and native workspace-tab layout.
 - Run governed DX Agents runtime proof once authorized, covering real provider receipt ingestion, QR-flow receipt handling, trusted tool bridge import, and launch/settings visual behavior.
 - Finish live AI Profiles runtime proof once the DX MetaSearch service, Study source workspace executor, Media generation providers, and Web Preview runtime-proof tools are available.
 - Continue the DX/Zed ecosystem integration with bounded source-only slices for remaining receipt scans, semantic icon hotspots, and governed runtime proof when explicitly authorized.
 
 COMPLETED:
+- Source-only production-readiness pass is complete: DX launch workspace Sources rails now forward real command buttons, source row controls, and source tool actions instead of allocating and dropping them; DX Automations composer fallback fields now carry non-receipt-backed provenance/copy; and Agent screen identity icons now use the shared `DxUiIcon::Agent` mapping across title-bar, carousel, tab, and rail surfaces. Runtime/native proof, Cargo, build, and `just run` remain deferred by instruction.
 - Project Panel cloud-root/icon semantics slice is source-verified: cloud-drive shortcut env roots now reject stale, relative, or file paths before suppressing valid user-profile fallbacks, and the DX Explorer Open File control uses a dedicated DX semantic icon. Runtime/native proof, Cargo, build, and `just run` remain deferred by instruction.
 - Source-only production-readiness pass is complete: AI Screen response shortcuts now resync response-anchor state after jumping to the latest user prompt, Project Panel storage byte/capacity/status ownership is guarded in the current tree, and Forge package-status receipt reads now use a short TTL cache invalidated by Forge refresh. Runtime/native proof, Cargo, build, and `just run` remain deferred by instruction.
 - Forge keyboard row navigation polish is source-verified: visible rows now keep per-row GPUI scroll anchors, workflow/provider rows attach those anchors to the actual nested row elements, keyboard navigation focuses the Forge panel before changing selection, and the newly active row scrolls into view instead of drifting off-screen. Runtime/native proof, Cargo, build, and `just run` remain deferred by instruction.

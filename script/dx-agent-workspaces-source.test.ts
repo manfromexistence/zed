@@ -13,6 +13,7 @@ test("DX agent workspace taxonomy has first-class Zed screens", () => {
   const agentUi = read("crates/agent_ui/src/agent_ui.rs");
   const zed = read("crates/zed/src/zed.rs");
   const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
+  const agentScreen = read("crates/agent_ui/src/agent_screen.rs");
   const workspace = read("crates/workspace/src/workspace.rs");
   const pane = read("crates/workspace/src/pane.rs");
   const titleBar = read("crates/title_bar/src/title_bar.rs");
@@ -58,8 +59,15 @@ test("DX agent workspace taxonomy has first-class Zed screens", () => {
   assert.match(titleBar, /WorkspaceScreenKind::Tools => "Tools"/);
   assert.match(titleBar, /WorkspaceScreenKind::Connections => dx_icon\(DxUiIcon::Connections\)/);
   assert.match(titleBar, /WorkspaceScreenKind::Tools => dx_icon\(DxUiIcon::Plugins\)/);
+  assert.match(titleBar, /WorkspaceScreenKind::Agent => dx_icon\(DxUiIcon::Agent\)/);
   assert.match(carousel, /WorkspaceScreenKind::Connections => "Connections"/);
   assert.match(carousel, /WorkspaceScreenKind::Tools => "Tools"/);
+  assert.match(carousel, /WorkspaceScreenKind::Agent => dx_icon\(DxUiIcon::Agent\)/);
+  assert.match(agentScreen, /Icon::new\(dx_icon\(DxUiIcon::Agent\)\)/);
+  assert.match(dxWorkspace, /"dx-agent-overview-section"[\s\S]*?dx_icon\(DxUiIcon::Agent\)/);
+  assert.match(dxWorkspace, /"dx-agent-subagents-section"[\s\S]*?dx_icon\(DxUiIcon::Agent\)/);
+  assert.match(agentWorkspace, /"dx-agent-overview-active-thread"[\s\S]*?dx_icon\(DxUiIcon::Agent\)/);
+  assert.match(agentWorkspace, /"dx-agent-threads-active"[\s\S]*?dx_icon\(DxUiIcon::Agent\)/);
 
   assert.match(sidebar, /"sidebar-toolbar-connections"[\s\S]*?zed_actions::assistant::OpenConnections/);
   assert.match(sidebar, /"sidebar-activity-connections"[\s\S]*?zed_actions::assistant::OpenConnections/);
@@ -68,7 +76,7 @@ test("DX agent workspace taxonomy has first-class Zed screens", () => {
 
   assert.match(dxWorkspace, /^mod agent_workspace;$/m);
   assert.match(dxWorkspace, /pub background_thread_count: usize/);
-  assert.match(agentPanel, /background_thread_count,/);
+  assert.match(agentPanel, /background_thread_count: background_task_count/);
 
   for (const [id, label, section] of [
     ["dx-agent-overview-section", "Overview", "AgentOverview"],

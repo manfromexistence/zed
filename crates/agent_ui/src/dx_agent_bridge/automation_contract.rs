@@ -27,6 +27,7 @@ pub(crate) struct DxAgentAutomation {
 pub(crate) struct DxAgentAutomationComposer {
     pub schema_version: String,
     pub status: String,
+    pub receipt_present: bool,
     pub runtime_available: bool,
     pub save_draft_available: bool,
     pub enable_available: bool,
@@ -35,6 +36,7 @@ pub(crate) struct DxAgentAutomationComposer {
     pub next_action: String,
     pub unavailable_reason: String,
     pub actions: Vec<DxAgentRowAction>,
+    pub fields_receipt_backed: bool,
     pub fields: Vec<DxAgentAutomationComposerField>,
 }
 
@@ -47,6 +49,41 @@ pub(crate) struct DxAgentAutomationComposerField {
     pub value: String,
     pub placeholder: String,
     pub status: String,
+}
+
+impl DxAgentAutomationComposer {
+    pub(crate) fn field_summary(&self, limit: usize) -> String {
+        self.fields
+            .iter()
+            .take(limit)
+            .map(|field| {
+                if field.required {
+                    format!("{}*", field.label)
+                } else {
+                    field.label.clone()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
+
+    pub(crate) fn field_summary_label(&self) -> &'static str {
+        if self.fields_receipt_backed {
+            "Receipt fields"
+        } else if self.receipt_present {
+            "Field template"
+        } else {
+            "Field template pending receipt"
+        }
+    }
+
+    pub(crate) fn empty_field_summary_label(&self) -> &'static str {
+        if self.fields_receipt_backed {
+            "No composer fields in receipt"
+        } else {
+            "No composer field template until receipt"
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -153,6 +190,7 @@ pub(super) fn automation_composer(
     value: Option<&Value>,
     root_exists: bool,
 ) -> DxAgentAutomationComposer {
+    let receipt_present = value.is_some();
     let runtime_available = value
         .and_then(|value| bool_field(value, &["runtime_available"]))
         .or_else(|| {
@@ -170,6 +208,10 @@ pub(super) fn automation_composer(
         && actions
             .iter()
             .any(|action| action.id == "enable" && action.enabled);
+    let fields = value
+        .and_then(|value| array_field(value, &["fields"]))
+        .map(|fields| fields.iter().take(12).filter_map(composer_field).collect());
+    let fields_receipt_backed = fields.is_some();
 
     DxAgentAutomationComposer {
         schema_version: value
@@ -184,6 +226,7 @@ pub(super) fn automation_composer(
                     "missing_receipt_root".to_string()
                 }
             }),
+        receipt_present,
         runtime_available,
         save_draft_available,
         enable_available,
@@ -214,10 +257,8 @@ pub(super) fn automation_composer(
                 }
             }),
         actions,
-        fields: value
-            .and_then(|value| array_field(value, &["fields"]))
-            .map(|fields| fields.iter().take(12).filter_map(composer_field).collect())
-            .unwrap_or_else(default_composer_fields),
+        fields_receipt_backed,
+        fields: fields.unwrap_or_else(default_composer_fields),
     }
 }
 

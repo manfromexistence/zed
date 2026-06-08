@@ -22,7 +22,7 @@ pub(super) fn agent_overview_section(
         .child(guided_cards)
         .child(compact_status_row(
             "dx-agent-overview-active-thread",
-            IconName::ZedAgent,
+            dx_icon(DxUiIcon::Agent),
             "Active",
             status.active_status.clone(),
             cx,
@@ -74,7 +74,7 @@ pub(super) fn agent_threads_section(status: &DxLaunchWorkspaceStatus, cx: &App) 
         .gap_1()
         .child(compact_status_row(
             "dx-agent-threads-active",
-            IconName::ZedAgent,
+            dx_icon(DxUiIcon::Agent),
             "Active thread",
             status.active_status.clone(),
             cx,

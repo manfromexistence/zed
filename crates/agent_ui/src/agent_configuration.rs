@@ -913,18 +913,7 @@ impl AgentConfiguration {
             .gap_1()
             .child(Label::new("Automations").size(LabelSize::Small));
         let composer = &snapshot.automation_composer;
-        let composer_fields = composer
-            .fields
-            .iter()
-            .take(4)
-            .map(|field| {
-                if field.required {
-                    format!("{}*", field.label)
-                } else {
-                    field.label.clone()
-                }
-            })
-            .join(", ");
+        let composer_fields = composer.field_summary(4);
         let save_draft_action = dx_agent_row_action(&composer.actions, "save_draft");
         let save_draft_command = save_draft_action.and_then(automation_public_command_for_action);
         let save_draft_available = composer.save_draft_available && save_draft_command.is_some();
@@ -994,7 +983,8 @@ impl AgentConfiguration {
             )
             .child(
                 Label::new(format!(
-                    "Fields: {composer_fields}; runtime: {}",
+                    "{}: {composer_fields}; runtime: {}",
+                    composer.field_summary_label(),
                     composer.unavailable_reason
                 ))
                 .size(LabelSize::Small)

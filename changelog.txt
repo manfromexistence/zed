@@ -17,6 +17,17 @@ NOTES:
 - Source-only by instruction. Cargo, build, `just run`, native Zed launch, browser automation, local servers, and runtime visual proof remain deferred.
 - Unrelated Agent/Automation dirty files were left unstaged for separate focused work.
 
+[2026-06-08] - Source Rail, Automation Provenance, And Agent Icon Polish
+
+CHANGED:
+- `crates\agent_ui\src\dx_launch_workspace.rs` now renders the real Sources rail command section, forwards per-source row controls into the source stack, and restores the Source Tools section instead of allocating those GPUI elements and dropping them.
+- `crates\agent_ui\src\dx_agent_bridge\automation_contract.rs`, `crates\agent_ui\src\dx_launch_workspace\automation_screen.rs`, `crates\agent_ui\src\dx_launch_workspace\automation_screen\sections.rs`, `crates\agent_ui\src\dx_launch_workspace\agents\automations\composer.rs`, and `crates\agent_ui\src\agent_configuration.rs` now distinguish receipt-backed composer fields from fallback field templates when the automation composer receipt is missing.
+- `crates\title_bar\src\title_bar.rs`, `crates\workspace\src\screen_carousel.rs`, `crates\agent_ui\src\agent_screen.rs`, and Agent workspace rail rows now use `dx_icon(DxUiIcon::Agent)` for Agent screen identity while preserving `DxUiIcon::Ai` for assistant/model contexts.
+- Focused source guards now pin Sources rail forwarding, automation composer field provenance, and Agent icon consistency.
+
+NOTES:
+- Six GPT-5.5 extra-high subagents were used for this goal. Source-only by instruction; Cargo, build, `just run`, native Zed launch, browser automation, local servers, and runtime visual proof remain deferred.
+
 [2026-06-08] - Source-Only Response, Storage, And Forge Cache Polish
 
 CHANGED:

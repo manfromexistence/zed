@@ -1214,9 +1214,17 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(sourcesRail, /\.shadow_md\(\)/);
   assert.match(sourcesRail, /\.occlude\(\)/);
   assert.match(sourcesRail, /rail_pin_header\(\s*"dx-sources-rail-pin"/);
-  assert.match(sourcesRail, /sources::source_set_stack\(&status\.source_sets, Vec::new\(\), cx\)/);
-  assert.doesNotMatch(sourcesRail, /dx-sources-commands-section/);
-  assert.doesNotMatch(sourcesRail, /dx-sources-tools-section/);
+  assert.match(sourcesRail, /"dx-sources-commands-section"/);
+  assert.match(sourcesRail, /DxLaunchRailSection::SourceCommands/);
+  assert.match(sourcesRail, /sidebar_actions/);
+  assert.match(sourcesRail, /sources::source_set_stack\(&status\.source_sets, source_row_controls, cx\)/);
+  assert.match(sourcesRail, /"dx-sources-tools-section"/);
+  assert.match(sourcesRail, /DxLaunchRailSection::SourceTools/);
+  assert.match(sourcesRail, /source_actions/);
+  assert.doesNotMatch(
+    sourcesRail,
+    /_sidebar_actions|_source_row_controls|_source_actions|Vec::new\(\)/,
+  );
   assert.doesNotMatch(sourcesRail, /dx-workspace-state-section/);
   assert.match(progressRail, /\.absolute\(\)/);
   assert.match(progressRail, /\.right_2\(\)/);
