@@ -1,9 +1,9 @@
 use std::{
     cmp::Ordering,
-    collections::HashMap,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
+use collections::HashMap;
 use fs::MTime;
 use project::{Entry, ProjectEntryId, WorktreeId};
 

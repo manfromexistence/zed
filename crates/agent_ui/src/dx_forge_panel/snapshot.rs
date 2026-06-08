@@ -89,7 +89,6 @@ pub(super) enum DxForgePanelState {
 
 #[derive(Clone)]
 pub(super) struct DxForgeReceiptRow {
-    pub(super) label: String,
     pub(super) source_path: String,
     pub(super) kind: String,
     pub(super) headline: String,
@@ -211,7 +210,6 @@ fn receipt_rows(bucket: &DxToolHistoryBucket) -> Vec<DxForgeReceiptRow> {
         .iter()
         .take(MAX_PANEL_ROWS)
         .map(|summary| DxForgeReceiptRow {
-            label: summary.label.clone(),
             source_path: summary.source_path.clone(),
             kind: summary.kind.clone(),
             headline: summary.headline.clone(),

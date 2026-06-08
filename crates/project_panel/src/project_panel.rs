@@ -68,8 +68,9 @@ use theme_settings::ThemeSettings;
 use ui::{
     Color, ContextMenu, ContextMenuEntry, DecoratedIcon, Icon, IconButtonShape, IconDecoration,
     IconDecorationKind, IndentGuideColors, IndentGuideLayout, Indicator, KeyBinding, Label,
-    LabelSize, ListItem, ListItemSpacing, ProjectEmptyState, ScrollAxes, ScrollableHandle,
-    Scrollbars, StickyCandidate, TintColor, Tooltip, WithScrollbar, prelude::*, v_flex,
+    LabelSize, ListItem, ListItemSpacing, PopoverMenu, ProjectEmptyState, ScrollAxes,
+    ScrollableHandle, Scrollbars, StickyCandidate, TintColor, Tooltip, WithScrollbar, prelude::*,
+    v_flex,
 };
 use util::{
     ResultExt, TakeUntilExt, TryFutureExt,
@@ -4173,14 +4174,15 @@ impl ProjectPanel {
         entries: BTreeSet<SelectedEntry>,
         cx: &App,
     ) -> BTreeSet<SelectedEntry> {
-        let project = self.project.read(cx);
-        if entries.len() == 1
-            && let Some(entry) = entries.iter().next().copied()
-            && project.entry_is_worktree_root(entry.entry_id, cx)
         {
-            return BTreeSet::from([entry]);
+            let project = self.project.read(cx);
+            if entries.len() == 1
+                && let Some(entry) = entries.iter().next().copied()
+                && project.entry_is_worktree_root(entry.entry_id, cx)
+            {
+                return BTreeSet::from([entry]);
+            }
         }
-        drop(project);
 
         self.disjoint_entries(entries, cx)
     }
@@ -5741,7 +5743,7 @@ impl ProjectPanel {
                                             }
                                             break;
                                         }
-                                        summary.record_file(child.entry);
+                                        summary.record_file(child);
                                         child_file_count += 1;
                                     }
                                     folder_storage_summary_updates.push((cache_key, summary));
@@ -6190,7 +6192,7 @@ impl ProjectPanel {
                 let target_path = target_directory.join(name);
                 if worktree.read(cx).entry_for_path(&target_path).is_some() {
                     paths_to_replace.push((
-                        utils::bounded_project_panel_label(name.to_string()),
+                        utils::bounded_project_panel_label(name.as_unix_str().to_owned()),
                         path.clone(),
                     ));
                 }

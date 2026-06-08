@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use component::{Component, ComponentScope, example_group_with_title, single_example};
-use gpui::{AnyElement, AnyView, ClickEvent, MouseButton, MouseDownEvent, Pixels, px};
+use gpui::{
+    AnyElement, AnyView, ClickEvent, MouseButton, MouseDownEvent, Pixels, ScrollAnchor, px,
+};
 use smallvec::SmallVec;
 
 use crate::{Disclosure, prelude::*};
@@ -53,6 +55,7 @@ pub struct ListItem {
     focused: Option<bool>,
     docked_right: bool,
     height: Option<DefiniteLength>,
+    scroll_anchor: Option<ScrollAnchor>,
 }
 
 impl ListItem {
@@ -84,6 +87,7 @@ impl ListItem {
             focused: None,
             docked_right: false,
             height: None,
+            scroll_anchor: None,
         }
     }
 
@@ -211,6 +215,11 @@ impl ListItem {
         self.height = Some(height.into());
         self
     }
+
+    pub fn anchor_scroll(mut self, scroll_anchor: Option<ScrollAnchor>) -> Self {
+        self.scroll_anchor = scroll_anchor;
+        self
+    }
 }
 
 impl Disableable for ListItem {
@@ -237,6 +246,9 @@ impl RenderOnce for ListItem {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         h_flex()
             .id(self.id)
+            .when_some(self.scroll_anchor, |this, scroll_anchor| {
+                this.anchor_scroll(Some(scroll_anchor))
+            })
             .when_some(self.group_name, |this, group| this.group(group))
             .w_full()
             .when_some(self.height, |this, height| this.h(height))

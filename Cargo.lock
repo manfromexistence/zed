@@ -15347,6 +15347,7 @@ dependencies = [
  "serde_json",
  "settings",
  "smallvec",
+ "sysinfo 0.37.2",
  "telemetry",
  "tempfile",
  "theme",

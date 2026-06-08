@@ -1,6 +1,6 @@
 use gpui::{
-    AnyElement, Context, InteractiveElement, IntoElement, ParentElement, SharedString, Stateful,
-    Styled, WeakEntity,
+    AnyElement, Context, InteractiveElement, IntoElement, ParentElement, SharedString,
+    StatefulInteractiveElement, Styled, WeakEntity,
 };
 use ui::{Color, DxUiIcon, Icon, IconSize, Label, LabelSize, Tooltip, dx_icon, prelude::*, v_flex};
 use util::ResultExt;
@@ -48,6 +48,7 @@ pub(crate) fn render_storage_root_strip(
             )
             .child(
                 div()
+                    .id("dx-explorer-storage-root-strip-scroll")
                     .w_full()
                     .overflow_x_scroll()
                     .child(h_flex().gap_1().children(rows)),
@@ -91,7 +92,7 @@ fn render_storage_root_strip_row(
         .when(available, |this| {
             this.cursor_pointer()
                 .hover(|style| style.bg(cx.theme().colors().element_hover.opacity(0.6)))
-                .on_click(move |_, window, cx| {
+                .on_click(move |_, _window, cx| {
                     panel
                         .update_in(cx, |this, window, cx| {
                             this.open_dx_explorer_storage_root(path.clone(), window, cx);

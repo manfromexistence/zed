@@ -1,3 +1,20 @@
+[2026-06-08] - Authorized J6 Build/Run Sync
+
+CHANGED:
+- `Cargo.lock` now includes the `sysinfo 0.37.2` lockfile entry required by the current Project Panel dependency graph.
+- `crates\ui\src\components\list\list_item.rs` now supports optional GPUI scroll anchors for shared list rows, letting DX Forge rows attach real row-navigation anchors through the common component.
+- `crates\agent_ui\src\agent_panel.rs`, `crates\agent_ui\src\dx_forge_panel\providers\view.rs`, `crates\agent_ui\src\dx_forge_panel\workflow_rows.rs`, and `crates\agent_ui\src\dx_forge_panel\snapshot.rs` now avoid unsupported element ids, unsupported Div click handlers, and unused receipt state.
+- `crates\project_panel\src\project_panel.rs`, `crates\project_panel\src\storage.rs`, and `crates\project_panel\src\storage_roots_view.rs` now compile cleanly with the storage overview helpers, bounded labels, and stateful horizontal storage-root strip.
+- `todo.txt` records the authorized validation pass and the disk-headroom recovery needed before the successful run.
+
+PASSED:
+- `rustfmt --edition 2024` on the touched Rust source files.
+- `git diff --check`
+- `just run` with `CARGO_BUILD_JOBS=6` and `CARGO_INCREMENTAL=1`; Zed launched and reported a detected main window.
+
+NOTES:
+- The first validation attempts were blocked by stale `Cargo.lock` and then by low G-drive build headroom. Rebuildable `G:\Zed\target\debug\deps`, `incremental`, and `build` cache directories were cleared to recover space before the successful rebuild.
+
 [2026-06-08] - Project Panel Cloud Root And Icon Semantics
 
 CHANGED:

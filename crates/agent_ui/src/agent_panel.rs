@@ -6365,10 +6365,12 @@ impl AgentPanel {
         icon: IconName,
         label: &'static str,
         active_thread: Entity<ThreadView>,
-        cx: &App,
+        _cx: &App,
     ) -> AnyElement {
         IconButton::new(
-            ("agent-toolbar-response-indicator-page", label, entry_ix),
+            SharedString::from(format!(
+                "agent-toolbar-response-indicator-page-{label}-{entry_ix}"
+            )),
             icon,
         )
         .icon_size(IconSize::XSmall)

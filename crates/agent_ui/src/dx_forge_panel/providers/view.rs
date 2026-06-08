@@ -193,9 +193,6 @@ fn provider_buttons_for_group(
         .on_mouse_down(MouseButton::Left, |_, _, cx| {
             cx.stop_propagation();
         })
-        .on_click(|_, _, cx| {
-            cx.stop_propagation();
-        })
         .children(
             providers_for(group)
                 .map(|provider| provider_target_button(provider, snapshot, workspace, cx)),
@@ -207,9 +204,6 @@ fn provider_group_actions(open_button: AnyElement) -> AnyElement {
     h_flex()
         .flex_none()
         .on_mouse_down(MouseButton::Left, |_, _, cx| {
-            cx.stop_propagation();
-        })
-        .on_click(|_, _, cx| {
             cx.stop_propagation();
         })
         .child(open_button)
