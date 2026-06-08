@@ -1347,7 +1347,7 @@ impl ConfigurationView {
         let access_key_id_editor = cx.new(|cx| {
             InputField::new(window, cx, Self::PLACEHOLDER_ACCESS_KEY_ID_TEXT)
                 .label("Access Key ID")
-                .tab_index(0)
+                .tab_index(0_isize)
                 .tab_stop(true)
         });
 

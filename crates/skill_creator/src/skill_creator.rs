@@ -1231,7 +1231,7 @@ impl Render for SkillCreator {
                         .child(
                             v_flex()
                                 .id("skill-creator-form")
-                                .tab_index(0)
+                                .tab_index(0_isize)
                                 .tab_group()
                                 .tab_stop(false)
                                 .size_full()

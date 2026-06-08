@@ -1,3 +1,22 @@
+[2026-06-09] - Authorized J6 Build Validation Repair
+
+CHANGED:
+- `crates\agent_ui\src\agent_panel.rs`, `crates\workspace\src\dock.rs`, Project Panel, Settings UI, Web Preview, and related GPUI call sites now pass explicit `isize` tab-index values where generic button APIs require them.
+- `crates\agent_ui\src\ui\model_selector_components.rs` now gives clickable provider headers stable stateful ids and avoids unsupported plain-Div tooltip calls.
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now attaches composer scroll behavior to a stable stateful container.
+- `crates\project_panel\src\media_preview.rs` now types the optional media header end slot explicitly and avoids holding theme borrows across mutable label rendering.
+- `crates\project_panel\src\storage_roots_view.rs` now uses supported `ButtonLike` width sizing for storage-root shortcut chips.
+- `crates\liquid_glass\src\lib.rs` now exposes the liquid-glass background/state helpers that were intentionally part of the crate surface, removing dead-code warnings from the build.
+- `crates\web_preview\src\web_preview_view.rs` no longer keeps the dead `UrlChanged` browser event path that was never produced.
+
+PASSED:
+- `rustfmt --edition 2024` on touched Rust files
+- `git diff --check`
+- `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run` built and launched Zed, detecting the main window
+
+NOTES:
+- Cleared inactive rebuildable target caches outside the active Zed build target to satisfy the repo's G-drive headroom guard while preserving source trees and the warm Zed target as much as possible.
+
 [2026-06-09] - DX Launch Rail Rainbow Identity
 
 CHANGED:

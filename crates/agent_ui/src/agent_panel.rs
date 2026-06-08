@@ -5584,7 +5584,7 @@ impl AgentPanel {
             .trigger_with_tooltip(
                 IconButton::new("agent-options-menu", IconName::Ellipsis)
                     .icon_size(IconSize::Small)
-                    .tab_index(0),
+                    .tab_index(0_isize),
                 move |_window, cx| {
                     Tooltip::for_action_in(
                         "Toggle Agent Menu",
@@ -5741,7 +5741,7 @@ impl AgentPanel {
 
         IconButton::new("go-back", IconName::ArrowLeft)
             .icon_size(IconSize::Small)
-            .tab_index(0)
+            .tab_index(0_isize)
             .on_click(cx.listener(|this, _, window, cx| {
                 this.go_back(&workspace::GoBack, window, cx);
             }))
@@ -6085,7 +6085,7 @@ impl AgentPanel {
             IconName::ThreadsSidebarLeftClosed,
         )
         .icon_size(IconSize::Small)
-        .tab_index(0)
+        .tab_index(0_isize)
         .toggle_state(self.fullscreen_sources_rail_open)
         .tooltip(Tooltip::text(if self.fullscreen_sources_rail_open {
             "Hide sources rail"
@@ -6101,7 +6101,7 @@ impl AgentPanel {
             IconName::ThreadsSidebarRightClosed,
         )
         .icon_size(IconSize::Small)
-        .tab_index(0)
+        .tab_index(0_isize)
         .toggle_state(self.fullscreen_progress_rail_open)
         .tooltip(Tooltip::text(if self.fullscreen_progress_rail_open {
             "Hide progress rail"
@@ -6116,7 +6116,7 @@ impl AgentPanel {
         let workspace = self.workspace.clone();
         let close_panel_button = IconButton::new("agent-panel-close-side-panel", IconName::Close)
             .icon_size(IconSize::Small)
-            .tab_index(0)
+            .tab_index(0_isize)
             .tooltip(Tooltip::text("Close Panel"))
             .on_click(move |_, window, cx| {
                 if let Some(workspace) = workspace.upgrade() {
@@ -6377,12 +6377,12 @@ impl AgentPanel {
         _cx: &App,
     ) -> AnyElement {
         IconButton::new(
-            ("agent-toolbar-response-indicator-page", label, entry_ix),
+            format!("agent-toolbar-response-indicator-page-{label}-{entry_ix}"),
             icon,
         )
         .icon_size(IconSize::XSmall)
         .icon_color(Color::Muted)
-        .tab_index(0)
+        .tab_index(0_isize)
         .tooltip(Tooltip::text(label))
         .on_click(move |_event, window, cx| {
             cx.stop_propagation();
@@ -6416,7 +6416,7 @@ impl AgentPanel {
             .items_center()
             .justify_center()
             .rounded_sm()
-            .tab_index(0)
+            .tab_index(0_isize)
             .cursor_pointer()
             .hover(|style| style.bg(cx.theme().colors().element_hover.opacity(0.72)))
             .focus_visible(|style| style.bg(cx.theme().colors().element_hover.opacity(0.72)))

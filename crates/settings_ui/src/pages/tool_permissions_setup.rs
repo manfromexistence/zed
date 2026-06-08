@@ -480,7 +480,7 @@ fn render_verification_section(
 
     cx.observe(&editor, |_, _, cx| cx.notify()).detach();
 
-    let focus_handle = editor.focus_handle(cx).tab_index(0).tab_stop(true);
+    let focus_handle = editor.focus_handle(cx).tab_index(0_isize).tab_stop(true);
 
     let current_text = editor.read(cx).text(cx);
     let (decision, matched_patterns) = if current_text.is_empty() {
@@ -986,7 +986,7 @@ fn render_user_pattern_row(
     SettingsInputField::new()
         .with_id(input_id)
         .with_initial_text(pattern)
-        .tab_index(0)
+        .tab_index(0_isize)
         .with_buffer_font()
         .color(Color::Default)
         .action_slot(
@@ -1047,7 +1047,7 @@ fn render_add_pattern_input(
     SettingsInputField::new()
         .with_id(input_id)
         .with_placeholder("Add regex pattern…")
-        .tab_index(0)
+        .tab_index(0_isize)
         .with_buffer_font()
         .display_clear_button()
         .display_confirm_button()

@@ -82,7 +82,7 @@ fn render_storage_root_strip_row(
     )))
     .style(ButtonStyle::Subtle)
     .size(ButtonSize::Compact)
-    .max_w(rems(18.))
+    .width(rems(18.))
     .disabled(!available)
     .tooltip(move |_window, cx| Tooltip::with_meta("Storage root", None, tooltip.clone(), cx))
     .when(available, |this| {
@@ -96,7 +96,7 @@ fn render_storage_root_strip_row(
                 })
                 .log_err();
         })
-        .tab_index(0)
+        .tab_index(0_isize)
         .track_focus(&row_focus_handle)
     })
     .child(Icon::new(icon).size(IconSize::XSmall).color(if available {

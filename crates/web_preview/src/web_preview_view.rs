@@ -561,7 +561,6 @@ enum PcUseStatusFileKind {
 
 #[derive(Clone, Debug)]
 pub(crate) enum BrowserEvent {
-    UrlChanged(String),
     TitleChanged(String),
     FaviconUriChanged {
         uri: String,
@@ -30583,24 +30582,6 @@ impl WebPreviewView {
 
         for event in events {
             match event {
-                BrowserEvent::UrlChanged(url) => {
-                    if self.onboarding_complete.is_some()
-                        && is_onboarding_complete_fallback_url(url.as_str())
-                    {
-                        if let Some(complete) = self.onboarding_complete.clone() {
-                            cx.defer_in(window, move |_, window, cx| {
-                                complete(window, cx);
-                            });
-                        }
-                        continue;
-                    }
-                    if matches!(self.load_state, PreviewLoadState::Loading)
-                        && !self.browser_event_url_matches_active_url(url.as_str())
-                    {
-                        continue;
-                    }
-                    self.sync_active_url(url.as_str(), window, cx);
-                }
                 BrowserEvent::TitleChanged(title) => {
                     if self.onboarding_complete.is_some()
                         && is_onboarding_complete_fallback_title(title.as_str())
@@ -32666,7 +32647,7 @@ impl WebPreviewView {
         let focus_handle = self.focus_handle(cx);
         IconButton::new("web-preview-tab-bar-add-trigger", IconName::Plus)
             .icon_size(IconSize::Small)
-            .tab_index(0)
+            .tab_index(0_isize)
             .track_focus(&focus_handle)
             .tooltip(Tooltip::text("New Web Preview"))
             .on_click(|_, window, cx| {
@@ -32684,7 +32665,7 @@ impl WebPreviewView {
             .trigger_with_tooltip(
                 IconButton::new("web-preview-tab-bar-extensions-trigger", IconName::Blocks)
                     .icon_size(IconSize::Small)
-                    .tab_index(0)
+                    .tab_index(0_isize)
                     .track_focus(&focus_handle),
                 Tooltip::text("Extensions"),
             )
@@ -32742,7 +32723,7 @@ impl WebPreviewView {
             .trigger_with_tooltip(
                 IconButton::new("web-preview-tab-bar-more-trigger", IconName::Ellipsis)
                     .icon_size(IconSize::Small)
-                    .tab_index(0)
+                    .tab_index(0_isize)
                     .track_focus(&focus_handle),
                 Tooltip::text("More"),
             )
@@ -35407,7 +35388,7 @@ impl WebPreviewView {
             .child(
                 IconButton::new("web-preview-tab-bar-back", IconName::ArrowLeft)
                     .icon_size(IconSize::Small)
-                    .tab_index(0)
+                    .tab_index(0_isize)
                     .track_focus(&focus_handle)
                     .tooltip(Tooltip::text("Back"))
                     .on_click(cx.listener(|this, _, _, cx| {
@@ -35417,7 +35398,7 @@ impl WebPreviewView {
             .child(
                 IconButton::new("web-preview-tab-bar-forward", IconName::ArrowRight)
                     .icon_size(IconSize::Small)
-                    .tab_index(0)
+                    .tab_index(0_isize)
                     .track_focus(&focus_handle)
                     .tooltip(Tooltip::text("Forward"))
                     .on_click(cx.listener(|this, _, _, cx| {
@@ -35427,7 +35408,7 @@ impl WebPreviewView {
             .child(
                 IconButton::new("web-preview-tab-bar-reload", IconName::RotateCw)
                     .icon_size(IconSize::Small)
-                    .tab_index(0)
+                    .tab_index(0_isize)
                     .track_focus(&focus_handle)
                     .tooltip(Tooltip::text("Reload"))
                     .on_click(cx.listener(|this, _, window, cx| {
@@ -36589,9 +36570,6 @@ fn take_queued_browser_events(event_queue: &Arc<Mutex<Vec<BrowserEvent>>>) -> Ve
 
 fn coalesce_browser_event(queue: &mut Vec<BrowserEvent>, event: &BrowserEvent) {
     match event {
-        BrowserEvent::UrlChanged(_) => {
-            queue.retain(|queued| !matches!(queued, BrowserEvent::UrlChanged(_)));
-        }
         BrowserEvent::TitleChanged(_) => {
             queue.retain(|queued| !matches!(queued, BrowserEvent::TitleChanged(_)));
         }
@@ -36604,7 +36582,6 @@ fn coalesce_browser_event(queue: &mut Vec<BrowserEvent>, event: &BrowserEvent) {
                     queued,
                     BrowserEvent::NavigationStarted { .. }
                         | BrowserEvent::NavigationCompleted { .. }
-                        | BrowserEvent::UrlChanged(_)
                         | BrowserEvent::TitleChanged(_)
                         | BrowserEvent::FaviconUriChanged { .. }
                 )
@@ -36649,10 +36626,6 @@ fn is_bounded_browser_event(event: &BrowserEvent) -> bool {
         event,
         BrowserEvent::IpcMessage(_) | BrowserEvent::IpcMessageRejected(_)
     )
-}
-
-fn is_onboarding_complete_fallback_url(url: &str) -> bool {
-    url == "about:blank#zed-onboarding-complete" || url.ends_with("#zed-onboarding-complete")
 }
 
 fn is_onboarding_complete_fallback_title(title: &str) -> bool {

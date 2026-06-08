@@ -4393,7 +4393,7 @@ impl ProjectPanel {
                                             .style(ButtonStyle::Subtle)
                                             .icon_size(IconSize::Small)
                                             .icon_color(Color::Muted)
-                                            .tab_index(0)
+                                            .tab_index(0_isize)
                                             .track_focus(&self.focus_handle(cx)),
                                             Tooltip::text(format!(
                                                 "Sort by {}",
@@ -4491,7 +4491,7 @@ impl ProjectPanel {
         )))
         .spacing(ListItemSpacing::ExtraDense)
         .toggle_state(is_selected)
-        .tab_index(0)
+        .tab_index(0_isize)
         .track_focus(&self.focus_handle(cx))
         .tooltip(move |_window, cx| {
             Tooltip::with_meta("Folder file summary", None, tooltip.clone(), cx)
@@ -4759,7 +4759,7 @@ impl ProjectPanel {
                             .shape(IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
                             .icon_size(IconSize::Small)
-                            .tab_index(0)
+                            .tab_index(0_isize)
                             .track_focus(&open_project_focus_handle)
                             .tooltip(move |_window, cx| {
                                 Tooltip::for_action_in(
@@ -4781,7 +4781,9 @@ impl ProjectPanel {
                             .icon_size(IconSize::Small)
                             .disabled(!has_worktree)
                             .when(has_worktree, |button| {
-                                button.tab_index(0).track_focus(&open_file_focus_handle)
+                                button
+                                    .tab_index(0_isize)
+                                    .track_focus(&open_file_focus_handle)
                             })
                             .tooltip(move |_window, cx| {
                                 Tooltip::for_action_in(
@@ -4818,7 +4820,7 @@ impl ProjectPanel {
                         .disabled(!has_worktree)
                         .when(has_worktree, |button| {
                             button
-                                .tab_index(0)
+                                .tab_index(0_isize)
                                 .track_focus(&toggle_ignored_focus_handle)
                         })
                         .tooltip(move |_window, cx| {
@@ -4853,7 +4855,9 @@ impl ProjectPanel {
                         .icon_size(IconSize::Small)
                         .disabled(!has_worktree)
                         .when(has_worktree, |button| {
-                            button.tab_index(0).track_focus(&toggle_hidden_focus_handle)
+                            button
+                                .tab_index(0_isize)
+                                .track_focus(&toggle_hidden_focus_handle)
                         })
                         .tooltip(move |_window, cx| {
                             Tooltip::for_action_in(
@@ -4884,7 +4888,7 @@ impl ProjectPanel {
                             .disabled(!has_worktree)
                             .when(has_worktree, |button| {
                                 button
-                                    .tab_index(0)
+                                    .tab_index(0_isize)
                                     .track_focus(&project_symbols_focus_handle)
                             })
                             .tooltip(move |_window, cx| {
@@ -4906,7 +4910,9 @@ impl ProjectPanel {
                             .icon_size(IconSize::Small)
                             .disabled(!has_worktree)
                             .when(has_worktree, |button| {
-                                button.tab_index(0).track_focus(&collapse_all_focus_handle)
+                                button
+                                    .tab_index(0_isize)
+                                    .track_focus(&collapse_all_focus_handle)
                             })
                             .tooltip(move |_window, cx| {
                                 Tooltip::for_action_in(
@@ -4933,7 +4939,9 @@ impl ProjectPanel {
                             .icon_size(IconSize::Small)
                             .disabled(is_read_only || !has_worktree)
                             .when(!is_read_only && has_worktree, |button| {
-                                button.tab_index(0).track_focus(&new_file_focus_handle)
+                                button
+                                    .tab_index(0_isize)
+                                    .track_focus(&new_file_focus_handle)
                             })
                             .tooltip(move |_window, cx| {
                                 Tooltip::for_action_in(
@@ -4955,7 +4963,9 @@ impl ProjectPanel {
                             .icon_size(IconSize::Small)
                             .disabled(is_read_only || !has_worktree)
                             .when(!is_read_only && has_worktree, |button| {
-                                button.tab_index(0).track_focus(&new_folder_focus_handle)
+                                button
+                                    .tab_index(0_isize)
+                                    .track_focus(&new_folder_focus_handle)
                             })
                             .tooltip(move |_window, cx| {
                                 Tooltip::for_action_in(
@@ -5089,7 +5099,7 @@ impl ProjectPanel {
                             .shape(IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
                             .icon_size(IconSize::Small)
-                            .tab_index(0)
+                            .tab_index(0_isize)
                             .track_focus(&copy_selection_focus_handle)
                             .tooltip(Tooltip::text("Copy selected"))
                             .on_click(cx.listener(|this, _, window, cx| {
@@ -5103,7 +5113,7 @@ impl ProjectPanel {
                                 .shape(IconButtonShape::Square)
                                 .style(ButtonStyle::Subtle)
                                 .icon_size(IconSize::Small)
-                                .tab_index(0)
+                                .tab_index(0_isize)
                                 .track_focus(&cut_selection_focus_handle)
                                 .tooltip(move |_window, cx| {
                                     Tooltip::for_action_in(
@@ -5128,7 +5138,7 @@ impl ProjectPanel {
                             .shape(IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
                             .icon_size(IconSize::Small)
-                            .tab_index(0)
+                            .tab_index(0_isize)
                             .track_focus(&duplicate_selection_focus_handle)
                             .tooltip(move |_window, cx| {
                                 Tooltip::for_action_in(
@@ -5155,7 +5165,7 @@ impl ProjectPanel {
                             .shape(IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
                             .icon_size(IconSize::Small)
-                            .tab_index(0)
+                            .tab_index(0_isize)
                             .track_focus(&paste_selection_focus_handle)
                             .tooltip(move |_window, cx| {
                                 Tooltip::for_action_in(
@@ -5179,7 +5189,7 @@ impl ProjectPanel {
                                 .shape(IconButtonShape::Square)
                                 .style(ButtonStyle::Subtle)
                                 .icon_size(IconSize::Small)
-                                .tab_index(0)
+                                .tab_index(0_isize)
                                 .track_focus(&trash_selection_focus_handle)
                                 .tooltip(move |_window, cx| {
                                     Tooltip::for_action_in(
@@ -5200,7 +5210,7 @@ impl ProjectPanel {
                             .shape(IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
                             .icon_size(IconSize::Small)
-                            .tab_index(0)
+                            .tab_index(0_isize)
                             .track_focus(&clear_selection_focus_handle)
                             .tooltip(Tooltip::text("Clear selection"))
                             .on_click(cx.listener(|this, _, window, cx| {

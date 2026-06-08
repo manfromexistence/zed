@@ -286,7 +286,7 @@ pub(crate) fn render_folder_media_shelf(
         .child(
             ListHeader::new("Media")
                 .start_slot(Icon::new(dx_icon(DxUiIcon::Media)).size(IconSize::XSmall))
-                .end_slot(panel_controls),
+                .end_slot::<AnyElement>(panel_controls),
         )
         .child(
             div()
@@ -342,7 +342,7 @@ fn render_media_shelf_overflow_card(
                 .full_width()
                 .height(px(PROJECT_PANEL_MEDIA_SHELF_CARD_TOTAL_HEIGHT).into())
                 .style(ButtonStyle::Subtle)
-                .tab_index(0)
+                .tab_index(0_isize)
                 .track_focus(&focus_handle)
                 .child(
                     div()
@@ -483,7 +483,7 @@ fn media_shelf_card_container(
     .selected_style(ButtonStyle::Tinted(TintColor::Accent))
     .toggle_state(is_selected)
     .size(ButtonSize::None)
-    .tab_index(0)
+    .tab_index(0_isize)
     .track_focus(&focus_handle)
     .tooltip(move |_window, cx| {
         Tooltip::with_meta(tooltip_title.clone(), None, tooltip_meta.clone(), cx)
@@ -639,6 +639,13 @@ fn media_gallery_card_container(
     cx: &mut App,
 ) -> Stateful<Div> {
     let colors = cx.theme().colors();
+    let elevated_surface_background = colors.elevated_surface_background;
+    let editor_background = colors.editor_background;
+    let border_focused = colors.border_focused;
+    let border_variant = colors.border_variant;
+    let element_selected = colors.element_selected;
+    let element_background = colors.element_background;
+    let element_hover = colors.element_hover;
     let tooltip_title = item.name.clone();
     let tooltip_meta = media_preview_card_tooltip_meta(item);
     let media = match item.kind {
@@ -661,7 +668,7 @@ fn media_gallery_card_container(
                 .h(px(PROJECT_PANEL_MEDIA_GALLERY_CARD_HEIGHT))
                 .rounded_sm()
                 .overflow_hidden()
-                .bg(colors.elevated_surface_background);
+                .bg(elevated_surface_background);
 
             let base = if let Some(preview) = item.video_frame_preview.as_ref() {
                 base.child(
@@ -684,7 +691,7 @@ fn media_gallery_card_container(
                     .right_1()
                     .bottom_1()
                     .rounded_full()
-                    .bg(colors.editor_background.opacity(0.72))
+                    .bg(editor_background.opacity(0.72))
                     .p_0p5()
                     .child(
                         Icon::new(IconName::PlayOutlined)
@@ -720,17 +727,17 @@ fn media_gallery_card_container(
         .rounded_sm()
         .border_1()
         .border_color(if is_selected {
-            colors.border_focused
+            border_focused
         } else {
-            colors.border_variant
+            border_variant
         })
         .bg(if is_selected {
-            colors.element_selected
+            element_selected
         } else {
-            colors.element_background
+            element_background
         })
         .when(!is_selected, |this| {
-            this.hover(|style| style.bg(colors.element_hover))
+            this.hover(|style| style.bg(element_hover))
         })
         .tooltip(move |_window, cx| {
             Tooltip::with_meta(tooltip_title.clone(), None, tooltip_meta.clone(), cx)

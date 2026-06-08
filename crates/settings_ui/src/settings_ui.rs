@@ -1833,7 +1833,7 @@ impl SettingsWindow {
                 expanded: false,
                 page_index,
                 item_index: None,
-                focus_handle: cx.focus_handle().tab_index(0).tab_stop(true),
+                focus_handle: cx.focus_handle().tab_index(0_isize).tab_stop(true),
             });
 
             for (item_index, item) in page.items.iter().enumerate() {
@@ -1850,7 +1850,7 @@ impl SettingsWindow {
                     expanded: false,
                     page_index,
                     item_index: Some(item_index),
-                    focus_handle: cx.focus_handle().tab_index(0).tab_stop(true),
+                    focus_handle: cx.focus_handle().tab_index(0_isize).tab_stop(true),
                 });
             }
         }
@@ -2336,7 +2336,7 @@ impl SettingsWindow {
                 .find_map(|(prev_file, handle)| {
                     (prev_file == &settings_ui_file).then(|| handle.clone())
                 })
-                .unwrap_or_else(|| cx.focus_handle().tab_index(0).tab_stop(true));
+                .unwrap_or_else(|| cx.focus_handle().tab_index(0_isize).tab_stop(true));
             ui_files.push((settings_ui_file, focus_handle));
         }
 
@@ -2368,7 +2368,7 @@ impl SettingsWindow {
                     .find_map(|(prev_file, handle)| {
                         (prev_file == &settings_ui_file).then(|| handle.clone())
                     })
-                    .unwrap_or_else(|| cx.focus_handle().tab_index(0).tab_stop(true));
+                    .unwrap_or_else(|| cx.focus_handle().tab_index(0_isize).tab_stop(true));
 
                 ui_files.push((settings_ui_file, focus_handle));
             }
@@ -2630,7 +2630,7 @@ impl SettingsWindow {
                                         x: px(0.0),
                                         y: px(2.0),
                                     })
-                                    .tab_index(0),
+                                    .tab_index(0_isize),
                                 )
                             })
                     }),
@@ -4358,7 +4358,7 @@ fn render_text_field<T: From<String> + Into<String> + AsRef<str> + Clone>(
     let initial_text = initial_text.filter(|s| !s.as_ref().is_empty());
 
     SettingsInputField::new()
-        .tab_index(0)
+        .tab_index(0_isize)
         .when_some(initial_text, |editor, text| {
             editor.with_initial_text(text.as_ref().to_string())
         })
@@ -4487,7 +4487,7 @@ where
             .log_err(); // todo(settings_ui) don't log err
         }
     })
-    .tab_index(0)
+    .tab_index(0_isize)
     .title_case(should_do_titlecase)
     .into_any_element()
 }

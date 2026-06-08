@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use gpui::{Action, ClickEvent, FocusHandle, prelude::*};
+use gpui::{Action, ClickEvent, FocusHandle, StatefulInteractiveElement, prelude::*};
 use ui::{Chip, ElevationIndex, KeyBinding, ListItem, ListItemSpacing, Tooltip, prelude::*};
 use zed_actions::agent::ToggleModelSelector;
 
@@ -70,6 +70,7 @@ impl RenderOnce for ModelSelectorHeader {
                 "Expand provider models"
             }
         });
+        let header_id = format!("model-selector-header-{}", title.as_ref());
 
         div()
             .px_2()
@@ -82,29 +83,22 @@ impl RenderOnce for ModelSelectorHeader {
             })
             .child(
                 h_flex()
+                    .id(header_id)
                     .w_full()
                     .gap_1()
                     .items_center()
                     .when_some(on_toggle.clone(), |this, on_toggle| {
-                        this.cursor_pointer()
-                            .tooltip(Tooltip::text(
-                                toggle_tooltip.unwrap_or("Toggle provider models"),
-                            ))
-                            .on_click(move |event, window, cx| {
-                                on_toggle(event, window, cx);
-                            })
+                        this.cursor_pointer().on_click(move |event, window, cx| {
+                            on_toggle(event, window, cx);
+                        })
                     })
                     .child(
-                        div()
-                            .min_w_0()
-                            .flex_1()
-                            .child(
-                                Label::new(title.clone())
-                                    .size(LabelSize::XSmall)
-                                    .color(Color::Muted)
-                                    .truncate(),
-                            )
-                            .tooltip(Tooltip::text(title.clone())),
+                        div().min_w_0().flex_1().child(
+                            Label::new(title.clone())
+                                .size(LabelSize::XSmall)
+                                .color(Color::Muted)
+                                .truncate(),
+                        ),
                     )
                     .when_some(count, |this, count| {
                         this.child(Chip::new(count.to_string()))
@@ -113,7 +107,7 @@ impl RenderOnce for ModelSelectorHeader {
                         let title_key = title.as_ref().to_string();
                         this.child(
                             IconButton::new(format!("model-provider-toggle-{title_key}"), icon)
-                                .tab_index(0)
+                                .tab_index(0_isize)
                                 .icon_size(IconSize::XSmall)
                                 .style(ButtonStyle::Subtle)
                                 .when_some(toggle_tooltip, |this, tooltip| {
@@ -235,8 +229,7 @@ impl RenderOnce for ModelSelectorListItem {
                         div()
                             .min_w_0()
                             .flex_1()
-                            .child(Label::new(self.title.clone()).truncate())
-                            .tooltip(Tooltip::text(self.title)),
+                            .child(Label::new(self.title.clone()).truncate()),
                     )
                     .when(self.is_latest, |parent| parent.child(Chip::new("Latest")))
                     .when_some(self.cost_info, |this, cost_info| {

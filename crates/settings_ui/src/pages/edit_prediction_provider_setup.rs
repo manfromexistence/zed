@@ -162,7 +162,7 @@ fn render_provider_dropdown(window: &mut Window, cx: &mut App) -> AnyElement {
                 )
                 .child(
                     DropdownMenu::new("provider-dropdown", current_provider_name, menu)
-                        .tab_index(0)
+                        .tab_index(0_isize)
                         .style(DropdownStyle::Outlined),
                 ),
         )
@@ -312,7 +312,7 @@ fn render_api_key_provider(
                 )
                 .child(
                     SettingsInputField::new()
-                        .tab_index(0)
+                        .tab_index(0_isize)
                         .with_placeholder("xxxxxxxxxxxxxxxxxxxx")
                         .on_confirm(move |api_key, _window, cx| {
                             write_key(api_key.filter(|key| !key.is_empty()), cx);

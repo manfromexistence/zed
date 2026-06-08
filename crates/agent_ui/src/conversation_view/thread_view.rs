@@ -18,7 +18,7 @@ use crate::completion_provider::AvailableSkill;
 use crate::message_editor::SharedSessionCapabilities;
 
 use db::kvp::KeyValueStore;
-use gpui::{List, TaskExt};
+use gpui::{List, StatefulInteractiveElement, TaskExt};
 use heapless::Vec as ArrayVec;
 use language_model::{
     FastModeConfirmation, LanguageModelEffortLevel, LanguageModelId, LanguageModelProviderId,
@@ -3930,13 +3930,14 @@ impl ThreadView {
                             .justify_between()
                             .child(
                                 v_flex()
+                                    .id("agent-composer-collapsed-editor-scroll")
                                     .relative()
                                     .w_full()
                                     .min_h_0()
                                     .when(expands_editor_area, |this| this.flex_1())
                                     .when(has_messages && !expands_editor_area, |this| {
-                                        this.max_h(rems(COMPOSER_COLLAPSED_EDITOR_MAX_HEIGHT_REMS))
-                                            .overflow_y_scroll()
+                                        this.overflow_y_scroll()
+                                            .max_h(rems(COMPOSER_COLLAPSED_EDITOR_MAX_HEIGHT_REMS))
                                     })
                                     .pt_0p5()
                                     .pr_2p5()

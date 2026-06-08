@@ -4,8 +4,9 @@ mod ui_state;
 
 use gpui::App;
 
-pub use backgrounds::load_glass_surface;
+pub use backgrounds::{BackgroundAsset, load_backgrounds, load_glass_surface};
 pub use element::{LiquidGlassStyle, liquid_glass_layer, paint_liquid_glass_layer};
+pub use ui_state::{GLASS_VARIANTS, UiState};
 
 pub fn default_liquid_glass_style() -> LiquidGlassStyle {
     let state = ui_state::UiState::default();

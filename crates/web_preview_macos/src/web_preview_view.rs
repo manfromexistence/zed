@@ -1281,7 +1281,7 @@ impl WebPreviewView {
             .trigger_with_tooltip(
                 IconButton::new("web-preview-tab-bar-extensions-trigger", IconName::Blocks)
                     .icon_size(IconSize::Small)
-                    .tab_index(0)
+                    .tab_index(0_isize)
                     .track_focus(&focus_handle),
                 Tooltip::text("Extensions"),
             )
@@ -1768,7 +1768,7 @@ impl WebPreviewView {
             .trigger_with_tooltip(
                 IconButton::new("web-preview-tab-bar-more-trigger", IconName::Ellipsis)
                     .icon_size(IconSize::Small)
-                    .tab_index(0)
+                    .tab_index(0_isize)
                     .track_focus(&focus_handle),
                 Tooltip::text("More"),
             )
@@ -1835,7 +1835,7 @@ impl WebPreviewView {
         let focus_handle = self.focus_handle(cx);
         IconButton::new("web-preview-tab-bar-add-trigger", IconName::Plus)
             .icon_size(IconSize::Small)
-            .tab_index(0)
+            .tab_index(0_isize)
             .track_focus(&focus_handle)
             .tooltip(Tooltip::text("New Web Preview"))
             .on_click(|_, window, cx| {
@@ -1851,7 +1851,7 @@ impl WebPreviewView {
             .child(
                 IconButton::new("web-preview-tab-bar-back", IconName::ArrowLeft)
                     .icon_size(IconSize::Small)
-                    .tab_index(0)
+                    .tab_index(0_isize)
                     .track_focus(&focus_handle)
                     .tooltip(Tooltip::text("Back"))
                     .on_click(cx.listener(Self::go_back)),
@@ -1859,7 +1859,7 @@ impl WebPreviewView {
             .child(
                 IconButton::new("web-preview-tab-bar-forward", IconName::ArrowRight)
                     .icon_size(IconSize::Small)
-                    .tab_index(0)
+                    .tab_index(0_isize)
                     .track_focus(&focus_handle)
                     .tooltip(Tooltip::text("Forward"))
                     .on_click(cx.listener(Self::go_forward)),
@@ -1867,7 +1867,7 @@ impl WebPreviewView {
             .child(
                 IconButton::new("web-preview-tab-bar-reload", IconName::RotateCw)
                     .icon_size(IconSize::Small)
-                    .tab_index(0)
+                    .tab_index(0_isize)
                     .track_focus(&focus_handle)
                     .tooltip(Tooltip::text("Reload"))
                     .on_click(cx.listener(Self::reload)),
@@ -1900,7 +1900,7 @@ impl WebPreviewView {
             .child(
                 IconButton::new("web-preview-tab-bar-bookmark", bookmark_icon)
                     .icon_size(IconSize::Small)
-                    .tab_index(0)
+                    .tab_index(0_isize)
                     .track_focus(&focus_handle)
                     .icon_color(Color::Muted)
                     .toggle_state(is_bookmarked)
