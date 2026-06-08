@@ -4484,18 +4484,13 @@ impl ProjectPanel {
             )
         };
 
-        ButtonLike::new(SharedString::from(format!(
+        ListItem::new(SharedString::from(format!(
             "dx-explorer-storage-drilldown-{}-{}",
             item.worktree_id.to_usize(),
             item.entry_id.to_usize()
         )))
-        .style(ButtonStyle::Subtle)
-        .selected_style(ButtonStyle::Tinted(TintColor::Accent))
-        .size(ButtonSize::None)
-        .full_width()
+        .spacing(ListItemSpacing::ExtraDense)
         .toggle_state(is_selected)
-        .tab_index(0)
-        .track_focus(&self.focus_handle(cx))
         .tooltip(move |_window, cx| {
             Tooltip::with_meta("Folder file summary", None, tooltip.clone(), cx)
         })
@@ -4510,9 +4505,8 @@ impl ProjectPanel {
                 cx,
             );
         }))
-        .child(
+        .start_slot::<AnyElement>(
             h_flex()
-                .w_full()
                 .items_center()
                 .gap_1()
                 .child(render_dx_explorer_storage_heat_indicator(item.heat_level))
@@ -4522,42 +4516,42 @@ impl ProjectPanel {
                         .color(Color::Muted)
                         .truncate(),
                 )
-                .child(
-                    div().min_w_0().flex_1().child(
-                        Label::new(item.label)
+                .into_any_element(),
+        )
+        .child(
+            Label::new(item.label)
+                .size(LabelSize::XSmall)
+                .color(Color::Default)
+                .truncate(),
+        )
+        .end_slot::<AnyElement>(
+            h_flex()
+                .gap_1()
+                .justify_end()
+                .overflow_hidden()
+                .when_some(modified_label, |this, modified_label| {
+                    this.child(
+                        Label::new(modified_label)
                             .size(LabelSize::XSmall)
-                            .color(Color::Default)
+                            .color(Color::Muted)
                             .truncate(),
-                    ),
-                )
+                    )
+                })
+                .when(!largest_files.is_empty(), |this| {
+                    this.child(
+                        Label::new(largest_files.join(" / "))
+                            .size(LabelSize::XSmall)
+                            .color(Color::Muted)
+                            .truncate(),
+                    )
+                })
                 .child(
-                    h_flex()
-                        .gap_1()
-                        .justify_end()
-                        .overflow_hidden()
-                        .when_some(modified_label, |this, modified_label| {
-                            this.child(
-                                Label::new(modified_label)
-                                    .size(LabelSize::XSmall)
-                                    .color(Color::Muted)
-                                    .truncate(),
-                            )
-                        })
-                        .when(!largest_files.is_empty(), |this| {
-                            this.child(
-                                Label::new(largest_files.join(" / "))
-                                    .size(LabelSize::XSmall)
-                                    .color(Color::Muted)
-                                    .truncate(),
-                            )
-                        })
-                        .child(
-                            Label::new(format!("{file_count} / {storage_label}"))
-                                .size(LabelSize::XSmall)
-                                .color(Color::Muted)
-                                .truncate(),
-                        ),
-                ),
+                    Label::new(format!("{file_count} / {storage_label}"))
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted)
+                        .truncate(),
+                )
+                .into_any_element(),
         )
         .into_any_element()
     }

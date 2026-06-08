@@ -1147,20 +1147,27 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(renderStorageDrilldownRow, /item\.path_label/);
   assert.match(renderStorageDrilldownRow, /Tooltip::with_meta\("Folder file summary"/);
   assert.match(renderStorageDrilldownRow, /item\s*\.\s*largest_files/);
-  assert.match(renderStorageDrilldownRow, /ButtonLike::new\(/);
-  assert.match(renderStorageDrilldownRow, /\.style\(ButtonStyle::Subtle\)/);
-  assert.match(renderStorageDrilldownRow, /\.selected_style\(ButtonStyle::Tinted\(TintColor::Accent\)\)/);
-  assert.match(renderStorageDrilldownRow, /\.size\(ButtonSize::None\)/);
-  assert.match(renderStorageDrilldownRow, /\.full_width\(\)/);
+  assert.match(
+    renderStorageDrilldownRow,
+    /ListItem::new\(SharedString::from\(format!\([\s\S]*"dx-explorer-storage-drilldown-\{\}-\{\}"[\s\S]*item\.worktree_id\.to_usize\(\),[\s\S]*item\.entry_id\.to_usize\(\)[\s\S]*\)\)\)/,
+    "storage drilldown rows must use stable real-entry ListItem ids",
+  );
+  assert.match(renderStorageDrilldownRow, /\.spacing\(ListItemSpacing::ExtraDense\)/);
   assert.match(renderStorageDrilldownRow, /\.toggle_state\(is_selected\)/);
-  assert.match(renderStorageDrilldownRow, /\.tab_index\(0\)/);
-  assert.match(renderStorageDrilldownRow, /\.track_focus\(&self\.focus_handle\(cx\)\)/);
-  assert.match(renderStorageDrilldownRow, /this\.expand_entry\(target\.worktree_id, target\.entry_id, cx\)/);
-  assert.match(renderStorageDrilldownRow, /\.child\([\s\S]*render_dx_explorer_storage_heat_indicator\(item\.heat_level\)[\s\S]*Label::new\(item\.label\)[\s\S]*Label::new\(format!\("\{file_count\} \/ \{storage_label\}"\)\)/);
+  assert.match(renderStorageDrilldownRow, /\.start_slot::<AnyElement>\(/);
+  assert.match(renderStorageDrilldownRow, /\.end_slot::<AnyElement>\(/);
+  assert.match(
+    renderStorageDrilldownRow,
+    /\.on_click\(cx\.listener\(move \|this, _, window, cx\|[\s\S]*this\.focus_handle\(cx\)\.focus\(window, cx\)[\s\S]*this\.expand_entry\(target\.worktree_id, target\.entry_id, cx\)[\s\S]*this\.update_visible_entries\([\s\S]*Some\(\(target\.worktree_id, target\.entry_id\)\)[\s\S]*true,[\s\S]*window,[\s\S]*cx/,
+    "storage drilldown ListItem clicks must focus, expand, select, and scroll to the real folder",
+  );
+  assert.match(renderStorageDrilldownRow, /\.start_slot::<AnyElement>\([\s\S]*render_dx_explorer_storage_heat_indicator\(item\.heat_level\)[\s\S]*Label::new\(heat_label\)/);
+  assert.match(renderStorageDrilldownRow, /\.child\([\s\S]*Label::new\(item\.label\)[\s\S]*\.truncate\(\)/);
+  assert.match(renderStorageDrilldownRow, /\.end_slot::<AnyElement>\([\s\S]*Label::new\(format!\("\{file_count\} \/ \{storage_label\}"\)\)/);
   assert.doesNotMatch(
     renderStorageDrilldownRow,
-    /ListItem::new|\.spacing\(ListItemSpacing::ExtraDense\)|\.start_slot::<AnyElement>\(|\.end_slot::<AnyElement>\(|cursor_pointer\(\)|\.hover\(/,
-    "storage drilldown rows must use focusable ButtonLike chrome instead of stale ListItem or custom row styling",
+    /ButtonLike::new|\.selected_style\(ButtonStyle::Tinted\(TintColor::Accent\)\)|\.size\(ButtonSize::None\)|\.full_width\(\)|\.tab_index\(0\)|\.track_focus\(&self\.focus_handle\(cx\)\)|cursor_pointer\(\)|\.hover\(/,
+    "storage drilldown rows must use Zed ListItem chrome instead of custom ButtonLike row styling",
   );
 
   assert.match(renderRootStrip, /\.id\("dx-explorer-storage-root-strip"\)/);
