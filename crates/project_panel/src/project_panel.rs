@@ -66,9 +66,9 @@ use std::{
 };
 use theme_settings::ThemeSettings;
 use ui::{
-    ButtonStyle, Chip, Color, ContextMenu, ContextMenuEntry, DecoratedIcon, Icon, IconButtonShape,
-    IconDecoration, IconDecorationKind, IndentGuideColors, IndentGuideLayout, Indicator,
-    KeyBinding, Label, LabelSize, ListHeader, ListItem, ListItemSpacing, PopoverMenu,
+    ButtonStyle, Chip, Color, ContextMenu, ContextMenuEntry, DecoratedIcon, Icon, IconButton,
+    IconButtonShape, IconDecoration, IconDecorationKind, IndentGuideColors, IndentGuideLayout,
+    Indicator, KeyBinding, Label, LabelSize, ListHeader, ListItem, ListItemSpacing, PopoverMenu,
     ProjectEmptyState, ScrollAxes, ScrollableHandle, Scrollbars, StickyCandidate, TintColor,
     Tooltip, WithScrollbar, prelude::*, v_flex,
 };
@@ -4679,347 +4679,330 @@ impl ProjectPanel {
         let new_folder_focus_handle = header_focus_handle.clone();
         let new_folder_tooltip_focus_handle = new_folder_focus_handle.clone();
 
-        h_flex()
+        let header_metrics = h_flex()
+            .min_w_0()
+            .flex_1()
+            .overflow_hidden()
+            .items_center()
+            .gap_1()
+            .child(Self::render_dx_explorer_metric(source_label.to_string()))
+            .child(Self::render_dx_explorer_metric(
+                Self::dx_explorer_count_label(summary.worktree_count, "root", "roots"),
+            ))
+            .child(Self::render_dx_explorer_metric(
+                Self::dx_explorer_count_label(summary.visible_file_count, "file", "files"),
+            ))
+            .child(Self::render_dx_explorer_metric(
+                Self::dx_explorer_count_label(summary.visible_folder_count, "folder", "folders"),
+            ))
+            .child(Self::render_dx_explorer_metric(
+                Self::dx_explorer_count_label(summary.visible_entry_count, "entry", "entries"),
+            ))
+            .when(summary.skipped_entry_count > 0, |this| {
+                this.child(Self::render_dx_explorer_metric(
+                    Self::dx_explorer_count_label(
+                        summary.skipped_entry_count,
+                        "skipped",
+                        "skipped",
+                    ),
+                ))
+            })
+            .when(summary.visible_file_bytes > 0, |this| {
+                this.child(Self::render_dx_explorer_metric(format!(
+                    "{} storage",
+                    storage::format_file_size(summary.visible_file_bytes)
+                )))
+            })
+            .when(summary.selected_entry_count > 0, |this| {
+                this.child(Self::render_dx_explorer_metric(
+                    Self::selected_entries_count_label(summary.selected_entry_count),
+                ))
+            })
+            .when(summary.expanded_dir_count > 0, |this| {
+                this.child(Self::render_dx_explorer_metric(
+                    Self::dx_explorer_count_label(
+                        summary.expanded_dir_count,
+                        "open folder",
+                        "open folders",
+                    ),
+                ))
+            })
+            .when(summary.cached_media_folder_count > 0, |this| {
+                this.child(Self::render_dx_explorer_metric(
+                    Self::dx_explorer_count_label(
+                        summary.cached_media_folder_count,
+                        "media folder",
+                        "media folders",
+                    ),
+                ))
+                .when(summary.cached_media_item_count > 0, |this| {
+                    this.child(Self::render_dx_explorer_metric(
+                        Self::dx_explorer_count_label(
+                            summary.cached_media_item_count,
+                            "media item",
+                            "media items",
+                        ),
+                    ))
+                })
+            });
+
+        let header_controls = h_flex()
+            .flex_none()
+            .items_center()
+            .gap_0p5()
+            .child(
+                h_flex()
+                    .id("dx-explorer-source-controls")
+                    .gap_0p5()
+                    .child(
+                        IconButton::new("dx-explorer-open-project", dx_icon(DxUiIcon::OpenProject))
+                            .shape(IconButtonShape::Square)
+                            .style(ButtonStyle::Subtle)
+                            .icon_size(IconSize::Small)
+                            .tab_index(0)
+                            .track_focus(&open_project_focus_handle)
+                            .tooltip(move |_window, cx| {
+                                Tooltip::for_action_in(
+                                    "Open project",
+                                    &workspace::Open::default(),
+                                    &open_project_focus_handle,
+                                    cx,
+                                )
+                            })
+                            .on_click(move |_, window, cx| {
+                                window
+                                    .dispatch_action(workspace::Open::default().boxed_clone(), cx);
+                            }),
+                    )
+                    .child(
+                        IconButton::new("dx-explorer-open-file", dx_icon(DxUiIcon::OpenFile))
+                            .shape(IconButtonShape::Square)
+                            .style(ButtonStyle::Subtle)
+                            .icon_size(IconSize::Small)
+                            .disabled(!has_worktree)
+                            .when(has_worktree, |button| {
+                                button.tab_index(0).track_focus(&open_file_focus_handle)
+                            })
+                            .tooltip(move |_window, cx| {
+                                Tooltip::for_action_in(
+                                    "Open file",
+                                    &ToggleFileFinder::default(),
+                                    &open_file_tooltip_focus_handle,
+                                    cx,
+                                )
+                            })
+                            .on_click(move |_, window, cx| {
+                                window
+                                    .dispatch_action(ToggleFileFinder::default().boxed_clone(), cx);
+                            }),
+                    ),
+            )
+            .child(
+                h_flex()
+                    .id("dx-explorer-filter-controls")
+                    .gap_0p5()
+                    .child(
+                        IconButton::new(
+                            "dx-explorer-toggle-ignored",
+                            if show_ignored_entries {
+                                IconName::ListX
+                            } else {
+                                IconName::ListFilter
+                            },
+                        )
+                        .shape(IconButtonShape::Square)
+                        .style(ButtonStyle::Subtle)
+                        .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+                        .toggle_state(show_ignored_entries)
+                        .icon_size(IconSize::Small)
+                        .disabled(!has_worktree)
+                        .when(has_worktree, |button| {
+                            button
+                                .tab_index(0)
+                                .track_focus(&toggle_ignored_focus_handle)
+                        })
+                        .tooltip(move |_window, cx| {
+                            Tooltip::for_action_in(
+                                if show_ignored_entries {
+                                    "Hide ignored files"
+                                } else {
+                                    "Show ignored files"
+                                },
+                                &ToggleHideGitIgnore,
+                                &toggle_ignored_tooltip_focus_handle,
+                                cx,
+                            )
+                        })
+                        .on_click(move |_, window, cx| {
+                            window.dispatch_action(ToggleHideGitIgnore.boxed_clone(), cx);
+                        }),
+                    )
+                    .child(
+                        IconButton::new(
+                            "dx-explorer-toggle-hidden",
+                            if show_hidden_entries {
+                                IconName::Eye
+                            } else {
+                                IconName::EyeOff
+                            },
+                        )
+                        .shape(IconButtonShape::Square)
+                        .style(ButtonStyle::Subtle)
+                        .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+                        .toggle_state(show_hidden_entries)
+                        .icon_size(IconSize::Small)
+                        .disabled(!has_worktree)
+                        .when(has_worktree, |button| {
+                            button.tab_index(0).track_focus(&toggle_hidden_focus_handle)
+                        })
+                        .tooltip(move |_window, cx| {
+                            Tooltip::for_action_in(
+                                if show_hidden_entries {
+                                    "Hide hidden files"
+                                } else {
+                                    "Show hidden files"
+                                },
+                                &ToggleHideHidden,
+                                &toggle_hidden_tooltip_focus_handle,
+                                cx,
+                            )
+                        })
+                        .on_click(move |_, window, cx| {
+                            window.dispatch_action(ToggleHideHidden.boxed_clone(), cx);
+                        }),
+                    ),
+            )
+            .child(
+                h_flex()
+                    .id("dx-explorer-view-controls")
+                    .gap_0p5()
+                    .child(
+                        IconButton::new("dx-explorer-project-symbols", IconName::ListTree)
+                            .shape(IconButtonShape::Square)
+                            .style(ButtonStyle::Subtle)
+                            .icon_size(IconSize::Small)
+                            .disabled(!has_worktree)
+                            .when(has_worktree, |button| {
+                                button
+                                    .tab_index(0)
+                                    .track_focus(&project_symbols_focus_handle)
+                            })
+                            .tooltip(move |_window, cx| {
+                                Tooltip::for_action_in(
+                                    "Project symbols",
+                                    &ToggleProjectSymbols,
+                                    &project_symbols_tooltip_focus_handle,
+                                    cx,
+                                )
+                            })
+                            .on_click(move |_, window, cx| {
+                                window.dispatch_action(ToggleProjectSymbols.boxed_clone(), cx);
+                            }),
+                    )
+                    .child(
+                        IconButton::new("dx-explorer-collapse-all", IconName::ListCollapse)
+                            .shape(IconButtonShape::Square)
+                            .style(ButtonStyle::Subtle)
+                            .icon_size(IconSize::Small)
+                            .disabled(!has_worktree)
+                            .when(has_worktree, |button| {
+                                button.tab_index(0).track_focus(&collapse_all_focus_handle)
+                            })
+                            .tooltip(move |_window, cx| {
+                                Tooltip::for_action_in(
+                                    "Collapse all",
+                                    &CollapseAllEntries,
+                                    &collapse_all_tooltip_focus_handle,
+                                    cx,
+                                )
+                            })
+                            .on_click(cx.listener(|this, _, window, cx| {
+                                this.focus_handle(cx).focus(window, cx);
+                                this.collapse_all_entries(&CollapseAllEntries, window, cx);
+                            })),
+                    ),
+            )
+            .child(
+                h_flex()
+                    .id("dx-explorer-edit-controls")
+                    .gap_0p5()
+                    .child(
+                        IconButton::new("dx-explorer-new-file", IconName::File)
+                            .shape(IconButtonShape::Square)
+                            .style(ButtonStyle::Subtle)
+                            .icon_size(IconSize::Small)
+                            .disabled(is_read_only || !has_worktree)
+                            .when(!is_read_only && has_worktree, |button| {
+                                button.tab_index(0).track_focus(&new_file_focus_handle)
+                            })
+                            .tooltip(move |_window, cx| {
+                                Tooltip::for_action_in(
+                                    "New file",
+                                    &NewFile,
+                                    &new_file_tooltip_focus_handle,
+                                    cx,
+                                )
+                            })
+                            .on_click(cx.listener(|this, _, window, cx| {
+                                this.focus_handle(cx).focus(window, cx);
+                                this.new_file(&NewFile, window, cx);
+                            })),
+                    )
+                    .child(
+                        IconButton::new("dx-explorer-new-folder", IconName::FolderOpenAdd)
+                            .shape(IconButtonShape::Square)
+                            .style(ButtonStyle::Subtle)
+                            .icon_size(IconSize::Small)
+                            .disabled(is_read_only || !has_worktree)
+                            .when(!is_read_only && has_worktree, |button| {
+                                button.tab_index(0).track_focus(&new_folder_focus_handle)
+                            })
+                            .tooltip(move |_window, cx| {
+                                Tooltip::for_action_in(
+                                    "New folder",
+                                    &NewDirectory,
+                                    &new_folder_tooltip_focus_handle,
+                                    cx,
+                                )
+                            })
+                            .on_click(cx.listener(|this, _, window, cx| {
+                                this.focus_handle(cx).focus(window, cx);
+                                this.new_directory(&NewDirectory, window, cx);
+                            })),
+                    ),
+            )
+            .child(side_panel_header_controls(
+                "dx-explorer",
+                self.workspace.clone(),
+                cx.entity().entity_id(),
+                cx,
+            ));
+
+        v_flex()
             .id("dx-explorer-header")
             .w_full()
-            .items_center()
-            .justify_between()
-            .gap_2()
             .px_2()
             .py_1()
             .border_b_1()
             .border_color(cx.theme().colors().border.opacity(0.6))
             .bg(cx.theme().colors().panel_background)
             .child(
-                h_flex()
-                    .min_w_0()
-                    .flex_1()
-                    .overflow_hidden()
-                    .items_center()
-                    .gap_1()
-                    .child(
+                ListHeader::new("DX Explorer")
+                    .start_slot(
                         Icon::new(dx_icon(DxUiIcon::Project))
-                            .size(IconSize::Small)
+                            .size(IconSize::XSmall)
                             .color(Color::Accent),
                     )
-                    .child(Label::new("DX Explorer").size(LabelSize::Small))
-                    .child(Self::render_dx_explorer_metric(source_label.to_string()))
-                    .child(Self::render_dx_explorer_metric(
-                        Self::dx_explorer_count_label(summary.worktree_count, "root", "roots"),
-                    ))
-                    .child(Self::render_dx_explorer_metric(
-                        Self::dx_explorer_count_label(summary.visible_file_count, "file", "files"),
-                    ))
-                    .child(Self::render_dx_explorer_metric(
-                        Self::dx_explorer_count_label(
-                            summary.visible_folder_count,
-                            "folder",
-                            "folders",
-                        ),
-                    ))
-                    .child(Self::render_dx_explorer_metric(
-                        Self::dx_explorer_count_label(
-                            summary.visible_entry_count,
-                            "entry",
-                            "entries",
-                        ),
-                    ))
-                    .when(summary.skipped_entry_count > 0, |this| {
-                        this.child(Self::render_dx_explorer_metric(
-                            Self::dx_explorer_count_label(
-                                summary.skipped_entry_count,
-                                "skipped",
-                                "skipped",
-                            ),
-                        ))
-                    })
-                    .when(summary.visible_file_bytes > 0, |this| {
-                        this.child(Self::render_dx_explorer_metric(format!(
-                            "{} storage",
-                            storage::format_file_size(summary.visible_file_bytes)
-                        )))
-                    })
-                    .when(summary.selected_entry_count > 0, |this| {
-                        this.child(Self::render_dx_explorer_metric(
-                            Self::selected_entries_count_label(summary.selected_entry_count),
-                        ))
-                    })
-                    .when(summary.expanded_dir_count > 0, |this| {
-                        this.child(Self::render_dx_explorer_metric(
-                            Self::dx_explorer_count_label(
-                                summary.expanded_dir_count,
-                                "open folder",
-                                "open folders",
-                            ),
-                        ))
-                    })
-                    .when(summary.cached_media_folder_count > 0, |this| {
-                        this.child(Self::render_dx_explorer_metric(
-                            Self::dx_explorer_count_label(
-                                summary.cached_media_folder_count,
-                                "media folder",
-                                "media folders",
-                            ),
-                        ))
-                        .when(
-                            summary.cached_media_item_count > 0,
-                            |this| {
-                                this.child(Self::render_dx_explorer_metric(
-                                    Self::dx_explorer_count_label(
-                                        summary.cached_media_item_count,
-                                        "media item",
-                                        "media items",
-                                    ),
-                                ))
-                            },
-                        )
-                    }),
-            )
-            .child(
-                h_flex()
-                    .flex_none()
-                    .items_center()
-                    .gap_0p5()
-                    .child(
+                    .end_slot::<AnyElement>(
                         h_flex()
-                            .id("dx-explorer-source-controls")
-                            .gap_0p5()
-                            .child(
-                                IconButton::new(
-                                    "dx-explorer-open-project",
-                                    dx_icon(DxUiIcon::OpenProject),
-                                )
-                                .shape(IconButtonShape::Square)
-                                .style(ButtonStyle::Subtle)
-                                .icon_size(IconSize::Small)
-                                .tab_index(0)
-                                .track_focus(&open_project_focus_handle)
-                                .tooltip(move |_window, cx| {
-                                    Tooltip::for_action_in(
-                                        "Open project",
-                                        &workspace::Open::default(),
-                                        &open_project_focus_handle,
-                                        cx,
-                                    )
-                                })
-                                .on_click(move |_, window, cx| {
-                                    window.dispatch_action(
-                                        workspace::Open::default().boxed_clone(),
-                                        cx,
-                                    );
-                                }),
-                            )
-                            .child(
-                                IconButton::new(
-                                    "dx-explorer-open-file",
-                                    dx_icon(DxUiIcon::OpenFile),
-                                )
-                                .shape(IconButtonShape::Square)
-                                .style(ButtonStyle::Subtle)
-                                .icon_size(IconSize::Small)
-                                .disabled(!has_worktree)
-                                .when(has_worktree, |button| {
-                                    button.tab_index(0).track_focus(&open_file_focus_handle)
-                                })
-                                .tooltip(move |_window, cx| {
-                                    Tooltip::for_action_in(
-                                        "Open file",
-                                        &ToggleFileFinder::default(),
-                                        &open_file_tooltip_focus_handle,
-                                        cx,
-                                    )
-                                })
-                                .on_click(move |_, window, cx| {
-                                    window.dispatch_action(
-                                        ToggleFileFinder::default().boxed_clone(),
-                                        cx,
-                                    );
-                                }),
-                            ),
-                    )
-                    .child(
-                        h_flex()
-                            .id("dx-explorer-filter-controls")
-                            .gap_0p5()
-                            .child(
-                                IconButton::new(
-                                    "dx-explorer-toggle-ignored",
-                                    if show_ignored_entries {
-                                        IconName::ListX
-                                    } else {
-                                        IconName::ListFilter
-                                    },
-                                )
-                                .shape(IconButtonShape::Square)
-                                .style(ButtonStyle::Subtle)
-                                .selected_style(ButtonStyle::Tinted(TintColor::Accent))
-                                .toggle_state(show_ignored_entries)
-                                .icon_size(IconSize::Small)
-                                .disabled(!has_worktree)
-                                .when(has_worktree, |button| {
-                                    button
-                                        .tab_index(0)
-                                        .track_focus(&toggle_ignored_focus_handle)
-                                })
-                                .tooltip(move |_window, cx| {
-                                    Tooltip::for_action_in(
-                                        if show_ignored_entries {
-                                            "Hide ignored files"
-                                        } else {
-                                            "Show ignored files"
-                                        },
-                                        &ToggleHideGitIgnore,
-                                        &toggle_ignored_tooltip_focus_handle,
-                                        cx,
-                                    )
-                                })
-                                .on_click(move |_, window, cx| {
-                                    window.dispatch_action(ToggleHideGitIgnore.boxed_clone(), cx);
-                                }),
-                            )
-                            .child(
-                                IconButton::new(
-                                    "dx-explorer-toggle-hidden",
-                                    if show_hidden_entries {
-                                        IconName::Eye
-                                    } else {
-                                        IconName::EyeOff
-                                    },
-                                )
-                                .shape(IconButtonShape::Square)
-                                .style(ButtonStyle::Subtle)
-                                .selected_style(ButtonStyle::Tinted(TintColor::Accent))
-                                .toggle_state(show_hidden_entries)
-                                .icon_size(IconSize::Small)
-                                .disabled(!has_worktree)
-                                .when(has_worktree, |button| {
-                                    button.tab_index(0).track_focus(&toggle_hidden_focus_handle)
-                                })
-                                .tooltip(move |_window, cx| {
-                                    Tooltip::for_action_in(
-                                        if show_hidden_entries {
-                                            "Hide hidden files"
-                                        } else {
-                                            "Show hidden files"
-                                        },
-                                        &ToggleHideHidden,
-                                        &toggle_hidden_tooltip_focus_handle,
-                                        cx,
-                                    )
-                                })
-                                .on_click(move |_, window, cx| {
-                                    window.dispatch_action(ToggleHideHidden.boxed_clone(), cx);
-                                }),
-                            ),
-                    )
-                    .child(
-                        h_flex()
-                            .id("dx-explorer-view-controls")
-                            .gap_0p5()
-                            .child(
-                                IconButton::new("dx-explorer-project-symbols", IconName::ListTree)
-                                    .shape(IconButtonShape::Square)
-                                    .style(ButtonStyle::Subtle)
-                                    .icon_size(IconSize::Small)
-                                    .disabled(!has_worktree)
-                                    .when(has_worktree, |button| {
-                                        button
-                                            .tab_index(0)
-                                            .track_focus(&project_symbols_focus_handle)
-                                    })
-                                    .tooltip(move |_window, cx| {
-                                        Tooltip::for_action_in(
-                                            "Project symbols",
-                                            &ToggleProjectSymbols,
-                                            &project_symbols_tooltip_focus_handle,
-                                            cx,
-                                        )
-                                    })
-                                    .on_click(move |_, window, cx| {
-                                        window.dispatch_action(
-                                            ToggleProjectSymbols.boxed_clone(),
-                                            cx,
-                                        );
-                                    }),
-                            )
-                            .child(
-                                IconButton::new("dx-explorer-collapse-all", IconName::ListCollapse)
-                                    .shape(IconButtonShape::Square)
-                                    .style(ButtonStyle::Subtle)
-                                    .icon_size(IconSize::Small)
-                                    .disabled(!has_worktree)
-                                    .when(has_worktree, |button| {
-                                        button.tab_index(0).track_focus(&collapse_all_focus_handle)
-                                    })
-                                    .tooltip(move |_window, cx| {
-                                        Tooltip::for_action_in(
-                                            "Collapse all",
-                                            &CollapseAllEntries,
-                                            &collapse_all_tooltip_focus_handle,
-                                            cx,
-                                        )
-                                    })
-                                    .on_click(cx.listener(|this, _, window, cx| {
-                                        this.focus_handle(cx).focus(window, cx);
-                                        this.collapse_all_entries(&CollapseAllEntries, window, cx);
-                                    })),
-                            ),
-                    )
-                    .child(
-                        h_flex()
-                            .id("dx-explorer-edit-controls")
-                            .gap_0p5()
-                            .child(
-                                IconButton::new("dx-explorer-new-file", IconName::File)
-                                    .shape(IconButtonShape::Square)
-                                    .style(ButtonStyle::Subtle)
-                                    .icon_size(IconSize::Small)
-                                    .disabled(is_read_only || !has_worktree)
-                                    .when(!is_read_only && has_worktree, |button| {
-                                        button.tab_index(0).track_focus(&new_file_focus_handle)
-                                    })
-                                    .tooltip(move |_window, cx| {
-                                        Tooltip::for_action_in(
-                                            "New file",
-                                            &NewFile,
-                                            &new_file_tooltip_focus_handle,
-                                            cx,
-                                        )
-                                    })
-                                    .on_click(cx.listener(|this, _, window, cx| {
-                                        this.focus_handle(cx).focus(window, cx);
-                                        this.new_file(&NewFile, window, cx);
-                                    })),
-                            )
-                            .child(
-                                IconButton::new("dx-explorer-new-folder", IconName::FolderOpenAdd)
-                                    .shape(IconButtonShape::Square)
-                                    .style(ButtonStyle::Subtle)
-                                    .icon_size(IconSize::Small)
-                                    .disabled(is_read_only || !has_worktree)
-                                    .when(!is_read_only && has_worktree, |button| {
-                                        button.tab_index(0).track_focus(&new_folder_focus_handle)
-                                    })
-                                    .tooltip(move |_window, cx| {
-                                        Tooltip::for_action_in(
-                                            "New folder",
-                                            &NewDirectory,
-                                            &new_folder_tooltip_focus_handle,
-                                            cx,
-                                        )
-                                    })
-                                    .on_click(cx.listener(|this, _, window, cx| {
-                                        this.focus_handle(cx).focus(window, cx);
-                                        this.new_directory(&NewDirectory, window, cx);
-                                    })),
-                            ),
-                    )
-                    .child(side_panel_header_controls(
-                        "dx-explorer",
-                        self.workspace.clone(),
-                        cx.entity().entity_id(),
-                        cx,
-                    )),
+                            .id("dx-explorer-header-actions")
+                            .min_w_0()
+                            .items_center()
+                            .gap_1()
+                            .child(header_metrics)
+                            .child(header_controls)
+                            .into_any_element(),
+                    ),
             )
             .into_any_element()
     }

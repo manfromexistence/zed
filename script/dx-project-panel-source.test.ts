@@ -160,7 +160,7 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-header"\)/);
   assert.match(renderDxExplorerHeader, /ProjectPanelSettings::get_global\(cx\)/);
   assert.match(renderDxExplorerHeader, /dx_icon\(DxUiIcon::Project\)/);
-  assert.match(renderDxExplorerHeader, /Label::new\("DX Explorer"\)/);
+  assert.match(renderDxExplorerHeader, /ListHeader::new\("DX Explorer"\)/);
   assert.match(renderDxExplorerHeader, /let source_label = summary\.source_kind\.label\(\);/);
   assert.doesNotMatch(renderDxExplorerHeader, /source_label = if is_read_only/);
   assert.match(source, /Self::LocalWorkspace => "Local source"/);
@@ -172,6 +172,16 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   assert.match(renderDxExplorerHeader, /summary\.visible_folder_count/);
   assert.match(renderDxExplorerHeader, /storage::format_file_size\(summary\.visible_file_bytes\)/);
   assert.match(renderDxExplorerHeader, /summary\.cached_media_item_count/);
+  assert.match(
+    renderDxExplorerHeader,
+    /\.child\(\s*ListHeader::new\("DX Explorer"\)[\s\S]*\.start_slot\([\s\S]*Icon::new\(dx_icon\(DxUiIcon::Project\)\)[\s\S]*\.end_slot::<AnyElement>\([\s\S]*\.id\("dx-explorer-header-actions"\)/,
+    "DX Explorer top chrome should use the shared ListHeader component with real action slots",
+  );
+  assert.doesNotMatch(
+    renderDxExplorerHeader,
+    /h_flex\(\)[\s\S]*\.child\(\s*Icon::new\(dx_icon\(DxUiIcon::Project\)\)[\s\S]*\.child\(Label::new\("DX Explorer"\)/,
+    "DX Explorer header should not rebuild shared ListHeader chrome by hand",
+  );
   assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-source-controls"\)/);
   assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-filter-controls"\)/);
   assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-view-controls"\)/);
