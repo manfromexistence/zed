@@ -707,6 +707,11 @@ test("Windows Web Preview favicon updates are bounded and page-scoped", () => {
   const startEventPump = functionBody(source, "start_event_pump");
   const applyBrowserEvents = functionBody(source, "apply_browser_events");
   const handleIpc = functionBody(source, "handle_ipc_message");
+  const coalesceBrowserEvent = functionBody(source, "coalesce_browser_event");
+  const navigationCompletionMatch = functionBody(
+    source,
+    "navigation_completion_matches_active_navigation",
+  );
   const renderStart = source.indexOf("impl Render for WebPreviewView");
   assert.ok(renderStart >= 0, "expected Web Preview render impl");
   const render = functionBody(source.slice(renderStart), "render");
@@ -837,6 +842,19 @@ test("Windows Web Preview favicon updates are bounded and page-scoped", () => {
   assert.match(source, /active_browser_navigation_id: Option<u64>/);
   assert.match(source, /last_completed_browser_navigation_id: Option<u64>/);
   assert.match(source, /fn navigation_completion_matches_active_navigation/);
+  assert.match(
+    navigationCompletionMatch,
+    /if let Some\(navigation_id\) = navigation_id \{[\s\S]*if let Some\(active_navigation_id\) = self\.active_browser_navigation_id \{[\s\S]*return navigation_id == active_navigation_id;[\s\S]*if matches!\(self\.load_state, PreviewLoadState::Loading\) \{[\s\S]*return false;[\s\S]*if let Some\(last_completed_navigation_id\) = self\.last_completed_browser_navigation_id \{[\s\S]*return navigation_id == last_completed_navigation_id;[\s\S]*return false;/,
+  );
+  assert.match(navigationCompletionMatch, /if self\.active_browser_navigation_id\.is_some\(\) \{[\s\S]*return false;/);
+  assert.match(
+    coalesceBrowserEvent,
+    /BrowserEvent::NavigationCompleted \{ navigation_id, \.\. \} => \{[\s\S]*BrowserEvent::NavigationCompleted \{[\s\S]*navigation_id: queued_navigation_id,[\s\S]*\.\.[\s\S]*\} if queued_navigation_id == navigation_id/,
+  );
+  assert.doesNotMatch(
+    coalesceBrowserEvent,
+    /BrowserEvent::NavigationCompleted \{ \.\. \} => \{[\s\S]*queue\.retain\(\|queued\| !matches!\(queued, BrowserEvent::NavigationCompleted \{ \.\. \}\)\)/,
+  );
   assert.match(source, /fn browser_event_url_matches_active_url/);
   assert.match(handleIpc, /"favicon-uri" => \{/);
   assert.match(handleIpc, /payload\.get\("page_url"\)\.and_then\(Value::as_str\)/);

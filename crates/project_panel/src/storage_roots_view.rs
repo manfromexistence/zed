@@ -4,7 +4,7 @@ use gpui::{
 };
 use ui::{
     ButtonLike, ButtonSize, ButtonStyle, Color, DxUiIcon, Icon, IconSize, Label, LabelSize,
-    Tooltip, dx_icon, prelude::*, v_flex,
+    ListHeader, Tooltip, dx_icon, prelude::*, v_flex,
 };
 use util::ResultExt;
 
@@ -38,19 +38,8 @@ pub(crate) fn render_storage_root_strip(
             .border_color(cx.theme().colors().border.opacity(0.6))
             .bg(cx.theme().colors().panel_background)
             .child(
-                h_flex()
-                    .items_center()
-                    .gap_1()
-                    .child(
-                        Icon::new(dx_icon(DxUiIcon::Storage))
-                            .size(IconSize::XSmall)
-                            .color(Color::Muted),
-                    )
-                    .child(
-                        Label::new("Storage roots")
-                            .size(LabelSize::XSmall)
-                            .color(Color::Muted),
-                    ),
+                ListHeader::new("Storage roots")
+                    .start_slot(Icon::new(dx_icon(DxUiIcon::Storage)).size(IconSize::XSmall)),
             )
             .child(
                 div()

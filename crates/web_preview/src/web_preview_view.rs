@@ -1498,8 +1498,24 @@ impl WebPreviewView {
         navigation_id: Option<u64>,
         url: Option<&str>,
     ) -> bool {
-        if let Some(active_navigation_id) = self.active_browser_navigation_id {
-            return navigation_id == Some(active_navigation_id);
+        if let Some(navigation_id) = navigation_id {
+            if let Some(active_navigation_id) = self.active_browser_navigation_id {
+                return navigation_id == active_navigation_id;
+            }
+
+            if matches!(self.load_state, PreviewLoadState::Loading) {
+                return false;
+            }
+
+            if let Some(last_completed_navigation_id) = self.last_completed_browser_navigation_id {
+                return navigation_id == last_completed_navigation_id;
+            }
+
+            return false;
+        }
+
+        if self.active_browser_navigation_id.is_some() {
+            return false;
         }
 
         if matches!(self.load_state, PreviewLoadState::Loading)
@@ -36570,8 +36586,16 @@ fn coalesce_browser_event(queue: &mut Vec<BrowserEvent>, event: &BrowserEvent) {
                 )
             });
         }
-        BrowserEvent::NavigationCompleted { .. } => {
-            queue.retain(|queued| !matches!(queued, BrowserEvent::NavigationCompleted { .. }));
+        BrowserEvent::NavigationCompleted { navigation_id, .. } => {
+            queue.retain(|queued| {
+                !matches!(
+                    queued,
+                    BrowserEvent::NavigationCompleted {
+                        navigation_id: queued_navigation_id,
+                        ..
+                    } if queued_navigation_id == navigation_id
+                )
+            });
         }
         BrowserEvent::MountFailed(_) => {
             queue.retain(|queued| !matches!(queued, BrowserEvent::MountFailed(_)));

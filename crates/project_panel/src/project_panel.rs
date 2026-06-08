@@ -66,11 +66,11 @@ use std::{
 };
 use theme_settings::ThemeSettings;
 use ui::{
-    Chip, Color, ContextMenu, ContextMenuEntry, DecoratedIcon, Icon, IconButtonShape,
-    IconDecoration, IconDecorationKind, IndentGuideColors, IndentGuideLayout, Indicator,
-    KeyBinding, Label, LabelSize, ListHeader, ListItem, ListItemSpacing, PopoverMenu,
-    ProjectEmptyState, ScrollAxes, ScrollableHandle, Scrollbars, StickyCandidate, TintColor,
-    Tooltip, WithScrollbar, prelude::*, v_flex,
+    ButtonLike, ButtonSize, ButtonStyle, Chip, Color, ContextMenu, ContextMenuEntry, DecoratedIcon,
+    Icon, IconButtonShape, IconDecoration, IconDecorationKind, IndentGuideColors,
+    IndentGuideLayout, Indicator, KeyBinding, Label, LabelSize, ListHeader, ListItem,
+    ListItemSpacing, PopoverMenu, ProjectEmptyState, ScrollAxes, ScrollableHandle, Scrollbars,
+    StickyCandidate, TintColor, Tooltip, WithScrollbar, prelude::*, v_flex,
 };
 use util::{
     ResultExt, TakeUntilExt, TryFutureExt,
@@ -4484,13 +4484,18 @@ impl ProjectPanel {
             )
         };
 
-        ListItem::new(SharedString::from(format!(
+        ButtonLike::new(SharedString::from(format!(
             "dx-explorer-storage-drilldown-{}-{}",
             item.worktree_id.to_usize(),
             item.entry_id.to_usize()
         )))
-        .spacing(ListItemSpacing::ExtraDense)
+        .style(ButtonStyle::Subtle)
+        .selected_style(ButtonStyle::Tinted(TintColor::Accent))
+        .size(ButtonSize::None)
+        .full_width()
         .toggle_state(is_selected)
+        .tab_index(0)
+        .track_focus(&self.focus_handle(cx))
         .tooltip(move |_window, cx| {
             Tooltip::with_meta("Folder file summary", None, tooltip.clone(), cx)
         })
@@ -4505,8 +4510,10 @@ impl ProjectPanel {
                 cx,
             );
         }))
-        .start_slot::<AnyElement>(
+        .child(
             h_flex()
+                .w_full()
+                .items_center()
                 .gap_1()
                 .child(render_dx_explorer_storage_heat_indicator(item.heat_level))
                 .child(
@@ -4515,40 +4522,42 @@ impl ProjectPanel {
                         .color(Color::Muted)
                         .truncate(),
                 )
-                .into_any_element(),
-        )
-        .child(
-            Label::new(item.label)
-                .size(LabelSize::XSmall)
-                .color(Color::Default)
-                .truncate(),
-        )
-        .end_slot::<AnyElement>(
-            h_flex()
-                .gap_1()
-                .when_some(modified_label, |this, modified_label| {
-                    this.child(
-                        Label::new(modified_label)
-                            .size(LabelSize::XSmall)
-                            .color(Color::Muted)
-                            .truncate(),
-                    )
-                })
-                .when(!largest_files.is_empty(), |this| {
-                    this.child(
-                        Label::new(largest_files.join(" / "))
-                            .size(LabelSize::XSmall)
-                            .color(Color::Muted)
-                            .truncate(),
-                    )
-                })
                 .child(
-                    Label::new(format!("{file_count} / {storage_label}"))
-                        .size(LabelSize::XSmall)
-                        .color(Color::Muted)
-                        .truncate(),
+                    div().min_w_0().flex_1().child(
+                        Label::new(item.label)
+                            .size(LabelSize::XSmall)
+                            .color(Color::Default)
+                            .truncate(),
+                    ),
                 )
-                .into_any_element(),
+                .child(
+                    h_flex()
+                        .gap_1()
+                        .justify_end()
+                        .overflow_hidden()
+                        .when_some(modified_label, |this, modified_label| {
+                            this.child(
+                                Label::new(modified_label)
+                                    .size(LabelSize::XSmall)
+                                    .color(Color::Muted)
+                                    .truncate(),
+                            )
+                        })
+                        .when(!largest_files.is_empty(), |this| {
+                            this.child(
+                                Label::new(largest_files.join(" / "))
+                                    .size(LabelSize::XSmall)
+                                    .color(Color::Muted)
+                                    .truncate(),
+                            )
+                        })
+                        .child(
+                            Label::new(format!("{file_count} / {storage_label}"))
+                                .size(LabelSize::XSmall)
+                                .color(Color::Muted)
+                                .truncate(),
+                        ),
+                ),
         )
         .into_any_element()
     }

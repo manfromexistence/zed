@@ -479,7 +479,7 @@ fn media_shelf_card_container(
     )))
     .full_width()
     .height(px(PROJECT_PANEL_MEDIA_SHELF_CARD_TOTAL_HEIGHT).into())
-    .style(ButtonStyle::Subtle)
+    .style(ButtonStyle::OutlinedGhost)
     .selected_style(ButtonStyle::Tinted(TintColor::Accent))
     .toggle_state(is_selected)
     .size(ButtonSize::None)
@@ -578,22 +578,37 @@ fn render_media_shelf_card_body(item: &MediaPreviewItem, cx: &mut App) -> Div {
             .flex()
             .items_center()
             .justify_center()
-            .gap_1()
             .px_2()
-            .child(
-                Icon::new(IconName::AudioOn)
-                    .size(IconSize::Small)
-                    .color(Color::Muted),
-            )
-            .child(
-                Label::new(item.name.clone())
-                    .size(LabelSize::XSmall)
-                    .color(Color::Default)
-                    .buffer_font(cx)
-                    .single_line()
-                    .truncate(),
-            ),
+            .child(audio_media_label(&item.name, IconSize::Small, cx)),
     }
+}
+
+fn audio_media_label(name: &str, icon_size: IconSize, cx: &mut App) -> Div {
+    let colors = cx.theme().colors();
+
+    h_flex()
+        .max_w_full()
+        .items_center()
+        .justify_center()
+        .gap_1()
+        .rounded_sm()
+        .bg(colors.editor_background.opacity(0.78))
+        .px_1p5()
+        .py_0p5()
+        .shadow_sm()
+        .child(
+            Icon::new(IconName::AudioOn)
+                .size(icon_size)
+                .color(Color::Accent),
+        )
+        .child(
+            Label::new(name.to_string())
+                .size(LabelSize::XSmall)
+                .color(Color::Default)
+                .buffer_font(cx)
+                .single_line()
+                .truncate(),
+        )
 }
 
 fn media_shelf_name_overlay(name: &str, cx: &mut App) -> Div {
@@ -689,28 +704,7 @@ fn media_gallery_card_container(
             .items_center()
             .justify_center()
             .px_1()
-            .child(
-                Label::new(item.name.clone())
-                    .size(LabelSize::XSmall)
-                    .color(Color::Default)
-                    .buffer_font(cx)
-                    .single_line()
-                    .truncate(),
-            )
-            .child(
-                div()
-                    .absolute()
-                    .left_1()
-                    .bottom_1()
-                    .rounded_full()
-                    .bg(colors.editor_background.opacity(0.55))
-                    .p_0p5()
-                    .child(
-                        Icon::new(IconName::AudioOn)
-                            .size(IconSize::XSmall)
-                            .color(Color::Muted),
-                    ),
-            ),
+            .child(audio_media_label(&item.name, IconSize::XSmall, cx)),
     };
 
     div()

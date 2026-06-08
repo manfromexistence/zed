@@ -1,19 +1,27 @@
-[2026-06-09] - Rainbow Glow Identity Polish
+[2026-06-09] - Web Preview Completion And Project Panel Focus
 
 CHANGED:
-- `crates\ui\src\components\dx_rainbow_glow.rs` now samples the DX HelloGlow palette stops with a 25-stripe GPUI cadence instead of using generic synthetic HSL.
-- `crates\editor\src\rainbow_caret.rs` now canonicalizes animated caret contrast-cache colors to deterministic bucket centers and uses finer fixed buckets for smoother hue changes.
-- `crates\editor\src\element.rs` now animates rainbow carets only while the editor focus handle contains focus; visible unfocused editors keep a static reduced-motion rainbow caret.
-- `script\dx-editor-power-rainbow-source.test.ts` now guards palette sampling, bucket canonicalization, focus-gated animation, and scoped no-`cursor_blink` coupling.
+- `crates\web_preview\src\web_preview_view.rs` now keeps queued native navigation completions distinct by navigation id, rejects stale identified completions after newer navigation state is known, and ignores previous completion ids while a newer load is active.
+- `script\web-preview-platform-lifecycle.test.ts` now guards same-id completion coalescing and stale identified completion rejection.
+- `crates\project_panel\src\media_preview.rs` now keeps media shelf cards on focusable `ButtonLike` chrome with a visible outer focus border.
+- `crates\project_panel\src\media_preview.rs` now renders audio media names and glyphs on a high-contrast editor-background plate over deterministic gradients.
+- `script\dx-project-panel-source.test.ts` now guards the media shelf card focus-visible ButtonLike contract.
+- `crates\project_panel\src\project_panel.rs` now renders storage drilldown rows as focusable `ButtonLike` controls with shared selected-state styling while preserving real folder expansion.
+- `crates\project_panel\src\storage_roots_view.rs` now uses the shared `ListHeader` chrome for the storage-root strip heading.
+- `script\dx-project-panel-source.test.ts` now guards the storage drilldown `ButtonLike` row contract, shared storage-root strip header, and audio-card readability plate.
+- `crates\editor\src\element.rs` now only animates rainbow caret motion while the editor focus handle contains focus, falling back to reduced motion otherwise.
+- `crates\ui\src\components\dx_rainbow_glow.rs` now samples the rainbow wash with 25 stripes, and `crates\editor\src\rainbow_caret.rs` uses 240 fixed contrast-cache buckets for smoother animated caret color reuse without unbounded cache growth.
+- `script\dx-editor-power-rainbow-source.test.ts` now guards those bounded rainbow visual quality constants.
 
 PASSED:
-- `node --test script/dx-editor-power-rainbow-source.test.ts`
-- `rustfmt --edition 2024 --check crates/editor/src/element.rs crates/editor/src/rainbow_caret.rs crates/ui/src/components/dx_rainbow_glow.rs`
+- `node --test script\dx-project-panel-source.test.ts`
+- `node --test script\web-preview-platform-lifecycle.test.ts script\dx-editor-power-rainbow-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check crates\project_panel\src\project_panel.rs crates\project_panel\src\storage_roots_view.rs crates\project_panel\src\media_preview.rs crates\editor\src\element.rs crates\editor\src\rainbow_caret.rs crates\ui\src\components\dx_rainbow_glow.rs crates\web_preview\src\web_preview_view.rs`
 - `git diff --check`
 
 NOTES:
-- Six GPT-5.5 extra-high subagent audits covered cache correctness, GPUI paint lifecycle, HelloGlow/helper fidelity, reduced-motion settings, source-guard/docs hygiene, and render-path performance.
-- Source-only by instruction. Cargo, build, `just run`, native Zed launch, local servers, runtime visual proof, and WebView proof remain deferred.
+- Focused source audits covered Project Panel GPUI focus behavior, rainbow caret paint behavior, Web Preview navigation identity, source-guard consistency, handoff wording, and git hygiene.
+- Source-only by instruction. Cargo, build, `just run`, native Zed launch, local servers, WebView runtime proof, and visual proof remain deferred.
 
 [2026-06-09] - Web Preview Favicon Navigation Safety
 

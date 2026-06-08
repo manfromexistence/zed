@@ -1145,15 +1145,20 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(renderStorageDrilldownRow, /item\.path_label/);
   assert.match(renderStorageDrilldownRow, /Tooltip::with_meta\("Folder file summary"/);
   assert.match(renderStorageDrilldownRow, /item\s*\.\s*largest_files/);
-  assert.match(renderStorageDrilldownRow, /ListItem::new\(/);
-  assert.match(renderStorageDrilldownRow, /\.spacing\(ListItemSpacing::ExtraDense\)/);
+  assert.match(renderStorageDrilldownRow, /ButtonLike::new\(/);
+  assert.match(renderStorageDrilldownRow, /\.style\(ButtonStyle::Subtle\)/);
+  assert.match(renderStorageDrilldownRow, /\.selected_style\(ButtonStyle::Tinted\(TintColor::Accent\)\)/);
+  assert.match(renderStorageDrilldownRow, /\.size\(ButtonSize::None\)/);
+  assert.match(renderStorageDrilldownRow, /\.full_width\(\)/);
   assert.match(renderStorageDrilldownRow, /\.toggle_state\(is_selected\)/);
-  assert.match(renderStorageDrilldownRow, /\.start_slot::<AnyElement>\(/);
-  assert.match(renderStorageDrilldownRow, /\.end_slot::<AnyElement>\(/);
+  assert.match(renderStorageDrilldownRow, /\.tab_index\(0\)/);
+  assert.match(renderStorageDrilldownRow, /\.track_focus\(&self\.focus_handle\(cx\)\)/);
+  assert.match(renderStorageDrilldownRow, /this\.expand_entry\(target\.worktree_id, target\.entry_id, cx\)/);
+  assert.match(renderStorageDrilldownRow, /\.child\([\s\S]*render_dx_explorer_storage_heat_indicator\(item\.heat_level\)[\s\S]*Label::new\(item\.label\)[\s\S]*Label::new\(format!\("\{file_count\} \/ \{storage_label\}"\)\)/);
   assert.doesNotMatch(
     renderStorageDrilldownRow,
-    /\.border_1\(\)|border_variant|element_background|cursor_pointer\(\)|\.hover\(/,
-    "storage drilldown rows must use Zed ListItem row chrome instead of custom row styling",
+    /ListItem::new|\.spacing\(ListItemSpacing::ExtraDense\)|\.start_slot::<AnyElement>\(|\.end_slot::<AnyElement>\(|cursor_pointer\(\)|\.hover\(/,
+    "storage drilldown rows must use focusable ButtonLike chrome instead of stale ListItem or custom row styling",
   );
 
   assert.match(renderRootStrip, /\.id\("dx-explorer-storage-root-strip"\)/);
@@ -1173,8 +1178,11 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(source, /if !this\.storage_root_shortcuts_allowed\(cx\) \{[\s\S]*this\.storage_root_shortcuts\.clear\(\);[\s\S]*cx\.notify\(\);[\s\S]*return;[\s\S]*\}/);
   assert.match(source, /fn open_dx_explorer_storage_root\([\s\S]*if !self\.storage_root_shortcuts_allowed\(cx\) \{[\s\S]*return;[\s\S]*\}/);
   assert.doesNotMatch(source, /render_dx_explorer_storage_root_strip\(is_local_or_wsl, is_read_only, cx\)/);
-  assert.match(renderRootStrip, /dx_icon\(DxUiIcon::Storage\)/);
-  assert.match(renderRootStrip, /Label::new\("Storage roots"\)/);
+  assert.match(renderRootStrip, /ListHeader::new\("Storage roots"\)/);
+  assert.match(
+    renderRootStrip,
+    /ListHeader::new\("Storage roots"\)[\s\S]*\.start_slot\(Icon::new\(dx_icon\(DxUiIcon::Storage\)\)\.size\(IconSize::XSmall\)\)/,
+  );
   assert.match(
     renderRootStrip,
     /shortcuts[\s\S]*\.map\(\|shortcut\|[\s\S]*render_storage_root_strip_row\(shortcut, panel\.clone\(\), focus_handle\.clone\(\)\)[\s\S]*\)/,
@@ -1396,6 +1404,7 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   assert.match(media, /fn render_media_shelf_overflow_card\([\s\S]*focus_handle: FocusHandle/);
   assert.match(media, /fn render_media_shelf_card/);
   assert.match(media, /fn render_media_gallery_card/);
+  assert.match(media, /fn audio_media_label/);
   assert.match(media, /fn audio_gradient_background/);
   assert.match(media, /pub\(crate\) fn is_media_path/);
   assert.match(media, /fn media_kind_sort_rank/);
@@ -1642,6 +1651,7 @@ test("project panel media preview renders direct image previews and video frames
   const renderMediaShelfCardBody = functionBody(media, "render_media_shelf_card_body");
   const mediaCardImageFallback = functionBody(media, "media_card_image_fallback");
   const mediaPreviewCardTooltipMeta = functionBody(media, "media_preview_card_tooltip_meta");
+  const audioMediaLabel = functionBody(media, "audio_media_label");
   const audioGradientBackground = functionBody(media, "audio_gradient_background");
   const buildFolderMediaPreview = functionBody(media, "build_folder_media_preview");
   const buildFolderMediaPreviewWithGeneratedMetadata = functionBody(
@@ -2170,8 +2180,8 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     mediaShelfCardContainer,
-    /ButtonLike::new\(SharedString::from\(format!\([\s\S]*"\{id_prefix\}-\{:\?\}-\{:\?\}"[\s\S]*item\.kind,[\s\S]*item\.entry_id[\s\S]*\.full_width\(\)[\s\S]*\.height\(px\(PROJECT_PANEL_MEDIA_SHELF_CARD_TOTAL_HEIGHT\)\.into\(\)\)[\s\S]*\.style\(ButtonStyle::Subtle\)[\s\S]*\.selected_style\(ButtonStyle::Tinted\(TintColor::Accent\)\)[\s\S]*\.toggle_state\(is_selected\)[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&focus_handle\)/,
-    "media shelf cards must use a focusable ButtonLike with Zed selected-state styling",
+    /ButtonLike::new\(SharedString::from\(format!\([\s\S]*"\{id_prefix\}-\{:\?\}-\{:\?\}"[\s\S]*item\.kind,[\s\S]*item\.entry_id[\s\S]*\.full_width\(\)[\s\S]*\.height\(px\(PROJECT_PANEL_MEDIA_SHELF_CARD_TOTAL_HEIGHT\)\.into\(\)\)[\s\S]*\.style\(ButtonStyle::OutlinedGhost\)[\s\S]*\.selected_style\(ButtonStyle::Tinted\(TintColor::Accent\)\)[\s\S]*\.toggle_state\(is_selected\)[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&focus_handle\)/,
+    "media shelf cards must use a focusable ButtonLike with a visible outer focus border and Zed selected-state styling",
   );
   assert.match(
     mediaShelfCardContainer,
@@ -2195,8 +2205,8 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     renderMediaShelfCardBody,
-    /MediaPreviewKind::Audio[\s\S]*w_full\(\)[\s\S]*flex_1\(\)[\s\S]*audio_gradient_background\(&item\.name\)[\s\S]*items_center\(\)[\s\S]*justify_center\(\)[\s\S]*Icon::new\(IconName::AudioOn\)[\s\S]*Label::new\(item\.name\.clone\(\)\)[\s\S]*truncate\(\)/,
-    "shelf audio cards must use full-height deterministic gradient rectangles with an audio glyph and centered truncated filenames",
+    /MediaPreviewKind::Audio[\s\S]*w_full\(\)[\s\S]*flex_1\(\)[\s\S]*audio_gradient_background\(&item\.name\)[\s\S]*items_center\(\)[\s\S]*justify_center\(\)[\s\S]*audio_media_label\(&item\.name, IconSize::Small, cx\)/,
+    "shelf audio cards must use full-height deterministic gradient rectangles with a readable centered audio label",
   );
   assert.doesNotMatch(
     media,
@@ -2220,8 +2230,13 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     mediaGalleryCardContainer,
-    /MediaPreviewKind::Audio[\s\S]*audio_gradient_background\(&item\.name\)[\s\S]*Label::new\(item\.name\.clone\(\)\)[\s\S]*buffer_font\(cx\)[\s\S]*truncate\(\)/,
-    "gallery audio cards must use deterministic color rectangles with centered truncated filenames",
+    /MediaPreviewKind::Audio[\s\S]*audio_gradient_background\(&item\.name\)[\s\S]*audio_media_label\(&item\.name, IconSize::XSmall, cx\)/,
+    "gallery audio cards must use deterministic color rectangles with readable centered audio labels",
+  );
+  assert.match(
+    audioMediaLabel,
+    /bg\(colors\.editor_background\.opacity\(0\.78\)\)[\s\S]*Icon::new\(IconName::AudioOn\)[\s\S]*\.color\(Color::Accent\)[\s\S]*Label::new\(name\.to_string\(\)\)[\s\S]*\.color\(Color::Default\)[\s\S]*\.truncate\(\)/,
+    "audio labels must place text and glyphs on a high-contrast editor-background plate over the gradient",
   );
   assert.match(
     mediaPreviewCardTooltipMeta,
