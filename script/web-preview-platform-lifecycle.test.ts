@@ -694,6 +694,9 @@ test("Windows Web Preview favicon updates are bounded and page-scoped", () => {
   const updateUri = functionBody(source, "update_favicon_uri");
   const cacheUri = functionBody(source, "cache_favicon_uri");
   const validateUri = functionBody(source, "validated_favicon_uri");
+  const validateUriForPage = functionBody(source, "validated_favicon_uri_for_page");
+  const faviconAllowedForPage = functionBody(source, "favicon_uri_allowed_for_page");
+  const faviconHttpOrigin = functionBody(source, "favicon_http_uri_matches_page_origin");
   const cacheTask = functionBody(source, "cache_web_preview_favicon_uri");
   const downloadBytes = functionBody(source, "download_favicon_bytes");
   const readFileBytes = functionBody(source, "read_favicon_file_bytes");
@@ -714,6 +717,8 @@ test("Windows Web Preview favicon updates are bounded and page-scoped", () => {
   assert.match(source, /const FAVICONS_DIR_NAME: &str = "favicons";/);
   assert.match(source, /const MAX_WEB_PREVIEW_FAVICON_URI_BYTES: usize = 4096;/);
   assert.match(source, /const MAX_WEB_PREVIEW_FAVICON_IMAGE_BYTES: usize = 512 \* 1024;/);
+  assert.match(source, /const MAX_WEB_PREVIEW_FAVICON_IMAGE_EDGE: u32 = 1024;/);
+  assert.match(source, /const MAX_WEB_PREVIEW_FAVICON_IMAGE_PIXELS: u64 = 1024 \* 1024;/);
   assert.match(source, /const MAX_WEB_PREVIEW_FAVICON_CACHE_BYTES: u64 = 16 \* 1024 \* 1024;/);
   assert.match(source, /const MAX_WEB_PREVIEW_FAVICON_CACHE_FILES: usize = 128;/);
   assert.match(source, /const MAX_DEFERRED_WEB_PREVIEW_BROWSER_EVENTS: usize = 128;/);
@@ -727,7 +732,7 @@ test("Windows Web Preview favicon updates are bounded and page-scoped", () => {
   );
   assert.match(
     eventEnum,
-    /NavigationCompleted\s*\{\s*url: Option<String>,\s*navigation_id: Option<u64>,?\s*\}/,
+    /NavigationCompleted\s*\{\s*url: Option<String>,\s*navigation_id: Option<u64>,\s*is_success: bool,?\s*\}/,
   );
   assert.match(source, /favicon_uri: Option<SharedString>/);
   assert.match(source, /favicon_image_path: Option<SharedString>/);
@@ -744,11 +749,12 @@ test("Windows Web Preview favicon updates are bounded and page-scoped", () => {
     pageMatch,
     /display_url_for_loaded_url\(page_url, source_apply_session_active\)\s*== self\.active_url\.as_ref\(\)/,
   );
-  assert.match(updateUri, /validated_favicon_uri\(uri\.as_str\(\), allow_file_uri\)/);
+  assert.match(updateUri, /validated_favicon_uri_for_page\(uri\.as_str\(\), page_url\.as_deref\(\), allow_file_uri\)/);
   assert.doesNotMatch(updateUri, /favicon_cache_file_path|cached_path\.exists|\.exists\(\)/);
-  assert.match(updateUri, /self\.cache_favicon_uri\(uri, allow_file_uri, cx\);/);
+  assert.match(updateUri, /self\.cache_favicon_uri\(uri, page_url, allow_file_uri, cx\);/);
   assert.match(cacheUri, /favicon_cache_request_uri/);
   assert.match(cacheUri, /cx\.background_spawn\(cache_web_preview_favicon_uri/);
+  assert.match(cacheUri, /page_url/);
   assert.match(cacheUri, /allow_file_uri/);
   assert.match(cacheUri, /cx\.emit\(ItemEvent::UpdateTab\);/);
 
@@ -757,19 +763,35 @@ test("Windows Web Preview favicon updates are bounded and page-scoped", () => {
   assert.match(validateUri, /"http" \| "https" => Some\(parsed\.to_string\(\)\)/);
   assert.match(validateUri, /"file" if allow_file_uri => Some\(parsed\.to_string\(\)\)/);
   assert.doesNotMatch(validateUri, /"data"/);
+  assert.match(validateUriForPage, /validated_favicon_uri\(uri, allow_file_uri\)/);
+  assert.match(validateUriForPage, /favicon_uri_allowed_for_page\(uri\.as_str\(\), page_url, allow_file_uri\)/);
+  assert.match(faviconAllowedForPage, /"http" \| "https" => page_url/);
+  assert.match(faviconAllowedForPage, /favicon_http_uri_matches_page_origin\(&favicon_url, &page_url\)/);
+  assert.match(faviconAllowedForPage, /"file" => allow_file_uri && favicon_page_allows_file_uri\(page_url\)/);
+  assert.match(faviconHttpOrigin, /matches!\(page_url\.scheme\(\), "http" \| "https"\)/);
+  assert.match(faviconHttpOrigin, /favicon_url\.scheme\(\) == page_url\.scheme\(\)/);
+  assert.match(faviconHttpOrigin, /favicon_url\.host_str\(\) == page_url\.host_str\(\)/);
+  assert.match(faviconHttpOrigin, /favicon_url\.port_or_known_default\(\) == page_url\.port_or_known_default\(\)/);
   assert.match(source, /fn favicon_page_allows_file_uri\(page_url: Option<&str>\) -> bool/);
   assert.match(source, /page_url\.scheme\(\) == "file"/);
-  assert.match(cacheTask, /validated_favicon_uri\(uri\.as_str\(\), allow_file_uri\)/);
+  assert.match(cacheTask, /validated_favicon_uri_for_page\(uri\.as_str\(\), page_url\.as_deref\(\), allow_file_uri\)/);
   assert.match(cacheTask, /let cache_path = favicon_cache_file_path\(&cache_dir, uri\.as_str\(\)\);/);
   assert.match(cacheTask, /if cache_path\.exists\(\) \{[\s\S]*prune_favicon_cache\(cache_dir\.as_path\(\), cache_path\.as_path\(\)\);[\s\S]*return Ok\(cache_path\);/);
   assert.match(cacheTask, /"http" \| "https" => download_favicon_bytes/);
   assert.match(cacheTask, /"file" =>/);
   assert.match(cacheTask, /favicon_bytes_look_like_image\(&bytes\)/);
+  assert.match(downloadBytes, /\.get\(uri, \(\)\.into\(\), false\)/);
   assert.match(downloadBytes, /\.take\(\(MAX_WEB_PREVIEW_FAVICON_IMAGE_BYTES \+ 1\) as u64\)/);
   assert.match(readFileBytes, /metadata\.len\(\) > MAX_WEB_PREVIEW_FAVICON_IMAGE_BYTES as u64/);
   assert.match(readFileBytes, /\.take\(\(MAX_WEB_PREVIEW_FAVICON_IMAGE_BYTES \+ 1\) as u64\)/);
-  assert.match(imageCheck, /image::guess_format\(bytes\)\.is_ok\(\)/);
+  assert.match(imageCheck, /image::guess_format\(bytes\)/);
+  assert.match(imageCheck, /favicon_raster_dimensions_within_bounds\(bytes, format\)/);
   assert.match(imageCheck, /prefix\.contains\("<svg"\)/);
+  assert.match(source, /fn favicon_raster_dimensions_within_bounds\(bytes: &\[u8\], format: image::ImageFormat\) -> bool/);
+  assert.match(source, /ImageReader::with_format\(std::io::Cursor::new\(bytes\), format\)\.into_dimensions\(\)/);
+  assert.match(source, /width <= MAX_WEB_PREVIEW_FAVICON_IMAGE_EDGE/);
+  assert.match(source, /height <= MAX_WEB_PREVIEW_FAVICON_IMAGE_EDGE/);
+  assert.match(source, /u64::from\(width\) \* u64::from\(height\) <= MAX_WEB_PREVIEW_FAVICON_IMAGE_PIXELS/);
   assert.match(writeCache, /fs::write\(&temp_path, bytes\)/);
   assert.match(writeCache, /fs::rename\(&temp_path, cache_path\)/);
   assert.match(writeCache, /prune_favicon_cache\(cache_dir, cache_path\);/);
@@ -802,7 +824,7 @@ test("Windows Web Preview favicon updates are bounded and page-scoped", () => {
   );
   assert.match(
     applyBrowserEvents,
-    /BrowserEvent::NavigationCompleted \{\s*url,\s*navigation_id\s*\}/,
+    /BrowserEvent::NavigationCompleted \{\s*url,\s*navigation_id,\s*is_success,\s*\}/,
   );
   assert.match(
     applyBrowserEvents,
@@ -810,7 +832,7 @@ test("Windows Web Preview favicon updates are bounded and page-scoped", () => {
   );
   assert.match(
     applyBrowserEvents,
-    /if let Some\(url\) = url \{[\s\S]*self\.sync_active_url\(url\.as_str\(\), window, cx\);[\s\S]*\}[\s\S]*self\.last_completed_browser_navigation_id = navigation_id;[\s\S]*self\.active_browser_navigation_id = None;/,
+    /self\.last_completed_browser_navigation_id = navigation_id;[\s\S]*self\.active_browser_navigation_id = None;[\s\S]*if is_success \{[\s\S]*if let Some\(url\) = url \{[\s\S]*self\.sync_active_url\(url\.as_str\(\), window, cx\);[\s\S]*self\.load_state = PreviewLoadState::Ready;[\s\S]*\} else \{[\s\S]*PreviewLoadState::Error/,
   );
   assert.match(source, /active_browser_navigation_id: Option<u64>/);
   assert.match(source, /last_completed_browser_navigation_id: Option<u64>/);
@@ -834,7 +856,7 @@ test("Windows Web Preview favicon updates are bounded and page-scoped", () => {
   assert.match(windowsHost, /BrowserEvent::NavigationStarted \{\s*url,\s*navigation_id,?\s*\}/);
   assert.match(
     windowsHost,
-    /BrowserEvent::NavigationCompleted \{\s*url: Some\(current_url\.clone\(\)\),\s*navigation_id,\s*\}/,
+    /BrowserEvent::NavigationCompleted \{\s*url: Some\(current_url\.clone\(\)\),\s*navigation_id,\s*is_success: navigation_succeeded,\s*\}/,
   );
   assert.match(windowsHost, /if navigation_succeeded \{\s*request_favicon_uri\(&webview, event_queue\.clone\(\), current_url, navigation_id\);/);
   assert.match(requestFavicon, /webview\.ExecuteScript\(&script, &handler\)/);

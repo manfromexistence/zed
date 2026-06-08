@@ -721,6 +721,7 @@ fn attach_event_handlers(
                     BrowserEvent::NavigationCompleted {
                         url: Some(current_url.clone()),
                         navigation_id,
+                        is_success: navigation_succeeded,
                     },
                 );
                 if navigation_succeeded {

@@ -1,3 +1,19 @@
+[2026-06-09] - Web Preview Favicon Navigation Safety
+
+CHANGED:
+- `crates\web_preview\src\web_preview_view.rs` now carries native navigation success through browser completion events so failed WebView2 completions enter an explicit error state without syncing a stale committed WebView source URL.
+- `crates\web_preview\src\web_preview_view.rs` now requires HTTP(S) favicon cache requests to match the current page origin, keeps file favicon URIs page-file scoped, fetches favicon bytes without following redirects, and rejects oversized raster dimensions before caching.
+- `crates\web_preview\src\windows_visual_webview.rs` forwards WebView2 completion success into the native browser event while still requesting favicon URIs only for successful completions.
+- `crates\web_preview_macos\src\web_preview_view.rs` and `crates\web_preview_linux\src\web_preview_view.rs` drop dead platform-copied `AsyncApp` imports from the live macOS/Linux compile path.
+- `script\web-preview-platform-lifecycle.test.ts` now guards success-only completion URL sync, failed-navigation error state, page-origin favicon cache policy, no-redirect favicon fetches, raster dimension limits, and native success forwarding.
+
+PASSED:
+- `git diff --check`
+
+NOTES:
+- Six GPT-5.5 extra-high subagent audits were used for Windows favicon/native navigation correctness, macOS/Linux event-pump parity, GPUI accessibility, brand-color icon scoping, rainbow caret paint behavior, and git/handoff hygiene.
+- Source-only by instruction. Cargo, build, `just run`, native Zed launch, local servers, source-guard execution, WebView runtime proof, and visual proof remain deferred.
+
 [2026-06-08] - Rainbow Caret Contrast Cache
 
 ADDED:

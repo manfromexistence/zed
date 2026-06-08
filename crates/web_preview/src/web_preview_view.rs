@@ -77,6 +77,8 @@ const BOOKMARKS_FILE_NAME: &str = "bookmarks.json";
 const FAVICONS_DIR_NAME: &str = "favicons";
 const MAX_WEB_PREVIEW_FAVICON_URI_BYTES: usize = 4096;
 const MAX_WEB_PREVIEW_FAVICON_IMAGE_BYTES: usize = 512 * 1024;
+const MAX_WEB_PREVIEW_FAVICON_IMAGE_EDGE: u32 = 1024;
+const MAX_WEB_PREVIEW_FAVICON_IMAGE_PIXELS: u64 = 1024 * 1024;
 const MAX_WEB_PREVIEW_FAVICON_CACHE_BYTES: u64 = 16 * 1024 * 1024;
 const MAX_WEB_PREVIEW_FAVICON_CACHE_FILES: usize = 128;
 const MAX_DEFERRED_WEB_PREVIEW_BROWSER_EVENTS: usize = 128;
@@ -573,6 +575,7 @@ pub(crate) enum BrowserEvent {
     NavigationCompleted {
         url: Option<String>,
         navigation_id: Option<u64>,
+        is_success: bool,
     },
     IpcMessage(String),
     IpcMessageRejected(String),
@@ -1439,7 +1442,12 @@ impl WebPreviewView {
             return false;
         }
 
-        self.update_favicon_uri(uri, favicon_page_allows_file_uri(page_url), cx)
+        self.update_favicon_uri(
+            uri,
+            page_url.map(ToOwned::to_owned),
+            favicon_page_allows_file_uri(page_url),
+            cx,
+        )
     }
 
     fn favicon_page_url_matches_active_url(&self, page_url: &str) -> bool {
@@ -1506,10 +1514,13 @@ impl WebPreviewView {
     fn update_favicon_uri(
         &mut self,
         uri: String,
+        page_url: Option<String>,
         allow_file_uri: bool,
         cx: &mut Context<Self>,
     ) -> bool {
-        let Some(uri) = validated_favicon_uri(uri.as_str(), allow_file_uri) else {
+        let Some(uri) =
+            validated_favicon_uri_for_page(uri.as_str(), page_url.as_deref(), allow_file_uri)
+        else {
             return false;
         };
 
@@ -1519,19 +1530,25 @@ impl WebPreviewView {
             .is_some_and(|current| current.as_ref() == uri.as_str())
         {
             if self.favicon_image_path.is_none() {
-                self.cache_favicon_uri(uri, allow_file_uri, cx);
+                self.cache_favicon_uri(uri, page_url, allow_file_uri, cx);
             }
             return false;
         }
 
         self.favicon_uri = Some(uri.clone().into());
         self.favicon_image_path = None;
-        self.cache_favicon_uri(uri, allow_file_uri, cx);
+        self.cache_favicon_uri(uri, page_url, allow_file_uri, cx);
 
         true
     }
 
-    fn cache_favicon_uri(&mut self, uri: String, allow_file_uri: bool, cx: &mut Context<Self>) {
+    fn cache_favicon_uri(
+        &mut self,
+        uri: String,
+        page_url: Option<String>,
+        allow_file_uri: bool,
+        cx: &mut Context<Self>,
+    ) {
         if self
             .favicon_cache_request_uri
             .as_ref()
@@ -1547,6 +1564,7 @@ impl WebPreviewView {
             http_client,
             cache_dir,
             uri.clone(),
+            page_url,
             allow_file_uri,
         ));
 
@@ -30601,20 +30619,33 @@ impl WebPreviewView {
                     }
                     tab_updated = true;
                 }
-                BrowserEvent::NavigationCompleted { url, navigation_id } => {
+                BrowserEvent::NavigationCompleted {
+                    url,
+                    navigation_id,
+                    is_success,
+                } => {
                     if !self.navigation_completion_matches_active_navigation(
                         navigation_id,
                         url.as_deref(),
                     ) {
                         continue;
                     }
-                    if let Some(url) = url {
-                        self.sync_active_url(url.as_str(), window, cx);
-                    }
                     self.last_completed_browser_navigation_id = navigation_id;
                     self.active_browser_navigation_id = None;
-                    self.load_state = PreviewLoadState::Ready;
-                    refocus_after_navigation = true;
+                    if is_success {
+                        if let Some(url) = url {
+                            self.sync_active_url(url.as_str(), window, cx);
+                        }
+                        self.load_state = PreviewLoadState::Ready;
+                        refocus_after_navigation = true;
+                    } else {
+                        self.load_state = PreviewLoadState::Error(
+                            "Web Preview navigation failed before the page became ready.".into(),
+                        );
+                        if self.clear_favicon() {
+                            tab_updated = true;
+                        }
+                    }
                 }
                 BrowserEvent::IpcMessage(message) => {
                     self.queue_deferred_ipc_message(message, cx);
@@ -36763,6 +36794,7 @@ fn create_native_preview_for_macos_window(
                         BrowserEvent::NavigationCompleted {
                             url: Some(url),
                             navigation_id: None,
+                            is_success: true,
                         },
                     );
                 }
@@ -38405,6 +38437,40 @@ fn validated_favicon_uri(uri: &str, allow_file_uri: bool) -> Option<String> {
     }
 }
 
+fn validated_favicon_uri_for_page(
+    uri: &str,
+    page_url: Option<&str>,
+    allow_file_uri: bool,
+) -> Option<String> {
+    let uri = validated_favicon_uri(uri, allow_file_uri)?;
+    if favicon_uri_allowed_for_page(uri.as_str(), page_url, allow_file_uri) {
+        Some(uri)
+    } else {
+        None
+    }
+}
+
+fn favicon_uri_allowed_for_page(uri: &str, page_url: Option<&str>, allow_file_uri: bool) -> bool {
+    let Ok(favicon_url) = url::Url::parse(uri) else {
+        return false;
+    };
+
+    match favicon_url.scheme() {
+        "http" | "https" => page_url
+            .and_then(|page_url| url::Url::parse(page_url).ok())
+            .is_some_and(|page_url| favicon_http_uri_matches_page_origin(&favicon_url, &page_url)),
+        "file" => allow_file_uri && favicon_page_allows_file_uri(page_url),
+        _ => false,
+    }
+}
+
+fn favicon_http_uri_matches_page_origin(favicon_url: &url::Url, page_url: &url::Url) -> bool {
+    matches!(page_url.scheme(), "http" | "https")
+        && favicon_url.scheme() == page_url.scheme()
+        && favicon_url.host_str() == page_url.host_str()
+        && favicon_url.port_or_known_default() == page_url.port_or_known_default()
+}
+
 fn favicon_page_allows_file_uri(page_url: Option<&str>) -> bool {
     page_url
         .and_then(|page_url| url::Url::parse(page_url).ok())
@@ -38426,9 +38492,10 @@ async fn cache_web_preview_favicon_uri(
     http_client: Arc<dyn http_client::HttpClient>,
     cache_dir: PathBuf,
     uri: String,
+    page_url: Option<String>,
     allow_file_uri: bool,
 ) -> Result<PathBuf> {
-    let uri = validated_favicon_uri(uri.as_str(), allow_file_uri)
+    let uri = validated_favicon_uri_for_page(uri.as_str(), page_url.as_deref(), allow_file_uri)
         .ok_or_else(|| anyhow!("Unsupported or oversized favicon URI"))?;
     let parsed = url::Url::parse(uri.as_str())?;
     let cache_path = favicon_cache_file_path(&cache_dir, uri.as_str());
@@ -38461,7 +38528,7 @@ async fn download_favicon_bytes(
     uri: &str,
 ) -> Result<Vec<u8>> {
     let mut response = http_client
-        .get(uri, ().into(), true)
+        .get(uri, ().into(), false)
         .await
         .with_context(|| format!("Failed to fetch favicon URI {uri}"))?;
     if !response.status().is_success() {
@@ -38501,12 +38568,26 @@ fn favicon_bytes_look_like_image(bytes: &[u8]) -> bool {
     if bytes.is_empty() {
         return false;
     }
-    if image::guess_format(bytes).is_ok() {
-        return true;
+    if let Ok(format) = image::guess_format(bytes) {
+        return favicon_raster_dimensions_within_bounds(bytes, format);
     }
 
     let prefix = String::from_utf8_lossy(&bytes[..bytes.len().min(512)]).to_ascii_lowercase();
     prefix.contains("<svg")
+}
+
+fn favicon_raster_dimensions_within_bounds(bytes: &[u8], format: image::ImageFormat) -> bool {
+    let Ok((width, height)) =
+        image::ImageReader::with_format(std::io::Cursor::new(bytes), format).into_dimensions()
+    else {
+        return false;
+    };
+
+    width > 0
+        && height > 0
+        && width <= MAX_WEB_PREVIEW_FAVICON_IMAGE_EDGE
+        && height <= MAX_WEB_PREVIEW_FAVICON_IMAGE_EDGE
+        && u64::from(width) * u64::from(height) <= MAX_WEB_PREVIEW_FAVICON_IMAGE_PIXELS
 }
 
 fn write_cached_favicon(cache_dir: &Path, cache_path: &Path, bytes: &[u8]) -> Result<()> {

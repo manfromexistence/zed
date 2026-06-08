@@ -3,8 +3,6 @@ use agent_ui::AgentPanel;
 use anyhow::{Context as _, Result, anyhow};
 use base64::Engine as _;
 use editor::Editor;
-#[cfg(target_os = "linux")]
-use gpui::AsyncApp;
 #[cfg(any(target_os = "windows", target_os = "linux"))]
 use gpui::ImageFormat as GpuiImageFormat;
 use gpui::{
