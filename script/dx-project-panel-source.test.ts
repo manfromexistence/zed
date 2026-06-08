@@ -825,7 +825,20 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   });
   assert.match(renderStorageDrilldown, /\.id\("dx-explorer-storage-drilldown"\)/);
   assert.match(renderStorageDrilldown, /dx_icon\(DxUiIcon::Storage\)/);
-  assert.match(renderStorageDrilldown, /Label::new\("Folder files"\)/);
+  assert.match(renderStorageDrilldown, /ListHeader::new\("Folder files"\)/);
+  assert.match(
+    renderStorageDrilldown,
+    /ListHeader::new\("Folder files"\)[\s\S]*\.start_slot\([\s\S]*Icon::new\(dx_icon\(DxUiIcon::Storage\)\)/,
+  );
+  assert.match(
+    renderStorageDrilldown,
+    /ListHeader::new\("Folder files"\)[\s\S]*\.end_slot(?:::<[^>]+>)?\([\s\S]*sort_mode\.status_label\(\)[\s\S]*\.children\(metrics\)[\s\S]*PopoverMenu::new\("dx-explorer-storage-sort-menu"\)/,
+  );
+  assert.doesNotMatch(
+    renderStorageDrilldown,
+    /Label::new\("Folder files"\)/,
+    "storage drilldown section header should use the shared ListHeader component",
+  );
   assert.match(renderStorageDrilldown, /\.children\(rows\)/);
   assert.doesNotMatch(renderStorageDrilldown, /\bread_dir\(|\bFile::open\(|child_entries/);
   assert.match(
@@ -1012,7 +1025,7 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(storageDrilldownItems, /StorageFolderItem/);
   assert.match(storageDrilldownItems, /StorageFolderItem::from_entry/);
   assert.match(storageDrilldownItems, /rank_storage_folder_items\(items, storage_sort_mode\)/);
-  assert.match(renderStorageDrilldown, /Label::new\("Folder files"\)/);
+  assert.match(renderStorageDrilldown, /ListHeader::new\("Folder files"\)/);
   assert.match(renderStorageDrilldown, /StorageSortMode::ALL/);
   assert.match(renderStorageDrilldown, /PopoverMenu::new\("dx-explorer-storage-sort-menu"\)/);
   assert.match(renderStorageDrilldown, /sort_mode\.status_label\(\)/);
@@ -1047,9 +1060,15 @@ test("project panel storage overview and root shortcuts stay cached and professi
   );
   assert.match(
     renderRootStripCall,
-    /if !is_local_or_wsl \|\| is_read_only \{[\s\S]*return None;[\s\S]*\}/,
+    /if !self\.storage_root_shortcuts_allowed\(cx\) \{[\s\S]*return None;[\s\S]*\}/,
     "local storage-root shortcuts must not render for read-only or remote-only project contexts",
   );
+  assert.match(source, /fn storage_root_shortcuts_allowed\(&self, cx: &mut Context<Self>\) -> bool \{[\s\S]*!project\.is_read_only\(cx\)[\s\S]*project\.is_local\(\) \|\| project\.is_via_wsl_with_host_interop\(cx\)/);
+  assert.match(source, /if this\.storage_root_shortcuts_allowed\(cx\) \{[\s\S]*this\.refresh_dx_explorer_storage_roots\(cx\);[\s\S]*\}/);
+  assert.match(source, /fn refresh_dx_explorer_storage_roots\(&mut self, cx: &mut Context<Self>\)[\s\S]*if !self\.storage_root_shortcuts_allowed\(cx\) \{[\s\S]*self\.storage_root_shortcuts\.clear\(\);[\s\S]*return;[\s\S]*\}/);
+  assert.match(source, /if !this\.storage_root_shortcuts_allowed\(cx\) \{[\s\S]*this\.storage_root_shortcuts\.clear\(\);[\s\S]*cx\.notify\(\);[\s\S]*return;[\s\S]*\}/);
+  assert.match(source, /fn open_dx_explorer_storage_root\([\s\S]*if !self\.storage_root_shortcuts_allowed\(cx\) \{[\s\S]*return;[\s\S]*\}/);
+  assert.doesNotMatch(source, /render_dx_explorer_storage_root_strip\(is_local_or_wsl, is_read_only, cx\)/);
   assert.match(renderRootStrip, /dx_icon\(DxUiIcon::Storage\)/);
   assert.match(renderRootStrip, /Label::new\("Storage roots"\)/);
   assert.match(
@@ -1064,10 +1083,17 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(renderRootStripRow, /ButtonLike::new\(/);
   assert.match(renderRootStripRow, /\.style\(ButtonStyle::Subtle\)/);
   assert.match(renderRootStripRow, /\.size\(ButtonSize::Compact\)/);
-  assert.match(renderRootStripRow, /\.tab_index\(0\)/);
-  assert.match(renderRootStripRow, /\.track_focus\(&focus_handle\)/);
+  assert.match(renderRootStripRow, /\.max_w\(rems\(18\.\)\)/);
+  assert.match(renderRootStripRow, /\.when\(available,[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&row_focus_handle\)/);
+  assert.doesNotMatch(
+    renderRootStripRow,
+    /\.size\(ButtonSize::Compact\)\s*\.tab_index\(0\)\s*\.track_focus\(&focus_handle\)/,
+    "unavailable storage roots must not remain in keyboard tab order",
+  );
   assert.match(renderRootStripRow, /Icon::new\(icon\)/);
   assert.match(renderRootStripRow, /Label::new\(status_label\)/);
+  assert.match(renderRootStripRow, /Label::new\(shortcut\.label\)[\s\S]*\.truncate\(\)/);
+  assert.match(renderRootStripRow, /Label::new\(status_label\)[\s\S]*\.truncate\(\)/);
   assert.match(renderRootStripRow, /\.disabled\(!available\)/);
   assert.match(
     renderRootStripRow,
@@ -1077,7 +1103,9 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(renderRootStripRow, /dx_icon\(DxUiIcon::CloudStorage\)/);
   assert.match(renderRootStripRow, /dx_icon\(DxUiIcon::DriveProvider\)/);
   assert.match(renderRootStripRow, /dx_icon\(DxUiIcon::DropboxProvider\)/);
-  assert.match(renderRootStripRow, /window\.focus\(&focus_handle, cx\)/);
+  assert.match(renderRootStripRow, /let row_focus_handle = focus_handle\.clone\(\);/);
+  assert.match(renderRootStripRow, /let click_focus_handle = row_focus_handle\.clone\(\);/);
+  assert.match(renderRootStripRow, /window\.focus\(&click_focus_handle, cx\)/);
   assert.match(renderRootStripRow, /this\.open_dx_explorer_storage_root\(path\.clone\(\), window, cx\)/);
   assert.match(renderRootStripRow, /let status_label = shortcut\.status_label\(\);/);
   assert.match(renderRootStripRow, /Label::new\(status_label\)/);

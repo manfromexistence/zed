@@ -1,3 +1,18 @@
+[2026-06-08] - GPUI Web Preview Navigation And Chrome Follow-Up
+
+CHANGED:
+- `crates\web_preview\src\web_preview_view.rs` and `crates\web_preview\src\windows_visual_webview.rs` now carry navigation-start and navigation-complete URLs through native browser events, keep the URL editor in sync through one helper, and reject stale URL/favicon updates while a newer page is loading.
+- `crates\web_preview_macos\src\web_preview_view.rs` and `crates\web_preview_linux\src\web_preview_view.rs` now bound Web Preview IPC messages by per-message size, queued count, and queued bytes before deferring work into the GPUI view.
+- `crates\agent_ui\src\conversation_view\thread_view.rs`, `crates\agent_ui\src\ui\model_selector_components.rs`, and Project Panel storage-root surfaces now keep empty-state composer sizing, provider headers, and local storage shortcuts bounded, focus-safe, and truncation-safe.
+- Source guards now pin stale-navigation rejection, cross-platform IPC bounds, branch-scoped original-color brand SVG rendering, composer empty-state sizing, selector truncation, and storage-root shortcut availability.
+
+PASSED:
+- `git diff --check`
+
+NOTES:
+- Six GPT-5.5 extra-high subagent audits were used for Web Preview favicon/native events, brand SVG color preservation, GPUI tab/chrome behavior, platform queue parity, source-guard precision, and git handoff hygiene.
+- Source-only by instruction. Cargo, build, `just run`, native Zed launch, local servers, and runtime visual proof remain deferred.
+
 [2026-06-08] - DX Rainbow Glow API Production Pass
 
 CHANGED:
@@ -18,9 +33,9 @@ NOTES:
 [2026-06-08] - Web Preview Favicon And Brand Color Hardening
 
 CHANGED:
-- `crates\web_preview\src\web_preview_view.rs` now applies native browser events from the GPUI window task instead of the render path, coalesces bounded browser events, and resolves favicon cache hits/downloads asynchronously before updating tab icons.
+- `crates\web_preview\src\web_preview_view.rs` now applies native browser events from the GPUI window task instead of the render path, coalesces bounded browser events, rejects stale favicon events during in-flight navigation, and resolves favicon cache hits/downloads asynchronously before updating tab icons.
 - Web Preview favicon cache writes now prune old `.favicon` files by count and total bytes while keeping URI and image byte caps.
-- `crates\web_preview_macos\src\web_preview_view.rs` and `crates\web_preview_linux\src\web_preview_view.rs` now mirror the bounded/coalesced native browser event queue contract.
+- `crates\web_preview_macos\src\web_preview_view.rs` and `crates\web_preview_linux\src\web_preview_view.rs` now mirror the bounded/coalesced native browser event queue contract and cap IPC messages by size, queued count, and queued bytes.
 - Provider/model brand SVG logos now use `Icon::from_external_svg_with_original_colors`, preserving embedded brand colors without changing the default tintable external SVG path for generic custom icons.
 - Source guards now cover the async favicon/cache contract, native event queue bounds, original-color brand icon path, and the tightened rainbow caret empty-bounds guard.
 
@@ -35,7 +50,7 @@ NOTES:
 CHANGED:
 - `crates\agent_ui\src\conversation_view\composer_liquid_glass.rs` now owns the AI composer glass layer and chrome decision, using the existing control-surface material while keeping opaque themes clear unless primary or muted text contrast needs a fallback.
 - `crates\agent_ui\src\conversation_view\thread_view.rs` now delegates composer glass rendering and border/background decisions to that focused helper instead of keeping the chrome logic inline.
-- Language-model provider and model-picker path SVGs now stay on the tintable external SVG path until their source model has an explicit brand-color mode, preserving theme and high-contrast behavior for generic extension icons.
+- Language-model provider and model-picker path SVG handling was isolated so generic external SVG icons can stay tintable while later brand-logo call sites can opt into original-color rendering explicitly.
 - Model/profile/mode selector triggers now truncate dynamic labels, model rows expose full-title tooltips, and provider headers toggle from the whole header row instead of only the chevron.
 - Project Panel storage-root shortcuts now render only for local/read-write contexts and participate in focus tracking before opening local roots.
 - Terminal cursors are source-guarded to pass through the non-rainbow `CursorLayout` paint path explicitly after the shared cursor paint signature changed.

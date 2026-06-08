@@ -702,6 +702,9 @@ pub(crate) struct AgentResponseAnchor {
 const RESPONSE_ANCHOR_SCROLL_RETRY_FRAMES: usize = 6;
 const FLOATING_MESSAGE_EDITOR_SAFE_PADDING_PX: f32 = 118.0;
 const MAX_VISIBLE_PROFILE_OPTION_SLOTS: usize = 4;
+const COMPOSER_MIN_LINES: usize = 2;
+const COMPOSER_COLLAPSED_MAX_LINES: usize = 2;
+const COMPOSER_EMPTY_STATE_MAX_LINES: usize = 8;
 
 #[derive(Clone, Copy)]
 struct ResponseAnchorScrollRequest {
@@ -3854,7 +3857,7 @@ impl ThreadView {
 
         let max_content_width = AgentSettings::get_global(cx).max_content_width;
         let has_messages = self.list_state.item_count() > 0;
-        let expands_editor_area = editor_expanded;
+        let expands_editor_area = editor_expanded && has_messages;
         let glass_source = window
             .use_keyed_state(
                 (
@@ -3885,7 +3888,7 @@ impl ThreadView {
                     this.on_action(cx.listener(Self::expand_message_editor))
                         .when(editor_expanded, |this| this.h(vh(0.8, window)))
                 } else {
-                    this.flex_1().size_full()
+                    this.flex_1().w_full()
                 }
             })
             .child(
@@ -7138,19 +7141,14 @@ impl ThreadView {
 
     pub(crate) fn sync_editor_mode_for_empty_state(&mut self, cx: &mut Context<Self>) {
         let has_messages = self.list_state.item_count() > 0;
-        let v2_empty_state = !has_messages;
-
-        let mode = if v2_empty_state {
-            EditorMode::Full {
-                scale_ui_elements_with_buffer_font_size: false,
-                show_active_line_background: false,
-                sizing_behavior: SizingBehavior::Default,
-            }
+        let max_lines = if has_messages {
+            COMPOSER_COLLAPSED_MAX_LINES
         } else {
-            EditorMode::AutoHeight {
-                min_lines: 2,
-                max_lines: Some(2),
-            }
+            COMPOSER_EMPTY_STATE_MAX_LINES
+        };
+        let mode = EditorMode::AutoHeight {
+            min_lines: COMPOSER_MIN_LINES,
+            max_lines: Some(max_lines),
         };
         self.message_editor.update(cx, |editor, cx| {
             editor.set_mode(mode, cx);

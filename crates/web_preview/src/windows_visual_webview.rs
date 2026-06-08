@@ -679,8 +679,15 @@ fn attach_event_handlers(
 
         let event_queue = browser_events.clone();
         webview.add_NavigationStarting(
-            &NavigationStartingEventHandler::create(Box::new(move |_, _| {
-                push_browser_event(&event_queue, BrowserEvent::NavigationStarted);
+            &NavigationStartingEventHandler::create(Box::new(move |_, args| {
+                let url = if let Some(args) = args {
+                    let mut uri = PWSTR::null();
+                    args.Uri(&mut uri)?;
+                    Some(take_pwstr(uri))
+                } else {
+                    None
+                };
+                push_browser_event(&event_queue, BrowserEvent::NavigationStarted { url });
                 Ok(())
             })),
             &mut token,
@@ -695,9 +702,13 @@ fn attach_event_handlers(
                 let mut url = PWSTR::null();
                 webview.Source(&mut url)?;
                 let current_url = take_pwstr(url);
-                push_browser_event(&event_queue, BrowserEvent::UrlChanged(current_url.clone()));
+                push_browser_event(
+                    &event_queue,
+                    BrowserEvent::NavigationCompleted {
+                        url: Some(current_url.clone()),
+                    },
+                );
                 request_favicon_uri(&webview, event_queue.clone(), current_url);
-                push_browser_event(&event_queue, BrowserEvent::NavigationCompleted);
                 Ok(())
             })),
             &mut token,

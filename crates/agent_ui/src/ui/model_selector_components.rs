@@ -95,11 +95,16 @@ impl RenderOnce for ModelSelectorHeader {
                             })
                     })
                     .child(
-                        div().flex_1().child(
-                            Label::new(title.clone())
-                                .size(LabelSize::XSmall)
-                                .color(Color::Muted),
-                        ),
+                        div()
+                            .min_w_0()
+                            .flex_1()
+                            .child(
+                                Label::new(title.clone())
+                                    .size(LabelSize::XSmall)
+                                    .color(Color::Muted)
+                                    .truncate(),
+                            )
+                            .tooltip(Tooltip::text(title.clone())),
                     )
                     .when_some(count, |this, count| {
                         this.child(Chip::new(count.to_string()))

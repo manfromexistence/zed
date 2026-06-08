@@ -68,9 +68,9 @@ use theme_settings::ThemeSettings;
 use ui::{
     Chip, Color, ContextMenu, ContextMenuEntry, DecoratedIcon, Icon, IconButtonShape,
     IconDecoration, IconDecorationKind, IndentGuideColors, IndentGuideLayout, Indicator,
-    KeyBinding, Label, LabelSize, ListItem, ListItemSpacing, PopoverMenu, ProjectEmptyState,
-    ScrollAxes, ScrollableHandle, Scrollbars, StickyCandidate, TintColor, Tooltip, WithScrollbar,
-    prelude::*, v_flex,
+    KeyBinding, Label, LabelSize, ListHeader, ListItem, ListItemSpacing, PopoverMenu,
+    ProjectEmptyState, ScrollAxes, ScrollableHandle, Scrollbars, StickyCandidate, TintColor,
+    Tooltip, WithScrollbar, prelude::*, v_flex,
 };
 use util::{
     ResultExt, TakeUntilExt, TryFutureExt,
@@ -1085,7 +1085,9 @@ impl ProjectPanel {
                 update_visible_entries_task: Default::default(),
                 undo_manager: UndoManager::new(workspace.weak_handle(), weak_project_panel, &cx),
             };
-            this.refresh_dx_explorer_storage_roots(cx);
+            if this.storage_root_shortcuts_allowed(cx) {
+                this.refresh_dx_explorer_storage_roots(cx);
+            }
             this.update_visible_entries(None, false, false, window, cx);
 
             this
@@ -4366,67 +4368,70 @@ impl ProjectPanel {
                 .border_color(cx.theme().colors().border.opacity(0.6))
                 .bg(cx.theme().colors().panel_background)
                 .child(
-                    h_flex()
-                        .items_center()
-                        .justify_between()
-                        .gap_2()
-                        .child(
+                    ListHeader::new("Folder files")
+                        .start_slot(
+                            Icon::new(dx_icon(DxUiIcon::Storage))
+                                .size(IconSize::XSmall)
+                                .color(Color::Muted),
+                        )
+                        .end_slot::<AnyElement>(
                             h_flex()
                                 .min_w_0()
                                 .items_center()
                                 .gap_1()
-                                .child(
-                                    Icon::new(dx_icon(DxUiIcon::Storage))
-                                        .size(IconSize::XSmall)
-                                        .color(Color::Muted),
-                                )
-                                .child(
-                                    Label::new("Folder files")
-                                        .size(LabelSize::XSmall)
-                                        .color(Color::Muted),
-                                )
                                 .child(Self::render_dx_explorer_metric(sort_mode.status_label()))
-                                .children(metrics),
-                        )
-                        .child(
-                            PopoverMenu::new("dx-explorer-storage-sort-menu")
-                                .trigger_with_tooltip(
-                                    IconButton::new(
-                                        "dx-explorer-storage-sort-button",
-                                        IconName::ListFilter,
-                                    )
-                                    .icon_size(IconSize::Small)
-                                    .icon_color(Color::Muted),
-                                    Tooltip::text(format!("Sort by {}", sort_mode.label())),
-                                )
-                                .anchor(gpui::Anchor::TopRight)
-                                .menu(move |window, cx| {
-                                    let panel = panel.clone();
-                                    Some(ContextMenu::build(
-                                        window,
-                                        cx,
-                                        move |menu, _window, _cx| {
-                                            StorageSortMode::ALL.into_iter().fold(
-                                                menu.header("Sort Folders"),
-                                                |menu, mode| {
-                                                    let panel = panel.clone();
-                                                    let label = mode.menu_label(sort_mode);
-                                                    menu.entry(label, None, move |_window, cx| {
-                                                        panel
-                                                            .update_in(cx, |this, window, cx| {
-                                                                this.storage_sort_mode = mode;
-                                                                this.update_visible_entries(
-                                                                    None, false, false, window, cx,
-                                                                );
-                                                                cx.notify();
-                                                            })
-                                                            .log_err();
-                                                    })
-                                                },
+                                .children(metrics)
+                                .child(
+                                    PopoverMenu::new("dx-explorer-storage-sort-menu")
+                                        .trigger_with_tooltip(
+                                            IconButton::new(
+                                                "dx-explorer-storage-sort-button",
+                                                IconName::ListFilter,
                                             )
-                                        },
-                                    ))
-                                })
+                                            .icon_size(IconSize::Small)
+                                            .icon_color(Color::Muted),
+                                            Tooltip::text(format!(
+                                                "Sort by {}",
+                                                sort_mode.label()
+                                            )),
+                                        )
+                                        .anchor(gpui::Anchor::TopRight)
+                                        .menu(move |window, cx| {
+                                            let panel = panel.clone();
+                                            Some(ContextMenu::build(
+                                                window,
+                                                cx,
+                                                move |menu, _window, _cx| {
+                                                    StorageSortMode::ALL.into_iter().fold(
+                                                        menu.header("Sort Folders"),
+                                                        |menu, mode| {
+                                                            let panel = panel.clone();
+                                                            let label = mode.menu_label(sort_mode);
+                                                            menu.entry(
+                                                                label,
+                                                                None,
+                                                                move |_window, cx| {
+                                                                    panel
+                                                                        .update_in(
+                                                                            cx,
+                                                                            |this, window, cx| {
+                                                                                this.storage_sort_mode = mode;
+                                                                                this.update_visible_entries(
+                                                                                    None, false, false, window, cx,
+                                                                                );
+                                                                                cx.notify();
+                                                                            },
+                                                                        )
+                                                                        .log_err();
+                                                                },
+                                                            )
+                                                        },
+                                                    )
+                                                },
+                                            ))
+                                        })
+                                        .into_any_element(),
+                                    )
                                 .into_any_element(),
                         ),
                 )
@@ -4542,13 +4547,14 @@ impl ProjectPanel {
         .into_any_element()
     }
 
-    fn render_dx_explorer_storage_root_strip(
-        &self,
-        is_local_or_wsl: bool,
-        is_read_only: bool,
-        cx: &mut Context<Self>,
-    ) -> Option<AnyElement> {
-        if !is_local_or_wsl || is_read_only {
+    fn storage_root_shortcuts_allowed(&self, cx: &mut Context<Self>) -> bool {
+        let project = self.project.read(cx);
+        !project.is_read_only(cx)
+            && (project.is_local() || project.is_via_wsl_with_host_interop(cx))
+    }
+
+    fn render_dx_explorer_storage_root_strip(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        if !self.storage_root_shortcuts_allowed(cx) {
             return None;
         }
 
@@ -4561,6 +4567,11 @@ impl ProjectPanel {
     }
 
     fn refresh_dx_explorer_storage_roots(&mut self, cx: &mut Context<Self>) {
+        if !self.storage_root_shortcuts_allowed(cx) {
+            self.storage_root_shortcuts.clear();
+            return;
+        }
+
         let generation = self.storage_root_refresh_generation.get().saturating_add(1);
         self.storage_root_refresh_generation.set(generation);
         self.storage_root_refresh_requested_at
@@ -4573,6 +4584,11 @@ impl ProjectPanel {
                 if this.storage_root_refresh_generation.get() != generation {
                     return;
                 }
+                if !this.storage_root_shortcuts_allowed(cx) {
+                    this.storage_root_shortcuts.clear();
+                    cx.notify();
+                    return;
+                }
                 this.storage_root_shortcuts = shortcuts;
                 cx.notify();
             })
@@ -4581,6 +4597,11 @@ impl ProjectPanel {
     }
 
     fn refresh_dx_explorer_storage_roots_after_interval(&mut self, cx: &mut Context<Self>) {
+        if !self.storage_root_shortcuts_allowed(cx) {
+            self.storage_root_shortcuts.clear();
+            return;
+        }
+
         if self
             .storage_root_refresh_requested_at
             .get()
@@ -4600,6 +4621,10 @@ impl ProjectPanel {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        if !self.storage_root_shortcuts_allowed(cx) {
+            return;
+        }
+
         if !path.is_absolute() || !path.is_dir() {
             return;
         }
@@ -9199,11 +9224,7 @@ impl Render for ProjectPanel {
                             cx,
                         ))
                         .when_some(
-                            self.render_dx_explorer_storage_root_strip(
-                                is_local_or_wsl,
-                                is_read_only,
-                                cx,
-                            ),
+                            self.render_dx_explorer_storage_root_strip(cx),
                             |this, root_strip| this.child(root_strip),
                         )
                         .map(|this| {
@@ -9680,7 +9701,7 @@ impl Render for ProjectPanel {
                     cx,
                 ))
                 .when_some(
-                    self.render_dx_explorer_storage_root_strip(is_local_or_wsl, is_read_only, cx),
+                    self.render_dx_explorer_storage_root_strip(cx),
                     |this, root_strip| this.child(root_strip),
                 )
                 .child(

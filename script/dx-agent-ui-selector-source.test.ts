@@ -31,6 +31,29 @@ const modelSelectorPopover = productionSource(
 const profileSelector = productionSource(readFileSync(profileSelectorPath, "utf8"));
 const modeSelector = productionSource(readFileSync(modeSelectorPath, "utf8"));
 
+function sourceBlock(source: string, needle: string): string {
+  const start = source.indexOf(needle);
+  assert.ok(start >= 0, `expected source block for ${needle}`);
+
+  const openBrace = source.indexOf("{", start);
+  assert.ok(openBrace >= start, `expected ${needle} to open a block`);
+
+  let depth = 0;
+  for (let index = openBrace; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === "{") {
+      depth += 1;
+    } else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return source.slice(start, index + 1);
+      }
+    }
+  }
+
+  assert.fail(`expected ${needle} block to close`);
+}
+
 test("agent model selector skips stale fuzzy candidate ids before model lookup", () => {
   const fuzzySearch = sliceBetween(
     modelSelector,
@@ -109,6 +132,7 @@ test("model selector GPUI chrome preserves bounded labels and header click targe
     "impl RenderOnce for ModelSelectorListItem",
     "#[derive(IntoElement)]\npub struct ModelSelectorFooter",
   );
+  const pathIconBranch = sourceBlock(listItem, "ModelIcon::Path(icon_path) => {");
 
   for (const trigger of [agentTrigger, popoverTrigger, profileTrigger, modeTrigger]) {
     assert.match(trigger, /\.truncate\(true\)/);
@@ -119,12 +143,31 @@ test("model selector GPUI chrome preserves bounded labels and header click targe
     /let on_toggle: Option<Rc<dyn Fn\(&ClickEvent, &mut Window, &mut App\) \+ 'static>> =\s*self\.on_toggle\.map\(Rc::from\);/
   );
   assert.match(header, /\.when_some\(on_toggle\.clone\(\),[\s\S]*\.cursor_pointer\(\)[\s\S]*\.on_click\(/);
+  assert.match(
+    header,
+    /div\(\)[\s\S]*\.min_w_0\(\)[\s\S]*\.flex_1\(\)[\s\S]*Label::new\(title\.clone\(\)\)[\s\S]*\.truncate\(\)[\s\S]*\.tooltip\(Tooltip::text\(title\.clone\(\)\)/,
+  );
   assert.match(header, /IconButton::new\(format!\("model-provider-toggle-\{title_key\}"\), icon\)/);
   assert.match(listItem, /\.min_w_0\(\)[\s\S]*\.flex_1\(\)[\s\S]*Label::new\(self\.title\.clone\(\)\)\.truncate\(\)[\s\S]*\.tooltip\(Tooltip::text\(self\.title\)\)/);
-  assert.match(listItem, /ModelIcon::Path\(icon_path\) => \{[\s\S]*Icon::from_external_svg\(icon_path\)[\s\S]*\.color\(model_icon_color\)/);
+  assert.match(
+    listItem,
+    /ModelIcon::Name\(icon_name\) => Icon::new\(icon_name\)[\s\S]*\.color\(model_icon_color\)[\s\S]*\.size\(IconSize::Small\)/,
+  );
+  assert.match(
+    pathIconBranch,
+    /Icon::from_external_svg_with_original_colors\(icon_path\)[\s\S]*\.size\(IconSize::Small\)/,
+  );
+  for (const source of [agentModelSelector, modelSelectorPopover, modelSelectorComponents]) {
+    assert.match(
+      source,
+      /Icon::from_external_svg_with_original_colors/,
+      "provider/model brand SVGs should use the explicit original-color path",
+    );
+  }
   assert.doesNotMatch(
-    [agentModelSelector, modelSelectorPopover, modelSelectorComponents].join("\n"),
-    /from_external_svg_with_original_colors/,
+    pathIconBranch,
+    /\.color\(model_icon_color\)/,
+    "brand SVG logos must not inherit selected/muted theme tints",
   );
 });
 

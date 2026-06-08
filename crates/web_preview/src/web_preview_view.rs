@@ -565,8 +565,12 @@ pub(crate) enum BrowserEvent {
         uri: String,
         page_url: Option<String>,
     },
-    NavigationStarted,
-    NavigationCompleted,
+    NavigationStarted {
+        url: Option<String>,
+    },
+    NavigationCompleted {
+        url: Option<String>,
+    },
     IpcMessage(String),
     IpcMessageRejected(String),
     MountFailed(String),
@@ -1408,6 +1412,10 @@ impl WebPreviewView {
         page_url: Option<&str>,
         cx: &mut Context<Self>,
     ) -> bool {
+        if matches!(self.load_state, PreviewLoadState::Loading) {
+            return false;
+        }
+
         if let Some(page_url) = page_url
             && !self.favicon_page_url_matches_active_url(page_url)
         {
@@ -1425,6 +1433,30 @@ impl WebPreviewView {
         let source_apply_session_active = self.dx_style_source_apply_session_token.is_some();
         display_url_for_loaded_url(page_url, source_apply_session_active)
             == self.active_url.as_ref()
+    }
+
+    fn sync_active_url(&mut self, url: &str, window: &mut Window, cx: &mut Context<Self>) {
+        let previous_url = self.active_url.to_string();
+        let source_apply_session_active = self.dx_style_source_apply_session_token.is_some();
+        let display_url = display_url_for_loaded_url(url, source_apply_session_active);
+        if source_apply_session_active
+            && !is_dx_style_generator_display_url(display_url)
+            && previous_url.as_str() != display_url
+        {
+            self.dx_style_source_apply_session_token = None;
+            self.dx_style_source_apply_session_source_identity = None;
+        }
+        self.active_url = display_url.into();
+        let editor_text = self.current_url_text(cx);
+        let should_sync_editor = !self.url_editor_focus_handle.is_focused(window)
+            || editor_text.is_empty()
+            || editor_text == previous_url;
+
+        if should_sync_editor {
+            self.url_editor.update(cx, |editor, cx| {
+                editor.set_text(display_url, window, cx);
+            });
+        }
     }
 
     fn update_favicon_uri(
@@ -30484,29 +30516,16 @@ impl WebPreviewView {
                         }
                         continue;
                     }
-                    let previous_url = self.active_url.to_string();
                     let source_apply_session_active =
                         self.dx_style_source_apply_session_token.is_some();
                     let display_url =
                         display_url_for_loaded_url(url.as_str(), source_apply_session_active);
-                    if source_apply_session_active
-                        && !is_dx_style_generator_display_url(display_url)
-                        && previous_url.as_str() != display_url
+                    if matches!(self.load_state, PreviewLoadState::Loading)
+                        && display_url != self.active_url.as_ref()
                     {
-                        self.dx_style_source_apply_session_token = None;
-                        self.dx_style_source_apply_session_source_identity = None;
+                        continue;
                     }
-                    self.active_url = display_url.into();
-                    let editor_text = self.current_url_text(cx);
-                    let should_sync_editor = !self.url_editor_focus_handle.is_focused(window)
-                        || editor_text.is_empty()
-                        || editor_text == previous_url;
-
-                    if should_sync_editor {
-                        self.url_editor.update(cx, |editor, cx| {
-                            editor.set_text(display_url, window, cx);
-                        });
-                    }
+                    self.sync_active_url(url.as_str(), window, cx);
                 }
                 BrowserEvent::TitleChanged(title) => {
                     if self.onboarding_complete.is_some()
@@ -30527,13 +30546,19 @@ impl WebPreviewView {
                         tab_updated = true;
                     }
                 }
-                BrowserEvent::NavigationStarted => {
+                BrowserEvent::NavigationStarted { url } => {
                     self.load_state = PreviewLoadState::Loading;
                     self.page_title = None;
                     self.clear_favicon();
+                    if let Some(url) = url {
+                        self.sync_active_url(url.as_str(), window, cx);
+                    }
                     tab_updated = true;
                 }
-                BrowserEvent::NavigationCompleted => {
+                BrowserEvent::NavigationCompleted { url } => {
+                    if let Some(url) = url {
+                        self.sync_active_url(url.as_str(), window, cx);
+                    }
                     self.load_state = PreviewLoadState::Ready;
                     refocus_after_navigation = true;
                 }
@@ -36445,19 +36470,20 @@ fn coalesce_browser_event(queue: &mut Vec<BrowserEvent>, event: &BrowserEvent) {
         BrowserEvent::FaviconUriChanged { .. } => {
             queue.retain(|queued| !matches!(queued, BrowserEvent::FaviconUriChanged { .. }));
         }
-        BrowserEvent::NavigationStarted => {
+        BrowserEvent::NavigationStarted { .. } => {
             queue.retain(|queued| {
                 !matches!(
                     queued,
-                    BrowserEvent::NavigationStarted
-                        | BrowserEvent::NavigationCompleted
+                    BrowserEvent::NavigationStarted { .. }
+                        | BrowserEvent::NavigationCompleted { .. }
+                        | BrowserEvent::UrlChanged(_)
                         | BrowserEvent::TitleChanged(_)
                         | BrowserEvent::FaviconUriChanged { .. }
                 )
             });
         }
-        BrowserEvent::NavigationCompleted => {
-            queue.retain(|queued| !matches!(queued, BrowserEvent::NavigationCompleted));
+        BrowserEvent::NavigationCompleted { .. } => {
+            queue.retain(|queued| !matches!(queued, BrowserEvent::NavigationCompleted { .. }));
         }
         BrowserEvent::MountFailed(_) => {
             queue.retain(|queued| !matches!(queued, BrowserEvent::MountFailed(_)));
@@ -36675,7 +36701,10 @@ fn create_native_preview_for_macos_window(
             let event_queue = event_queue.clone();
             move |event, url| {
                 if matches!(event, PageLoadEvent::Finished) {
-                    push_browser_event(&event_queue, BrowserEvent::UrlChanged(url));
+                    push_browser_event(
+                        &event_queue,
+                        BrowserEvent::NavigationCompleted { url: Some(url) },
+                    );
                 }
             }
         })

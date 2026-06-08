@@ -70,6 +70,9 @@ const DEFAULT_WEB_PREVIEW_URL: &str = "https://www.google.com/";
 const GOOGLE_SEARCH_URL: &str = "https://www.google.com/search";
 const BOOKMARKS_FILE_NAME: &str = "bookmarks.json";
 const MAX_DEFERRED_WEB_PREVIEW_BROWSER_EVENTS: usize = 128;
+const MAX_WEB_PREVIEW_IPC_MESSAGE_BYTES: usize = 1024 * 1024;
+const MAX_DEFERRED_WEB_PREVIEW_IPC_MESSAGES: usize = 256;
+const MAX_DEFERRED_WEB_PREVIEW_IPC_BYTES: usize = 8 * 1024 * 1024;
 
 pub type OnboardingCompleteCallback = Rc<dyn Fn(&mut Window, &mut App)>;
 
@@ -104,6 +107,7 @@ pub(crate) enum BrowserEvent {
     UrlChanged(String),
     TitleChanged(String),
     IpcMessage(String),
+    IpcMessageRejected(String),
     MountFailed(String),
 }
 
@@ -845,8 +849,26 @@ impl WebPreviewView {
 
     fn report_action_panic(&mut self, message: &str, cx: &mut Context<Self>) {
         let message = message.to_string();
+        self.report_action_error_message(message, cx);
+    }
+
+    fn report_action_error_message(&mut self, message: String, cx: &mut Context<Self>) {
         self.load_state = PreviewLoadState::Error(message.clone().into());
         self.show_toast(message, cx);
+    }
+
+    fn queue_deferred_ipc_message(&mut self, message: String, cx: &mut Context<Self>) {
+        if let Some(error) =
+            deferred_ipc_message_capacity_error(&self.deferred_ipc_messages, message.len())
+        {
+            self.report_action_error_message(
+                format!("Web Preview bridge message rejected: {error}"),
+                cx,
+            );
+            return;
+        }
+
+        self.deferred_ipc_messages.push(message);
     }
 
     fn apply_browser_events(
@@ -899,8 +921,9 @@ impl WebPreviewView {
                     self.page_title = Some(title.into());
                     tab_updated = true;
                 }
-                BrowserEvent::IpcMessage(message) => {
-                    self.deferred_ipc_messages.push(message);
+                BrowserEvent::IpcMessage(message) => self.queue_deferred_ipc_message(message, cx),
+                BrowserEvent::IpcMessageRejected(message) => {
+                    self.report_action_error_message(message, cx);
                 }
                 BrowserEvent::MountFailed(error) => {
                     self.native_mount_requested.set(false);
@@ -2281,6 +2304,35 @@ pub(crate) fn push_browser_event(event_queue: &Arc<Mutex<Vec<BrowserEvent>>>, ev
     prune_browser_event_queue(&mut queue);
 }
 
+pub(crate) fn push_browser_ipc_event(event_queue: &Arc<Mutex<Vec<BrowserEvent>>>, message: String) {
+    if let Some(error) = ipc_message_capacity_error(message.len()) {
+        let mut queue = event_queue
+            .lock()
+            .expect("browser event queue lock poisoned");
+        push_browser_ipc_rejection_once(
+            &mut queue,
+            format!("Web Preview bridge message rejected: {error}"),
+        );
+        prune_browser_event_queue(&mut queue);
+        return;
+    }
+
+    let mut queue = event_queue
+        .lock()
+        .expect("browser event queue lock poisoned");
+    if let Some(error) = queued_browser_ipc_capacity_error(&queue, message.len()) {
+        push_browser_ipc_rejection_once(
+            &mut queue,
+            format!("Web Preview bridge message rejected: {error}"),
+        );
+        prune_browser_event_queue(&mut queue);
+        return;
+    }
+
+    queue.push(BrowserEvent::IpcMessage(message));
+    prune_browser_event_queue(&mut queue);
+}
+
 fn coalesce_browser_event(queue: &mut Vec<BrowserEvent>, event: &BrowserEvent) {
     match event {
         BrowserEvent::UrlChanged(_) => {
@@ -2292,13 +2344,80 @@ fn coalesce_browser_event(queue: &mut Vec<BrowserEvent>, event: &BrowserEvent) {
         BrowserEvent::MountFailed(_) => {
             queue.retain(|queued| !matches!(queued, BrowserEvent::MountFailed(_)));
         }
-        BrowserEvent::IpcMessage(_) => {}
+        BrowserEvent::IpcMessage(_) | BrowserEvent::IpcMessageRejected(_) => {}
     }
 }
 
 fn prune_browser_event_queue(queue: &mut Vec<BrowserEvent>) {
     while queue.len() > MAX_DEFERRED_WEB_PREVIEW_BROWSER_EVENTS {
         queue.remove(0);
+    }
+}
+
+fn ipc_message_capacity_error(message_len: usize) -> Option<&'static str> {
+    (message_len > MAX_WEB_PREVIEW_IPC_MESSAGE_BYTES)
+        .then_some("message exceeds the Web Preview IPC byte limit")
+}
+
+fn queued_browser_ipc_capacity_error(
+    queue: &[BrowserEvent],
+    message_len: usize,
+) -> Option<&'static str> {
+    if queued_browser_ipc_message_count(queue) >= MAX_DEFERRED_WEB_PREVIEW_IPC_MESSAGES {
+        return Some("too many Web Preview IPC messages are already queued");
+    }
+
+    let queued_bytes = queued_browser_ipc_message_bytes(queue);
+    if queued_bytes.saturating_add(message_len) > MAX_DEFERRED_WEB_PREVIEW_IPC_BYTES {
+        return Some("queued Web Preview IPC messages exceed the byte limit");
+    }
+
+    None
+}
+
+fn deferred_ipc_message_capacity_error(
+    messages: &[String],
+    message_len: usize,
+) -> Option<&'static str> {
+    if let Some(error) = ipc_message_capacity_error(message_len) {
+        return Some(error);
+    }
+
+    if messages.len() >= MAX_DEFERRED_WEB_PREVIEW_IPC_MESSAGES {
+        return Some("too many Web Preview IPC messages are already deferred");
+    }
+
+    let queued_bytes = messages.iter().map(String::len).sum::<usize>();
+    if queued_bytes.saturating_add(message_len) > MAX_DEFERRED_WEB_PREVIEW_IPC_BYTES {
+        return Some("deferred Web Preview IPC messages exceed the byte limit");
+    }
+
+    None
+}
+
+fn queued_browser_ipc_message_count(queue: &[BrowserEvent]) -> usize {
+    queue
+        .iter()
+        .filter(|event| matches!(event, BrowserEvent::IpcMessage(_)))
+        .count()
+}
+
+fn queued_browser_ipc_message_bytes(queue: &[BrowserEvent]) -> usize {
+    queue
+        .iter()
+        .filter_map(|event| match event {
+            BrowserEvent::IpcMessage(message) => Some(message.len()),
+            _ => None,
+        })
+        .sum()
+}
+
+fn push_browser_ipc_rejection_once(queue: &mut Vec<BrowserEvent>, message: String) {
+    if !queue
+        .iter()
+        .any(|event| matches!(event, BrowserEvent::IpcMessageRejected(_)))
+    {
+        queue.push(BrowserEvent::IpcMessageRejected(message));
     }
 }
 
@@ -2425,10 +2544,7 @@ fn create_native_preview_for_macos_window(
             }
         })
         .with_ipc_handler(move |request| {
-            push_browser_event(
-                &event_queue,
-                BrowserEvent::IpcMessage(request.body().to_string()),
-            );
+            push_browser_ipc_event(&event_queue, request.body().to_string());
         })
         .build_as_child(window)
         .with_context(|| "Failed to build the embedded web preview")?;

@@ -4,6 +4,43 @@ import test from "node:test";
 
 const read = (path: string) => readFileSync(path, "utf8");
 
+const sourceBlock = (source: string, needle: string) => {
+  const start = source.indexOf(needle);
+  assert.ok(start >= 0, `expected source block for ${needle}`);
+
+  const openBrace = source.indexOf("{", start);
+  assert.ok(openBrace >= start, `expected ${needle} to open a block`);
+
+  let depth = 0;
+  for (let index = openBrace; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === "{") {
+      depth += 1;
+    } else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return source.slice(start, index + 1);
+      }
+    }
+  }
+
+  assert.fail(`expected ${needle} block to close`);
+};
+
+const assertOriginalColorBrandBranch = (
+  source: string,
+  branchNeedle: string,
+  pathName: string,
+) => {
+  const branch = sourceBlock(source, branchNeedle);
+  assert.match(
+    branch,
+    new RegExp(`Icon::from_external_svg_with_original_colors\\(${pathName}\\)[\\s\\S]*\\.size\\(`),
+  );
+  assert.doesNotMatch(branch, new RegExp(`Icon::from_external_svg\\(${pathName}\\)`));
+  assert.doesNotMatch(branch, /\.color\(/);
+};
+
 const functionBody = (source: string, name: string) => {
   const start = source.search(new RegExp(`fn\\s+${name}\\s*\\(`));
   assert.ok(start >= 0, `expected ${name}`);
@@ -80,15 +117,19 @@ test("provider and model brand SVGs preserve original colors without retinting e
     /IconSource::OriginalColorExternalSvg\(path\) => img\(path\)[\s\S]*\.opacity\(self\.opacity\)/,
   );
 
-  for (const source of [
-    agentConfiguration,
-    agentModelSelector,
-    modelSelectorPopover,
+  assertOriginalColorBrandBranch(agentConfiguration, "IconOrSvg::Svg(path) => {", "path");
+  assertOriginalColorBrandBranch(agentModelSelector, "IconOrSvg::Svg(path) => {", "path");
+  assertOriginalColorBrandBranch(modelSelectorPopover, "AgentModelIcon::Path(path) => {", "path");
+  assertOriginalColorBrandBranch(
     modelSelectorComponents,
+    "ModelIcon::Path(icon_path) => {",
+    "icon_path",
+  );
+  assertOriginalColorBrandBranch(
     apiKeysOnboarding,
-  ]) {
-    assert.match(source, /Icon::from_external_svg_with_original_colors/);
-  }
+    "IconOrSvg::Svg(icon_path) => {",
+    "icon_path",
+  );
 
   assert.match(agentConfiguration, /AgentIcon::Path\(icon_path\) => Icon::from_external_svg\(icon_path\)/);
 });

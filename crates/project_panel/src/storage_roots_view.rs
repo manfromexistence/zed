@@ -86,19 +86,22 @@ fn render_storage_root_strip_row(
     )))
     .style(ButtonStyle::Subtle)
     .size(ButtonSize::Compact)
-    .tab_index(0)
-    .track_focus(&focus_handle)
+    .max_w(rems(18.))
     .disabled(!available)
     .tooltip(move |_window, cx| Tooltip::with_meta("Storage root", None, tooltip.clone(), cx))
     .when(available, |this| {
+        let row_focus_handle = focus_handle.clone();
+        let click_focus_handle = row_focus_handle.clone();
         this.on_click(move |_, window, cx| {
-            window.focus(&focus_handle, cx);
+            window.focus(&click_focus_handle, cx);
             panel
                 .update_in(cx, |this, window, cx| {
                     this.open_dx_explorer_storage_root(path.clone(), window, cx);
                 })
                 .log_err();
         })
+        .tab_index(0)
+        .track_focus(&row_focus_handle)
     })
     .child(Icon::new(icon).size(IconSize::XSmall).color(if available {
         Color::Muted
@@ -106,20 +109,22 @@ fn render_storage_root_strip_row(
         Color::Disabled
     }))
     .child(
-        Label::new(shortcut.label)
-            .size(LabelSize::XSmall)
-            .color(if available {
-                Color::Default
-            } else {
-                Color::Muted
-            })
-            .single_line(),
+        div().min_w_0().child(
+            Label::new(shortcut.label)
+                .size(LabelSize::XSmall)
+                .color(if available {
+                    Color::Default
+                } else {
+                    Color::Muted
+                })
+                .truncate(),
+        ),
     )
     .child(
         Label::new(status_label)
             .size(LabelSize::XSmall)
             .color(Color::Muted)
-            .single_line(),
+            .truncate(),
     )
     .into_any_element()
 }

@@ -17,6 +17,33 @@ const sourceWindow = (source: string, needle: string, before = 600, after = 600)
   return source.slice(Math.max(0, index - before), index + needle.length + after);
 };
 
+const functionBody = (source: string, name: string): string => {
+  const signature = new RegExp(
+    `\\n    (?:pub\\(crate\\)\\s+|pub\\s+)?fn ${name}\\(`,
+  );
+  const match = signature.exec(source);
+  assert.ok(match?.index !== undefined, `expected function ${name}`);
+
+  const start = match.index + 1;
+  const openBrace = source.indexOf("{", start);
+  assert.ok(openBrace > start, `expected ${name} to have a body`);
+
+  let depth = 0;
+  for (let index = openBrace; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === "{") {
+      depth += 1;
+    } else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return source.slice(start, index + 1);
+      }
+    }
+  }
+
+  assert.fail(`expected ${name} body to close`);
+};
+
 test("Agent composer uses shared liquid glass primitives", () => {
   assert.match(cargo, /liquid_glass\.workspace = true/);
   assert.match(threadView, /use liquid_glass::load_glass_surface;/);
@@ -89,6 +116,7 @@ test("composer glass layer is bounded to the composer shell", () => {
   assert.match(composerGlass, /\.absolute\(\)\s*\.inset_0\(\)\s*\.size_full\(\)/);
   assert.match(composerGlass, /ComposerGlassSurfaceStyle/);
   assert.match(composerGlass, /composer_glass_surface_style/);
+  assert.match(threadView, /COMPOSER_EMPTY_STATE_MAX_LINES: usize = 8/);
   assert.match(composerGlass, /MIN_TEXT_READABILITY_CONTRAST: f32 = 45\.0/);
   assert.match(composerGlass, /MIN_MUTED_TEXT_READABILITY_CONTRAST: f32 = 30\.0/);
   assert.match(
@@ -111,6 +139,9 @@ test("composer glass layer is bounded to the composer shell", () => {
 });
 
 test("composer preserves the real editor and controls", () => {
+  const renderMessageEditor = functionBody(threadView, "render_message_editor");
+  const syncEmptyStateMode = functionBody(threadView, "sync_editor_mode_for_empty_state");
+
   assert.match(
     threadView,
     /use_keyed_state\(\s*\(\s*"agent-composer-liquid-glass-source",\s*cx\.entity_id\(\)\.as_u64\(\),\s*\),\s*cx,\s*\|_, _\| load_glass_surface\(\),\s*\)/s,
@@ -127,6 +158,12 @@ test("composer preserves the real editor and controls", () => {
   assert.match(threadView, /self\.render_voice_controls\(window, cx\)/);
   assert.match(threadView, /self\.render_send_button\(cx\)/);
   assert.match(messageEditor, /background: cx\.theme\(\)\.system\(\)\.transparent/);
+  assert.match(renderMessageEditor, /let expands_editor_area = editor_expanded && has_messages;/);
+  assert.match(renderMessageEditor, /else \{\s*this\.flex_1\(\)\.w_full\(\)\s*\}/);
+  assert.doesNotMatch(renderMessageEditor, /else \{\s*this\.flex_1\(\)\.size_full\(\)\s*\}/);
+  assert.match(syncEmptyStateMode, /let max_lines = if has_messages \{[\s\S]*COMPOSER_COLLAPSED_MAX_LINES[\s\S]*\} else \{[\s\S]*COMPOSER_EMPTY_STATE_MAX_LINES/);
+  assert.match(syncEmptyStateMode, /EditorMode::AutoHeight \{[\s\S]*min_lines: COMPOSER_MIN_LINES,[\s\S]*max_lines: Some\(max_lines\)/);
+  assert.doesNotMatch(syncEmptyStateMode, /EditorMode::Full/);
 });
 
 test("composer liquid glass guard is discoverable", () => {
