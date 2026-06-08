@@ -66,11 +66,11 @@ use std::{
 };
 use theme_settings::ThemeSettings;
 use ui::{
-    ButtonLike, ButtonSize, ButtonStyle, Chip, Color, ContextMenu, ContextMenuEntry, DecoratedIcon,
-    Icon, IconButtonShape, IconDecoration, IconDecorationKind, IndentGuideColors,
-    IndentGuideLayout, Indicator, KeyBinding, Label, LabelSize, ListHeader, ListItem,
-    ListItemSpacing, PopoverMenu, ProjectEmptyState, ScrollAxes, ScrollableHandle, Scrollbars,
-    StickyCandidate, TintColor, Tooltip, WithScrollbar, prelude::*, v_flex,
+    ButtonStyle, Chip, Color, ContextMenu, ContextMenuEntry, DecoratedIcon, Icon, IconButtonShape,
+    IconDecoration, IconDecorationKind, IndentGuideColors, IndentGuideLayout, Indicator,
+    KeyBinding, Label, LabelSize, ListHeader, ListItem, ListItemSpacing, PopoverMenu,
+    ProjectEmptyState, ScrollAxes, ScrollableHandle, Scrollbars, StickyCandidate, TintColor,
+    Tooltip, WithScrollbar, prelude::*, v_flex,
 };
 use util::{
     ResultExt, TakeUntilExt, TryFutureExt,
@@ -4491,6 +4491,8 @@ impl ProjectPanel {
         )))
         .spacing(ListItemSpacing::ExtraDense)
         .toggle_state(is_selected)
+        .tab_index(0)
+        .track_focus(&self.focus_handle(cx))
         .tooltip(move |_window, cx| {
             Tooltip::with_meta("Folder file summary", None, tooltip.clone(), cx)
         })

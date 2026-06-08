@@ -2,7 +2,8 @@ use std::sync::Arc;
 
 use component::{Component, ComponentScope, example_group_with_title, single_example};
 use gpui::{
-    AnyElement, AnyView, ClickEvent, MouseButton, MouseDownEvent, Pixels, ScrollAnchor, px,
+    AnyElement, AnyView, ClickEvent, FocusHandle, MouseButton, MouseDownEvent, Pixels,
+    ScrollAnchor, px,
 };
 use smallvec::SmallVec;
 
@@ -53,6 +54,8 @@ pub struct ListItem {
     rounded: bool,
     overflow_x: bool,
     focused: Option<bool>,
+    tab_index: Option<isize>,
+    focus_handle: Option<FocusHandle>,
     docked_right: bool,
     height: Option<DefiniteLength>,
     scroll_anchor: Option<ScrollAnchor>,
@@ -85,6 +88,8 @@ impl ListItem {
             rounded: false,
             overflow_x: false,
             focused: None,
+            tab_index: None,
+            focus_handle: None,
             docked_right: false,
             height: None,
             scroll_anchor: None,
@@ -206,6 +211,16 @@ impl ListItem {
         self
     }
 
+    pub fn tab_index(mut self, tab_index: isize) -> Self {
+        self.tab_index = Some(tab_index);
+        self
+    }
+
+    pub fn track_focus(mut self, focus_handle: &FocusHandle) -> Self {
+        self.focus_handle = Some(focus_handle.clone());
+        self
+    }
+
     pub fn docked_right(mut self, docked_right: bool) -> Self {
         self.docked_right = docked_right;
         self
@@ -244,8 +259,14 @@ impl ParentElement for ListItem {
 
 impl RenderOnce for ListItem {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let is_focusable = self.focus_handle.is_some();
+
         h_flex()
             .id(self.id)
+            .when_some(self.tab_index, |this, tab_index| this.tab_index(tab_index))
+            .when_some(self.focus_handle, |this, focus_handle| {
+                this.track_focus(&focus_handle)
+            })
             .when_some(self.scroll_anchor, |this, scroll_anchor| {
                 this.anchor_scroll(Some(scroll_anchor))
             })
@@ -278,6 +299,12 @@ impl RenderOnce for ListItem {
                 })
             })
             .when(self.rounded, |this| this.rounded_sm())
+            .when(is_focusable && !self.disabled, |this| {
+                this.focus_visible(|this| {
+                    this.border_1()
+                        .border_color(cx.theme().colors().border_focused)
+                })
+            })
             .when_some(self.on_hover, |this, on_hover| this.on_hover(on_hover))
             .child(
                 h_flex()

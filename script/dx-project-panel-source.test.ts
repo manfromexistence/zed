@@ -995,6 +995,7 @@ test("project panel storage overview and root shortcuts stay cached and professi
   const storage = read("crates/project_panel/src/storage.rs");
   const storageRoots = read("crates/project_panel/src/storage_roots.rs");
   const storageRootsView = read("crates/project_panel/src/storage_roots_view.rs");
+  const listItem = read("crates/ui/src/components/list/list_item.rs");
   const dxIcons = read("crates/ui/src/dx_icons.rs");
   const media = read("crates/project_panel/src/media_preview.rs");
   const updateVisibleEntries = functionBody(source, "update_visible_entries");
@@ -1154,6 +1155,8 @@ test("project panel storage overview and root shortcuts stay cached and professi
   );
   assert.match(renderStorageDrilldownRow, /\.spacing\(ListItemSpacing::ExtraDense\)/);
   assert.match(renderStorageDrilldownRow, /\.toggle_state\(is_selected\)/);
+  assert.match(renderStorageDrilldownRow, /\.tab_index\(0\)/);
+  assert.match(renderStorageDrilldownRow, /\.track_focus\(&self\.focus_handle\(cx\)\)/);
   assert.match(renderStorageDrilldownRow, /\.start_slot::<AnyElement>\(/);
   assert.match(renderStorageDrilldownRow, /\.end_slot::<AnyElement>\(/);
   assert.match(
@@ -1166,9 +1169,21 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(renderStorageDrilldownRow, /\.end_slot::<AnyElement>\([\s\S]*Label::new\(format!\("\{file_count\} \/ \{storage_label\}"\)\)/);
   assert.doesNotMatch(
     renderStorageDrilldownRow,
-    /ButtonLike::new|\.selected_style\(ButtonStyle::Tinted\(TintColor::Accent\)\)|\.size\(ButtonSize::None\)|\.full_width\(\)|\.tab_index\(0\)|\.track_focus\(&self\.focus_handle\(cx\)\)|cursor_pointer\(\)|\.hover\(/,
+    /ButtonLike::new|\.selected_style\(ButtonStyle::Tinted\(TintColor::Accent\)\)|\.size\(ButtonSize::None\)|\.full_width\(\)|cursor_pointer\(\)|\.hover\(/,
     "storage drilldown rows must use Zed ListItem chrome instead of custom ButtonLike row styling",
   );
+  assert.match(
+    listItem,
+    /tab_index:\s*Option<isize>/,
+    "Zed ListItem must support explicit tab stops for focusable Project Panel action rows",
+  );
+  assert.match(
+    listItem,
+    /focus_handle:\s*Option<FocusHandle>/,
+    "Zed ListItem must track focus when used as an action row",
+  );
+  assert.match(listItem, /pub fn tab_index\(mut self, tab_index: isize\) -> Self/);
+  assert.match(listItem, /pub fn track_focus\(mut self, focus_handle: &FocusHandle\) -> Self/);
 
   assert.match(renderRootStrip, /\.id\("dx-explorer-storage-root-strip"\)/);
   assert.match(
