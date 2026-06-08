@@ -1,10 +1,11 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use crate::dx_receipt_history::invalidate_tool_history_snapshot_cache;
 use crate::dx_source_sets::invalidate_source_set_snapshot_cache;
 use gpui::{
     Action, App, AppContext, Context, EventEmitter, FocusHandle, Focusable, InteractiveElement,
-    IntoElement, Render, ScrollHandle, WeakEntity, Window, px,
+    IntoElement, MouseButton, MouseDownEvent, Render, ScrollAnchor, ScrollHandle, WeakEntity,
+    Window, px,
 };
 use ui::prelude::*;
 use ui::{DxUiIcon, IconName, dx_icon};
@@ -62,6 +63,7 @@ pub(crate) struct DxForgePanel {
     pub(super) active_item: Option<DxForgeRowKey>,
     checked_items: HashSet<DxForgeRowKey>,
     pub(super) visible_rows: Vec<DxForgeVisibleRow>,
+    row_scroll_anchors: HashMap<DxForgeRowKey, ScrollAnchor>,
 }
 
 impl DxForgePanel {
@@ -74,6 +76,7 @@ impl DxForgePanel {
             active_item: None,
             checked_items: HashSet::default(),
             visible_rows: Vec::new(),
+            row_scroll_anchors: HashMap::default(),
         }
     }
 
@@ -95,14 +98,25 @@ impl DxForgePanel {
     }
 
     fn sync_visible_rows(&mut self, visible_rows: Vec<DxForgeVisibleRow>) {
+        let visible_keys = visible_rows
+            .iter()
+            .map(|row| row.item_key().clone())
+            .collect::<HashSet<_>>();
         let active_item_is_visible = self
             .active_item
             .as_ref()
-            .is_none_or(|item_key| visible_rows.iter().any(|row| row.item_key() == item_key));
+            .is_none_or(|item_key| visible_keys.contains(item_key));
         if !active_item_is_visible {
             self.clear_active_item();
         }
 
+        self.row_scroll_anchors
+            .retain(|item_key, _| visible_keys.contains(item_key));
+        for item_key in visible_keys {
+            self.row_scroll_anchors
+                .entry(item_key)
+                .or_insert_with(|| ScrollAnchor::for_handle(self.scroll_handle.clone()));
+        }
         self.visible_rows = visible_rows;
     }
 
@@ -137,12 +151,40 @@ impl DxForgePanel {
         }
     }
 
+    pub(super) fn row_scroll_anchor(&self, item_key: &DxForgeRowKey) -> Option<ScrollAnchor> {
+        self.row_scroll_anchors.get(item_key).cloned()
+    }
+
+    pub(super) fn scroll_item_into_view(
+        &self,
+        item_key: &DxForgeRowKey,
+        window: &mut Window,
+        cx: &mut App,
+    ) {
+        if let Some(scroll_anchor) = self.row_scroll_anchor(item_key) {
+            scroll_anchor.scroll_to(window, cx);
+        }
+    }
+
     pub(super) fn item_checked(&self, item_key: &DxForgeRowKey) -> bool {
         self.checked_items.contains(item_key)
     }
 
     pub(super) fn item_active(&self, item_key: &DxForgeRowKey) -> bool {
         self.active_item.as_ref() == Some(item_key)
+    }
+
+    pub(super) fn focus_panel(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.focus_handle.focus(window, cx);
+    }
+
+    fn focus_panel_on_mouse_down(
+        &mut self,
+        _: &MouseDownEvent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.focus_panel(window, cx);
     }
 }
 
@@ -226,6 +268,10 @@ impl Render for DxForgePanel {
             .size_full()
             .key_context(self.dispatch_context())
             .track_focus(&self.focus_handle)
+            .on_mouse_down(
+                MouseButton::Left,
+                cx.listener(Self::focus_panel_on_mouse_down),
+            )
             .on_action(cx.listener(Self::select_next))
             .on_action(cx.listener(Self::select_previous))
             .on_action(cx.listener(Self::select_first))

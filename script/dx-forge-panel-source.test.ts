@@ -663,6 +663,7 @@ test("Forge panel uses workflow tabs with Git-style selectable rows", () => {
   assert.match(panel, /active_item: Option<DxForgeRowKey>/);
   assert.match(panel, /checked_items: HashSet<DxForgeRowKey>/);
   assert.match(panel, /visible_rows: Vec<DxForgeVisibleRow>/);
+  assert.match(panel, /row_scroll_anchors: HashMap<DxForgeRowKey, ScrollAnchor>/);
   const clearActiveItemBody = extractRustMethod(panel, "clear_active_item");
   const syncVisibleRowsBody = extractRustMethod(panel, "sync_visible_rows");
   const refreshBody = extractRustMethod(panel, "refresh");
@@ -671,7 +672,10 @@ test("Forge panel uses workflow tabs with Git-style selectable rows", () => {
     /(?:self\.checked_items\s*(?:\.clear\(\)|\.drain\(\)|=\s*(?:HashSet::default\(\)|HashSet::new\(\)|Default::default\(\)))|std::mem::take\(&mut self\.checked_items\))/;
   assert.match(clearActiveItemBody, /self\.active_item\s*=\s*None;/);
   assert.doesNotMatch(clearActiveItemBody, /checked_items/);
-  assert.match(syncVisibleRowsBody, /visible_rows\.iter\(\)\.any\(\|row\| row\.item_key\(\) == item_key\)/);
+  assert.match(syncVisibleRowsBody, /let visible_keys = visible_rows[\s\S]*\.collect::<HashSet<_>>\(\);/);
+  assert.match(syncVisibleRowsBody, /visible_keys\.contains\(item_key\)/);
+  assert.match(syncVisibleRowsBody, /self\.row_scroll_anchors\s*\.retain\(\|item_key, _\| visible_keys\.contains\(item_key\)\)/);
+  assert.match(syncVisibleRowsBody, /ScrollAnchor::for_handle\(self\.scroll_handle\.clone\(\)\)/);
   assert.match(syncVisibleRowsBody, /self\.visible_rows\s*=\s*visible_rows;/);
   assert.doesNotMatch(syncVisibleRowsBody, checkedItemReset);
   assert.match(refreshBody, /self\.clear_active_item\(\);[\s\S]*cx\.notify\(\);/);
@@ -682,6 +686,8 @@ test("Forge panel uses workflow tabs with Git-style selectable rows", () => {
   );
   assert.doesNotMatch(setActiveTabBody, checkedItemReset);
   assert.match(panel, /activate_item/);
+  assert.match(panel, /row_scroll_anchor/);
+  assert.match(panel, /scroll_item_into_view/);
   assert.match(panel, /item_active/);
   assert.match(panel, /visible_rows_for_tab\(&snapshot, self\.active_tab\)/);
   assert.match(panel, /self\.sync_visible_rows\(visible_rows\)/);
@@ -734,20 +740,25 @@ test("Forge panel uses workflow tabs with Git-style selectable rows", () => {
   assert.match(workflowRows, /let checked = item_checked\(panel, &item_key, cx\)/);
   assert.match(workflowRows, /let active = item_active\(panel, &item_key, cx\)/);
   assert.match(workflowRows, /selection_checkbox\(id\.clone\(\), item_key, checked, panel\)/);
+  assert.match(workflowRows, /row_scroll_anchor\(panel, &row_key, cx\)/);
+  assert.match(workflowRows, /\.anchor_scroll\(scroll_anchor\)/);
   assert.match(workflowRows, /\.toggle_state\(active\)/);
-  assert.match(workflowRows, /panel\.toggle_item_checked\(checkbox_key\.clone\(\), cx\)/);
+  const selectionCheckboxBody = workflowRows.match(
+    /pub\(super\) fn selection_checkbox\([\s\S]*?\r?\n}\r?\n\r?\nfn selectable_row/,
+  )?.[0] ?? "";
+  assert.match(selectionCheckboxBody, /let checkbox_key = item_key\.clone\(\)/);
+  assert.match(selectionCheckboxBody, /panel\.focus_panel\(window, cx\)/);
+  assert.match(selectionCheckboxBody, /panel\.activate_item\(checkbox_key\.clone\(\), cx\)/);
+  assert.match(selectionCheckboxBody, /panel\.toggle_item_checked\(checkbox_key\.clone\(\), cx\)/);
   assert.match(
     workflowRows,
-    /panel\s*\.update\(cx, \|panel, cx\|[\s\S]*panel\.activate_item\(row_key\.clone\(\), cx\)/,
+    /panel\s*\.update\(cx, \|panel, cx\|[\s\S]*panel\.focus_panel\(window, cx\)[\s\S]*panel\.activate_item\(row_key\.clone\(\), cx\)/,
   );
   assert.doesNotMatch(
     workflowRows.match(/fn selectable_row\([\s\S]*?\r?\n}\r?\n\r?\nfn selectable_row_actions/)?.[0] ?? "",
     /panel\.toggle_item_(?:selection|checked)\(row_key\.clone\(\), cx\)/,
   );
-  assert.match(
-    workflowRows.match(/pub\(super\) fn selection_checkbox\([\s\S]*?\r?\n}\r?\n\r?\nfn selectable_row/)?.[0] ?? "",
-    /\.on_click\(\|_, _, cx\| \{[\s\S]*cx\.stop_propagation\(\);[\s\S]*\}\)/,
-  );
+  assert.match(selectionCheckboxBody, /\.on_click\(move \|_, window, cx\| \{[\s\S]*cx\.stop_propagation\(\);[\s\S]*\}\)/);
   assert.match(workflowRows, /cx\.stop_propagation\(\)/);
   assert.match(workflowRows, /fn item_active/);
   assert.match(panelView, /DxForgePanelTab::Repository/);
@@ -779,8 +790,21 @@ test("Forge panel wires visible-row navigation to menu actions", () => {
   assert.match(dispatchContextBody, /dispatch_context\.add\("menu"\)/);
 
   const renderBody = extractRustMethod(panel, "render");
-  assert.match(renderBody, /\.key_context\(self\.dispatch_context\(\)\)/);
-  assert.match(renderBody, /\.track_focus\(&self\.focus_handle\)/);
+  const actionRootChain =
+    renderBody.match(/v_flex\(\)[\s\S]*?\.child\(panel_view::render_panel/)?.[0] ?? "";
+  assert.ok(
+    actionRootChain,
+    "Forge panel should bind focus and menu ownership on the root element",
+  );
+  assert.match(panel, /MouseButton/);
+  assert.match(panel, /MouseDownEvent/);
+  assert.match(actionRootChain, /\.id\("dx-forge-panel-action-root"\)/);
+  assert.match(actionRootChain, /\.key_context\(self\.dispatch_context\(\)\)/);
+  assert.match(actionRootChain, /\.track_focus\(&self\.focus_handle\)/);
+  assert.match(
+    actionRootChain,
+    /\.on_mouse_down\(\s*MouseButton::Left,\s*cx\.listener\(Self::focus_panel_on_mouse_down\),?\s*\)/,
+  );
   for (const method of [
     "select_next",
     "select_previous",
@@ -789,10 +813,25 @@ test("Forge panel wires visible-row navigation to menu actions", () => {
     "toggle_active_item_checked",
   ]) {
     assert.match(
-      renderBody,
+      actionRootChain,
       new RegExp(`\\.on_action\\(cx\\.listener\\(Self::${method}\\)\\)`),
     );
   }
+
+  const focusPanelBody = extractRustMethod(panel, "focus_panel");
+  assert.match(focusPanelBody, /window: &mut Window/);
+  assert.match(focusPanelBody, /self\.focus_handle\.focus\(window, cx\)/);
+  assert.doesNotMatch(
+    focusPanelBody,
+    /stop_propagation|toggle_panel_focus|ensure_panel|set_active_tab|activate_item|toggle_item_checked|refresh|sync_visible_rows|cx\.notify\(\)/,
+  );
+  const focusPanelOnMouseDownBody = extractRustMethod(panel, "focus_panel_on_mouse_down");
+  assert.match(focusPanelOnMouseDownBody, /_: &MouseDownEvent/);
+  assert.match(focusPanelOnMouseDownBody, /self\.focus_panel\(window, cx\)/);
+  assert.doesNotMatch(
+    focusPanelOnMouseDownBody,
+    /stop_propagation|toggle_panel_focus|ensure_panel|set_active_tab|activate_item|toggle_item_checked|refresh|sync_visible_rows|cx\.notify\(\)/,
+  );
 
   const activeVisibleRowIndexBody = extractRustMethod(rowSelection, "active_visible_row_index");
   assert.match(activeVisibleRowIndexBody, /self\.active_item\.as_ref\(\)\?/);
@@ -803,40 +842,61 @@ test("Forge panel wires visible-row navigation to menu actions", () => {
   assert.match(activeVisibleRowKeyBody, /self\.visible_rows\s*\.get\(index\)/);
   assert.match(activeVisibleRowKeyBody, /row\.item_key\(\)\.clone\(\)/);
 
+  assert.match(panel, /row_scroll_anchors:\s*HashMap<DxForgeRowKey, ScrollAnchor>/);
+  const syncVisibleRowsBody = extractRustMethod(panel, "sync_visible_rows");
+  assert.match(syncVisibleRowsBody, /visible_keys[\s\S]*collect::<HashSet<_>>\(\)/);
+  assert.match(syncVisibleRowsBody, /row_scroll_anchors[\s\S]*retain\(\|item_key, _\| visible_keys\.contains\(item_key\)\)/);
+  assert.match(syncVisibleRowsBody, /ScrollAnchor::for_handle\(self\.scroll_handle\.clone\(\)\)/);
+  const rowScrollAnchorBody = extractRustMethod(panel, "row_scroll_anchor");
+  assert.match(rowScrollAnchorBody, /self\.row_scroll_anchors\.get\(item_key\)\.cloned\(\)/);
+  const scrollItemIntoViewBody = extractRustMethod(panel, "scroll_item_into_view");
+  assert.match(scrollItemIntoViewBody, /self\.row_scroll_anchor\(item_key\)/);
+  assert.match(scrollItemIntoViewBody, /scroll_anchor\.scroll_to\(window, cx\)/);
+  assert.match(workflowRows, /let scroll_anchor = row_scroll_anchor\(panel, &row_key, cx\);/);
+  assert.match(workflowRows, /\.anchor_scroll\(scroll_anchor\)/);
+  assert.match(providersView, /let scroll_anchor = row_scroll_anchor\(panel, &item_key, cx\);/);
+  assert.match(providersView, /\.anchor_scroll\(scroll_anchor\)/);
+
   const setActiveVisibleRowBody = extractRustMethod(rowSelection, "set_active_visible_row");
   assert.match(setActiveVisibleRowBody, /self\.visible_rows\.get\(index\)/);
   assert.match(setActiveVisibleRowBody, /row\.item_key\(\)\.clone\(\)/);
+  assert.match(setActiveVisibleRowBody, /self\.scroll_item_into_view\(&item_key, window, cx\)/);
   assert.match(setActiveVisibleRowBody, /cx\.notify\(\)/);
 
   const selectFirstVisibleRowBody = extractRustMethod(rowSelection, "select_first_visible_row");
   assert.match(selectFirstVisibleRowBody, /if !self\.visible_rows\.is_empty\(\)/);
-  assert.match(selectFirstVisibleRowBody, /self\.set_active_visible_row\(0, cx\)/);
+  assert.match(selectFirstVisibleRowBody, /self\.set_active_visible_row\(0, window, cx\)/);
 
   const selectLastVisibleRowBody = extractRustMethod(rowSelection, "select_last_visible_row");
   assert.match(selectLastVisibleRowBody, /self\.visible_rows\.len\(\)\.checked_sub\(1\)/);
-  assert.match(selectLastVisibleRowBody, /self\.set_active_visible_row\(last_index, cx\)/);
+  assert.match(selectLastVisibleRowBody, /self\.set_active_visible_row\(last_index, window, cx\)/);
 
   const selectNextBody = extractRustMethod(rowSelection, "select_next");
   assert.match(selectNextBody, /_: &SelectNext/);
+  assert.match(selectNextBody, /self\.focus_panel\(window, cx\)/);
   assert.match(selectNextBody, /self\.active_visible_row_index\(\)/);
-  assert.match(selectNextBody, /self\.select_first_visible_row\(cx\)/);
+  assert.match(selectNextBody, /self\.select_first_visible_row\(window, cx\)/);
   assert.match(selectNextBody, /checked_add\(1\)/);
   assert.match(selectNextBody, /next_index < self\.visible_rows\.len\(\)/);
-  assert.match(selectNextBody, /self\.set_active_visible_row\(next_index, cx\)/);
+  assert.match(selectNextBody, /self\.set_active_visible_row\(next_index, window, cx\)/);
   assert.doesNotMatch(selectNextBody, /self\.active_item\s*=/);
   assert.doesNotMatch(selectNextBody, /% self\.visible_rows\.len\(\)/);
 
   const selectPreviousBody = extractRustMethod(rowSelection, "select_previous");
   assert.match(selectPreviousBody, /_: &SelectPrevious/);
+  assert.match(selectPreviousBody, /window: &mut Window/);
+  assert.match(selectPreviousBody, /self\.focus_panel\(window, cx\)/);
   assert.match(selectPreviousBody, /self\.active_visible_row_index\(\)/);
-  assert.match(selectPreviousBody, /self\.select_last_visible_row\(cx\)/);
+  assert.match(selectPreviousBody, /self\.select_last_visible_row\(window, cx\)/);
   assert.match(selectPreviousBody, /checked_sub\(1\)/);
-  assert.match(selectPreviousBody, /self\.set_active_visible_row\(previous_index, cx\)/);
+  assert.match(selectPreviousBody, /self\.set_active_visible_row\(previous_index, window, cx\)/);
   assert.doesNotMatch(selectPreviousBody, /self\.active_item\s*=/);
   assert.doesNotMatch(selectPreviousBody, /% self\.visible_rows\.len\(\)/);
 
   const toggleActiveBody = extractRustMethod(rowSelection, "toggle_active_item_checked");
   assert.match(toggleActiveBody, /_: &Confirm/);
+  assert.match(toggleActiveBody, /window: &mut Window/);
+  assert.match(toggleActiveBody, /self\.focus_panel\(window, cx\)/);
   assert.match(toggleActiveBody, /let Some\(active_item\) = self\.active_visible_row_key\(\) else/);
   assert.match(toggleActiveBody, /self\.toggle_item_checked\(active_item, cx\)/);
   assert.doesNotMatch(toggleActiveBody, /self\.active_item\.clone\(\)/);
@@ -866,6 +926,16 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.match(providersRoot, /mod view;/);
   assert.match(providersRoot, /mod tooltips;/);
   assert.match(providersRoot, /pub\(super\) use self::view::remote_target_strip;/);
+  const providerGroupControlsBody =
+    providersView.match(
+      /fn provider_group_controls\([\s\S]*?\r?\n}\r?\n\r?\nfn provider_buttons_for_group/,
+    )?.[0] ?? "";
+  assert.match(providerGroupControlsBody, /row_scroll_anchor\(panel, &item_key, cx\)/);
+  assert.match(providerGroupControlsBody, /\.anchor_scroll\(scroll_anchor\)/);
+  assert.match(
+    providerGroupControlsBody,
+    /\.on_click\(move \|_, window, cx\| \{[\s\S]*panel\.focus_panel\(window, cx\)[\s\S]*panel\.activate_item\(row_key\.clone\(\), cx\)/,
+  );
 
   const providerTargets = [
     ["GitHub", "DxForgeProviderGithub", "dx_forge_provider_github", "ProviderGroup::Code", "svgl", "github_dark"],
@@ -966,10 +1036,6 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
     providersView.match(
       /pub\(in crate::dx_forge_panel\) fn remote_target_strip\([\s\S]*?\r?\n}\r?\n\r?\nfn provider_target_button/,
     )?.[0] ?? "";
-  const providerGroupControlsBody =
-    providersView.match(
-      /fn provider_group_controls\([\s\S]*?\r?\n}\r?\n\r?\nfn provider_buttons_for_group/,
-    )?.[0] ?? "";
   const providerButtonsBody =
     providersView.match(
       /fn provider_buttons_for_group\([\s\S]*?\r?\n}\r?\n\r?\nfn provider_group_actions/,
@@ -993,10 +1059,10 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.match(providerGroupControlsBody, /selection_checkbox\([\s\S]*checked,[\s\S]*panel,/);
   assert.match(providerGroupControlsBody, /\.toggle_state\(active\)/);
   assert.match(providerGroupControlsBody, /let row_key = item_key\.clone\(\)/);
-  assert.match(providerGroupControlsBody, /\.on_click\(move \|_, _, cx\|/);
+  assert.match(providerGroupControlsBody, /\.on_click\(move \|_, window, cx\|/);
   assert.match(
     providerGroupControlsBody,
-    /panel_for_row\s*\.update\(cx, \|panel, cx\|[\s\S]*panel\.activate_item\(row_key\.clone\(\), cx\)/,
+    /panel_for_row\s*\.update\(cx, \|panel, cx\|[\s\S]*panel\.focus_panel\(window, cx\)[\s\S]*panel\.activate_item\(row_key\.clone\(\), cx\)/,
   );
   assert.doesNotMatch(
     providerGroupControlsBody,

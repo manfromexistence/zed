@@ -1,4 +1,4 @@
-use gpui::{AnyElement, App, MouseButton, SharedString, WeakEntity, rems};
+use gpui::{AnyElement, App, MouseButton, ScrollAnchor, SharedString, WeakEntity, rems};
 use ui::{
     Checkbox, ElevationIndex, IconName, ListItem, ListItemSpacing, ToggleState, Tooltip, prelude::*,
 };
@@ -39,6 +39,7 @@ pub(super) fn selectable_receipt_row(
         receipt.detail.clone(),
         panel,
         open_button,
+        cx,
     )
     .tooltip(move |_, cx| Tooltip::with_meta(title.clone(), None, meta.clone(), cx))
     .into_any_element()
@@ -74,6 +75,7 @@ pub(super) fn selectable_source_row(
         source.detail.clone(),
         panel,
         open_button,
+        cx,
     )
     .tooltip(move |_, cx| Tooltip::with_meta(title.clone(), None, meta.clone(), cx))
     .into_any_element()
@@ -102,10 +104,12 @@ pub(super) fn selection_checkbox(
             )
             .fill()
             .elevation(ElevationIndex::Surface)
-            .on_click(move |_, _, cx| {
+            .on_click(move |_, window, cx| {
                 cx.stop_propagation();
                 panel
                     .update(cx, |panel, cx| {
+                        panel.focus_panel(window, cx);
+                        panel.activate_item(checkbox_key.clone(), cx);
                         panel.toggle_item_checked(checkbox_key.clone(), cx)
                     })
                     .ok();
@@ -131,12 +135,15 @@ fn selectable_row(
     detail: String,
     panel: &WeakEntity<DxForgePanel>,
     open_button: Option<AnyElement>,
+    cx: &App,
 ) -> ListItem {
     let panel_for_row = panel.clone();
     let row_key = item_key.clone();
+    let scroll_anchor = row_scroll_anchor(panel, &row_key, cx);
     let selection_checkbox = selection_checkbox(id.clone(), item_key, checked, panel);
     let row_actions = selectable_row_actions(open_button, selection_checkbox);
     ListItem::new(id)
+        .anchor_scroll(scroll_anchor)
         .inset(true)
         .height(rems(1.75))
         .spacing(ListItemSpacing::Dense)
@@ -157,11 +164,24 @@ fn selectable_row(
                 ),
         )
         .end_slot(row_actions)
-        .on_click(move |_, _, cx| {
+        .on_click(move |_, window, cx| {
             panel_for_row
-                .update(cx, |panel, cx| panel.activate_item(row_key.clone(), cx))
+                .update(cx, |panel, cx| {
+                    panel.focus_panel(window, cx);
+                    panel.activate_item(row_key.clone(), cx)
+                })
                 .ok();
         })
+}
+
+pub(super) fn row_scroll_anchor(
+    panel: &WeakEntity<DxForgePanel>,
+    item_key: &DxForgeRowKey,
+    cx: &App,
+) -> Option<ScrollAnchor> {
+    panel
+        .upgrade()
+        .and_then(|panel| panel.read(cx).row_scroll_anchor(item_key))
 }
 
 fn selectable_row_actions(

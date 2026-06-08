@@ -19,6 +19,24 @@ NOTES:
 - Source-only by instruction. Cargo, build, `just run`, native Zed launch, browser automation, recursive disk scans, and runtime visual proof remain deferred.
 - Unrelated Forge panel dirty files were left unstaged for a separate focused commit.
 
+[2026-06-08] - Forge Keyboard Row Navigation Polish
+
+CHANGED:
+- `crates\agent_ui\src\dx_forge_panel\panel.rs` now owns per-visible-row `ScrollAnchor`s, prunes them with the visible row model, and exposes a focused scroll-to-row helper for keyboard navigation.
+- `crates\agent_ui\src\dx_forge_panel\workflow_rows.rs` and `crates\agent_ui\src\dx_forge_panel\providers\view.rs` now attach those anchors to real Forge rows and focus the panel before row/checkbox state changes.
+- `crates\agent_ui\src\dx_forge_panel\row_selection.rs` now focuses the panel and scrolls the active nested row into view when menu keyboard navigation changes active selection.
+- `script\dx-forge-panel-source.test.ts` now guards the anchor-backed nested-row scroll contract and the window-aware focus path.
+
+PASSED:
+- `node --test script\dx-forge-panel-source.test.ts`
+- `node --test script\dx-project-panel-source.test.ts`
+- `rustfmt --edition 2024 --check crates\project_panel\src\project_panel.rs crates\agent_ui\src\dx_forge_panel\panel.rs crates\agent_ui\src\dx_forge_panel\row_selection.rs crates\agent_ui\src\dx_forge_panel\workflow_rows.rs crates\agent_ui\src\dx_forge_panel\providers\view.rs`
+- `git diff --check`
+- Focused conflict-marker scan on touched Forge and Project Panel guard/source files
+
+NOTES:
+- Source-only by instruction. Cargo, build, `just run`, native Zed launch, browser automation, and runtime visual proof remain deferred.
+
 [2026-06-08] - Project Panel Storage And Operation Polish
 
 CHANGED:

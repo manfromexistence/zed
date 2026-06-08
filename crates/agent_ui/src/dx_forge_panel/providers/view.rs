@@ -12,7 +12,7 @@ use crate::dx_forge_panel::{
     panel::DxForgePanel,
     snapshot::DxForgePanelSnapshot,
     visible_rows::remote_target_item_key,
-    workflow_rows::selection_checkbox,
+    workflow_rows::{row_scroll_anchor, selection_checkbox},
 };
 
 pub(in crate::dx_forge_panel) fn remote_target_strip(
@@ -87,6 +87,7 @@ fn provider_group_controls(
     let tooltip_meta = remote_target_tooltip(group, &state, target_path.as_deref(), enabled);
     let open_title = SharedString::from(format!("Open {}", group.title()));
     let item_key = remote_target_item_key(group.key());
+    let scroll_anchor = row_scroll_anchor(panel, &item_key, cx);
     let checked = panel
         .upgrade()
         .is_some_and(|panel| panel.read(cx).item_checked(&item_key));
@@ -128,6 +129,7 @@ fn provider_group_controls(
         "dx-forge-provider-group-{}",
         group.key()
     )))
+    .anchor_scroll(scroll_anchor)
     .inset(true)
     .spacing(ListItemSpacing::Dense)
     .toggle_state(active)
@@ -164,9 +166,12 @@ fn provider_group_controls(
     )
     .end_slot(provider_group_actions(open_button.into_any_element()))
     .tooltip(move |_, cx| Tooltip::with_meta(tooltip_title.clone(), None, tooltip_meta.clone(), cx))
-    .on_click(move |_, _, cx| {
+    .on_click(move |_, window, cx| {
         panel_for_row
-            .update(cx, |panel, cx| panel.activate_item(row_key.clone(), cx))
+            .update(cx, |panel, cx| {
+                panel.focus_panel(window, cx);
+                panel.activate_item(row_key.clone(), cx)
+            })
             .ok();
     })
     .into_any_element()
