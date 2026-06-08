@@ -564,6 +564,7 @@ pub(crate) enum BrowserEvent {
     FaviconUriChanged {
         uri: String,
         page_url: Option<String>,
+        navigation_id: Option<u64>,
     },
     NavigationStarted {
         url: Option<String>,
@@ -800,6 +801,7 @@ pub struct WebPreviewView {
     extensions_scanned: bool,
     load_state: PreviewLoadState,
     active_browser_navigation_id: Option<u64>,
+    last_completed_browser_navigation_id: Option<u64>,
     layout_bounds: Rc<RefCell<Option<Bounds<Pixels>>>>,
     host_bounds: Rc<RefCell<Option<Bounds<Pixels>>>>,
     #[cfg(target_os = "macos")]
@@ -1186,6 +1188,7 @@ impl WebPreviewView {
             extensions_scanned: false,
             load_state: PreviewLoadState::Loading,
             active_browser_navigation_id: None,
+            last_completed_browser_navigation_id: None,
             layout_bounds: Rc::new(RefCell::new(None)),
             host_bounds: Rc::new(RefCell::new(None)),
             #[cfg(target_os = "macos")]
@@ -1414,9 +1417,19 @@ impl WebPreviewView {
         &mut self,
         uri: String,
         page_url: Option<&str>,
+        navigation_id: Option<u64>,
         cx: &mut Context<Self>,
     ) -> bool {
         if matches!(self.load_state, PreviewLoadState::Loading) {
+            return false;
+        }
+
+        if let Some(navigation_id) = navigation_id
+            && let Some(expected_navigation_id) = self
+                .active_browser_navigation_id
+                .or(self.last_completed_browser_navigation_id)
+            && navigation_id != expected_navigation_id
+        {
             return false;
         }
 
@@ -30568,8 +30581,13 @@ impl WebPreviewView {
                     self.page_title = Some(title.into());
                     tab_updated = true;
                 }
-                BrowserEvent::FaviconUriChanged { uri, page_url } => {
-                    if self.update_favicon_uri_for_page(uri, page_url.as_deref(), cx) {
+                BrowserEvent::FaviconUriChanged {
+                    uri,
+                    page_url,
+                    navigation_id,
+                } => {
+                    if self.update_favicon_uri_for_page(uri, page_url.as_deref(), navigation_id, cx)
+                    {
                         tab_updated = true;
                     }
                 }
@@ -30593,6 +30611,7 @@ impl WebPreviewView {
                     if let Some(url) = url {
                         self.sync_active_url(url.as_str(), window, cx);
                     }
+                    self.last_completed_browser_navigation_id = navigation_id;
                     self.active_browser_navigation_id = None;
                     self.load_state = PreviewLoadState::Ready;
                     refocus_after_navigation = true;
@@ -31608,6 +31627,7 @@ impl WebPreviewView {
                     && self.update_favicon_uri_for_page(
                         uri.to_string(),
                         payload.get("page_url").and_then(Value::as_str),
+                        None,
                         cx,
                     )
                 {
@@ -36191,6 +36211,7 @@ impl Item for WebPreviewView {
                 extensions_scanned: self.extensions_scanned,
                 load_state: PreviewLoadState::Loading,
                 active_browser_navigation_id: None,
+                last_completed_browser_navigation_id: None,
                 layout_bounds: Rc::new(RefCell::new(None)),
                 host_bounds: Rc::new(RefCell::new(None)),
                 #[cfg(target_os = "macos")]

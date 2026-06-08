@@ -417,21 +417,32 @@ impl WebPreviewView {
     }
 
     #[cfg(target_os = "macos")]
-    fn start_event_pump(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
-        let entity_id = cx.entity().entity_id();
+    fn start_event_pump(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let browser_events = self.browser_events.clone();
-        self.event_pump_task = Some(cx.spawn(move |_this, cx: &mut AsyncApp| async move {
+        self.event_pump_task = Some(cx.spawn_in(window, async move |this, cx| {
             loop {
-                let should_notify = browser_events
-                    .lock()
-                    .map(|events| !events.is_empty())
-                    .unwrap_or(false);
-                if should_notify {
-                    cx.update(|app| app.notify(entity_id));
+                if this.upgrade().is_none() {
+                    break;
                 }
-                cx.background_executor()
-                    .timer(Duration::from_millis(16))
-                    .await;
+
+                let pending_events = take_queued_browser_events(&browser_events);
+                if pending_events.is_empty() {
+                    cx.background_executor()
+                        .timer(Duration::from_millis(50))
+                        .await;
+                } else {
+                    if this
+                        .update_in(cx, move |this, window, cx| {
+                            this.apply_browser_events(pending_events, window, cx);
+                        })
+                        .is_err()
+                    {
+                        break;
+                    }
+                    cx.background_executor()
+                        .timer(Duration::from_millis(16))
+                        .await;
+                }
             }
         }));
     }
@@ -2193,17 +2204,6 @@ impl Item for WebPreviewView {
 impl Render for WebPreviewView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.is_active_item = true;
-        let pending_events = {
-            let mut events = self
-                .browser_events
-                .lock()
-                .expect("browser event queue lock poisoned");
-            std::mem::take(&mut *events)
-        };
-        if !pending_events.is_empty() {
-            self.apply_browser_events(pending_events, window, cx);
-        }
-
         #[cfg(any(target_os = "windows", target_os = "macos"))]
         {
             window.set_background_appearance(gpui::WindowBackgroundAppearance::Transparent);
@@ -2304,8 +2304,9 @@ pub(crate) fn push_browser_event(event_queue: &Arc<Mutex<Vec<BrowserEvent>>>, ev
     prune_browser_event_queue(&mut queue);
 }
 
-pub(crate) fn push_browser_ipc_event(event_queue: &Arc<Mutex<Vec<BrowserEvent>>>, message: String) {
-    if let Some(error) = ipc_message_capacity_error(message.len()) {
+pub(crate) fn push_browser_ipc_event(event_queue: &Arc<Mutex<Vec<BrowserEvent>>>, message: &str) {
+    let message_len = message.len();
+    if let Some(error) = ipc_message_capacity_error(message_len) {
         let mut queue = event_queue
             .lock()
             .expect("browser event queue lock poisoned");
@@ -2320,7 +2321,7 @@ pub(crate) fn push_browser_ipc_event(event_queue: &Arc<Mutex<Vec<BrowserEvent>>>
     let mut queue = event_queue
         .lock()
         .expect("browser event queue lock poisoned");
-    if let Some(error) = queued_browser_ipc_capacity_error(&queue, message.len()) {
+    if let Some(error) = queued_browser_ipc_capacity_error(&queue, message_len) {
         push_browser_ipc_rejection_once(
             &mut queue,
             format!("Web Preview bridge message rejected: {error}"),
@@ -2329,8 +2330,15 @@ pub(crate) fn push_browser_ipc_event(event_queue: &Arc<Mutex<Vec<BrowserEvent>>>
         return;
     }
 
-    queue.push(BrowserEvent::IpcMessage(message));
+    queue.push(BrowserEvent::IpcMessage(message.to_owned()));
     prune_browser_event_queue(&mut queue);
+}
+
+fn take_queued_browser_events(event_queue: &Arc<Mutex<Vec<BrowserEvent>>>) -> Vec<BrowserEvent> {
+    let mut events = event_queue
+        .lock()
+        .expect("browser event queue lock poisoned");
+    std::mem::take(&mut *events)
 }
 
 fn coalesce_browser_event(queue: &mut Vec<BrowserEvent>, event: &BrowserEvent) {
@@ -2561,7 +2569,7 @@ fn create_native_preview_for_macos_window(
             }
         })
         .with_ipc_handler(move |request| {
-            push_browser_ipc_event(&event_queue, request.body().to_string());
+            push_browser_ipc_event(&event_queue, request.body());
         })
         .build_as_child(window)
         .with_context(|| "Failed to build the embedded web preview")?;

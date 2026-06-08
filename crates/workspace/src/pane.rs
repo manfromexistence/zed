@@ -1,7 +1,7 @@
 use crate::{
-    CloseWindow, NewCenterTerminal, NewFile, NewLiquidGlass, NewTerminal, NewWebPreview,
-    OpenInTerminal, OpenOptions, OpenTerminal, OpenVisible, SplitDirection, ToggleFileFinder,
-    ToggleProjectSymbols, ToggleZoom, Workspace, WorkspaceItemBuilder, ZoomIn, ZoomOut,
+    CloseWindow, NewCenterTerminal, NewFile, NewTerminal, NewWebPreview, OpenInTerminal,
+    OpenOptions, OpenTerminal, OpenVisible, SplitDirection, ToggleFileFinder, ToggleProjectSymbols,
+    ToggleZoom, Workspace, WorkspaceItemBuilder, ZoomIn, ZoomOut,
     focus_follows_mouse::FocusFollowsMouse as _,
     invalid_item_view::InvalidItemView,
     item::{
@@ -4523,13 +4523,6 @@ fn default_render_tab_bar_buttons(
             WorkspaceScreenKind::Connections => div().into_any_element(),
             WorkspaceScreenKind::Tools => div().into_any_element(),
             WorkspaceScreenKind::Onboarding => div().into_any_element(),
-            WorkspaceScreenKind::LiquidGlass => IconButton::new("plus", IconName::Plus)
-                .icon_size(IconSize::Small)
-                .tooltip(Tooltip::text("New Liquid Glass"))
-                .on_click(|_, window, cx| {
-                    window.dispatch_action(NewLiquidGlass.boxed_clone(), cx);
-                })
-                .into_any_element(),
             WorkspaceScreenKind::Other => PopoverMenu::new("pane-tab-bar-popover-menu")
                 .trigger_with_tooltip(
                     IconButton::new("plus", IconName::Plus).icon_size(IconSize::Small),
@@ -4542,7 +4535,6 @@ fn default_render_tab_bar_buttons(
                         menu.action("New File", NewFile.boxed_clone())
                             .action("New Terminal", NewTerminal::default().boxed_clone())
                             .action("New Web Preview", NewWebPreview.boxed_clone())
-                            .action("New Liquid Glass", NewLiquidGlass.boxed_clone())
                             .action("Open File", ToggleFileFinder::default().boxed_clone())
                             .separator()
                             .action("Search Project", DeploySearch::default().boxed_clone())

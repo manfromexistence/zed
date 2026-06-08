@@ -47,8 +47,8 @@ use update_version::UpdateVersion;
 use util::ResultExt;
 use workspace::dock::DockPosition;
 use workspace::{
-    GoBack, GoForward, MultiWorkspace, NewCenterTerminal, NewFile, NewLiquidGlass, NewWebPreview,
-    OpenLog, ToggleFileFinder, ToggleProjectSymbols, ToggleWorktreeSecurity, Workspace,
+    GoBack, GoForward, MultiWorkspace, NewCenterTerminal, NewFile, NewWebPreview, OpenLog,
+    ToggleFileFinder, ToggleProjectSymbols, ToggleWorktreeSecurity, Workspace,
     item::{ItemHandle, WorkspaceScreenKind},
     notifications::{NotifyResultExt, NotifyTaskExt as _},
 };
@@ -963,9 +963,6 @@ impl TitleBar {
                 // TODO(dx-onboarding): Re-enable after the fullscreen WebPreview
                 // completion path is safe on Windows.
             }
-            WorkspaceScreenKind::LiquidGlass => {
-                window.dispatch_action(NewLiquidGlass.boxed_clone(), cx);
-            }
             WorkspaceScreenKind::Other => window.dispatch_action(NewFile.boxed_clone(), cx),
         }
     }
@@ -980,7 +977,6 @@ impl TitleBar {
             WorkspaceScreenKind::Browser => "Browser",
             WorkspaceScreenKind::Terminal => "Terminal",
             WorkspaceScreenKind::Onboarding => "Onboarding Disabled",
-            WorkspaceScreenKind::LiquidGlass => "Glass",
             WorkspaceScreenKind::Other => "Screen",
         }
     }
@@ -995,7 +991,6 @@ impl TitleBar {
             WorkspaceScreenKind::Browser => "New Browser Tab",
             WorkspaceScreenKind::Terminal => "New Terminal",
             WorkspaceScreenKind::Onboarding => "Onboarding Disabled",
-            WorkspaceScreenKind::LiquidGlass => "New Liquid Glass",
             WorkspaceScreenKind::Other => "New Item",
         }
     }
@@ -1010,7 +1005,6 @@ impl TitleBar {
             WorkspaceScreenKind::Browser => dx_icon(DxUiIcon::Browser),
             WorkspaceScreenKind::Terminal => IconName::Terminal,
             WorkspaceScreenKind::Onboarding => IconName::Sparkle,
-            WorkspaceScreenKind::LiquidGlass => IconName::Sparkle,
             WorkspaceScreenKind::Other => IconName::Circle,
         }
     }

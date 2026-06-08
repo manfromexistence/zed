@@ -101,7 +101,7 @@ test("agent UI selector source guard is focused on production selector code", ()
   assert.doesNotMatch(languageModelSelector, /#\[cfg\(test\)\]/);
 });
 
-test("model selector GPUI chrome preserves bounded labels and header click targets", () => {
+test("model selector GPUI chrome preserves bounded labels and keyboard-reachable header controls", () => {
   const agentTrigger = sliceBetween(
     agentModelSelector,
     'Button::new("active-model", model_name)',
@@ -147,7 +147,7 @@ test("model selector GPUI chrome preserves bounded labels and header click targe
     header,
     /div\(\)[\s\S]*\.min_w_0\(\)[\s\S]*\.flex_1\(\)[\s\S]*Label::new\(title\.clone\(\)\)[\s\S]*\.truncate\(\)[\s\S]*\.tooltip\(Tooltip::text\(title\.clone\(\)\)/,
   );
-  assert.match(header, /IconButton::new\(format!\("model-provider-toggle-\{title_key\}"\), icon\)/);
+  assert.match(header, /IconButton::new\(format!\("model-provider-toggle-\{title_key\}"\), icon\)[\s\S]*\.tab_index\(0\)/);
   assert.match(listItem, /\.min_w_0\(\)[\s\S]*\.flex_1\(\)[\s\S]*Label::new\(self\.title\.clone\(\)\)\.truncate\(\)[\s\S]*\.tooltip\(Tooltip::text\(self\.title\)\)/);
   assert.match(
     listItem,

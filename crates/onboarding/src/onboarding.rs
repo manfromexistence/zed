@@ -988,7 +988,6 @@ fn find_post_onboarding_item(workspace: &Workspace, cx: &App) -> Option<Box<dyn 
                 | WorkspaceScreenKind::Tools
                 | WorkspaceScreenKind::Browser
                 | WorkspaceScreenKind::Terminal
-                | WorkspaceScreenKind::LiquidGlass
                 | WorkspaceScreenKind::Other => {
                     fallback.get_or_insert_with(|| item.boxed_clone());
                 }

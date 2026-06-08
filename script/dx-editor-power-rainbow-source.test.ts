@@ -91,10 +91,12 @@ test("DX rainbow glow helper is reusable and motion-aware", () => {
   assert.match(rainbowGlow, /self\.radius = radius\.max\(Pixels::ZERO\);/);
   assert.match(rainbowGlow, /self\.phase_offset = normalize_phase\(offset\);/);
   assert.doesNotMatch(rainbowGlow, /SystemTime|UNIX_EPOCH/);
+  assert.doesNotMatch(rainbowGlow, /as_secs_f64|DX_RAINBOW_CYCLE_SECONDS/);
+  assert.match(rainbowGlow, /const DX_RAINBOW_CYCLE_NANOS: u128 = 2_400_000_000;/);
   assert.match(rainbowGlow, /static DX_RAINBOW_STARTED_AT: OnceLock<Instant> = OnceLock::new\(\);/);
   assert.match(
     rainbowGlow,
-    /fn dx_rainbow_animated_phase\(\) -> f32 \{[\s\S]*get_or_init\(Instant::now\)[\s\S]*elapsed\(\)[\s\S]*as_secs_f64\(\)[\s\S]*DX_RAINBOW_CYCLE_SECONDS/s,
+    /fn dx_rainbow_animated_phase\(\) -> f32 \{[\s\S]*let cycle_position = DX_RAINBOW_STARTED_AT[\s\S]*get_or_init\(Instant::now\)[\s\S]*elapsed\(\)[\s\S]*as_nanos\(\)[\s\S]*% DX_RAINBOW_CYCLE_NANOS;[\s\S]*cycle_position as f32 \/ DX_RAINBOW_CYCLE_NANOS as f32/s,
   );
   assert.match(rainbowGlow, /DxRainbowMotion::Animated => dx_rainbow_animated_phase\(\)/);
   assert.match(rainbowGlow, /DxRainbowMotion::Reduced => DX_RAINBOW_REDUCED_PHASE/);

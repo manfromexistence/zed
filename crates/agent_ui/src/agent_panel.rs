@@ -1255,7 +1255,6 @@ impl DxWorkspaceSnapshot {
                 | WorkspaceScreenKind::Tools
                 | WorkspaceScreenKind::Terminal
                 | WorkspaceScreenKind::Onboarding
-                | WorkspaceScreenKind::LiquidGlass
                 | WorkspaceScreenKind::Other => {}
             }
 

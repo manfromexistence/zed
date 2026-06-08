@@ -113,6 +113,7 @@ impl RenderOnce for ModelSelectorHeader {
                         let title_key = title.as_ref().to_string();
                         this.child(
                             IconButton::new(format!("model-provider-toggle-{title_key}"), icon)
+                                .tab_index(0)
                                 .icon_size(IconSize::XSmall)
                                 .style(ButtonStyle::Subtle)
                                 .when_some(toggle_tooltip, |this, tooltip| {

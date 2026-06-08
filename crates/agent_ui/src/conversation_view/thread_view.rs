@@ -705,6 +705,8 @@ const MAX_VISIBLE_PROFILE_OPTION_SLOTS: usize = 4;
 const COMPOSER_MIN_LINES: usize = 2;
 const COMPOSER_COLLAPSED_MAX_LINES: usize = 2;
 const COMPOSER_EMPTY_STATE_MAX_LINES: usize = 8;
+const COMPOSER_COLLAPSED_MAX_HEIGHT_REMS: f32 = 18.;
+const COMPOSER_COLLAPSED_EDITOR_MAX_HEIGHT_REMS: f32 = 9.;
 
 #[derive(Clone, Copy)]
 struct ResponseAnchorScrollRequest {
@@ -3905,6 +3907,9 @@ impl ThreadView {
                     .shadow_sm()
                     .flex_shrink_1()
                     .flex_grow_0()
+                    .when(has_messages && !expands_editor_area, |this| {
+                        this.max_h(rems(COMPOSER_COLLAPSED_MAX_HEIGHT_REMS))
+                    })
                     .when(expands_editor_area, |this| this.h_full())
                     .justify_between()
                     .gap_1()
@@ -3929,6 +3934,10 @@ impl ThreadView {
                                     .w_full()
                                     .min_h_0()
                                     .when(expands_editor_area, |this| this.flex_1())
+                                    .when(has_messages && !expands_editor_area, |this| {
+                                        this.max_h(rems(COMPOSER_COLLAPSED_EDITOR_MAX_HEIGHT_REMS))
+                                            .overflow_y_scroll()
+                                    })
                                     .pt_0p5()
                                     .pr_2p5()
                                     .child(self.message_editor.clone())

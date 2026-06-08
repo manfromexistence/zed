@@ -1,3 +1,40 @@
+[2026-06-08] - Rainbow Caret Integer Phase Cycle
+
+CHANGED:
+- `crates\ui\src\components\dx_rainbow_glow.rs` now keeps the monotonic rainbow caret clock but computes the animated phase from integer nanosecond cycle position instead of floating elapsed seconds.
+- `script\dx-editor-power-rainbow-source.test.ts` now guards the integer nanosecond phase calculation so wall-clock and long-uptime float drift paths do not return.
+
+PASSED:
+- `node --test script/dx-editor-power-rainbow-source.test.ts`
+- `rustfmt --edition 2024 --check crates/ui/src/components/dx_rainbow_glow.rs`
+- `git diff --check`
+
+NOTES:
+- Six GPT-5.5 extra-high subagent audits were used for phase math, APCA/theme handling, GPUI helper API, editor lifecycle, render-path performance, and source-guard/git hygiene.
+- Source-only by instruction. Cargo, build, `just run`, native Zed launch, local servers, and runtime visual proof remain deferred.
+
+[2026-06-08] - GPUI Event Pump And Liquid Glass Surface Hardening
+
+CHANGED:
+- `crates\web_preview_macos\src\web_preview_view.rs` and `crates\web_preview_linux\src\web_preview_view.rs` now drain native browser events from the window event pump instead of `render`, and defer IPC body allocation until after size/capacity checks.
+- `crates\web_preview_linux\src\web_preview_view.rs` now uses the `AsyncWindowContext` window/app update shape when notifying after processed GTK events.
+- `crates\web_preview\src\web_preview_view.rs` and `crates\web_preview\src\windows_visual_webview.rs` now carry WebView2 navigation ids through native favicon URI requests so delayed same-URL favicon callbacks cannot update a newer page.
+- `crates\liquid_glass` now stays a shared GPUI primitive crate for bounded product surfaces instead of registering a standalone Liquid Glass workspace tab.
+- Agent composer Liquid Glass readability and collapsed-height caps were tightened while preserving the real message editor, profile controls, and shared GPUI primitive path.
+- Model selector provider-group chevrons are explicitly tabbable, and Project Panel media headers use the shared list-header chrome.
+- Source guards were updated to inspect the cfg-enabled platform event pumps, guard keyboard-reachable model provider toggles, and pin the scoped Liquid Glass workspace-tab removal.
+
+PASSED:
+- `node --test script/dx-agent-composer-liquid-glass-source.test.ts script/dx-agent-ui-selector-source.test.ts script/dx-editor-power-rainbow-source.test.ts script/dx-project-panel-source.test.ts script/web-preview-platform-lifecycle.test.ts script/dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --check crates/agent_ui/src/agent_panel.rs crates/agent_ui/src/conversation_view/composer_liquid_glass.rs crates/agent_ui/src/conversation_view/thread_view.rs crates/agent_ui/src/ui/model_selector_components.rs crates/liquid_glass/src/lib.rs crates/onboarding/src/onboarding.rs crates/project_panel/src/media_preview.rs crates/project_panel/src/project_panel.rs crates/sidebar/src/sidebar.rs crates/title_bar/src/title_bar.rs crates/ui/src/components/dx_rainbow_glow.rs crates/web_preview/src/web_preview_view.rs crates/web_preview/src/windows_visual_webview.rs crates/web_preview_linux/src/web_preview_view.rs crates/web_preview_macos/src/web_preview_view.rs crates/workspace/src/item.rs crates/workspace/src/pane.rs crates/workspace/src/screen_carousel.rs crates/workspace/src/workspace.rs`
+- `rg -n "NewLiquidGlass|WorkspaceScreenKind::LiquidGlass|LiquidGlassView|liquid_glass_view" crates` returned no live Rust matches.
+- Conflict-marker scan on modified non-deleted files returned no matches.
+- `git diff --check`
+
+NOTES:
+- Six GPT-5.5 extra-high subagent audits were used for Web Preview/native events, platform queue parity, brand-icon color preservation, GPUI accessibility, source-guard precision, and git handoff hygiene.
+- Source-only by instruction. Cargo, build, `just run`, native Zed launch, local servers, and runtime visual proof remain deferred.
+
 [2026-06-08] - Rainbow Caret Monotonic Phase Clock
 
 CHANGED:

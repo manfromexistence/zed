@@ -142,7 +142,6 @@ impl From<WorkspaceScreenKind> for SerializedSidebarGridScreenKind {
             WorkspaceScreenKind::Editor => Self::Editor,
             WorkspaceScreenKind::Browser => Self::Browser,
             WorkspaceScreenKind::Terminal => Self::Terminal,
-            WorkspaceScreenKind::LiquidGlass => Self::LiquidGlass,
             WorkspaceScreenKind::Onboarding => Self::Other,
             WorkspaceScreenKind::Other => Self::Other,
         }
@@ -8303,7 +8302,6 @@ impl Sidebar {
             | WorkspaceScreenKind::Tools
             | WorkspaceScreenKind::Editor
             | WorkspaceScreenKind::Onboarding
-            | WorkspaceScreenKind::LiquidGlass
             | WorkspaceScreenKind::Other => self.project_root_path(cx),
         };
         let context = SidebarGridContext {
@@ -8334,7 +8332,6 @@ impl Sidebar {
             | WorkspaceScreenKind::Other => self.editor_grid_entries(cx),
             WorkspaceScreenKind::Browser => self.browser_grid_entries(),
             WorkspaceScreenKind::Terminal => self.terminal_grid_entries(cx),
-            WorkspaceScreenKind::LiquidGlass => self.editor_grid_entries(cx),
         };
 
         self.grid_entry_cache

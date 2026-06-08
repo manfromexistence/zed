@@ -724,7 +724,7 @@ fn attach_event_handlers(
                     },
                 );
                 if navigation_succeeded {
-                    request_favicon_uri(&webview, event_queue.clone(), current_url);
+                    request_favicon_uri(&webview, event_queue.clone(), current_url, navigation_id);
                 }
                 Ok(())
             })),
@@ -752,6 +752,7 @@ fn request_favicon_uri(
     webview: &ICoreWebView2,
     event_queue: Arc<Mutex<Vec<BrowserEvent>>>,
     page_url: String,
+    navigation_id: Option<u64>,
 ) {
     let script = HSTRING::from(FAVICON_URI_SCRIPT);
     let handler = ExecuteScriptCompletedHandler::create(Box::new(move |error_code, result| {
@@ -765,6 +766,7 @@ fn request_favicon_uri(
                 BrowserEvent::FaviconUriChanged {
                     uri,
                     page_url: Some(page_url.clone()),
+                    navigation_id,
                 },
             );
         }

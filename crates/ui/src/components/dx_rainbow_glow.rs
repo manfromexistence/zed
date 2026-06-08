@@ -7,7 +7,7 @@ use gpui::{
 };
 
 const DX_RAINBOW_STRIPE_COUNT: usize = 17;
-const DX_RAINBOW_CYCLE_SECONDS: f64 = 2.4;
+const DX_RAINBOW_CYCLE_NANOS: u128 = 2_400_000_000;
 const DX_RAINBOW_REDUCED_PHASE: f32 = 0.58;
 const DX_RAINBOW_SATURATION: f32 = 0.86;
 const DX_RAINBOW_LIGHTNESS: f32 = 0.62;
@@ -181,11 +181,12 @@ fn dx_rainbow_phase_now(motion: DxRainbowMotion, phase_offset: f32) -> f32 {
 }
 
 fn dx_rainbow_animated_phase() -> f32 {
-    let elapsed_seconds = DX_RAINBOW_STARTED_AT
+    let cycle_position = DX_RAINBOW_STARTED_AT
         .get_or_init(Instant::now)
         .elapsed()
-        .as_secs_f64();
-    ((elapsed_seconds % DX_RAINBOW_CYCLE_SECONDS) / DX_RAINBOW_CYCLE_SECONDS) as f32
+        .as_nanos()
+        % DX_RAINBOW_CYCLE_NANOS;
+    cycle_position as f32 / DX_RAINBOW_CYCLE_NANOS as f32
 }
 
 pub fn dx_rainbow_paint_sample(

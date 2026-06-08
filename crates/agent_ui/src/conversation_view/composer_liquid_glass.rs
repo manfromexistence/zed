@@ -8,10 +8,8 @@ const MIN_TEXT_READABILITY_CONTRAST: f32 = 45.0;
 const MIN_MUTED_TEXT_READABILITY_CONTRAST: f32 = 30.0;
 const READABILITY_SAMPLE_EDITOR_ALPHA: f32 = 0.72;
 const FALLBACK_BACKGROUND_EDITOR_ALPHA: f32 = 0.86;
-const TRANSPARENT_FALLBACK_BACKGROUND_ALPHA: f32 = 0.56;
-const OPAQUE_FALLBACK_BACKGROUND_ALPHA: f32 = 0.24;
-const TRANSPARENT_READABILITY_OVERLAY_ALPHA: f32 = 0.58;
-const OPAQUE_READABILITY_OVERLAY_ALPHA: f32 = 0.42;
+const READABILITY_FALLBACK_BACKGROUND_ALPHA: f32 = 0.94;
+const READABILITY_OVERLAY_ALPHA: f32 = 0.72;
 const TRANSPARENT_BORDER_ALPHA: f32 = 0.9;
 const OPAQUE_BORDER_ALPHA: f32 = 0.68;
 
@@ -41,11 +39,7 @@ pub(super) fn composer_glass_surface_style(cx: &mut App) -> ComposerGlassSurface
             let base =
                 panel_background.blend(editor_background.opacity(FALLBACK_BACKGROUND_EDITOR_ALPHA));
 
-            if is_transparent {
-                base.opacity(TRANSPARENT_FALLBACK_BACKGROUND_ALPHA)
-            } else {
-                base.opacity(OPAQUE_FALLBACK_BACKGROUND_ALPHA)
-            }
+            base.opacity(READABILITY_FALLBACK_BACKGROUND_ALPHA)
         } else {
             transparent
         },
@@ -54,13 +48,8 @@ pub(super) fn composer_glass_surface_style(cx: &mut App) -> ComposerGlassSurface
         } else {
             border.opacity(OPAQUE_BORDER_ALPHA)
         },
-        readability_overlay: needs_readability_fallback.then(|| {
-            if is_transparent {
-                readability_base.opacity(TRANSPARENT_READABILITY_OVERLAY_ALPHA)
-            } else {
-                readability_base.opacity(OPAQUE_READABILITY_OVERLAY_ALPHA)
-            }
-        }),
+        readability_overlay: needs_readability_fallback
+            .then(|| readability_base.opacity(READABILITY_OVERLAY_ALPHA)),
     }
 }
 

@@ -303,8 +303,6 @@ actions!(
         NewFileSplitHorizontal,
         /// Creates a new web preview tab.
         NewWebPreview,
-        /// Creates a new Liquid Glass tab.
-        NewLiquidGlass,
         /// Opens a new search.
         NewSearch,
         /// Opens a new window.
@@ -6067,9 +6065,6 @@ impl Workspace {
                         // TODO(dx-onboarding): Re-enable after the fullscreen WebPreview
                         // onboarding completion path is safe on Windows.
                     }
-                    WorkspaceScreenKind::LiquidGlass => {
-                        window.dispatch_action(NewLiquidGlass.boxed_clone(), cx);
-                    }
                     WorkspaceScreenKind::Other => {}
                 }
             });
@@ -8975,13 +8970,6 @@ impl Render for Workspace {
         let transparent_workspace_background = self
             .active_item(cx)
             .is_some_and(|item| item.requires_transparent_workspace_background());
-        let active_workspace_overlay = self.active_item(cx).and_then(|item| {
-            if item.screen_kind(cx) == WorkspaceScreenKind::LiquidGlass {
-                item.workspace_overlay(window, cx)
-            } else {
-                None
-            }
-        });
         let notification_entities = self
             .notifications
             .iter()
@@ -9394,8 +9382,7 @@ impl Render for Workspace {
                     .when(self.status_bar_visible(cx), |parent| {
                         parent.child(self.status_bar.clone())
                     })
-                    .child(self.toast_layer.clone())
-                    .children(active_workspace_overlay),
+                    .child(self.toast_layer.clone()),
             )
     }
 }

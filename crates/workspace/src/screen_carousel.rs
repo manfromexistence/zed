@@ -68,7 +68,6 @@ impl Workspace {
                 | WorkspaceScreenKind::Connections
                 | WorkspaceScreenKind::Tools
                 | WorkspaceScreenKind::Onboarding
-                | WorkspaceScreenKind::LiquidGlass
                 | WorkspaceScreenKind::Other,
                 _,
             ) => None,
@@ -294,7 +293,6 @@ impl Workspace {
             WorkspaceScreenKind::Browser => "Browser",
             WorkspaceScreenKind::Terminal => "Terminal",
             WorkspaceScreenKind::Onboarding => "Onboarding Disabled",
-            WorkspaceScreenKind::LiquidGlass => "Glass",
             WorkspaceScreenKind::Other => "Screen",
         }
     }
@@ -309,7 +307,6 @@ impl Workspace {
             WorkspaceScreenKind::Browser => dx_icon(DxUiIcon::Browser),
             WorkspaceScreenKind::Terminal => IconName::Terminal,
             WorkspaceScreenKind::Onboarding => IconName::Sparkle,
-            WorkspaceScreenKind::LiquidGlass => IconName::Sparkle,
             WorkspaceScreenKind::Other => IconName::Circle,
         }
     }
