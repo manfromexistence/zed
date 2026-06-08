@@ -1,11 +1,8 @@
 use gpui::{
-    AnyElement, Context, InteractiveElement, IntoElement, ParentElement, SharedString, Styled,
-    WeakEntity,
+    AnyElement, Context, InteractiveElement, IntoElement, ParentElement, SharedString,
+    StatefulInteractiveElement, Styled, WeakEntity,
 };
-use ui::{
-    ButtonLike, ButtonSize, ButtonStyle, Color, DxUiIcon, Icon, IconSize, Label, LabelSize,
-    Tooltip, dx_icon, prelude::*, v_flex,
-};
+use ui::{Color, DxUiIcon, Icon, IconSize, Label, LabelSize, Tooltip, dx_icon, prelude::*, v_flex};
 use util::ResultExt;
 
 use crate::{ProjectPanel, storage_roots};
@@ -21,7 +18,7 @@ pub(crate) fn render_storage_root_strip(
 
     let rows = shortcuts
         .into_iter()
-        .map(|shortcut| render_storage_root_strip_row(shortcut, panel.clone()))
+        .map(|shortcut| render_storage_root_strip_row(shortcut, panel.clone(), cx))
         .collect::<Vec<_>>();
 
     Some(
@@ -63,6 +60,7 @@ pub(crate) fn render_storage_root_strip(
 fn render_storage_root_strip_row(
     shortcut: storage_roots::StorageRootShortcut,
     panel: WeakEntity<ProjectPanel>,
+    cx: &mut Context<ProjectPanel>,
 ) -> AnyElement {
     let icon = match shortcut.kind {
         storage_roots::StorageRootKind::Drive => dx_icon(DxUiIcon::Storage),
@@ -76,43 +74,53 @@ fn render_storage_root_strip_row(
     let tooltip = shortcut.tooltip.clone();
     let status_label = shortcut.status_label();
 
-    ButtonLike::new(SharedString::from(format!(
-        "dx-explorer-storage-root-{}",
-        shortcut.id
-    )))
-    .style(ButtonStyle::Subtle)
-    .size(ButtonSize::Compact)
-    .disabled(!available)
-    .tooltip(move |_window, cx| Tooltip::with_meta("Storage root", None, tooltip.clone(), cx))
-    .when(available, |this| {
-        this.on_click(move |_, _window, cx| {
-            panel
-                .update_in(cx, |this, window, cx| {
-                    this.open_dx_explorer_storage_root(path.clone(), window, cx);
+    h_flex()
+        .id(SharedString::from(format!(
+            "dx-explorer-storage-root-{}",
+            shortcut.id
+        )))
+        .flex_none()
+        .items_center()
+        .gap_1()
+        .px_1()
+        .py_0p5()
+        .rounded_sm()
+        .border_1()
+        .border_color(cx.theme().colors().border_variant.opacity(0.5))
+        .bg(cx.theme().colors().element_background.opacity(0.35))
+        .tooltip(move |_window, cx| Tooltip::with_meta("Storage root", None, tooltip.clone(), cx))
+        .when(available, |this| {
+            this.cursor_pointer()
+                .hover(|style| style.bg(cx.theme().colors().element_hover.opacity(0.6)))
+                .on_click(move |_, _window, cx| {
+                    panel
+                        .update_in(cx, |this, window, cx| {
+                            this.open_dx_explorer_storage_root(path.clone(), window, cx);
+                        })
+                        .log_err();
                 })
-                .log_err();
         })
-    })
-    .child(Icon::new(icon).size(IconSize::XSmall).color(if available {
-        Color::Muted
-    } else {
-        Color::Disabled
-    }))
-    .child(
-        Label::new(shortcut.label)
-            .size(LabelSize::XSmall)
-            .color(if available {
-                Color::Default
-            } else {
-                Color::Muted
-            })
-            .single_line(),
-    )
-    .child(
-        Label::new(status_label)
-            .size(LabelSize::XSmall)
-            .color(Color::Muted)
-            .single_line(),
-    )
-    .into_any_element()
+        .when(!available, |this| this.cursor_not_allowed().opacity(0.55))
+        .child(Icon::new(icon).size(IconSize::XSmall).color(if available {
+            Color::Muted
+        } else {
+            Color::Disabled
+        }))
+        .child(
+            Label::new(shortcut.label)
+                .size(LabelSize::XSmall)
+                .color(if available {
+                    Color::Default
+                } else {
+                    Color::Muted
+                })
+                .single_line(),
+        )
+        .child(
+            Label::new(status_label)
+                .size(LabelSize::XSmall)
+                .color(Color::Muted)
+                .single_line(),
+        )
+        .into_any_element()
 }

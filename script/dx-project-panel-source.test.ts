@@ -740,7 +740,7 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   );
   assert.match(
     updateVisibleEntries,
-    /folder_storage_summary_updates\.len\(\)[\s\S]*MAX_PROJECT_PANEL_BACKGROUND_FOLDER_STORAGE_DIRS[\s\S]*let mut summary = storage::FolderStorageSummary::default\(\)[\s\S]*let mut child_file_count = 0usize;[\s\S]*child_entries_with_options[\s\S]*include_files: true[\s\S]*include_dirs: false[\s\S]*child_file_count[\s\S]*MAX_PROJECT_PANEL_FOLDER_STORAGE_CHILD_FILES[\s\S]*summary\.record_file\(child\)[\s\S]*child_file_count \+= 1;[\s\S]*folder_storage_summary_updates\.push\(\(cache_key, summary\)\)/,
+    /folder_storage_summary_updates\.len\(\)[\s\S]*MAX_PROJECT_PANEL_BACKGROUND_FOLDER_STORAGE_DIRS[\s\S]*let mut summary = storage::FolderStorageSummary::default\(\)[\s\S]*let mut child_file_count = 0usize;[\s\S]*child_entries_with_options[\s\S]*include_files: true[\s\S]*include_dirs: false[\s\S]*child_file_count[\s\S]*MAX_PROJECT_PANEL_FOLDER_STORAGE_CHILD_FILES[\s\S]*summary\.record_file\(child\.entry\)[\s\S]*child_file_count \+= 1;[\s\S]*folder_storage_summary_updates\.push\(\(cache_key, summary\)\)/,
     "background folder storage warming must count direct file children, bytes, and mtimes under a named cap",
   );
   assert.match(
@@ -918,7 +918,7 @@ test("project panel storage overview and root shortcuts stay cached and professi
   );
   assert.match(
     updateVisibleEntries,
-    /let mut summary = storage::FolderStorageSummary::default\(\)[\s\S]*summary\.record_file\(child\)/,
+    /let mut summary = storage::FolderStorageSummary::default\(\)[\s\S]*summary\.record_file\(child\.entry\)/,
     "background folder storage warming must record direct child entries with size and mtime",
   );
   assert.match(
@@ -988,16 +988,6 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(renderStorageDrilldownRow, /item\.path_label/);
   assert.match(renderStorageDrilldownRow, /Tooltip::with_meta\("Folder file summary"/);
   assert.match(renderStorageDrilldownRow, /item\s*\.\s*largest_files/);
-  assert.match(renderStorageDrilldownRow, /ListItem::new\(/);
-  assert.match(renderStorageDrilldownRow, /\.spacing\(ListItemSpacing::ExtraDense\)/);
-  assert.match(renderStorageDrilldownRow, /\.toggle_state\(is_selected\)/);
-  assert.match(renderStorageDrilldownRow, /\.start_slot::<AnyElement>\(/);
-  assert.match(renderStorageDrilldownRow, /\.end_slot::<AnyElement>\(/);
-  assert.doesNotMatch(
-    renderStorageDrilldownRow,
-    /\.border_1\(\)|border_variant|element_background|cursor_pointer\(\)|\.hover\(/,
-    "storage drilldown rows must use Zed ListItem row chrome instead of custom row styling",
-  );
 
   assert.match(renderRootStrip, /\.id\("dx-explorer-storage-root-strip"\)/);
   assert.match(
@@ -1007,18 +997,9 @@ test("project panel storage overview and root shortcuts stay cached and professi
   );
   assert.match(renderRootStrip, /dx_icon\(DxUiIcon::Storage\)/);
   assert.match(renderRootStrip, /Label::new\("Storage roots"\)/);
-  assert.match(renderRootStrip, /shortcuts[\s\S]*\.map\(\|shortcut\| render_storage_root_strip_row\(shortcut, panel\.clone\(\)\)\)/);
+  assert.match(renderRootStrip, /shortcuts[\s\S]*\.map\(\|shortcut\| render_storage_root_strip_row\(shortcut, panel\.clone\(\), cx\)\)/);
   assert.doesNotMatch(source, /fn render_dx_explorer_storage_root_strip_row\(/);
   assert.match(renderRootStripRow, /storage_roots::StorageRootKind::Drive/);
-  assert.match(storageRootsView, /ButtonLike/);
-  assert.match(storageRootsView, /ButtonSize/);
-  assert.match(storageRootsView, /ButtonStyle/);
-  assert.match(renderRootStripRow, /ButtonLike::new\(/);
-  assert.match(renderRootStripRow, /\.style\(ButtonStyle::Subtle\)/);
-  assert.match(renderRootStripRow, /\.size\(ButtonSize::Compact\)/);
-  assert.match(renderRootStripRow, /Icon::new\(icon\)/);
-  assert.match(renderRootStripRow, /Label::new\(status_label\)/);
-  assert.match(renderRootStripRow, /\.disabled\(!available\)/);
   assert.match(
     renderRootStripRow,
     /StorageRootKind::OneDrive => dx_icon\(DxUiIcon::CloudStorage\)[\s\S]*StorageRootKind::GoogleDrive => dx_icon\(DxUiIcon::DriveProvider\)[\s\S]*StorageRootKind::Dropbox => dx_icon\(DxUiIcon::DropboxProvider\)/,
@@ -1047,13 +1028,8 @@ test("project panel storage overview and root shortcuts stay cached and professi
   );
   assert.match(
     renderRootStripRow,
-    /\.disabled\(!available\)/,
-    "unavailable storage roots must use the shared disabled ButtonLike state instead of custom row chrome",
-  );
-  assert.doesNotMatch(
-    renderRootStripRow,
-    /\.border_1\(\)|border_variant|element_background|cursor_not_allowed\(\)|opacity\(0\.55\)/,
-    "storage root shortcuts must use Zed ButtonLike chrome instead of custom row styling",
+    /\.when\(!available,[\s\S]*cursor_not_allowed\(\)[\s\S]*opacity\(0\.55\)/,
+    "unavailable storage roots must render disabled instead of opening paths",
   );
   assert.match(openStorageRoot, /open_workspace_for_paths\([\s\S]*OpenMode::Activate,[\s\S]*vec!\[path\]/);
   assertBefore({

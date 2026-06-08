@@ -4475,79 +4475,88 @@ impl ProjectPanel {
             )
         };
 
-        ListItem::new(SharedString::from(format!(
-            "dx-explorer-storage-drilldown-{}-{}",
-            item.worktree_id.to_usize(),
-            item.entry_id.to_usize()
-        )))
-        .spacing(ListItemSpacing::ExtraDense)
-        .toggle_state(is_selected)
-        .tooltip(move |_window, cx| {
-            Tooltip::with_meta("Folder file summary", None, tooltip.clone(), cx)
-        })
-        .on_click(cx.listener(move |this, _, window, cx| {
-            this.focus_handle(cx).focus(window, cx);
-            this.expand_entry(target.worktree_id, target.entry_id, cx);
-            this.update_visible_entries(
-                Some((target.worktree_id, target.entry_id)),
-                false,
-                true,
-                window,
-                cx,
-            );
-        }))
-        .start_slot::<AnyElement>(
-            h_flex()
-                .gap_1()
-                .child(
-                    div()
-                        .h(px(4.))
-                        .w(bar_width)
-                        .rounded_sm()
-                        .bg(heat_color.opacity(0.8)),
-                )
-                .child(
-                    Label::new(heat_label)
+        h_flex()
+            .id(SharedString::from(format!(
+                "dx-explorer-storage-drilldown-{}-{}",
+                item.worktree_id.to_usize(),
+                item.entry_id.to_usize()
+            )))
+            .w_full()
+            .items_center()
+            .gap_1()
+            .px_1()
+            .py_0p5()
+            .rounded_sm()
+            .cursor_pointer()
+            .border_1()
+            .border_color(if is_selected {
+                heat_color.opacity(0.58)
+            } else {
+                cx.theme().colors().border_variant.opacity(0.42)
+            })
+            .bg(if is_selected {
+                heat_color.opacity(0.14)
+            } else {
+                cx.theme().colors().element_background.opacity(0.35)
+            })
+            .tooltip(move |_window, cx| {
+                Tooltip::with_meta("Folder file summary", None, tooltip.clone(), cx)
+            })
+            .hover(|style| style.bg(heat_color.opacity(0.12)))
+            .on_click(cx.listener(move |this, _, window, cx| {
+                this.focus_handle(cx).focus(window, cx);
+                this.expand_entry(target.worktree_id, target.entry_id, cx);
+                this.update_visible_entries(
+                    Some((target.worktree_id, target.entry_id)),
+                    false,
+                    true,
+                    window,
+                    cx,
+                );
+            }))
+            .child(
+                div()
+                    .h(px(4.))
+                    .w(bar_width)
+                    .rounded_sm()
+                    .bg(heat_color.opacity(0.8)),
+            )
+            .child(
+                Label::new(heat_label)
+                    .size(LabelSize::XSmall)
+                    .color(Color::Muted)
+                    .truncate(),
+            )
+            .child(
+                Label::new(item.label)
+                    .size(LabelSize::XSmall)
+                    .color(Color::Default)
+                    .truncate(),
+            )
+            .child(div().flex_1())
+            .when_some(modified_label, |this, modified_label| {
+                this.child(
+                    Label::new(modified_label)
                         .size(LabelSize::XSmall)
                         .color(Color::Muted)
                         .truncate(),
                 )
-                .into_any_element(),
-        )
-        .child(
-            Label::new(item.label)
-                .size(LabelSize::XSmall)
-                .color(Color::Default)
-                .truncate(),
-        )
-        .end_slot::<AnyElement>(
-            h_flex()
-                .gap_1()
-                .when_some(modified_label, |this, modified_label| {
-                    this.child(
-                        Label::new(modified_label)
-                            .size(LabelSize::XSmall)
-                            .color(Color::Muted)
-                            .truncate(),
-                    )
-                })
-                .when(!largest_files.is_empty(), |this| {
-                    this.child(
-                        Label::new(largest_files.join(" / "))
-                            .size(LabelSize::XSmall)
-                            .color(Color::Muted)
-                            .truncate(),
-                    )
-                })
-                .child(
-                    Label::new(format!("{file_count} / {storage_label}"))
+            })
+            .when(!largest_files.is_empty(), |this| {
+                this.child(
+                    Label::new(largest_files.join(" / "))
                         .size(LabelSize::XSmall)
                         .color(Color::Muted)
                         .truncate(),
                 )
-                .into_any_element(),
-        )
-        .into_any_element()
+            })
+            .child(
+                Label::new(format!("{file_count} / {storage_label}"))
+                    .size(LabelSize::XSmall)
+                    .color(Color::Muted)
+                    .truncate(),
+            )
+            .into_any_element()
     }
 
     fn render_dx_explorer_storage_root_strip(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
