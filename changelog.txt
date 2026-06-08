@@ -1,3 +1,17 @@
+[2026-06-08] - Rainbow Caret Opaque Background Contrast
+
+CHANGED:
+- `crates\editor\src\element.rs` now computes rainbow caret APCA contrast against the theme background when the window background is opaque, while still falling back to the appearance base for transparent or blurred windows.
+- `script\dx-editor-power-rainbow-source.test.ts` now guards the opaque-window contrast path so translucent editor backgrounds cannot hide the caret on solid workspace surfaces.
+
+PASSED:
+- `node --test script/dx-editor-power-rainbow-source.test.ts`
+- `rustfmt --edition 2024 --check crates/editor/src/element.rs`
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. Cargo, build, `just run`, native Zed launch, local servers, and runtime visual proof remain deferred.
+
 [2026-06-08] - Rainbow Caret Integer Phase Cycle
 
 CHANGED:

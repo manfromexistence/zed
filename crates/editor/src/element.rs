@@ -47,8 +47,8 @@ use gpui::{
     ModifiersChangedEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, PaintQuad,
     ParentElement, Pixels, ScrollHandle, ShapedLine, SharedString, Size,
     StatefulInteractiveElement, Style, Styled, StyledText, TaskExt, TextAlign, TextRun,
-    TextStyleRefinement, WeakEntity, Window, div, fill, outline, pattern_slash, point, px, quad,
-    relative, size, solid_background, transparent_black,
+    TextStyleRefinement, WeakEntity, Window, WindowBackgroundAppearance, div, fill, outline,
+    pattern_slash, point, px, quad, relative, size, solid_background, transparent_black,
 };
 use itertools::Itertools;
 use language::{
@@ -5744,11 +5744,22 @@ impl EditorElement {
     fn paint_cursors(&mut self, layout: &mut EditorLayout, window: &mut Window, cx: &mut App) {
         let editor_background = cx.theme().colors().editor_background;
         let contrast_background = if editor_background.a < 1.0 {
-            let base = match cx.theme().appearance {
+            let appearance_base = match cx.theme().appearance {
                 Appearance::Dark => Hsla::black(),
                 Appearance::Light => Hsla::white(),
             };
-            base.blend(editor_background)
+            let background_base = match cx.theme().window_background_appearance() {
+                WindowBackgroundAppearance::Opaque => {
+                    let background = cx.theme().colors().background;
+                    if background.a < 1.0 {
+                        appearance_base.blend(background)
+                    } else {
+                        background
+                    }
+                }
+                _ => appearance_base,
+            };
+            background_base.blend(editor_background)
         } else {
             editor_background
         };
