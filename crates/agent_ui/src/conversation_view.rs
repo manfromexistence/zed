@@ -106,6 +106,7 @@ const TOKEN_THRESHOLD: u64 = 250;
 
 pub(crate) const DRAFT_PROMPT_PERSIST_DEBOUNCE: Duration = Duration::from_millis(250);
 
+mod composer_liquid_glass;
 mod composer_profile_options;
 mod thread_view;
 mod voice_controls;

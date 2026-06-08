@@ -5,6 +5,7 @@ import test from "node:test";
 const read = (path: string) => readFileSync(path, "utf8");
 
 const cargo = read("crates/agent_ui/Cargo.toml");
+const composerGlass = read("crates/agent_ui/src/conversation_view/composer_liquid_glass.rs");
 const threadView = read("crates/agent_ui/src/conversation_view/thread_view.rs");
 const messageEditor = read("crates/agent_ui/src/message_editor.rs");
 const liquidGlass = read("crates/liquid_glass/src/lib.rs");
@@ -18,27 +19,90 @@ const sourceWindow = (source: string, needle: string, before = 600, after = 600)
 
 test("Agent composer uses shared liquid glass primitives", () => {
   assert.match(cargo, /liquid_glass\.workspace = true/);
-  assert.match(threadView, /use gpui::\{List, RenderImage, TaskExt, canvas\};/);
+  assert.match(threadView, /use liquid_glass::load_glass_surface;/);
   assert.match(
-    threadView,
-    /use liquid_glass::\{default_liquid_glass_style, load_glass_surface, paint_liquid_glass_layer\};/,
+    composerGlass,
+    /use gpui::\{AnyElement, App, Hsla, IntoElement, RenderImage, canvas\};/,
   );
-  assert.match(threadView, /theme_is_transparent/);
+  assert.match(
+    composerGlass,
+    /use liquid_glass::\{control_surface_liquid_glass_style, paint_liquid_glass_layer\};/,
+  );
+  assert.match(composerGlass, /theme_is_transparent/);
   assert.match(liquidGlass, /pub use backgrounds::load_glass_surface;/);
   assert.match(liquidGlass, /pub fn default_liquid_glass_style\(\) -> LiquidGlassStyle/);
+  assert.match(liquidGlass, /pub fn control_surface_liquid_glass_style\(\) -> LiquidGlassStyle/);
   assert.match(liquidGlass, /let state = ui_state::UiState::default\(\);/);
+  assert.doesNotMatch(
+    threadView,
+    /default_liquid_glass_style|paint_liquid_glass_layer|control_surface_liquid_glass_style|canvas\(/,
+  );
+});
+
+test("control surface liquid glass material values are guarded", () => {
+  const controlStyle = sourceWindow(
+    liquidGlass,
+    "pub fn control_surface_liquid_glass_style",
+    0,
+    1200,
+  );
+
+  for (const value of [
+    "power_factor: 3.0",
+    "a: 0.7",
+    "b: 2.3",
+    "c: 5.2",
+    "d: 6.9",
+    "f_power: 1.0",
+    "noise: 0.06",
+    "glow_weight: 0.25",
+    "glow_edge0: 0.5",
+    "glow_edge1: -0.5",
+    "glow_bias: 0.0",
+    "chromatic_aberration: 0.008",
+    "aberration_samples: 5",
+    "blur_radius: 2.0",
+    "blur_iterations: 1",
+    "blur_downscale: 0.5",
+  ]) {
+    assert.ok(controlStyle.includes(value), `missing ${value}`);
+  }
 });
 
 test("composer glass layer is bounded to the composer shell", () => {
-  const glassLayer = sourceWindow(threadView, "fn render_composer_liquid_glass_layer", 0, 900);
+  const glassLayer = sourceWindow(
+    composerGlass,
+    "pub(super) fn render_composer_liquid_glass_layer",
+    0,
+    900,
+  );
   const composerShell = sourceWindow(threadView, '"agent-composer-liquid-glass-source"', 900, 4000);
 
-  assert.match(threadView, /fn render_composer_liquid_glass_layer\(source_image: Arc<RenderImage>\) -> AnyElement/);
-  assert.match(threadView, /paint_liquid_glass_layer\(window, bounds, bounds, source_image\.clone\(\), &style\)/);
-  assert.match(threadView, /\.absolute\(\)\s*\.inset_0\(\)\s*\.size_full\(\)/);
-  assert.match(threadView, /composer_glass_readability_background/);
-  assert.match(threadView, /composer_glass_fallback_background/);
-  assert.match(threadView, /composer_glass_border_color/);
+  assert.match(
+    composerGlass,
+    /pub\(super\) fn render_composer_liquid_glass_layer\(source_image: Arc<RenderImage>\) -> AnyElement/,
+  );
+  assert.match(
+    composerGlass,
+    /paint_liquid_glass_layer\(window, bounds, bounds, source_image\.clone\(\), &style\)/,
+  );
+  assert.match(composerGlass, /\.absolute\(\)\s*\.inset_0\(\)\s*\.size_full\(\)/);
+  assert.match(composerGlass, /ComposerGlassSurfaceStyle/);
+  assert.match(composerGlass, /composer_glass_surface_style/);
+  assert.match(composerGlass, /MIN_READABILITY_CONTRAST: f32 = 45\.0/);
+  assert.doesNotMatch(
+    composerGlass,
+    /text_muted|apca_contrast\(colors\.text_muted/,
+    "muted text should not force the whole composer glass surface into fallback",
+  );
+  assert.doesNotMatch(
+    threadView,
+    /composer_glass_readability_background|composer_glass_fallback_background|composer_glass_border_color/,
+  );
+  assert.match(
+    composerShell,
+    /\.child\(render_composer_liquid_glass_layer\(glass_source\)\)[\s\S]*\.when_some\(glass_surface_style\.readability_overlay[\s\S]*\.child\(\s*v_flex\(\)\s*\.relative\(\)/,
+  );
   assert.doesNotMatch(glassLayer + composerShell, /std::fs|spawn|background_executor|thread::sleep/);
 });
 
@@ -48,7 +112,10 @@ test("composer preserves the real editor and controls", () => {
     /use_keyed_state\(\s*\(\s*"agent-composer-liquid-glass-source",\s*cx\.entity_id\(\)\.as_u64\(\),\s*\),\s*cx,\s*\|_, _\| load_glass_surface\(\),\s*\)/s,
   );
   assert.match(threadView, /\.relative\(\)\s*\.overflow_hidden\(\)\s*\.rounded_md\(\)/);
-  assert.match(threadView, /\.border_color\(border_color\)\s*\.bg\(fallback_background\)/);
+  assert.match(
+    threadView,
+    /\.border_color\(glass_surface_style\.border\)\s*\.bg\(glass_surface_style\.background\)/,
+  );
   assert.match(threadView, /render_composer_liquid_glass_layer\(glass_source\)/);
   assert.match(threadView, /self\.message_editor\.clone\(\)/);
   assert.match(threadView, /self\.render_add_context_button\(cx\)/);

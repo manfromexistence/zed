@@ -18,23 +18,21 @@ use crate::completion_provider::AvailableSkill;
 use crate::message_editor::SharedSessionCapabilities;
 
 use db::kvp::KeyValueStore;
-use gpui::{List, RenderImage, TaskExt, canvas};
+use gpui::{List, TaskExt};
 use heapless::Vec as ArrayVec;
 use language_model::{
     FastModeConfirmation, LanguageModelEffortLevel, LanguageModelId, LanguageModelProviderId,
     LanguageModelRegistry, Speed,
 };
-use liquid_glass::{
-    control_surface_liquid_glass_style, load_glass_surface, paint_liquid_glass_layer,
-};
+use liquid_glass::load_glass_surface;
 use settings::update_settings_file;
-use ui::{
-    ButtonLike, SpinnerLabel, SpinnerVariant, SplitButton, SplitButtonStyle, Tab,
-    theme_is_transparent, utils::apca_contrast,
-};
+use ui::{ButtonLike, SpinnerLabel, SpinnerVariant, SplitButton, SplitButtonStyle, Tab};
 use workspace::SERIALIZATION_THROTTLE_TIME;
 use workspace::notifications::NotificationId;
 
+use super::composer_liquid_glass::{
+    composer_glass_surface_style, render_composer_liquid_glass_layer,
+};
 use super::composer_profile_options::{
     ComposerOptionEntry, ComposerOptionSlot, ComposerProfileKind,
 };
@@ -273,79 +271,6 @@ impl RenderOnce for GeneratingSpinnerElement {
             window.use_state(cx, |_, _| GeneratingSpinner::new(self.variant))
         })
     }
-}
-
-fn render_composer_liquid_glass_layer(source_image: Arc<RenderImage>) -> AnyElement {
-    let style = control_surface_liquid_glass_style();
-
-    canvas(
-        move |bounds, _, _| bounds,
-        move |bounds, _, window, _cx| {
-            paint_liquid_glass_layer(window, bounds, bounds, source_image.clone(), &style);
-        },
-    )
-    .absolute()
-    .inset_0()
-    .size_full()
-    .into_any_element()
-}
-
-fn composer_glass_readability_background(cx: &mut App) -> Option<Hsla> {
-    if !composer_glass_needs_readability_fallback(cx) {
-        return None;
-    }
-
-    let is_transparent = theme_is_transparent(cx);
-    let colors = cx.theme().colors();
-    let base = colors
-        .panel_background
-        .blend(colors.editor_background.opacity(0.72));
-
-    Some(if is_transparent {
-        base.opacity(0.58)
-    } else {
-        base.opacity(0.42)
-    })
-}
-
-fn composer_glass_fallback_background(cx: &mut App) -> Hsla {
-    if !composer_glass_needs_readability_fallback(cx) {
-        return cx.theme().system().transparent;
-    }
-
-    let is_transparent = theme_is_transparent(cx);
-    let colors = cx.theme().colors();
-    let base = colors
-        .panel_background
-        .blend(colors.editor_background.opacity(0.86));
-
-    if is_transparent {
-        base.opacity(0.56)
-    } else {
-        base.opacity(0.24)
-    }
-}
-
-fn composer_glass_border_color(cx: &mut App) -> Hsla {
-    if theme_is_transparent(cx) {
-        cx.theme().colors().border.opacity(0.9)
-    } else {
-        cx.theme().colors().border.opacity(0.68)
-    }
-}
-
-fn composer_glass_needs_readability_fallback(cx: &mut App) -> bool {
-    if theme_is_transparent(cx) {
-        return true;
-    }
-
-    let colors = cx.theme().colors();
-    let candidate_background = colors
-        .panel_background
-        .blend(colors.editor_background.opacity(0.72));
-
-    apca_contrast(colors.text, candidate_background).abs() < 45.0
-        || apca_contrast(colors.text_muted, candidate_background).abs() < 45.0
 }
 
 pub enum AcpThreadViewEvent {
@@ -3941,9 +3866,7 @@ impl ThreadView {
             )
             .read(cx)
             .clone();
-        let fallback_background = composer_glass_fallback_background(cx);
-        let readability_background = composer_glass_readability_background(cx);
-        let border_color = composer_glass_border_color(cx);
+        let glass_surface_style = composer_glass_surface_style(cx);
 
         h_flex()
             .px_2()
@@ -3973,8 +3896,8 @@ impl ThreadView {
                     .overflow_hidden()
                     .rounded_md()
                     .border_1()
-                    .border_color(border_color)
-                    .bg(fallback_background)
+                    .border_color(glass_surface_style.border)
+                    .bg(glass_surface_style.background)
                     .p_1p5()
                     .shadow_sm()
                     .flex_shrink_1()
@@ -3983,15 +3906,12 @@ impl ThreadView {
                     .justify_between()
                     .gap_1()
                     .child(render_composer_liquid_glass_layer(glass_source))
-                    .when_some(readability_background, |this, background| {
-                        this.child(
-                            div()
-                                .absolute()
-                                .inset_0()
-                                .size_full()
-                                .bg(background),
-                        )
-                    })
+                    .when_some(
+                        glass_surface_style.readability_overlay,
+                        |this, background| {
+                            this.child(div().absolute().inset_0().size_full().bg(background))
+                        },
+                    )
                     .child(
                         v_flex()
                             .relative()
