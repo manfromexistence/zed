@@ -197,6 +197,36 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
     /"dx-explorer-open-file"[\s\S]*\.when\(has_worktree,[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&open_file_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"Open file",\s*&ToggleFileFinder::default\(\),\s*&open_file_tooltip_focus_handle,[\s\S]*cx/,
     "Open File should only enter tab order when enabled and should expose its action keybinding",
   );
+  assert.match(
+    renderDxExplorerHeader,
+    /"dx-explorer-toggle-ignored"[\s\S]*\.when\(has_worktree,[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&toggle_ignored_focus_handle\)[\s\S]*Tooltip::for_action_in\([\s\S]*if show_ignored_entries[\s\S]*"Hide ignored files"[\s\S]*"Show ignored files"[\s\S]*&ToggleHideGitIgnore,[\s\S]*&toggle_ignored_tooltip_focus_handle,[\s\S]*cx/,
+    "Ignored-files toggle should be focus-tracked only when enabled and expose its action keybinding",
+  );
+  assert.match(
+    renderDxExplorerHeader,
+    /"dx-explorer-toggle-hidden"[\s\S]*\.when\(has_worktree,[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&toggle_hidden_focus_handle\)[\s\S]*Tooltip::for_action_in\([\s\S]*if show_hidden_entries[\s\S]*"Hide hidden files"[\s\S]*"Show hidden files"[\s\S]*&ToggleHideHidden,[\s\S]*&toggle_hidden_tooltip_focus_handle,[\s\S]*cx/,
+    "Hidden-files toggle should be focus-tracked only when enabled and expose its action keybinding",
+  );
+  assert.match(
+    renderDxExplorerHeader,
+    /"dx-explorer-project-symbols"[\s\S]*\.when\(has_worktree,[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&project_symbols_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"Project symbols",\s*&ToggleProjectSymbols,[\s\S]*&project_symbols_tooltip_focus_handle,[\s\S]*cx/,
+    "Project Symbols should be focus-tracked only when enabled and expose its action keybinding",
+  );
+  assert.match(
+    renderDxExplorerHeader,
+    /"dx-explorer-collapse-all"[\s\S]*\.when\(has_worktree,[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&collapse_all_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"Collapse all",\s*&CollapseAllEntries,[\s\S]*&collapse_all_tooltip_focus_handle,[\s\S]*cx/,
+    "Collapse All should be focus-tracked only when enabled and expose its action keybinding",
+  );
+  assert.match(
+    renderDxExplorerHeader,
+    /"dx-explorer-new-file"[\s\S]*\.when\(!is_read_only && has_worktree,[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&new_file_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"New file",\s*&NewFile,[\s\S]*&new_file_tooltip_focus_handle,[\s\S]*cx/,
+    "New File should be focus-tracked only when writable and expose its action keybinding",
+  );
+  assert.match(
+    renderDxExplorerHeader,
+    /"dx-explorer-new-folder"[\s\S]*\.when\(!is_read_only && has_worktree,[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&new_folder_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"New folder",\s*&NewDirectory,[\s\S]*&new_folder_tooltip_focus_handle,[\s\S]*cx/,
+    "New Folder should be focus-tracked only when writable and expose its action keybinding",
+  );
   assert.doesNotMatch(
     renderDxExplorerHeader,
     /"dx-explorer-open-project"[\s\S]*Tooltip::text\("Open project"\)/,
@@ -206,6 +236,11 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
     renderDxExplorerHeader,
     /"dx-explorer-open-file"[\s\S]*Tooltip::text\("Open file"\)/,
     "Open File should not keep a plain tooltip when the action binding is exact",
+  );
+  assert.doesNotMatch(
+    renderDxExplorerHeader,
+    /Tooltip::text\((?:if show_ignored_entries|if show_hidden_entries|"Project symbols"|"Collapse all"|"New file"|"New folder")/,
+    "DX Explorer header action buttons should use action-aware tooltips instead of plain text",
   );
   assert.match(renderDxExplorerHeader, /IconName::ListX/);
   assert.match(renderDxExplorerHeader, /IconName::ListFilter/);

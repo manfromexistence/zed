@@ -4661,6 +4661,18 @@ impl ProjectPanel {
         let open_project_focus_handle = header_focus_handle.clone();
         let open_file_focus_handle = header_focus_handle.clone();
         let open_file_tooltip_focus_handle = open_file_focus_handle.clone();
+        let toggle_ignored_focus_handle = header_focus_handle.clone();
+        let toggle_ignored_tooltip_focus_handle = toggle_ignored_focus_handle.clone();
+        let toggle_hidden_focus_handle = header_focus_handle.clone();
+        let toggle_hidden_tooltip_focus_handle = toggle_hidden_focus_handle.clone();
+        let project_symbols_focus_handle = header_focus_handle.clone();
+        let project_symbols_tooltip_focus_handle = project_symbols_focus_handle.clone();
+        let collapse_all_focus_handle = header_focus_handle.clone();
+        let collapse_all_tooltip_focus_handle = collapse_all_focus_handle.clone();
+        let new_file_focus_handle = header_focus_handle.clone();
+        let new_file_tooltip_focus_handle = new_file_focus_handle.clone();
+        let new_folder_focus_handle = header_focus_handle.clone();
+        let new_folder_tooltip_focus_handle = new_folder_focus_handle.clone();
 
         h_flex()
             .id("dx-explorer-header")
@@ -4839,11 +4851,23 @@ impl ProjectPanel {
                                 .toggle_state(show_ignored_entries)
                                 .icon_size(IconSize::Small)
                                 .disabled(!has_worktree)
-                                .tooltip(Tooltip::text(if show_ignored_entries {
-                                    "Hide ignored files"
-                                } else {
-                                    "Show ignored files"
-                                }))
+                                .when(has_worktree, |button| {
+                                    button
+                                        .tab_index(0)
+                                        .track_focus(&toggle_ignored_focus_handle)
+                                })
+                                .tooltip(move |_window, cx| {
+                                    Tooltip::for_action_in(
+                                        if show_ignored_entries {
+                                            "Hide ignored files"
+                                        } else {
+                                            "Show ignored files"
+                                        },
+                                        &ToggleHideGitIgnore,
+                                        &toggle_ignored_tooltip_focus_handle,
+                                        cx,
+                                    )
+                                })
                                 .on_click(move |_, window, cx| {
                                     window.dispatch_action(ToggleHideGitIgnore.boxed_clone(), cx);
                                 }),
@@ -4863,11 +4887,21 @@ impl ProjectPanel {
                                 .toggle_state(show_hidden_entries)
                                 .icon_size(IconSize::Small)
                                 .disabled(!has_worktree)
-                                .tooltip(Tooltip::text(if show_hidden_entries {
-                                    "Hide hidden files"
-                                } else {
-                                    "Show hidden files"
-                                }))
+                                .when(has_worktree, |button| {
+                                    button.tab_index(0).track_focus(&toggle_hidden_focus_handle)
+                                })
+                                .tooltip(move |_window, cx| {
+                                    Tooltip::for_action_in(
+                                        if show_hidden_entries {
+                                            "Hide hidden files"
+                                        } else {
+                                            "Show hidden files"
+                                        },
+                                        &ToggleHideHidden,
+                                        &toggle_hidden_tooltip_focus_handle,
+                                        cx,
+                                    )
+                                })
                                 .on_click(move |_, window, cx| {
                                     window.dispatch_action(ToggleHideHidden.boxed_clone(), cx);
                                 }),
@@ -4883,7 +4917,19 @@ impl ProjectPanel {
                                     .style(ButtonStyle::Subtle)
                                     .icon_size(IconSize::Small)
                                     .disabled(!has_worktree)
-                                    .tooltip(Tooltip::text("Project symbols"))
+                                    .when(has_worktree, |button| {
+                                        button
+                                            .tab_index(0)
+                                            .track_focus(&project_symbols_focus_handle)
+                                    })
+                                    .tooltip(move |_window, cx| {
+                                        Tooltip::for_action_in(
+                                            "Project symbols",
+                                            &ToggleProjectSymbols,
+                                            &project_symbols_tooltip_focus_handle,
+                                            cx,
+                                        )
+                                    })
                                     .on_click(move |_, window, cx| {
                                         window.dispatch_action(
                                             ToggleProjectSymbols.boxed_clone(),
@@ -4897,7 +4943,17 @@ impl ProjectPanel {
                                     .style(ButtonStyle::Subtle)
                                     .icon_size(IconSize::Small)
                                     .disabled(!has_worktree)
-                                    .tooltip(Tooltip::text("Collapse all"))
+                                    .when(has_worktree, |button| {
+                                        button.tab_index(0).track_focus(&collapse_all_focus_handle)
+                                    })
+                                    .tooltip(move |_window, cx| {
+                                        Tooltip::for_action_in(
+                                            "Collapse all",
+                                            &CollapseAllEntries,
+                                            &collapse_all_tooltip_focus_handle,
+                                            cx,
+                                        )
+                                    })
                                     .on_click(cx.listener(|this, _, window, cx| {
                                         this.focus_handle(cx).focus(window, cx);
                                         this.collapse_all_entries(&CollapseAllEntries, window, cx);
@@ -4914,7 +4970,17 @@ impl ProjectPanel {
                                     .style(ButtonStyle::Subtle)
                                     .icon_size(IconSize::Small)
                                     .disabled(is_read_only || !has_worktree)
-                                    .tooltip(Tooltip::text("New file"))
+                                    .when(!is_read_only && has_worktree, |button| {
+                                        button.tab_index(0).track_focus(&new_file_focus_handle)
+                                    })
+                                    .tooltip(move |_window, cx| {
+                                        Tooltip::for_action_in(
+                                            "New file",
+                                            &NewFile,
+                                            &new_file_tooltip_focus_handle,
+                                            cx,
+                                        )
+                                    })
                                     .on_click(cx.listener(|this, _, window, cx| {
                                         this.focus_handle(cx).focus(window, cx);
                                         this.new_file(&NewFile, window, cx);
@@ -4926,7 +4992,17 @@ impl ProjectPanel {
                                     .style(ButtonStyle::Subtle)
                                     .icon_size(IconSize::Small)
                                     .disabled(is_read_only || !has_worktree)
-                                    .tooltip(Tooltip::text("New folder"))
+                                    .when(!is_read_only && has_worktree, |button| {
+                                        button.tab_index(0).track_focus(&new_folder_focus_handle)
+                                    })
+                                    .tooltip(move |_window, cx| {
+                                        Tooltip::for_action_in(
+                                            "New folder",
+                                            &NewDirectory,
+                                            &new_folder_tooltip_focus_handle,
+                                            cx,
+                                        )
+                                    })
                                     .on_click(cx.listener(|this, _, window, cx| {
                                         this.focus_handle(cx).focus(window, cx);
                                         this.new_directory(&NewDirectory, window, cx);
