@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use gpui::{AnyElement, Bounds, IntoElement, Pixels, RenderImage, Window, canvas};
+use ui::prelude::*;
 
 #[derive(Clone, Debug)]
 pub struct LiquidGlassStyle {
@@ -69,6 +70,22 @@ pub fn liquid_glass_layer(
             style.paint(window, bounds, glass_bounds, source_image.clone());
         },
     )
+    .into_any_element()
+}
+
+pub fn bounded_liquid_glass_layer(
+    source_image: Arc<RenderImage>,
+    style: LiquidGlassStyle,
+) -> AnyElement {
+    canvas(
+        move |bounds, _, _| bounds,
+        move |bounds, _, window, _cx| {
+            style.paint(window, bounds, bounds, source_image.clone());
+        },
+    )
+    .absolute()
+    .inset_0()
+    .size_full()
     .into_any_element()
 }
 

@@ -9,6 +9,7 @@ const composerGlass = read("crates/agent_ui/src/conversation_view/composer_liqui
 const threadView = read("crates/agent_ui/src/conversation_view/thread_view.rs");
 const messageEditor = read("crates/agent_ui/src/message_editor.rs");
 const liquidGlass = read("crates/liquid_glass/src/lib.rs");
+const liquidGlassElement = read("crates/liquid_glass/src/element.rs");
 const workspaceItem = read("crates/workspace/src/item.rs");
 const workspaceSource = read("crates/workspace/src/workspace.rs");
 const paneSource = read("crates/workspace/src/pane.rs");
@@ -53,16 +54,28 @@ test("Agent composer uses shared liquid glass primitives", () => {
   assert.match(threadView, /use liquid_glass::load_glass_surface;/);
   assert.match(
     composerGlass,
-    /use gpui::\{AnyElement, App, Hsla, IntoElement, RenderImage, canvas\};/,
+    /use gpui::\{AnyElement, App, Hsla, RenderImage\};/,
   );
   assert.match(
     composerGlass,
-    /use liquid_glass::\{control_surface_liquid_glass_style, paint_liquid_glass_layer\};/,
+    /use liquid_glass::\{bounded_liquid_glass_layer, control_surface_liquid_glass_style\};/,
   );
   assert.match(composerGlass, /theme_is_transparent/);
-  assert.match(liquidGlass, /pub use backgrounds::load_glass_surface;/);
+  assert.match(
+    liquidGlass,
+    /pub use backgrounds::\{BackgroundAsset, load_backgrounds, load_glass_surface\};/,
+  );
   assert.match(liquidGlass, /pub fn default_liquid_glass_style\(\) -> LiquidGlassStyle/);
   assert.match(liquidGlass, /pub fn control_surface_liquid_glass_style\(\) -> LiquidGlassStyle/);
+  assert.match(liquidGlass, /bounded_liquid_glass_layer/);
+  assert.match(
+    liquidGlassElement,
+    /pub fn bounded_liquid_glass_layer\(\s*source_image: Arc<RenderImage>,\s*style: LiquidGlassStyle,\s*\) -> AnyElement/,
+  );
+  assert.match(
+    liquidGlassElement,
+    /style\.paint\(window, bounds, bounds, source_image\.clone\(\)\)/,
+  );
   assert.match(liquidGlass, /let state = ui_state::UiState::default\(\);/);
   assert.doesNotMatch(liquidGlass, /liquid_glass_view|LiquidGlassView|register_serializable_item|observe_new|NewLiquidGlass/);
   assert.doesNotMatch(workspaceItem, /LiquidGlass/);
@@ -118,26 +131,33 @@ test("composer glass layer is bounded to the composer shell", () => {
   );
   assert.match(
     composerGlass,
-    /paint_liquid_glass_layer\(window, bounds, bounds, source_image\.clone\(\), &style\)/,
+    /bounded_liquid_glass_layer\(source_image, control_surface_liquid_glass_style\(\)\)/,
   );
-  assert.match(composerGlass, /\.absolute\(\)\s*\.inset_0\(\)\s*\.size_full\(\)/);
+  assert.doesNotMatch(composerGlass, /paint_liquid_glass_layer|canvas\(/);
+  assert.match(liquidGlassElement, /\.absolute\(\)\s*\.inset_0\(\)\s*\.size_full\(\)/);
   assert.match(composerGlass, /ComposerGlassSurfaceStyle/);
   assert.match(composerGlass, /composer_glass_surface_style/);
   assert.match(threadView, /COMPOSER_EMPTY_STATE_MAX_LINES: usize = 8/);
   assert.match(threadView, /COMPOSER_COLLAPSED_MAX_HEIGHT_REMS: f32 = 18\./);
   assert.match(threadView, /COMPOSER_COLLAPSED_EDITOR_MAX_HEIGHT_REMS: f32 = 9\./);
   assert.match(composerGlass, /MIN_TEXT_READABILITY_CONTRAST: f32 = 45\.0/);
-  assert.match(composerGlass, /MIN_MUTED_TEXT_READABILITY_CONTRAST: f32 = 30\.0/);
-  assert.match(composerGlass, /READABILITY_FALLBACK_BACKGROUND_ALPHA: f32 = 0\.94/);
-  assert.match(composerGlass, /READABILITY_OVERLAY_ALPHA: f32 = 0\.72/);
-  assert.doesNotMatch(composerGlass, /TRANSPARENT_FALLBACK_BACKGROUND_ALPHA|OPAQUE_FALLBACK_BACKGROUND_ALPHA/);
-  assert.match(
+  assert.match(composerGlass, /MIN_SUPPORTING_CONTENT_READABILITY_CONTRAST: f32 = 30\.0/);
+  assert.match(composerGlass, /READABILITY_PLATE_ALPHA: f32 = 0\.62/);
+  assert.match(composerGlass, /TRANSPARENT_READABILITY_VEIL_ALPHA: f32 = 0\.18/);
+  assert.match(composerGlass, /background: transparent/);
+  assert.match(composerGlass, /text_placeholder/);
+  assert.match(composerGlass, /icon_muted/);
+  assert.doesNotMatch(
     composerGlass,
-    /needs_readability_fallback\(is_transparent, text, text_muted, readability_base\)/,
+    /FALLBACK_BACKGROUND_EDITOR_ALPHA|READABILITY_FALLBACK_BACKGROUND_ALPHA|READABILITY_OVERLAY_ALPHA/,
   );
   assert.match(
     composerGlass,
-    /apca_contrast\(text_muted, readability_base\)\.abs\(\) < MIN_MUTED_TEXT_READABILITY_CONTRAST/,
+    /needs_readability_plate\(\s*text,\s*text_muted,\s*text_placeholder,\s*icon,\s*icon_muted,\s*readability_base,\s*\)/,
+  );
+  assert.match(
+    composerGlass,
+    /apca_contrast\(icon_muted, readability_base\)\.abs\(\)\s*< MIN_SUPPORTING_CONTENT_READABILITY_CONTRAST/,
   );
   assert.doesNotMatch(
     threadView,
@@ -152,7 +172,14 @@ test("composer glass layer is bounded to the composer shell", () => {
 
 test("composer preserves the real editor and controls", () => {
   const renderMessageEditor = functionBody(threadView, "render_message_editor");
+  const messageEditorRender = functionBody(messageEditor, "render");
   const syncEmptyStateMode = functionBody(threadView, "sync_editor_mode_for_empty_state");
+  const collapsedEditorScroll = sourceWindow(
+    renderMessageEditor,
+    '"agent-composer-collapsed-editor-scroll"',
+    0,
+    900,
+  );
 
   assert.match(
     threadView,
@@ -169,12 +196,17 @@ test("composer preserves the real editor and controls", () => {
   assert.match(threadView, /self\.render_profile_option_slots\(cx\)/);
   assert.match(threadView, /self\.render_voice_controls\(window, cx\)/);
   assert.match(threadView, /self\.render_send_button\(cx\)/);
-  assert.match(messageEditor, /background: cx\.theme\(\)\.system\(\)\.transparent/);
+  assert.match(messageEditorRender, /background: cx\.theme\(\)\.system\(\)\.transparent/);
   assert.match(renderMessageEditor, /let expands_editor_area = editor_expanded && has_messages;/);
   assert.match(renderMessageEditor, /else \{\s*this\.flex_1\(\)\.w_full\(\)\s*\}/);
   assert.doesNotMatch(renderMessageEditor, /else \{\s*this\.flex_1\(\)\.size_full\(\)\s*\}/);
+  assert.equal(
+    renderMessageEditor.match(/render_composer_liquid_glass_layer\(glass_source\)/g)?.length ?? 0,
+    1,
+  );
   assert.match(renderMessageEditor, /has_messages && !expands_editor_area[\s\S]*max_h\(rems\(COMPOSER_COLLAPSED_MAX_HEIGHT_REMS\)\)/);
-  assert.match(renderMessageEditor, /has_messages && !expands_editor_area[\s\S]*max_h\(rems\(COMPOSER_COLLAPSED_EDITOR_MAX_HEIGHT_REMS\)\)[\s\S]*\.overflow_y_scroll\(\)/);
+  assert.match(collapsedEditorScroll, /\.overflow_y_scroll\(\)/);
+  assert.match(collapsedEditorScroll, /\.max_h\(rems\(COMPOSER_COLLAPSED_EDITOR_MAX_HEIGHT_REMS\)\)/);
   assert.match(syncEmptyStateMode, /let max_lines = if has_messages \{[\s\S]*COMPOSER_COLLAPSED_MAX_LINES[\s\S]*\} else \{[\s\S]*COMPOSER_EMPTY_STATE_MAX_LINES/);
   assert.match(syncEmptyStateMode, /EditorMode::AutoHeight \{[\s\S]*min_lines: COMPOSER_MIN_LINES,[\s\S]*max_lines: Some\(max_lines\)/);
   assert.doesNotMatch(syncEmptyStateMode, /EditorMode::Full/);

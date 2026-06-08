@@ -1,3 +1,17 @@
+[2026-06-09] - AI Composer Liquid Glass Correction
+
+CHANGED:
+- `crates\liquid_glass\src\element.rs` now exposes a shared bounded Liquid Glass layer wrapper that paints the real GPUI LiquidGlass primitive against the element bounds.
+- `crates\agent_ui\src\conversation_view\composer_liquid_glass.rs` now uses that shared bounded wrapper for the AI composer instead of owning a local canvas paint shim.
+- The composer glass shell now keeps its base background transparent so the bounded glass material remains visible, while the readability fallback uses a light transparent veil for transparent windows and a stronger APCA-gated plate only when text, placeholder, or icon contrast needs it.
+- `script\dx-agent-composer-liquid-glass-source.test.ts` now guards the shared bounded primitive, single composer layer, transparent message editor render style, preserved composer controls, and expanded readability checks.
+
+PASSED:
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. Cargo, build, runtime proof, native launch, local servers, browser automation, source-guard execution, and `just run` remain deferred.
+
 [2026-06-09] - Authorized J6 Build Validation Repair
 
 CHANGED:
