@@ -4550,10 +4550,20 @@ impl ProjectPanel {
         .into_any_element()
     }
 
-    fn render_dx_explorer_storage_root_strip(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+    fn render_dx_explorer_storage_root_strip(
+        &self,
+        is_local_or_wsl: bool,
+        is_read_only: bool,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
+        if !is_local_or_wsl || is_read_only {
+            return None;
+        }
+
         storage_roots_view::render_storage_root_strip(
             self.storage_root_shortcuts.clone(),
             cx.entity().downgrade(),
+            self.focus_handle(cx),
             cx,
         )
     }
@@ -9185,7 +9195,11 @@ impl Render for ProjectPanel {
                             cx,
                         ))
                         .when_some(
-                            self.render_dx_explorer_storage_root_strip(cx),
+                            self.render_dx_explorer_storage_root_strip(
+                                is_local_or_wsl,
+                                is_read_only,
+                                cx,
+                            ),
                             |this, root_strip| this.child(root_strip),
                         )
                         .map(|this| {
@@ -9662,7 +9676,7 @@ impl Render for ProjectPanel {
                     cx,
                 ))
                 .when_some(
-                    self.render_dx_explorer_storage_root_strip(cx),
+                    self.render_dx_explorer_storage_root_strip(is_local_or_wsl, is_read_only, cx),
                     |this, root_strip| this.child(root_strip),
                 )
                 .child(

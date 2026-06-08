@@ -6,7 +6,7 @@ const read = (path: string) => readFileSync(path, "utf8");
 
 const functionBody = (source: string, name: string): string => {
   const signature = new RegExp(
-    `\\n(?:    )?(?:pub\\(crate\\)\\s+|pub\\s+)?(?:async\\s+)?fn ${name}\\(`,
+    `\\n(?:    )?(?:pub\\(crate\\)\\s+|pub\\s+)?(?:async\\s+)?fn ${name}(?:<[^>]+>)?\\(`,
   );
   const match = signature.exec(source);
   assert.ok(match?.index !== undefined, `expected function ${name}`);
@@ -298,4 +298,11 @@ test("terminal element render materialization is bounded before row cell and hig
     "highlighted_range_lines.push",
     "terminal highlight lines must be capped before vector push",
   );
+});
+
+test("terminal cursor paint path stays outside rainbow caret effects", () => {
+  const element = read("crates/terminal_view/src/terminal_element.rs");
+
+  assert.match(element, /cursor\.paint\(origin, window, cx, None\);/);
+  assert.doesNotMatch(element, /dx_rainbow_paint_sample|DxRainbowMotion|paint_dx_rainbow_caret_glow/);
 });

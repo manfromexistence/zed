@@ -4,7 +4,8 @@ use gpui::{AnyElement, App, Hsla, IntoElement, RenderImage, canvas};
 use liquid_glass::{control_surface_liquid_glass_style, paint_liquid_glass_layer};
 use ui::{prelude::*, theme_is_transparent, utils::apca_contrast};
 
-const MIN_READABILITY_CONTRAST: f32 = 45.0;
+const MIN_TEXT_READABILITY_CONTRAST: f32 = 45.0;
+const MIN_MUTED_TEXT_READABILITY_CONTRAST: f32 = 30.0;
 const READABILITY_SAMPLE_EDITOR_ALPHA: f32 = 0.72;
 const FALLBACK_BACKGROUND_EDITOR_ALPHA: f32 = 0.86;
 const TRANSPARENT_FALLBACK_BACKGROUND_ALPHA: f32 = 0.56;
@@ -27,12 +28,13 @@ pub(super) fn composer_glass_surface_style(cx: &mut App) -> ComposerGlassSurface
     let panel_background = colors.panel_background;
     let editor_background = colors.editor_background;
     let text = colors.text;
+    let text_muted = colors.text_muted;
     let border = colors.border;
 
     let readability_base =
         panel_background.blend(editor_background.opacity(READABILITY_SAMPLE_EDITOR_ALPHA));
     let needs_readability_fallback =
-        needs_readability_fallback(is_transparent, text, readability_base);
+        needs_readability_fallback(is_transparent, text, text_muted, readability_base);
 
     ComposerGlassSurfaceStyle {
         background: if needs_readability_fallback {
@@ -65,10 +67,12 @@ pub(super) fn composer_glass_surface_style(cx: &mut App) -> ComposerGlassSurface
 fn needs_readability_fallback(
     is_transparent: bool,
     text: Hsla,
+    text_muted: Hsla,
     readability_base: Hsla,
 ) -> bool {
     is_transparent
-        || apca_contrast(text, readability_base).abs() < MIN_READABILITY_CONTRAST
+        || apca_contrast(text, readability_base).abs() < MIN_TEXT_READABILITY_CONTRAST
+        || apca_contrast(text_muted, readability_base).abs() < MIN_MUTED_TEXT_READABILITY_CONTRAST
 }
 
 pub(super) fn render_composer_liquid_glass_layer(source_image: Arc<RenderImage>) -> AnyElement {

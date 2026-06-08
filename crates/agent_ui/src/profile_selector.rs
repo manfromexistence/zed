@@ -221,6 +221,7 @@ impl Render for ProfileSelector {
         let trigger_button = Button::new("profile-selector", selected_profile)
             .label_size(LabelSize::Small)
             .color(Color::Muted)
+            .truncate(true)
             .end_icon(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted));
 
         let tooltip: Box<dyn Fn(&mut Window, &mut App) -> AnyView> = Box::new(Tooltip::element({

@@ -53,7 +53,8 @@ impl Render for ApiKeysWithProviders {
                                 .size(IconSize::XSmall)
                                 .color(Color::Muted),
                             IconOrSvg::Svg(icon_path) => {
-                                Icon::from_external_svg_with_original_colors(icon_path)
+                                Icon::from_external_svg(icon_path)
+                                    .color(Color::Muted)
                                     .size(IconSize::XSmall)
                             }
                         })

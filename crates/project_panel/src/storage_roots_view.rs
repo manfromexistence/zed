@@ -1,6 +1,6 @@
 use gpui::{
-    AnyElement, Context, InteractiveElement, IntoElement, ParentElement, SharedString, Styled,
-    WeakEntity,
+    AnyElement, Context, FocusHandle, InteractiveElement, IntoElement, ParentElement,
+    SharedString, Styled, WeakEntity,
 };
 use ui::{
     ButtonLike, ButtonSize, ButtonStyle, Color, DxUiIcon, Icon, IconSize, Label, LabelSize,
@@ -13,6 +13,7 @@ use crate::{ProjectPanel, storage_roots};
 pub(crate) fn render_storage_root_strip(
     shortcuts: Vec<storage_roots::StorageRootShortcut>,
     panel: WeakEntity<ProjectPanel>,
+    focus_handle: FocusHandle,
     cx: &mut Context<ProjectPanel>,
 ) -> Option<AnyElement> {
     if shortcuts.is_empty() {
@@ -21,7 +22,9 @@ pub(crate) fn render_storage_root_strip(
 
     let rows = shortcuts
         .into_iter()
-        .map(|shortcut| render_storage_root_strip_row(shortcut, panel.clone()))
+        .map(|shortcut| {
+            render_storage_root_strip_row(shortcut, panel.clone(), focus_handle.clone())
+        })
         .collect::<Vec<_>>();
 
     Some(
@@ -63,6 +66,7 @@ pub(crate) fn render_storage_root_strip(
 fn render_storage_root_strip_row(
     shortcut: storage_roots::StorageRootShortcut,
     panel: WeakEntity<ProjectPanel>,
+    focus_handle: FocusHandle,
 ) -> AnyElement {
     let icon = match shortcut.kind {
         storage_roots::StorageRootKind::Drive => dx_icon(DxUiIcon::Storage),
@@ -82,10 +86,13 @@ fn render_storage_root_strip_row(
     )))
     .style(ButtonStyle::Subtle)
     .size(ButtonSize::Compact)
+    .tab_index(0)
+    .track_focus(&focus_handle)
     .disabled(!available)
     .tooltip(move |_window, cx| Tooltip::with_meta("Storage root", None, tooltip.clone(), cx))
     .when(available, |this| {
-        this.on_click(move |_, _window, cx| {
+        this.on_click(move |_, window, cx| {
+            window.focus(&focus_handle, cx);
             panel
                 .update_in(cx, |this, window, cx| {
                     this.open_dx_explorer_storage_root(path.clone(), window, cx);

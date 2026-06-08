@@ -59,6 +59,46 @@ test("DX semantic icon layer owns rebrand-specific aliases", () => {
   assert.doesNotMatch(dxIcons, /LoadCircle|Settings => IconName::Settings/);
 });
 
+test("provider and model path SVGs stay tintable until a brand color mode is explicit", () => {
+  const icon = read("crates/ui/src/components/icon.rs");
+  const agentConfiguration = read("crates/agent_ui/src/agent_configuration.rs");
+  const agentModelSelector = read("crates/agent_ui/src/agent_model_selector.rs");
+  const modelSelectorPopover = read("crates/agent_ui/src/model_selector_popover.rs");
+  const modelSelectorComponents = read("crates/agent_ui/src/ui/model_selector_components.rs");
+  const apiKeysOnboarding = read("crates/ai_onboarding/src/agent_api_keys_onboarding.rs");
+
+  assert.match(icon, /ExternalSvg\(SharedString\)/);
+  assert.match(icon, /OriginalColorExternalSvg\(Arc<Path>\)/);
+  assert.match(icon, /pub fn from_external_svg\(svg: SharedString\) -> Self/);
+  assert.match(icon, /pub fn from_external_svg_with_original_colors\(svg: SharedString\) -> Self/);
+  assert.match(
+    icon,
+    /IconSource::ExternalSvg\(path\) => svg\(\)[\s\S]*\.external_path\(path\)[\s\S]*\.text_color\(self\.color\.color\(cx\)\)/,
+  );
+  assert.match(
+    icon,
+    /IconSource::OriginalColorExternalSvg\(path\) => img\(path\)[\s\S]*\.opacity\(self\.opacity\)/,
+  );
+
+  assert.match(agentConfiguration, /IconOrSvg::Svg\(path\) => \{[\s\S]*Icon::from_external_svg\(path\)[\s\S]*\.color\(Color::Muted\)/);
+  assert.match(agentModelSelector, /IconOrSvg::Svg\(path\) => Icon::from_external_svg\(path\)[\s\S]*\.color\(color\)/);
+  assert.match(modelSelectorPopover, /AgentModelIcon::Path\(path\) => \{[\s\S]*Icon::from_external_svg\(path\)[\s\S]*\.color\(color\)/);
+  assert.match(modelSelectorComponents, /ModelIcon::Path\(icon_path\) => \{[\s\S]*Icon::from_external_svg\(icon_path\)[\s\S]*\.color\(model_icon_color\)/);
+  assert.match(apiKeysOnboarding, /IconOrSvg::Svg\(icon_path\) => \{[\s\S]*Icon::from_external_svg\(icon_path\)[\s\S]*\.color\(Color::Muted\)/);
+  assert.doesNotMatch(
+    [
+      agentConfiguration,
+      agentModelSelector,
+      modelSelectorPopover,
+      modelSelectorComponents,
+      apiKeysOnboarding,
+    ].join("\n"),
+    /from_external_svg_with_original_colors/,
+  );
+
+  assert.match(agentConfiguration, /AgentIcon::Path\(icon_path\) => Icon::from_external_svg\(icon_path\)/);
+});
+
 test("DX shell chrome uses semantic icons instead of scattered literals", () => {
   const dxIcons = read("crates/ui/src/dx_icons.rs");
   const titleBar = read("crates/title_bar/src/title_bar.rs");

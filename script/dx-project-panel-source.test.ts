@@ -1020,12 +1020,20 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(renderRootStrip, /\.id\("dx-explorer-storage-root-strip"\)/);
   assert.match(
     renderRootStripCall,
-    /storage_roots_view::render_storage_root_strip\([\s\S]*self\.storage_root_shortcuts\.clone\(\),[\s\S]*cx\.entity\(\)\.downgrade\(\),[\s\S]*cx/,
+    /storage_roots_view::render_storage_root_strip\([\s\S]*self\.storage_root_shortcuts\.clone\(\),[\s\S]*cx\.entity\(\)\.downgrade\(\),[\s\S]*self\.focus_handle\(cx\),[\s\S]*cx/,
     "Project Panel should delegate storage-root strip rendering to the focused view module",
+  );
+  assert.match(
+    renderRootStripCall,
+    /if !is_local_or_wsl \|\| is_read_only \{[\s\S]*return None;[\s\S]*\}/,
+    "local storage-root shortcuts must not render for read-only or remote-only project contexts",
   );
   assert.match(renderRootStrip, /dx_icon\(DxUiIcon::Storage\)/);
   assert.match(renderRootStrip, /Label::new\("Storage roots"\)/);
-  assert.match(renderRootStrip, /shortcuts[\s\S]*\.map\(\|shortcut\| render_storage_root_strip_row\(shortcut, panel\.clone\(\)\)\)/);
+  assert.match(
+    renderRootStrip,
+    /shortcuts[\s\S]*\.map\(\|shortcut\|[\s\S]*render_storage_root_strip_row\(shortcut, panel\.clone\(\), focus_handle\.clone\(\)\)[\s\S]*\)/,
+  );
   assert.doesNotMatch(source, /fn render_dx_explorer_storage_root_strip_row\(/);
   assert.match(renderRootStripRow, /storage_roots::StorageRootKind::Drive/);
   assert.match(storageRootsView, /ButtonLike/);
@@ -1034,6 +1042,8 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(renderRootStripRow, /ButtonLike::new\(/);
   assert.match(renderRootStripRow, /\.style\(ButtonStyle::Subtle\)/);
   assert.match(renderRootStripRow, /\.size\(ButtonSize::Compact\)/);
+  assert.match(renderRootStripRow, /\.tab_index\(0\)/);
+  assert.match(renderRootStripRow, /\.track_focus\(&focus_handle\)/);
   assert.match(renderRootStripRow, /Icon::new\(icon\)/);
   assert.match(renderRootStripRow, /Label::new\(status_label\)/);
   assert.match(renderRootStripRow, /\.disabled\(!available\)/);
@@ -1045,6 +1055,7 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(renderRootStripRow, /dx_icon\(DxUiIcon::CloudStorage\)/);
   assert.match(renderRootStripRow, /dx_icon\(DxUiIcon::DriveProvider\)/);
   assert.match(renderRootStripRow, /dx_icon\(DxUiIcon::DropboxProvider\)/);
+  assert.match(renderRootStripRow, /window\.focus\(&focus_handle, cx\)/);
   assert.match(renderRootStripRow, /this\.open_dx_explorer_storage_root\(path\.clone\(\), window, cx\)/);
   assert.match(renderRootStripRow, /let status_label = shortcut\.status_label\(\);/);
   assert.match(renderRootStripRow, /Label::new\(status_label\)/);

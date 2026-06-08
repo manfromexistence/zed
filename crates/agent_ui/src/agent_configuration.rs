@@ -1809,7 +1809,8 @@ impl AgentConfiguration {
                                     .gap_1p5()
                                     .child(match provider.icon() {
                                         IconOrSvg::Svg(path) => {
-                                            Icon::from_external_svg_with_original_colors(path)
+                                            Icon::from_external_svg(path)
+                                                .color(Color::Muted)
                                                 .size(IconSize::Small)
                                         }
                                         IconOrSvg::Icon(name) => Icon::new(name)

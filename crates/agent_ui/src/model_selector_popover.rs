@@ -80,10 +80,12 @@ impl Render for ModelSelectorPopover {
             Button::new("active-model", model_name)
                 .label_size(LabelSize::Small)
                 .color(color)
+                .truncate(true)
                 .when_some(model_icon, |this, icon| {
                     this.start_icon(match icon {
                         AgentModelIcon::Path(path) => {
-                            Icon::from_external_svg_with_original_colors(path)
+                            Icon::from_external_svg(path)
+                                .color(color)
                                 .size(IconSize::XSmall)
                         }
                         AgentModelIcon::Named(icon_name) => {

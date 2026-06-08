@@ -89,11 +89,15 @@ test("composer glass layer is bounded to the composer shell", () => {
   assert.match(composerGlass, /\.absolute\(\)\s*\.inset_0\(\)\s*\.size_full\(\)/);
   assert.match(composerGlass, /ComposerGlassSurfaceStyle/);
   assert.match(composerGlass, /composer_glass_surface_style/);
-  assert.match(composerGlass, /MIN_READABILITY_CONTRAST: f32 = 45\.0/);
-  assert.doesNotMatch(
+  assert.match(composerGlass, /MIN_TEXT_READABILITY_CONTRAST: f32 = 45\.0/);
+  assert.match(composerGlass, /MIN_MUTED_TEXT_READABILITY_CONTRAST: f32 = 30\.0/);
+  assert.match(
     composerGlass,
-    /text_muted|apca_contrast\(colors\.text_muted/,
-    "muted text should not force the whole composer glass surface into fallback",
+    /needs_readability_fallback\(is_transparent, text, text_muted, readability_base\)/,
+  );
+  assert.match(
+    composerGlass,
+    /apca_contrast\(text_muted, readability_base\)\.abs\(\) < MIN_MUTED_TEXT_READABILITY_CONTRAST/,
   );
   assert.doesNotMatch(
     threadView,
@@ -101,7 +105,7 @@ test("composer glass layer is bounded to the composer shell", () => {
   );
   assert.match(
     composerShell,
-    /\.child\(render_composer_liquid_glass_layer\(glass_source\)\)[\s\S]*\.when_some\(glass_surface_style\.readability_overlay[\s\S]*\.child\(\s*v_flex\(\)\s*\.relative\(\)/,
+    /\.child\(render_composer_liquid_glass_layer\(glass_source\)\)[\s\S]*\.when_some\(\s*glass_surface_style\.readability_overlay[\s\S]*\.child\(\s*v_flex\(\)\s*\.relative\(\)/,
   );
   assert.doesNotMatch(glassLayer + composerShell, /std::fs|spawn|background_executor|thread::sleep/);
 });

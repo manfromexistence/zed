@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use gpui::{Action, ClickEvent, FocusHandle, prelude::*};
 use ui::{Chip, ElevationIndex, KeyBinding, ListItem, ListItemSpacing, Tooltip, prelude::*};
 use zed_actions::agent::ToggleModelSelector;
@@ -52,7 +54,8 @@ impl RenderOnce for ModelSelectorHeader {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let title = self.title;
         let count = self.count;
-        let on_toggle = self.on_toggle;
+        let on_toggle: Option<Rc<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>> =
+            self.on_toggle.map(Rc::from);
         let toggle_icon = self.expanded.map(|expanded| {
             if expanded {
                 IconName::ChevronDown
@@ -82,6 +85,15 @@ impl RenderOnce for ModelSelectorHeader {
                     .w_full()
                     .gap_1()
                     .items_center()
+                    .when_some(on_toggle.clone(), |this, on_toggle| {
+                        this.cursor_pointer()
+                            .tooltip(Tooltip::text(
+                                toggle_tooltip.unwrap_or("Toggle provider models"),
+                            ))
+                            .on_click(move |event, window, cx| {
+                                on_toggle(event, window, cx);
+                            })
+                    })
                     .child(
                         div().flex_1().child(
                             Label::new(title.clone())
@@ -208,12 +220,19 @@ impl RenderOnce for ModelSelectorListItem {
                                 .color(model_icon_color)
                                 .size(IconSize::Small),
                             ModelIcon::Path(icon_path) => {
-                                Icon::from_external_svg_with_original_colors(icon_path)
+                                Icon::from_external_svg(icon_path)
+                                    .color(model_icon_color)
                                     .size(IconSize::Small)
                             }
                         })
                     })
-                    .child(Label::new(self.title).truncate())
+                    .child(
+                        div()
+                            .min_w_0()
+                            .flex_1()
+                            .child(Label::new(self.title.clone()).truncate())
+                            .tooltip(Tooltip::text(self.title)),
+                    )
                     .when(self.is_latest, |parent| parent.child(Chip::new("Latest")))
                     .when_some(self.cost_info, |this, cost_info| {
                         let tooltip_text = if cost_info.ends_with('×') {

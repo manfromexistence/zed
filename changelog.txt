@@ -1,14 +1,17 @@
-[2026-06-08] - GPUI Composer And Brand Icon Hardening
+[2026-06-08] - GPUI Composer And Selector Hardening
 
 CHANGED:
-- `crates\agent_ui\src\conversation_view\composer_liquid_glass.rs` now owns the AI composer glass layer and chrome decision, using the existing control-surface material while keeping opaque themes clear unless primary text contrast needs a fallback.
+- `crates\agent_ui\src\conversation_view\composer_liquid_glass.rs` now owns the AI composer glass layer and chrome decision, using the existing control-surface material while keeping opaque themes clear unless primary or muted text contrast needs a fallback.
 - `crates\agent_ui\src\conversation_view\thread_view.rs` now delegates composer glass rendering and border/background decisions to that focused helper instead of keeping the chrome logic inline.
-- `crates\ui\src\components\icon.rs` keeps `Icon::from_external_svg` tintable and transformable, and adds an explicit original-color external SVG constructor for provider/model brand logos.
-- Language-model provider and model-picker SVG logos now opt into the original-color path, while custom thread, menu, onboarding, and agent icons keep the existing themed SVG renderer.
-- Terminal cursors pass through the non-rainbow `CursorLayout` paint path explicitly after the shared cursor paint signature changed.
-- `script\dx-agent-composer-liquid-glass-source.test.ts` now guards the extracted composer helper, control-surface material, primary-text readability fallback, and preserved editor/control layout.
+- Language-model provider and model-picker path SVGs now stay on the tintable external SVG path until their source model has an explicit brand-color mode, preserving theme and high-contrast behavior for generic extension icons.
+- Model/profile/mode selector triggers now truncate dynamic labels, model rows expose full-title tooltips, and provider headers toggle from the whole header row instead of only the chevron.
+- Project Panel storage-root shortcuts now render only for local/read-write contexts and participate in focus tracking before opening local roots.
+- Terminal cursors are source-guarded to pass through the non-rainbow `CursorLayout` paint path explicitly after the shared cursor paint signature changed.
+- `script\dx-agent-composer-liquid-glass-source.test.ts` now guards the extracted composer helper, control-surface material, primary and muted text readability fallback, and preserved editor/control layout.
+- Source guards now cover tintable generic SVG icon paths, selector truncation/header click behavior, local/read-write storage-root shortcuts, and terminal cursor rainbow isolation.
 
 PASSED:
+- `node --test script/dx-agent-composer-liquid-glass-source.test.ts script/dx-agent-ui-selector-source.test.ts script/dx-icon-system-source.test.ts script/dx-project-panel-source.test.ts script/dx-terminal-view-source.test.ts script/dx-handoff-source-guard-registry.test.ts`
 - `git diff --check`
 
 NOTES:
@@ -25,18 +28,18 @@ CHANGED:
 - `DxRainbowGlow` now paints soft rainbow washes with broad GPUI quads and keeps stripe work to the visible band without repeated heavy stripe passes.
 - `crates\editor\src\element.rs` now samples the local rainbow caret color during cursor painting instead of caching it during cursor layout, so requested animation frames repaint a fresh hue while remote and leader-follow cursors keep their existing player colors.
 - Rainbow caret styling is limited to bar and underline cursor shapes, and the extra glow is capped to the newest caret so multi-cursor editing keeps bounded per-frame paint work.
-- `script\dx-editor-power-rainbow-source.test.ts` now guards the paint-time sample path, explicit animation-frame flag, cursor-shape gate, explicit rainbow exports, builder bounds, empty caret-glow bounds, and foreground cursor-label contract.
+- `script\dx-editor-power-rainbow-source.test.ts` now guards the paint-time sample path, explicit animation-frame flag, cursor-shape gate, and newest-caret glow contract.
 - `todo.txt` records this focused source-only caret cycling and production-hardening fix.
 
 PASSED:
-- `node --test script\dx-editor-power-rainbow-source.test.ts`
 - `git diff --check`
 
 NOTES:
 - Root cause: the previous rainbow caret path scheduled repaint frames from `paint_cursors`, but the Hsla color was computed once in `layout_visible_cursors` and stored in `CursorLayout.color`.
-- Reduced motion remains tied to disabled cursor blinking through `DxRainbowMotion::Reduced`, which uses the stable rainbow phase and does not request animation frames; no global reduced-motion setting exists in the current repo settings surface.
+- Reduced motion remains tied to disabled cursor blinking through `DxRainbowMotion::Reduced`, which uses the stable rainbow phase and does not request animation frames.
 - The second production pass used six GPT-5.5 extra-high subagent audits for API surface, paint lifecycle, performance/allocation risk, reduced motion, cursor integration, and git hygiene.
 - Cargo, `just run`, local servers, browser automation, native launch, and runtime visual proof remain skipped by instruction.
+
 [2026-06-08] - Authorized J6 Build/Run Sync
 
 CHANGED:
