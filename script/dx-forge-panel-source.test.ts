@@ -7,6 +7,10 @@ const agentUi = readFileSync("crates/agent_ui/src/agent_ui.rs", "utf8");
 const moduleRoot = readFileSync("crates/agent_ui/src/dx_forge_panel.rs", "utf8");
 const controls = readFileSync("crates/agent_ui/src/dx_forge_panel/controls.rs", "utf8");
 const panel = readFileSync("crates/agent_ui/src/dx_forge_panel/panel.rs", "utf8");
+const rowSelectionPath = "crates/agent_ui/src/dx_forge_panel/row_selection.rs";
+const rowSelection = existsSync(rowSelectionPath)
+  ? readFileSync(rowSelectionPath, "utf8")
+  : "";
 const rootsPath = "crates/agent_ui/src/dx_forge_panel/roots.rs";
 const roots = existsSync(rootsPath)
   ? readFileSync(rootsPath, "utf8")
@@ -126,6 +130,7 @@ const remoteRegistrySources = [remoteRegistry, remoteRegistryProviders].join("\n
 const forgeSources = [
   moduleRoot,
   controls,
+  rowSelection,
   machineCache,
   packageStatus,
   remoteRegistrySources,
@@ -182,6 +187,7 @@ test("Forge panel owns a stable local action and dock identity", () => {
   assert.match(panel, /DockPosition::Left/);
   assert.match(panel, /position == DockPosition::Left/);
   assert.match(panel, /use ui::\{DxUiIcon, IconName, dx_icon\};/);
+  assert.match(panel, /use ui::prelude::\*/);
   assert.match(panel, /Some\(dx_icon\(DxUiIcon::Forge\)\)/);
   assert.match(panel, /fn activation_priority\(&self\) -> u32 \{\s*4\s*\}/);
   assert.match(panel, /fn starts_open\(&self, _:\s*&Window, _:\s*&App\) -> bool \{\s*false/);
@@ -758,6 +764,97 @@ test("Forge panel uses workflow tabs with Git-style selectable rows", () => {
   );
 });
 
+test("Forge panel wires visible-row navigation to menu actions", () => {
+  assert.ok(
+    existsSync(rowSelectionPath),
+    "Forge visible-row selection should live in a focused module",
+  );
+  assert.match(moduleRoot, /mod row_selection;/);
+  assert.match(rowSelection, /use menu::\{Confirm, SelectFirst, SelectLast, SelectNext, SelectPrevious\};/);
+  assert.match(rowSelection, /KeyContext/);
+
+  const dispatchContextBody = extractRustMethod(rowSelection, "dispatch_context");
+  assert.match(dispatchContextBody, /KeyContext::new_with_defaults\(\)/);
+  assert.match(dispatchContextBody, /dispatch_context\.add\("DxForgePanel"\)/);
+  assert.match(dispatchContextBody, /dispatch_context\.add\("menu"\)/);
+
+  const renderBody = extractRustMethod(panel, "render");
+  assert.match(renderBody, /\.key_context\(self\.dispatch_context\(\)\)/);
+  assert.match(renderBody, /\.track_focus\(&self\.focus_handle\)/);
+  for (const method of [
+    "select_next",
+    "select_previous",
+    "select_first",
+    "select_last",
+    "toggle_active_item_checked",
+  ]) {
+    assert.match(
+      renderBody,
+      new RegExp(`\\.on_action\\(cx\\.listener\\(Self::${method}\\)\\)`),
+    );
+  }
+
+  const activeVisibleRowIndexBody = extractRustMethod(rowSelection, "active_visible_row_index");
+  assert.match(activeVisibleRowIndexBody, /self\.active_item\.as_ref\(\)\?/);
+  assert.match(activeVisibleRowIndexBody, /self\.visible_rows\s*\.iter\(\)\s*\.position\(\|row\| row\.item_key\(\) == active_item\)/);
+
+  const activeVisibleRowKeyBody = extractRustMethod(rowSelection, "active_visible_row_key");
+  assert.match(activeVisibleRowKeyBody, /self\.active_visible_row_index\(\)\?/);
+  assert.match(activeVisibleRowKeyBody, /self\.visible_rows\s*\.get\(index\)/);
+  assert.match(activeVisibleRowKeyBody, /row\.item_key\(\)\.clone\(\)/);
+
+  const setActiveVisibleRowBody = extractRustMethod(rowSelection, "set_active_visible_row");
+  assert.match(setActiveVisibleRowBody, /self\.visible_rows\.get\(index\)/);
+  assert.match(setActiveVisibleRowBody, /row\.item_key\(\)\.clone\(\)/);
+  assert.match(setActiveVisibleRowBody, /cx\.notify\(\)/);
+
+  const selectFirstVisibleRowBody = extractRustMethod(rowSelection, "select_first_visible_row");
+  assert.match(selectFirstVisibleRowBody, /if !self\.visible_rows\.is_empty\(\)/);
+  assert.match(selectFirstVisibleRowBody, /self\.set_active_visible_row\(0, cx\)/);
+
+  const selectLastVisibleRowBody = extractRustMethod(rowSelection, "select_last_visible_row");
+  assert.match(selectLastVisibleRowBody, /self\.visible_rows\.len\(\)\.checked_sub\(1\)/);
+  assert.match(selectLastVisibleRowBody, /self\.set_active_visible_row\(last_index, cx\)/);
+
+  const selectNextBody = extractRustMethod(rowSelection, "select_next");
+  assert.match(selectNextBody, /_: &SelectNext/);
+  assert.match(selectNextBody, /self\.active_visible_row_index\(\)/);
+  assert.match(selectNextBody, /self\.select_first_visible_row\(cx\)/);
+  assert.match(selectNextBody, /checked_add\(1\)/);
+  assert.match(selectNextBody, /next_index < self\.visible_rows\.len\(\)/);
+  assert.match(selectNextBody, /self\.set_active_visible_row\(next_index, cx\)/);
+  assert.doesNotMatch(selectNextBody, /self\.active_item\s*=/);
+  assert.doesNotMatch(selectNextBody, /% self\.visible_rows\.len\(\)/);
+
+  const selectPreviousBody = extractRustMethod(rowSelection, "select_previous");
+  assert.match(selectPreviousBody, /_: &SelectPrevious/);
+  assert.match(selectPreviousBody, /self\.active_visible_row_index\(\)/);
+  assert.match(selectPreviousBody, /self\.select_last_visible_row\(cx\)/);
+  assert.match(selectPreviousBody, /checked_sub\(1\)/);
+  assert.match(selectPreviousBody, /self\.set_active_visible_row\(previous_index, cx\)/);
+  assert.doesNotMatch(selectPreviousBody, /self\.active_item\s*=/);
+  assert.doesNotMatch(selectPreviousBody, /% self\.visible_rows\.len\(\)/);
+
+  const toggleActiveBody = extractRustMethod(rowSelection, "toggle_active_item_checked");
+  assert.match(toggleActiveBody, /_: &Confirm/);
+  assert.match(toggleActiveBody, /let Some\(active_item\) = self\.active_visible_row_key\(\) else/);
+  assert.match(toggleActiveBody, /self\.toggle_item_checked\(active_item, cx\)/);
+  assert.doesNotMatch(toggleActiveBody, /self\.active_item\.clone\(\)/);
+  assert.doesNotMatch(toggleActiveBody, /checked_items\.(insert|remove|clear)/);
+  assert.doesNotMatch(toggleActiveBody, /self\.visible_rows\.first\(\)/);
+
+  const rowSelectionBodies = [
+    selectNextBody,
+    selectPreviousBody,
+    toggleActiveBody,
+  ].join("\n");
+  assert.doesNotMatch(
+    rowSelectionBodies,
+    /snapshot\.|latest_receipts|package_statuses|machine_caches|media_outputs|restore_previews|remote_registries/,
+    "row selection should only use the rendered visible_rows model",
+  );
+});
+
 test("Forge panel renders DX icon provider targets with snapshot-driven readiness", () => {
   assert.match(moduleRoot, /mod providers;/);
   assert.match(panelView, /remote_target_strip\(snapshot, workspace, panel, cx\)/);
@@ -979,6 +1076,7 @@ test("Forge panel files stay small and professionally named", () => {
   const lineCounts = new Map([
     ["dx_forge_panel.rs", moduleRoot],
     ["controls.rs", controls],
+    ["row_selection.rs", rowSelection],
     ["roots.rs", roots],
     ["machine_cache.rs", machineCache],
     ["package_status.rs", packageStatus],

@@ -3,9 +3,10 @@ use std::collections::HashSet;
 use crate::dx_receipt_history::invalidate_tool_history_snapshot_cache;
 use crate::dx_source_sets::invalidate_source_set_snapshot_cache;
 use gpui::{
-    Action, App, AppContext, Context, EventEmitter, FocusHandle, Focusable, IntoElement, Render,
-    ScrollHandle, WeakEntity, Window, px,
+    Action, App, AppContext, Context, EventEmitter, FocusHandle, Focusable, InteractiveElement,
+    IntoElement, Render, ScrollHandle, WeakEntity, Window, px,
 };
+use ui::prelude::*;
 use ui::{DxUiIcon, IconName, dx_icon};
 use workspace::{
     Workspace,
@@ -58,9 +59,9 @@ pub(crate) struct DxForgePanel {
     focus_handle: FocusHandle,
     scroll_handle: ScrollHandle,
     active_tab: DxForgePanelTab,
-    active_item: Option<DxForgeRowKey>,
+    pub(super) active_item: Option<DxForgeRowKey>,
     checked_items: HashSet<DxForgeRowKey>,
-    visible_rows: Vec<DxForgeVisibleRow>,
+    pub(super) visible_rows: Vec<DxForgeVisibleRow>,
 }
 
 impl DxForgePanel {
@@ -220,15 +221,25 @@ impl Render for DxForgePanel {
         let visible_rows = visible_rows_for_tab(&snapshot, self.active_tab);
         self.sync_visible_rows(visible_rows);
 
-        panel_view::render_panel(
-            &snapshot,
-            &self.workspace,
-            &cx.entity().downgrade(),
-            cx.entity().entity_id(),
-            self.active_tab,
-            &self.scroll_handle,
-            window,
-            cx,
-        )
+        v_flex()
+            .id("dx-forge-panel-action-root")
+            .size_full()
+            .key_context(self.dispatch_context())
+            .track_focus(&self.focus_handle)
+            .on_action(cx.listener(Self::select_next))
+            .on_action(cx.listener(Self::select_previous))
+            .on_action(cx.listener(Self::select_first))
+            .on_action(cx.listener(Self::select_last))
+            .on_action(cx.listener(Self::toggle_active_item_checked))
+            .child(panel_view::render_panel(
+                &snapshot,
+                &self.workspace,
+                &cx.entity().downgrade(),
+                cx.entity().entity_id(),
+                self.active_tab,
+                &self.scroll_handle,
+                window,
+                cx,
+            ))
     }
 }

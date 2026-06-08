@@ -7,6 +7,7 @@ mod panel_view;
 mod providers;
 mod remote_registry;
 mod roots;
+mod row_selection;
 mod rows;
 mod snapshot;
 mod snapshot_state;
