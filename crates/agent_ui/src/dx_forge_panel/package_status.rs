@@ -1,6 +1,7 @@
 use serde_json::Value;
 use std::{fs::File, io::Read, path::Path};
 
+use super::package_status_cache;
 use super::roots::ForgeRootContext;
 use super::roots::forge_root_contexts;
 use super::snapshot::{DxForgeReceiptDrilldown, DxForgeSourceRow};
@@ -9,6 +10,14 @@ const MAX_PACKAGE_STATUS_BYTES: u64 = 1024 * 1024;
 const MAX_WORKSPACE_ROOTS: usize = 4;
 
 pub(super) fn package_status_rows(workspace_roots: &[String]) -> Vec<DxForgeSourceRow> {
+    package_status_cache::package_status_rows(workspace_roots)
+}
+
+pub(super) fn invalidate_package_status_snapshot_cache() {
+    package_status_cache::invalidate_package_status_snapshot_cache();
+}
+
+pub(super) fn scan_package_status_rows(workspace_roots: &[String]) -> Vec<DxForgeSourceRow> {
     let mut rows = Vec::new();
     for context in forge_root_contexts(workspace_roots)
         .into_iter()

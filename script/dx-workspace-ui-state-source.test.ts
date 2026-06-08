@@ -448,6 +448,7 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   const responseAnchors = functionBody(threadView, "response_anchors");
   const viewportReferenceAnchor = functionBody(threadView, "response_anchor_viewport_reference_ix");
   const syncResponseAnchor = functionBody(threadView, "sync_response_anchor_from_scroll_position");
+  const scrollToMostRecentUserPrompt = functionBody(threadView, "scroll_to_most_recent_user_prompt");
   const scrollToEnd = functionBody(threadView, "scroll_to_end");
   const scrollToTop = functionBody(threadView, "scroll_to_top");
   const scrollOutputPageUp = functionBody(threadView, "scroll_output_page_up");
@@ -737,6 +738,7 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(syncResponseAnchor, /self\.active_response_anchor_entry_ix = next_anchor/);
   assert.match(syncResponseAnchor, /cx\.emit\(AcpThreadViewEvent::ScrollPositionChanged\)/);
   for (const [name, body] of [
+    ["scroll_to_most_recent_user_prompt", scrollToMostRecentUserPrompt],
     ["scroll_to_end", scrollToEnd],
     ["scroll_to_top", scrollToTop],
     ["scroll_output_page_up", scrollOutputPageUp],
@@ -1229,7 +1231,7 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(progressRail, /rail_pin_header\(\s*"dx-progress-rail-pin"/);
   assert.match(
     diagnosticsMenu,
-    /IconButton::new\("dx-launch-diagnostics-button", dx_icon\(DxUiIcon::Source\)\)/,
+    /IconButton::new\("dx-launch-diagnostics-button", dx_icon\(DxUiIcon::Settings\)\)/,
   );
   assert.doesNotMatch(diagnosticsMenu, /Button::new\("dx-launch-diagnostics-button", "Diagnostics"\)|\.full_width\(\)/);
   assert.doesNotMatch(sourcesRail, /\.border_r_1\(\)/);

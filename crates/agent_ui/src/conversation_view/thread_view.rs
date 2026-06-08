@@ -6700,6 +6700,7 @@ impl ThreadView {
                 item_ix: ix,
                 offset_in_item: px(0.0),
             });
+            self.sync_response_anchor_from_scroll_position(cx);
             cx.notify();
         } else {
             self.scroll_to_end(cx);

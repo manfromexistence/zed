@@ -168,7 +168,7 @@ test("DX.md exposes the lightweight source guard registry", () => {
   );
   assert.match(
     dx,
-    /script\/dx-project-panel-source\.test\.ts` - project panel .*file-browser operation toolbar.*cached storage roots.*folder storage overview.*storage ranking/,
+    /script\/dx-project-panel-source\.test\.ts` - project panel .*file-browser operation toolbar.*cached storage roots.*storage-root capacity\/status label ownership.*folder storage overview.*storage ranking/,
   );
 });
 

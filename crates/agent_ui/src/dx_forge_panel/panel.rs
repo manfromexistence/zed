@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
+use crate::dx_forge_panel::package_status::invalidate_package_status_snapshot_cache;
 use crate::dx_receipt_history::invalidate_tool_history_snapshot_cache;
 use crate::dx_source_sets::invalidate_source_set_snapshot_cache;
 use gpui::{
@@ -122,6 +123,7 @@ impl DxForgePanel {
 
     pub(super) fn refresh(&mut self, cx: &mut Context<Self>) {
         invalidate_machine_cache_snapshot_cache();
+        invalidate_package_status_snapshot_cache();
         invalidate_remote_registry_snapshot_cache();
         invalidate_tool_history_snapshot_cache();
         invalidate_source_set_snapshot_cache();

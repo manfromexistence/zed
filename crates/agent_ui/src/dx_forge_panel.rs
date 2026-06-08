@@ -3,6 +3,7 @@ pub(crate) mod panel;
 mod controls;
 mod machine_cache;
 mod package_status;
+mod package_status_cache;
 mod panel_view;
 mod providers;
 mod remote_registry;

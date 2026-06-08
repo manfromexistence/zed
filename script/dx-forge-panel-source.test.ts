@@ -23,6 +23,11 @@ const packageStatusPath = "crates/agent_ui/src/dx_forge_panel/package_status.rs"
 const packageStatus = existsSync(packageStatusPath)
   ? readFileSync(packageStatusPath, "utf8")
   : "";
+const packageStatusCachePath =
+  "crates/agent_ui/src/dx_forge_panel/package_status_cache.rs";
+const packageStatusCache = existsSync(packageStatusCachePath)
+  ? readFileSync(packageStatusCachePath, "utf8")
+  : "";
 const remoteRegistryPath = "crates/agent_ui/src/dx_forge_panel/remote_registry.rs";
 const remoteRegistry = existsSync(remoteRegistryPath)
   ? readFileSync(remoteRegistryPath, "utf8")
@@ -133,6 +138,7 @@ const forgeSources = [
   rowSelection,
   machineCache,
   packageStatus,
+  packageStatusCache,
   remoteRegistrySources,
   panel,
   roots,
@@ -148,6 +154,7 @@ const forgeSources = [
 const forgeReaderSources = [
   machineCache,
   packageStatus,
+  packageStatusCache,
   remoteRegistrySources,
   receiptBuckets,
   receiptFiles,
@@ -278,6 +285,7 @@ test("Forge panel reads package-status without runtime overclaims", () => {
     "Forge package-status reader must live in a focused module",
   );
   assert.match(moduleRoot, /mod package_status;/);
+  assert.match(moduleRoot, /mod package_status_cache;/);
   assert.match(snapshot, /package_status_rows\(workspace_roots\)/);
   assert.match(snapshot, /pub\(super\) package_statuses: Vec<DxForgeSourceRow>/);
   assert.match(snapshot, /visible_package_status_warning_count/);
@@ -290,7 +298,14 @@ test("Forge panel reads package-status without runtime overclaims", () => {
   );
   assert.match(panelView, /"Package Status"/);
   assert.match(panelView, /No Forge package status found/);
+  assert.match(packageStatusCache, /const PACKAGE_STATUS_CACHE_TTL: Duration = Duration::from_secs\(5\);/);
   assert.match(packageStatus, /const MAX_PACKAGE_STATUS_BYTES: u64 = 1024 \* 1024;/);
+  assert.match(packageStatusCache, /OnceLock<[\s\S]*Mutex<Option<\(Instant, Vec<String>, Vec<DxForgeSourceRow>\)>>/);
+  assert.match(packageStatus, /pub\(super\) fn invalidate_package_status_snapshot_cache/);
+  assert.match(packageStatus, /package_status_cache::invalidate_package_status_snapshot_cache\(\)/);
+  assert.match(packageStatus, /pub\(super\) fn scan_package_status_rows\(workspace_roots: &\[String\]\)/);
+  assert.match(packageStatusCache, /let rows = scan_package_status_rows\(workspace_roots\)/);
+  assert.match(packageStatusCache, /now\.duration_since\(\*cached_at\) <= PACKAGE_STATUS_CACHE_TTL/);
   assert.match(roots, /join\("\.dx"\)[\s\S]*\.join\("forge"\)[\s\S]*\.join\("package-status\.json"\)/);
   assert.match(roots, /join\("\.forge"\)[\s\S]*\.join\("receipts"\)[\s\S]*\.join\("package-status\.json"\)/);
   assert.ok(
@@ -350,6 +365,15 @@ test("Forge panel reads package-status without runtime overclaims", () => {
   assert.doesNotMatch(
     `${packageStatus}\n${panelView}`,
     /connected|synced live|runtime proven|provider proven|browser verified/i,
+  );
+  assert.match(panel, /use crate::dx_forge_panel::package_status::invalidate_package_status_snapshot_cache;/);
+  assert.match(panel, /invalidate_package_status_snapshot_cache\(\)/);
+  assert.ok(
+    panel.indexOf("invalidate_machine_cache_snapshot_cache()") <
+      panel.indexOf("invalidate_package_status_snapshot_cache()") &&
+      panel.indexOf("invalidate_package_status_snapshot_cache()") <
+        panel.indexOf("invalidate_remote_registry_snapshot_cache()"),
+    "Forge refresh should invalidate all cached filesystem-backed readers together",
   );
 });
 
@@ -1146,6 +1170,7 @@ test("Forge panel files stay small and professionally named", () => {
     ["roots.rs", roots],
     ["machine_cache.rs", machineCache],
     ["package_status.rs", packageStatus],
+    ["package_status_cache.rs", packageStatusCache],
     ["remote_registry.rs", remoteRegistry],
     ["remote_registry/providers.rs", remoteRegistryProviders],
     ["panel.rs", panel],

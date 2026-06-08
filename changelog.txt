@@ -1,3 +1,20 @@
+[2026-06-08] - Source-Only Response, Storage, And Forge Cache Polish
+
+CHANGED:
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now resyncs response-anchor state after the latest-user-prompt shortcut scrolls, keeping the fullscreen AI response indicator aligned with the programmatic jump path.
+- `crates\agent_ui\src\dx_forge_panel\package_status_cache.rs` now owns a five-second cache for bounded package-status receipt reads, `crates\agent_ui\src\dx_forge_panel\package_status.rs` stays focused on the package-status read model, and `crates\agent_ui\src\dx_forge_panel\panel.rs` invalidates that cache alongside the other Forge filesystem-backed readers.
+- `script\dx-workspace-ui-state-source.test.ts`, `script\dx-forge-panel-source.test.ts`, `script\dx-handoff-source-guard-registry.test.ts`, `DX.md`, and `todo.txt` now guard and document the source-only ownership boundaries, including the current Project Panel storage-root capacity/status label ownership.
+
+PASSED:
+- `node --test script\dx-handoff-source-guard-registry.test.ts script\dx-project-panel-source.test.ts script\dx-forge-panel-source.test.ts script\dx-workspace-ui-state-source.test.ts script\dx-icon-system-source.test.ts`
+- `rustfmt --edition 2024 --check` on touched Rust source files.
+- `git diff --check`
+- Focused conflict-marker scan on touched source, guard, and handoff files.
+
+NOTES:
+- Six GPT-5.5 extra-high subagents were used for this goal. Wider follow-up findings are intentionally not mixed into this commit: DX Sources rail control forwarding, automation composer receipt-backed field honesty, and Agent title-bar semantic icon consistency.
+- Source-only by instruction. Cargo, build, `just run`, native Zed launch, browser automation, local servers, and runtime visual proof remain deferred.
+
 [2026-06-08] - Project Panel Storage Domain Follow-Up
 
 CHANGED:
