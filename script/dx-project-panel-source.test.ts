@@ -582,6 +582,46 @@ test("project panel selection toolbar exposes file-browser operation state", () 
   assert.match(renderSelectedEntriesToolbar, /unwrap_or\("Paste files here"\)/);
   assert.match(renderSelectedEntriesToolbar, /\.when\(!is_read_only && can_paste_to_selection/);
   assert.match(renderSelectedEntriesToolbar, /this\.paste\(&Paste \{\}, window, cx\)/);
+  assert.match(
+    renderSelectedEntriesToolbar,
+    /let toolbar_focus_handle = self\.focus_handle\(cx\);/,
+    "selection toolbar should share the Project Panel focus handle across command buttons",
+  );
+  assert.match(
+    renderSelectedEntriesToolbar,
+    /"project-panel-copy-selection"[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&copy_selection_focus_handle\)[\s\S]*Tooltip::text\("Copy selected"\)/,
+    "Copy selected should stay keyboard reachable without advertising unavailable read-only keybinding state",
+  );
+  assert.match(
+    renderSelectedEntriesToolbar,
+    /"project-panel-cut-selection"[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&cut_selection_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"Prepare selected items to move",\s*&Cut \{\},\s*&cut_selection_tooltip_focus_handle,[\s\S]*cx/,
+    "Cut selected should be keyboard reachable and expose its Project Panel action keybinding",
+  );
+  assert.match(
+    renderSelectedEntriesToolbar,
+    /"project-panel-duplicate-selection"[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&duplicate_selection_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"Duplicate selected",\s*&Duplicate \{\},\s*&duplicate_selection_tooltip_focus_handle,[\s\S]*cx/,
+    "Duplicate selected should be keyboard reachable and expose its Project Panel action keybinding",
+  );
+  assert.match(
+    renderSelectedEntriesToolbar,
+    /"project-panel-paste-selection-target"[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&paste_selection_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*paste_tooltip,\s*&Paste \{\},\s*&paste_selection_tooltip_focus_handle,[\s\S]*cx/,
+    "Paste Here should be keyboard reachable and expose its Project Panel action keybinding",
+  );
+  assert.match(
+    renderSelectedEntriesToolbar,
+    /"project-panel-trash-selection"[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&trash_selection_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"Trash selected",\s*&Trash \{ skip_prompt: false \},\s*&trash_selection_tooltip_focus_handle,[\s\S]*cx/,
+    "Trash selected should be keyboard reachable and expose its Project Panel action keybinding",
+  );
+  assert.match(
+    renderSelectedEntriesToolbar,
+    /"project-panel-clear-selection"[\s\S]*\.tab_index\(0\)[\s\S]*\.track_focus\(&clear_selection_focus_handle\)[\s\S]*Tooltip::text\("Clear selection"\)/,
+    "Clear selection should remain keyboard reachable even though it is local toolbar state",
+  );
+  assert.doesNotMatch(
+    renderSelectedEntriesToolbar,
+    /Tooltip::text\("Prepare selected items to move"\)|Tooltip::text\("Duplicate selected"\)|Tooltip::text\(paste_tooltip\)|Tooltip::text\("Trash selected"\)/,
+    "selection toolbar action buttons should use action-aware tooltips instead of plain text",
+  );
   assert.doesNotMatch(
     source,
     /let has_external_paste_paths = self\.external_paths_from_system_clipboard\(cx\)\.is_some\(\);[\s\S]*render_selected_entries_toolbar\(/,

@@ -5033,6 +5033,17 @@ impl ProjectPanel {
         let paste_tooltip = clipboard_operation_for_paste
             .map(|operation| operation.mode.paste_tooltip())
             .unwrap_or("Paste files here");
+        let toolbar_focus_handle = self.focus_handle(cx);
+        let copy_selection_focus_handle = toolbar_focus_handle.clone();
+        let cut_selection_focus_handle = toolbar_focus_handle.clone();
+        let cut_selection_tooltip_focus_handle = cut_selection_focus_handle.clone();
+        let duplicate_selection_focus_handle = toolbar_focus_handle.clone();
+        let duplicate_selection_tooltip_focus_handle = duplicate_selection_focus_handle.clone();
+        let paste_selection_focus_handle = toolbar_focus_handle.clone();
+        let paste_selection_tooltip_focus_handle = paste_selection_focus_handle.clone();
+        let trash_selection_focus_handle = toolbar_focus_handle.clone();
+        let trash_selection_tooltip_focus_handle = trash_selection_focus_handle.clone();
+        let clear_selection_focus_handle = toolbar_focus_handle.clone();
 
         h_flex()
             .id("project-panel-selection-toolbar")
@@ -5090,6 +5101,8 @@ impl ProjectPanel {
                             .shape(IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
                             .icon_size(IconSize::Small)
+                            .tab_index(0)
+                            .track_focus(&copy_selection_focus_handle)
                             .tooltip(Tooltip::text("Copy selected"))
                             .on_click(cx.listener(|this, _, window, cx| {
                                 this.focus_handle(cx).focus(window, cx);
@@ -5102,7 +5115,16 @@ impl ProjectPanel {
                                 .shape(IconButtonShape::Square)
                                 .style(ButtonStyle::Subtle)
                                 .icon_size(IconSize::Small)
-                                .tooltip(Tooltip::text("Prepare selected items to move"))
+                                .tab_index(0)
+                                .track_focus(&cut_selection_focus_handle)
+                                .tooltip(move |_window, cx| {
+                                    Tooltip::for_action_in(
+                                        "Prepare selected items to move",
+                                        &Cut {},
+                                        &cut_selection_tooltip_focus_handle,
+                                        cx,
+                                    )
+                                })
                                 .on_click(cx.listener(|this, _, window, cx| {
                                     this.focus_handle(cx).focus(window, cx);
                                     this.cut(&Cut {}, window, cx);
@@ -5118,7 +5140,16 @@ impl ProjectPanel {
                             .shape(IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
                             .icon_size(IconSize::Small)
-                            .tooltip(Tooltip::text("Duplicate selected"))
+                            .tab_index(0)
+                            .track_focus(&duplicate_selection_focus_handle)
+                            .tooltip(move |_window, cx| {
+                                Tooltip::for_action_in(
+                                    "Duplicate selected",
+                                    &Duplicate {},
+                                    &duplicate_selection_tooltip_focus_handle,
+                                    cx,
+                                )
+                            })
                             .on_click(cx.listener(
                                 |this, _, window, cx| {
                                     this.focus_handle(cx).focus(window, cx);
@@ -5136,7 +5167,16 @@ impl ProjectPanel {
                             .shape(IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
                             .icon_size(IconSize::Small)
-                            .tooltip(Tooltip::text(paste_tooltip))
+                            .tab_index(0)
+                            .track_focus(&paste_selection_focus_handle)
+                            .tooltip(move |_window, cx| {
+                                Tooltip::for_action_in(
+                                    paste_tooltip,
+                                    &Paste {},
+                                    &paste_selection_tooltip_focus_handle,
+                                    cx,
+                                )
+                            })
                             .on_click(cx.listener(
                                 |this, _, window, cx| {
                                     this.focus_handle(cx).focus(window, cx);
@@ -5151,7 +5191,16 @@ impl ProjectPanel {
                                 .shape(IconButtonShape::Square)
                                 .style(ButtonStyle::Subtle)
                                 .icon_size(IconSize::Small)
-                                .tooltip(Tooltip::text("Trash selected"))
+                                .tab_index(0)
+                                .track_focus(&trash_selection_focus_handle)
+                                .tooltip(move |_window, cx| {
+                                    Tooltip::for_action_in(
+                                        "Trash selected",
+                                        &Trash { skip_prompt: false },
+                                        &trash_selection_tooltip_focus_handle,
+                                        cx,
+                                    )
+                                })
                                 .on_click(cx.listener(|this, _, window, cx| {
                                     this.focus_handle(cx).focus(window, cx);
                                     this.trash(&Trash { skip_prompt: false }, window, cx);
@@ -5163,6 +5212,8 @@ impl ProjectPanel {
                             .shape(IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
                             .icon_size(IconSize::Small)
+                            .tab_index(0)
+                            .track_focus(&clear_selection_focus_handle)
                             .tooltip(Tooltip::text("Clear selection"))
                             .on_click(cx.listener(|this, _, window, cx| {
                                 this.selection = None;
