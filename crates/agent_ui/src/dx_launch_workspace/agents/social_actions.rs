@@ -22,12 +22,12 @@ pub(super) fn dx_agent_social_action_row(
             "unsupported"
         };
         let qr = if receipt.qr_supported {
-            "QR ready"
+            "QR supported"
         } else {
             "QR unavailable"
         };
         let link = if receipt.link_supported {
-            "link ready"
+            "link supported"
         } else {
             "link unavailable"
         };

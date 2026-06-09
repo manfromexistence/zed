@@ -515,11 +515,11 @@ fn has_source_actions(status: &DxLaunchWorkspaceStatus) -> bool {
         || !status.deploy_targets.targets.is_empty()
 }
 
-fn has_sources_rail_content(status: &DxLaunchWorkspaceStatus) -> bool {
+pub(crate) fn has_sources_rail_content(status: &DxLaunchWorkspaceStatus) -> bool {
     status.source_sets.total_sources > 0 || has_source_actions(status)
 }
 
-fn has_progress_rail_content(status: &DxLaunchWorkspaceStatus) -> bool {
+pub(crate) fn has_progress_rail_content(status: &DxLaunchWorkspaceStatus) -> bool {
     has_agent_progress(status)
         || has_agent_environment(status)
         || has_agent_subagents(status)

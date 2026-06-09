@@ -292,15 +292,23 @@ pub(super) fn web_audit_row(index: usize, audit: &DxCheckPanelWebAudit, _cx: &Ap
 }
 
 pub(super) fn status_color(snapshot: &DxCheckPanelSnapshot) -> Color {
+    let status = snapshot.status.to_ascii_lowercase();
+
     if !snapshot.receipt_present
         || snapshot.receipt_error.is_some()
         || snapshot.fail_count.unwrap_or(0) > 0
+        || check_status_is_failure(&status)
     {
         Color::Error
-    } else if snapshot.warn_count.unwrap_or(0) > 0 || !snapshot.warnings.is_empty() {
+    } else if snapshot.warn_count.unwrap_or(0) > 0
+        || !snapshot.warnings.is_empty()
+        || check_status_is_warning(&status)
+    {
         Color::Warning
-    } else {
+    } else if check_status_is_success(&status) && check_snapshot_has_result_signal(snapshot) {
         Color::Success
+    } else {
+        Color::Muted
     }
 }
 
@@ -368,6 +376,28 @@ fn section_status_color(status: &str) -> Color {
         "warn" | "warning" | "review" => Color::Warning,
         _ => Color::Muted,
     }
+}
+
+fn check_status_is_success(status: &str) -> bool {
+    matches!(status, "pass" | "passed" | "ready" | "ok")
+}
+
+fn check_status_is_failure(status: &str) -> bool {
+    matches!(status, "fail" | "failed" | "blocked" | "error")
+}
+
+fn check_status_is_warning(status: &str) -> bool {
+    matches!(status, "warn" | "warning" | "review")
+}
+
+fn check_snapshot_has_result_signal(snapshot: &DxCheckPanelSnapshot) -> bool {
+    snapshot.score_value.is_some()
+        || snapshot.score_percent.is_some()
+        || snapshot.pass_count.is_some()
+        || snapshot.fail_count.is_some()
+        || snapshot.warn_count.is_some()
+        || snapshot.skipped_count.is_some()
+        || !snapshot.sections.is_empty()
 }
 
 fn stable_id(value: &str) -> String {

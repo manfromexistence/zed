@@ -82,6 +82,7 @@ fn remote_provider_rank(provider: &DxForgeRemoteProvider) -> u8 {
 pub(super) enum DxForgePanelState {
     NoWorkspace,
     Ready,
+    Evidence,
     Attention,
     Empty,
     Missing,

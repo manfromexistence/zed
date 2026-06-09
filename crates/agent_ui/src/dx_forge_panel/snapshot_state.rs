@@ -96,7 +96,7 @@ pub(super) fn forge_state(input: ForgeStateInputs<'_>) -> (DxForgePanelState, St
 
         if input.package_status_count > 0 {
             return (
-                DxForgePanelState::Ready,
+                DxForgePanelState::Evidence,
                 format!(
                     "{} {} available",
                     input.package_status_count,
@@ -107,7 +107,7 @@ pub(super) fn forge_state(input: ForgeStateInputs<'_>) -> (DxForgePanelState, St
 
         if input.remote_registry_count > 0 {
             return (
-                DxForgePanelState::Ready,
+                DxForgePanelState::Evidence,
                 format!(
                     "{} {} available",
                     input.remote_registry_count,
@@ -118,7 +118,7 @@ pub(super) fn forge_state(input: ForgeStateInputs<'_>) -> (DxForgePanelState, St
 
         if input.machine_cache_count > 0 {
             return (
-                DxForgePanelState::Ready,
+                DxForgePanelState::Evidence,
                 format!(
                     "{} {} available",
                     input.machine_cache_count,

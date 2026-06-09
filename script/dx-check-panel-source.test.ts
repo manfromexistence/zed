@@ -144,6 +144,18 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   assert.match(section, /ListHeader::new\(title\)/);
   assert.match(section, /\.toggle\(Some\(is_open\)\)/);
   assert.doesNotMatch(section, /Open|Closed|end_slot\(status_/);
+  const statusColor = functionBody(rows, "status_color");
+  assert.match(statusColor, /let status = snapshot\.status\.to_ascii_lowercase\(\);/);
+  assert.match(statusColor, /check_status_is_failure\(&status\)/);
+  assert.match(statusColor, /check_status_is_warning\(&status\)/);
+  assert.match(
+    statusColor,
+    /check_status_is_success\(&status\) && check_snapshot_has_result_signal\(snapshot\)/,
+  );
+  assert.match(rows, /fn check_status_is_success\(status: &str\) -> bool/);
+  assert.match(rows, /fn check_snapshot_has_result_signal\(snapshot: &DxCheckPanelSnapshot\) -> bool/);
+  assert.match(rows, /snapshot\.score_value\.is_some\(\)/);
+  assert.match(rows, /!\s*snapshot\.sections\.is_empty\(\)/);
   assert.doesNotMatch(tabs, /count_chip|Divider::vertical|border_b_1|ghost_element|editor_background/);
   assert.doesNotMatch(
     `${view}\n${rows}\n${tabs}`,

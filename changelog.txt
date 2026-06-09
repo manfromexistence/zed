@@ -1,3 +1,19 @@
+[2026-06-09] - DX Readiness State Honesty
+
+CHANGED:
+- `crates\agent_ui\src\dx_forge_panel\*.rs` now separates source-only Forge evidence from runtime-ready Forge state so package-status, remote-registry, and machine-cache sources do not paint green without proof.
+- `crates\agent_ui\src\dx_check_panel_view\view_rows.rs` and `dx_check_score.rs` now require explicit pass/ready status plus concrete result signals before success/Demo-ready presentation.
+- `crates\agent_ui\src\dx_runtime_proof_status.rs` now derives runtime-green from the final audited claim state instead of raw import/status booleans.
+- `crates\agent_ui\src\dx_launch_workspace\agents\social_actions.rs` and `agent_configuration.rs` now describe QR/link capabilities as supported rather than ready until payload/runtime proof exists.
+- `crates\agent_ui\src\agent_panel.rs` now disables fullscreen Sources/Progress rail toolbar toggles when the matching rail has no available content, preventing selected controls for hidden rails.
+
+PASSED:
+- `node --test script\dx-runtime-proof-status-source.test.ts script\dx-check-panel-source.test.ts script\dx-forge-panel-source.test.ts script\dx-workspace-ui-state-source.test.ts`
+- `rustfmt --edition 2024 --check` on touched Rust files
+
+NOTES:
+- Source-only by instruction. `just run`, Cargo build/check/test/clippy, and runtime visual proof were not run.
+
 [2026-06-09] - DX Panel Chrome Follow-Up
 
 CHANGED:

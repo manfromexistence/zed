@@ -569,6 +569,12 @@ test("Forge panel reads Forge remote registry and makes provider targets concret
   assert.match(providersState, /fn provider_target_state/);
   assert.match(providersState, /snapshot\.remote_provider_for\(provider\.id\)/);
   assert.match(providersState, /configured_provider_count_for_group\(group\.key\(\)\)/);
+  assert.match(providersState, /"Not configured"/);
+  assert.match(providersState, /"Configured"/);
+  assert.doesNotMatch(
+    providersState,
+    /health unchecked[\s\S]{0,260}Color::Success|Color::Success[\s\S]{0,260}health unchecked/,
+  );
   assert.match(providersView, /provider_target_state\(provider, snapshot\)/);
   assert.match(providersView, /target_path_for_provider\(provider, snapshot\)/);
   assert.match(providersView, /target_open_path_for_provider\(provider, snapshot\)/);
@@ -1317,6 +1323,9 @@ test("Forge panel source surface is closed against UI slop and proof overclaims"
     allForgePanelSources,
     /\b(?:connected remote|synced live|runtime\s+(?:proven|verified|ready|green)|provider\s+(?:proven|verified|ready|green)|browser\s+(?:proven|verified|ready|green)|live\s+(?:remote\s+)?health\s+(?:checked|verified)|source\s+hash\s+matches|hash\s+verified|metadata\s+verified|freshness\s+verified|cache\s+verified|runtime-backed|browser-backed|provider-backed)\b/i,
   );
+  assert.match(snapshot, /Evidence,/);
+  assert.match(snapshotState, /DxForgePanelState::Evidence/);
+  assert.match(rows, /DxForgePanelState::Evidence => \(IconName::FileTextOutlined, Color::Muted, "Evidence"\)/);
 
   assert.match(allForgePanelSources, /source-only receipt evidence/);
   assert.match(allForgePanelSources, /receipt file only; live checks not executed/);

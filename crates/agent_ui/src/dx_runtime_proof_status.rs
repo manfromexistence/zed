@@ -72,13 +72,7 @@ pub(crate) struct DxRuntimeProofReceiptSummary {
 
 impl DxRuntimeProofStatusSnapshot {
     pub(crate) fn runtime_green_candidate(&self) -> bool {
-        self.latest_import
-            .as_ref()
-            .is_some_and(|receipt| receipt.runtime_green_candidate)
-            && self
-                .latest_status
-                .as_ref()
-                .is_some_and(|receipt| receipt.can_claim_runtime_green)
+        self.claim_state == "Runtime green candidate" && self.blockers.is_empty()
     }
 }
 
@@ -238,15 +232,6 @@ fn claim_state(
         .map(|receipt| receipt.can_claim_runtime_green)
         .unwrap_or(false);
 
-    if import_ready && status_ready && blockers.is_empty() {
-        return ("Runtime green candidate".to_string(), blockers);
-    }
-
-    if import_ready || status_ready {
-        blockers
-            .push("Runtime proof import and status receipts are not both claim-ready.".to_string());
-    }
-
     if let Some(receipt) = latest_import {
         if receipt.evidence_count == 0 {
             blockers.push("Latest runtime import has no evidence lines.".to_string());
@@ -272,6 +257,15 @@ fn claim_state(
 
     if let Some(receipt) = latest_status {
         blockers.extend(receipt.blockers.iter().take(3).cloned());
+    }
+
+    if import_ready && status_ready && blockers.is_empty() {
+        return ("Runtime green candidate".to_string(), blockers);
+    }
+
+    if import_ready || status_ready {
+        blockers
+            .push("Runtime proof import and status receipts are not both claim-ready.".to_string());
     }
 
     ("Import not claim-ready".to_string(), blockers)

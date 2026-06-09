@@ -57,6 +57,24 @@ test("DX runtime proof plan owns backend proof lanes before runtime-green import
   assert.match(statusModel, /pub profile_backend_lane_count: usize/);
   assert.match(statusModel, /pub profile_backend_passed_lane_count: usize/);
   assert.match(statusModel, /pub profile_backend_blocker_count: usize/);
+  assert.match(
+    statusModel,
+    /pub\(crate\) fn runtime_green_candidate\(&self\) -> bool \{\s*self\.claim_state == "Runtime green candidate" && self\.blockers\.is_empty\(\)\s*\}/,
+  );
+  const claimState = functionBody(statusModel, "claim_state");
+  assert.match(
+    claimState,
+    /if let Some\(receipt\) = latest_import[\s\S]*receipt\.evidence_count == 0[\s\S]*receipt\.profile_backend_blocker_count > 0[\s\S]*missing_profile_backend_lanes/,
+  );
+  assert.match(
+    claimState,
+    /if import_ready && status_ready && blockers\.is_empty\(\)[\s\S]*"Runtime green candidate"/,
+  );
+  assert.ok(
+    claimState.indexOf("if let Some(receipt) = latest_import") <
+      claimState.indexOf('if import_ready && status_ready && blockers.is_empty()'),
+    "runtime-green claim must run after import evidence and backend blockers are audited",
+  );
   assert.match(importModel, /Missing profile backend proof lane evidence/);
   assert.match(summaries, /let profile_backend_validation = validation\s*\.get\("profile_backend_validation"\)/);
   assert.match(summaries, /profile_backend_passed_lane_count: usize_at\(\s*profile_backend_validation,\s*"passed_lane_count",?\s*\)/);
@@ -146,3 +164,20 @@ test("DX runtime proof status keeps receipt IO and JSON helpers focused", () => 
   assert.ok(lineCount(fieldsPath) < 95, "runtime-proof JSON field module should stay small");
   assert.ok(lineCount(summariesPath) < 170, "runtime-proof summary parser module should stay small");
 });
+
+function functionBody(source: string, name: string): string {
+  const signature = source.indexOf(`fn ${name}`);
+  assert.notEqual(signature, -1, `missing function ${name}`);
+  const bodyStart = source.indexOf("{", signature);
+  assert.notEqual(bodyStart, -1, `missing function body for ${name}`);
+  let depth = 0;
+  for (let index = bodyStart; index < source.length; index++) {
+    const char = source[index];
+    if (char === "{") depth++;
+    if (char === "}") {
+      depth--;
+      if (depth === 0) return source.slice(bodyStart, index + 1);
+    }
+  }
+  assert.fail(`unterminated function body for ${name}`);
+}

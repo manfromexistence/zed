@@ -39,6 +39,9 @@ const dxLaunchWwwWarnings = read("crates/agent_ui/src/dx_launch_workspace/www_ev
 const dxAgentBridgeWarnings = read(
   "crates/agent_ui/src/dx_launch_workspace/agents/bridge/review/warnings.rs",
 );
+const dxAgentSocialActions = read(
+  "crates/agent_ui/src/dx_launch_workspace/agents/social_actions.rs",
+);
 const dxLaunchSources = read("crates/agent_ui/src/dx_launch_workspace/sources.rs");
 const dxLaunchSourceController = read(
   "crates/agent_ui/src/dx_launch_workspace/sources/controller.rs",
@@ -532,6 +535,8 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   );
   assert.match(agentPanel, /"agent-toolbar-toggle-sources-rail"/);
   assert.match(agentPanel, /"agent-toolbar-toggle-progress-rail"/);
+  assert.match(agentPanel, /has_sources_rail_content/);
+  assert.match(agentPanel, /has_progress_rail_content/);
   for (const [button, label] of [
     [toolbarBackButton, "Agent toolbar overlay back button"],
     [sourcesRailButton, "Agent sources rail toggle"],
@@ -559,6 +564,14 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(closePanelButton, /if let Some\(workspace\) = workspace\.upgrade\(\)/);
   assert.match(closePanelButton, /workspace\.close_side_panel_by_id\(panel_id, window, cx\)/);
   assert.doesNotMatch(closePanelButton, /CloseActiveSidePanel/);
+  assert.match(sourcesRailButton, /\.disabled\(!sources_rail_available\)/);
+  assert.match(sourcesRailButton, /\.toggle_state\(sources_rail_open\)/);
+  assert.match(sourcesRailButton, /Sources rail has no sources yet/);
+  assert.match(sourcesRailButton, /if sources_rail_available[\s\S]*fullscreen_sources_rail_open = !this\.fullscreen_sources_rail_open[\s\S]*else[\s\S]*fullscreen_sources_rail_open = false/);
+  assert.match(progressRailButton, /\.disabled\(!progress_rail_available\)/);
+  assert.match(progressRailButton, /\.toggle_state\(progress_rail_open\)/);
+  assert.match(progressRailButton, /Progress rail has no agent activity yet/);
+  assert.match(progressRailButton, /if progress_rail_available[\s\S]*fullscreen_progress_rail_open = !this\.fullscreen_progress_rail_open[\s\S]*else[\s\S]*fullscreen_progress_rail_open = false/);
   assert.match(agentPanel, /enum AgentPanelHostKind \{/);
   assert.match(agentPanel, /Sidechat,/);
   assert.match(agentPanel, /BuilderWorkspace,/);
@@ -1319,8 +1332,10 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(agentPanel, /toggle_dx_launch_rail_section/);
   assert.match(toolbar, /"Hide sources rail"/);
   assert.match(toolbar, /"Show sources rail"/);
+  assert.match(toolbar, /"Sources rail has no sources yet"/);
   assert.match(toolbar, /"Hide progress rail"/);
   assert.match(toolbar, /"Show progress rail"/);
+  assert.match(toolbar, /"Progress rail has no agent activity yet"/);
   assert.doesNotMatch(toolbar, /Show or hide sources|Show or hide progress/);
   assert.match(agentPanel, /DxLaunchRailControls\s*\{/);
   assert.match(dxLaunchWorkspace, /enum DxLaunchRailSide/);
@@ -1403,6 +1418,8 @@ test("agent rails and project badges keep compact production layout", () => {
   );
   assert.match(dxLaunchCheckPanel, /"Readiness score"/);
   assert.doesNotMatch(dxLaunchCheckPanel, /"Rail score"/);
+  assert.match(dxCheckScore, /score >= 85 && blockers\.is_empty\(\)/);
+  assert.doesNotMatch(dxCheckScore, /let state = if score >= 85 \{\s*"Demo ready"/);
   assert.match(dxAgentWorkspace, /"Quality"/);
   assert.match(dxAgentWorkspace, /"Accounts"/);
   assert.match(dxAgentWorkspace, /"Trusted bridge"/);
@@ -1479,6 +1496,9 @@ test("agent launch rails use professional operator-facing copy", () => {
   assert.match(sourceActions, /"Review Source"/);
   assert.match(sourceActions, /"Review Deploy Readiness"/);
   assert.doesNotMatch(sourceActions, /"No source actions yet"/);
+  assert.match(`${dxAgentSocialActions}\n${agentConfiguration}`, /QR supported/);
+  assert.match(`${dxAgentSocialActions}\n${agentConfiguration}`, /link supported/);
+  assert.doesNotMatch(`${dxAgentSocialActions}\n${agentConfiguration}`, /QR ready|link ready/);
   assert.match(guidedCards, /"Prepare Handoff"/);
   assert.match(guidedCards, /"Review Gate"/);
   assert.match(guidedCards, /"Review Audit"/);

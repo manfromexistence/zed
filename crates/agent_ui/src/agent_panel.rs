@@ -65,8 +65,8 @@ use crate::dx_launch_status::launch_status_snapshot_for_roots;
 use crate::dx_launch_workspace::{
     DxLaunchRailControls, DxLaunchRailSection, DxLaunchRailSide, DxLaunchRailState,
     DxLaunchWorkspaceStatus, DxSourceRowControl, DxSubagentStatus, DxSubagentStatusRow,
-    render_automation_screen, render_connections_screen, render_tools_screen,
-    render_workspace_chrome,
+    has_progress_rail_content, has_sources_rail_content, render_automation_screen,
+    render_connections_screen, render_tools_screen, render_workspace_chrome,
 };
 use crate::dx_proof_freshness::proof_freshness_snapshot;
 use crate::dx_receipt_history::tool_history_snapshot;
@@ -6079,20 +6079,48 @@ impl AgentPanel {
         };
 
         let is_full_screen = self.should_render_dx_launch_chrome(cx);
+        let fullscreen_launch_status = is_full_screen
+            .then(|| {
+                self.dx_launch_workspace_status_cache
+                    .as_ref()
+                    .map(|cache| self.with_live_dx_launch_status(cache.status.clone(), cx))
+            })
+            .flatten();
+        let sources_rail_available = fullscreen_launch_status
+            .as_ref()
+            .is_some_and(has_sources_rail_content);
+        let progress_rail_available = fullscreen_launch_status
+            .as_ref()
+            .is_some_and(has_progress_rail_content);
+        let sources_rail_open = self.fullscreen_sources_rail_open && sources_rail_available;
+        let progress_rail_open = self.fullscreen_progress_rail_open && progress_rail_available;
         let agent_sources_rail_button = IconButton::new(
             "agent-toolbar-toggle-sources-rail",
             IconName::ThreadsSidebarLeftClosed,
         )
         .icon_size(IconSize::Small)
         .tab_index(0_isize)
-        .toggle_state(self.fullscreen_sources_rail_open)
-        .tooltip(Tooltip::text(if self.fullscreen_sources_rail_open {
+        .disabled(!sources_rail_available)
+        .toggle_state(sources_rail_open)
+        .tooltip(Tooltip::text(if !sources_rail_available {
+            "Sources rail has no sources yet"
+        } else if sources_rail_open {
             "Hide sources rail"
         } else {
             "Show sources rail"
         }))
         .on_click(cx.listener(|this, _, _window, cx| {
-            this.fullscreen_sources_rail_open = !this.fullscreen_sources_rail_open;
+            let sources_rail_available = this
+                .dx_launch_workspace_status_cache
+                .as_ref()
+                .map(|cache| this.with_live_dx_launch_status(cache.status.clone(), cx))
+                .as_ref()
+                .is_some_and(has_sources_rail_content);
+            if sources_rail_available {
+                this.fullscreen_sources_rail_open = !this.fullscreen_sources_rail_open;
+            } else {
+                this.fullscreen_sources_rail_open = false;
+            }
             cx.notify();
         }));
         let agent_progress_rail_button = IconButton::new(
@@ -6101,14 +6129,27 @@ impl AgentPanel {
         )
         .icon_size(IconSize::Small)
         .tab_index(0_isize)
-        .toggle_state(self.fullscreen_progress_rail_open)
-        .tooltip(Tooltip::text(if self.fullscreen_progress_rail_open {
+        .disabled(!progress_rail_available)
+        .toggle_state(progress_rail_open)
+        .tooltip(Tooltip::text(if !progress_rail_available {
+            "Progress rail has no agent activity yet"
+        } else if progress_rail_open {
             "Hide progress rail"
         } else {
             "Show progress rail"
         }))
         .on_click(cx.listener(|this, _, _window, cx| {
-            this.fullscreen_progress_rail_open = !this.fullscreen_progress_rail_open;
+            let progress_rail_available = this
+                .dx_launch_workspace_status_cache
+                .as_ref()
+                .map(|cache| this.with_live_dx_launch_status(cache.status.clone(), cx))
+                .as_ref()
+                .is_some_and(has_progress_rail_content);
+            if progress_rail_available {
+                this.fullscreen_progress_rail_open = !this.fullscreen_progress_rail_open;
+            } else {
+                this.fullscreen_progress_rail_open = false;
+            }
             cx.notify();
         }));
         let panel_id = cx.entity().entity_id();

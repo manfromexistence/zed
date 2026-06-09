@@ -49,7 +49,7 @@ pub(super) fn provider_target_state(
 
     let Some(remote) = snapshot.remote_provider_for(provider.id) else {
         return target_state(
-            "Available",
+            "Not configured",
             format!("No {} remote found", provider.label),
             Color::Muted,
             IconName::Circle,
@@ -84,15 +84,15 @@ fn group_target_state(
     }
 
     target_state(
-        "Ready",
+        "Configured",
         format!(
             "{}/{} registered {} enabled; health unchecked",
             configured_count,
             registry_count,
             plural(registry_count, "remote", "remotes"),
         ),
-        Color::Success,
-        IconName::Check,
+        Color::Muted,
+        IconName::Circle,
     )
 }
 
@@ -109,18 +109,15 @@ fn provider_state_from_remote(remote: &DxForgeRemoteProvider) -> RemoteTargetSta
         );
     }
 
+    let primary = if remote.primary { " primary" } else { "" };
     target_state(
-        if remote.primary {
-            "Primary"
-        } else {
-            "Ready"
-        },
+        "Configured",
         format!(
-            "{} '{}' configured; health unchecked",
-            remote.label, remote.remote_name
+            "{} '{}'{} configured; health unchecked",
+            remote.label, remote.remote_name, primary
         ),
-        Color::Success,
-        IconName::Check,
+        Color::Muted,
+        IconName::Circle,
     )
 }
 

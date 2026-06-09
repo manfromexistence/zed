@@ -110,6 +110,7 @@ pub(super) fn state_presentation(state: DxForgePanelState) -> (IconName, Color, 
     match state {
         DxForgePanelState::NoWorkspace => (IconName::Folder, Color::Muted, "No workspace"),
         DxForgePanelState::Ready => (IconName::Check, Color::Success, "Ready"),
+        DxForgePanelState::Evidence => (IconName::FileTextOutlined, Color::Muted, "Evidence"),
         DxForgePanelState::Attention => (IconName::Warning, Color::Warning, "Review"),
         DxForgePanelState::Empty => (IconName::Circle, Color::Muted, "No receipts"),
         DxForgePanelState::Missing => (IconName::Info, Color::Muted, "Missing"),

@@ -143,7 +143,7 @@ pub(crate) fn check_score_snapshot(input: DxCheckScoreInput<'_>) -> DxCheckScore
     }
     let score = score.min(100);
 
-    let state = if score >= 85 {
+    let state = if score >= 85 && blockers.is_empty() {
         "Demo ready"
     } else if score >= 65 {
         "Proof partial"
