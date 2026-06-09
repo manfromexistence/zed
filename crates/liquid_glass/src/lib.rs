@@ -4,7 +4,9 @@ mod ui_state;
 
 use gpui::App;
 
-pub use backgrounds::{BackgroundAsset, load_backgrounds, load_glass_surface};
+pub use backgrounds::{
+    BackgroundAsset, load_backgrounds, load_glass_surface, load_liquid_glass_backdrop_carrier,
+};
 pub use element::{
     LiquidGlassStyle, bounded_liquid_glass_layer, liquid_glass_layer, paint_liquid_glass_layer,
 };

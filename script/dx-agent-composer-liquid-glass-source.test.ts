@@ -10,6 +10,7 @@ const threadView = read("crates/agent_ui/src/conversation_view/thread_view.rs");
 const messageEditor = read("crates/agent_ui/src/message_editor.rs");
 const liquidGlass = read("crates/liquid_glass/src/lib.rs");
 const liquidGlassElement = read("crates/liquid_glass/src/element.rs");
+const liquidGlassBackgrounds = read("crates/liquid_glass/src/backgrounds.rs");
 const workspaceItem = read("crates/workspace/src/item.rs");
 const workspaceSource = read("crates/workspace/src/workspace.rs");
 const paneSource = read("crates/workspace/src/pane.rs");
@@ -51,7 +52,7 @@ const functionBody = (source: string, name: string): string => {
 
 test("Agent composer uses shared liquid glass primitives", () => {
   assert.match(cargo, /liquid_glass\.workspace = true/);
-  assert.match(threadView, /use liquid_glass::load_glass_surface;/);
+  assert.match(threadView, /use liquid_glass::load_liquid_glass_backdrop_carrier;/);
   assert.match(
     composerGlass,
     /use gpui::\{AnyElement, App, Hsla, RenderImage\};/,
@@ -63,7 +64,13 @@ test("Agent composer uses shared liquid glass primitives", () => {
   assert.match(composerGlass, /theme_is_transparent/);
   assert.match(
     liquidGlass,
-    /pub use backgrounds::\{BackgroundAsset, load_backgrounds, load_glass_surface\};/,
+    /pub use backgrounds::\{\s*BackgroundAsset, load_backgrounds, load_glass_surface, load_liquid_glass_backdrop_carrier,\s*\};/,
+  );
+  assert.match(liquidGlassBackgrounds, /pub fn load_liquid_glass_backdrop_carrier\(\) -> Arc<RenderImage>/);
+  assert.match(liquidGlassBackgrounds, /use_backdrop/);
+  assert.match(
+    liquidGlassBackgrounds,
+    /pub fn load_glass_surface\(\) -> Arc<RenderImage> \{\s*load_liquid_glass_backdrop_carrier\(\)\s*\}/,
   );
   assert.match(liquidGlass, /pub fn default_liquid_glass_style\(\) -> LiquidGlassStyle/);
   assert.match(liquidGlass, /pub fn control_surface_liquid_glass_style\(\) -> LiquidGlassStyle/);
@@ -183,7 +190,7 @@ test("composer preserves the real editor and controls", () => {
 
   assert.match(
     threadView,
-    /use_keyed_state\(\s*\(\s*"agent-composer-liquid-glass-source",\s*cx\.entity_id\(\)\.as_u64\(\),\s*\),\s*cx,\s*\|_, _\| load_glass_surface\(\),\s*\)/s,
+    /use_keyed_state\(\s*\(\s*"agent-composer-liquid-glass-source",\s*cx\.entity_id\(\)\.as_u64\(\),\s*\),\s*cx,\s*\|_, _\| load_liquid_glass_backdrop_carrier\(\),\s*\)/s,
   );
   assert.match(threadView, /\.relative\(\)\s*\.overflow_hidden\(\)\s*\.rounded_md\(\)/);
   assert.match(

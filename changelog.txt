@@ -1,3 +1,16 @@
+[2026-06-09] - AI Composer Liquid Glass Backdrop Carrier
+
+CHANGED:
+- `crates\liquid_glass\src\backgrounds.rs` now exposes `load_liquid_glass_backdrop_carrier()` so composer code names the GPUI backdrop-carrier contract instead of implying a custom fake glass texture.
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now loads that explicit carrier for the shared AI composer Liquid Glass keyed state while preserving the existing bounded composer surface, controls, focus behavior, and layout.
+- `crates\liquid_glass\README.md` and `script\dx-agent-composer-liquid-glass-source.test.ts` now document and guard that the transparent image is only the atlas carrier while GPUI samples the live window backdrop through `use_backdrop`, and the composer material keeps the recovered Liquid Glass control tuning on a bounded GPUI surface.
+
+PASSED:
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. Cargo, build, runtime proof, native launch, local servers, browser automation, source-guard execution, and `just run` remain deferred.
+
 [2026-06-09] - AI Composer Liquid Glass Correction
 
 CHANGED:

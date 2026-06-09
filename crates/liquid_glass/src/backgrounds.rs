@@ -48,9 +48,15 @@ pub fn load_backgrounds(cx: &App) -> Arc<[BackgroundAsset]> {
         .into()
 }
 
-pub fn load_glass_surface() -> Arc<RenderImage> {
+pub fn load_liquid_glass_backdrop_carrier() -> Arc<RenderImage> {
+    // The live backdrop is sampled by the renderer when LiquidGlassStyle uses
+    // `use_backdrop`; this image is only the atlas carrier required by GPUI.
     let image = RgbaImage::from_pixel(2, 2, Rgba([0, 0, 0, 0]));
     Arc::new(RenderImage::new(to_bgra_frames(image)))
+}
+
+pub fn load_glass_surface() -> Arc<RenderImage> {
+    load_liquid_glass_backdrop_carrier()
 }
 
 fn load_render_image(path: &str, index: usize, cx: &App) -> Arc<RenderImage> {

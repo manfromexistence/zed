@@ -24,7 +24,7 @@ use language_model::{
     FastModeConfirmation, LanguageModelEffortLevel, LanguageModelId, LanguageModelProviderId,
     LanguageModelRegistry, Speed,
 };
-use liquid_glass::load_glass_surface;
+use liquid_glass::load_liquid_glass_backdrop_carrier;
 use settings::update_settings_file;
 use ui::{ButtonLike, SpinnerLabel, SpinnerVariant, SplitButton, SplitButtonStyle, Tab};
 use workspace::SERIALIZATION_THROTTLE_TIME;
@@ -3867,7 +3867,7 @@ impl ThreadView {
                     cx.entity_id().as_u64(),
                 ),
                 cx,
-                |_, _| load_glass_surface(),
+                |_, _| load_liquid_glass_backdrop_carrier(),
             )
             .read(cx)
             .clone();

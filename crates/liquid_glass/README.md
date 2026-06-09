@@ -9,6 +9,12 @@ bounded GPUI primitive directly, as the AI composer does.
 
 - GPU primitive: `gpui::Window::paint_liquid_glass`
 - Assets: loaded from the root `assets/liquid_glass/` tree
+- Backdrop surfaces: `load_liquid_glass_backdrop_carrier()` provides the transparent atlas
+  carrier while GPUI samples the live window backdrop through `use_backdrop`; product code should
+  not replace it with demo textures.
+- Composer material: `control_surface_liquid_glass_style()` keeps the reference control defaults
+  for refraction, blur, glow, and chromatic aberration while applying them to a bounded GPUI
+  surface.
 
 ## Backend model
 
