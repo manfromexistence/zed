@@ -2,7 +2,7 @@ use gpui::{AnyElement, App, SharedString, prelude::*};
 use ui::{IconName, prelude::*};
 
 use super::{
-    DxLaunchWorkspaceStatus, check, compact_status_row, muted_card, proof, signal_row, style_panel,
+    DxLaunchWorkspaceStatus, check, compact_status_row, proof, signal_row, style_panel,
     subagent_summary,
 };
 

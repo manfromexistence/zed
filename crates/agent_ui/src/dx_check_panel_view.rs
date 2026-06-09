@@ -7,7 +7,8 @@ use gpui::{
 };
 use theme::ActiveTheme;
 use ui::{
-    ButtonStyle, IconButtonShape, ListItem, ListItemSpacing, Tooltip, WithScrollbar, prelude::*,
+    ButtonStyle, IconButtonShape, Indicator, ListItem, ListItemSpacing, Tab, Tooltip,
+    WithScrollbar, prelude::*,
 };
 use workspace::{
     OpenOptions, Workspace,
@@ -207,7 +208,7 @@ impl DxCheckPanel {
     ) -> AnyElement {
         h_flex()
             .id("dx-check-panel-header")
-            .h(px(32.0))
+            .h(Tab::container_height(cx))
             .w_full()
             .min_w_0()
             .items_center()
@@ -253,13 +254,10 @@ impl DxCheckPanel {
         let tooltip = format!("{}\n{outcome}", snapshot.status);
 
         ListItem::new("dx-check-status")
+            .inset(true)
             .spacing(ListItemSpacing::Sparse)
             .selectable(false)
-            .start_slot(
-                Icon::new(IconName::Check)
-                    .size(IconSize::Small)
-                    .color(color),
-            )
+            .start_slot(Indicator::dot().color(color))
             .child(
                 h_flex()
                     .min_w_0()
@@ -272,7 +270,7 @@ impl DxCheckPanel {
                             .truncate(),
                     )
                     .child(
-                        Label::new(outcome)
+                        Label::new(snapshot.status.clone())
                             .size(LabelSize::Small)
                             .color(Color::Muted)
                             .truncate(),
@@ -293,7 +291,7 @@ impl DxCheckPanel {
 
         h_flex()
             .id("dx-check-toolbar")
-            .h(px(32.0))
+            .h(Tab::container_height(cx))
             .w_full()
             .min_w_0()
             .px_1()
@@ -663,6 +661,7 @@ impl Render for DxCheckPanel {
                             .min_h_0()
                             .min_w_0()
                             .gap_1()
+                            .px_1()
                             .py_1()
                             .overflow_y_scroll()
                             .children(self.render_active_tab_sections(&snapshot, panel, cx)),

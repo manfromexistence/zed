@@ -56,7 +56,7 @@ pub(super) fn source_item_row(
                         .when(has_detail, |this| {
                             this.child(
                                 Label::new(source.detail.clone())
-                                    .size(LabelSize::XSmall)
+                                    .size(LabelSize::Small)
                                     .color(Color::Muted)
                                     .truncate(),
                             )

@@ -1213,6 +1213,11 @@ test("agent rails and project badges keep compact production layout", () => {
   const launchChrome = functionBody(dxLaunchWorkspace, "render_workspace_chrome");
   const sourcesRail = functionBody(dxLaunchWorkspace, "render_sources_rail");
   const progressRail = functionBody(dxLaunchWorkspace, "render_right_rail");
+  const hasSourcesRailContent = functionBody(dxLaunchWorkspace, "has_sources_rail_content");
+  const hasProgressRailContent = functionBody(dxLaunchWorkspace, "has_progress_rail_content");
+  const hasAgentProgress = functionBody(dxLaunchWorkspace, "has_agent_progress");
+  const hasAgentEnvironment = functionBody(dxLaunchWorkspace, "has_agent_environment");
+  const hasAgentReadiness = functionBody(dxLaunchWorkspace, "has_agent_readiness");
   const diagnosticsMenu = functionBody(dxLaunchWorkspace, "diagnostics_menu");
   const railSection = functionBody(dxLaunchWorkspace, "rail_section");
   const subagentSummary = functionBody(dxLaunchWorkspace, "subagent_summary");
@@ -1231,6 +1236,19 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(dxLaunchWorkspace, /enum DxLaunchRailSection/);
   assert.match(dxLaunchWorkspace, /struct DxLaunchRailControls/);
   assert.match(dxLaunchWorkspace, /fn rail_section\(/);
+  assert.match(launchChrome, /show_sources_rail && has_sources_rail_content\(&status\)/);
+  assert.match(launchChrome, /show_progress_rail && has_progress_rail_content\(&status\)/);
+  assert.match(
+    hasSourcesRailContent,
+    /status\.source_sets\.total_sources > 0 \|\| has_source_actions\(status\)/,
+  );
+  assert.match(
+    hasProgressRailContent,
+    /has_agent_progress\(status\)[\s\S]*has_agent_environment\(status\)[\s\S]*has_agent_subagents\(status\)[\s\S]*has_agent_readiness\(status\)/,
+  );
+  assert.doesNotMatch(hasAgentProgress, /launch_status\.latest_present/);
+  assert.doesNotMatch(hasAgentEnvironment, /visible_worktree_count > 0/);
+  assert.doesNotMatch(hasAgentReadiness, /acceptance_count|passed_count/);
   assert.match(dxLaunchWorkspace, /ListHeader/);
   assert.match(dxLaunchWorkspace, /ListItem/);
   assert.match(dxLaunchWorkspace, /ListItemSpacing/);

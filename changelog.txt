@@ -1,3 +1,19 @@
+[2026-06-09] - DX Panel Chrome Follow-Up
+
+CHANGED:
+- `crates\project_panel\src\project_panel.rs` now keeps the Project header to one Git-panel-height title row, moves secondary filters/view actions into an action-backed overflow menu, and keeps extended source metrics in the title tooltip.
+- `crates\agent_ui\src\dx_check_panel_view*.rs` now uses shared tab-height header/toolbar chrome, indicator status rows, and end-slot detail rows instead of cramped badge-like text.
+- `crates\agent_ui\src\dx_forge_panel\*.rs` now uses tab-height panel chrome and provider readiness indicators instead of status glyph badges.
+- `crates\agent_ui\src\dx_launch_workspace*.rs` and `agent_panel.rs` now render fullscreen AI rails only when meaningful source/progress data exists and promote rail/action typography out of tiny badge-like sizing.
+- Focused source guards now pin the quiet Agent rail defaults and the updated Project/Forge/Check panel chrome contracts.
+
+PASSED:
+- `rustfmt --edition 2024` on touched Rust files
+- `node --test script\dx-workspace-ui-state-source.test.ts script\dx-launch-workspace-source.test.ts script\dx-forge-panel-source.test.ts script\dx-check-panel-source.test.ts script\dx-project-panel-source.test.ts script\dx-title-bar-source.test.ts script\dx-agent-workspaces-source.test.ts`
+
+NOTES:
+- Source-only by instruction. `just run`, Cargo build/check/test/clippy, and runtime visual proof were not run.
+
 [2026-06-09] - AI Default Screen And Panel Chrome Polish
 
 CHANGED:

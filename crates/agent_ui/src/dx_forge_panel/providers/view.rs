@@ -153,11 +153,7 @@ fn provider_group_controls(
         h_flex()
             .flex_none()
             .gap_1()
-            .child(
-                Icon::new(state.icon)
-                    .size(IconSize::Small)
-                    .color(state.color),
-            )
+            .child(Indicator::dot().color(state.color))
             .child(checkbox),
     )
     .end_slot_on_hover(provider_group_actions(

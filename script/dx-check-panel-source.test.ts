@@ -124,7 +124,7 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
 
   assert.match(renderHeader, /h_flex\(\)/);
   assert.match(renderHeader, /\.id\("dx-check-panel-header"\)/);
-  assert.match(renderHeader, /\.h\(px\(32\.0\)\)/);
+  assert.match(renderHeader, /\.h\(Tab::container_height\(cx\)\)/);
   assert.match(renderHeader, /Label::new\("Check"\)/);
   assert.match(renderHeader, /side_panel_header_controls/);
   assert.match(renderStatusStrip, /ListItem::new\("dx-check-status"\)/);

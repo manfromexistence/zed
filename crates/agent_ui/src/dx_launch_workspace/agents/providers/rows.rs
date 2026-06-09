@@ -80,11 +80,11 @@ pub(super) fn dx_agent_provider_row(
 
 pub(super) fn dx_agent_model_row(id: SharedString, model: &DxAgentModel, _cx: &App) -> AnyElement {
     ListItem::new(id)
-        .spacing(ListItemSpacing::ExtraDense)
+        .spacing(ListItemSpacing::Sparse)
         .selectable(false)
         .start_slot(
             Icon::new(dx_icon(DxUiIcon::Ai))
-                .size(IconSize::XSmall)
+                .size(IconSize::Small)
                 .color(Color::Muted),
         )
         .child(
@@ -96,10 +96,10 @@ pub(super) fn dx_agent_model_row(id: SharedString, model: &DxAgentModel, _cx: &A
                         .min_w_0()
                         .justify_between()
                         .gap_2()
-                        .child(Label::new(model.model_id.clone()).size(LabelSize::XSmall))
+                        .child(Label::new(model.model_id.clone()).size(LabelSize::Small))
                         .child(
                             Label::new(model_state_label(model.active, &model.status))
-                                .size(LabelSize::XSmall)
+                                .size(LabelSize::Small)
                                 .color(Color::Muted)
                                 .truncate(),
                         ),
@@ -110,7 +110,7 @@ pub(super) fn dx_agent_model_row(id: SharedString, model: &DxAgentModel, _cx: &A
                         &model.id,
                         &model.compatibility,
                     ))
-                    .size(LabelSize::XSmall)
+                    .size(LabelSize::Small)
                     .color(Color::Muted)
                     .truncate(),
                 ),

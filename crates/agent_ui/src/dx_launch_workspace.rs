@@ -306,25 +306,31 @@ pub(crate) fn render_workspace_chrome(
         .overflow_hidden()
         .bg(cx.theme().colors().panel_background)
         .child(div().size_full().min_w_0().overflow_hidden().child(center))
-        .when(show_sources_rail, |this| {
-            this.child(render_sources_rail(
-                source_row_controls,
-                source_actions,
-                &status,
-                &rail_controls,
-                window,
-                cx,
-            ))
-        })
-        .when(show_progress_rail, |this| {
-            this.child(render_right_rail(
-                &status,
-                guided_cards,
-                &rail_controls,
-                window,
-                cx,
-            ))
-        })
+        .when(
+            show_sources_rail && has_sources_rail_content(&status),
+            |this| {
+                this.child(render_sources_rail(
+                    source_row_controls,
+                    source_actions,
+                    &status,
+                    &rail_controls,
+                    window,
+                    cx,
+                ))
+            },
+        )
+        .when(
+            show_progress_rail && has_progress_rail_content(&status),
+            |this| {
+                this.child(render_right_rail(
+                    &status,
+                    guided_cards,
+                    &rail_controls,
+                    window,
+                    cx,
+                ))
+            },
+        )
         .into_any_element()
 }
 
@@ -509,15 +515,23 @@ fn has_source_actions(status: &DxLaunchWorkspaceStatus) -> bool {
         || !status.deploy_targets.targets.is_empty()
 }
 
+fn has_sources_rail_content(status: &DxLaunchWorkspaceStatus) -> bool {
+    status.source_sets.total_sources > 0 || has_source_actions(status)
+}
+
+fn has_progress_rail_content(status: &DxLaunchWorkspaceStatus) -> bool {
+    has_agent_progress(status)
+        || has_agent_environment(status)
+        || has_agent_subagents(status)
+        || has_agent_readiness(status)
+}
+
 fn has_agent_progress(status: &DxLaunchWorkspaceStatus) -> bool {
-    status.agent_bridge.active_task_count > 0
-        || status.background_thread_count > 0
-        || status.launch_status.latest_present
+    status.agent_bridge.active_task_count > 0 || status.background_thread_count > 0
 }
 
 fn has_agent_environment(status: &DxLaunchWorkspaceStatus) -> bool {
-    status.visible_worktree_count > 0
-        || status.agent_bridge.connected_accounts_summary.connected > 0
+    status.agent_bridge.connected_accounts_summary.connected > 0
         || status.agent_bridge.connected_accounts_summary.needs_auth > 0
         || status.agent_bridge.automation_count > 0
 }
@@ -527,10 +541,7 @@ fn has_agent_subagents(status: &DxLaunchWorkspaceStatus) -> bool {
 }
 
 fn has_agent_readiness(status: &DxLaunchWorkspaceStatus) -> bool {
-    status.launch_readiness.acceptance_count > 0
-        || status.launch_readiness.passed_count > 0
-        || status.launch_readiness.warning_count > 0
-        || status.launch_readiness.failed_count > 0
+    status.launch_readiness.warning_count > 0 || status.launch_readiness.failed_count > 0
 }
 
 fn rail_rainbow_glow(id: &'static str, phase_offset: f32) -> AnyElement {

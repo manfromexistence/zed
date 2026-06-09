@@ -169,7 +169,7 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
 
   assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-header"\)/);
   assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-title-row"\)/);
-  assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-summary-row"\)/);
+  assert.doesNotMatch(renderDxExplorerHeader, /\.id\("dx-explorer-summary-row"\)/);
   assert.match(renderDxExplorerHeader, /ProjectPanelSettings::get_global\(cx\)/);
   assert.match(renderDxExplorerHeader, /dx_icon\(DxUiIcon::Project\)/);
   assert.match(renderDxExplorerHeader, /let source_label = summary\.source_kind\.label\(\);/);
@@ -203,10 +203,10 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
     /\.id\("dx-explorer-title-row"\)[\s\S]*Icon::new\(dx_icon\(DxUiIcon::Project\)\)[\s\S]*Label::new\("Project"\)[\s\S]*\.child\(header_controls\)/,
     "DX Explorer top chrome should keep title and actions in a readable Git-panel-style title row",
   );
-  assert.match(
+  assert.doesNotMatch(
     renderDxExplorerHeader,
-    /\.id\("dx-explorer-summary-row"\)[\s\S]*\.child\(header_metrics\)/,
-    "DX Explorer metrics should live in their own row instead of crowding the title actions",
+    /dx-explorer-summary-row|header_metrics/,
+    "DX Explorer metrics should stay in the title tooltip instead of creating a cramped visible strip",
   );
   assert.doesNotMatch(
     renderDxExplorerHeader,
@@ -224,14 +224,16 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
     "DX Explorer metric text should not grow local chrome",
   );
   assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-source-controls"\)/);
-  assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-filter-controls"\)/);
-  assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-view-controls"\)/);
   assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-edit-controls"\)/);
+  assert.match(renderDxExplorerHeader, /PopoverMenu::new\("dx-explorer-project-options-menu"\)/);
+  assert.match(renderDxExplorerHeader, /action_checked_with_disabled\(/);
+  assert.doesNotMatch(renderDxExplorerHeader, /\.id\("dx-explorer-filter-controls"\)/);
+  assert.doesNotMatch(renderDxExplorerHeader, /\.id\("dx-explorer-view-controls"\)/);
   assert.equal(
     renderDxExplorerHeader.match(/Divider::vertical\(\)\.color\(ui::DividerColor::BorderFaded\)/g)
       ?.length,
-    3,
-    "DX Explorer header should separate action groups with the same faded dividers used by Zed panels",
+    1,
+    "DX Explorer header should keep only the primary action divider and move secondary controls into overflow",
   );
   assert.match(
     renderSidePanelHeaderControls,
@@ -278,23 +280,28 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   );
   assert.match(
     renderDxExplorerHeader,
-    /"dx-explorer-toggle-ignored"[\s\S]*\.when\(has_worktree,[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&toggle_ignored_focus_handle\)[\s\S]*Tooltip::for_action_in\([\s\S]*if show_ignored_entries[\s\S]*"Hide ignored files"[\s\S]*"Show ignored files"[\s\S]*&ToggleHideGitIgnore,[\s\S]*&toggle_ignored_tooltip_focus_handle,[\s\S]*cx/,
-    "Ignored-files toggle should be focus-tracked only when enabled and expose its action keybinding",
+    /"dx-explorer-project-options"[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&project_options_focus_handle\)[\s\S]*Tooltip::text\("Project options"\)/,
+    "Secondary Project controls should move behind a focus-tracked overflow menu",
   );
   assert.match(
     renderDxExplorerHeader,
-    /"dx-explorer-toggle-hidden"[\s\S]*\.when\(has_worktree,[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&toggle_hidden_focus_handle\)[\s\S]*Tooltip::for_action_in\([\s\S]*if show_hidden_entries[\s\S]*"Hide hidden files"[\s\S]*"Show hidden files"[\s\S]*&ToggleHideHidden,[\s\S]*&toggle_hidden_tooltip_focus_handle,[\s\S]*cx/,
-    "Hidden-files toggle should be focus-tracked only when enabled and expose its action keybinding",
+    /action_checked_with_disabled\([\s\S]*if show_ignored_entries[\s\S]*"Ignored files visible"[\s\S]*"Ignored files hidden"[\s\S]*ToggleHideGitIgnore\.boxed_clone\(\),[\s\S]*show_ignored_entries,[\s\S]*!has_worktree/,
+    "Ignored-files toggle should stay action-backed inside the Project options menu",
   );
   assert.match(
     renderDxExplorerHeader,
-    /"dx-explorer-project-symbols"[\s\S]*\.when\(has_worktree,[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&project_symbols_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"Project symbols",\s*&ToggleProjectSymbols,[\s\S]*&project_symbols_tooltip_focus_handle,[\s\S]*cx/,
-    "Project Symbols should be focus-tracked only when enabled and expose its action keybinding",
+    /action_checked_with_disabled\([\s\S]*if show_hidden_entries[\s\S]*"Hidden files visible"[\s\S]*"Hidden files hidden"[\s\S]*ToggleHideHidden\.boxed_clone\(\),[\s\S]*show_hidden_entries,[\s\S]*!has_worktree/,
+    "Hidden-files toggle should stay action-backed inside the Project options menu",
   );
   assert.match(
     renderDxExplorerHeader,
-    /"dx-explorer-collapse-all"[\s\S]*\.when\(has_worktree,[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&collapse_all_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"Collapse all",\s*&CollapseAllEntries,[\s\S]*&collapse_all_tooltip_focus_handle,[\s\S]*cx/,
-    "Collapse All should be focus-tracked only when enabled and expose its action keybinding",
+    /"Project symbols"[\s\S]*Some\(ToggleProjectSymbols\.boxed_clone\(\)\)[\s\S]*if has_worktree[\s\S]*window\.dispatch_action\([\s\S]*ToggleProjectSymbols\.boxed_clone\(\),[\s\S]*cx/,
+    "Project Symbols should stay action-backed inside the Project options menu",
+  );
+  assert.match(
+    renderDxExplorerHeader,
+    /"Collapse folders"[\s\S]*Some\(CollapseAllEntries\.boxed_clone\(\)\)[\s\S]*if has_worktree[\s\S]*this\.collapse_all_entries\([\s\S]*&CollapseAllEntries,[\s\S]*window,[\s\S]*cx/,
+    "Collapse All should stay action-backed inside the Project options menu",
   );
   assert.match(
     renderDxExplorerHeader,
@@ -318,18 +325,18 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   );
   assert.doesNotMatch(
     renderDxExplorerHeader,
-    /Tooltip::text\((?:if show_ignored_entries|if show_hidden_entries|"Project symbols"|"Collapse all"|"New file"|"New folder")/,
-    "DX Explorer header action buttons should use action-aware tooltips instead of plain text",
+    /Tooltip::text\((?:if show_ignored_entries|if show_hidden_entries|"New file"|"New folder")/,
+    "Visible DX Explorer header action buttons should use action-aware tooltips instead of plain text",
   );
-  assert.match(renderDxExplorerHeader, /IconName::ListX/);
-  assert.match(renderDxExplorerHeader, /IconName::ListFilter/);
+  assert.doesNotMatch(renderDxExplorerHeader, /IconName::ListX/);
+  assert.doesNotMatch(renderDxExplorerHeader, /IconName::ListFilter/);
   assert.match(renderDxExplorerHeader, /workspace::Open::default\(\)\.boxed_clone\(\)/);
   assert.match(renderDxExplorerHeader, /ToggleFileFinder::default\(\)\.boxed_clone\(\)/);
   assert.match(renderDxExplorerHeader, /ToggleHideGitIgnore\.boxed_clone\(\)/);
   assert.match(renderDxExplorerHeader, /ToggleHideHidden\.boxed_clone\(\)/);
-  assert.match(renderDxExplorerHeader, /selected_style\(ButtonStyle::Tinted\(TintColor::Accent\)\)/);
-  assert.match(renderDxExplorerHeader, /toggle_state\(show_ignored_entries\)/);
-  assert.match(renderDxExplorerHeader, /toggle_state\(show_hidden_entries\)/);
+  assert.doesNotMatch(renderDxExplorerHeader, /selected_style\(ButtonStyle::Tinted\(TintColor::Accent\)\)/);
+  assert.doesNotMatch(renderDxExplorerHeader, /toggle_state\(show_ignored_entries\)/);
+  assert.doesNotMatch(renderDxExplorerHeader, /toggle_state\(show_hidden_entries\)/);
   assert.match(renderDxExplorerHeader, /ToggleProjectSymbols\.boxed_clone\(\)/);
   assert.match(renderDxExplorerHeader, /this\.new_file\(&NewFile, window, cx\)/);
   assert.match(renderDxExplorerHeader, /this\.new_directory\(&NewDirectory, window, cx\)/);

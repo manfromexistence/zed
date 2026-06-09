@@ -1,5 +1,5 @@
 use gpui::{AnyElement, App, ClickEvent, IntoElement, ParentElement, SharedString, Window};
-use ui::{ListHeader, ListItem, ListItemSpacing, Tooltip, prelude::*};
+use ui::{Indicator, ListHeader, ListItem, ListItemSpacing, Tooltip, prelude::*};
 
 use crate::dx_check_panel::{
     DxCheckPanelAdapterPlan, DxCheckPanelNotice, DxCheckPanelQuickFix, DxCheckPanelSection,
@@ -28,34 +28,55 @@ pub(super) fn detail_row(
     value: impl Into<SharedString>,
 ) -> AnyElement {
     let label = label.into();
+    let value = value.into();
+    let tooltip = format!("{}: {}", label.as_ref(), value.as_ref());
+
     ListItem::new(format!("dx-check-detail-{}", stable_id(label.as_ref())))
         .inset(true)
         .spacing(ListItemSpacing::Sparse)
         .selectable(false)
         .child(
-            h_flex()
-                .min_w_0()
-                .w_full()
-                .gap_2()
-                .justify_between()
-                .child(
-                    Label::new(label)
-                        .size(LabelSize::Small)
-                        .color(Color::Muted)
-                        .flex_none(),
-                )
-                .child(
-                    Label::new(value.into())
-                        .size(LabelSize::Small)
-                        .color(Color::Default)
-                        .truncate(),
-                ),
+            Label::new(label)
+                .size(LabelSize::Small)
+                .color(Color::Muted)
+                .truncate(),
         )
+        .end_slot(
+            Label::new(value)
+                .size(LabelSize::Small)
+                .color(Color::Default)
+                .truncate(),
+        )
+        .tooltip(Tooltip::text(tooltip))
         .into_any_element()
 }
 
 pub(super) fn section_row(section: &DxCheckPanelSection) -> AnyElement {
-    detail_row(section.title.clone(), section_score_label(section))
+    let score = section_score_label(section);
+    let tooltip = format!("{}: {score}", section.title);
+
+    ListItem::new(format!(
+        "dx-check-section-score-{}",
+        stable_id(&section.title)
+    ))
+    .inset(true)
+    .spacing(ListItemSpacing::Sparse)
+    .selectable(false)
+    .start_slot(Indicator::dot().color(section_status_color(&section.status)))
+    .child(
+        Label::new(section.title.clone())
+            .size(LabelSize::Small)
+            .color(Color::Default)
+            .truncate(),
+    )
+    .end_slot(
+        Label::new(score)
+            .size(LabelSize::Small)
+            .color(Color::Muted)
+            .truncate(),
+    )
+    .tooltip(Tooltip::text(tooltip))
+    .into_any_element()
 }
 
 pub(super) fn notice_row(
@@ -337,6 +358,15 @@ fn section_score_label(section: &DxCheckPanelSection) -> String {
             format!("{score}/{max_score}, {}{estimated}", section.status)
         }
         _ => section.status.clone(),
+    }
+}
+
+fn section_status_color(status: &str) -> Color {
+    match status {
+        "pass" | "passed" | "ready" | "ok" => Color::Success,
+        "fail" | "failed" | "blocked" | "error" => Color::Error,
+        "warn" | "warning" | "review" => Color::Warning,
+        _ => Color::Muted,
     }
 }
 

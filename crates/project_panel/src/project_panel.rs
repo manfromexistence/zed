@@ -70,7 +70,7 @@ use ui::{
     IconButton, IconButtonShape, IconDecoration, IconDecorationKind, IndentGuideColors,
     IndentGuideLayout, Indicator, KeyBinding, Label, LabelSize, ListHeader, ListItem,
     ListItemSpacing, PopoverMenu, ProjectEmptyState, ScrollAxes, ScrollableHandle, Scrollbars,
-    StickyCandidate, TintColor, Tooltip, WithScrollbar, prelude::*, v_flex,
+    StickyCandidate, Tab, Tooltip, WithScrollbar, prelude::*, v_flex,
 };
 use util::{
     ResultExt, TakeUntilExt, TryFutureExt,
@@ -4656,20 +4656,15 @@ impl ProjectPanel {
         let open_project_focus_handle = header_focus_handle.clone();
         let open_file_focus_handle = header_focus_handle.clone();
         let open_file_tooltip_focus_handle = open_file_focus_handle.clone();
-        let toggle_ignored_focus_handle = header_focus_handle.clone();
-        let toggle_ignored_tooltip_focus_handle = toggle_ignored_focus_handle.clone();
-        let toggle_hidden_focus_handle = header_focus_handle.clone();
-        let toggle_hidden_tooltip_focus_handle = toggle_hidden_focus_handle.clone();
-        let project_symbols_focus_handle = header_focus_handle.clone();
-        let project_symbols_tooltip_focus_handle = project_symbols_focus_handle.clone();
-        let collapse_all_focus_handle = header_focus_handle.clone();
-        let collapse_all_tooltip_focus_handle = collapse_all_focus_handle.clone();
         let new_file_focus_handle = header_focus_handle.clone();
         let new_file_tooltip_focus_handle = new_file_focus_handle.clone();
         let new_folder_focus_handle = header_focus_handle.clone();
         let new_folder_tooltip_focus_handle = new_folder_focus_handle.clone();
+        let project_options_focus_handle = header_focus_handle.clone();
+        let panel_for_project_options = cx.entity().downgrade();
 
         let header_summary_meta = [
+            format!("Source: {source_label}"),
             format!(
                 "Roots: {}",
                 Self::dx_explorer_count_label(summary.worktree_count, "root", "roots")
@@ -4712,28 +4707,6 @@ impl ProjectPanel {
             ),
         ]
         .join("\n");
-
-        let header_metrics = h_flex()
-            .min_w_0()
-            .flex_1()
-            .overflow_hidden()
-            .items_center()
-            .gap_1()
-            .child(Self::render_dx_explorer_metric(source_label.to_string()))
-            .child(Self::render_dx_explorer_metric(
-                Self::dx_explorer_count_label(summary.worktree_count, "root", "roots"),
-            ))
-            .child(Self::render_dx_explorer_metric(
-                Self::dx_explorer_count_label(summary.visible_file_count, "file", "files"),
-            ))
-            .child(Self::render_dx_explorer_metric(
-                Self::dx_explorer_count_label(summary.visible_folder_count, "folder", "folders"),
-            ))
-            .when(summary.selected_entry_count > 0, |this| {
-                this.child(Self::render_dx_explorer_metric(
-                    Self::selected_entries_count_label(summary.selected_entry_count),
-                ))
-            });
 
         let header_controls = h_flex()
             .flex_none()
@@ -4791,137 +4764,6 @@ impl ProjectPanel {
             .child(Divider::vertical().color(ui::DividerColor::BorderFaded))
             .child(
                 h_flex()
-                    .id("dx-explorer-filter-controls")
-                    .gap_0p5()
-                    .child(
-                        IconButton::new(
-                            "dx-explorer-toggle-ignored",
-                            if show_ignored_entries {
-                                IconName::ListX
-                            } else {
-                                IconName::ListFilter
-                            },
-                        )
-                        .shape(IconButtonShape::Square)
-                        .style(ButtonStyle::Subtle)
-                        .selected_style(ButtonStyle::Tinted(TintColor::Accent))
-                        .toggle_state(show_ignored_entries)
-                        .icon_size(IconSize::Small)
-                        .disabled(!has_worktree)
-                        .when(has_worktree, |button| {
-                            button
-                                .tab_index(0_isize)
-                                .track_focus(&toggle_ignored_focus_handle)
-                        })
-                        .tooltip(move |_window, cx| {
-                            Tooltip::for_action_in(
-                                if show_ignored_entries {
-                                    "Hide ignored files"
-                                } else {
-                                    "Show ignored files"
-                                },
-                                &ToggleHideGitIgnore,
-                                &toggle_ignored_tooltip_focus_handle,
-                                cx,
-                            )
-                        })
-                        .on_click(move |_, window, cx| {
-                            window.dispatch_action(ToggleHideGitIgnore.boxed_clone(), cx);
-                        }),
-                    )
-                    .child(
-                        IconButton::new(
-                            "dx-explorer-toggle-hidden",
-                            if show_hidden_entries {
-                                IconName::Eye
-                            } else {
-                                IconName::EyeOff
-                            },
-                        )
-                        .shape(IconButtonShape::Square)
-                        .style(ButtonStyle::Subtle)
-                        .selected_style(ButtonStyle::Tinted(TintColor::Accent))
-                        .toggle_state(show_hidden_entries)
-                        .icon_size(IconSize::Small)
-                        .disabled(!has_worktree)
-                        .when(has_worktree, |button| {
-                            button
-                                .tab_index(0_isize)
-                                .track_focus(&toggle_hidden_focus_handle)
-                        })
-                        .tooltip(move |_window, cx| {
-                            Tooltip::for_action_in(
-                                if show_hidden_entries {
-                                    "Hide hidden files"
-                                } else {
-                                    "Show hidden files"
-                                },
-                                &ToggleHideHidden,
-                                &toggle_hidden_tooltip_focus_handle,
-                                cx,
-                            )
-                        })
-                        .on_click(move |_, window, cx| {
-                            window.dispatch_action(ToggleHideHidden.boxed_clone(), cx);
-                        }),
-                    ),
-            )
-            .child(Divider::vertical().color(ui::DividerColor::BorderFaded))
-            .child(
-                h_flex()
-                    .id("dx-explorer-view-controls")
-                    .gap_0p5()
-                    .child(
-                        IconButton::new("dx-explorer-project-symbols", IconName::ListTree)
-                            .shape(IconButtonShape::Square)
-                            .style(ButtonStyle::Subtle)
-                            .icon_size(IconSize::Small)
-                            .disabled(!has_worktree)
-                            .when(has_worktree, |button| {
-                                button
-                                    .tab_index(0_isize)
-                                    .track_focus(&project_symbols_focus_handle)
-                            })
-                            .tooltip(move |_window, cx| {
-                                Tooltip::for_action_in(
-                                    "Project symbols",
-                                    &ToggleProjectSymbols,
-                                    &project_symbols_tooltip_focus_handle,
-                                    cx,
-                                )
-                            })
-                            .on_click(move |_, window, cx| {
-                                window.dispatch_action(ToggleProjectSymbols.boxed_clone(), cx);
-                            }),
-                    )
-                    .child(
-                        IconButton::new("dx-explorer-collapse-all", IconName::ListCollapse)
-                            .shape(IconButtonShape::Square)
-                            .style(ButtonStyle::Subtle)
-                            .icon_size(IconSize::Small)
-                            .disabled(!has_worktree)
-                            .when(has_worktree, |button| {
-                                button
-                                    .tab_index(0_isize)
-                                    .track_focus(&collapse_all_focus_handle)
-                            })
-                            .tooltip(move |_window, cx| {
-                                Tooltip::for_action_in(
-                                    "Collapse all",
-                                    &CollapseAllEntries,
-                                    &collapse_all_tooltip_focus_handle,
-                                    cx,
-                                )
-                            })
-                            .on_click(cx.listener(|this, _, window, cx| {
-                                this.focus_handle(cx).focus(window, cx);
-                                this.collapse_all_entries(&CollapseAllEntries, window, cx);
-                            })),
-                    ),
-            )
-            .child(Divider::vertical().color(ui::DividerColor::BorderFaded))
-            .child(
-                h_flex()
                     .id("dx-explorer-edit-controls")
                     .gap_0p5()
                     .child(
@@ -4973,6 +4815,75 @@ impl ProjectPanel {
                             })),
                     ),
             )
+            .child(
+                PopoverMenu::new("dx-explorer-project-options-menu")
+                    .trigger_with_tooltip(
+                        IconButton::new("dx-explorer-project-options", IconName::Ellipsis)
+                            .shape(IconButtonShape::Square)
+                            .style(ButtonStyle::Subtle)
+                            .icon_size(IconSize::Small)
+                            .tab_index(0_isize)
+                            .track_focus(&project_options_focus_handle),
+                        move |_window, _cx| Tooltip::text("Project options"),
+                    )
+                    .anchor(gpui::Anchor::TopRight)
+                    .menu(move |window, cx| {
+                        let panel = panel_for_project_options.clone();
+                        Some(ContextMenu::build(window, cx, move |menu, _window, _cx| {
+                            menu.header("Project View")
+                                .action_checked_with_disabled(
+                                    if show_ignored_entries {
+                                        "Ignored files visible"
+                                    } else {
+                                        "Ignored files hidden"
+                                    },
+                                    ToggleHideGitIgnore.boxed_clone(),
+                                    show_ignored_entries,
+                                    !has_worktree,
+                                )
+                                .action_checked_with_disabled(
+                                    if show_hidden_entries {
+                                        "Hidden files visible"
+                                    } else {
+                                        "Hidden files hidden"
+                                    },
+                                    ToggleHideHidden.boxed_clone(),
+                                    show_hidden_entries,
+                                    !has_worktree,
+                                )
+                                .entry(
+                                    "Project symbols",
+                                    Some(ToggleProjectSymbols.boxed_clone()),
+                                    move |window, cx| {
+                                        if has_worktree {
+                                            window.dispatch_action(
+                                                ToggleProjectSymbols.boxed_clone(),
+                                                cx,
+                                            );
+                                        }
+                                    },
+                                )
+                                .entry(
+                                    "Collapse folders",
+                                    Some(CollapseAllEntries.boxed_clone()),
+                                    move |window, cx| {
+                                        if has_worktree {
+                                            panel
+                                                .update_in(cx, |this, window, cx| {
+                                                    this.focus_handle(cx).focus(window, cx);
+                                                    this.collapse_all_entries(
+                                                        &CollapseAllEntries,
+                                                        window,
+                                                        cx,
+                                                    );
+                                                })
+                                                .log_err();
+                                        }
+                                    },
+                                )
+                        }))
+                    }),
+            )
             .child(self.render_side_panel_header_controls("dx-explorer", cx));
 
         v_flex()
@@ -4986,15 +4897,19 @@ impl ProjectPanel {
             .child(
                 h_flex()
                     .id("dx-explorer-title-row")
-                    .h(px(32.0))
+                    .h(Tab::container_height(cx))
                     .w_full()
                     .min_w_0()
                     .items_center()
                     .justify_between()
                     .gap_2()
+                    .tooltip(move |_window, cx| {
+                        Tooltip::with_meta("Project summary", None, header_summary_meta.clone(), cx)
+                    })
                     .child(
                         h_flex()
                             .min_w_0()
+                            .overflow_hidden()
                             .items_center()
                             .gap_1()
                             .child(
@@ -5010,20 +4925,6 @@ impl ProjectPanel {
                             ),
                     )
                     .child(header_controls),
-            )
-            .child(
-                h_flex()
-                    .id("dx-explorer-summary-row")
-                    .h(px(28.0))
-                    .w_full()
-                    .min_w_0()
-                    .items_center()
-                    .gap_2()
-                    .px_1()
-                    .tooltip(move |_window, cx| {
-                        Tooltip::with_meta("Project summary", None, header_summary_meta.clone(), cx)
-                    })
-                    .child(header_metrics),
             )
             .into_any_element()
     }

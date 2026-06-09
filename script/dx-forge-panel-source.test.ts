@@ -1182,7 +1182,7 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.match(providerGroupControlsBody, /Label::new\(group\.title\(\)\)/);
   assert.doesNotMatch(providerGroupControlsBody, /Label::new\(state\.detail\.clone\(\)\)/);
   assert.match(providerGroupControlsBody, /remote_target_tooltip\(group, &state, target_path\.as_deref\(\), enabled\)/);
-  assert.match(providerGroupControlsBody, /Icon::new\(state\.icon\)/);
+  assert.match(providerGroupControlsBody, /Indicator::dot\(\)\.color\(state\.color\)/);
   assert.match(providerGroupControlsBody, /format!\("Open \{\}", group\.title\(\)\)/);
   assert.match(
     providerButtonsBody,
@@ -1217,7 +1217,7 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.match(providers, /visible_restore_warning_count/);
   assert.match(providers, /media_outputs\.len\(\)/);
   assert.match(providers, /Tooltip::with_meta/);
-  assert.match(providers, /Icon::new\(state\.icon\)/);
+  assert.doesNotMatch(providers, /Icon::new\(state\.icon\)/);
   assert.doesNotMatch(providersView, /Label::new\(state\.label\)/);
   assert.match(providers, /source_slug/);
   assert.doesNotMatch(providers, /fn provider_icon_stack/);

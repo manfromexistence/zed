@@ -15,22 +15,22 @@ pub(super) fn connection_detail_row(
     detail: impl Into<SharedString>,
 ) -> AnyElement {
     ListItem::new(id)
-        .spacing(ListItemSpacing::ExtraDense)
+        .spacing(ListItemSpacing::Sparse)
         .selectable(false)
-        .start_slot(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted))
+        .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
         .child(
             h_flex()
                 .min_w_0()
                 .gap_1()
                 .child(
                     Label::new(label.into())
-                        .size(LabelSize::XSmall)
+                        .size(LabelSize::Small)
                         .color(Color::Muted)
                         .flex_none(),
                 )
                 .child(
                     Label::new(detail.into())
-                        .size(LabelSize::XSmall)
+                        .size(LabelSize::Small)
                         .color(Color::Default)
                         .truncate(),
                 ),

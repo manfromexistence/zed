@@ -6162,7 +6162,7 @@ impl AgentPanel {
                 .end_icon(
                     Icon::new(chevron_icon)
                         .color(icon_color)
-                        .size(IconSize::XSmall),
+                        .size(IconSize::Small),
                 );
 
             let agent_selector_menu = PopoverMenu::new("new_thread_menu")
@@ -6379,7 +6379,7 @@ impl AgentPanel {
             format!("agent-toolbar-response-indicator-page-{label}-{entry_ix}"),
             icon,
         )
-        .icon_size(IconSize::XSmall)
+        .icon_size(IconSize::Small)
         .icon_color(Color::Muted)
         .tab_index(0_isize)
         .tooltip(Tooltip::text(label))
@@ -6994,10 +6994,10 @@ impl AgentPanel {
                         .min_w_0()
                         .child(
                             Button::new(format!("dx-source-row-action-{ix}"), action_label)
-                                .label_size(LabelSize::XSmall)
+                                .label_size(LabelSize::Small)
                                 .color(Color::Muted)
                                 .start_icon(
-                                    Icon::new(icon).size(IconSize::XSmall).color(Color::Muted),
+                                    Icon::new(icon).size(IconSize::Small).color(Color::Muted),
                                 )
                                 .disabled(!can_create_entries)
                                 .on_click(cx.listener(move |this, _, window, cx| {
@@ -7006,11 +7006,11 @@ impl AgentPanel {
                         )
                         .child(
                             Button::new(format!("dx-source-row-receipt-{ix}"), "Receipt")
-                                .label_size(LabelSize::XSmall)
+                                .label_size(LabelSize::Small)
                                 .color(Color::Muted)
                                 .start_icon(
                                     Icon::new(IconName::FileTextOutlined)
-                                        .size(IconSize::XSmall)
+                                        .size(IconSize::Small)
                                         .color(Color::Muted),
                                 )
                                 .disabled(!can_create_entries || !has_receipt_drilldowns)
@@ -7053,28 +7053,27 @@ impl AgentPanel {
                     .gap_1()
                     .min_w_0()
                     .items_center()
-                    .child(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted))
+                    .child(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
                     .child(
                         Label::new(title)
-                            .size(LabelSize::XSmall)
+                            .size(LabelSize::Small)
                             .color(Color::Default)
                             .truncate(),
                     ),
             )
             .child(
                 Label::new(detail)
-                    .size(LabelSize::XSmall)
+                    .size(LabelSize::Small)
                     .color(Color::Muted)
                     .truncate(),
             )
             .child(
                 Button::new(action_id, action_label)
-                    .full_width()
-                    .label_size(LabelSize::XSmall)
+                    .label_size(LabelSize::Small)
                     .color(Color::Muted)
                     .start_icon(
                         Icon::new(IconName::Paperclip)
-                            .size(IconSize::XSmall)
+                            .size(IconSize::Small)
                             .color(Color::Muted),
                     )
                     .disabled(!can_create_entries)
@@ -7287,28 +7286,27 @@ impl AgentPanel {
                     .gap_1()
                     .min_w_0()
                     .items_center()
-                    .child(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted))
+                    .child(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
                     .child(
                         Label::new(title)
-                            .size(LabelSize::XSmall)
+                            .size(LabelSize::Small)
                             .color(Color::Default)
                             .truncate(),
                     ),
             )
             .child(
                 Label::new(detail)
-                    .size(LabelSize::XSmall)
+                    .size(LabelSize::Small)
                     .color(Color::Muted)
                     .truncate(),
             )
             .child(
                 Button::new(action_id, action_label)
-                    .full_width()
-                    .label_size(LabelSize::XSmall)
+                    .label_size(LabelSize::Small)
                     .color(Color::Muted)
                     .start_icon(
                         Icon::new(IconName::PlayOutlined)
-                            .size(IconSize::XSmall)
+                            .size(IconSize::Small)
                             .color(Color::Muted),
                     )
                     .disabled(!can_create_entries)

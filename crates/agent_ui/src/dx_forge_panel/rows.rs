@@ -1,5 +1,5 @@
-use gpui::{AnyElement, App, EntityId, IntoElement, WeakEntity, px};
-use ui::{IconName, ListHeader, ListItem, ListItemSpacing, prelude::*};
+use gpui::{AnyElement, App, EntityId, IntoElement, WeakEntity};
+use ui::{IconName, ListHeader, ListItem, ListItemSpacing, Tab, prelude::*};
 use workspace::{Workspace, dock::side_panel_header_controls};
 
 use super::snapshot::DxForgePanelState;
@@ -11,7 +11,7 @@ pub(super) fn panel_header(
 ) -> impl IntoElement {
     h_flex()
         .id("dx-forge-panel-header")
-        .h(px(32.0))
+        .h(Tab::container_height(cx))
         .w_full()
         .min_w_0()
         .items_center()
