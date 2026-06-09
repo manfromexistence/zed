@@ -4,7 +4,10 @@ use gpui::{
     AnyElement, App, ClickEvent, Context, DismissEvent, EventEmitter, FocusHandle, Focusable,
     Render, SharedString, Window, prelude::*,
 };
-use ui::{Disclosure, DxRainbowGlow, IconName, PopoverMenu, Tooltip, prelude::*};
+use ui::{
+    DxRainbowGlow, IconName, ListHeader, ListItem, ListItemSpacing, PopoverMenu, Tooltip,
+    prelude::*,
+};
 
 use crate::dx_agent_bridge::DxAgentBridgeSnapshot;
 use crate::dx_check_score::DxCheckScoreSnapshot;
@@ -542,19 +545,13 @@ fn rail_section(
         .id(id)
         .gap_1()
         .child(
-            h_flex()
-                .id(format!("{id}-header"))
-                .items_center()
-                .gap_1()
-                .py_0p5()
-                .cursor_pointer()
-                .on_click(move |event, window, cx| {
+            ListHeader::new(label)
+                .inset(true)
+                .toggle(Some(is_open))
+                .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
+                .on_toggle(move |event, window, cx| {
                     on_toggle(section, event, window, cx);
-                })
-                .child(Disclosure::new(format!("{id}-disclosure"), is_open))
-                .child(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
-                .child(Label::new(label).size(LabelSize::Small).color(Color::Muted))
-                .child(div().flex_1()),
+                }),
         )
         .when(is_open, |this| this.child(content))
         .when(!is_open && show_bottom_rule, |this| {
@@ -631,60 +628,43 @@ fn compact_status_row(
     icon: IconName,
     label: &'static str,
     value: impl Into<SharedString>,
-    cx: &App,
+    _cx: &App,
 ) -> AnyElement {
     let value = value.into();
 
-    h_flex()
-        .id(id)
-        .items_center()
-        .justify_between()
-        .gap_2()
-        .min_w_0()
-        .rounded_sm()
-        .px_1()
-        .py_0p5()
-        .hover(|this| this.bg(cx.theme().colors().element_hover))
-        .tooltip(Tooltip::text(format!("{label}: {value}")))
+    ListItem::new(id)
+        .inset(true)
+        .spacing(ListItemSpacing::ExtraDense)
+        .selectable(false)
+        .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
         .child(
-            h_flex()
-                .gap_1p5()
-                .min_w_0()
-                .child(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
-                .child(
-                    Label::new(label)
-                        .size(LabelSize::Small)
-                        .color(Color::Default)
-                        .truncate(),
-                ),
+            Label::new(label)
+                .size(LabelSize::Small)
+                .color(Color::Default)
+                .truncate(),
         )
+        .tooltip(Tooltip::text(format!("{label}: {value}")))
         .into_any_element()
 }
 
-fn subagent_row(id: SharedString, row: &DxSubagentStatusRow, cx: &App) -> AnyElement {
-    h_flex()
-        .id(id)
-        .items_center()
-        .gap_2()
-        .min_w_0()
-        .rounded_sm()
-        .px_1()
-        .py_0p5()
-        .hover(|this| this.bg(cx.theme().colors().element_hover))
-        .tooltip(Tooltip::text(format!(
-            "{}: {}",
-            row.status.label(),
-            row.detail
-        )))
-        .child(subagent_pixel_icon(row.status))
+fn subagent_row(id: SharedString, row: &DxSubagentStatusRow, _cx: &App) -> AnyElement {
+    ListItem::new(id)
+        .inset(true)
+        .spacing(ListItemSpacing::ExtraDense)
+        .selectable(false)
+        .start_slot(subagent_pixel_icon(row.status))
         .child(
             Label::new(row.label.clone())
                 .size(LabelSize::Small)
                 .color(Color::Default)
                 .truncate(),
         )
-        .child(div().flex_1())
-        .child(subagent_status_badge(row.status))
+        .end_slot(subagent_status_badge(row.status))
+        .tooltip(Tooltip::text(format!(
+            "{}: {}",
+            row.status.label(),
+            row.detail
+        )))
         .into_any_element()
 }
 
@@ -693,7 +673,6 @@ fn subagent_status_badge(status: DxSubagentStatus) -> AnyElement {
 
     h_flex()
         .items_center()
-        .gap_0p5()
         .rounded_sm()
         .border_1()
         .border_color(color.opacity(0.42))
@@ -780,11 +759,11 @@ fn signal_row(
     color: Color,
     label: impl Into<SharedString>,
 ) -> AnyElement {
-    h_flex()
-        .id(id)
-        .gap_1()
-        .min_w_0()
-        .child(Icon::new(icon).size(IconSize::XSmall).color(color))
+    ListItem::new(id)
+        .inset(true)
+        .spacing(ListItemSpacing::ExtraDense)
+        .selectable(false)
+        .start_slot(Icon::new(icon).size(IconSize::Small).color(color))
         .child(
             Label::new(label.into())
                 .size(LabelSize::XSmall)
@@ -812,17 +791,13 @@ fn source_row(
     id: SharedString,
     icon: IconName,
     label: impl Into<SharedString>,
-    cx: &App,
+    _cx: &App,
 ) -> AnyElement {
-    h_flex()
-        .id(id)
-        .gap_1()
-        .min_w_0()
-        .rounded_sm()
-        .px_1()
-        .py_0p5()
-        .bg(cx.theme().colors().element_background)
-        .child(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted))
+    ListItem::new(id)
+        .inset(true)
+        .spacing(ListItemSpacing::ExtraDense)
+        .selectable(false)
+        .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
         .child(
             Label::new(label.into())
                 .size(LabelSize::XSmall)
@@ -833,17 +808,20 @@ fn source_row(
 }
 
 fn metric_row(label: impl Into<SharedString>, value: impl Into<SharedString>) -> AnyElement {
-    h_flex()
-        .justify_between()
-        .gap_2()
-        .min_w_0()
+    let label = label.into();
+    let value = value.into();
+
+    ListItem::new(rail_stable_id("dx-launch-metric", label.as_ref()))
+        .inset(true)
+        .spacing(ListItemSpacing::ExtraDense)
+        .selectable(false)
         .child(
-            Label::new(label.into())
+            Label::new(label)
                 .size(LabelSize::XSmall)
                 .color(Color::Muted),
         )
-        .child(
-            Label::new(value.into())
+        .end_slot(
+            Label::new(value)
                 .size(LabelSize::XSmall)
                 .color(Color::Default)
                 .truncate(),
@@ -851,19 +829,37 @@ fn metric_row(label: impl Into<SharedString>, value: impl Into<SharedString>) ->
         .into_any_element()
 }
 
-fn muted_card(label: impl Into<SharedString>, cx: &App) -> AnyElement {
-    div()
-        .w_full()
-        .rounded_sm()
-        .border_1()
-        .border_color(cx.theme().colors().border_variant)
-        .px_2()
-        .py_1()
+fn muted_card(label: impl Into<SharedString>, _cx: &App) -> AnyElement {
+    let label = label.into();
+
+    ListItem::new(rail_stable_id("dx-launch-empty", label.as_ref()))
+        .inset(true)
+        .spacing(ListItemSpacing::ExtraDense)
+        .selectable(false)
+        .start_slot(
+            Icon::new(IconName::Info)
+                .size(IconSize::Small)
+                .color(Color::Muted),
+        )
         .child(
-            Label::new(label.into())
+            Label::new(label)
                 .size(LabelSize::XSmall)
                 .color(Color::Muted)
                 .truncate(),
         )
         .into_any_element()
+}
+
+fn rail_stable_id(prefix: &str, label: &str) -> SharedString {
+    let mut id = String::with_capacity(prefix.len() + label.len().min(48) + 1);
+    id.push_str(prefix);
+    id.push('-');
+    for ch in label.chars().take(48) {
+        if ch.is_ascii_alphanumeric() {
+            id.push(ch.to_ascii_lowercase());
+        } else if !id.ends_with('-') {
+            id.push('-');
+        }
+    }
+    SharedString::from(id.trim_end_matches('-').to_string())
 }

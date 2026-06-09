@@ -39,7 +39,7 @@ pub(super) fn status_strip(
             h_flex()
                 .flex_none()
                 .gap_1()
-                .child(status_chip(workspace_scope, Color::Muted, cx))
+                .child(status_marker(workspace_scope, Color::Muted, cx))
                 .child(actions),
         )
         .into_any_element()
@@ -58,12 +58,12 @@ pub(super) fn section_header(
             ListHeader::new(title)
                 .inset(true)
                 .start_slot(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted))
-                .end_slot(count_chip(count, Color::Muted, cx)),
+                .end_slot(count_marker(count, Color::Muted, cx)),
         )
         .into_any_element()
 }
 
-pub(super) fn status_chip(label: impl Into<SharedString>, color: Color, _cx: &App) -> AnyElement {
+pub(super) fn status_marker(label: impl Into<SharedString>, color: Color, _cx: &App) -> AnyElement {
     h_flex()
         .h_5()
         .min_w_0()
@@ -84,7 +84,7 @@ pub(super) fn status_chip(label: impl Into<SharedString>, color: Color, _cx: &Ap
         .into_any_element()
 }
 
-pub(super) fn count_chip(count: usize, color: Color, _cx: &App) -> AnyElement {
+pub(super) fn count_marker(count: usize, color: Color, _cx: &App) -> AnyElement {
     h_flex()
         .h_5()
         .min_w_5()

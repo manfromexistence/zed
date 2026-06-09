@@ -114,6 +114,7 @@ const SIDEBAR_SPACE_GRID_COLUMNS: usize = 3;
 const SIDEBAR_SPACE_GRID_ITEMS: usize = SIDEBAR_SPACE_GRID_COLUMNS * 4;
 const MAX_VISIBLE_SPACE_DOTS: usize = 7;
 const MAX_SIDEBAR_GRID_SHORTCUTS: usize = 24;
+const MAX_SIDEBAR_MANUAL_THREAD_ORDER: usize = 512;
 
 #[derive(Clone, Serialize, Deserialize)]
 struct SerializedSpaceLabel {
@@ -198,6 +199,7 @@ enum SerializedSidebarView {
 #[derive(Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 enum SidebarThreadSortMode {
+    Manual,
     #[default]
     Latest,
     Oldest,
@@ -206,7 +208,8 @@ enum SidebarThreadSortMode {
 }
 
 impl SidebarThreadSortMode {
-    const ALL: [Self; 4] = [
+    const ALL: [Self; 5] = [
+        Self::Manual,
         Self::Latest,
         Self::Oldest,
         Self::TitleAscending,
@@ -215,6 +218,7 @@ impl SidebarThreadSortMode {
 
     fn label(self) -> &'static str {
         match self {
+            Self::Manual => "Custom",
             Self::Latest => "Latest",
             Self::Oldest => "Oldest",
             Self::TitleAscending => "A to Z",
@@ -224,6 +228,7 @@ impl SidebarThreadSortMode {
 
     fn icon(self) -> IconName {
         match self {
+            Self::Manual => IconName::ListTodo,
             Self::Latest => IconName::Clock,
             Self::Oldest => IconName::HistoryRerun,
             Self::TitleAscending => IconName::ArrowUp,
@@ -271,6 +276,8 @@ struct SerializedSidebar {
     grid_shortcuts: Vec<SerializedSidebarGridShortcut>,
     #[serde(default)]
     thread_sort_mode: SidebarThreadSortMode,
+    #[serde(default)]
+    manual_thread_order: Vec<ThreadId>,
     #[serde(default)]
     thread_icon_overrides: Vec<SerializedThreadIconOverride>,
 }
@@ -1065,6 +1072,7 @@ pub struct Sidebar {
     activity_bar_expanded: bool,
     grid_shortcuts: Vec<SerializedSidebarGridShortcut>,
     thread_sort_mode: SidebarThreadSortMode,
+    manual_thread_order: Vec<ThreadId>,
     thread_icon_overrides: HashMap<ThreadId, IconName>,
     thread_icon_picker_handles: RefCell<HashMap<ThreadId, PopoverMenuHandle<ThreadIconPickerMenu>>>,
     grid_entry_cache:
@@ -1215,6 +1223,7 @@ impl Sidebar {
             activity_bar_expanded: false,
             grid_shortcuts: Vec::new(),
             thread_sort_mode: SidebarThreadSortMode::default(),
+            manual_thread_order: Vec::new(),
             thread_icon_overrides: HashMap::new(),
             thread_icon_picker_handles: RefCell::default(),
             grid_entry_cache: RefCell::default(),
@@ -6119,6 +6128,81 @@ impl Sidebar {
         metadata.interacted_at.unwrap_or(metadata.updated_at)
     }
 
+    fn reorder_thread_around(
+        &mut self,
+        dragged_thread_id: ThreadId,
+        target_thread_id: ThreadId,
+        cx: &mut Context<Self>,
+    ) {
+        if dragged_thread_id == target_thread_id || self.has_filter_query(cx) {
+            return;
+        }
+
+        let visible_thread_ids = self
+            .contents
+            .entries
+            .iter()
+            .filter_map(|entry| match entry {
+                ListEntry::Thread(thread) if thread.draft != Some(DraftKind::Empty) => {
+                    Some(thread.metadata.thread_id)
+                }
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        let Some(dragged_ix) = visible_thread_ids
+            .iter()
+            .position(|thread_id| *thread_id == dragged_thread_id)
+        else {
+            return;
+        };
+        let Some(target_ix) = visible_thread_ids
+            .iter()
+            .position(|thread_id| *thread_id == target_thread_id)
+        else {
+            return;
+        };
+        let insert_after_target = dragged_ix < target_ix;
+
+        let mut ordered_thread_ids = Vec::with_capacity(self.manual_thread_order.len() + 1);
+        let mut seen_thread_ids = HashSet::default();
+        for thread_id in self.manual_thread_order.iter().copied() {
+            if seen_thread_ids.insert(thread_id) {
+                ordered_thread_ids.push(thread_id);
+            }
+        }
+        for thread_id in visible_thread_ids {
+            if seen_thread_ids.insert(thread_id) {
+                ordered_thread_ids.push(thread_id);
+            }
+        }
+
+        if !ordered_thread_ids.contains(&dragged_thread_id)
+            || !ordered_thread_ids.contains(&target_thread_id)
+        {
+            return;
+        }
+
+        ordered_thread_ids.retain(|thread_id| *thread_id != dragged_thread_id);
+        let mut insertion_ix = ordered_thread_ids
+            .iter()
+            .position(|thread_id| *thread_id == target_thread_id)
+            .unwrap_or(ordered_thread_ids.len());
+        if insert_after_target {
+            insertion_ix += 1;
+        }
+        ordered_thread_ids.insert(
+            insertion_ix.min(ordered_thread_ids.len()),
+            dragged_thread_id,
+        );
+        ordered_thread_ids.truncate(MAX_SIDEBAR_MANUAL_THREAD_ORDER);
+
+        self.manual_thread_order = ordered_thread_ids;
+        self.thread_sort_mode = SidebarThreadSortMode::Manual;
+        self.update_entries(cx);
+        self.serialize(cx);
+        cx.notify();
+    }
+
     fn push_entries_by_display_time(
         &self,
         entries: &mut Vec<ListEntry>,
@@ -6152,7 +6236,38 @@ impl Sidebar {
             .chain(threads.into_iter().map(ListEntry::Thread))
             .collect::<Vec<_>>();
 
+        let manual_thread_ranks = self
+            .manual_thread_order
+            .iter()
+            .enumerate()
+            .map(|(ix, thread_id)| (*thread_id, ix))
+            .collect::<HashMap<_, _>>();
+        let manual_thread_rank = |entry: &ListEntry| match entry {
+            ListEntry::Thread(thread) if thread.draft != Some(DraftKind::Empty) => {
+                manual_thread_ranks.get(&thread.metadata.thread_id).copied()
+            }
+            _ => None,
+        };
+
         row_entries.sort_by(|left, right| match self.thread_sort_mode {
+            SidebarThreadSortMode::Manual => {
+                let left_rank = manual_thread_rank(left);
+                let right_rank = manual_thread_rank(right);
+
+                match (left_rank, right_rank) {
+                    (Some(left_rank), Some(right_rank)) => left_rank
+                        .cmp(&right_rank)
+                        .then_with(|| display_time(right).cmp(&display_time(left))),
+                    (Some(_), None) => Ordering::Less,
+                    (None, Some(_)) => Ordering::Greater,
+                    (None, None) => display_time(right).cmp(&display_time(left)).then_with(|| {
+                        title(left)
+                            .as_ref()
+                            .to_lowercase()
+                            .cmp(&title(right).as_ref().to_lowercase())
+                    }),
+                }
+            }
             SidebarThreadSortMode::Latest => {
                 display_time(right).cmp(&display_time(left)).then_with(|| {
                     title(left)
@@ -6568,6 +6683,7 @@ impl Sidebar {
         let is_selected = is_active;
         let is_draft = thread.draft.is_some();
         let is_empty_draft = thread.draft == Some(DraftKind::Empty);
+        let can_reorder_thread = !is_empty_draft && !self.has_filter_query(cx);
         let is_running = matches!(
             thread.status,
             AgentThreadStatus::Running | AgentThreadStatus::WaitingForConfirmation
@@ -6585,6 +6701,8 @@ impl Sidebar {
         let sidebar_bg = color
             .title_bar_background
             .blend(color.panel_background.opacity(0.25));
+        let drop_target_background = color.element_hover;
+        let drop_target_border = color.text_accent;
 
         let timestamp: SharedString = if is_empty_draft {
             SharedString::default()
@@ -6827,6 +6945,23 @@ impl Sidebar {
 
         div()
             .id(("thread-drag-source", ix))
+            .when(can_reorder_thread, |this| {
+                let target_thread_id = thread.metadata.thread_id;
+                this.drag_over::<DraggedSidebarThread>(move |row, dragged, _, _cx| {
+                    if dragged.thread_id == target_thread_id {
+                        row
+                    } else {
+                        row.bg(drop_target_background)
+                            .border_l_2()
+                            .border_color(drop_target_border)
+                    }
+                })
+                .on_drop(cx.listener(
+                    move |this, dragged: &DraggedSidebarThread, _window, cx| {
+                        this.reorder_thread_around(dragged.thread_id, target_thread_id, cx);
+                    },
+                ))
+            })
             .on_drag(dragged_thread, |dragged, _, _, cx| {
                 cx.new(|_| dragged.clone())
             })
@@ -7759,7 +7894,7 @@ impl Sidebar {
                     ))
                     .child(button(
                         "sidebar-toolbar-settings",
-                        IconName::DxCog,
+                        dx_icon(DxUiIcon::Settings),
                         "Settings",
                         |_this, _, window, cx| {
                             window.dispatch_action(Box::new(zed_actions::OpenSettings), cx);
@@ -7950,7 +8085,7 @@ impl Sidebar {
             button(
                 cx,
                 "sidebar-activity-settings",
-                IconName::DxCog,
+                dx_icon(DxUiIcon::Settings),
                 "Settings",
                 |_this, _, window, cx| {
                     window.dispatch_action(Box::new(zed_actions::OpenSettings), cx);
@@ -9508,6 +9643,12 @@ impl WorkspaceSidebar for Sidebar {
             activity_bar_expanded: self.activity_bar_expanded,
             grid_shortcuts: self.grid_shortcuts.clone(),
             thread_sort_mode: self.thread_sort_mode,
+            manual_thread_order: self
+                .manual_thread_order
+                .iter()
+                .copied()
+                .take(MAX_SIDEBAR_MANUAL_THREAD_ORDER)
+                .collect(),
             thread_icon_overrides: self
                 .thread_icon_overrides
                 .iter()
@@ -9556,6 +9697,11 @@ impl WorkspaceSidebar for Sidebar {
                 .take(MAX_SIDEBAR_GRID_SHORTCUTS)
                 .collect();
             self.thread_sort_mode = serialized.thread_sort_mode;
+            self.manual_thread_order = serialized
+                .manual_thread_order
+                .into_iter()
+                .take(MAX_SIDEBAR_MANUAL_THREAD_ORDER)
+                .collect();
             self.thread_icon_overrides = serialized
                 .thread_icon_overrides
                 .into_iter()

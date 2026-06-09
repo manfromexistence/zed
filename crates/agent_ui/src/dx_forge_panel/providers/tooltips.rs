@@ -11,13 +11,10 @@ pub(super) fn provider_tooltip_meta(
     target_path: Option<&str>,
     enabled: bool,
 ) -> String {
-    let mut lines = vec![
-        format!("Status: {}", state.label),
-        state.detail.clone(),
-    ];
+    let mut lines = vec![format!("State: {}", state.label), state.detail.clone()];
 
     if let Some(remote) = snapshot.remote_provider_for(provider.id) {
-        lines.push(format!("Remote: {}", remote.remote_name));
+        lines.push(format!("Configured remote: {}", remote.remote_name));
         lines.push(format!("Registry: {}", remote.registry_path));
         lines.push(remote.detail.clone());
     } else if let Some(path) = target_path {

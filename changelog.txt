@@ -1,3 +1,20 @@
+[2026-06-09] - Sidebar Reorder And DX Panel Primitive Cleanup
+
+CHANGED:
+- `crates\sidebar\src\sidebar.rs` now persists manual chat-thread ordering through real drag/drop row targets, adds a guarded Custom sort mode, and keeps filtered/sidebar draft states from corrupting the saved order.
+- `crates\agent_ui\src\dx_launch_workspace.rs` now renders fullscreen Agent floating rail sections and rows through shared GPUI `ListHeader` and `ListItem` primitives instead of bespoke row chrome.
+- `crates\agent_ui\src\dx_forge_panel\*.rs` now uses Git-panel-style list/header/action primitives for Forge package, remote, machine-cache, and workflow surfaces, with source-owned labels and explicit source-only evidence wording.
+- `assets\icons\dx_cog.svg` and focused source guards now pin the Lucide Cog contract used by DX sidebar settings surfaces.
+- `script\dx-workspace-ui-state-source.test.ts`, `script\dx-launch-workspace-source.test.ts`, `script\dx-icon-system-source.test.ts`, and `script\dx-forge-panel-source.test.ts` now guard the sidebar reorder, rail primitive, cog icon, and Forge panel contracts.
+
+PASSED:
+- `rustfmt --edition 2024 --check` on touched Rust files
+- `node --test script\dx-icon-system-source.test.ts script\dx-workspace-ui-state-source.test.ts script\dx-launch-workspace-source.test.ts script\dx-check-panel-source.test.ts script\dx-forge-panel-source.test.ts`
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. `just run`, Cargo build/check/test/clippy, and runtime visual proof were not run.
+
 [2026-06-09] - Sidebar Workspace Button And Rail Badge Polish
 
 CHANGED:

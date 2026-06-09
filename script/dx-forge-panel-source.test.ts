@@ -321,7 +321,7 @@ test("Forge panel reads package-status without runtime overclaims", () => {
       panelView.indexOf("machine_cache_section(snapshot, workspace, panel, cx)"),
     "package status should be visible before machine cache evidence",
   );
-  assert.match(panelView, /"Package Status"/);
+  assert.match(panelView, /title: PACKAGE_STATUS_LABEL/);
   assert.match(panelView, /No package status found/);
   assert.match(packageStatusCache, /const PACKAGE_STATUS_CACHE_TTL: Duration = Duration::from_secs\(5\);/);
   assert.match(packageStatus, /const MAX_PACKAGE_STATUS_BYTES: u64 = 1024 \* 1024;/);
@@ -420,7 +420,7 @@ test("Forge panel surfaces bounded machine-cache evidence without freshness over
         panelView.indexOf("restore_section(snapshot, workspace, panel, cx)"),
     "package and media workflow sections should keep their source-backed order",
   );
-  assert.match(panelView, /"Machine Caches"/);
+  assert.match(panelView, /title: MACHINE_CACHES_LABEL/);
   assert.match(panelView, /No machine caches found/);
   assert.match(machineCache, /const MACHINE_CACHE_CACHE_TTL: Duration = Duration::from_secs\(5\);/);
   assert.match(machineCache, /const MAX_MACHINE_CACHE_ROOTS: usize = 4;/);
@@ -494,7 +494,7 @@ test("Forge panel reads Forge remote registry and makes provider targets concret
   assert.match(snapshot, /REMOTE_REGISTRY_LABEL/);
   assert.match(panel, /invalidate_remote_registry_snapshot_cache\(\)/);
   assert.match(panelView, /fn remote_registry_section/);
-  assert.match(panelView, /"Remote Registry"/);
+  assert.match(panelView, /title: REMOTE_REGISTRY_LABEL/);
   assert.match(panelView, /No remote registry found/);
   const remotesBranch =
     panelView.match(/DxForgePanelTab::Remotes => vec!\[[\s\S]*?\],/)?.[0] ?? "";
@@ -623,7 +623,8 @@ test("Forge panel uses Git-style controls instead of metric cards", () => {
   const evidenceRowBodies = `${statusStripBody}\n${sectionHeaderBody}\n${selectableRowBody}\n${emptyRowBody}`;
 
   assert.match(moduleRoot, /mod controls;/);
-  assert.match(panelView, /toolbar\(snapshot, workspace, panel, cx\)/);
+  assert.match(panelView, /panel_header\(workspace, panel_id, cx\)/);
+  assert.match(panelView, /status_strip\(/);
   assert.match(panelView, /section_header\(/);
   assert.match(rows, /pub\(super\) fn section_header/);
   assert.match(statusStripBody, /ListItem::new\("dx-forge-status"\)/);
@@ -652,13 +653,18 @@ test("Forge panel uses Git-style controls instead of metric cards", () => {
   assert.doesNotMatch(selectableRowBody, /\.spacing\(ListItemSpacing::Sparse\)/);
   assert.doesNotMatch(selectableRowBody, /\bpath: String\b/);
   assert.match(selectableRowBody, /\.start_slot\(Icon::new\(icon\)/);
-  assert.match(selectableRowBody, /selectable_row_actions\(open_button, selection_checkbox\)/);
-  assert.match(selectableRowBody, /\.end_slot\(row_actions\)/);
+  assert.match(selectableRowBody, /let hover_checkbox_id = SharedString::from\(format!\("\{id\}-hover"\)\)/);
+  assert.match(selectableRowBody, /let checkbox = selection_checkbox\(id\.clone\(\), item_key\.clone\(\), checked, panel\)/);
+  assert.match(selectableRowBody, /let hover_checkbox = selection_checkbox\(hover_checkbox_id, item_key, checked, panel\)/);
+  assert.match(selectableRowBody, /selectable_row_actions\(open_button, hover_checkbox\)/);
+  assert.match(selectableRowBody, /\.end_slot\(checkbox\)/);
+  assert.match(selectableRowBody, /\.end_slot_on_hover\(row_actions\)/);
   assert.doesNotMatch(selectableRowBody, /\.start_slot\(selection_checkbox\)/);
   assert.match(workflowRows, /fn selectable_row_actions/);
   assert.match(selectableRowActionsBody, /\.on_mouse_down\(MouseButton::Left/);
-  assert.match(selectableRowActionsBody, /\.on_click\(\|_, _, cx\|/);
   assert.match(selectableRowActionsBody, /cx\.stop_propagation\(\);/);
+  assert.match(selectableRowActionsBody, /actions = actions\.child\(open_button\)/);
+  assert.match(selectableRowActionsBody, /actions\.child\(selection_checkbox\)\.into_any_element\(\)/);
   assert.match(emptyRowBody, /ListItem::new\(id\)/);
   assert.match(emptyRowBody, /\.inset\(true\)/);
   assert.match(emptyRowBody, /\.spacing\(ListItemSpacing::Sparse\)/);
@@ -715,7 +721,7 @@ test("Forge panel uses workflow tabs with Git-style selectable rows", () => {
   assert.match(forgeTabBody, /\.toggle_state\(selected\)/);
   assert.match(forgeTabBody, /\.selected_bottom_border\(true\)/);
   assert.match(forgeTabBody, /\.start_slot\(\s*Icon::new\(tab_icon\(tab\)\)/);
-  assert.match(forgeTabBody, /\.end_slot\(\s*Label::new\(format!\("\(\{count\}\)"\)\)/);
+  assert.match(forgeTabBody, /\.end_slot\(count_marker\(/);
   assert.match(
     forgeTabBody,
     /panel\.focus_panel\(window, cx\)[\s\S]*panel\.set_active_tab\(tab, cx\)/,
@@ -825,7 +831,8 @@ test("Forge panel uses workflow tabs with Git-style selectable rows", () => {
   assert.match(workflowRows, /\.child\(selection_checkbox\)/);
   assert.match(workflowRows, /let checked = item_checked\(panel, &item_key, cx\)/);
   assert.match(workflowRows, /let active = item_active\(panel, &item_key, cx\)/);
-  assert.match(workflowRows, /selection_checkbox\(id\.clone\(\), item_key, checked, panel\)/);
+  assert.match(workflowRows, /selection_checkbox\(id\.clone\(\), item_key\.clone\(\), checked, panel\)/);
+  assert.match(workflowRows, /selection_checkbox\(hover_checkbox_id, item_key, checked, panel\)/);
   assert.match(workflowRows, /row_scroll_anchor\(panel, &row_key, cx\)/);
   assert.match(workflowRows, /\.anchor_scroll\(scroll_anchor\)/);
   assert.match(workflowRows, /\.toggle_state\(active\)/);
@@ -1144,7 +1151,11 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.match(providerGroupControlsBody, /\.inset\(true\)/);
   assert.match(providerGroupControlsBody, /\.spacing\(ListItemSpacing::Dense\)/);
   assert.match(providerGroupControlsBody, /\.start_slot\(/);
-  assert.match(providerGroupControlsBody, /\.end_slot\(provider_group_actions\(open_button\.into_any_element\(\)\)\)/);
+  assert.match(providerGroupControlsBody, /\.end_slot\(checkbox\)/);
+  assert.match(
+    providerGroupControlsBody,
+    /\.end_slot_on_hover\(provider_group_actions\([\s\S]*open_button\.into_any_element\(\),[\s\S]*hover_checkbox,[\s\S]*\)\)/,
+  );
   assert.match(providerGroupControlsBody, /let checked = panel[\s\S]*item_checked\(&item_key\)/);
   assert.match(providerGroupControlsBody, /let active = panel[\s\S]*item_active\(&item_key\)/);
   assert.match(providerGroupControlsBody, /selection_checkbox\([\s\S]*checked,[\s\S]*panel,/);
@@ -1174,10 +1185,10 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
     /providers_for\(group\)[\s\S]*provider_target_button\(provider, snapshot, workspace, cx\)/,
   );
   assert.match(providerButtonsBody, /\.on_mouse_down\(MouseButton::Left/);
-  assert.match(providerButtonsBody, /\.on_click\(\|_, _, cx\|/);
+  assert.match(providerButtonsBody, /\.on_mouse_up\(MouseButton::Left/);
   assert.match(providerButtonsBody, /cx\.stop_propagation\(\);/);
   assert.match(providerGroupActionsBody, /\.on_mouse_down\(MouseButton::Left/);
-  assert.match(providerGroupActionsBody, /\.on_click\(\|_, _, cx\|/);
+  assert.match(providerGroupActionsBody, /\.on_mouse_up\(MouseButton::Left/);
   assert.match(providerGroupActionsBody, /\.child\(open_button\)/);
   assert.match(providerGroupActionsBody, /cx\.stop_propagation\(\);/);
   assert.match(providersView, /IconButtonShape::Square/);

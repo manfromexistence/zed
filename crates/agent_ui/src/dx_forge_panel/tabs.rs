@@ -5,7 +5,7 @@ use ui::{DxUiIcon, IconName, Tab, TabBar, TabPosition, Tooltip, dx_icon, prelude
 
 use super::{
     panel::{DxForgePanel, DxForgePanelTab},
-    rows::count_chip,
+    rows::count_marker,
     snapshot::DxForgePanelSnapshot,
     visible_rows::visible_row_count_for_tab,
 };
@@ -81,7 +81,7 @@ fn forge_tab(
                     Color::Muted
                 }),
         )
-        .end_slot(count_chip(
+        .end_slot(count_marker(
             count,
             if selected {
                 Color::Accent

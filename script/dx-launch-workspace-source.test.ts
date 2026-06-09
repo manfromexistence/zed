@@ -160,7 +160,7 @@ test("collapsed workspace activity bar stays icon-only with hover details", () =
   assert.match(sidebar, /"sidebar-toolbar-plugins"[\s\S]*?dx_icon\(DxUiIcon::Plugins\)/);
   assert.match(sidebar, /"sidebar-toolbar-extensions"[\s\S]*?dx_icon\(DxUiIcon::Extensions\)/);
   assert.match(sidebar, /"sidebar-toolbar-automations"[\s\S]*?dx_icon\(DxUiIcon::Automations\)/);
-  assert.match(sidebar, /"sidebar-toolbar-settings",\s*IconName::DxCog,\s*"Settings"/);
+  assert.match(sidebar, /"sidebar-toolbar-settings",\s*dx_icon\(DxUiIcon::Settings\),\s*"Settings"/);
   assert.match(genToolbar, /\.on_click\(cx\.listener\(on_click\)\)/);
   assert.match(activityToolbar, /\.on_click\(cx\.listener\(on_click\)\)/);
   assert.match(bottomBar, /"sidebar-bottom-add-folder"[\s\S]*?\.on_click\(cx\.listener/);

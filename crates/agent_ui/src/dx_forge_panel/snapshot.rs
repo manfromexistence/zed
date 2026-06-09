@@ -9,6 +9,9 @@ use crate::dx_receipt_history::{DxToolHistoryBucket, tool_history_snapshot};
 use crate::dx_source_sets::{DxSourceItem, source_set_snapshot};
 
 const FORGE_HISTORY_LABEL: &str = "Forge History";
+pub(super) const PACKAGE_STATUS_LABEL: &str = "Package Status";
+pub(super) const MACHINE_CACHES_LABEL: &str = "Machine Caches";
+pub(super) const REMOTE_REGISTRY_LABEL: &str = "Remote Registry";
 const RESTORE_PREVIEWS_LABEL: &str = "Restore Previews";
 const MEDIA_OUTPUTS_LABEL: &str = "Media Outputs";
 const MAX_PANEL_ROWS: usize = 4;
@@ -168,6 +171,9 @@ pub(super) fn forge_panel_snapshot(workspace_roots: &[String]) -> DxForgePanelSn
         remote_registry_count: remote_registries.len(),
         machine_cache_count: machine_caches.len(),
         package_status_count: package_statuses.len(),
+        remote_registry_label: REMOTE_REGISTRY_LABEL,
+        machine_caches_label: MACHINE_CACHES_LABEL,
+        package_status_label: PACKAGE_STATUS_LABEL,
         receipt_count,
         summarized_receipt_count,
         visible_blocker_count,

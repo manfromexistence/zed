@@ -11,6 +11,9 @@ pub(super) struct ForgeStateInputs<'a> {
     pub(super) remote_registry_count: usize,
     pub(super) machine_cache_count: usize,
     pub(super) package_status_count: usize,
+    pub(super) remote_registry_label: &'static str,
+    pub(super) machine_caches_label: &'static str,
+    pub(super) package_status_label: &'static str,
     pub(super) receipt_count: usize,
     pub(super) summarized_receipt_count: usize,
     pub(super) visible_blocker_count: usize,
@@ -34,7 +37,8 @@ pub(super) fn forge_state(input: ForgeStateInputs<'_>) -> (DxForgePanelState, St
     {
         return (
             DxForgePanelState::Missing,
-            "No Forge data found".to_string(),
+            "Missing Forge receipt, remote-registry, package-status, or machine-cache root"
+                .to_string(),
         );
     }
     if input.receipt_count > 0 && input.summarized_receipt_count == 0 {
@@ -65,7 +69,7 @@ pub(super) fn forge_state(input: ForgeStateInputs<'_>) -> (DxForgePanelState, St
         return (
             DxForgePanelState::Attention,
             format!(
-                "{} machine cache warning(s)",
+                "{} visible machine cache warning(s) need review",
                 input.visible_machine_cache_warning_count
             ),
         );
@@ -79,10 +83,7 @@ pub(super) fn forge_state(input: ForgeStateInputs<'_>) -> (DxForgePanelState, St
     if input.visible_restore_warning_count > 0 {
         return (
             DxForgePanelState::Attention,
-            format!(
-                "{} restore warning(s)",
-                input.visible_restore_warning_count
-            ),
+            format!("{} restore warning(s)", input.visible_restore_warning_count),
         );
     }
     if input.receipt_count == 0 {
@@ -99,11 +100,7 @@ pub(super) fn forge_state(input: ForgeStateInputs<'_>) -> (DxForgePanelState, St
                 format!(
                     "{} {} available",
                     input.package_status_count,
-                    plural(
-                        input.package_status_count,
-                        "package status",
-                        "package statuses",
-                    )
+                    source_label(input.package_status_label, input.package_status_count),
                 ),
             );
         }
@@ -114,11 +111,7 @@ pub(super) fn forge_state(input: ForgeStateInputs<'_>) -> (DxForgePanelState, St
                 format!(
                     "{} {} available",
                     input.remote_registry_count,
-                    plural(
-                        input.remote_registry_count,
-                        "remote registry",
-                        "remote registries",
-                    )
+                    source_label(input.remote_registry_label, input.remote_registry_count),
                 ),
             );
         }
@@ -129,11 +122,7 @@ pub(super) fn forge_state(input: ForgeStateInputs<'_>) -> (DxForgePanelState, St
                 format!(
                     "{} {} available",
                     input.machine_cache_count,
-                    plural(
-                        input.machine_cache_count,
-                        "machine cache",
-                        "machine caches",
-                    )
+                    source_label(input.machine_caches_label, input.machine_cache_count),
                 ),
             );
         }
@@ -188,6 +177,14 @@ pub(super) fn forge_history_root_path(
     )
 }
 
-fn plural(count: usize, singular: &'static str, plural: &'static str) -> &'static str {
-    if count == 1 { singular } else { plural }
+fn source_label(label: &'static str, count: usize) -> String {
+    match label {
+        "Machine Caches" if count == 1 => "machine cache".to_string(),
+        "Machine Caches" => "machine caches".to_string(),
+        "Package Status" if count == 1 => "package status".to_string(),
+        "Package Status" => "package statuses".to_string(),
+        "Remote Registry" if count == 1 => "remote registry".to_string(),
+        "Remote Registry" => "remote registries".to_string(),
+        _ => label.to_ascii_lowercase(),
+    }
 }

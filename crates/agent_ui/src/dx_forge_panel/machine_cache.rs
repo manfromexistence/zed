@@ -186,7 +186,7 @@ fn machine_cache_row(
     DxForgeSourceRow {
         label: "Machine Cache".to_string(),
         detail: format!(
-            "{} {} · {} · {}",
+            "{} {} · {} · {} · freshness unchecked",
             summary.total,
             plural(summary.total, "machine cache", "machine caches"),
             family,
@@ -195,7 +195,7 @@ fn machine_cache_row(
         path: display_path(workspace_root, dx_root),
         open_path: dx_root.display().to_string(),
         receipts: vec![DxForgeReceiptDrilldown {
-            label: "Format".to_string(),
+            label: "Machine family".to_string(),
             detail: family,
         }],
         warnings: warnings(&summary),
@@ -230,12 +230,12 @@ fn metadata_detail(summary: &MachineCacheSummary) -> String {
     }
 
     format!(
-        "{} metadata {} missing",
+        "{} {} missing",
         summary.missing_metadata_sidecars,
         plural(
             summary.missing_metadata_sidecars,
-            "sidecar is",
-            "sidecars are"
+            "metadata sidecar",
+            "metadata sidecars"
         )
     )
 }
@@ -244,8 +244,13 @@ fn warnings(summary: &MachineCacheSummary) -> Vec<String> {
     let mut warnings = Vec::new();
     if summary.missing_metadata_sidecars > 0 {
         warnings.push(format!(
-            "{} metadata missing",
-            summary.missing_metadata_sidecars
+            "{} {} missing",
+            summary.missing_metadata_sidecars,
+            plural(
+                summary.missing_metadata_sidecars,
+                "metadata sidecar",
+                "metadata sidecars"
+            )
         ));
     }
     if summary.unknown_caches > 0 {
@@ -270,22 +275,17 @@ fn warnings(summary: &MachineCacheSummary) -> Vec<String> {
 }
 
 fn metadata_path_for(machine_path: &Path) -> PathBuf {
-    let Some(file_name) = machine_path.file_name().and_then(|name| name.to_str()) else {
-        return machine_path.with_extension("machine.meta.json");
-    };
-
-    if let Some(stem) = file_name.strip_suffix(".machine") {
-        return machine_path.with_file_name(format!("{stem}{MACHINE_METADATA_SUFFIX}"));
-    }
-
-    machine_path.with_extension("machine.meta.json")
+    machine_path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .and_then(|file_name| file_name.strip_suffix(".machine"))
+        .map(|stem| machine_path.with_file_name(format!("{stem}{MACHINE_METADATA_SUFFIX}")))
+        .unwrap_or_else(|| machine_path.with_extension("machine.meta.json"))
 }
 
 fn display_path(workspace_root: &Path, path: &Path) -> String {
-    path.strip_prefix(workspace_root)
-        .unwrap_or(path)
-        .display()
-        .to_string()
+    let path = path.strip_prefix(workspace_root).unwrap_or(path);
+    path.display().to_string()
 }
 
 fn plural(count: usize, singular: &'static str, plural: &'static str) -> &'static str {

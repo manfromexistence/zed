@@ -1137,7 +1137,11 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
 
 test("sidebar chat groups expose persistent sort and icon override controls", () => {
   assert.match(sidebar, /enum SidebarThreadSortMode/);
+  assert.match(sidebar, /SidebarThreadSortMode[\s\S]*Manual/);
+  assert.match(sidebar, /Self::Manual => "Custom"/);
   assert.match(sidebar, /thread_sort_mode: SidebarThreadSortMode/);
+  assert.match(sidebar, /manual_thread_order:\s*Vec<ThreadId>/);
+  assert.match(sidebar, /const MAX_SIDEBAR_MANUAL_THREAD_ORDER: usize = 512;/);
   assert.match(sidebar, /thread_icon_overrides: HashMap<ThreadId, IconName>/);
   assert.match(sidebar, /struct DraggedSidebarThread/);
   assert.match(sidebar, /impl Render for DraggedSidebarThread[\s\S]*"dragged-sidebar-thread"/);
@@ -1173,11 +1177,27 @@ test("sidebar chat groups expose persistent sort and icon override controls", ()
   assert.match(sidebar, /is_hovered \|\| is_icon_picker_open \|\| is_focused/);
   assert.match(sidebar, /\.hovered\(is_hovered \|\| is_icon_picker_open\)/);
   assert.match(sidebar, /\(!is_draft\)\.then\(\|\|/);
+  assert.match(sidebar, /fn reorder_thread_around\(/);
+  assert.match(sidebar, /dragged_thread_id == target_thread_id \|\| self\.has_filter_query\(cx\)/);
+  assert.match(sidebar, /self\.thread_sort_mode = SidebarThreadSortMode::Manual/);
+  assert.match(sidebar, /ordered_thread_ids\.truncate\(MAX_SIDEBAR_MANUAL_THREAD_ORDER\)/);
+  assert.match(sidebar, /\.drag_over::<DraggedSidebarThread>/);
+  assert.match(sidebar, /this\.reorder_thread_around\(dragged\.thread_id, target_thread_id, cx\)/);
   assert.match(sidebar, /shortcut\.icon = icon_name/);
   assert.match(sidebar, /ThreadMetadataStore::global\(cx\)[\s\S]*?\.entry\(\*thread_id\)[\s\S]*?\.is_some\(\)/);
   assert.match(sidebar, /IconButton::new\(\("thread-icon-picker", ix\), IconName::Sparkle\)/);
   assert.match(sidebar, /IconName::iter\(\)/);
   assert.match(sidebar, /SerializedThreadIconOverride/);
+  const serializedState = functionBody(sidebar, "serialized_state");
+  const restoreSerializedState = functionBody(sidebar, "restore_serialized_state");
+  assert.match(
+    serializedState,
+    /manual_thread_order:\s*self[\s\S]*?\.manual_thread_order[\s\S]*?\.take\(MAX_SIDEBAR_MANUAL_THREAD_ORDER\)[\s\S]*?\.collect\(\)/,
+  );
+  assert.match(
+    restoreSerializedState,
+    /self\.manual_thread_order = serialized[\s\S]*?\.manual_thread_order[\s\S]*?\.take\(MAX_SIDEBAR_MANUAL_THREAD_ORDER\)[\s\S]*?\.collect\(\)/,
+  );
   assert.match(threadItem, /let timestamp_color = if self\.selected \|\| self\.hovered/);
   assert.match(threadItem, /Color::Custom\(color\.text\.opacity\(0\.68\)\)/);
   assert.match(threadItem, /Label::new\(timestamp\.clone\(\)\)[\s\S]*\.color\(timestamp_color\)/);
@@ -1207,11 +1227,16 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(dxLaunchWorkspace, /enum DxLaunchRailSection/);
   assert.match(dxLaunchWorkspace, /struct DxLaunchRailControls/);
   assert.match(dxLaunchWorkspace, /fn rail_section\(/);
-  assert.match(dxLaunchWorkspace, /Disclosure::new\(format!\("\{id\}-disclosure"\), is_open\)/);
-  assert.match(railSection, /\.cursor_pointer\(\)/);
-  assert.match(railSection, /\.on_click\(move \|event, window, cx\| \{/);
+  assert.match(dxLaunchWorkspace, /ListHeader/);
+  assert.match(dxLaunchWorkspace, /ListItem/);
+  assert.match(dxLaunchWorkspace, /ListItemSpacing/);
+  assert.match(railSection, /ListHeader::new\(label\)/);
+  assert.match(railSection, /\.toggle\(Some\(is_open\)\)/);
+  assert.match(railSection, /\.start_slot\(Icon::new\(icon\)/);
+  assert.match(railSection, /\.on_toggle\(move \|event, window, cx\| \{/);
   assert.match(railSection, /on_toggle\(section, event, window, cx\)/);
-  assert.doesNotMatch(railSection, /Disclosure::new\(format!\("\{id\}-disclosure"\), is_open\)\.on_click/);
+  assert.doesNotMatch(railSection, /Disclosure::new/);
+  assert.doesNotMatch(railSection, /\.cursor_pointer\(\)/);
   assert.match(dxLaunchWorkspace, /"dx-agent-overview-section"/);
   assert.match(dxLaunchWorkspace, /"dx-agent-threads-section"/);
   assert.match(dxLaunchWorkspace, /"dx-agent-tasks-section"/);
@@ -1246,6 +1271,12 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.doesNotMatch(agentPanel, /dx_session_label/);
   assert.match(agentPanel, /ToolCallStatus::WaitingForConfirmation/);
   assert.match(dxLaunchWorkspace, /muted_card\("No live subagent state", cx\)/);
+  assert.match(dxLaunchWorkspace, /fn metric_row\(/);
+  assert.match(dxLaunchWorkspace, /ListItem::new\(rail_stable_id\("dx-launch-metric"/);
+  assert.match(dxLaunchWorkspace, /fn signal_row\(/);
+  assert.match(dxLaunchWorkspace, /fn source_row\(/);
+  assert.match(dxLaunchWorkspace, /fn muted_card\(/);
+  assert.match(dxLaunchWorkspace, /ListItem::new\(rail_stable_id\("dx-launch-empty"/);
   assert.match(agentPanel, /collapsed_dx_launch_rail_sections: HashSet<DxLaunchRailSection>/);
   assert.match(agentPanel, /fullscreen_sources_rail_pinned: bool/);
   assert.match(agentPanel, /fullscreen_progress_rail_pinned: bool/);

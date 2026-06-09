@@ -75,8 +75,10 @@ test("DX semantic icon layer owns rebrand-specific aliases", () => {
   assert.match(icons, /\bDxCog,/);
   assert.match(loaderAsset, /viewBox="0 0 16 16"/);
   assert.match(loaderAsset, /M8 1\.75v2\.5/);
-  assert.match(cogAsset, /viewBox="0 0 16 16"/);
-  assert.match(cogAsset, /M8\.13 2h-\.26/);
+  assert.match(cogAsset, /viewBox="0 0 24 24"/);
+  assert.match(cogAsset, /stroke="currentColor"/);
+  assert.match(cogAsset, /<circle cx="12" cy="12" r="8"/);
+  assert.match(cogAsset, /<circle cx="12" cy="12" r="2"/);
 
   assert.match(uiRoot, /mod dx_icons;/);
   assert.match(uiRoot, /pub use dx_icons::\*/);

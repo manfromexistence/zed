@@ -90,11 +90,12 @@ fn package_status_row(workspace_root: &Path, path: &Path, value: &Value) -> DxFo
 }
 
 fn unreadable_package_status_row(workspace_root: &Path, path: &Path) -> DxForgeSourceRow {
-    let warning = "Could not read package status".to_string();
+    let warning =
+        format!("package status could not be read within {MAX_PACKAGE_STATUS_BYTES} bytes");
 
     DxForgeSourceRow {
         label: "Package status unavailable".to_string(),
-        detail: "Could not read package status".to_string(),
+        detail: warning.clone(),
         path: display_path(workspace_root, path),
         open_path: path.display().to_string(),
         receipts: vec![DxForgeReceiptDrilldown {
@@ -116,6 +117,8 @@ fn forge_package_status_row(workspace_root: &Path, path: &Path, value: &Value) -
     let tracked_media_assets =
         usize_field(value, &["summary", "tracked_media_assets"]).unwrap_or(0);
     let package_lock_present = bool_field(value, &["package_lock_present"]).unwrap_or(false);
+    let integrity_state =
+        string_field(value, &["integrity_state"]).unwrap_or_else(|| "unknown".to_string());
     let missing_summary_fields = forge_summary_missing_count(value);
     let warning_count = missing_packages
         + mismatched_packages
@@ -126,7 +129,7 @@ fn forge_package_status_row(workspace_root: &Path, path: &Path, value: &Value) -
     DxForgeSourceRow {
         label: "Package receipt".to_string(),
         detail: format!(
-            "{valid_packages}/{package_count} valid · {missing_packages} missing · {mismatched_packages} mismatched · lock {} · media {tracked_media_assets}/{media_asset_count}",
+            "{valid_packages}/{package_count} valid · {missing_packages} missing · {mismatched_packages} mismatched · lock {} · media {tracked_media_assets}/{media_asset_count} · integrity {integrity_state}",
             if package_lock_present {
                 "present"
             } else {
@@ -137,7 +140,7 @@ fn forge_package_status_row(workspace_root: &Path, path: &Path, value: &Value) -
         open_path: path.display().to_string(),
         receipts: vec![DxForgeReceiptDrilldown {
             label: "Package receipt".to_string(),
-            detail: "Integrity read from receipt; live checks not run".to_string(),
+            detail: "receipt file only; live checks not executed".to_string(),
         }],
         warnings: forge_package_status_warnings(warning_count, missing_summary_fields),
     }
@@ -152,15 +155,15 @@ fn forge_package_status_warnings(
         warnings.push(format!(
             "{} {}",
             warning_count,
-            plural(warning_count, "package receipt warning", "package receipt warnings")
+            plural(
+                warning_count,
+                "package receipt warning",
+                "package receipt warnings"
+            )
         ));
     }
     if missing_summary_fields > 0 {
-        warnings.push(format!(
-            "{} {} missing",
-            missing_summary_fields,
-            plural(missing_summary_fields, "summary field", "summary fields")
-        ));
+        warnings.push(format!("{missing_summary_fields} summary field(s) missing"));
     }
     warnings
 }
@@ -213,7 +216,7 @@ fn package_status_evidence_detail(value: &Value) -> String {
         .count();
 
     if evidence_count == 0 {
-        "receipt evidence".to_string()
+        "source-only receipt evidence".to_string()
     } else {
         format!(
             "{} {}",
@@ -258,10 +261,8 @@ fn package_rows(value: &Value) -> &[Value] {
 }
 
 fn display_path(workspace_root: &Path, path: &Path) -> String {
-    path.strip_prefix(workspace_root)
-        .unwrap_or(path)
-        .display()
-        .to_string()
+    let path = path.strip_prefix(workspace_root).unwrap_or(path);
+    path.display().to_string()
 }
 
 fn string_field(value: &Value, path: &[&str]) -> Option<String> {

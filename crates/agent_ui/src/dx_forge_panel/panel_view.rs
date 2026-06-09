@@ -9,7 +9,9 @@ use super::{
     panel::{DxForgePanel, DxForgePanelTab},
     providers::remote_target_strip,
     rows::{empty_row, section_header, status_strip},
-    snapshot::DxForgePanelSnapshot,
+    snapshot::{
+        DxForgePanelSnapshot, MACHINE_CACHES_LABEL, PACKAGE_STATUS_LABEL, REMOTE_REGISTRY_LABEL,
+    },
     source_section::{SourceSection, source_section},
     tabs::render_tab_bar,
     workflow_rows::selectable_receipt_row,
@@ -112,7 +114,7 @@ fn remote_registry_section(
     source_section(
         SourceSection {
             header_id: "dx-forge-remote-registry-header",
-            title: "Remotes",
+            title: REMOTE_REGISTRY_LABEL,
             icon: IconName::CloudDownload,
             empty_id: "dx-forge-remote-registry-empty",
             workspace_empty: "Open a workspace to inspect remotes",
@@ -138,7 +140,7 @@ fn package_status_section(
     source_section(
         SourceSection {
             header_id: "dx-forge-package-status-header",
-            title: "Package Status",
+            title: PACKAGE_STATUS_LABEL,
             icon: IconName::Box,
             empty_id: "dx-forge-package-status-empty",
             workspace_empty: "Open a workspace to inspect package status",
@@ -164,14 +166,14 @@ fn machine_cache_section(
     source_section(
         SourceSection {
             header_id: "dx-forge-machine-caches-header",
-            title: "Machine Cache",
+            title: MACHINE_CACHES_LABEL,
             icon: IconName::Binary,
             empty_id: "dx-forge-machine-caches-empty",
             workspace_empty: "Open a workspace to inspect machine caches",
             empty: "No machine caches found",
             row_id: "dx-forge-machine-cache",
             open_id: "dx-forge-open-machine-cache-root",
-            open_tooltip: "Open machine cache",
+            open_tooltip: "Open machine cache root",
         },
         &snapshot.machine_caches,
         snapshot,
