@@ -5,7 +5,6 @@ use ui::{DxUiIcon, IconName, Tab, TabBar, TabPosition, Tooltip, dx_icon, prelude
 
 use super::{
     panel::{DxForgePanel, DxForgePanelTab},
-    rows::count_marker,
     snapshot::DxForgePanelSnapshot,
     visible_rows::visible_row_count_for_tab,
 };
@@ -14,7 +13,7 @@ pub(super) fn render_tab_bar(
     snapshot: &DxForgePanelSnapshot,
     active_tab: DxForgePanelTab,
     panel: &WeakEntity<DxForgePanel>,
-    cx: &App,
+    _cx: &App,
 ) -> impl IntoElement {
     TabBar::new("dx-forge-tab-bar")
         .child(forge_tab(
@@ -24,7 +23,6 @@ pub(super) fn render_tab_bar(
             DxForgePanelTab::Repository,
             active_tab,
             panel,
-            cx,
         ))
         .child(forge_tab(
             "dx-forge-tab-packages",
@@ -33,7 +31,6 @@ pub(super) fn render_tab_bar(
             DxForgePanelTab::Packages,
             active_tab,
             panel,
-            cx,
         ))
         .child(forge_tab(
             "dx-forge-tab-media",
@@ -42,7 +39,6 @@ pub(super) fn render_tab_bar(
             DxForgePanelTab::Media,
             active_tab,
             panel,
-            cx,
         ))
         .child(forge_tab(
             "dx-forge-tab-remotes",
@@ -51,7 +47,6 @@ pub(super) fn render_tab_bar(
             DxForgePanelTab::Remotes,
             active_tab,
             panel,
-            cx,
         ))
 }
 
@@ -62,7 +57,6 @@ fn forge_tab(
     tab: DxForgePanelTab,
     active_tab: DxForgePanelTab,
     panel: &WeakEntity<DxForgePanel>,
-    cx: &App,
 ) -> impl IntoElement {
     let selected = active_tab == tab;
     let panel = panel.clone();
@@ -81,15 +75,6 @@ fn forge_tab(
                     Color::Muted
                 }),
         )
-        .end_slot(count_marker(
-            count,
-            if selected {
-                Color::Accent
-            } else {
-                Color::Muted
-            },
-            cx,
-        ))
         .child(
             Label::new(label)
                 .size(LabelSize::Small)

@@ -1,3 +1,20 @@
+[2026-06-09] - Agent Rails And DX Panel Primitive Polish
+
+CHANGED:
+- `crates\agent_ui\src\dx_launch_workspace.rs`, `agent_panel.rs`, and `dx_launch_workspace\agent_workspace.rs` now remove the duplicated fullscreen Agent command rail, add a real Source Controller section, and organize the right floating rail as Progress, Environment, Sources, Subagents, and Readiness using existing workspace/source/agent state.
+- `crates\agent_ui\src\dx_launch_workspace\sources\controller.rs` now owns the source-controller summary rows for workspace roots, total sources, attachable sources, managed receipts, media outputs, and restore previews.
+- `crates\agent_ui\src\dx_forge_panel\*.rs` now uses shared `ListHeader`, `TabBar`, `Tab`, and `Indicator` primitives instead of visible badge/count chrome.
+- `crates\agent_ui\src\dx_check_panel_view*.rs` now uses shared side-panel header controls, tab primitives, and indicator labels instead of straight-text badge rows.
+- Focused source guards now pin the Source Controller, Agent rail taxonomy, Forge tab/header primitives, and Check panel primitive contract.
+
+PASSED:
+- `node --test script\dx-workspace-ui-state-source.test.ts script\dx-launch-workspace-source.test.ts script\dx-agent-workspaces-source.test.ts script\dx-forge-panel-source.test.ts script\dx-check-panel-source.test.ts`
+- `rustfmt --edition 2024 --check` on touched Rust files
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. `just run`, Cargo build/check/test/clippy, and runtime visual proof were not run.
+
 [2026-06-09] - Sidebar Reorder Compile Repair
 
 FIXED:

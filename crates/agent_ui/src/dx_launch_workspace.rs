@@ -130,7 +130,7 @@ pub(crate) struct DxSourceRowControl {
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub(crate) enum DxLaunchRailSection {
-    SourceCommands,
+    SourceController,
     SourceStack,
     SourceTools,
     AgentOverview,
@@ -142,7 +142,7 @@ pub(crate) enum DxLaunchRailSection {
 
 #[derive(Clone, Copy)]
 pub(crate) struct DxLaunchRailState {
-    pub source_commands_open: bool,
+    pub source_controller_open: bool,
     pub source_stack_open: bool,
     pub source_tools_open: bool,
     pub agent_overview_open: bool,
@@ -155,7 +155,7 @@ pub(crate) struct DxLaunchRailState {
 impl DxLaunchRailState {
     pub(crate) fn is_open(self, section: DxLaunchRailSection) -> bool {
         match section {
-            DxLaunchRailSection::SourceCommands => self.source_commands_open,
+            DxLaunchRailSection::SourceController => self.source_controller_open,
             DxLaunchRailSection::SourceStack => self.source_stack_open,
             DxLaunchRailSection::SourceTools => self.source_tools_open,
             DxLaunchRailSection::AgentOverview => self.agent_overview_open,
@@ -288,7 +288,6 @@ impl Render for DxLaunchDiagnosticsMenu {
 
 pub(crate) fn render_workspace_chrome(
     center: AnyElement,
-    sidebar_actions: AnyElement,
     source_row_controls: Vec<DxSourceRowControl>,
     source_actions: AnyElement,
     guided_cards: AnyElement,
@@ -309,7 +308,6 @@ pub(crate) fn render_workspace_chrome(
         .child(div().size_full().min_w_0().overflow_hidden().child(center))
         .when(show_sources_rail, |this| {
             this.child(render_sources_rail(
-                sidebar_actions,
                 source_row_controls,
                 source_actions,
                 &status,
@@ -331,7 +329,6 @@ pub(crate) fn render_workspace_chrome(
 }
 
 fn render_sources_rail(
-    sidebar_actions: AnyElement,
     source_row_controls: Vec<DxSourceRowControl>,
     source_actions: AnyElement,
     status: &DxLaunchWorkspaceStatus,
@@ -364,12 +361,12 @@ fn render_sources_rail(
         ))
         .child(rail_rainbow_glow("dx-sources-rail-rainbow-glow", 0.))
         .child(rail_section(
-            "dx-sources-commands-section",
-            "Commands",
-            IconName::Terminal,
-            DxLaunchRailSection::SourceCommands,
+            "dx-sources-controller-section",
+            "Source Controller",
+            dx_icon(DxUiIcon::Source),
+            DxLaunchRailSection::SourceController,
             rail_controls,
-            sidebar_actions,
+            sources::source_controller_state(&status.source_sets, cx),
             true,
             cx,
         ))
@@ -385,8 +382,8 @@ fn render_sources_rail(
         ))
         .child(rail_section(
             "dx-sources-tools-section",
-            "Source Tools",
-            dx_icon(DxUiIcon::Source),
+            "Next Actions",
+            IconName::ListTodo,
             DxLaunchRailSection::SourceTools,
             rail_controls,
             source_actions,
@@ -430,7 +427,7 @@ fn render_right_rail(
         .child(diagnostics_menu(status.clone()))
         .child(rail_section(
             "dx-agent-overview-section",
-            "Overview",
+            "Progress",
             dx_icon(DxUiIcon::Agent),
             DxLaunchRailSection::AgentOverview,
             rail_controls,
@@ -440,21 +437,21 @@ fn render_right_rail(
         ))
         .child(rail_section(
             "dx-agent-threads-section",
-            "Threads",
-            IconName::HistoryRerun,
+            "Environment",
+            dx_icon(DxUiIcon::Project),
             DxLaunchRailSection::AgentThreads,
             rail_controls,
-            agent_workspace::agent_threads_section(status, cx),
+            agent_workspace::agent_environment_section(status, cx),
             true,
             cx,
         ))
         .child(rail_section(
             "dx-agent-tasks-section",
-            "Tasks",
-            IconName::TodoProgress,
+            "Sources",
+            dx_icon(DxUiIcon::Source),
             DxLaunchRailSection::AgentTasks,
             rail_controls,
-            agent_workspace::agent_tasks_section(status, cx),
+            agent_workspace::agent_sources_section(status, cx),
             true,
             cx,
         ))
@@ -470,7 +467,7 @@ fn render_right_rail(
         ))
         .child(rail_section(
             "dx-agent-approvals-section",
-            "Approvals",
+            "Readiness",
             dx_icon(DxUiIcon::Permissions),
             DxLaunchRailSection::AgentApprovals,
             rail_controls,
@@ -659,7 +656,7 @@ fn subagent_row(id: SharedString, row: &DxSubagentStatusRow, _cx: &App) -> AnyEl
                 .color(Color::Default)
                 .truncate(),
         )
-        .end_slot(subagent_status_badge(row.status))
+        .end_slot(subagent_status_indicator(row.status))
         .tooltip(Tooltip::text(format!(
             "{}: {}",
             row.status.label(),
@@ -668,22 +665,10 @@ fn subagent_row(id: SharedString, row: &DxSubagentStatusRow, _cx: &App) -> AnyEl
         .into_any_element()
 }
 
-fn subagent_status_badge(status: DxSubagentStatus) -> AnyElement {
-    let color = subagent_status_color(status);
-
-    h_flex()
-        .items_center()
-        .rounded_sm()
-        .border_1()
-        .border_color(color.opacity(0.42))
-        .bg(color.opacity(0.1))
-        .px_1()
-        .py_0p5()
-        .child(
-            Icon::new(subagent_status_icon(status))
-                .size(IconSize::Indicator)
-                .color(Color::Custom(color)),
-        )
+fn subagent_status_indicator(status: DxSubagentStatus) -> AnyElement {
+    Icon::new(subagent_status_icon(status))
+        .size(IconSize::XSmall)
+        .color(Color::Custom(subagent_status_color(status)))
         .into_any_element()
 }
 

@@ -1,7 +1,7 @@
 use gpui::{
     AnyElement, App, EntityId, InteractiveElement, IntoElement, ScrollHandle, WeakEntity, Window,
 };
-use ui::{WithScrollbar, prelude::*};
+use ui::{ListHeader, WithScrollbar, prelude::*};
 use workspace::{Workspace, dock::side_panel_header_controls};
 
 use super::{
@@ -84,20 +84,9 @@ fn panel_header(
     panel_id: EntityId,
     cx: &App,
 ) -> impl IntoElement {
-    h_flex()
-        .justify_between()
-        .gap_2()
-        .px_2()
-        .py_1()
-        .child(
-            h_flex()
-                .gap_1()
-                .flex_1()
-                .min_w_0()
-                .child(Icon::new(dx_icon(DxUiIcon::Forge)).size(IconSize::Small))
-                .child(Label::new("Forge").size(LabelSize::Small).truncate()),
-        )
-        .child(side_panel_header_controls(
+    ListHeader::new("Forge")
+        .start_slot(Icon::new(dx_icon(DxUiIcon::Forge)).size(IconSize::Small))
+        .end_slot(side_panel_header_controls(
             "dx-forge-panel",
             workspace.clone(),
             panel_id,

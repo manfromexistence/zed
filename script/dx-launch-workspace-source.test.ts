@@ -783,6 +783,7 @@ test("DX launch workspace delegates agents and source rails", () => {
   const sourceAttachments = read(
     "crates/agent_ui/src/dx_launch_workspace/sources/attachments.rs",
   );
+  const sourceController = read("crates/agent_ui/src/dx_launch_workspace/sources/controller.rs");
   const sourceReceipts = read("crates/agent_ui/src/dx_launch_workspace/sources/receipts.rs");
   const sourceRows = read("crates/agent_ui/src/dx_launch_workspace/sources/rows.rs");
   const sourceSignals = read("crates/agent_ui/src/dx_launch_workspace/sources/signals.rs");
@@ -793,11 +794,15 @@ test("DX launch workspace delegates agents and source rails", () => {
 
   assert.match(parent, /^mod agent_workspace;$/m);
   assert.match(parent, /^mod agents;$/m);
+  assert.match(sources, /^mod controller;$/m);
+  assert.match(sources, /pub\(super\) use self::controller::source_controller_state;/);
   assert.match(parent, /agent_workspace::agent_overview_section/);
-  assert.match(parent, /agent_workspace::agent_tasks_section/);
+  assert.match(parent, /agent_workspace::agent_sources_section/);
+  assert.match(parent, /sources::source_controller_state\(&status\.source_sets, cx\)/);
+  assert.match(sourceController, /snapshot\.attachment_summary\(\)/);
   assert.match(parent, /sources::source_set_stack/);
   assert.match(parent, /sources::source_set_stack\(&status\.source_sets, source_row_controls, cx\)/);
-  assert.match(parent, /sidebar_actions/);
+  assert.doesNotMatch(parent, /sidebar_actions/);
   assert.match(parent, /source_actions/);
   assert.doesNotMatch(parent, /fn dx_agent_bridge_state/);
   assert.doesNotMatch(parent, /fn source_set_stack/);
@@ -1350,6 +1355,7 @@ test("DX launch workspace delegates agents and source rails", () => {
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/social/rows.rs") < 165);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/social_actions.rs") < 110);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/sources.rs") < 95);
+  assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/sources/controller.rs") < 80);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/sources/attachments.rs") < 60);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/sources/receipts.rs") < 55);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/sources/rows.rs") < 90);

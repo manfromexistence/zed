@@ -6,7 +6,9 @@ use gpui::{
     ScrollHandle, Styled, TaskExt, WeakEntity, Window, div, px,
 };
 use theme::ActiveTheme;
-use ui::{IconButtonShape, ListItem, ListItemSpacing, Tooltip, WithScrollbar, prelude::*};
+use ui::{
+    IconButtonShape, ListHeader, ListItem, ListItemSpacing, Tooltip, WithScrollbar, prelude::*,
+};
 use workspace::{
     OpenOptions, Workspace,
     dock::{DockPosition, Panel, PanelEvent, side_panel_header_controls},
@@ -17,7 +19,7 @@ use crate::dx_check_panel::{
 };
 use crate::dx_check_panel_view::view_rows::{
     adapter_plan_row, config_label, count_label, detail_row, duration_label, empty_row, notice_row,
-    notice_title, outcome_label, quick_fix_row, section, section_row, status_chip, status_color,
+    notice_title, outcome_label, quick_fix_row, section, section_row, status_color, status_label,
     web_audit_row,
 };
 
@@ -204,35 +206,13 @@ impl DxCheckPanel {
         panel_id: EntityId,
         cx: &App,
     ) -> AnyElement {
-        h_flex()
-            .px_2()
-            .py_1()
-            .gap_2()
-            .justify_between()
-            .child(
-                h_flex()
-                    .flex_1()
-                    .min_w_0()
-                    .gap_1()
-                    .items_center()
-                    .child(
-                        Icon::new(IconName::Check)
-                            .size(IconSize::Small)
-                            .color(status_color(snapshot)),
-                    )
-                    .child(
-                        v_flex()
-                            .min_w_0()
-                            .child(Label::new("Check").size(LabelSize::Small).truncate())
-                            .child(
-                                Label::new(snapshot.title.clone())
-                                    .size(LabelSize::XSmall)
-                                    .color(Color::Muted)
-                                    .truncate(),
-                            ),
-                    ),
+        ListHeader::new("Check")
+            .start_slot(
+                Icon::new(IconName::Check)
+                    .size(IconSize::Small)
+                    .color(status_color(snapshot)),
             )
-            .child(side_panel_header_controls(
+            .end_slot(side_panel_header_controls(
                 "dx-check-panel",
                 self.workspace.clone(),
                 panel_id,
@@ -265,7 +245,7 @@ impl DxCheckPanel {
                                     .color(status_color(snapshot))
                                     .truncate(),
                             )
-                            .child(status_chip(
+                            .child(status_label(
                                 snapshot.status.clone(),
                                 status_color(snapshot),
                                 cx,

@@ -35,21 +35,17 @@ pub(super) fn agent_overview_section(
             cx,
         ))
         .child(compact_status_row(
-            "dx-agent-overview-accounts",
-            dx_icon(DxUiIcon::Connections),
-            "Accounts",
-            format!(
-                "{} connected / {} need auth",
-                status.agent_bridge.connected_accounts_summary.connected,
-                status.agent_bridge.connected_accounts_summary.needs_auth
-            ),
+            "dx-agent-overview-active-tasks",
+            dx_icon(DxUiIcon::Receipts),
+            "Active tasks",
+            status.agent_bridge.active_task_count.to_string(),
             cx,
         ))
         .child(compact_status_row(
-            "dx-agent-overview-receipts",
-            dx_icon(DxUiIcon::Receipts),
-            "Receipts",
-            status.agent_bridge.receipt_index.receipt_count.to_string(),
+            "dx-agent-overview-release-gate",
+            IconName::Check,
+            "Release gate",
+            status.agent_bridge.release_gate.status.clone(),
             cx,
         ))
         .child(compact_status_row(
@@ -69,89 +65,103 @@ pub(super) fn agent_overview_section(
         .into_any_element()
 }
 
-pub(super) fn agent_threads_section(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {
+pub(super) fn agent_environment_section(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {
+    let bridge = &status.agent_bridge.trusted_tool_bridge;
+
     v_flex()
         .gap_1()
         .child(compact_status_row(
-            "dx-agent-threads-active",
-            dx_icon(DxUiIcon::Agent),
-            "Active thread",
-            status.active_status.clone(),
+            "dx-agent-environment-worktrees",
+            dx_icon(DxUiIcon::Project),
+            "Worktrees",
+            status.visible_worktree_count.to_string(),
             cx,
         ))
         .child(compact_status_row(
-            "dx-agent-threads-parked",
+            "dx-agent-environment-background",
             IconName::HistoryRerun,
-            "Parked threads",
+            "Background threads",
             status.background_thread_count.to_string(),
             cx,
         ))
         .child(compact_status_row(
-            "dx-agent-threads-acp",
-            dx_icon(DxUiIcon::Mcp),
-            "ACP rows",
-            status.subagent_rows.len().to_string(),
+            "dx-agent-environment-accounts",
+            dx_icon(DxUiIcon::Connections),
+            "Accounts",
+            format!(
+                "{} connected / {} need auth",
+                status.agent_bridge.connected_accounts_summary.connected,
+                status.agent_bridge.connected_accounts_summary.needs_auth
+            ),
             cx,
         ))
         .child(compact_status_row(
-            "dx-agent-threads-receipt-tasks",
-            dx_icon(DxUiIcon::Receipts),
-            "Receipt tasks",
-            status
-                .agent_bridge
-                .receipt_index
-                .active_task_count
-                .to_string(),
-            cx,
-        ))
-        .when(status.active_status.as_ref() == "Idle", |stack| {
-            stack.child(muted_card("No active Agent thread state", cx))
-        })
-        .into_any_element()
-}
-
-pub(super) fn agent_tasks_section(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {
-    v_flex()
-        .gap_1()
-        .child(compact_status_row(
-            "dx-agent-tasks-active",
-            dx_icon(DxUiIcon::Receipts),
-            "Active tasks",
-            status.agent_bridge.active_task_count.to_string(),
-            cx,
-        ))
-        .child(compact_status_row(
-            "dx-agent-tasks-receipt-index",
-            IconName::FileTextOutlined,
-            "Receipt index",
-            status.agent_bridge.receipt_index.status.clone(),
-            cx,
-        ))
-        .child(compact_status_row(
-            "dx-agent-tasks-automations",
+            "dx-agent-environment-automations",
             dx_icon(DxUiIcon::Automations),
             "Automations",
             status.agent_bridge.automation_count.to_string(),
             cx,
         ))
         .child(compact_status_row(
-            "dx-agent-tasks-recovery",
-            IconName::Undo,
-            "Recovery controls",
-            status.agent_bridge.import_summary.recovery_counts.label(),
+            "dx-agent-environment-tools",
+            IconName::ToolWeb,
+            "Trusted tools",
+            format!(
+                "{} approved / {} blocked",
+                bridge.approved_plugin_tool_count + bridge.approved_automation_tool_count,
+                bridge.blocked_tool_count
+            ),
+            cx,
+        ))
+        .into_any_element()
+}
+
+pub(super) fn agent_sources_section(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {
+    let summary = status.source_sets.attachment_summary();
+    let stack = v_flex()
+        .gap_1()
+        .child(compact_status_row(
+            "dx-agent-sources-total",
+            dx_icon(DxUiIcon::Source),
+            "Total sources",
+            status.source_sets.total_sources.to_string(),
             cx,
         ))
         .child(compact_status_row(
-            "dx-agent-tasks-release-gate",
-            IconName::Check,
-            "Release gate",
-            status.agent_bridge.release_gate.status.clone(),
+            "dx-agent-sources-roots",
+            dx_icon(DxUiIcon::Project),
+            "Workspace roots",
+            summary.workspace_roots.to_string(),
             cx,
         ))
-        .when(status.agent_bridge.active_task_count == 0, |stack| {
-            stack.child(muted_card("No active DX Agents task receipts", cx))
-        })
-        .into_any_element()
+        .child(compact_status_row(
+            "dx-agent-sources-attachable",
+            IconName::Paperclip,
+            "Attachable",
+            summary.attachable_sources.to_string(),
+            cx,
+        ))
+        .child(compact_status_row(
+            "dx-agent-sources-receipts",
+            dx_icon(DxUiIcon::Receipts),
+            "Managed receipts",
+            summary.managed_receipts.to_string(),
+            cx,
+        ))
+        .child(compact_status_row(
+            "dx-agent-sources-media",
+            dx_icon(DxUiIcon::Media),
+            "Media outputs",
+            summary.produced_files.to_string(),
+            cx,
+        ));
+
+    if status.source_sets.total_sources == 0 {
+        stack.child(muted_card("No active source context", cx))
+    } else {
+        stack
+    }
+    .into_any_element()
 }
 
 pub(super) fn agent_subagents_section(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {

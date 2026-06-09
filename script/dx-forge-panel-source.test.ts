@@ -721,7 +721,8 @@ test("Forge panel uses workflow tabs with Git-style selectable rows", () => {
   assert.match(forgeTabBody, /\.toggle_state\(selected\)/);
   assert.match(forgeTabBody, /\.selected_bottom_border\(true\)/);
   assert.match(forgeTabBody, /\.start_slot\(\s*Icon::new\(tab_icon\(tab\)\)/);
-  assert.match(forgeTabBody, /\.end_slot\(count_marker\(/);
+  assert.match(forgeTabBody, /let title = format!\("\{label\} \(\{count\}\)"\)/);
+  assert.doesNotMatch(forgeTabBody, /\.end_slot\(count_/);
   assert.match(
     forgeTabBody,
     /panel\.focus_panel\(window, cx\)[\s\S]*panel\.set_active_tab\(tab, cx\)/,

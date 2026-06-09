@@ -39,6 +39,10 @@ const dxLaunchWwwWarnings = read("crates/agent_ui/src/dx_launch_workspace/www_ev
 const dxAgentBridgeWarnings = read(
   "crates/agent_ui/src/dx_launch_workspace/agents/bridge/review/warnings.rs",
 );
+const dxLaunchSources = read("crates/agent_ui/src/dx_launch_workspace/sources.rs");
+const dxLaunchSourceController = read(
+  "crates/agent_ui/src/dx_launch_workspace/sources/controller.rs",
+);
 const dxLaunchSourceRows = read("crates/agent_ui/src/dx_launch_workspace/sources/rows.rs");
 const dxLaunchSourceAttachments = read(
   "crates/agent_ui/src/dx_launch_workspace/sources/attachments.rs",
@@ -1213,8 +1217,8 @@ test("agent rails and project badges keep compact production layout", () => {
   const railSection = functionBody(dxLaunchWorkspace, "rail_section");
   const subagentSummary = functionBody(dxLaunchWorkspace, "subagent_summary");
   const agentOverview = functionBody(dxAgentWorkspace, "agent_overview_section");
-  const agentThreads = functionBody(dxAgentWorkspace, "agent_threads_section");
-  const agentTasks = functionBody(dxAgentWorkspace, "agent_tasks_section");
+  const agentEnvironment = functionBody(dxAgentWorkspace, "agent_environment_section");
+  const agentSources = functionBody(dxAgentWorkspace, "agent_sources_section");
   const sourceRow = functionBody(dxLaunchSourceRows, "source_item_row");
   const sourceRowControls = functionBody(agentPanel, "render_dx_launch_source_row_controls");
   const toolbar = functionBody(agentPanel, "render_toolbar");
@@ -1239,13 +1243,18 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.doesNotMatch(railSection, /\.cursor_pointer\(\)/);
   assert.match(dxLaunchWorkspace, /"dx-agent-overview-section"/);
   assert.match(dxLaunchWorkspace, /"dx-agent-threads-section"/);
+  assert.match(dxLaunchWorkspace, /"Environment"/);
   assert.match(dxLaunchWorkspace, /"dx-agent-tasks-section"/);
+  assert.match(dxLaunchWorkspace, /"Sources"/);
   assert.match(dxLaunchWorkspace, /"dx-agent-subagents-section"/);
   assert.match(dxLaunchWorkspace, /"dx-agent-approvals-section"/);
   assert.match(agentOverview, /"Quality"/);
-  assert.match(agentOverview, /"Receipts"/);
-  assert.match(agentThreads, /"Parked threads"/);
-  assert.match(agentTasks, /"Recovery controls"/);
+  assert.match(agentOverview, /"Active tasks"/);
+  assert.match(agentOverview, /"Release gate"/);
+  assert.match(agentEnvironment, /"Background threads"/);
+  assert.match(agentEnvironment, /"Trusted tools"/);
+  assert.match(agentSources, /"Attachable"/);
+  assert.match(agentSources, /"Managed receipts"/);
   assert.match(dxLaunchWorkspace, /fn subagent_pixel_icon/);
   assert.match(dxLaunchWorkspace, /gpui::hsla\(210\.0 \/ 360\.0/);
   assert.match(dxLaunchWorkspace, /status\.subagent_rows\.iter\(\)\.take\(6\)/);
@@ -1315,11 +1324,13 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(sourcesRail, /\.shadow_md\(\)/);
   assert.match(sourcesRail, /\.occlude\(\)/);
   assert.match(sourcesRail, /rail_pin_header\(\s*"dx-sources-rail-pin"/);
-  assert.match(sourcesRail, /"dx-sources-commands-section"/);
-  assert.match(sourcesRail, /DxLaunchRailSection::SourceCommands/);
-  assert.match(sourcesRail, /sidebar_actions/);
+  assert.match(sourcesRail, /"dx-sources-controller-section"/);
+  assert.match(sourcesRail, /DxLaunchRailSection::SourceController/);
+  assert.match(sourcesRail, /sources::source_controller_state\(&status\.source_sets, cx\)/);
+  assert.doesNotMatch(sourcesRail, /sidebar_actions/);
   assert.match(sourcesRail, /sources::source_set_stack\(&status\.source_sets, source_row_controls, cx\)/);
   assert.match(sourcesRail, /"dx-sources-tools-section"/);
+  assert.match(sourcesRail, /"Next Actions"/);
   assert.match(sourcesRail, /DxLaunchRailSection::SourceTools/);
   assert.match(sourcesRail, /source_actions/);
   assert.doesNotMatch(
@@ -1377,7 +1388,9 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(dxAgentWorkspace, /"Quality"/);
   assert.match(dxAgentWorkspace, /"Accounts"/);
   assert.match(dxAgentWorkspace, /"Trusted bridge"/);
-  assert.match(dxAgentWorkspace, /"Recovery controls"/);
+  assert.match(dxAgentWorkspace, /"Active tasks"/);
+  assert.match(dxAgentWorkspace, /"Release gate"/);
+  assert.match(dxAgentWorkspace, /"Trusted tools"/);
   assert.doesNotMatch(dxLaunchWorkspace, /No active subagents|Show \{\} more|is working/);
   assert.doesNotMatch(dxLaunchWorkspace, /source bridge wired|source bridge missing|No automation receipts|Fresh proof|worktree\(s\)|task\(s\)/);
   assert.match(dxLaunchWorkspace, /"Attach"/);
@@ -1425,19 +1438,24 @@ test("agent rails and project badges keep compact production layout", () => {
 });
 
 test("agent launch rails use professional operator-facing copy", () => {
-  const sidebarActions = functionBody(agentPanel, "render_dx_launch_sidebar_actions");
   const sourceActions = functionBody(agentPanel, "render_dx_launch_source_actions");
+  const sourcesRail = functionBody(dxLaunchWorkspace, "render_sources_rail");
+  const sourceController = functionBody(dxLaunchSourceController, "source_controller_state");
   const guidedCards = functionBody(agentPanel, "render_dx_launch_guided_cards");
   const agentOverview = functionBody(dxAgentWorkspace, "agent_overview_section");
-  const agentThreads = functionBody(dxAgentWorkspace, "agent_threads_section");
-  const agentTasks = functionBody(dxAgentWorkspace, "agent_tasks_section");
+  const agentEnvironment = functionBody(dxAgentWorkspace, "agent_environment_section");
+  const agentSources = functionBody(dxAgentWorkspace, "agent_sources_section");
   const agentApprovals = functionBody(dxAgentWorkspace, "agent_approvals_section");
   const subagentSummary = functionBody(dxLaunchWorkspace, "subagent_summary");
   const styleState = functionBody(dxLaunchStylePanel, "dx_style_panel_state");
   const webPreviewState = functionBody(dxStylePanelCards, "web_preview_state");
   const sourceSetStatus = functionBody(dxSourceSetFormatting, "source_set_status");
 
-  assert.match(sidebarActions, /"Review Receipts"/);
+  assert.doesNotMatch(agentPanel, /render_dx_launch_sidebar_actions/);
+  assert.match(sourcesRail, /"Source Controller"/);
+  assert.match(sourcesRail, /"Next Actions"/);
+  assert.match(sourceController, /"Workspace roots"/);
+  assert.match(sourceController, /"Managed receipts"/);
   assert.match(sourceActions, /"Review Source"/);
   assert.match(sourceActions, /"Review Deploy Readiness"/);
   assert.match(sourceActions, /"No source actions yet"/);
@@ -1457,13 +1475,14 @@ test("agent launch rails use professional operator-facing copy", () => {
   );
 
   assert.match(agentOverview, /"Bridge"/);
-  assert.match(agentOverview, /"Accounts"/);
-  assert.match(agentOverview, /"Receipts"/);
+  assert.match(agentOverview, /"Active tasks"/);
+  assert.match(agentOverview, /"Release gate"/);
   assert.match(agentOverview, /"Quality"/);
-  assert.match(agentThreads, /"Parked threads"/);
-  assert.match(agentThreads, /"No active Agent thread state"/);
-  assert.match(agentTasks, /"Recovery controls"/);
-  assert.match(agentTasks, /"Release gate"/);
+  assert.match(agentEnvironment, /"Background threads"/);
+  assert.match(agentEnvironment, /"Accounts"/);
+  assert.match(agentEnvironment, /"Trusted tools"/);
+  assert.match(agentSources, /"Attachable"/);
+  assert.match(agentSources, /"Managed receipts"/);
   assert.match(agentApprovals, /"Trusted bridge"/);
   assert.match(agentApprovals, /"Blocked tools"/);
   assert.match(subagentSummary, /"Active Tasks"/);

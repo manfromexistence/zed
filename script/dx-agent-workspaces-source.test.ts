@@ -74,7 +74,8 @@ test("DX agent workspace taxonomy has first-class Zed screens", () => {
   assert.match(dxWorkspace, /"dx-agent-overview-section"[\s\S]*?dx_icon\(DxUiIcon::Agent\)/);
   assert.match(dxWorkspace, /"dx-agent-subagents-section"[\s\S]*?dx_icon\(DxUiIcon::Agent\)/);
   assert.match(agentWorkspace, /"dx-agent-overview-active-thread"[\s\S]*?dx_icon\(DxUiIcon::Agent\)/);
-  assert.match(agentWorkspace, /"dx-agent-threads-active"[\s\S]*?dx_icon\(DxUiIcon::Agent\)/);
+  assert.match(agentWorkspace, /"dx-agent-environment-worktrees"[\s\S]*?dx_icon\(DxUiIcon::Project\)/);
+  assert.match(agentWorkspace, /"dx-agent-sources-total"[\s\S]*?dx_icon\(DxUiIcon::Source\)/);
 
   assert.match(sidebar, sidebarWorkspaceActionArm("Connections", "OpenConnections"));
   assert.match(sidebar, sidebarWorkspaceActionArm("Tools", "OpenTools"));
@@ -92,11 +93,11 @@ test("DX agent workspace taxonomy has first-class Zed screens", () => {
   assert.match(agentPanel, /background_thread_count: background_task_count/);
 
   for (const [id, label, section] of [
-    ["dx-agent-overview-section", "Overview", "AgentOverview"],
-    ["dx-agent-threads-section", "Threads", "AgentThreads"],
-    ["dx-agent-tasks-section", "Tasks", "AgentTasks"],
+    ["dx-agent-overview-section", "Progress", "AgentOverview"],
+    ["dx-agent-threads-section", "Environment", "AgentThreads"],
+    ["dx-agent-tasks-section", "Sources", "AgentTasks"],
     ["dx-agent-subagents-section", "Subagents", "AgentSubagents"],
-    ["dx-agent-approvals-section", "Approvals", "AgentApprovals"],
+    ["dx-agent-approvals-section", "Readiness", "AgentApprovals"],
   ] as const) {
     assert.match(dxWorkspace, new RegExp(`"${id}"`));
     assert.match(dxWorkspace, new RegExp(`"${label}"`));
@@ -105,8 +106,8 @@ test("DX agent workspace taxonomy has first-class Zed screens", () => {
 
   for (const fnName of [
     "agent_overview_section",
-    "agent_threads_section",
-    "agent_tasks_section",
+    "agent_environment_section",
+    "agent_sources_section",
     "agent_subagents_section",
     "agent_approvals_section",
   ]) {
@@ -117,9 +118,9 @@ test("DX agent workspace taxonomy has first-class Zed screens", () => {
   assert.match(agentWorkspace, /status\.background_thread_count/);
   assert.match(agentWorkspace, /status\.agent_bridge\.active_task_count/);
   assert.match(agentWorkspace, /status\.agent_bridge\.trusted_tool_bridge/);
+  assert.match(agentWorkspace, /status\.source_sets\.attachment_summary\(\)/);
   assert.match(agentWorkspace, /subagent_summary\(status, cx\)/);
-  assert.match(agentWorkspace, /No active Agent thread state/);
-  assert.match(agentWorkspace, /No active DX Agents task receipts/);
+  assert.match(agentWorkspace, /No active source context/);
   assert.match(agentWorkspace, /Blocked trusted tool approval receipts need review/);
   assert.match(dxWorkspace, /compact_status_row\(\s*"dx-subagents-more"/);
   assert.ok(!dxWorkspace.includes('"+{} more"'));

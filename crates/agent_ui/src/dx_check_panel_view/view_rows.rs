@@ -1,5 +1,5 @@
 use gpui::{AnyElement, App, ClickEvent, IntoElement, ParentElement, SharedString, Window};
-use ui::{ListHeader, ListItem, ListItemSpacing, prelude::*};
+use ui::{Indicator, ListHeader, ListItem, ListItemSpacing, prelude::*};
 
 use crate::dx_check_panel::{
     DxCheckPanelAdapterPlan, DxCheckPanelNotice, DxCheckPanelQuickFix, DxCheckPanelSection,
@@ -7,61 +7,31 @@ use crate::dx_check_panel::{
 };
 
 pub(super) fn section(
-    _id: &'static str,
+    id: &'static str,
     title: &'static str,
     icon: IconName,
     is_open: bool,
     on_toggle: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
-    cx: &App,
+    _cx: &App,
 ) -> gpui::Div {
-    v_flex().w_full().min_w_0().gap_0p5().child(
+    v_flex().id(id).w_full().min_w_0().gap_0p5().child(
         ListHeader::new(title)
             .inset(true)
             .toggle(Some(is_open))
             .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
-            .on_toggle(on_toggle)
-            .end_slot(status_chip(
-                if is_open { "Open" } else { "Closed" },
-                if is_open {
-                    Color::Success
-                } else {
-                    Color::Muted
-                },
-                cx,
-            )),
+            .on_toggle(on_toggle),
     )
 }
 
-pub(super) fn status_chip(label: impl Into<SharedString>, color: Color, _cx: &App) -> AnyElement {
+pub(super) fn status_label(label: impl Into<SharedString>, color: Color, _cx: &App) -> AnyElement {
     h_flex()
         .h_5()
         .min_w_0()
         .items_center()
         .gap_0p5()
-        .px_0p5()
-        .child(
-            Icon::new(IconName::Circle)
-                .size(IconSize::XSmall)
-                .color(color),
-        )
+        .child(Indicator::dot().color(color))
         .child(
             Label::new(label)
-                .size(LabelSize::XSmall)
-                .color(color)
-                .truncate(),
-        )
-        .into_any_element()
-}
-
-pub(super) fn count_chip(count: usize, color: Color, _cx: &App) -> AnyElement {
-    h_flex()
-        .h_5()
-        .min_w_5()
-        .items_center()
-        .justify_center()
-        .px_0p5()
-        .child(
-            Label::new(count.to_string())
                 .size(LabelSize::XSmall)
                 .color(color)
                 .truncate(),
@@ -311,7 +281,7 @@ pub(super) fn web_audit_row(index: usize, audit: &DxCheckPanelWebAudit, cx: &App
                                 .size(LabelSize::Small)
                                 .truncate(),
                         )
-                        .child(status_chip(audit.status.clone(), color, cx)),
+                        .child(status_label(audit.status.clone(), color, cx)),
                 )
                 .child(
                     Label::new(audit.detail.clone())

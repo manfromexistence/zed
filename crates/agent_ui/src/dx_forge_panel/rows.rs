@@ -1,5 +1,5 @@
 use gpui::{AnyElement, App, SharedString};
-use ui::{IconName, ListHeader, ListItem, ListItemSpacing, prelude::*};
+use ui::{IconName, Indicator, ListHeader, ListItem, ListItemSpacing, prelude::*};
 
 use super::snapshot::DxForgePanelState;
 
@@ -39,7 +39,7 @@ pub(super) fn status_strip(
             h_flex()
                 .flex_none()
                 .gap_1()
-                .child(status_marker(workspace_scope, Color::Muted, cx))
+                .child(status_label(workspace_scope, Color::Muted, cx))
                 .child(actions),
         )
         .into_any_element()
@@ -58,23 +58,18 @@ pub(super) fn section_header(
             ListHeader::new(title)
                 .inset(true)
                 .start_slot(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted))
-                .end_slot(count_marker(count, Color::Muted, cx)),
+                .end_slot(count_label(count, Color::Muted, cx)),
         )
         .into_any_element()
 }
 
-pub(super) fn status_marker(label: impl Into<SharedString>, color: Color, _cx: &App) -> AnyElement {
+pub(super) fn status_label(label: impl Into<SharedString>, color: Color, _cx: &App) -> AnyElement {
     h_flex()
         .h_5()
         .min_w_0()
         .items_center()
         .gap_0p5()
-        .px_0p5()
-        .child(
-            Icon::new(IconName::Circle)
-                .size(IconSize::XSmall)
-                .color(color),
-        )
+        .child(Indicator::dot().color(color))
         .child(
             Label::new(label)
                 .size(LabelSize::XSmall)
@@ -84,13 +79,10 @@ pub(super) fn status_marker(label: impl Into<SharedString>, color: Color, _cx: &
         .into_any_element()
 }
 
-pub(super) fn count_marker(count: usize, color: Color, _cx: &App) -> AnyElement {
+pub(super) fn count_label(count: usize, color: Color, _cx: &App) -> AnyElement {
     h_flex()
         .h_5()
-        .min_w_5()
         .items_center()
-        .justify_center()
-        .px_0p5()
         .child(
             Label::new(count.to_string())
                 .size(LabelSize::XSmall)

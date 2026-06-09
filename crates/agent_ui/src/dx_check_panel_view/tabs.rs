@@ -1,8 +1,9 @@
-use gpui::{App, IntoElement, WeakEntity};
-use ui::{Divider, Tab, prelude::*};
+use std::cmp::Ordering;
+
+use gpui::{App, IntoElement, SharedString, WeakEntity};
+use ui::{IconName, Tab, TabBar, TabPosition, Tooltip, prelude::*};
 
 use super::DxCheckPanel;
-use super::view_rows::count_chip;
 use crate::dx_check_panel::DxCheckPanelSnapshot;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -16,25 +17,18 @@ pub(super) fn render_tab_bar(
     snapshot: &DxCheckPanelSnapshot,
     active_tab: DxCheckPanelTab,
     panel: WeakEntity<DxCheckPanel>,
-    cx: &App,
+    _cx: &App,
 ) -> impl IntoElement {
-    h_flex()
-        .id("dx-check-tab-bar")
-        .h(Tab::container_height(cx))
-        .w_full()
-        .border_b_1()
-        .border_color(cx.theme().colors().border.opacity(0.6))
-        .child(render_tab(
+    TabBar::new("dx-check-tab-bar")
+        .child(check_tab(
             "dx-check-tab-overview",
             "Overview",
             snapshot.sections.len(),
             DxCheckPanelTab::Overview,
             active_tab,
             panel.clone(),
-            cx,
         ))
-        .child(Divider::vertical().color(ui::DividerColor::BorderFaded))
-        .child(render_tab(
+        .child(check_tab(
             "dx-check-tab-findings",
             "Findings",
             snapshot.blockers.len()
@@ -44,67 +38,85 @@ pub(super) fn render_tab_bar(
             DxCheckPanelTab::Findings,
             active_tab,
             panel.clone(),
-            cx,
         ))
-        .child(Divider::vertical().color(ui::DividerColor::BorderFaded))
-        .child(render_tab(
+        .child(check_tab(
             "dx-check-tab-receipt",
             "Receipt",
             usize::from(snapshot.receipt_present),
             DxCheckPanelTab::Receipt,
             active_tab,
             panel,
-            cx,
         ))
 }
 
-fn render_tab(
+fn check_tab(
     id: &'static str,
     label: &'static str,
     count: usize,
     tab: DxCheckPanelTab,
     active_tab: DxCheckPanelTab,
     panel: WeakEntity<DxCheckPanel>,
-    cx: &App,
 ) -> impl IntoElement {
     let selected = active_tab == tab;
+    let title = format!("{label} ({count})");
+    let label = if count > 0 {
+        SharedString::from(format!("{label} ({count})"))
+    } else {
+        SharedString::from(label)
+    };
 
-    h_flex()
-        .id(id)
-        .h_full()
-        .flex_1()
-        .min_w_0()
-        .justify_center()
-        .gap_1()
-        .px_1()
-        .cursor_pointer()
-        .border_b_1()
-        .when(selected, |this| {
-            this.border_color(cx.theme().colors().text_accent)
-        })
-        .when(!selected, |this| {
-            this.bg(cx.theme().colors().editor_background.opacity(0.6))
-                .border_color(cx.theme().colors().border.opacity(0.6))
-        })
-        .hover(|this| this.bg(cx.theme().colors().element_hover))
+    Tab::new(id)
+        .position(tab_position(tab, active_tab))
+        .toggle_state(selected)
+        .selected_bottom_border(true)
+        .start_slot(
+            Icon::new(tab_icon(tab))
+                .size(IconSize::XSmall)
+                .color(if selected {
+                    Color::Default
+                } else {
+                    Color::Muted
+                }),
+        )
         .child(
             Label::new(label)
                 .size(LabelSize::Small)
                 .when(!selected, |this| this.color(Color::Muted))
                 .truncate(),
         )
-        .child(count_chip(
-            count,
-            if selected {
-                Color::Accent
-            } else {
-                Color::Muted
-            },
-            cx,
-        ))
+        .tooltip(Tooltip::text(title))
         .on_click(move |_, _, cx| {
             panel
                 .update(cx, |panel, cx| panel.set_active_tab(tab, cx))
                 .ok();
         })
+}
+
+fn tab_position(tab: DxCheckPanelTab, active_tab: DxCheckPanelTab) -> TabPosition {
+    let current_index = tab_index(tab);
+    let active_index = tab_index(active_tab);
+
+    match current_index {
+        0 => TabPosition::First,
+        2 => TabPosition::Last,
+        _ if current_index == active_index => TabPosition::Middle(Ordering::Equal),
+        _ if current_index < active_index => TabPosition::Middle(Ordering::Less),
+        _ => TabPosition::Middle(Ordering::Greater),
+    }
+}
+
+fn tab_index(tab: DxCheckPanelTab) -> usize {
+    match tab {
+        DxCheckPanelTab::Overview => 0,
+        DxCheckPanelTab::Findings => 1,
+        DxCheckPanelTab::Receipt => 2,
+    }
+}
+
+fn tab_icon(tab: DxCheckPanelTab) -> IconName {
+    match tab {
+        DxCheckPanelTab::Overview => IconName::Check,
+        DxCheckPanelTab::Findings => IconName::Warning,
+        DxCheckPanelTab::Receipt => IconName::FileTextOutlined,
+    }
 }

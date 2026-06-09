@@ -110,3 +110,55 @@ test("DX Check panel parser bounds user-controlled snapshot strings", () => {
     assert.match(parser, pattern);
   }
 });
+
+test("DX Check panel view uses shared panel primitives instead of badge chrome", () => {
+  const view = read("crates/agent_ui/src/dx_check_panel_view.rs");
+  const rows = read("crates/agent_ui/src/dx_check_panel_view/view_rows.rs");
+  const tabs = read("crates/agent_ui/src/dx_check_panel_view/tabs.rs");
+
+  const renderHeader = functionBody(view, "render_header");
+  const renderStatusStrip = functionBody(view, "render_status_strip");
+  const renderToolbar = functionBody(view, "render_toolbar");
+  const section = functionBody(rows, "section");
+  const checkTab = functionBody(tabs, "check_tab");
+
+  assert.match(renderHeader, /ListHeader::new\("Check"\)/);
+  assert.match(renderHeader, /\.start_slot\(/);
+  assert.match(renderHeader, /\.end_slot\(side_panel_header_controls/);
+  assert.match(renderStatusStrip, /ListItem::new\("dx-check-status"\)/);
+  assert.match(renderStatusStrip, /\.spacing\(ListItemSpacing::Dense\)/);
+  assert.match(renderStatusStrip, /\.selectable\(false\)/);
+  assert.match(renderStatusStrip, /status_label\(/);
+  assert.match(renderToolbar, /IconButton::new\("dx-check-open-receipt", IconName::FileTextOutlined\)/);
+  assert.match(renderToolbar, /IconButton::new\("dx-check-refresh", IconName::RotateCw\)/);
+  assert.match(tabs, /TabBar::new\("dx-check-tab-bar"\)/);
+  assert.match(checkTab, /Tab::new\(id\)/);
+  assert.match(checkTab, /\.position\(tab_position\(tab, active_tab\)\)/);
+  assert.match(checkTab, /\.selected_bottom_border\(true\)/);
+  assert.match(section, /v_flex\(\)\.id\(id\)/);
+  assert.match(section, /ListHeader::new\(title\)/);
+  assert.match(section, /\.toggle\(Some\(is_open\)\)/);
+  assert.doesNotMatch(section, /Open|Closed|end_slot\(status_/);
+  assert.doesNotMatch(tabs, /count_chip|Divider::vertical|border_b_1|ghost_element|editor_background/);
+  assert.doesNotMatch(
+    `${view}\n${rows}\n${tabs}`,
+    /\b(?:Badge|Chip|Pill|Tag|StatusBadge|BadgeCluster)\b|fn\s+\w*(?:badge|chip|pill|tag|cluster)\w*\s*\(/i,
+  );
+});
+
+function functionBody(source: string, name: string): string {
+  const signature = source.indexOf(`fn ${name}`);
+  assert.notEqual(signature, -1, `missing function ${name}`);
+  const bodyStart = source.indexOf("{", signature);
+  assert.notEqual(bodyStart, -1, `missing function body for ${name}`);
+  let depth = 0;
+  for (let index = bodyStart; index < source.length; index++) {
+    const char = source[index];
+    if (char === "{") depth++;
+    if (char === "}") {
+      depth--;
+      if (depth === 0) return source.slice(bodyStart, index + 1);
+    }
+  }
+  assert.fail(`unterminated function body for ${name}`);
+}

@@ -53,10 +53,10 @@ use crate::dx_launch_binary_cache::{DxBinaryCacheInput, binary_cache_snapshot};
 use crate::dx_launch_contracts::launch_contract_snapshot;
 use crate::dx_launch_prompts::{
     forge_proof_prompt, launch_audit_prompt, launch_handoff_prompt, launch_readiness_prompt,
-    launch_source_audit_prompt, launch_www_evidence_prompt, receipt_review_prompt,
-    restore_approval_prompt, runtime_proof_evidence_template_prompt, runtime_proof_import_prompt,
-    runtime_proof_prompt, source_action_icon, source_action_label, source_action_prompt,
-    source_action_title, source_receipt_review_prompt,
+    launch_source_audit_prompt, launch_www_evidence_prompt, restore_approval_prompt,
+    runtime_proof_evidence_template_prompt, runtime_proof_import_prompt, runtime_proof_prompt,
+    source_action_icon, source_action_label, source_action_prompt, source_action_title,
+    source_receipt_review_prompt,
 };
 use crate::dx_launch_readiness::launch_readiness_snapshot;
 use crate::dx_launch_receipts::launch_receipt_review_snapshot_for_roots;
@@ -157,7 +157,6 @@ const MAX_THREAD_CLIPBOARD_DECOMPRESSED_BYTES: usize = 64 * 1024 * 1024;
 const MAX_SKILL_URL_CLIPBOARD_BYTES: usize = 64 * 1024;
 const MAX_AGENT_PANEL_MESSAGE_EDITOR_TEXT_BYTES: usize = 16 * 1024 * 1024;
 const MAX_AGENT_PANEL_TITLE_EDITOR_TEXT_BYTES: usize = 16 * 1024;
-const DX_LAUNCH_RECIPE_PROMPT: &str = "Run the DX launch metasearch-to-reduced-context recipe for this workspace. First call list_dx_launch_demo_recipes with focus=\"metasearch\". Then, using only permissioned Agent tools and no local servers or builds, guide me through the next safe receipt step: inspect_dx_metasearch, search_dx_metasearch with write_source_pack_receipt=true, prepare_dx_source_attachment, prepare_dx_metasearch_context, plan_dx_serializer_rlm_execution, gate_dx_serializer_rlm_runner, write_dx_serializer_rlm_reduced_context, and preview_dx_serializer_rlm_reducer_execution. Stop before execute_dx_serializer_rlm_reducer, external serializer/RLM runner work, or model-call execution unless I explicitly approve a no-shell absolute command vector and managed receipt.";
 const DX_MEDIA_PROOF_PROMPT: &str = "Prepare the DX media provider proof flow for this workspace. Review provider readiness, media plan receipts, runner-gate receipts, and any produced-file proof cards in the Sources rail. Guide me through the next safe step using permissioned tools only: plan_dx_media_tool, gate_dx_media_tool_runner, and prepare_dx_source_attachment for produced files. Do not run local servers, builds, browser input, shell commands, unmanaged file writes, provider calls, or media execution until I explicitly approve the governed tool request and produced files can be verified from receipts.";
 const DX_REDUCER_GUARD_PROMPT: &str = "Prepare a DX serializer/RLM reducer execution guard review for this workspace. Review metasearch source packs, source attachments, context bundles, execution-plan receipts, runner-gate receipts, reduced-context receipts, execution-preview receipts, external-execution receipts, citation coverage, token budget, and model-call approval state. If I provide approval evidence, first use preview_dx_serializer_rlm_reducer_execution for the managed dry-run preview. Use execute_dx_serializer_rlm_reducer only when I explicitly provide a no-shell absolute command vector under approved DX serializer/RLM roots and require a managed execution receipt. Do not run cargo, package managers, local servers, browser input, shell commands, network, unmanaged file writes, or model calls unless the governed tool request explicitly covers them.";
 
@@ -6805,7 +6804,6 @@ impl AgentPanel {
         let Some(status) = self.cached_dx_launch_workspace_status(cx) else {
             return center;
         };
-        let sidebar_actions = self.render_dx_launch_sidebar_actions(&status, window, cx);
         let source_row_controls =
             self.render_dx_launch_source_row_controls(&status.source_sets, cx);
         let source_actions =
@@ -6852,7 +6850,6 @@ impl AgentPanel {
         };
         render_workspace_chrome(
             center,
-            sidebar_actions,
             source_row_controls,
             source_actions,
             guided_cards,
@@ -6889,7 +6886,7 @@ impl AgentPanel {
     fn dx_launch_rail_state(&self) -> DxLaunchRailState {
         let is_open = |section| !self.collapsed_dx_launch_rail_sections.contains(&section);
         DxLaunchRailState {
-            source_commands_open: is_open(DxLaunchRailSection::SourceCommands),
+            source_controller_open: is_open(DxLaunchRailSection::SourceController),
             source_stack_open: is_open(DxLaunchRailSection::SourceStack),
             source_tools_open: is_open(DxLaunchRailSection::SourceTools),
             agent_overview_open: is_open(DxLaunchRailSection::AgentOverview),
@@ -6918,107 +6915,6 @@ impl AgentPanel {
             .overflow_hidden()
             .bg(cx.theme().colors().panel_background)
             .child(div().size_full().min_w_0().overflow_hidden().child(center))
-            .into_any_element()
-    }
-
-    fn render_dx_launch_sidebar_actions(
-        &self,
-        status: &DxLaunchWorkspaceStatus,
-        _window: &mut Window,
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
-        let can_create_entries = self.has_open_project(cx);
-        let review_receipts_prompt = receipt_review_prompt(
-            &status.receipt_snapshot,
-            &status.launch_status,
-            &status.launch_receipts,
-            &status.launch_contracts,
-            &status.launch_readiness,
-            &status.launch_audit,
-            &status.source_audit,
-            &status.www_evidence,
-            &status.tool_history,
-            &status.proof_freshness,
-            &status.deploy_targets,
-        );
-        let action_button = |id: &'static str, icon: IconName, label: &'static str| {
-            Button::new(id, label)
-                .full_width()
-                .label_size(LabelSize::Small)
-                .color(Color::Muted)
-                .start_icon(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted))
-        };
-
-        v_flex()
-            .gap_1()
-            .child(
-                action_button("dx-launch-new-chat", IconName::NewThread, "New Chat")
-                    .disabled(!can_create_entries)
-                    .on_click(cx.listener(|this, _, window, cx| {
-                        this.new_thread(&NewThread, window, cx);
-                    })),
-            )
-            .child(
-                action_button("dx-launch-search", dx_icon(DxUiIcon::Search), "Search").on_click(
-                    |_event, window, cx| {
-                        window.dispatch_action(
-                            Box::new(zed_actions::agents_sidebar::FocusSidebarFilter),
-                            cx,
-                        );
-                    },
-                ),
-            )
-            .child(
-                action_button(
-                    "dx-launch-connections",
-                    dx_icon(DxUiIcon::Connections),
-                    "Connections",
-                )
-                .on_click(|_event, window, cx| {
-                    window
-                        .dispatch_action(zed_actions::assistant::OpenConnections.boxed_clone(), cx);
-                }),
-            )
-            .child(
-                action_button("dx-launch-plugins", dx_icon(DxUiIcon::Plugins), "Plugins").on_click(
-                    |_event, window, cx| {
-                        window.dispatch_action(zed_actions::assistant::OpenTools.boxed_clone(), cx);
-                    },
-                ),
-            )
-            .child(
-                action_button(
-                    "dx-launch-automations",
-                    dx_icon(DxUiIcon::Automations),
-                    "Automations",
-                )
-                .on_click(|_event, window, cx| {
-                    window
-                        .dispatch_action(zed_actions::assistant::OpenAutomations.boxed_clone(), cx);
-                }),
-            )
-            .child(
-                action_button(
-                    "dx-launch-demo-recipe",
-                    IconName::PlayOutlined,
-                    "Source Workflow",
-                )
-                .disabled(!can_create_entries)
-                .on_click(cx.listener(|this, _, window, cx| {
-                    this.insert_dx_launch_prompt(DX_LAUNCH_RECIPE_PROMPT, window, cx);
-                })),
-            )
-            .child(
-                action_button(
-                    "dx-launch-review-receipts",
-                    IconName::FileTextOutlined,
-                    "Review Receipts",
-                )
-                .disabled(!can_create_entries)
-                .on_click(cx.listener(move |this, _, window, cx| {
-                    this.insert_dx_launch_prompt(review_receipts_prompt.clone(), window, cx);
-                })),
-            )
             .into_any_element()
     }
 
