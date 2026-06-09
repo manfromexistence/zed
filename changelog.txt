@@ -1,3 +1,20 @@
+[2026-06-09] - J6 Validation And AI Screen Dock Active State
+
+FIXED:
+- `crates\project_panel\src\project_panel.rs` now passes the Project options tooltip builder in the shape expected by `PopoverMenu::trigger_with_tooltip`.
+- `crates\agent_ui\src\dx_forge_panel\rows.rs`, `dx_forge_panel\providers\state.rs`, `agent_panel.rs`, and `project_panel.rs` no longer emit the warnings surfaced by the authorized J6 validation pass.
+- `crates\title_bar\src\title_bar.rs` now resolves the active screen from the screen-host pane and treats a zoomed Agent panel as the active AI screen, preventing the Code icon from staying highlighted while the AI screen is visible.
+- `script\dx-title-bar-source.test.ts` now guards the Agent-first active-state contract.
+
+PASSED:
+- `node --test script\dx-title-bar-source.test.ts`
+- `rustfmt --edition 2024 --check` on touched Rust files
+- `git diff --check`
+- `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run` built and launched Zed successfully after stopping the stale dev process that was locking `G:\Zed\target\debug\zed.exe`
+
+NOTES:
+- The final successful incremental J6 compile completed in 26.73 seconds after the target binary lock was cleared.
+
 [2026-06-09] - DX Readiness State Honesty
 
 CHANGED:

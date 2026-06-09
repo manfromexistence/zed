@@ -139,7 +139,7 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
   assert.match(agentScreenActive, /self\.active_screen_kind\(cx\) == WorkspaceScreenKind::Agent/);
   assert.match(
     titleBarSource,
-    /fn active_screen_kind\(&self, cx: &App\) -> WorkspaceScreenKind[\s\S]*?\.unwrap_or\(WorkspaceScreenKind::Agent\)/,
+    /fn active_screen_kind\(&self, cx: &App\) -> WorkspaceScreenKind[\s\S]*?workspace\.zoomed_is_agent_panel\(\)[\s\S]*?workspace\.screen_host_pane\(\)[\s\S]*?if zoomed_is_agent_panel \{[\s\S]*?return WorkspaceScreenKind::Agent;[\s\S]*?screen_host_pane[\s\S]*?\.active_item\(\)[\s\S]*?\.or_else\(\|\| workspace\.read\(cx\)\.active_item\(cx\)\)[\s\S]*?\.unwrap_or\(WorkspaceScreenKind::Agent\)/,
     "empty/default workspace chrome should mark the AI screen as active instead of Code",
   );
   assert.doesNotMatch(
@@ -164,7 +164,6 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
   assert.match(titleBarSource, /zed_actions::assistant::OpenConnections\.boxed_clone\(\)/);
   assert.match(titleBarSource, /zed_actions::assistant::OpenTools\.boxed_clone\(\)/);
   assert.doesNotMatch(agentScreenActive, /dock_at_position|visible_panel|agent_panel_is_active/);
-  assert.doesNotMatch(agentScreenActive, /zoomed_is_agent_panel/);
   assert.doesNotMatch(titleBarSource, /fn agent_panel_is_active/);
   assert.match(
     titleBarSource,

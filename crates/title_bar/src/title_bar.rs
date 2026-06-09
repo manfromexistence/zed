@@ -807,9 +807,26 @@ impl TitleBar {
     }
 
     fn active_screen_kind(&self, cx: &App) -> WorkspaceScreenKind {
-        self.workspace
-            .upgrade()
-            .and_then(|workspace| workspace.read(cx).active_item(cx))
+        let Some(workspace) = self.workspace.upgrade() else {
+            return WorkspaceScreenKind::Agent;
+        };
+
+        let (zoomed_is_agent_panel, screen_host_pane) = {
+            let workspace = workspace.read(cx);
+            (
+                workspace.zoomed_is_agent_panel(),
+                workspace.screen_host_pane(),
+            )
+        };
+
+        if zoomed_is_agent_panel {
+            return WorkspaceScreenKind::Agent;
+        }
+
+        screen_host_pane
+            .read(cx)
+            .active_item()
+            .or_else(|| workspace.read(cx).active_item(cx))
             .map(|item| item.screen_kind(cx))
             .unwrap_or(WorkspaceScreenKind::Agent)
     }

@@ -1,5 +1,5 @@
 use gpui::{AnyElement, App, EntityId, IntoElement, WeakEntity};
-use ui::{IconName, ListHeader, ListItem, ListItemSpacing, Tab, prelude::*};
+use ui::{IconName, ListHeader, ListItem, ListItemSpacing, Tab, Tooltip, prelude::*};
 use workspace::{Workspace, dock::side_panel_header_controls};
 
 use super::snapshot::DxForgePanelState;
@@ -78,11 +78,11 @@ pub(super) fn section_header(
     let count_tooltip = format!("{count} {}", title.to_ascii_lowercase());
     div()
         .id(id)
+        .tooltip(Tooltip::text(count_tooltip))
         .child(
             ListHeader::new(title)
                 .inset(true)
-                .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
-                .tooltip(Tooltip::text(count_tooltip)),
+                .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted)),
         )
         .into_any_element()
 }

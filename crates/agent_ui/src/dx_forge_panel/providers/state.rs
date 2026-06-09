@@ -9,7 +9,6 @@ pub(super) struct RemoteTargetState {
     pub(super) label: &'static str,
     pub(super) detail: String,
     pub(super) color: Color,
-    pub(super) icon: IconName,
 }
 
 pub(super) fn remote_target_state(
@@ -270,13 +269,12 @@ fn target_state(
     label: &'static str,
     detail: impl Into<String>,
     color: Color,
-    icon: IconName,
+    _icon: IconName,
 ) -> RemoteTargetState {
     RemoteTargetState {
         label,
         detail: detail.into(),
         color,
-        icon,
     }
 }
 

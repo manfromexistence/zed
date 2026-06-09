@@ -7004,7 +7004,6 @@ impl AgentPanel {
                 can_create_entries,
                 cx,
             ));
-            card_count += 1;
         }
 
         stack.into_any_element()

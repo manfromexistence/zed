@@ -207,7 +207,6 @@ struct DxExplorerSummary {
     visible_file_count: usize,
     visible_folder_count: usize,
     visible_file_bytes: u64,
-    selected_entry_count: usize,
     expanded_dir_count: usize,
     cached_media_folder_count: usize,
     cached_media_item_count: usize,
@@ -4245,11 +4244,7 @@ impl ProjectPanel {
         operation_status::ClipboardOperationSummary::new(mode, clipboard.items().len())
     }
 
-    fn dx_explorer_summary(
-        &self,
-        selected_entry_count: usize,
-        source_kind: DxExplorerSourceKind,
-    ) -> DxExplorerSummary {
+    fn dx_explorer_summary(&self, source_kind: DxExplorerSourceKind) -> DxExplorerSummary {
         let visible_summary = self.state.dx_explorer_visible_summary;
         let folder_media_previews = self.folder_media_previews.borrow();
         let cached_media_folder_count = folder_media_previews
@@ -4272,7 +4267,6 @@ impl ProjectPanel {
             worktree_count: self.state.visible_entries.len(),
             visible_entry_count: visible_summary.entry_count,
             skipped_entry_count: visible_summary.skipped_entry_count,
-            selected_entry_count,
             expanded_dir_count: self
                 .state
                 .expanded_dir_ids
@@ -4824,7 +4818,7 @@ impl ProjectPanel {
                             .icon_size(IconSize::Small)
                             .tab_index(0_isize)
                             .track_focus(&project_options_focus_handle),
-                        move |_window, _cx| Tooltip::text("Project options"),
+                        Tooltip::text("Project options"),
                     )
                     .anchor(gpui::Anchor::TopRight)
                     .menu(move |window, cx| {
@@ -4866,7 +4860,7 @@ impl ProjectPanel {
                                 .entry(
                                     "Collapse folders",
                                     Some(CollapseAllEntries.boxed_clone()),
-                                    move |window, cx| {
+                                    move |_window, cx| {
                                         if has_worktree {
                                             panel
                                                 .update_in(cx, |this, window, cx| {
@@ -9102,8 +9096,7 @@ impl Render for ProjectPanel {
                 dx_explorer_source_kind,
             )
         };
-        let dx_explorer_summary =
-            self.dx_explorer_summary(selected_entry_count, dx_explorer_source_kind);
+        let dx_explorer_summary = self.dx_explorer_summary(dx_explorer_source_kind);
         let selected_entries_toolbar = (selected_entry_count > 0
             && self.state.edit_state.is_none())
         .then(|| {
