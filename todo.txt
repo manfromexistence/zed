@@ -1,5 +1,5 @@
 IN PROGRESS:
-- None. Sidebar chat reorder and DX panel primitive cleanup are source-verified and ready for manual runtime UX review.
+- None. Sidebar chat reorder compile repair is build-verified and ready for manual runtime UX review.
 
 PENDING:
 - Run governed DX Agents connection/tool runtime proof once authorized, covering main sidebar Connections and Tools routing, real social/provider receipts, QR payload display, credential expiry/error visuals, trusted tool bridge approvals, and native workspace-tab layout.
@@ -8,6 +8,7 @@ PENDING:
 - Continue the DX/Zed ecosystem integration with bounded source-only slices for remaining receipt scans, semantic icon hotspots, and governed runtime proof when explicitly authorized.
 
 COMPLETED:
+- Sidebar chat reorder compile repair is build-verified: the manual thread reorder path now gives the seen-thread set an explicit `HashSet<agent_ui::ThreadId>` type so the J6 incremental build can compile the reordered sidebar code. Authorized `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run` built and launched Zed successfully.
 - Sidebar chat reorder and DX panel primitive cleanup are source-verified: real thread rows now support persistent manual drag/drop ordering with filter-safe no-ops and a Custom sort mode, the DX Cog asset/settings shortcut path is guarded, Agent fullscreen floating rails use shared GPUI ListHeader/ListItem primitives, and Forge/Check panel source surfaces now follow Git-panel-grade list/header/action primitives with bounded package, remote, and machine-cache readers. Runtime/native proof, Cargo, build, and `just run` remain deferred by instruction.
 - Sidebar Plugins/Tools, Connections, and Automations are build-verified through direct active-workspace action dispatch: expanded and collapsed sidebar buttons now dispatch the first-class workspace actions through the active workspace focus handle, while the Agent fullscreen right rail hides the remaining visible count/status badge text for the extra-subagents and approval-gate rows and preserves details in tooltips.
 - Agent voice controls and DX panel chrome polish are build-verified: sidebar settings shortcuts now use the explicit DX Cog icon, Agent composer voice controls are mic-only with a compact recording/transcription surface and cached Flow runtime retry refresh, Forge/Check panels use lighter GPUI list/header status slots instead of badge-heavy row text, the voice source guard was updated, and the authorized `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run` built and launched Zed after a transient compiler memory retry.

@@ -1,3 +1,17 @@
+[2026-06-09] - Sidebar Reorder Compile Repair
+
+FIXED:
+- `crates\sidebar\src\sidebar.rs` now gives the manual thread reorder dedupe set an explicit `HashSet<agent_ui::ThreadId>` type, fixing the Rust hasher inference error surfaced by the authorized J6 build.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\sidebar\src\sidebar.rs`
+- `node --test script\dx-workspace-ui-state-source.test.ts`
+- `git diff --check`
+- `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run` built and launched Zed, detecting the main window
+
+NOTES:
+- Standalone Cargo build/check/test/clippy commands were not run.
+
 [2026-06-09] - Sidebar Reorder And DX Panel Primitive Cleanup
 
 CHANGED:

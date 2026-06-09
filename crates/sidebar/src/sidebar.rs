@@ -6164,7 +6164,7 @@ impl Sidebar {
         let insert_after_target = dragged_ix < target_ix;
 
         let mut ordered_thread_ids = Vec::with_capacity(self.manual_thread_order.len() + 1);
-        let mut seen_thread_ids = HashSet::default();
+        let mut seen_thread_ids: HashSet<agent_ui::ThreadId> = HashSet::new();
         for thread_id in self.manual_thread_order.iter().copied() {
             if seen_thread_ids.insert(thread_id) {
                 ordered_thread_ids.push(thread_id);
