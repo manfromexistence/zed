@@ -7759,7 +7759,7 @@ impl Sidebar {
                     ))
                     .child(button(
                         "sidebar-toolbar-settings",
-                        dx_icon(DxUiIcon::Settings),
+                        IconName::DxCog,
                         "Settings",
                         |_this, _, window, cx| {
                             window.dispatch_action(Box::new(zed_actions::OpenSettings), cx);
@@ -7950,7 +7950,7 @@ impl Sidebar {
             button(
                 cx,
                 "sidebar-activity-settings",
-                dx_icon(DxUiIcon::Settings),
+                IconName::DxCog,
                 "Settings",
                 |_this, _, window, cx| {
                     window.dispatch_action(Box::new(zed_actions::OpenSettings), cx);

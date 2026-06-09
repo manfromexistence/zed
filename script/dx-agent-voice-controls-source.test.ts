@@ -41,7 +41,7 @@ test("agent composer voice controls live in focused modules", () => {
   assert.match(threadView, /use crate::flow_speech_runtime::/);
 });
 
-test("composer renders separate mic and read-aloud buttons before send", () => {
+test("composer renders a compact mic control before send", () => {
   const controls = sourceSlice(
     threadView,
     ".children(self.render_voice_controls(window, cx))",
@@ -89,15 +89,10 @@ test("composer renders separate mic and read-aloud buttons before send", () => {
     "let voice_icon = match state.phase",
     "let voice_color = match state.phase",
   );
-  const speakDisabled = sourceSlice(
-    voiceButtons,
-    "let speak_disabled =",
-    "let voice_disabled =",
-  );
   const voiceDisabled = sourceSlice(
     voiceButtons,
     "let voice_disabled =",
-    "let speak_icon = match state.phase",
+    "vec![",
   );
   const recordingPanel = sourceSlice(
     voiceControls,
@@ -106,50 +101,39 @@ test("composer renders separate mic and read-aloud buttons before send", () => {
   );
 
   assert.match(voiceControls, /agent-composer-voice-input/);
-  assert.match(voiceControls, /agent-composer-text-to-speech/);
+  assert.doesNotMatch(voiceControls, /agent-composer-text-to-speech/);
   assert.match(voiceControls, /struct ComposerVoiceAvailability/);
-  assert.match(voiceControls, /has_composer_text: bool/);
+  assert.doesNotMatch(voiceControls, /has_composer_text: bool/);
   assert.match(voiceControls, /stt_ready: bool/);
   assert.match(voiceControls, /tts_ready: bool/);
   assert.match(voiceControls, /stt_status: SharedString/);
-  assert.match(voiceControls, /tts_status: SharedString/);
+  assert.doesNotMatch(voiceControls, /tts_status: SharedString/);
   assert.match(voiceControls, /IconName::Mic/);
-  assert.match(voiceControls, /IconName::AudioOn/);
+  assert.doesNotMatch(voiceButtons, /IconName::AudioOn/);
   assert.match(voiceControls, /IconName::Stop/);
   assert.match(voiceIcon, /ComposerVoicePhase::Recording\s*\|\s*ComposerVoicePhase::Transcribing => IconName::Stop/);
   assert.match(voiceIcon, /ComposerVoicePhase::Speaking => IconName::Mic/);
   assert.doesNotMatch(voiceIcon, /ComposerVoicePhase::Speaking => IconName::Stop/);
   assert.match(voiceButtons, /ComposerVoicePhase::Ready if !availability\.stt_ready => Color::Warning/);
-  assert.match(voiceButtons, /let speak_icon = match state\.phase/);
-  assert.match(voiceButtons, /ComposerVoicePhase::Speaking => IconName::Stop/);
   assert.match(voiceControls, /availability\.stt_status\.clone\(\)/);
   assert.match(voiceButtons, /\.disabled\(voice_disabled\)/);
-  assert.match(speakDisabled, /!availability\.has_composer_text/);
-  assert.doesNotMatch(speakDisabled, /!availability\.tts_ready/);
   assert.match(voiceDisabled, /ComposerVoicePhase::Speaking => true/);
   assert.match(
     voiceDisabled,
     /ComposerVoicePhase::Ready \| ComposerVoicePhase::Error => false/,
   );
   assert.doesNotMatch(voiceDisabled, /!availability\.stt_ready/);
-  assert.match(voiceButtons, /availability\.has_composer_text && !availability\.tts_ready/);
-  assert.match(
-    voiceButtons,
-    /state\.speak_tooltip\(&availability\)/,
-  );
-  assert.match(voiceControls, /Type text in the composer before reading aloud/);
-  assert.match(voiceControls, /availability\.tts_status\.clone\(\)/);
+  assert.doesNotMatch(voiceButtons, /availability\.has_composer_text && !availability\.tts_ready/);
+  assert.doesNotMatch(voiceButtons, /state\.speak_tooltip\(&availability\)/);
+  assert.doesNotMatch(voiceControls, /Type text in the composer before reading aloud/);
   assert.match(voiceControls, /availability\.stt_status\.clone\(\)/);
-  assert.match(
+  assert.doesNotMatch(
     threadView,
-    /let has_composer_text = !editor\.read\(cx\)\.text\(cx\)\.trim\(\)\.is_empty\(\)/,
+    /composer_voice_availability\.has_composer_text/,
   );
   assert.match(voiceControls, /Kokoro read-aloud is active/);
   assert.match(voiceButtons, /agent-composer-voice-input[\s\S]+\.on_click\(on_voice_click\)/);
-  assert.match(
-    voiceButtons,
-    /agent-composer-text-to-speech", speak_icon\)[\s\S]+\.on_click\(on_speak_click\)/,
-  );
+  assert.doesNotMatch(voiceButtons, /on_speak_click/);
   assert.doesNotMatch(voiceButtons, /dummy|mock|placeholder|fake|demo/i);
   assert.doesNotMatch(recordingPanel, /dummy|mock|placeholder|fake|demo/i);
 });
@@ -199,10 +183,10 @@ test("voice recording UI exposes real recording and transcription states", () =>
   assert.match(voiceControls, /Speaking/);
   assert.match(voiceControls, /set_synthesizing/);
   assert.match(voiceControls, /render_voice_recording_panel/);
-  assert.match(voiceControls, /Recording with Flow/);
-  assert.match(voiceControls, /Transcribing with Flow STT/);
-  assert.match(voiceControls, /Generating Kokoro audio/);
-  assert.match(voiceControls, /Reading with Kokoro/);
+  assert.match(voiceControls, /Listening/);
+  assert.match(voiceControls, /Transcribing/);
+  assert.match(voiceControls, /Generating audio/);
+  assert.match(voiceControls, /Reading/);
   assert.match(voiceControls, /90s max/);
   assert.match(voiceControls, /agent-composer-stop-voice-recording/);
   assert.match(voiceControls, /agent-composer-cancel-flow-transcription/);
@@ -218,11 +202,10 @@ test("voice recording UI exposes real recording and transcription states", () =>
   assert.match(voiceControls, /Duration::ZERO/);
   assert.match(voiceControls, /const VOICE_RECORDING_STOP_TRANSCRIBE_LABEL/);
   assert.match(voiceControls, /const VOICE_RECORDING_STOP_TRANSCRIBE_TOOLTIP/);
-  assert.match(voiceControls, /const VOICE_RECORDING_DISCARD_LABEL/);
+  assert.doesNotMatch(voiceControls, /const VOICE_RECORDING_DISCARD_LABEL/);
   assert.match(voiceControls, /const VOICE_RECORDING_DISCARD_TOOLTIP/);
   assert.match(voiceControls, /Stop recording and transcribe/);
   assert.match(voiceControls, /Cancel Flow transcription/);
-  assert.match(voiceControls, /Stop Kokoro read-aloud/);
   assert.match(voiceControls, /agent-composer-discard-voice-recording/);
   assert.match(voiceControls, /Discard recording/);
   assert.match(
@@ -230,7 +213,7 @@ test("voice recording UI exposes real recording and transcription states", () =>
     /ComposerVoicePhase::Recording => \([\s\S]+VOICE_RECORDING_STOP_TRANSCRIBE_LABEL/,
   );
   assert.match(recordingPanel, /Button::new\(stop_button_id, stop_button_label\)/);
-  assert.match(recordingPanel, /Button::new\([\s\S]+VOICE_RECORDING_DISCARD_LABEL/);
+  assert.match(recordingPanel, /IconButton::new\([\s\S]+agent-composer-discard-voice-recording/);
   assert.match(recordingPanel, /IconName::Trash/);
   assert.doesNotMatch(
     recordingPanel,
@@ -247,7 +230,6 @@ test("voice recording UI exposes real recording and transcription states", () =>
   assert.match(voiceControls, /Retry Flow voice input/);
   assert.match(voiceControls, /agent-composer-dismiss-voice-error/);
   assert.match(voiceControls, /Dismiss Flow voice error/);
-  assert.match(voiceControls, /Retry or dismiss to continue/);
   assert.match(threadView, /flow_recording_session[\s\S]+telemetry\(\)/);
   assert.match(threadView, /MAX_RECORDING_SECONDS/);
   assert.match(threadView, /Duration::from_millis\(500\)/);
@@ -263,9 +245,8 @@ test("voice recording UI exposes real recording and transcription states", () =>
   assert.match(threadView, /fn dismiss_flow_voice_error/);
   assert.match(threadView, /Flow voice error dismissed/);
   assert.match(constructorAvailability, /stt_status: flow_voice_runtime\.stt_readiness_summary\(\)\.into\(\)/);
-  assert.match(constructorAvailability, /tts_status: flow_voice_runtime\.tts_readiness_summary\(\)\.into\(\)/);
   assert.match(refreshAvailability, /stt_status = runtime\.stt_readiness_summary\(\)\.into\(\)/);
-  assert.match(refreshAvailability, /tts_status = runtime\.tts_readiness_summary\(\)\.into\(\)/);
+  assert.doesNotMatch(refreshAvailability, /tts_status = runtime\.tts_readiness_summary\(\)\.into\(\)/);
   assert.match(
     stopVoiceAction,
     /ComposerVoicePhase::Synthesizing \| ComposerVoicePhase::Speaking => \{\s*self\.stop_flow_voice_playback\(cx\)\s*\}/,
@@ -365,7 +346,7 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   const speakText = sourceSlice(
     runtime,
     "pub(crate) fn speak_text",
-    "pub(crate) fn status_summary",
+    "pub(crate) fn stt_readiness_summary",
   );
   const detectRuntime = sourceSlice(
     runtime,
@@ -679,16 +660,21 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.doesNotMatch(runtime, /mock|placeholder|dummy/i);
 });
 
-test("voice runtime status summary reports precise readiness blockers", () => {
+test("voice runtime readiness summaries report precise blockers", () => {
   const runtime = readFileSync(flowRuntimePath, "utf8");
   const speakText = sourceSlice(
     runtime,
     "pub(crate) fn speak_text",
-    "pub(crate) fn status_summary",
+    "pub(crate) fn stt_readiness_summary",
   );
-  const statusSummary = sourceSlice(
+  const sttReadinessSummary = sourceSlice(
     runtime,
-    "pub(crate) fn status_summary",
+    "pub(crate) fn stt_readiness_summary",
+    "fn stt_model_label",
+  );
+  const ttsReadinessSummary = sourceSlice(
+    runtime,
+    "pub(crate) fn tts_readiness_summary",
     "pub(crate) fn stt_available",
   );
   const ttsAvailable = sourceSlice(
@@ -717,10 +703,11 @@ test("voice runtime status summary reports precise readiness blockers", () => {
     "fn append_stt_backend_args",
   );
 
-  assert.match(statusSummary, /Friday Kokoro ready/);
+  assert.match(ttsReadinessSummary, /Friday Kokoro ready/);
   assert.match(runtime, /pub\(crate\) fn stt_readiness_summary\(&self\) -> String/);
-  assert.match(statusSummary, /let tts = self\.tts_readiness_summary\(\);/);
-  assert.doesNotMatch(statusSummary, /\"Friday Kokoro missing\"/);
+  assert.match(sttReadinessSummary, /self\.ensure_stt_ready\(\)/);
+  assert.match(sttReadinessSummary, /format!\("\{\} ready", stt_model\.label\)/);
+  assert.doesNotMatch(ttsReadinessSummary, /"Friday Kokoro missing"/);
   assert.match(speakText, /let tts_runtime = self\.tts_runtime\(\)\?/);
   assert.doesNotMatch(speakText, /context\("Friday Kokoro TTS runtime is not available"\)\?/);
   assert.match(ttsAvailable, /self\.ensure_tts_ready\(\)\.is_ok\(\)/);
@@ -736,8 +723,6 @@ test("voice runtime status summary reports precise readiness blockers", () => {
   assert.match(missingTtsReadiness, /kokoro-v1_0\.pth/);
   assert.match(missingTtsReadiness, /voices\/af_heart\.pt/);
   assert.match(missingTtsReadiness, /voices\/af_bella\.pt/);
-  assert.match(statusSummary, /Flow STT command ready/);
-  assert.match(statusSummary, /Flow STT command missing/);
   assert.match(missingSttModelMessage, /Flow \{\} model files are missing or empty under/);
   assert.match(missingSttModelMessage, /Flow \{\} requires a non-empty GGML model from FLOW_WHISPER_MODEL, DX_FLOW_WHISPER_MODEL/);
   assert.match(missingSttModelMessage, /plus a whisper\.cpp binary from FLOW_WHISPER_CPP_BINARY, DX_WHISPER_CPP_BINARY, FLOW_WHISPER_CPP_EXE, or FLOW_WHISPER_CPP/);
@@ -910,11 +895,6 @@ test("voice text paths use the real message editor contents and insert APIs", ()
 });
 
 test("voice playback keeps audio feature wiring and fallback states", () => {
-  const speakComposerText = sourceSlice(
-    threadView,
-    "fn speak_composer_text",
-    "fn speak_agent_response_text",
-  );
   const speakAgentResponseText = sourceSlice(
     threadView,
     "fn speak_agent_response_text",
@@ -970,13 +950,13 @@ test("voice playback keeps audio feature wiring and fallback states", () => {
     speakFlowText,
     /ComposerVoicePhase::Recording \| ComposerVoicePhase::Transcribing/,
   );
-  assert.match(speakComposerText, /let text = self\.message_editor\.read\(cx\)\.text\(cx\)/);
-  assert.match(speakComposerText, /FlowTextToSpeechRequest::composer\(text\)/);
+  assert.doesNotMatch(threadView, /fn speak_composer_text/);
+  assert.doesNotMatch(threadView, /FlowTextToSpeechRequest::composer/);
   assert.match(speakAgentResponseText, /FlowTextToSpeechRequest::agent_response\(text\)/);
   assert.doesNotMatch(speakAgentResponseText, /message_editor|active_editor\(cx\)|thread\.read|latest_agent_response_content/);
   assert.match(speakFlowText, /let text = request\.text\.trim\(\)\.to_string\(\)/);
   assert.match(speakFlowText, /runtime\.speak_text\(&text, &cancellation\)/);
-  assert.match(speakFlowText, /request\.synthesizing_message\(&summary\)/);
+  assert.match(speakFlowText, /set_synthesizing\("Generating Kokoro audio"\)/);
   assert.match(speakFlowText, /request\.speaking_message/);
   assert.match(speakFlowText, /request\.finished_message/);
   assert.doesNotMatch(speakFlowText, /active_editor\(cx\)/);
@@ -1002,12 +982,12 @@ test("voice playback keeps audio feature wiring and fallback states", () => {
   assert.match(getAgentMessageContent, /AssistantMessageChunk::Thought \{ \.\. \} => None/);
   assert.doesNotMatch(renderThreadControls, /toggle_flow_voice_recording|start_flow_voice_recording|transcribe_recording|insert_transcript_text/);
   assert.doesNotMatch(renderThreadControls, /agent-response-voice-input|IconName::Mic/);
-  assert.doesNotMatch(speakComposerText + speakAgentResponseText, /runtime\.speak_text|Audio::play_wav_file_tracked|FlowSpeechCancellation::new/);
+  assert.doesNotMatch(speakAgentResponseText, /runtime\.speak_text|Audio::play_wav_file_tracked|FlowSpeechCancellation::new/);
   assert.equal([...speakFlowText.matchAll(/runtime\.speak_text\(&text, &cancellation\)/g)].length, 1);
   assert.equal([...speakFlowText.matchAll(/Audio::play_wav_file_tracked/g)].length, 1);
   assert.equal([...speakFlowText.matchAll(/FlowSpeechCancellation::new\(\)/g)].length, 1);
   assert.doesNotMatch(
-    speakComposerText + speakAgentResponseText + speakFlowText + renderThreadControls + latestAgentResponseContent,
+    speakAgentResponseText + speakFlowText + renderThreadControls + latestAgentResponseContent,
     /dummy|mock|placeholder|fake|demo/i,
   );
   assertBefore(
@@ -1019,7 +999,7 @@ test("voice playback keeps audio feature wiring and fallback states", () => {
   assertBefore(
     speakFlowText,
     "if let Err(error) = runtime.ensure_tts_ready()",
-    "request.synthesizing_message(&summary)",
+    'set_synthesizing("Generating Kokoro audio")',
     "Kokoro readiness must be checked before entering Synthesizing",
   );
   assertBefore(

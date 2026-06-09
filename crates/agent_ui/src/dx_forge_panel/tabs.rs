@@ -5,6 +5,7 @@ use ui::{DxUiIcon, IconName, Tab, TabBar, TabPosition, Tooltip, dx_icon, prelude
 
 use super::{
     panel::{DxForgePanel, DxForgePanelTab},
+    rows::count_chip,
     snapshot::DxForgePanelSnapshot,
     visible_rows::visible_row_count_for_tab,
 };
@@ -61,7 +62,7 @@ fn forge_tab(
     tab: DxForgePanelTab,
     active_tab: DxForgePanelTab,
     panel: &WeakEntity<DxForgePanel>,
-    _cx: &App,
+    cx: &App,
 ) -> impl IntoElement {
     let selected = active_tab == tab;
     let panel = panel.clone();
@@ -80,11 +81,15 @@ fn forge_tab(
                     Color::Muted
                 }),
         )
-        .end_slot(
-            Label::new(format!("({count})"))
-                .size(LabelSize::XSmall)
-                .color(Color::Muted),
-        )
+        .end_slot(count_chip(
+            count,
+            if selected {
+                Color::Accent
+            } else {
+                Color::Muted
+            },
+            cx,
+        ))
         .child(
             Label::new(label)
                 .size(LabelSize::Small)

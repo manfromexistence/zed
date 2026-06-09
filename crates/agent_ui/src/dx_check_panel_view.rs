@@ -6,7 +6,7 @@ use gpui::{
     ScrollHandle, Styled, TaskExt, WeakEntity, Window, div, px,
 };
 use theme::ActiveTheme;
-use ui::{IconButtonShape, Tooltip, WithScrollbar, prelude::*};
+use ui::{IconButtonShape, ListItem, ListItemSpacing, Tooltip, WithScrollbar, prelude::*};
 use workspace::{
     OpenOptions, Workspace,
     dock::{DockPosition, Panel, PanelEvent, side_panel_header_controls},
@@ -17,7 +17,8 @@ use crate::dx_check_panel::{
 };
 use crate::dx_check_panel_view::view_rows::{
     adapter_plan_row, config_label, count_label, detail_row, duration_label, empty_row, notice_row,
-    notice_title, outcome_label, quick_fix_row, section, section_row, status_color, web_audit_row,
+    notice_title, outcome_label, quick_fix_row, section, section_row, status_chip, status_color,
+    web_audit_row,
 };
 
 mod tabs;
@@ -241,43 +242,46 @@ impl DxCheckPanel {
     }
 
     fn render_status_strip(&self, snapshot: &DxCheckPanelSnapshot, cx: &App) -> AnyElement {
-        h_flex()
-            .id("dx-check-status")
-            .h(px(32.0))
-            .w_full()
-            .min_w_0()
-            .gap_2()
-            .px_2()
-            .border_y_1()
-            .border_color(cx.theme().colors().border)
-            .child(
+        ListItem::new("dx-check-status")
+            .spacing(ListItemSpacing::Dense)
+            .selectable(false)
+            .start_slot(
                 Icon::new(IconName::Check)
                     .size(IconSize::Small)
                     .color(status_color(snapshot)),
             )
             .child(
-                Label::new(snapshot.score_label())
-                    .size(LabelSize::Small)
-                    .color(status_color(snapshot))
-                    .truncate(),
-            )
-            .child(
-                Label::new(snapshot.status.clone())
-                    .size(LabelSize::XSmall)
-                    .color(Color::Muted)
-                    .truncate(),
-            )
-            .child(div().flex_1())
-            .child(
-                Label::new(outcome_label(
-                    snapshot.pass_count,
-                    snapshot.fail_count,
-                    snapshot.warn_count,
-                    snapshot.skipped_count,
-                ))
-                .size(LabelSize::XSmall)
-                .color(Color::Muted)
-                .truncate(),
+                v_flex()
+                    .min_w_0()
+                    .gap_0p5()
+                    .child(
+                        h_flex()
+                            .min_w_0()
+                            .gap_2()
+                            .justify_between()
+                            .child(
+                                Label::new(snapshot.score_label())
+                                    .size(LabelSize::Small)
+                                    .color(status_color(snapshot))
+                                    .truncate(),
+                            )
+                            .child(status_chip(
+                                snapshot.status.clone(),
+                                status_color(snapshot),
+                                cx,
+                            )),
+                    )
+                    .child(
+                        Label::new(outcome_label(
+                            snapshot.pass_count,
+                            snapshot.fail_count,
+                            snapshot.warn_count,
+                            snapshot.skipped_count,
+                        ))
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted)
+                        .truncate(),
+                    ),
             )
             .into_any_element()
     }
@@ -537,7 +541,7 @@ impl DxCheckPanel {
                 stack = stack.child(empty_row("No web-audit results in the latest receipt."));
             } else {
                 for (index, audit) in snapshot.web_audits.iter().enumerate() {
-                    stack = stack.child(web_audit_row(index, audit));
+                    stack = stack.child(web_audit_row(index, audit, cx));
                 }
             }
         }

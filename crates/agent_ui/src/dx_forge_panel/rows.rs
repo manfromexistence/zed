@@ -1,4 +1,4 @@
-use gpui::{AnyElement, App};
+use gpui::{AnyElement, App, SharedString};
 use ui::{IconName, ListHeader, ListItem, ListItemSpacing, prelude::*};
 
 use super::snapshot::DxForgePanelState;
@@ -8,7 +8,7 @@ pub(super) fn status_strip(
     detail: String,
     workspace_scope: String,
     actions: AnyElement,
-    _cx: &App,
+    cx: &App,
 ) -> AnyElement {
     let (icon, color, label) = state_presentation(state);
 
@@ -39,13 +39,7 @@ pub(super) fn status_strip(
             h_flex()
                 .flex_none()
                 .gap_1()
-                .child(
-                    Label::new(workspace_scope)
-                        .size(LabelSize::XSmall)
-                        .color(Color::Muted)
-                        .single_line()
-                        .truncate(),
-                )
+                .child(status_chip(workspace_scope, Color::Muted, cx))
                 .child(actions),
         )
         .into_any_element()
@@ -56,7 +50,7 @@ pub(super) fn section_header(
     title: &'static str,
     icon: IconName,
     count: usize,
-    _cx: &App,
+    cx: &App,
 ) -> AnyElement {
     div()
         .id(id)
@@ -64,11 +58,44 @@ pub(super) fn section_header(
             ListHeader::new(title)
                 .inset(true)
                 .start_slot(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted))
-                .end_slot(
-                    Label::new(count.to_string())
-                        .size(LabelSize::XSmall)
-                        .color(Color::Muted),
-                ),
+                .end_slot(count_chip(count, Color::Muted, cx)),
+        )
+        .into_any_element()
+}
+
+pub(super) fn status_chip(label: impl Into<SharedString>, color: Color, _cx: &App) -> AnyElement {
+    h_flex()
+        .h_5()
+        .min_w_0()
+        .items_center()
+        .gap_0p5()
+        .px_0p5()
+        .child(
+            Icon::new(IconName::Circle)
+                .size(IconSize::XSmall)
+                .color(color),
+        )
+        .child(
+            Label::new(label)
+                .size(LabelSize::XSmall)
+                .color(color)
+                .truncate(),
+        )
+        .into_any_element()
+}
+
+pub(super) fn count_chip(count: usize, color: Color, _cx: &App) -> AnyElement {
+    h_flex()
+        .h_5()
+        .min_w_5()
+        .items_center()
+        .justify_center()
+        .px_0p5()
+        .child(
+            Label::new(count.to_string())
+                .size(LabelSize::XSmall)
+                .color(color)
+                .truncate(),
         )
         .into_any_element()
 }

@@ -2,18 +2,17 @@ use std::time::{Duration, Instant};
 
 use gpui::{AnyElement, App, ClickEvent, IntoElement, Window};
 use ui::{
-    Button, ButtonCommon, ButtonSize, Clickable, Color, Icon, IconButton, IconName, IconSize,
-    Label, LabelSize, Tooltip,
+    Button, ButtonCommon, ButtonSize, Clickable, Color, Icon, IconButton, IconButtonShape,
+    IconName, IconSize, Label, LabelSize, Tooltip,
 };
 use ui::{h_flex, prelude::*, v_flex};
 
-const VOICE_LEVEL_BAR_COUNT: usize = 12;
+const VOICE_LEVEL_BAR_COUNT: usize = 8;
 const MAX_RECORDING_DURATION_LABEL: &str = "90s max";
-const VOICE_RECORDING_STOP_TRANSCRIBE_LABEL: &str = "Stop and transcribe";
+const VOICE_RECORDING_STOP_TRANSCRIBE_LABEL: &str = "Done";
 const VOICE_RECORDING_STOP_TRANSCRIBE_TOOLTIP: &str = "Stop recording and transcribe with Flow";
 const VOICE_TRANSCRIPTION_CANCEL_LABEL: &str = "Cancel";
 const VOICE_TRANSCRIPTION_CANCEL_TOOLTIP: &str = "Cancel Flow transcription";
-const VOICE_RECORDING_DISCARD_LABEL: &str = "Discard";
 const VOICE_RECORDING_DISCARD_TOOLTIP: &str = "Discard recording";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -38,11 +37,9 @@ pub(super) struct ComposerVoiceState {
 
 #[derive(Clone, Debug)]
 pub(super) struct ComposerVoiceAvailability {
-    pub(super) has_composer_text: bool,
     pub(super) stt_ready: bool,
     pub(super) stt_status: SharedString,
     pub(super) tts_ready: bool,
-    pub(super) tts_status: SharedString,
 }
 
 impl Default for ComposerVoiceState {
@@ -155,35 +152,12 @@ impl ComposerVoiceState {
             ComposerVoicePhase::Ready => "Record voice input with Flow".into(),
         }
     }
-
-    fn speak_tooltip(&self, availability: &ComposerVoiceAvailability) -> SharedString {
-        match self.phase {
-            ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking => {
-                "Stop Kokoro read-aloud".into()
-            }
-            ComposerVoicePhase::Recording | ComposerVoicePhase::Transcribing => {
-                "Finish voice recording before reading aloud".into()
-            }
-            ComposerVoicePhase::Error | ComposerVoicePhase::Ready if !availability.tts_ready => {
-                availability.tts_status.clone()
-            }
-            ComposerVoicePhase::Error | ComposerVoicePhase::Ready
-                if !availability.has_composer_text =>
-            {
-                "Type text in the composer before reading aloud".into()
-            }
-            ComposerVoicePhase::Error | ComposerVoicePhase::Ready => {
-                "Read the composer aloud with Kokoro".into()
-            }
-        }
-    }
 }
 
 pub(super) fn render_voice_buttons(
     state: &ComposerVoiceState,
     availability: ComposerVoiceAvailability,
     on_voice_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
-    on_speak_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
 ) -> Vec<AnyElement> {
     let voice_icon = match state.phase {
         ComposerVoicePhase::Recording | ComposerVoicePhase::Transcribing => IconName::Stop,
@@ -197,28 +171,10 @@ pub(super) fn render_voice_buttons(
         ComposerVoicePhase::Ready if !availability.stt_ready => Color::Warning,
         ComposerVoicePhase::Speaking | ComposerVoicePhase::Ready => Color::Muted,
     };
-    let speak_disabled = match state.phase {
-        ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking => false,
-        ComposerVoicePhase::Recording | ComposerVoicePhase::Transcribing => true,
-        ComposerVoicePhase::Ready | ComposerVoicePhase::Error => !availability.has_composer_text,
-    };
     let voice_disabled = match state.phase {
         ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking => true,
         ComposerVoicePhase::Ready | ComposerVoicePhase::Error => false,
         ComposerVoicePhase::Recording | ComposerVoicePhase::Transcribing => false,
-    };
-    let speak_icon = match state.phase {
-        ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking => IconName::Stop,
-        _ => IconName::AudioOn,
-    };
-    let speak_color = match state.phase {
-        ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking => Color::Accent,
-        ComposerVoicePhase::Ready | ComposerVoicePhase::Error
-            if availability.has_composer_text && !availability.tts_ready =>
-        {
-            Color::Warning
-        }
-        _ => Color::Muted,
     };
 
     vec![
@@ -228,13 +184,6 @@ pub(super) fn render_voice_buttons(
             .disabled(voice_disabled)
             .tooltip(Tooltip::text(state.voice_tooltip(&availability)))
             .on_click(on_voice_click)
-            .into_any_element(),
-        IconButton::new("agent-composer-text-to-speech", speak_icon)
-            .icon_size(IconSize::Small)
-            .icon_color(speak_color)
-            .disabled(speak_disabled)
-            .tooltip(Tooltip::text(state.speak_tooltip(&availability)))
-            .on_click(on_speak_click)
             .into_any_element(),
     ]
 }
@@ -252,29 +201,13 @@ pub(super) fn render_voice_recording_panel(
     }
 
     let (title, tone, detail) = match state.phase {
-        ComposerVoicePhase::Recording => {
-            ("Recording with Flow", Color::Error, recording_detail(state))
+        ComposerVoicePhase::Recording => ("Listening", Color::Error, recording_detail(state)),
+        ComposerVoicePhase::Transcribing => {
+            ("Transcribing", Color::Accent, "Preparing text".into())
         }
-        ComposerVoicePhase::Transcribing => (
-            "Transcribing with Flow STT",
-            Color::Accent,
-            "Preparing transcript".into(),
-        ),
-        ComposerVoicePhase::Synthesizing => (
-            "Generating Kokoro audio",
-            Color::Accent,
-            "Preparing generated audio".into(),
-        ),
-        ComposerVoicePhase::Speaking => (
-            "Reading with Kokoro",
-            Color::Accent,
-            "Playing generated audio".into(),
-        ),
-        ComposerVoicePhase::Error => (
-            "Flow voice needs attention",
-            Color::Warning,
-            "Retry or dismiss to continue".into(),
-        ),
+        ComposerVoicePhase::Synthesizing => ("Generating audio", Color::Accent, "Working".into()),
+        ComposerVoicePhase::Speaking => ("Reading", Color::Accent, "Playing".into()),
+        ComposerVoicePhase::Error => ("Voice unavailable", Color::Warning, state.message.clone()),
         ComposerVoicePhase::Ready => unreachable!(),
     };
     let (stop_button_id, stop_button_label, stop_button_tooltip) = match state.phase {
@@ -299,7 +232,7 @@ pub(super) fn render_voice_recording_panel(
         v_flex()
             .id("agent-composer-voice-recording-panel")
             .w_full()
-            .gap_1()
+            .gap_0p5()
             .px_2()
             .py_1()
             .rounded_sm()
@@ -378,18 +311,13 @@ pub(super) fn render_voice_recording_panel(
                                     )
                                     .when(state.phase == ComposerVoicePhase::Recording, |this| {
                                         this.child(
-                                            Button::new(
+                                            IconButton::new(
                                                 "agent-composer-discard-voice-recording",
-                                                VOICE_RECORDING_DISCARD_LABEL,
+                                                IconName::Trash,
                                             )
-                                            .size(ButtonSize::Compact)
-                                            .label_size(LabelSize::XSmall)
-                                            .color(Color::Error)
-                                            .start_icon(
-                                                Icon::new(IconName::Trash)
-                                                    .size(IconSize::XSmall)
-                                                    .color(Color::Error),
-                                            )
+                                            .shape(IconButtonShape::Square)
+                                            .icon_size(IconSize::Small)
+                                            .icon_color(Color::Error)
                                             .tooltip(Tooltip::text(VOICE_RECORDING_DISCARD_TOOLTIP))
                                             .on_click(on_cancel_recording_click),
                                         )
@@ -433,12 +361,6 @@ pub(super) fn render_voice_recording_panel(
             .when(state.phase == ComposerVoicePhase::Recording, |this| {
                 this.child(render_voice_level_meter(state.input_level, tone, cx))
             })
-            .child(
-                Label::new(state.message.clone())
-                    .size(LabelSize::XSmall)
-                    .color(Color::Muted)
-                    .truncate(),
-            )
             .into_any_element(),
     )
 }
@@ -482,17 +404,12 @@ fn recording_detail(state: &ComposerVoiceState) -> SharedString {
         .recording_started_at()
         .map(|started_at| format_clock(started_at.elapsed()))
         .unwrap_or_else(|| "00:00".to_string());
-    let captured = format_captured_duration(state.captured_duration);
-    format!("{elapsed} elapsed / {captured} captured / {MAX_RECORDING_DURATION_LABEL}").into()
+    format!("{elapsed} / {MAX_RECORDING_DURATION_LABEL}").into()
 }
 
 fn format_clock(duration: Duration) -> String {
     let seconds = duration.as_secs().min(Duration::from_secs(599).as_secs());
     format!("{:02}:{:02}", seconds / 60, seconds % 60)
-}
-
-fn format_captured_duration(duration: Duration) -> String {
-    format!("{:.1}s", duration.as_secs_f32())
 }
 
 fn status_icon(phase: ComposerVoicePhase) -> IconName {

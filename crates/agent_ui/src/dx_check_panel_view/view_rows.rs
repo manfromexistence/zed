@@ -12,7 +12,7 @@ pub(super) fn section(
     icon: IconName,
     is_open: bool,
     on_toggle: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
-    _cx: &App,
+    cx: &App,
 ) -> gpui::Div {
     v_flex().w_full().min_w_0().gap_0p5().child(
         ListHeader::new(title)
@@ -20,12 +20,53 @@ pub(super) fn section(
             .toggle(Some(is_open))
             .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
             .on_toggle(on_toggle)
-            .end_slot(
-                Label::new(if is_open { "open" } else { "closed" })
-                    .size(LabelSize::XSmall)
-                    .color(Color::Muted),
-            ),
+            .end_slot(status_chip(
+                if is_open { "Open" } else { "Closed" },
+                if is_open {
+                    Color::Success
+                } else {
+                    Color::Muted
+                },
+                cx,
+            )),
     )
+}
+
+pub(super) fn status_chip(label: impl Into<SharedString>, color: Color, _cx: &App) -> AnyElement {
+    h_flex()
+        .h_5()
+        .min_w_0()
+        .items_center()
+        .gap_0p5()
+        .px_0p5()
+        .child(
+            Icon::new(IconName::Circle)
+                .size(IconSize::XSmall)
+                .color(color),
+        )
+        .child(
+            Label::new(label)
+                .size(LabelSize::XSmall)
+                .color(color)
+                .truncate(),
+        )
+        .into_any_element()
+}
+
+pub(super) fn count_chip(count: usize, color: Color, _cx: &App) -> AnyElement {
+    h_flex()
+        .h_5()
+        .min_w_5()
+        .items_center()
+        .justify_center()
+        .px_0p5()
+        .child(
+            Label::new(count.to_string())
+                .size(LabelSize::XSmall)
+                .color(color)
+                .truncate(),
+        )
+        .into_any_element()
 }
 
 pub(super) fn detail_row(
@@ -242,7 +283,7 @@ pub(super) fn empty_row(message: &'static str) -> AnyElement {
         .into_any_element()
 }
 
-pub(super) fn web_audit_row(index: usize, audit: &DxCheckPanelWebAudit) -> AnyElement {
+pub(super) fn web_audit_row(index: usize, audit: &DxCheckPanelWebAudit, cx: &App) -> AnyElement {
     let (icon, color) = match audit.status.as_str() {
         "ready" => (IconName::Check, Color::Success),
         "blocked" => (IconName::Warning, Color::Error),
@@ -270,12 +311,7 @@ pub(super) fn web_audit_row(index: usize, audit: &DxCheckPanelWebAudit) -> AnyEl
                                 .size(LabelSize::Small)
                                 .truncate(),
                         )
-                        .child(
-                            Label::new(audit.status.clone())
-                                .size(LabelSize::XSmall)
-                                .color(color)
-                                .truncate(),
-                        ),
+                        .child(status_chip(audit.status.clone(), color, cx)),
                 )
                 .child(
                     Label::new(audit.detail.clone())

@@ -1,3 +1,22 @@
+[2026-06-09] - Agent Voice And DX Panel Polish
+
+CHANGED:
+- `crates\sidebar\src\sidebar.rs` now uses the explicit DX Cog icon for sidebar settings shortcuts.
+- `crates\agent_ui\src\conversation_view\voice_controls.rs`, `thread_view.rs`, and `flow_speech_runtime.rs` now keep the composer mic-only, simplify the recording/transcription UI, and cache the Flow speech runtime with one refresh/retry path for stale runtime availability.
+- `crates\agent_ui\src\dx_check_panel_view.rs`, `dx_check_panel_view\tabs.rs`, `dx_check_panel_view\view_rows.rs`, `dx_forge_panel\rows.rs`, and `dx_forge_panel\tabs.rs` now use lighter GPUI list/header status and count slots instead of badge-heavy row text.
+- `script\dx-agent-voice-controls-source.test.ts` now guards the mic-only composer voice contract and the retained response read-aloud path.
+- `Cargo.lock` now drops the stale `agent_ui` dependency edge to `liquid_glass` after the composer glass removal.
+
+PASSED:
+- `rustfmt --edition 2024` on touched Rust files
+- `node --test script\dx-agent-voice-controls-source.test.ts`
+- `git diff --check`
+- `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run` built and launched Zed
+
+NOTES:
+- The first J6 validation hit a transient compiler memory failure while rebuilding panel crates after `cargo clean`; the immediate incremental retry succeeded without source changes.
+- Manual mic/STT timing still needs interactive UX confirmation in the running editor.
+
 [2026-06-09] - Sidebar Workspace Action Routing
 
 CHANGED:

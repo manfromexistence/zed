@@ -2,6 +2,7 @@ use gpui::{App, IntoElement, WeakEntity};
 use ui::{Divider, Tab, prelude::*};
 
 use super::DxCheckPanel;
+use super::view_rows::count_chip;
 use crate::dx_check_panel::DxCheckPanelSnapshot;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -92,11 +93,15 @@ fn render_tab(
                 .when(!selected, |this| this.color(Color::Muted))
                 .truncate(),
         )
-        .child(
-            Label::new(count.to_string())
-                .size(LabelSize::XSmall)
-                .color(Color::Muted),
-        )
+        .child(count_chip(
+            count,
+            if selected {
+                Color::Accent
+            } else {
+                Color::Muted
+            },
+            cx,
+        ))
         .on_click(move |_, _, cx| {
             panel
                 .update(cx, |panel, cx| panel.set_active_tab(tab, cx))

@@ -49,7 +49,6 @@ struct ThreadFeedbackState {
 
 struct FlowTextToSpeechRequest {
     text: String,
-    source_label: &'static str,
     empty_message: &'static str,
     #[cfg(feature = "audio")]
     speaking_message: &'static str,
@@ -58,35 +57,15 @@ struct FlowTextToSpeechRequest {
 }
 
 impl FlowTextToSpeechRequest {
-    fn composer(text: String) -> Self {
-        Self {
-            text,
-            source_label: "composer",
-            empty_message: "Type text in the composer before using Kokoro read-aloud",
-            #[cfg(feature = "audio")]
-            speaking_message: "Kokoro is reading the composer",
-            #[cfg(feature = "audio")]
-            finished_message: "Kokoro finished reading the composer",
-        }
-    }
-
     fn agent_response(text: String) -> Self {
         Self {
             text,
-            source_label: "latest agent response",
             empty_message: "No agent response is available for Kokoro read-aloud",
             #[cfg(feature = "audio")]
             speaking_message: "Kokoro is reading the latest agent response",
             #[cfg(feature = "audio")]
             finished_message: "Kokoro finished reading the latest agent response",
         }
-    }
-
-    fn synthesizing_message(&self, summary: &str) -> String {
-        format!(
-            "Generating Kokoro audio for {}. Flow voice runtime: {summary}",
-            self.source_label
-        )
     }
 }
 
@@ -656,6 +635,7 @@ pub struct ThreadView {
     pub message_editor: Entity<MessageEditor>,
     composer_voice_state: ComposerVoiceState,
     composer_voice_availability: ComposerVoiceAvailability,
+    flow_voice_runtime: FlowSpeechRuntime,
     flow_recording_session: Option<FlowRecordingSession>,
     flow_speech_cancellation: Option<FlowSpeechCancellation>,
     #[cfg(feature = "audio")]
@@ -921,7 +901,6 @@ impl ThreadView {
 
         subscriptions.push(cx.observe(&message_editor, |this, editor, cx| {
             let has_composer_text = !editor.read(cx).text(cx).trim().is_empty();
-            this.composer_voice_availability.has_composer_text = has_composer_text;
             let editor = editor.clone();
             this._draft_resolve_task = Some(cx.spawn(async move |this, cx| {
                 cx.background_executor()
@@ -945,11 +924,9 @@ impl ThreadView {
 
         let flow_voice_runtime = FlowSpeechRuntime::detect();
         let composer_voice_availability = ComposerVoiceAvailability {
-            has_composer_text: false,
             stt_ready: flow_voice_runtime.stt_available(),
             stt_status: flow_voice_runtime.stt_readiness_summary().into(),
             tts_ready: flow_voice_runtime.tts_available(),
-            tts_status: flow_voice_runtime.tts_readiness_summary().into(),
         };
 
         let mut this = Self {
@@ -1013,6 +990,7 @@ impl ThreadView {
             message_editor,
             composer_voice_state: ComposerVoiceState::default(),
             composer_voice_availability,
+            flow_voice_runtime: flow_voice_runtime.clone(),
             flow_recording_session: None,
             flow_speech_cancellation: None,
             #[cfg(feature = "audio")]
@@ -4205,17 +4183,14 @@ impl ThreadView {
             cx.listener(|this, _event, window, cx| {
                 this.toggle_flow_voice_recording(window, cx);
             }),
-            cx.listener(|this, _event, window, cx| {
-                this.speak_composer_text(window, cx);
-            }),
         )
     }
 
     fn refresh_flow_voice_runtime_availability(&mut self, runtime: &FlowSpeechRuntime) {
+        self.flow_voice_runtime = runtime.clone();
         self.composer_voice_availability.stt_ready = runtime.stt_available();
         self.composer_voice_availability.stt_status = runtime.stt_readiness_summary().into();
         self.composer_voice_availability.tts_ready = runtime.tts_available();
-        self.composer_voice_availability.tts_status = runtime.tts_readiness_summary().into();
     }
 
     fn toggle_flow_voice_recording(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -4252,71 +4227,84 @@ impl ThreadView {
     }
 
     fn start_flow_voice_recording(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let runtime = FlowSpeechRuntime::detect();
-        self.refresh_flow_voice_runtime_availability(&runtime);
-        let summary = runtime.status_summary();
         #[cfg(feature = "audio")]
         let input_audio_device = AudioSettings::get_global(cx).input_audio_device.clone();
         #[cfg(not(feature = "audio"))]
         let input_audio_device = None;
+        let runtime = self.flow_voice_runtime.clone();
+        self.refresh_flow_voice_runtime_availability(&runtime);
 
         match runtime.start_recording(input_audio_device.as_ref()) {
-            Ok(session) => {
-                let input_device_label = session.input_device_label().to_string();
-                self.flow_recording_session = Some(session);
-                self.composer_voice_state.set_recording(format!(
-                    "Listening on {input_device_label}. Flow voice runtime: {summary}"
-                ));
-                self.message_editor
-                    .read(cx)
-                    .focus_handle(cx)
-                    .focus(window, cx);
-                self._flow_speech_task = Some(cx.spawn_in(window, async move |this, cx| {
-                    loop {
-                        cx.background_executor()
-                            .timer(Duration::from_millis(500))
-                            .await;
-                        let Ok(keep_recording) = this.update_in(cx, |this, window, cx| {
-                            let is_recording =
-                                this.composer_voice_state.phase() == ComposerVoicePhase::Recording;
-                            if is_recording {
-                                if let Some(telemetry) = this
-                                    .flow_recording_session
-                                    .as_ref()
-                                    .and_then(|session| session.telemetry().ok())
-                                {
-                                    let captured_duration = telemetry.captured_duration();
-                                    let telemetry_changed =
-                                        this.composer_voice_state.update_recording_telemetry(
-                                            captured_duration,
-                                            telemetry.input_level(),
-                                        );
-                                    if captured_duration
-                                        >= Duration::from_secs(MAX_RECORDING_SECONDS as u64)
-                                    {
-                                        this.stop_flow_voice_recording(window, cx);
-                                        return false;
-                                    }
-                                    if telemetry_changed {
-                                        cx.notify();
-                                    }
-                                }
-                            }
-                            is_recording
-                        }) else {
-                            break;
-                        };
-                        if !keep_recording {
-                            break;
-                        }
-                    }
-                }));
-                cx.notify();
-            }
+            Ok(session) => self.install_flow_recording_session(session, window, cx),
             Err(error) => {
-                self.report_flow_voice_error("Flow voice recording failed", error, cx);
+                log::debug!("Cached Flow voice runtime failed to start recording: {error:#}");
+                let runtime = FlowSpeechRuntime::detect();
+                self.refresh_flow_voice_runtime_availability(&runtime);
+                match runtime.start_recording(input_audio_device.as_ref()) {
+                    Ok(session) => self.install_flow_recording_session(session, window, cx),
+                    Err(error) => {
+                        self.report_flow_voice_error("Flow voice recording failed", error, cx);
+                    }
+                }
             }
         }
+    }
+
+    fn install_flow_recording_session(
+        &mut self,
+        session: FlowRecordingSession,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let input_device_label = session.input_device_label().to_string();
+        self.flow_recording_session = Some(session);
+        self.composer_voice_state
+            .set_recording(format!("Listening on {input_device_label}"));
+        self.message_editor
+            .read(cx)
+            .focus_handle(cx)
+            .focus(window, cx);
+        self._flow_speech_task = Some(cx.spawn_in(window, async move |this, cx| {
+            loop {
+                cx.background_executor()
+                    .timer(Duration::from_millis(500))
+                    .await;
+                let Ok(keep_recording) = this.update_in(cx, |this, window, cx| {
+                    let is_recording =
+                        this.composer_voice_state.phase() == ComposerVoicePhase::Recording;
+                    if is_recording {
+                        if let Some(telemetry) = this
+                            .flow_recording_session
+                            .as_ref()
+                            .and_then(|session| session.telemetry().ok())
+                        {
+                            let captured_duration = telemetry.captured_duration();
+                            let telemetry_changed =
+                                this.composer_voice_state.update_recording_telemetry(
+                                    captured_duration,
+                                    telemetry.input_level(),
+                                );
+                            if captured_duration
+                                >= Duration::from_secs(MAX_RECORDING_SECONDS as u64)
+                            {
+                                this.stop_flow_voice_recording(window, cx);
+                                return false;
+                            }
+                            if telemetry_changed {
+                                cx.notify();
+                            }
+                        }
+                    }
+                    is_recording
+                }) else {
+                    break;
+                };
+                if !keep_recording {
+                    break;
+                }
+            }
+        }));
+        cx.notify();
     }
 
     fn stop_flow_voice_recording(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -4419,11 +4407,6 @@ impl ThreadView {
         }
     }
 
-    fn speak_composer_text(&mut self, _window: &mut Window, cx: &mut Context<Self>) {
-        let text = self.message_editor.read(cx).text(cx);
-        self.speak_flow_text(FlowTextToSpeechRequest::composer(text), cx);
-    }
-
     fn speak_agent_response_text(&mut self, text: String, cx: &mut Context<Self>) {
         self.speak_flow_text(FlowTextToSpeechRequest::agent_response(text), cx);
     }
@@ -4449,18 +4432,22 @@ impl ThreadView {
             return;
         }
 
-        let runtime = FlowSpeechRuntime::detect();
+        let mut runtime = self.flow_voice_runtime.clone();
         self.refresh_flow_voice_runtime_availability(&runtime);
         if let Err(error) = runtime.ensure_tts_ready() {
-            let message = format!("Friday Kokoro TTS is not ready: {error}");
-            self.composer_voice_state.set_error(message.clone());
-            self.show_flow_voice_toast(message, cx);
-            cx.notify();
-            return;
+            log::debug!("Cached Flow voice runtime failed TTS readiness: {error:#}");
+            runtime = FlowSpeechRuntime::detect();
+            self.refresh_flow_voice_runtime_availability(&runtime);
+            if let Err(error) = runtime.ensure_tts_ready() {
+                let message = format!("Friday Kokoro TTS is not ready: {error}");
+                self.composer_voice_state.set_error(message.clone());
+                self.show_flow_voice_toast(message, cx);
+                cx.notify();
+                return;
+            }
         }
-        let summary = runtime.status_summary();
         self.composer_voice_state
-            .set_synthesizing(request.synthesizing_message(&summary));
+            .set_synthesizing("Generating Kokoro audio");
         self.flow_playback_id = self.flow_playback_id.wrapping_add(1);
         let playback_id = self.flow_playback_id;
         let cancellation = FlowSpeechCancellation::new();
