@@ -13,7 +13,7 @@ pub(super) fn section(
     is_open: bool,
     on_toggle: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     _cx: &App,
-) -> gpui::Div {
+) -> gpui::Stateful<gpui::Div> {
     v_flex().id(id).w_full().min_w_0().gap_0p5().child(
         ListHeader::new(title)
             .inset(true)

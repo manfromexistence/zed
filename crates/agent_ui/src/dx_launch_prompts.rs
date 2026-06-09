@@ -97,6 +97,7 @@ pub(crate) fn launch_source_audit_prompt(snapshot: &DxLaunchSourceAuditSnapshot)
     )
 }
 
+#[allow(dead_code)]
 pub(crate) fn receipt_review_prompt(
     receipt_snapshot: &DxReceiptSnapshot,
     launch_status: &DxLaunchStatusSnapshot,

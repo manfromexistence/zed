@@ -184,7 +184,7 @@ impl DxCheckPanel {
         section_kind: DxCheckPanelSectionKind,
         panel: WeakEntity<DxCheckPanel>,
         cx: &App,
-    ) -> gpui::Div {
+    ) -> gpui::Stateful<gpui::Div> {
         let is_open = self.section_is_open(section_kind);
         section(
             section_kind.id(),

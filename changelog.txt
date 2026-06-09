@@ -1,3 +1,19 @@
+[2026-06-09] - Agent Rails Compile Follow-Up
+
+FIXED:
+- `crates\agent_ui\src\dx_launch_workspace\sources\controller.rs` now exposes the Source Controller helper at the workspace-module scope required by the rail re-export.
+- `crates\agent_ui\src\dx_check_panel_view.rs` and `dx_check_panel_view\view_rows.rs` now return concrete `Stateful<Div>` section shells so existing Check panel section builders keep their `.child(...)` composition.
+- `crates\agent_ui\src\dx_launch_prompts.rs` now keeps the hidden receipt-review prompt helper without emitting a dead-code warning after the duplicated fullscreen command rail was removed.
+
+PASSED:
+- `node --test script\dx-check-panel-source.test.ts script\dx-launch-workspace-source.test.ts`
+- `rustfmt --edition 2024 --check` on touched Rust files
+- `git diff --check`
+- `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run` built and launched Zed, detecting the main window
+
+NOTES:
+- The first J6 retry hit transient target/package-cache artifact failures after the compile fixes; an immediate retry succeeded without cache cleanup.
+
 [2026-06-09] - Agent Rails And DX Panel Primitive Polish
 
 CHANGED:

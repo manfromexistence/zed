@@ -5,7 +5,10 @@ use crate::dx_source_sets::DxSourceSetSnapshot;
 
 use super::super::compact_status_row;
 
-pub(super) fn source_controller_state(snapshot: &DxSourceSetSnapshot, cx: &App) -> AnyElement {
+pub(in crate::dx_launch_workspace) fn source_controller_state(
+    snapshot: &DxSourceSetSnapshot,
+    cx: &App,
+) -> AnyElement {
     let summary = snapshot.attachment_summary();
 
     v_flex()
