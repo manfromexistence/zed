@@ -3,6 +3,13 @@ import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const read = (path: string) => readFileSync(path, "utf8");
+const sidebarWorkspaceActionArm = (kind: string, action: string) =>
+  new RegExp(
+    `WorkspaceScreenKind::${kind} => \\{\\s*` +
+      `let action = zed_actions::assistant::${action}\\.boxed_clone\\(\\);\\s*` +
+      `self\\.dispatch_workspace_action\\(action\\.as_ref\\(\\), window, cx\\);\\s*` +
+      `return;\\s*\\}`,
+  );
 
 test("DX connection UI uses semantic icons and real Zed sidebar routes", () => {
   const dxIcons = read("crates/ui/src/dx_icons.rs");
@@ -29,6 +36,7 @@ test("DX connection UI uses semantic icons and real Zed sidebar routes", () => {
 
   assert.match(sidebar, /"sidebar-toolbar-connections"[\s\S]*?dx_icon\(DxUiIcon::Connections\)[\s\S]*?"Connections"[\s\S]*?activate_workspace_screen\(\s*WorkspaceScreenKind::Connections/);
   assert.match(sidebar, /"sidebar-activity-connections"[\s\S]*?dx_icon\(DxUiIcon::Connections\)[\s\S]*?"Connections"[\s\S]*?activate_workspace_screen\(WorkspaceScreenKind::Connections/);
+  assert.match(sidebar, sidebarWorkspaceActionArm("Connections", "OpenConnections"));
   assert.match(agentPanel, /"dx-launch-connections"[\s\S]*?dx_icon\(DxUiIcon::Connections\)[\s\S]*?"Connections"[\s\S]*?zed_actions::assistant::OpenConnections/);
 });
 

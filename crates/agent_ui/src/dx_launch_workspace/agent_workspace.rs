@@ -2,8 +2,8 @@ use gpui::{AnyElement, App, SharedString, prelude::*};
 use ui::{IconName, prelude::*};
 
 use super::{
-    DxLaunchWorkspaceStatus, check, compact_status_row, metric_row, muted_card, proof, signal_row,
-    style_panel, subagent_summary,
+    DxLaunchWorkspaceStatus, check, compact_status_row, muted_card, proof, signal_row, style_panel,
+    subagent_summary,
 };
 
 pub(super) fn agent_overview_section(
@@ -193,9 +193,12 @@ pub(super) fn agent_approvals_section(status: &DxLaunchWorkspaceStatus, cx: &App
             bridge.blocked_tool_count.to_string(),
             cx,
         ))
-        .child(metric_row(
+        .child(compact_status_row(
+            "dx-agent-approvals-gate",
+            IconName::Check,
             "Gate review",
             status.agent_bridge.release_gate.status.clone(),
+            cx,
         ));
 
     if !bridge.present {

@@ -611,14 +611,16 @@ fn subagent_summary(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {
     }
 
     if status.subagent_rows.len() > 6 {
-        stack = stack.child(
-            Label::new(format!(
-                "+{} more",
+        stack = stack.child(compact_status_row(
+            "dx-subagents-more",
+            IconName::Ellipsis,
+            "More subagents",
+            format!(
+                "{} more subagent row(s) hidden",
                 status.subagent_rows.len().saturating_sub(6)
-            ))
-            .size(LabelSize::XSmall)
-            .color(Color::Muted),
-        );
+            ),
+            cx,
+        ));
     }
 
     stack.into_any_element()

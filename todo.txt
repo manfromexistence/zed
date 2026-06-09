@@ -1,5 +1,5 @@
 IN PROGRESS:
-- None. Agent voice controls, DX Cog sidebar settings icons, and Forge/Check panel chrome polish are build-verified and ready for manual runtime UX review.
+- None. Sidebar workspace buttons and Agent right-rail badge cleanup are build-verified and ready for manual runtime UX review.
 
 PENDING:
 - Run governed DX Agents connection/tool runtime proof once authorized, covering main sidebar Connections and Tools routing, real social/provider receipts, QR payload display, credential expiry/error visuals, trusted tool bridge approvals, and native workspace-tab layout.
@@ -8,6 +8,7 @@ PENDING:
 - Continue the DX/Zed ecosystem integration with bounded source-only slices for remaining receipt scans, semantic icon hotspots, and governed runtime proof when explicitly authorized.
 
 COMPLETED:
+- Sidebar Plugins/Tools, Connections, and Automations are build-verified through direct active-workspace action dispatch: expanded and collapsed sidebar buttons now dispatch the first-class workspace actions through the active workspace focus handle, while the Agent fullscreen right rail hides the remaining visible count/status badge text for the extra-subagents and approval-gate rows and preserves details in tooltips.
 - Agent voice controls and DX panel chrome polish are build-verified: sidebar settings shortcuts now use the explicit DX Cog icon, Agent composer voice controls are mic-only with a compact recording/transcription surface and cached Flow runtime retry refresh, Forge/Check panels use lighter GPUI list/header status slots instead of badge-heavy row text, the voice source guard was updated, and the authorized `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run` built and launched Zed after a transient compiler memory retry.
 - Sidebar workspace action routing is source-verified: collapsed and expanded sidebar Plugins, Connections, and Automations now activate the owning workspace screens through `Workspace::activate_screen_kind`; ACP Registry dispatches through the active workspace focus handle; collapsed Settings opens global settings instead of Agent-only settings; and focused source guards now cover those real routes plus clickable sidebar chrome.
 - AI composer Liquid Glass removal is source-verified: the Agent composer no longer imports or mounts Liquid Glass, `agent_ui` no longer depends on `liquid_glass`, the obsolete composer glass helper module was removed, and the composer now uses normal GPUI panel chrome. The Agent fullscreen right floating rail keeps its accordions and row labels but hides compact badge value/status text from the visible row chrome while preserving the value in tooltips.

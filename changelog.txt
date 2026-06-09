@@ -1,3 +1,19 @@
+[2026-06-09] - Sidebar Workspace Button And Rail Badge Polish
+
+CHANGED:
+- `crates\sidebar\src\sidebar.rs` now routes the Plugins button through the first-class Tools workspace action, and routes Connections and Automations through their first-class workspace actions, avoiding sidebar-focus/deferred-dispatch failures.
+- `crates\agent_ui\src\dx_launch_workspace.rs` and `dx_launch_workspace\agent_workspace.rs` now hide the remaining right-rail badge-style text for hidden subagents and the approval gate value while keeping the details available through compact row tooltips.
+- `script\dx-launch-workspace-source.test.ts`, `script\dx-agent-workspaces-source.test.ts`, `script\dx-agent-connections-ui-source.test.ts`, and `script\dx-automations-source.test.ts` now guard the direct sidebar action routes and right-rail badge cleanup.
+
+PASSED:
+- `rustfmt --edition 2024` on touched Rust files
+- `node --test script\dx-launch-workspace-source.test.ts script\dx-agent-workspaces-source.test.ts script\dx-agent-connections-ui-source.test.ts script\dx-automations-source.test.ts`
+- `git diff --check`
+- `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run`
+
+NOTES:
+- Authorized J6 runtime validation built and launched Zed successfully. Standalone Cargo build/check/test/clippy commands were not run.
+
 [2026-06-09] - Agent Voice And DX Panel Polish
 
 CHANGED:

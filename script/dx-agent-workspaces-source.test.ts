@@ -6,6 +6,13 @@ const read = (path: string) => readFileSync(path, "utf8");
 const lineCount = (path: string) => read(path).split(/\r?\n/).length;
 const enumBody = (source: string, name: string) =>
   source.match(new RegExp(`enum ${name} \\{[\\s\\S]*?\\}`))?.[0] ?? "";
+const sidebarWorkspaceActionArm = (kind: string, action: string) =>
+  new RegExp(
+    `WorkspaceScreenKind::${kind} => \\{\\s*` +
+      `let action = zed_actions::assistant::${action}\\.boxed_clone\\(\\);\\s*` +
+      `self\\.dispatch_workspace_action\\(action\\.as_ref\\(\\), window, cx\\);\\s*` +
+      `return;\\s*\\}`,
+  );
 
 test("DX agent workspace taxonomy has first-class Zed screens", () => {
   const item = read("crates/workspace/src/item.rs");
@@ -69,7 +76,12 @@ test("DX agent workspace taxonomy has first-class Zed screens", () => {
   assert.match(agentWorkspace, /"dx-agent-overview-active-thread"[\s\S]*?dx_icon\(DxUiIcon::Agent\)/);
   assert.match(agentWorkspace, /"dx-agent-threads-active"[\s\S]*?dx_icon\(DxUiIcon::Agent\)/);
 
-  assert.match(sidebar, /fn activate_workspace_screen\([\s\S]*?workspace\.activate_screen_kind\(kind, window, cx\)/);
+  assert.match(sidebar, sidebarWorkspaceActionArm("Connections", "OpenConnections"));
+  assert.match(sidebar, sidebarWorkspaceActionArm("Tools", "OpenTools"));
+  assert.match(
+    sidebar,
+    /fn activate_workspace_screen\([\s\S]*?workspace\.activate_screen_kind\(kind, window, cx\)/,
+  );
   assert.match(sidebar, /"sidebar-toolbar-connections"[\s\S]*?activate_workspace_screen\(\s*WorkspaceScreenKind::Connections/);
   assert.match(sidebar, /"sidebar-activity-connections"[\s\S]*?activate_workspace_screen\(WorkspaceScreenKind::Connections/);
   assert.match(sidebar, /"sidebar-toolbar-plugins"[\s\S]*?activate_workspace_screen\(WorkspaceScreenKind::Tools/);
@@ -109,6 +121,10 @@ test("DX agent workspace taxonomy has first-class Zed screens", () => {
   assert.match(agentWorkspace, /No active Agent thread state/);
   assert.match(agentWorkspace, /No active DX Agents task receipts/);
   assert.match(agentWorkspace, /Blocked trusted tool approval receipts need review/);
+  assert.match(dxWorkspace, /compact_status_row\(\s*"dx-subagents-more"/);
+  assert.ok(!dxWorkspace.includes('"+{} more"'));
+  assert.match(agentWorkspace, /compact_status_row\([\s\S]*?"dx-agent-approvals-gate"/);
+  assert.doesNotMatch(agentWorkspace, /metric_row\(\s*"Gate review"/);
 });
 
 test("Connections workspace is wired to provider, channel, social, gateway, and credential state", () => {

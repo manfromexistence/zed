@@ -3,6 +3,13 @@ import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const read = (path: string) => readFileSync(path, "utf8");
+const sidebarWorkspaceActionArm = (kind: string, action: string) =>
+  new RegExp(
+    `WorkspaceScreenKind::${kind} => \\{\\s*` +
+      `let action = zed_actions::assistant::${action}\\.boxed_clone\\(\\);\\s*` +
+      `self\\.dispatch_workspace_action\\(action\\.as_ref\\(\\), window, cx\\);\\s*` +
+      `return;\\s*\\}`,
+  );
 const lineCount = (path: string) => read(path).split(/\r?\n/).length;
 
 test("DX Automations expose typed bridge schema and pending composer contract", () => {
@@ -258,6 +265,7 @@ test("DX Automations have a first-class workspace tab contract", () => {
   );
   assert.match(sidebar, /"sidebar-toolbar-automations"[\s\S]*?activate_workspace_screen\(\s*WorkspaceScreenKind::Automations/);
   assert.match(sidebar, /"sidebar-activity-automations"[\s\S]*?activate_workspace_screen\(WorkspaceScreenKind::Automations/);
+  assert.match(sidebar, sidebarWorkspaceActionArm("Automations", "OpenAutomations"));
   assert.match(titleBar, /WorkspaceScreenKind::Automations/);
   assert.match(titleBar, /zed_actions::assistant::OpenAutomations\.boxed_clone\(\)/);
   assert.doesNotMatch(automationScreen, /dummy|fake|OpenProjectDebugTasks/);

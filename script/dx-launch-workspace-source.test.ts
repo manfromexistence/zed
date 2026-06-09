@@ -27,6 +27,13 @@ const functionBody = (source: string, name: string) => {
 
   assert.fail(`expected ${name} body to close`);
 };
+const sidebarWorkspaceActionArm = (kind: string, action: string) =>
+  new RegExp(
+    `WorkspaceScreenKind::${kind} => \\{\\s*` +
+      `let action = zed_actions::assistant::${action}\\.boxed_clone\\(\\);\\s*` +
+      `self\\.dispatch_workspace_action\\(action\\.as_ref\\(\\), window, cx\\);\\s*` +
+      `return;\\s*\\}`,
+  );
 
 test("DX launch workspace UI stays split by rail ownership", () => {
   const parent = read("crates/agent_ui/src/dx_launch_workspace.rs");
@@ -153,7 +160,7 @@ test("collapsed workspace activity bar stays icon-only with hover details", () =
   assert.match(sidebar, /"sidebar-toolbar-plugins"[\s\S]*?dx_icon\(DxUiIcon::Plugins\)/);
   assert.match(sidebar, /"sidebar-toolbar-extensions"[\s\S]*?dx_icon\(DxUiIcon::Extensions\)/);
   assert.match(sidebar, /"sidebar-toolbar-automations"[\s\S]*?dx_icon\(DxUiIcon::Automations\)/);
-  assert.match(sidebar, /"sidebar-toolbar-settings"[\s\S]*?dx_icon\(DxUiIcon::Settings\)/);
+  assert.match(sidebar, /"sidebar-toolbar-settings",\s*IconName::DxCog,\s*"Settings"/);
   assert.match(genToolbar, /\.on_click\(cx\.listener\(on_click\)\)/);
   assert.match(activityToolbar, /\.on_click\(cx\.listener\(on_click\)\)/);
   assert.match(bottomBar, /"sidebar-bottom-add-folder"[\s\S]*?\.on_click\(cx\.listener/);
@@ -161,7 +168,9 @@ test("collapsed workspace activity bar stays icon-only with hover details", () =
   assert.match(sidebar, /fn dispatch_workspace_action\([\s\S]*?focus_handle\.dispatch_action\(action, window, cx\)/);
   assert.match(sidebar, /"sidebar-toolbar-acp-registry"[\s\S]*?dispatch_workspace_action\(&zed_actions::AcpRegistry/);
   assert.match(sidebar, /"sidebar-activity-acp-registry"[\s\S]*?dispatch_workspace_action\(&zed_actions::AcpRegistry/);
-  assert.match(sidebar, /fn activate_workspace_screen\([\s\S]*?WorkspaceScreenKind[\s\S]*?workspace\.activate_screen_kind\(kind, window, cx\)/);
+  assert.match(sidebar, sidebarWorkspaceActionArm("Tools", "OpenTools"));
+  assert.match(sidebar, sidebarWorkspaceActionArm("Connections", "OpenConnections"));
+  assert.match(sidebar, sidebarWorkspaceActionArm("Automations", "OpenAutomations"));
   assert.match(sidebar, /"sidebar-toolbar-plugins"[\s\S]*?activate_workspace_screen\(WorkspaceScreenKind::Tools/);
   assert.match(sidebar, /"sidebar-activity-plugins"[\s\S]*?activate_workspace_screen\(WorkspaceScreenKind::Tools/);
   assert.match(sidebar, /"sidebar-toolbar-automations"[\s\S]*?activate_workspace_screen\(\s*WorkspaceScreenKind::Automations/);
