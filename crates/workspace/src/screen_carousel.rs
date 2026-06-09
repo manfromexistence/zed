@@ -35,7 +35,7 @@ impl Workspace {
     fn active_screen_kind(&self, cx: &App) -> WorkspaceScreenKind {
         self.active_item(cx)
             .map(|item| item.screen_kind(cx))
-            .unwrap_or(WorkspaceScreenKind::Editor)
+            .unwrap_or(WorkspaceScreenKind::Agent)
     }
 
     fn adjacent_screen_kind(

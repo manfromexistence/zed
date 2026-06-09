@@ -1,5 +1,5 @@
 use gpui::{AnyElement, App, ClickEvent, IntoElement, ParentElement, SharedString, Window};
-use ui::{Indicator, ListHeader, ListItem, ListItemSpacing, prelude::*};
+use ui::{ListHeader, ListItem, ListItemSpacing, Tooltip, prelude::*};
 
 use crate::dx_check_panel::{
     DxCheckPanelAdapterPlan, DxCheckPanelNotice, DxCheckPanelQuickFix, DxCheckPanelSection,
@@ -21,22 +21,6 @@ pub(super) fn section(
             .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
             .on_toggle(on_toggle),
     )
-}
-
-pub(super) fn status_label(label: impl Into<SharedString>, color: Color, _cx: &App) -> AnyElement {
-    h_flex()
-        .h_5()
-        .min_w_0()
-        .items_center()
-        .gap_0p5()
-        .child(Indicator::dot().color(color))
-        .child(
-            Label::new(label)
-                .size(LabelSize::Small)
-                .color(color)
-                .truncate(),
-        )
-        .into_any_element()
 }
 
 pub(super) fn detail_row(
@@ -120,25 +104,19 @@ pub(super) fn quick_fix_row(index: usize, fix: &DxCheckPanelQuickFix) -> AnyElem
             "no approval required"
         }
     );
+    let tooltip = format!(
+        "{}\n{}\n{}",
+        risk,
+        fix.next_action,
+        fix.command.as_deref().unwrap_or("No command")
+    );
     let mut content = v_flex()
         .min_w_0()
         .gap_0p5()
         .child(
-            h_flex()
-                .min_w_0()
-                .gap_2()
-                .justify_between()
-                .child(
-                    Label::new(fix.label.clone())
-                        .size(LabelSize::Small)
-                        .truncate(),
-                )
-                .child(
-                    Label::new(risk)
-                        .size(LabelSize::Small)
-                        .color(Color::Muted)
-                        .truncate(),
-                ),
+            Label::new(fix.label.clone())
+                .size(LabelSize::Small)
+                .truncate(),
         )
         .child(
             Label::new(fix.next_action.clone())
@@ -165,6 +143,7 @@ pub(super) fn quick_fix_row(index: usize, fix: &DxCheckPanelQuickFix) -> AnyElem
                 .color(Color::Muted),
         )
         .child(content)
+        .tooltip(Tooltip::text(tooltip))
         .into_any_element()
 }
 
@@ -179,28 +158,23 @@ pub(super) fn adapter_plan_row(index: usize, plan: &DxCheckPanelAdapterPlan) -> 
         plan.parser, configured_from
     );
 
+    let tooltip = format!(
+        "{detail}\n{}\n{}",
+        plan.command,
+        plan.run_command
+            .as_deref()
+            .unwrap_or("No run command configured")
+    );
     let mut content = v_flex()
         .min_w_0()
         .gap_0p5()
         .child(
-            h_flex()
-                .min_w_0()
-                .gap_2()
-                .justify_between()
-                .child(
-                    Label::new(plan.label.clone())
-                        .size(LabelSize::Small)
-                        .truncate(),
-                )
-                .child(
-                    Label::new(plan.target.clone())
-                        .size(LabelSize::Small)
-                        .color(Color::Muted)
-                        .truncate(),
-                ),
+            Label::new(plan.label.clone())
+                .size(LabelSize::Small)
+                .truncate(),
         )
         .child(
-            Label::new(detail)
+            Label::new(plan.target.clone())
                 .size(LabelSize::Small)
                 .color(Color::Muted)
                 .truncate(),
@@ -230,6 +204,7 @@ pub(super) fn adapter_plan_row(index: usize, plan: &DxCheckPanelAdapterPlan) -> 
                 .color(Color::Muted),
         )
         .child(content)
+        .tooltip(Tooltip::text(tooltip))
         .into_any_element()
 }
 
@@ -252,7 +227,7 @@ pub(super) fn empty_row(message: &'static str) -> AnyElement {
         .into_any_element()
 }
 
-pub(super) fn web_audit_row(index: usize, audit: &DxCheckPanelWebAudit, cx: &App) -> AnyElement {
+pub(super) fn web_audit_row(index: usize, audit: &DxCheckPanelWebAudit, _cx: &App) -> AnyElement {
     let (icon, color) = match audit.status.as_str() {
         "ready" => (IconName::Check, Color::Success),
         "blocked" => (IconName::Warning, Color::Error),
@@ -260,6 +235,8 @@ pub(super) fn web_audit_row(index: usize, audit: &DxCheckPanelWebAudit, cx: &App
         _ => (IconName::Info, Color::Muted),
     };
     let source = audit.source.as_deref().unwrap_or(&audit.url);
+
+    let tooltip = format!("{}\n{}\n{}", audit.status, audit.detail, source);
 
     ListItem::new(SharedString::from(format!("dx-check-web-audit-{index}")))
         .inset(true)
@@ -271,16 +248,9 @@ pub(super) fn web_audit_row(index: usize, audit: &DxCheckPanelWebAudit, cx: &App
                 .flex_1()
                 .gap_0p5()
                 .child(
-                    h_flex()
-                        .min_w_0()
-                        .gap_2()
-                        .justify_between()
-                        .child(
-                            Label::new(audit.label.clone())
-                                .size(LabelSize::Small)
-                                .truncate(),
-                        )
-                        .child(status_label(audit.status.clone(), color, cx)),
+                    Label::new(audit.label.clone())
+                        .size(LabelSize::Small)
+                        .truncate(),
                 )
                 .child(
                     Label::new(audit.detail.clone())
@@ -295,6 +265,8 @@ pub(super) fn web_audit_row(index: usize, audit: &DxCheckPanelWebAudit, cx: &App
                         .truncate_start(),
                 ),
         )
+        .end_slot(Icon::new(icon).size(IconSize::Small).color(color))
+        .tooltip(Tooltip::text(tooltip))
         .into_any_element()
 }
 

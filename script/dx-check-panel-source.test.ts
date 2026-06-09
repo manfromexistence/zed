@@ -122,14 +122,19 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   const section = functionBody(rows, "section");
   const checkTab = functionBody(tabs, "check_tab");
 
-  assert.match(renderHeader, /ListHeader::new\("Check"\)/);
-  assert.match(renderHeader, /\.start_slot\(/);
-  assert.match(renderHeader, /\.end_slot\(side_panel_header_controls/);
+  assert.match(renderHeader, /h_flex\(\)/);
+  assert.match(renderHeader, /\.id\("dx-check-panel-header"\)/);
+  assert.match(renderHeader, /\.h\(px\(32\.0\)\)/);
+  assert.match(renderHeader, /Label::new\("Check"\)/);
+  assert.match(renderHeader, /side_panel_header_controls/);
   assert.match(renderStatusStrip, /ListItem::new\("dx-check-status"\)/);
   assert.match(renderStatusStrip, /\.spacing\(ListItemSpacing::Sparse\)/);
   assert.match(renderStatusStrip, /\.selectable\(false\)/);
-  assert.match(renderStatusStrip, /status_label\(/);
-  assert.match(renderToolbar, /IconButton::new\("dx-check-open-receipt", IconName::FileTextOutlined\)/);
+  assert.match(renderStatusStrip, /Tooltip::text\(tooltip\)/);
+  assert.doesNotMatch(renderStatusStrip, /status_label\(/);
+  assert.match(renderToolbar, /Button::new\("dx-check-open-receipt", "Receipt"\)/);
+  assert.match(renderToolbar, /\.start_icon\([\s\S]*Icon::new\(IconName::FileTextOutlined\)/);
+  assert.match(renderToolbar, /\.style\(ButtonStyle::Subtle\)/);
   assert.match(renderToolbar, /IconButton::new\("dx-check-refresh", IconName::RotateCw\)/);
   assert.match(tabs, /TabBar::new\("dx-check-tab-bar"\)/);
   assert.match(checkTab, /Tab::new\(id\)/);
@@ -142,7 +147,7 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   assert.doesNotMatch(tabs, /count_chip|Divider::vertical|border_b_1|ghost_element|editor_background/);
   assert.doesNotMatch(
     `${view}\n${rows}\n${tabs}`,
-    /\b(?:Badge|Chip|Pill|Tag|StatusBadge|BadgeCluster)\b|fn\s+\w*(?:badge|chip|pill|tag|cluster)\w*\s*\(/i,
+    /\b(?:Badge|Chip|Pill|Tag|StatusBadge|BadgeCluster)\b|fn\s+\w*(?:badge|chip|pill|tag|cluster)\w*\s*\(|LabelSize::XSmall|IconSize::XSmall|ListItemSpacing::ExtraDense/i,
   );
 });
 

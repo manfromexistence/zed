@@ -684,7 +684,7 @@ fn compact_status_row(
 
     ListItem::new(id)
         .inset(true)
-        .spacing(ListItemSpacing::ExtraDense)
+        .spacing(ListItemSpacing::Sparse)
         .selectable(false)
         .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
         .child(
@@ -700,7 +700,7 @@ fn compact_status_row(
 fn subagent_row(id: SharedString, row: &DxSubagentStatusRow, _cx: &App) -> AnyElement {
     ListItem::new(id)
         .inset(true)
-        .spacing(ListItemSpacing::ExtraDense)
+        .spacing(ListItemSpacing::Sparse)
         .selectable(false)
         .start_slot(subagent_pixel_icon(row.status))
         .child(
@@ -720,7 +720,7 @@ fn subagent_row(id: SharedString, row: &DxSubagentStatusRow, _cx: &App) -> AnyEl
 
 fn subagent_status_indicator(status: DxSubagentStatus) -> AnyElement {
     Icon::new(subagent_status_icon(status))
-        .size(IconSize::XSmall)
+        .size(IconSize::Small)
         .color(Color::Custom(subagent_status_color(status)))
         .into_any_element()
 }
@@ -799,12 +799,12 @@ fn signal_row(
 ) -> AnyElement {
     ListItem::new(id)
         .inset(true)
-        .spacing(ListItemSpacing::ExtraDense)
+        .spacing(ListItemSpacing::Sparse)
         .selectable(false)
         .start_slot(Icon::new(icon).size(IconSize::Small).color(color))
         .child(
             Label::new(label.into())
-                .size(LabelSize::XSmall)
+                .size(LabelSize::Small)
                 .color(color)
                 .truncate(),
         )
@@ -816,12 +816,8 @@ fn section_title(label: &'static str, icon: IconName) -> AnyElement {
         .gap_1()
         .items_center()
         .pt_1()
-        .child(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted))
-        .child(
-            Label::new(label)
-                .size(LabelSize::XSmall)
-                .color(Color::Muted),
-        )
+        .child(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
+        .child(Label::new(label).size(LabelSize::Small).color(Color::Muted))
         .into_any_element()
 }
 
@@ -833,12 +829,12 @@ fn source_row(
 ) -> AnyElement {
     ListItem::new(id)
         .inset(true)
-        .spacing(ListItemSpacing::ExtraDense)
+        .spacing(ListItemSpacing::Sparse)
         .selectable(false)
         .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
         .child(
             Label::new(label.into())
-                .size(LabelSize::XSmall)
+                .size(LabelSize::Small)
                 .color(Color::Muted)
                 .truncate(),
         )
@@ -851,16 +847,12 @@ fn metric_row(label: impl Into<SharedString>, value: impl Into<SharedString>) ->
 
     ListItem::new(rail_stable_id("dx-launch-metric", label.as_ref()))
         .inset(true)
-        .spacing(ListItemSpacing::ExtraDense)
+        .spacing(ListItemSpacing::Sparse)
         .selectable(false)
-        .child(
-            Label::new(label)
-                .size(LabelSize::XSmall)
-                .color(Color::Muted),
-        )
+        .child(Label::new(label).size(LabelSize::Small).color(Color::Muted))
         .end_slot(
             Label::new(value)
-                .size(LabelSize::XSmall)
+                .size(LabelSize::Small)
                 .color(Color::Default)
                 .truncate(),
         )
@@ -872,7 +864,7 @@ fn muted_card(label: impl Into<SharedString>, _cx: &App) -> AnyElement {
 
     ListItem::new(rail_stable_id("dx-launch-empty", label.as_ref()))
         .inset(true)
-        .spacing(ListItemSpacing::ExtraDense)
+        .spacing(ListItemSpacing::Sparse)
         .selectable(false)
         .start_slot(
             Icon::new(IconName::Info)
@@ -881,7 +873,7 @@ fn muted_card(label: impl Into<SharedString>, _cx: &App) -> AnyElement {
         )
         .child(
             Label::new(label)
-                .size(LabelSize::XSmall)
+                .size(LabelSize::Small)
                 .color(Color::Muted)
                 .truncate(),
         )

@@ -109,7 +109,7 @@ fn provider_group_controls(
         IconName::ArrowUpRight,
     )
     .shape(IconButtonShape::Square)
-    .icon_size(IconSize::XSmall)
+    .icon_size(IconSize::Small)
     .icon_color(Color::Muted)
     .disabled(!enabled)
     .tooltip({
@@ -134,7 +134,7 @@ fn provider_group_controls(
     .anchor_scroll(scroll_anchor)
     .inset(true)
     .height(rems(1.75))
-    .spacing(ListItemSpacing::Dense)
+    .spacing(ListItemSpacing::Sparse)
     .toggle_state(active)
     .start_slot(
         Icon::new(group_icon(group))
@@ -142,32 +142,26 @@ fn provider_group_controls(
             .color(Color::Muted),
     )
     .child(
+        h_flex().w_full().min_w_0().gap_1p5().child(
+            Label::new(group.title())
+                .size(LabelSize::Small)
+                .truncate()
+                .flex_1(),
+        ),
+    )
+    .end_slot(
         h_flex()
-            .w_full()
-            .min_w_0()
-            .gap_1p5()
-            .child(provider_buttons_for_group(group, snapshot, workspace, cx))
-            .child(
-                Label::new(group.title())
-                    .size(LabelSize::Small)
-                    .truncate()
-                    .flex_none(),
-            )
-            .child(
-                Label::new(state.detail.clone())
-                    .size(LabelSize::XSmall)
-                    .color(Color::Muted)
-                    .truncate()
-                    .flex_1(),
-            )
+            .flex_none()
+            .gap_1()
             .child(
                 Icon::new(state.icon)
-                    .size(IconSize::XSmall)
+                    .size(IconSize::Small)
                     .color(state.color),
-            ),
+            )
+            .child(checkbox),
     )
-    .end_slot(checkbox)
     .end_slot_on_hover(provider_group_actions(
+        provider_buttons_for_group(group, snapshot, workspace, cx),
         open_button.into_any_element(),
         hover_checkbox,
     ))
@@ -210,7 +204,11 @@ fn provider_buttons_for_group(
         .into_any_element()
 }
 
-fn provider_group_actions(open_button: AnyElement, selection_checkbox: AnyElement) -> AnyElement {
+fn provider_group_actions(
+    provider_buttons: AnyElement,
+    open_button: AnyElement,
+    selection_checkbox: AnyElement,
+) -> AnyElement {
     h_flex()
         .flex_none()
         .gap_1()
@@ -221,6 +219,7 @@ fn provider_group_actions(open_button: AnyElement, selection_checkbox: AnyElemen
         .on_mouse_up(MouseButton::Left, |_, _, cx| {
             cx.stop_propagation();
         })
+        .child(provider_buttons)
         .child(open_button)
         .child(selection_checkbox)
         .into_any_element()

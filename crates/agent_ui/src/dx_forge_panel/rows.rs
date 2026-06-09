@@ -1,47 +1,70 @@
-use gpui::{AnyElement, App, SharedString};
-use ui::{IconName, Indicator, ListHeader, ListItem, ListItemSpacing, prelude::*};
+use gpui::{AnyElement, App, EntityId, IntoElement, WeakEntity, px};
+use ui::{IconName, ListHeader, ListItem, ListItemSpacing, prelude::*};
+use workspace::{Workspace, dock::side_panel_header_controls};
 
 use super::snapshot::DxForgePanelState;
+
+pub(super) fn panel_header(
+    workspace: &WeakEntity<Workspace>,
+    panel_id: EntityId,
+    cx: &App,
+) -> impl IntoElement {
+    h_flex()
+        .id("dx-forge-panel-header")
+        .h(px(32.0))
+        .w_full()
+        .min_w_0()
+        .items_center()
+        .justify_between()
+        .gap_2()
+        .px_2()
+        .border_b_1()
+        .border_color(cx.theme().colors().border)
+        .child(
+            h_flex()
+                .min_w_0()
+                .items_center()
+                .gap_1()
+                .child(Icon::new(dx_icon(DxUiIcon::Forge)).size(IconSize::Small))
+                .child(
+                    Label::new("Forge")
+                        .size(LabelSize::Small)
+                        .color(Color::Default)
+                        .truncate(),
+                ),
+        )
+        .child(side_panel_header_controls(
+            "dx-forge-panel",
+            workspace.clone(),
+            panel_id,
+            cx,
+        ))
+}
 
 pub(super) fn status_strip(
     state: DxForgePanelState,
     detail: String,
     workspace_scope: String,
     actions: AnyElement,
-    cx: &App,
+    _cx: &App,
 ) -> AnyElement {
     let (icon, color, label) = state_presentation(state);
+    let tooltip = format!("{detail}\n{workspace_scope}");
 
     ListItem::new("dx-forge-status")
         .selectable(false)
         .spacing(ListItemSpacing::Sparse)
         .start_slot(Icon::new(icon).size(IconSize::Small).color(color))
         .child(
-            h_flex()
-                .w_full()
-                .min_w_0()
-                .gap_1p5()
-                .child(
-                    Label::new(label)
-                        .size(LabelSize::Small)
-                        .color(color)
-                        .truncate(),
-                )
-                .child(
-                    Label::new(detail)
-                        .size(LabelSize::Small)
-                        .color(Color::Muted)
-                        .truncate()
-                        .flex_1(),
-                ),
+            h_flex().w_full().min_w_0().gap_1p5().child(
+                Label::new(label)
+                    .size(LabelSize::Small)
+                    .color(color)
+                    .truncate(),
+            ),
         )
-        .end_slot(
-            h_flex()
-                .flex_none()
-                .gap_1()
-                .child(status_label(workspace_scope, Color::Muted, cx))
-                .child(actions),
-        )
+        .end_slot(h_flex().flex_none().gap_1().child(actions))
+        .tooltip(Tooltip::text(tooltip))
         .into_any_element()
 }
 
@@ -50,44 +73,16 @@ pub(super) fn section_header(
     title: &'static str,
     icon: IconName,
     count: usize,
-    cx: &App,
+    _cx: &App,
 ) -> AnyElement {
+    let count_tooltip = format!("{count} {}", title.to_ascii_lowercase());
     div()
         .id(id)
         .child(
             ListHeader::new(title)
                 .inset(true)
                 .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
-                .end_slot(count_label(count, Color::Muted, cx)),
-        )
-        .into_any_element()
-}
-
-pub(super) fn status_label(label: impl Into<SharedString>, color: Color, _cx: &App) -> AnyElement {
-    h_flex()
-        .h_5()
-        .min_w_0()
-        .items_center()
-        .gap_0p5()
-        .child(Indicator::dot().color(color))
-        .child(
-            Label::new(label)
-                .size(LabelSize::Small)
-                .color(color)
-                .truncate(),
-        )
-        .into_any_element()
-}
-
-pub(super) fn count_label(count: usize, color: Color, _cx: &App) -> AnyElement {
-    h_flex()
-        .h_5()
-        .items_center()
-        .child(
-            Label::new(count.to_string())
-                .size(LabelSize::Small)
-                .color(color)
-                .truncate(),
+                .tooltip(Tooltip::text(count_tooltip)),
         )
         .into_any_element()
 }

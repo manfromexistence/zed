@@ -24,7 +24,7 @@ pub(super) fn status_actions(
         .child(
             IconButton::new("dx-forge-open-history", IconName::FolderOpen)
                 .shape(IconButtonShape::Square)
-                .icon_size(IconSize::XSmall)
+                .icon_size(IconSize::Small)
                 .icon_color(Color::Muted)
                 .disabled(!history_enabled)
                 .tooltip(Tooltip::text(if history_enabled {
@@ -44,7 +44,7 @@ pub(super) fn status_actions(
         .child(
             IconButton::new("dx-forge-refresh", IconName::RotateCw)
                 .shape(IconButtonShape::Square)
-                .icon_size(IconSize::XSmall)
+                .icon_size(IconSize::Small)
                 .tooltip(Tooltip::text("Refresh Forge"))
                 .on_click({
                     let panel = panel.clone();
@@ -67,7 +67,7 @@ pub(super) fn open_exact_abs_path_button(
 
     IconButton::new(id, IconName::ArrowUpRight)
         .shape(IconButtonShape::Square)
-        .icon_size(IconSize::XSmall)
+        .icon_size(IconSize::Small)
         .icon_color(Color::Muted)
         .disabled(!enabled)
         .tooltip(Tooltip::text(if enabled {

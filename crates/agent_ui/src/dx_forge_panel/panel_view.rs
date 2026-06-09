@@ -1,14 +1,14 @@
 use gpui::{
     AnyElement, App, EntityId, InteractiveElement, IntoElement, ScrollHandle, WeakEntity, Window,
 };
-use ui::{ListHeader, WithScrollbar, prelude::*};
-use workspace::{Workspace, dock::side_panel_header_controls};
+use ui::{WithScrollbar, prelude::*};
+use workspace::Workspace;
 
 use super::{
     controls::{open_exact_abs_path_button, status_actions},
     panel::{DxForgePanel, DxForgePanelTab},
     providers::remote_target_strip,
-    rows::{empty_row, section_header, status_strip},
+    rows::{empty_row, panel_header, section_header, status_strip},
     snapshot::{
         DxForgePanelSnapshot, MACHINE_CACHES_LABEL, PACKAGE_STATUS_LABEL, REMOTE_REGISTRY_LABEL,
     },
@@ -75,21 +75,6 @@ pub(super) fn render_panel(
             snapshot.state_detail.clone(),
             snapshot.workspace_scope.clone(),
             status_actions(snapshot, workspace, panel, cx),
-            cx,
-        ))
-}
-
-fn panel_header(
-    workspace: &WeakEntity<Workspace>,
-    panel_id: EntityId,
-    cx: &App,
-) -> impl IntoElement {
-    ListHeader::new("Forge")
-        .start_slot(Icon::new(dx_icon(DxUiIcon::Forge)).size(IconSize::Small))
-        .end_slot(side_panel_header_controls(
-            "dx-forge-panel",
-            workspace.clone(),
-            panel_id,
             cx,
         ))
 }

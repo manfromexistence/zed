@@ -84,7 +84,6 @@ fn render_storage_root_strip_row(
     .size(ButtonSize::Compact)
     .width(rems(18.))
     .disabled(!available)
-    .tooltip(move |_window, cx| Tooltip::with_meta("Storage", None, tooltip.clone(), cx))
     .when(available, |this| {
         let row_focus_handle = focus_handle.clone();
         let click_focus_handle = row_focus_handle.clone();
@@ -99,7 +98,7 @@ fn render_storage_root_strip_row(
         .tab_index(0_isize)
         .track_focus(&row_focus_handle)
     })
-    .child(Icon::new(icon).size(IconSize::XSmall).color(if available {
+    .child(Icon::new(icon).size(IconSize::Small).color(if available {
         Color::Muted
     } else {
         Color::Disabled
@@ -107,7 +106,7 @@ fn render_storage_root_strip_row(
     .child(
         div().min_w_0().flex_1().child(
             Label::new(shortcut.label)
-                .size(LabelSize::XSmall)
+                .size(LabelSize::Small)
                 .color(if available {
                     Color::Default
                 } else {
@@ -138,12 +137,9 @@ fn render_storage_root_strip_row(
             ),
         )
     })
-    .child(
-        Label::new(status_label)
-            .size(LabelSize::XSmall)
-            .color(Color::Muted)
-            .truncate(),
-    )
+    .tooltip(move |_window, cx| {
+        Tooltip::with_meta("Storage", None, format!("{tooltip}\n{status_label}"), cx)
+    })
     .into_any_element()
 }
 

@@ -361,7 +361,7 @@ fn render_media_shelf_overflow_card(
                             } else {
                                 "More".to_string()
                             })
-                            .size(LabelSize::XSmall)
+                            .size(LabelSize::Small)
                             .color(Color::Muted)
                             .single_line(),
                         ),
@@ -560,7 +560,7 @@ fn render_media_shelf_card_body(item: &MediaPreviewItem, cx: &mut App) -> Div {
                     .p_0p5()
                     .child(
                         Icon::new(IconName::PlayOutlined)
-                            .size(IconSize::XSmall)
+                            .size(IconSize::Small)
                             .color(Color::Accent),
                     ),
             )
@@ -601,7 +601,7 @@ fn audio_media_label(name: &str, icon_size: IconSize, cx: &mut App) -> Div {
         )
         .child(
             Label::new(name.to_string())
-                .size(LabelSize::XSmall)
+                .size(LabelSize::Small)
                 .color(Color::Default)
                 .buffer_font(cx)
                 .single_line()
@@ -622,7 +622,7 @@ fn media_shelf_name_overlay(name: &str, cx: &mut App) -> Div {
         .shadow_md()
         .child(
             Label::new(name.to_string())
-                .size(LabelSize::XSmall)
+                .size(LabelSize::Small)
                 .color(Color::Default)
                 .buffer_font(cx)
                 .single_line()
@@ -693,7 +693,7 @@ fn media_gallery_card_container(
                     .p_0p5()
                     .child(
                         Icon::new(IconName::PlayOutlined)
-                            .size(IconSize::XSmall)
+                            .size(IconSize::Small)
                             .color(Color::Accent),
                     ),
             )
@@ -709,7 +709,7 @@ fn media_gallery_card_container(
             .items_center()
             .justify_center()
             .px_1()
-            .child(audio_media_label(&item.name, IconSize::XSmall, cx)),
+            .child(audio_media_label(&item.name, IconSize::Small, cx)),
     };
 
     div()
@@ -743,7 +743,7 @@ fn media_gallery_card_container(
         .child(media)
         .child(
             Label::new(item.name.clone())
-                .size(LabelSize::XSmall)
+                .size(LabelSize::Small)
                 .color(Color::Muted)
                 .single_line()
                 .truncate(),

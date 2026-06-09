@@ -189,9 +189,15 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   assert.match(renderDxExplorerHeader, /summary\.visible_folder_count/);
   assert.match(
     renderDxExplorerHeader,
-    /storage::format_file_size\(\s*summary\.visible_file_bytes,\s*\)/,
+    /let header_summary_meta = \[/,
+    "full DX Explorer summary should move into a tooltip instead of crowding the visible header",
+  );
+  assert.match(
+    renderDxExplorerHeader,
+    /format!\(\s*"Size: \{\}"[\s\S]*storage::format_file_size\(\s*summary\.visible_file_bytes\s*\)/,
   );
   assert.match(renderDxExplorerHeader, /summary\.cached_media_item_count/);
+  assert.match(renderDxExplorerHeader, /Tooltip::with_meta\([\s\S]*"Project summary"[\s\S]*header_summary_meta\.clone\(\)[\s\S]*cx[\s\S]*\)/);
   assert.match(
     renderDxExplorerHeader,
     /\.id\("dx-explorer-title-row"\)[\s\S]*Icon::new\(dx_icon\(DxUiIcon::Project\)\)[\s\S]*Label::new\("Project"\)[\s\S]*\.child\(header_controls\)/,
@@ -1318,9 +1324,10 @@ test("project panel storage overview and root shortcuts stay cached and professi
     "unavailable storage roots must not remain in keyboard tab order",
   );
   assert.match(renderRootStripRow, /Icon::new\(icon\)/);
-  assert.match(renderRootStripRow, /Label::new\(status_label\)/);
+  assert.match(renderRootStripRow, /let status_label = shortcut\.status_label\(\);/);
+  assert.match(renderRootStripRow, /Tooltip::with_meta\("Storage", None, format!\("\{tooltip\}\\n\{status_label\}"\), cx\)/);
+  assert.doesNotMatch(renderRootStripRow, /Label::new\(status_label\)/);
   assert.match(renderRootStripRow, /Label::new\(shortcut\.label\)[\s\S]*\.truncate\(\)/);
-  assert.match(renderRootStripRow, /Label::new\(status_label\)[\s\S]*\.truncate\(\)/);
   assert.match(renderRootStripRow, /\.disabled\(!available\)/);
   assert.match(
     renderRootStripRow,
@@ -1335,7 +1342,6 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(renderRootStripRow, /window\.focus\(&click_focus_handle, cx\)/);
   assert.match(renderRootStripRow, /this\.open_dx_explorer_storage_root\(path\.clone\(\), window, cx\)/);
   assert.match(renderRootStripRow, /let status_label = shortcut\.status_label\(\);/);
-  assert.match(renderRootStripRow, /Label::new\(status_label\)/);
   assert.match(
     capacityUsedBytes,
     /self\.total_bytes\s*\.saturating_sub\(self\.available_bytes\.min\(self\.total_bytes\)\)/,
@@ -2371,7 +2377,7 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     mediaGalleryCardContainer,
-    /MediaPreviewKind::Audio[\s\S]*audio_gradient_background\(&item\.name\)[\s\S]*audio_media_label\(&item\.name, IconSize::XSmall, cx\)/,
+    /MediaPreviewKind::Audio[\s\S]*audio_gradient_background\(&item\.name\)[\s\S]*audio_media_label\(&item\.name, IconSize::Small, cx\)/,
     "gallery audio cards must use deterministic color rectangles with readable centered audio labels",
   );
   assert.match(

@@ -7,7 +7,7 @@ use gpui::{
 };
 use theme::ActiveTheme;
 use ui::{
-    IconButtonShape, ListHeader, ListItem, ListItemSpacing, Tooltip, WithScrollbar, prelude::*,
+    ButtonStyle, IconButtonShape, ListItem, ListItemSpacing, Tooltip, WithScrollbar, prelude::*,
 };
 use workspace::{
     OpenOptions, Workspace,
@@ -19,8 +19,7 @@ use crate::dx_check_panel::{
 };
 use crate::dx_check_panel_view::view_rows::{
     adapter_plan_row, config_label, count_label, detail_row, duration_label, empty_row, notice_row,
-    notice_title, outcome_label, quick_fix_row, section, section_row, status_color, status_label,
-    web_audit_row,
+    notice_title, outcome_label, quick_fix_row, section, section_row, status_color, web_audit_row,
 };
 
 mod tabs;
@@ -206,13 +205,35 @@ impl DxCheckPanel {
         panel_id: EntityId,
         cx: &App,
     ) -> AnyElement {
-        ListHeader::new("Check")
-            .start_slot(
-                Icon::new(IconName::Check)
-                    .size(IconSize::Small)
-                    .color(status_color(snapshot)),
+        h_flex()
+            .id("dx-check-panel-header")
+            .h(px(32.0))
+            .w_full()
+            .min_w_0()
+            .items_center()
+            .justify_between()
+            .gap_2()
+            .px_2()
+            .border_b_1()
+            .border_color(cx.theme().colors().border)
+            .child(
+                h_flex()
+                    .min_w_0()
+                    .items_center()
+                    .gap_1()
+                    .child(
+                        Icon::new(IconName::Check)
+                            .size(IconSize::Small)
+                            .color(status_color(snapshot)),
+                    )
+                    .child(
+                        Label::new("Check")
+                            .size(LabelSize::Small)
+                            .color(Color::Default)
+                            .truncate(),
+                    ),
             )
-            .end_slot(side_panel_header_controls(
+            .child(side_panel_header_controls(
                 "dx-check-panel",
                 self.workspace.clone(),
                 panel_id,
@@ -221,48 +242,43 @@ impl DxCheckPanel {
             .into_any_element()
     }
 
-    fn render_status_strip(&self, snapshot: &DxCheckPanelSnapshot, cx: &App) -> AnyElement {
+    fn render_status_strip(&self, snapshot: &DxCheckPanelSnapshot, _cx: &App) -> AnyElement {
+        let color = status_color(snapshot);
+        let outcome = outcome_label(
+            snapshot.pass_count,
+            snapshot.fail_count,
+            snapshot.warn_count,
+            snapshot.skipped_count,
+        );
+        let tooltip = format!("{}\n{outcome}", snapshot.status);
+
         ListItem::new("dx-check-status")
             .spacing(ListItemSpacing::Sparse)
             .selectable(false)
             .start_slot(
                 Icon::new(IconName::Check)
                     .size(IconSize::Small)
-                    .color(status_color(snapshot)),
+                    .color(color),
             )
             .child(
-                v_flex()
+                h_flex()
                     .min_w_0()
-                    .gap_0p5()
+                    .gap_2()
+                    .justify_between()
                     .child(
-                        h_flex()
-                            .min_w_0()
-                            .gap_2()
-                            .justify_between()
-                            .child(
-                                Label::new(snapshot.score_label())
-                                    .size(LabelSize::Small)
-                                    .color(status_color(snapshot))
-                                    .truncate(),
-                            )
-                            .child(status_label(
-                                snapshot.status.clone(),
-                                status_color(snapshot),
-                                cx,
-                            )),
+                        Label::new(snapshot.score_label())
+                            .size(LabelSize::Small)
+                            .color(color)
+                            .truncate(),
                     )
                     .child(
-                        Label::new(outcome_label(
-                            snapshot.pass_count,
-                            snapshot.fail_count,
-                            snapshot.warn_count,
-                            snapshot.skipped_count,
-                        ))
-                        .size(LabelSize::Small)
-                        .color(Color::Muted)
-                        .truncate(),
+                        Label::new(outcome)
+                            .size(LabelSize::Small)
+                            .color(Color::Muted)
+                            .truncate(),
                     ),
             )
+            .tooltip(Tooltip::text(tooltip))
             .into_any_element()
     }
 
@@ -286,10 +302,15 @@ impl DxCheckPanel {
             .border_b_1()
             .border_color(cx.theme().colors().border)
             .child(
-                IconButton::new("dx-check-open-receipt", IconName::FileTextOutlined)
-                    .shape(IconButtonShape::Square)
-                    .icon_size(IconSize::Small)
-                    .icon_color(Color::Muted)
+                Button::new("dx-check-open-receipt", "Receipt")
+                    .label_size(LabelSize::Small)
+                    .color(Color::Muted)
+                    .style(ButtonStyle::Subtle)
+                    .start_icon(
+                        Icon::new(IconName::FileTextOutlined)
+                            .size(IconSize::Small)
+                            .color(Color::Muted),
+                    )
                     .disabled(!receipt_enabled)
                     .tooltip(Tooltip::text(if receipt_enabled {
                         "Open latest Check receipt"

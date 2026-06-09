@@ -606,7 +606,7 @@ test("Forge panel renders real receipt, restore, and media states", () => {
   );
   assert.match(panelView, /No restore previews found/);
   assert.match(panelView, /No media outputs found/);
-  assert.match(panelView, /side_panel_header_controls/);
+  assert.match(rows, /side_panel_header_controls/);
   assert.match(rows, /DxForgePanelState::NoWorkspace/);
   assert.match(rows, /\.min_w_0\(\)/);
   assert.match(workflowRows, /Tooltip::with_meta/);
@@ -637,7 +637,8 @@ test("Forge panel uses Git-style controls instead of metric cards", () => {
   assert.match(sectionHeaderBody, /div\(\)[\s\S]*\.id\(id\)/);
   assert.match(sectionHeaderBody, /\.inset\(true\)/);
   assert.match(sectionHeaderBody, /\.start_slot\(/);
-  assert.match(sectionHeaderBody, /\.end_slot\(/);
+  assert.match(sectionHeaderBody, /Tooltip::text\(count_tooltip\)/);
+  assert.doesNotMatch(sectionHeaderBody, /\.end_slot\(/);
   assert.doesNotMatch(
     `${statusStripBody}\n${sectionHeaderBody}`,
     /\.h\(px\((?:28|32)\.0\)\)|\.border_1\(\)|\.border_y_1\(\)|\.border_r_2\(\)|ghost_element_hover/,
@@ -648,9 +649,9 @@ test("Forge panel uses Git-style controls instead of metric cards", () => {
   assert.match(selectableRowBody, /ListItem::new\(id\)/);
   assert.match(selectableRowBody, /\.inset\(true\)/);
   assert.match(selectableRowBody, /\.height\(rems\(1\.75\)\)/);
-  assert.match(selectableRowBody, /\.spacing\(ListItemSpacing::Dense\)/);
+  assert.match(selectableRowBody, /\.spacing\(ListItemSpacing::Sparse\)/);
   assert.doesNotMatch(selectableRowBody, /\.height\(px\(52\.0\)\)/);
-  assert.doesNotMatch(selectableRowBody, /\.spacing\(ListItemSpacing::Sparse\)/);
+  assert.doesNotMatch(selectableRowBody, /\.spacing\(ListItemSpacing::Dense\)/);
   assert.doesNotMatch(selectableRowBody, /\bpath: String\b/);
   assert.match(selectableRowBody, /\.start_slot\(Icon::new\(icon\)/);
   assert.match(selectableRowBody, /let hover_checkbox_id = SharedString::from\(format!\("\{id\}-hover"\)\)/);
@@ -826,7 +827,7 @@ test("Forge panel uses workflow tabs with Git-style selectable rows", () => {
   assert.match(workflowRows, /ElevationIndex::Surface/);
   assert.match(workflowRows, /ListItem::new\(id/);
   assert.match(workflowRows, /\.height\(rems\(1\.75\)\)/);
-  assert.match(workflowRows, /\.spacing\(ListItemSpacing::Dense\)/);
+  assert.match(workflowRows, /\.spacing\(ListItemSpacing::Sparse\)/);
   assert.match(workflowRows, /\.start_slot\(Icon::new\(icon\)/);
   assert.match(workflowRows, /fn selectable_row_actions/);
   assert.match(workflowRows, /\.child\(selection_checkbox\)/);
@@ -1150,9 +1151,10 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.doesNotMatch(remoteTargetStripBody, /\bRemote targets\b|\blanes\b|ProviderGroup::ALL\.len\(\)/i);
   assert.match(providerGroupControlsBody, /ListItem::new/);
   assert.match(providerGroupControlsBody, /\.inset\(true\)/);
-  assert.match(providerGroupControlsBody, /\.spacing\(ListItemSpacing::Dense\)/);
+  assert.match(providerGroupControlsBody, /\.spacing\(ListItemSpacing::Sparse\)/);
   assert.match(providerGroupControlsBody, /\.start_slot\(/);
-  assert.match(providerGroupControlsBody, /\.end_slot\(checkbox\)/);
+  assert.match(providerGroupControlsBody, /\.end_slot\(/);
+  assert.match(providerGroupControlsBody, /\.child\(checkbox\)/);
   assert.match(
     providerGroupControlsBody,
     /\.end_slot_on_hover\(provider_group_actions\([\s\S]*open_button\.into_any_element\(\),[\s\S]*hover_checkbox,[\s\S]*\)\)/,
@@ -1178,7 +1180,8 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   );
   assert.match(providerGroupControlsBody, /provider_buttons_for_group\(group, snapshot, workspace, cx\)/);
   assert.match(providerGroupControlsBody, /Label::new\(group\.title\(\)\)/);
-  assert.match(providerGroupControlsBody, /Label::new\(state\.detail\.clone\(\)\)/);
+  assert.doesNotMatch(providerGroupControlsBody, /Label::new\(state\.detail\.clone\(\)\)/);
+  assert.match(providerGroupControlsBody, /remote_target_tooltip\(group, &state, target_path\.as_deref\(\), enabled\)/);
   assert.match(providerGroupControlsBody, /Icon::new\(state\.icon\)/);
   assert.match(providerGroupControlsBody, /format!\("Open \{\}", group\.title\(\)\)/);
   assert.match(

@@ -4669,6 +4669,50 @@ impl ProjectPanel {
         let new_folder_focus_handle = header_focus_handle.clone();
         let new_folder_tooltip_focus_handle = new_folder_focus_handle.clone();
 
+        let header_summary_meta = [
+            format!(
+                "Roots: {}",
+                Self::dx_explorer_count_label(summary.worktree_count, "root", "roots")
+            ),
+            format!(
+                "Files: {}",
+                Self::dx_explorer_count_label(summary.visible_file_count, "file", "files")
+            ),
+            format!(
+                "Folders: {}",
+                Self::dx_explorer_count_label(summary.visible_folder_count, "folder", "folders")
+            ),
+            format!(
+                "Entries: {}",
+                Self::dx_explorer_count_label(summary.visible_entry_count, "entry", "entries")
+            ),
+            format!(
+                "Omitted: {}",
+                Self::dx_explorer_count_label(summary.skipped_entry_count, "omitted", "omitted")
+            ),
+            format!(
+                "Size: {}",
+                storage::format_file_size(summary.visible_file_bytes)
+            ),
+            format!(
+                "Expanded: {}",
+                Self::dx_explorer_count_label(summary.expanded_dir_count, "folder", "folders")
+            ),
+            format!(
+                "Media folders: {}",
+                Self::dx_explorer_count_label(
+                    summary.cached_media_folder_count,
+                    "folder",
+                    "folders"
+                )
+            ),
+            format!(
+                "Media items: {}",
+                Self::dx_explorer_count_label(summary.cached_media_item_count, "item", "items")
+            ),
+        ]
+        .join("\n");
+
         let header_metrics = h_flex()
             .min_w_0()
             .flex_1()
@@ -4685,54 +4729,10 @@ impl ProjectPanel {
             .child(Self::render_dx_explorer_metric(
                 Self::dx_explorer_count_label(summary.visible_folder_count, "folder", "folders"),
             ))
-            .child(Self::render_dx_explorer_metric(
-                Self::dx_explorer_count_label(summary.visible_entry_count, "entry", "entries"),
-            ))
-            .when(summary.skipped_entry_count > 0, |this| {
-                this.child(Self::render_dx_explorer_metric(
-                    Self::dx_explorer_count_label(
-                        summary.skipped_entry_count,
-                        "omitted",
-                        "omitted",
-                    ),
-                ))
-            })
-            .when(summary.visible_file_bytes > 0, |this| {
-                this.child(Self::render_dx_explorer_metric(storage::format_file_size(
-                    summary.visible_file_bytes,
-                )))
-            })
             .when(summary.selected_entry_count > 0, |this| {
                 this.child(Self::render_dx_explorer_metric(
                     Self::selected_entries_count_label(summary.selected_entry_count),
                 ))
-            })
-            .when(summary.expanded_dir_count > 0, |this| {
-                this.child(Self::render_dx_explorer_metric(
-                    Self::dx_explorer_count_label(
-                        summary.expanded_dir_count,
-                        "expanded folder",
-                        "expanded folders",
-                    ),
-                ))
-            })
-            .when(summary.cached_media_folder_count > 0, |this| {
-                this.child(Self::render_dx_explorer_metric(
-                    Self::dx_explorer_count_label(
-                        summary.cached_media_folder_count,
-                        "media folder",
-                        "media folders",
-                    ),
-                ))
-                .when(summary.cached_media_item_count > 0, |this| {
-                    this.child(Self::render_dx_explorer_metric(
-                        Self::dx_explorer_count_label(
-                            summary.cached_media_item_count,
-                            "media item",
-                            "media items",
-                        ),
-                    ))
-                })
             });
 
         let header_controls = h_flex()
@@ -5020,6 +5020,9 @@ impl ProjectPanel {
                     .items_center()
                     .gap_2()
                     .px_1()
+                    .tooltip(move |_window, cx| {
+                        Tooltip::with_meta("Project summary", None, header_summary_meta.clone(), cx)
+                    })
                     .child(header_metrics),
             )
             .into_any_element()

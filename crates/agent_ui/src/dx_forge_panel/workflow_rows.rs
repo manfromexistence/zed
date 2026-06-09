@@ -151,25 +151,18 @@ fn selectable_row(
         .anchor_scroll(scroll_anchor)
         .inset(true)
         .height(rems(1.75))
-        .spacing(ListItemSpacing::Dense)
+        .spacing(ListItemSpacing::Sparse)
         .toggle_state(active)
         .start_slot(Icon::new(icon).size(IconSize::Small).color(icon_color))
         .child(
-            h_flex()
-                .w_full()
-                .min_w_0()
-                .flex_1()
-                .gap_1p5()
-                .child(Label::new(title).size(LabelSize::Small).truncate())
-                .child(
-                    Label::new(detail)
-                        .size(LabelSize::XSmall)
-                        .color(Color::Muted)
-                        .truncate(),
-                ),
+            Label::new(title)
+                .size(LabelSize::Small)
+                .color(Color::Default)
+                .truncate(),
         )
         .end_slot(checkbox)
         .end_slot_on_hover(row_actions)
+        .tooltip(Tooltip::text(detail))
         .on_click(move |_, window, cx| {
             panel_for_row
                 .update(cx, |panel, cx| {
