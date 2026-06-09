@@ -76,7 +76,7 @@ fn provider_detail(kind: &str, mapping_count: usize, has_auth_backend: bool) -> 
         "auth backend not configured"
     };
     format!(
-        "{} · {} mapping(s) · {} · registry file only; live remote health unchecked",
+        "{} · {} mapping(s) · {} · health unchecked",
         canonical_kind_label(kind),
         mapping_count,
         auth,

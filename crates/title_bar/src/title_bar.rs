@@ -61,13 +61,11 @@ pub use onboarding_banner::restore_banner;
 const MAX_PROJECT_NAME_LENGTH: usize = 40;
 const MAX_BRANCH_NAME_LENGTH: usize = 40;
 const MAX_SHORT_SHA_LENGTH: usize = 8;
-const MAX_DOCK_ITEM_LABEL_LENGTH: usize = 14;
 
 struct ActivePaneScreenEntry {
     item: Box<dyn ItemHandle>,
     kind: WorkspaceScreenKind,
     title: SharedString,
-    subtitle: Option<SharedString>,
     icon: IconName,
     selected: bool,
 }
@@ -479,37 +477,6 @@ impl TitleBar {
         });
         let active_screen_kind = self.active_screen_kind(cx);
         let agent_screen_is_active = self.agent_screen_is_active(cx);
-        let should_show_extra_entries = !matches!(
-            active_screen_kind,
-            WorkspaceScreenKind::Agent
-                | WorkspaceScreenKind::Automations
-                | WorkspaceScreenKind::Connections
-                | WorkspaceScreenKind::Tools
-                | WorkspaceScreenKind::Editor
-                | WorkspaceScreenKind::Browser
-                | WorkspaceScreenKind::Terminal
-                | WorkspaceScreenKind::Onboarding
-        ) && !agent_screen_is_active;
-        let extra_entries = if should_show_extra_entries {
-            self.collect_active_pane_screen_entries(cx)
-                .into_iter()
-                .filter(|entry| {
-                    !matches!(
-                        entry.kind,
-                        WorkspaceScreenKind::Agent
-                            | WorkspaceScreenKind::Automations
-                            | WorkspaceScreenKind::Connections
-                            | WorkspaceScreenKind::Tools
-                            | WorkspaceScreenKind::Editor
-                            | WorkspaceScreenKind::Browser
-                            | WorkspaceScreenKind::Terminal
-                            | WorkspaceScreenKind::Onboarding
-                    )
-                })
-                .collect::<Vec<_>>()
-        } else {
-            Vec::new()
-        };
         let has_screen_entries = self.workspace.upgrade().is_some();
 
         let has_project_segment = project_segment.is_some() || branch_segment.is_some();
@@ -545,23 +512,6 @@ impl TitleBar {
                     .gap_0p5()
                     .child(self.render_agent_screen_button(agent_screen_is_active, cx))
                     .child(self.render_screen_kind_button(
-                        WorkspaceScreenKind::Automations,
-                        !agent_screen_is_active
-                            && active_screen_kind == WorkspaceScreenKind::Automations,
-                        cx,
-                    ))
-                    .child(self.render_screen_kind_button(
-                        WorkspaceScreenKind::Connections,
-                        !agent_screen_is_active
-                            && active_screen_kind == WorkspaceScreenKind::Connections,
-                        cx,
-                    ))
-                    .child(self.render_screen_kind_button(
-                        WorkspaceScreenKind::Tools,
-                        !agent_screen_is_active && active_screen_kind == WorkspaceScreenKind::Tools,
-                        cx,
-                    ))
-                    .child(self.render_screen_kind_button(
                         WorkspaceScreenKind::Editor,
                         !agent_screen_is_active
                             && active_screen_kind == WorkspaceScreenKind::Editor,
@@ -578,12 +528,7 @@ impl TitleBar {
                         !agent_screen_is_active
                             && active_screen_kind == WorkspaceScreenKind::Terminal,
                         cx,
-                    ))
-                    .children(
-                        extra_entries
-                            .into_iter()
-                            .map(|entry| self.render_screen_entry_button(entry, cx)),
-                    ),
+                    )),
             )
             .child(
                 h_flex()
@@ -698,79 +643,21 @@ impl TitleBar {
         .into_any_element()
     }
 
-    fn render_screen_entry_button(
-        &self,
-        entry: ActivePaneScreenEntry,
-        _cx: &mut Context<Self>,
-    ) -> AnyElement {
-        let workspace = self.workspace.clone();
-        let tooltip = entry
-            .subtitle
-            .clone()
-            .unwrap_or_else(|| entry.title.clone());
-        let kind = entry.kind;
-        let item = entry.item;
-        let button_id = format!(
-            "screen-dock-entry-{}-{:?}",
-            Self::screen_kind_label(kind).to_lowercase(),
-            item.item_id()
-        );
-
-        ButtonLike::new(button_id)
-            .size(ButtonSize::Default)
-            .selected_style(ButtonStyle::Tinted(TintColor::Accent))
-            .toggle_state(entry.selected)
-            .child(
-                h_flex()
-                    .items_center()
-                    .gap_0p5()
-                    .child(
-                        Icon::new(entry.icon)
-                            .size(IconSize::Medium)
-                            .color(if entry.selected {
-                                Color::Accent
-                            } else {
-                                Color::Muted
-                            }),
-                    )
-                    .child(
-                        Label::new(util::truncate_and_trailoff(
-                            entry.title.as_ref(),
-                            MAX_DOCK_ITEM_LABEL_LENGTH,
-                        ))
-                        .size(LabelSize::Default)
-                        .color(if entry.selected {
-                            Color::Default
-                        } else {
-                            Color::Muted
-                        }),
-                    ),
-            )
-            .tooltip(Tooltip::text(tooltip))
-            .on_click(move |_, window, cx| {
-                let Some(workspace) = workspace.upgrade() else {
-                    return;
-                };
-                let _ = workspace.update(cx, |workspace, cx| {
-                    if !workspace.activate_screen_kind(kind, window, cx) {
-                        workspace.activate_item(&*item, true, true, window, cx);
-                    }
-                });
-            })
-            .into_any_element()
-    }
-
     fn render_agent_screen_button(&self, selected: bool, _cx: &mut Context<Self>) -> AnyElement {
+        let workspace = self.workspace.clone();
         IconButton::new("screen-dock-agent", dx_icon(DxUiIcon::Agent))
             .size(ButtonSize::Default)
             .icon_size(IconSize::Medium)
             .toggle_state(selected)
             .tooltip(Tooltip::text("AI"))
             .on_click(move |_, window, cx| {
-                window.dispatch_action(
-                    zed_actions::assistant::FocusAgentFullscreen.boxed_clone(),
-                    cx,
-                );
+                let Some(workspace) = workspace.upgrade() else {
+                    return;
+                };
+
+                workspace.update(cx, |workspace, cx| {
+                    workspace.activate_screen_kind(WorkspaceScreenKind::Agent, window, cx);
+                });
             })
             .into_any_element()
     }
@@ -869,13 +756,6 @@ impl TitleBar {
             .into_any_element()
     }
 
-    fn collect_active_pane_screen_entries(&self, cx: &App) -> Vec<ActivePaneScreenEntry> {
-        let Some(workspace) = self.workspace.upgrade() else {
-            return Vec::new();
-        };
-        Self::collect_workspace_screen_entries(&workspace, cx)
-    }
-
     fn collect_workspace_screen_entries(
         workspace: &Entity<Workspace>,
         cx: &App,
@@ -919,7 +799,6 @@ impl TitleBar {
 
         ActivePaneScreenEntry {
             selected,
-            subtitle: item.tab_tooltip_text(cx),
             icon: Self::screen_kind_icon(kind),
             kind,
             title,
@@ -973,7 +852,7 @@ impl TitleBar {
             WorkspaceScreenKind::Automations => "Automations",
             WorkspaceScreenKind::Connections => "Connections",
             WorkspaceScreenKind::Tools => "Tools",
-            WorkspaceScreenKind::Editor => "Editor",
+            WorkspaceScreenKind::Editor => "Code",
             WorkspaceScreenKind::Browser => "Browser",
             WorkspaceScreenKind::Terminal => "Terminal",
             WorkspaceScreenKind::Onboarding => "Onboarding Disabled",

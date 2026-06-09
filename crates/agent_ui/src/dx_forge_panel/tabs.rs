@@ -61,11 +61,11 @@ fn forge_tab(
     tab: DxForgePanelTab,
     active_tab: DxForgePanelTab,
     panel: &WeakEntity<DxForgePanel>,
-    cx: &App,
+    _cx: &App,
 ) -> impl IntoElement {
     let selected = active_tab == tab;
     let panel = panel.clone();
-    let title = format!("{label} - {count} items");
+    let title = format!("{label} ({count})");
 
     Tab::new(id)
         .position(tab_position(tab, active_tab))
@@ -81,7 +81,7 @@ fn forge_tab(
                 }),
         )
         .end_slot(
-            Label::new(count.to_string())
+            Label::new(format!("({count})"))
                 .size(LabelSize::XSmall)
                 .color(Color::Muted),
         )
@@ -103,14 +103,14 @@ fn forge_tab(
 }
 
 fn tab_position(tab: DxForgePanelTab, active_tab: DxForgePanelTab) -> TabPosition {
-    let tab_index = tab_index(tab);
+    let current_index = tab_index(tab);
     let active_index = tab_index(active_tab);
 
-    match tab_index {
+    match current_index {
         0 => TabPosition::First,
         3 => TabPosition::Last,
-        _ if tab_index == active_index => TabPosition::Middle(Ordering::Equal),
-        _ if tab_index < active_index => TabPosition::Middle(Ordering::Less),
+        _ if current_index == active_index => TabPosition::Middle(Ordering::Equal),
+        _ if current_index < active_index => TabPosition::Middle(Ordering::Less),
         _ => TabPosition::Middle(Ordering::Greater),
     }
 }

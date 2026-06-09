@@ -1,3 +1,23 @@
+[2026-06-09] - Screen Dock Navigation Polish
+
+CHANGED:
+- `crates\title_bar\src\title_bar.rs` now keeps the primary screen dock to AI, Code, Browser, and Terminal, routes the AI screen button through workspace screen activation, and removes the unused active-pane subtitle field from the dock entry model.
+- `crates\workspace\src\screen_carousel.rs` now uses the Code label for the editor screen.
+- `crates\platform_title_bar\src\platforms\platform_windows.rs` widens Windows caption buttons so the system action targets are not visually too tall for their width.
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now keeps clicked response anchors active while pending and treats bottom-clamped fullscreen Agent scroll as the latest response anchor.
+- Settings glyph call sites in CSV preview, debugger, edit prediction, recent projects, tasks, welcome, and Zed quick actions now use the DX Cog icon.
+- `crates\agent_ui\src\conversation_view\composer_liquid_glass.rs` and DX Forge panel files now include the small compile repairs surfaced by the authorized J6 build, including the missing theme trait import, supported GPUI mouse-up propagation guards, a tab-index shadowing fix, and unused Forge snapshot label cleanup.
+- Focused source guards were updated for the four-button screen dock and response-anchor behavior.
+
+PASSED:
+- `rustfmt --edition 2024` on touched Rust files
+- `node --test script\dx-title-bar-source.test.ts script\dx-workspace-ui-state-source.test.ts`
+- `git diff --check`
+- `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run` built and launched Zed without compiler warnings
+
+NOTES:
+- `script\dx-forge-panel-source.test.ts` still reports contract failures against the larger Forge-panel worker changes; the compile errors and warnings that blocked `just run` were fixed here.
+
 [2026-06-09] - AI Composer Liquid Glass Backdrop Carrier
 
 CHANGED:

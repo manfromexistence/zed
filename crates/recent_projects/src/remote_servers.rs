@@ -1654,9 +1654,7 @@ impl RemoteServerProjects {
                                         )
                                         .inset(true)
                                         .spacing(ui::ListItemSpacing::Sparse)
-                                        .start_slot(
-                                            Icon::new(IconName::Settings).color(Color::Muted),
-                                        )
+                                        .start_slot(Icon::new(IconName::DxCog).color(Color::Muted))
                                         .child(Label::new("View Server Options"))
                                         .on_click(cx.listener({
                                             let ssh_connection = connection.clone();

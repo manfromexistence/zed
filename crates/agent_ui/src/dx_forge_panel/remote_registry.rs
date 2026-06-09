@@ -131,13 +131,13 @@ fn remote_registry_row(
     let primary_detail = primary
         .as_deref()
         .map(|name| format!("primary {name}"))
-        .unwrap_or_else(|| "no primary remote".to_string());
+        .unwrap_or_else(|| "no primary".to_string());
 
     (
         DxForgeSourceRow {
             label: "Forge remotes".to_string(),
             detail: format!(
-                "{} {} · {} enabled · {} · {} · {} auth backend(s) · registry file only; live remote health unchecked",
+                "{} {} · {} enabled · {} · {} · {} auth backend(s) · health unchecked",
                 remotes.len(),
                 plural(remotes.len(), "remote", "remotes"),
                 enabled_count,
@@ -149,12 +149,12 @@ fn remote_registry_row(
             open_path: registry_open_path.clone(),
             receipts: vec![
                 DxForgeReceiptDrilldown {
-                    label: "Remote kinds".to_string(),
+                    label: "Kinds".to_string(),
                     detail: kind_detail(&kinds),
                 },
                 DxForgeReceiptDrilldown {
-                    label: "Branch mappings".to_string(),
-                    detail: format!("{branch_mapping_count} configured mapping(s)"),
+                    label: "Mappings".to_string(),
+                    detail: format!("{branch_mapping_count} mapping(s)"),
                 },
             ],
             warnings,
@@ -170,8 +170,8 @@ fn unreadable_registry_row(workspace_root: &Path, path: &Path) -> DxForgeSourceR
         path: display_path(workspace_root, path),
         open_path: path.display().to_string(),
         receipts: vec![DxForgeReceiptDrilldown {
-            label: "Read model".to_string(),
-            detail: "registry file only; live remote health unchecked".to_string(),
+            label: "Registry".to_string(),
+            detail: "registry file only; health unchecked".to_string(),
         }],
         warnings: vec![format!(
             "remote registry could not be read within {} bytes",

@@ -67,19 +67,17 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
   const agentScreenButton = functionBodyFrom(titleBarSource, "render_agent_screen_button");
   const agentScreenActive = functionBodyFrom(titleBarSource, "agent_screen_is_active");
   const agentButtonIndex = screenDock.indexOf("render_agent_screen_button(agent_screen_is_active, cx)");
-  const automationButtonIndex = screenDock.indexOf("WorkspaceScreenKind::Automations", agentButtonIndex);
-  const connectionsButtonIndex = screenDock.indexOf("WorkspaceScreenKind::Connections", automationButtonIndex);
-  const toolsButtonIndex = screenDock.indexOf("WorkspaceScreenKind::Tools", connectionsButtonIndex);
-  const editorButtonIndex = screenDock.indexOf("WorkspaceScreenKind::Editor", toolsButtonIndex);
+  const editorButtonIndex = screenDock.indexOf("WorkspaceScreenKind::Editor", agentButtonIndex);
   const browserButtonIndex = screenDock.indexOf("WorkspaceScreenKind::Browser", editorButtonIndex);
   const terminalButtonIndex = screenDock.indexOf("WorkspaceScreenKind::Terminal", browserButtonIndex);
   assert.ok(agentButtonIndex >= 0, "screen dock should render the AI button");
-  assert.ok(automationButtonIndex > agentButtonIndex, "Automations should follow AI in the screen dock");
-  assert.ok(connectionsButtonIndex > automationButtonIndex, "Connections should follow Automations in the screen dock");
-  assert.ok(toolsButtonIndex > connectionsButtonIndex, "Tools should follow Connections in the screen dock");
-  assert.ok(editorButtonIndex > toolsButtonIndex, "Editor should follow Tools in the screen dock");
+  assert.equal(screenDock.indexOf("WorkspaceScreenKind::Automations"), -1, "Automations should not be a primary screen dock button");
+  assert.equal(screenDock.indexOf("WorkspaceScreenKind::Connections"), -1, "Connections should not be a primary screen dock button");
+  assert.equal(screenDock.indexOf("WorkspaceScreenKind::Tools"), -1, "Tools should not be a primary screen dock button");
+  assert.ok(editorButtonIndex > agentButtonIndex, "Code should follow AI in the screen dock");
   assert.ok(browserButtonIndex > editorButtonIndex, "Browser should follow Editor in the screen dock");
   assert.ok(terminalButtonIndex > browserButtonIndex, "Terminal should follow Browser in the screen dock");
+  assert.doesNotMatch(screenDock, /extra_entries|render_screen_entry_button/, "screen dock should not leak dynamic extra screen buttons");
   assert.doesNotMatch(
     screenDock,
     /render_screen_kind_button\(\s*WorkspaceScreenKind::Onboarding/,
@@ -87,20 +85,14 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
   );
   assert.match(
     screenDock,
-    /\.child\(self\.render_agent_screen_button\(agent_screen_is_active, cx\)\)[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Automations,[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Connections,[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Tools,[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Editor,[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Browser,[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Terminal,[\s\S]*?\.children\(\s*extra_entries/s,
-    "primary screen dock buttons must stay AI, Automations, Connections, Tools, Editor, Browser, Terminal before overflow entries",
+    /\.child\(self\.render_agent_screen_button\(agent_screen_is_active, cx\)\)[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Editor,[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Browser,[\s\S]*?\.child\(self\.render_screen_kind_button\(\s*WorkspaceScreenKind::Terminal,/s,
+    "primary screen dock buttons must stay AI, Code, Browser, Terminal",
   );
   assert.match(screenDock, /let agent_screen_is_active = self\.agent_screen_is_active\(cx\);/);
-  assert.match(screenDock, /&& !agent_screen_is_active/);
-  assert.match(
-    screenDock,
-    /WorkspaceScreenKind::Automations,\s*!agent_screen_is_active\s*&& active_screen_kind == WorkspaceScreenKind::Automations/s,
-    "automation dock button must not stay active while fullscreen AI is active",
-  );
   assert.match(
     screenDock,
     /WorkspaceScreenKind::Editor,\s*!agent_screen_is_active\s*&& active_screen_kind == WorkspaceScreenKind::Editor/s,
-    "editor dock button must not stay active while fullscreen AI is active",
+    "code dock button must not stay active while fullscreen AI is active",
   );
   assert.match(
     screenDock,
@@ -134,8 +126,8 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
   );
   assert.match(
     agentScreenButton,
-    /zed_actions::assistant::FocusAgentFullscreen\.boxed_clone\(\)/,
-    "AI screen dock button should open the real Agent panel fullscreen action",
+    /workspace\.activate_screen_kind\(WorkspaceScreenKind::Agent, window, cx\)/,
+    "AI screen dock button should route through the same workspace screen activation path as the other screen buttons",
   );
   assert.match(
     titleBarSource,
@@ -146,6 +138,7 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
   assert.match(titleBarSource, /fn agent_screen_is_active\(&self, cx: &App\) -> bool/);
   assert.match(agentScreenActive, /self\.active_screen_kind\(cx\) == WorkspaceScreenKind::Agent/);
   assert.match(titleBarSource, /WorkspaceScreenKind::Agent => "AI"/);
+  assert.match(titleBarSource, /WorkspaceScreenKind::Editor => "Code"/);
   assert.match(titleBarSource, /WorkspaceScreenKind::Automations => "Automations"/);
   assert.match(titleBarSource, /WorkspaceScreenKind::Connections => "Connections"/);
   assert.match(titleBarSource, /WorkspaceScreenKind::Tools => "Tools"/);

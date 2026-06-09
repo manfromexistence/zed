@@ -619,7 +619,7 @@ impl EditPredictionButton {
     fn add_configure_providers_item(&self, menu: ContextMenu) -> ContextMenu {
         menu.separator().item(
             ContextMenuEntry::new("Configure Providers")
-                .icon(IconName::Settings)
+                .icon(IconName::DxCog)
                 .icon_position(IconPosition::Start)
                 .icon_color(Color::Muted)
                 .handler(move |window, cx| {

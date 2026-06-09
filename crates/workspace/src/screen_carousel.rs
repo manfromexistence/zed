@@ -289,7 +289,7 @@ impl Workspace {
             WorkspaceScreenKind::Automations => "Automations",
             WorkspaceScreenKind::Connections => "Connections",
             WorkspaceScreenKind::Tools => "Tools",
-            WorkspaceScreenKind::Editor => "Editor",
+            WorkspaceScreenKind::Editor => "Code",
             WorkspaceScreenKind::Browser => "Browser",
             WorkspaceScreenKind::Terminal => "Terminal",
             WorkspaceScreenKind::Onboarding => "Onboarding Disabled",

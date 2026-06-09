@@ -2,6 +2,8 @@ use gpui::{Hsla, Rgba, WindowControlArea, prelude::*};
 
 use ui::prelude::*;
 
+const WINDOWS_CAPTION_BUTTON_WIDTH: Pixels = px(46.0);
+
 #[derive(IntoElement)]
 pub struct WindowsWindowControls {
     button_height: Pixels,
@@ -130,7 +132,7 @@ impl RenderOnce for WindowsCaptionButton {
             .justify_center()
             .items_center()
             .occlude()
-            .w(px(36.))
+            .w(WINDOWS_CAPTION_BUTTON_WIDTH)
             .h_full()
             .text_size(px(10.0))
             .hover(|style| style.bg(hover_bg).text_color(hover_fg))

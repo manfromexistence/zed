@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use gpui::{AnyElement, App, Hsla, RenderImage};
 use liquid_glass::{bounded_liquid_glass_layer, control_surface_liquid_glass_style};
+use theme::ActiveTheme;
 use ui::{theme_is_transparent, utils::apca_contrast};
 
 const MIN_TEXT_READABILITY_CONTRAST: f32 = 45.0;
@@ -74,8 +75,7 @@ fn needs_readability_plate(
             < MIN_SUPPORTING_CONTENT_READABILITY_CONTRAST
         || apca_contrast(text_placeholder, readability_base).abs()
             < MIN_SUPPORTING_CONTENT_READABILITY_CONTRAST
-        || apca_contrast(icon, readability_base).abs()
-            < MIN_SUPPORTING_CONTENT_READABILITY_CONTRAST
+        || apca_contrast(icon, readability_base).abs() < MIN_SUPPORTING_CONTENT_READABILITY_CONTRAST
         || apca_contrast(icon_muted, readability_base).abs()
             < MIN_SUPPORTING_CONTENT_READABILITY_CONTRAST
 }

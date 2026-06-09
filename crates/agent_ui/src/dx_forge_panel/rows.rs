@@ -7,6 +7,7 @@ pub(super) fn status_strip(
     state: DxForgePanelState,
     detail: String,
     workspace_scope: String,
+    actions: AnyElement,
     _cx: &App,
 ) -> AnyElement {
     let (icon, color, label) = state_presentation(state);
@@ -35,11 +36,17 @@ pub(super) fn status_strip(
                 ),
         )
         .end_slot(
-            Label::new(workspace_scope)
-                .size(LabelSize::XSmall)
-                .color(Color::Muted)
-                .single_line()
-                .truncate(),
+            h_flex()
+                .flex_none()
+                .gap_1()
+                .child(
+                    Label::new(workspace_scope)
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted)
+                        .single_line()
+                        .truncate(),
+                )
+                .child(actions),
         )
         .into_any_element()
 }
@@ -89,8 +96,8 @@ pub(super) fn state_presentation(state: DxForgePanelState) -> (IconName, Color, 
     match state {
         DxForgePanelState::NoWorkspace => (IconName::Folder, Color::Muted, "No workspace"),
         DxForgePanelState::Ready => (IconName::Check, Color::Success, "Ready"),
-        DxForgePanelState::Attention => (IconName::Warning, Color::Warning, "Needs attention"),
-        DxForgePanelState::Empty => (IconName::Circle, Color::Muted, "Waiting for receipts"),
-        DxForgePanelState::Missing => (IconName::Info, Color::Muted, "Not configured"),
+        DxForgePanelState::Attention => (IconName::Warning, Color::Warning, "Review"),
+        DxForgePanelState::Empty => (IconName::Circle, Color::Muted, "No receipts"),
+        DxForgePanelState::Missing => (IconName::Info, Color::Muted, "Missing"),
     }
 }

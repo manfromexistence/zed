@@ -78,7 +78,7 @@ fn package_status_row(workspace_root: &Path, path: &Path, value: &Value) -> DxFo
         path: display_path(workspace_root, path),
         open_path: path.display().to_string(),
         receipts: vec![DxForgeReceiptDrilldown {
-            label: "Read model".to_string(),
+            label: "Status file".to_string(),
             detail: format!("{status} package-status; {node_modules}; {evidence_detail}"),
         }],
         warnings: if warnings == 0 {
@@ -90,18 +90,15 @@ fn package_status_row(workspace_root: &Path, path: &Path, value: &Value) -> DxFo
 }
 
 fn unreadable_package_status_row(workspace_root: &Path, path: &Path) -> DxForgeSourceRow {
-    let warning = format!(
-        "package status could not be read within {} bytes or parsed as JSON",
-        MAX_PACKAGE_STATUS_BYTES
-    );
+    let warning = "Could not read package status".to_string();
 
     DxForgeSourceRow {
-        label: "Package status unreadable".to_string(),
-        detail: warning.clone(),
+        label: "Package status unavailable".to_string(),
+        detail: "Could not read package status".to_string(),
         path: display_path(workspace_root, path),
         open_path: path.display().to_string(),
         receipts: vec![DxForgeReceiptDrilldown {
-            label: "Read model".to_string(),
+            label: "Status file".to_string(),
             detail: warning.clone(),
         }],
         warnings: vec![warning],
@@ -127,7 +124,7 @@ fn forge_package_status_row(workspace_root: &Path, path: &Path, value: &Value) -
         + missing_summary_fields;
 
     DxForgeSourceRow {
-        label: "Forge receipt".to_string(),
+        label: "Package receipt".to_string(),
         detail: format!(
             "{valid_packages}/{package_count} valid · {missing_packages} missing · {mismatched_packages} mismatched · lock {} · media {tracked_media_assets}/{media_asset_count}",
             if package_lock_present {
@@ -139,10 +136,8 @@ fn forge_package_status_row(workspace_root: &Path, path: &Path, value: &Value) -
         path: display_path(workspace_root, path),
         open_path: path.display().to_string(),
         receipts: vec![DxForgeReceiptDrilldown {
-            label: "Forge receipt".to_string(),
-            detail:
-                "forge.package_status_receipt; integrity_state read from receipt; receipt file only; live checks not executed"
-                    .to_string(),
+            label: "Package receipt".to_string(),
+            detail: "Integrity read from receipt; live checks not run".to_string(),
         }],
         warnings: forge_package_status_warnings(warning_count, missing_summary_fields),
     }
@@ -154,10 +149,18 @@ fn forge_package_status_warnings(
 ) -> Vec<String> {
     let mut warnings = Vec::new();
     if warning_count > 0 {
-        warnings.push(format!("{warning_count} Forge receipt warning(s)"));
+        warnings.push(format!(
+            "{} {}",
+            warning_count,
+            plural(warning_count, "package receipt warning", "package receipt warnings")
+        ));
     }
     if missing_summary_fields > 0 {
-        warnings.push(format!("{missing_summary_fields} summary field(s) missing"));
+        warnings.push(format!(
+            "{} {} missing",
+            missing_summary_fields,
+            plural(missing_summary_fields, "summary field", "summary fields")
+        ));
     }
     warnings
 }
@@ -183,9 +186,9 @@ fn status_detail(status: &str, package_count: usize, current_receipts: usize) ->
 
 fn package_status_label(status: &str) -> String {
     if status.contains("visibility") {
-        "DX read model".to_string()
+        "Package status".to_string()
     } else if status.contains("lock") {
-        "DX read model".to_string()
+        "Package status".to_string()
     } else {
         "Package status".to_string()
     }
@@ -210,9 +213,13 @@ fn package_status_evidence_detail(value: &Value) -> String {
         .count();
 
     if evidence_count == 0 {
-        "source-only receipt evidence".to_string()
+        "receipt evidence".to_string()
     } else {
-        format!("{evidence_count} receipt evidence flag(s)")
+        format!(
+            "{} {}",
+            evidence_count,
+            plural(evidence_count, "evidence flag", "evidence flags")
+        )
     }
 }
 
@@ -283,4 +290,8 @@ fn field<'a>(value: &'a Value, path: &[&str]) -> Option<&'a Value> {
         current = current.get(*segment)?;
     }
     Some(current)
+}
+
+fn plural(count: usize, singular: &'static str, plural: &'static str) -> &'static str {
+    if count == 1 { singular } else { plural }
 }

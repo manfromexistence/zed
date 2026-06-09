@@ -1580,7 +1580,7 @@ impl PickerDelegate for DebugDelegate {
 
         let (icon, indicator) = match task_kind {
             Some(TaskSourceKind::UserInput) => (Some(Icon::new(IconName::Terminal)), None),
-            Some(TaskSourceKind::AbsPath { .. }) => (Some(Icon::new(IconName::Settings)), None),
+            Some(TaskSourceKind::AbsPath { .. }) => (Some(Icon::new(IconName::DxCog)), None),
             Some(TaskSourceKind::Worktree { .. }) => (Some(Icon::new(IconName::FileTree)), None),
             Some(TaskSourceKind::Lsp { language_name, .. }) => (
                 file_icons::FileIcons::get(cx)

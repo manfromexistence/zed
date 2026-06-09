@@ -8,11 +8,8 @@ pub(super) struct ForgeStateInputs<'a> {
     pub(super) workspace_roots: &'a [String],
     pub(super) history_root_exists: bool,
     pub(super) configured_root_count: usize,
-    pub(super) remote_registry_label: &'static str,
     pub(super) remote_registry_count: usize,
     pub(super) machine_cache_count: usize,
-    pub(super) machine_caches_label: &'static str,
-    pub(super) package_status_label: &'static str,
     pub(super) package_status_count: usize,
     pub(super) receipt_count: usize,
     pub(super) summarized_receipt_count: usize,
@@ -27,7 +24,7 @@ pub(super) fn forge_state(input: ForgeStateInputs<'_>) -> (DxForgePanelState, St
     if input.workspace_roots.is_empty() {
         return (
             DxForgePanelState::NoWorkspace,
-            "Open a workspace to read Forge receipts".to_string(),
+            "Open a workspace to inspect Forge history".to_string(),
         );
     }
     if !input.history_root_exists
@@ -37,21 +34,20 @@ pub(super) fn forge_state(input: ForgeStateInputs<'_>) -> (DxForgePanelState, St
     {
         return (
             DxForgePanelState::Missing,
-            "Missing Forge receipt, remote-registry, package-status, or machine-cache root"
-                .to_string(),
+            "No Forge data found".to_string(),
         );
     }
     if input.receipt_count > 0 && input.summarized_receipt_count == 0 {
         return (
             DxForgePanelState::Attention,
-            "Forge receipts exist, but no known receipt summaries were readable".to_string(),
+            "Receipt summaries unavailable".to_string(),
         );
     }
     if input.visible_package_status_warning_count > 0 {
         return (
             DxForgePanelState::Attention,
             format!(
-                "{} visible package status warning(s) need review",
+                "{} package status warning(s)",
                 input.visible_package_status_warning_count
             ),
         );
@@ -60,7 +56,7 @@ pub(super) fn forge_state(input: ForgeStateInputs<'_>) -> (DxForgePanelState, St
         return (
             DxForgePanelState::Attention,
             format!(
-                "{} visible remote registry warning(s) need review",
+                "{} remote warning(s)",
                 input.visible_remote_registry_warning_count
             ),
         );
@@ -69,7 +65,7 @@ pub(super) fn forge_state(input: ForgeStateInputs<'_>) -> (DxForgePanelState, St
         return (
             DxForgePanelState::Attention,
             format!(
-                "{} visible machine cache warning(s) need review",
+                "{} machine cache warning(s)",
                 input.visible_machine_cache_warning_count
             ),
         );
@@ -77,17 +73,14 @@ pub(super) fn forge_state(input: ForgeStateInputs<'_>) -> (DxForgePanelState, St
     if input.visible_blocker_count > 0 {
         return (
             DxForgePanelState::Attention,
-            format!(
-                "{} visible Forge blocker(s) need review",
-                input.visible_blocker_count
-            ),
+            format!("{} blocker(s)", input.visible_blocker_count),
         );
     }
     if input.visible_restore_warning_count > 0 {
         return (
             DxForgePanelState::Attention,
             format!(
-                "{} visible restore warning(s) need review",
+                "{} restore warning(s)",
                 input.visible_restore_warning_count
             ),
         );
@@ -104,8 +97,13 @@ pub(super) fn forge_state(input: ForgeStateInputs<'_>) -> (DxForgePanelState, St
             return (
                 DxForgePanelState::Ready,
                 format!(
-                    "{} {} file(s) available",
-                    input.package_status_count, input.package_status_label
+                    "{} {} available",
+                    input.package_status_count,
+                    plural(
+                        input.package_status_count,
+                        "package status",
+                        "package statuses",
+                    )
                 ),
             );
         }
@@ -114,8 +112,13 @@ pub(super) fn forge_state(input: ForgeStateInputs<'_>) -> (DxForgePanelState, St
             return (
                 DxForgePanelState::Ready,
                 format!(
-                    "{} {} row(s) available",
-                    input.remote_registry_count, input.remote_registry_label
+                    "{} {} available",
+                    input.remote_registry_count,
+                    plural(
+                        input.remote_registry_count,
+                        "remote registry",
+                        "remote registries",
+                    )
                 ),
             );
         }
@@ -124,30 +127,35 @@ pub(super) fn forge_state(input: ForgeStateInputs<'_>) -> (DxForgePanelState, St
             return (
                 DxForgePanelState::Ready,
                 format!(
-                    "{} {} row(s) available",
-                    input.machine_cache_count, input.machine_caches_label
+                    "{} {} available",
+                    input.machine_cache_count,
+                    plural(
+                        input.machine_cache_count,
+                        "machine cache",
+                        "machine caches",
+                    )
                 ),
             );
         }
 
         return (
             DxForgePanelState::Empty,
-            "Forge is configured, but no receipts were found".to_string(),
+            "History configured; no receipts yet".to_string(),
         );
     }
 
     (
         DxForgePanelState::Ready,
-        format!("{} Forge receipt(s) available", input.receipt_count),
+        format!("{} receipt(s) available", input.receipt_count),
     )
 }
 
 pub(super) fn workspace_scope(workspace_roots: &[String]) -> String {
     match workspace_roots.len() {
         0 => "No roots".to_string(),
-        1 => "1 root scanned".to_string(),
-        count if count <= MAX_WORKSPACE_ROOTS => format!("{count} roots scanned"),
-        count => format!("first {MAX_WORKSPACE_ROOTS} of {count} roots scanned"),
+        1 => "1 root".to_string(),
+        count if count <= MAX_WORKSPACE_ROOTS => format!("{count} roots"),
+        count => format!("{MAX_WORKSPACE_ROOTS} of {count} roots"),
     }
 }
 
@@ -160,7 +168,7 @@ pub(super) fn configured_root_scope(
     }
 
     let scanned_roots = workspace_roots.len().min(MAX_WORKSPACE_ROOTS);
-    format!("{configured_root_count} of {scanned_roots} scanned roots configured")
+    format!("{configured_root_count} of {scanned_roots} roots")
 }
 
 pub(super) fn forge_history_root_path(
@@ -178,4 +186,8 @@ pub(super) fn forge_history_root_path(
             .display()
             .to_string(),
     )
+}
+
+fn plural(count: usize, singular: &'static str, plural: &'static str) -> &'static str {
+    if count == 1 { singular } else { plural }
 }

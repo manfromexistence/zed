@@ -1059,15 +1059,8 @@ impl ThreadView {
                         this.visible_entry_range = Some(visible_range.clone());
                         let mut preserve_response_anchor = false;
                         if let Some(request) = this.response_anchor_scroll_request {
-                            let request_is_visible = visible_range.contains(&request.entry_ix);
-                            if request_is_visible {
-                                this.response_anchor_scroll_request = None;
-                                this.active_response_anchor_entry_ix = Some(request.entry_ix);
-                                preserve_response_anchor = true;
-                            } else {
-                                this.active_response_anchor_entry_ix = Some(request.entry_ix);
-                                preserve_response_anchor = true;
-                            }
+                            this.active_response_anchor_entry_ix = Some(request.entry_ix);
+                            preserve_response_anchor = true;
                         }
                         if this.response_anchor_scroll_request.is_none()
                             && !preserve_response_anchor
@@ -6763,6 +6756,10 @@ impl ThreadView {
         visible_range: Range<usize>,
         cx: &App,
     ) -> Option<usize> {
+        if self.list_state.is_scrolled_to_end() == Some(true) {
+            return self.last_response_anchor_entry(cx);
+        }
+
         self.response_anchor_for_scroll_position(
             visible_range,
             self.list_state.logical_scroll_top().item_ix,
@@ -6771,6 +6768,10 @@ impl ThreadView {
     }
 
     fn response_anchor_for_current_scroll_position(&self, cx: &App) -> Option<usize> {
+        if self.list_state.is_scrolled_to_end() == Some(true) {
+            return self.last_response_anchor_entry(cx);
+        }
+
         let scroll_top = self.list_state.logical_scroll_top();
         let visible_range = self
             .visible_entry_range
@@ -6842,6 +6843,18 @@ impl ThreadView {
             .entries()
             .get(entry_ix)
             .is_some_and(|entry| matches!(entry, AgentThreadEntry::UserMessage(_)))
+    }
+
+    fn last_response_anchor_entry(&self, cx: &App) -> Option<usize> {
+        self.thread
+            .read(cx)
+            .entries()
+            .iter()
+            .enumerate()
+            .rev()
+            .find_map(|(entry_ix, entry)| {
+                matches!(entry, AgentThreadEntry::UserMessage(_)).then_some(entry_ix)
+            })
     }
 
     pub(crate) fn scroll_to_response_anchor(

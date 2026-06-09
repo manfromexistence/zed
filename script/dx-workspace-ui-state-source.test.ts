@@ -420,7 +420,7 @@ test("core side panels expose dock close controls in visible headers", () => {
   );
   assert.match(
     sidePanelHeaderControls,
-    /format!\("\{id_prefix\}-close-side-panel"\)[\s\S]*\.tab_index\(0\)/,
+    /format!\("\{id_prefix\}-close-side-panel"\)[\s\S]*\.tab_index\(0(?:_isize)?\)/,
     "core side-panel close buttons must stay keyboard reachable in visible headers",
   );
   assert.match(
@@ -535,7 +535,7 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
     [closePanelButton, "Agent side-panel close button"],
     [panelOptionsTrigger, "Agent options menu trigger"],
   ] as const) {
-    assert.match(button, /\.tab_index\(0\)/, `${label} must be tabbable`);
+    assert.match(button, /\.tab_index\(0(?:_isize)?\)/, `${label} must be tabbable`);
   }
   for (const [button, label] of [
     [toolbarBackButton, "Agent toolbar overlay back button"],
@@ -723,9 +723,10 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(threadView, /this\.visible_entry_range = Some\(visible_range\.clone\(\)\)/);
   assert.match(
     threadView,
-    /if let Some\(request\) = this\.response_anchor_scroll_request[\s\S]*?let request_is_visible = visible_range\.contains\(&request\.entry_ix\);[\s\S]*?if request_is_visible \{[\s\S]*?this\.response_anchor_scroll_request = None;[\s\S]*?this\.active_response_anchor_entry_ix = Some\(request\.entry_ix\);[\s\S]*?preserve_response_anchor = true;[\s\S]*?\} else \{[\s\S]*?this\.active_response_anchor_entry_ix = Some\(request\.entry_ix\);[\s\S]*?preserve_response_anchor = true;[\s\S]*?\}/s,
-    "programmatic response-anchor retries should preserve the requested anchor until the list settles or the retry window expires",
+    /if let Some\(request\) = this\.response_anchor_scroll_request \{[\s\S]*?this\.active_response_anchor_entry_ix = Some\(request\.entry_ix\);[\s\S]*?preserve_response_anchor = true;[\s\S]*?\}/s,
+    "programmatic response-anchor retries should preserve the requested anchor for the full retry window instead of unlocking as soon as the bottom-clamped target becomes visible",
   );
+  assert.doesNotMatch(threadView, /request_is_visible/, "visible-but-bottom-clamped prompt clicks must not unlock the clicked anchor early");
   assert.doesNotMatch(
     threadView,
     /else if scroll_top\.item_ix != request\.entry_ix[\s\S]*?response_anchor_scroll_request = None/,
@@ -763,6 +764,9 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(threadView, /fn response_anchor_for_scroll_position\(/);
   assert.match(threadView, /fn response_anchor_viewport_reference_ix\(/);
   assert.match(threadView, /fn is_response_anchor_entry\(/);
+  assert.match(threadView, /fn last_response_anchor_entry\(&self, cx: &App\) -> Option<usize>/);
+  assert.match(visibleRangeAnchor, /self\.list_state\.is_scrolled_to_end\(\) == Some\(true\)[\s\S]*?return self\.last_response_anchor_entry\(cx\);/);
+  assert.match(currentScrollAnchor, /self\.list_state\.is_scrolled_to_end\(\) == Some\(true\)[\s\S]*?return self\.last_response_anchor_entry\(cx\);/);
   assert.match(visibleRangeAnchor, /logical_scroll_top\(\)\.item_ix/);
   assert.doesNotMatch(visibleRangeAnchor, /\.take\(end\.saturating_add\(1\)\)/);
   assert.match(currentScrollAnchor, /let scroll_top = self\.list_state\.logical_scroll_top\(\);/);
@@ -880,9 +884,9 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(agentPanel, /IconName::ChevronRight/);
   assert.match(
     responsePageButton,
-    /IconButton::new\(\s*\("agent-toolbar-response-indicator-page", label, entry_ix\),\s*icon,\s*\)/,
+    /IconButton::new\(\s*format!\("agent-toolbar-response-indicator-page-\{label\}-\{entry_ix\}"\),\s*icon,\s*\)/,
   );
-  assert.match(responsePageButton, /\.tab_index\(0\)/);
+  assert.match(responsePageButton, /\.tab_index\(0(?:_isize)?\)/);
   assert.match(responsePageButton, /thread\.scroll_to_response_anchor\(entry_ix, window, cx\)/);
   assert.match(responsePageButton, /cx\.stop_propagation\(\)/);
   assert.match(agentPanel, /AcpThreadViewEvent::ScrollPositionChanged => \{\s*cx\.notify\(\);\s*\}/);
@@ -893,7 +897,7 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(responseIndicator, /\.gap_0\(\)/);
   assert.match(responseIndicator, /\.px_0p5\(\)/);
   assert.match(responseSegment, /\.w\(px\(9\.0\)\)/);
-  assert.match(responseSegment, /\.tab_index\(0\)/);
+  assert.match(responseSegment, /\.tab_index\(0(?:_isize)?\)/);
   assert.match(responseSegment, /\.focus_visible\(/);
   assert.match(responseSegment, /\.cursor_pointer\(\)/);
   assert.doesNotMatch(responseSegment, /CursorStyle::PointingHand/);

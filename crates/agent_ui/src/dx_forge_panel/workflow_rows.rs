@@ -97,6 +97,9 @@ pub(super) fn selection_checkbox(
 
     h_flex()
         .id(SharedString::from(format!("dx-forge-selection-slot-{id}")))
+        .flex_none()
+        .occlude()
+        .cursor_pointer()
         .child(
             Checkbox::new(
                 SharedString::from(format!("dx-forge-select-{id}")),
@@ -118,7 +121,7 @@ pub(super) fn selection_checkbox(
         .on_mouse_down(MouseButton::Left, |_, _, cx| {
             cx.stop_propagation();
         })
-        .on_click(|_, _, cx| {
+        .on_mouse_up(MouseButton::Left, |_, _, cx| {
             cx.stop_propagation();
         })
         .into_any_element()
@@ -140,8 +143,10 @@ fn selectable_row(
     let panel_for_row = panel.clone();
     let row_key = item_key.clone();
     let scroll_anchor = row_scroll_anchor(panel, &row_key, cx);
-    let selection_checkbox = selection_checkbox(id.clone(), item_key, checked, panel);
-    let row_actions = selectable_row_actions(open_button, selection_checkbox);
+    let hover_checkbox_id = SharedString::from(format!("{id}-hover"));
+    let checkbox = selection_checkbox(id.clone(), item_key.clone(), checked, panel);
+    let hover_checkbox = selection_checkbox(hover_checkbox_id, item_key, checked, panel);
+    let row_actions = selectable_row_actions(open_button, hover_checkbox);
     ListItem::new(id)
         .anchor_scroll(scroll_anchor)
         .inset(true)
@@ -163,7 +168,8 @@ fn selectable_row(
                         .truncate(),
                 ),
         )
-        .end_slot(row_actions)
+        .end_slot(checkbox)
+        .end_slot_on_hover(row_actions)
         .on_click(move |_, window, cx| {
             panel_for_row
                 .update(cx, |panel, cx| {
@@ -191,10 +197,11 @@ fn selectable_row_actions(
     let mut actions = h_flex()
         .flex_none()
         .gap_1()
+        .occlude()
         .on_mouse_down(MouseButton::Left, |_, _, cx| {
             cx.stop_propagation();
         })
-        .on_click(|_, _, cx| {
+        .on_mouse_up(MouseButton::Left, |_, _, cx| {
             cx.stop_propagation();
         });
 

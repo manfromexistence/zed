@@ -124,6 +124,8 @@ const extractRustFunction = (source: string, name: string): string => {
 
   assert.fail(`unterminated Rust function body for ${name}`);
 };
+const escapedTextPattern = (text: string): RegExp =>
+  new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
 const snapshot = readFileSync("crates/agent_ui/src/dx_forge_panel/snapshot.rs", "utf8");
 const snapshotStatePath = "crates/agent_ui/src/dx_forge_panel/snapshot_state.rs";
 const snapshotState = existsSync(snapshotStatePath)
@@ -133,6 +135,7 @@ const panelView = readFileSync("crates/agent_ui/src/dx_forge_panel/panel_view.rs
 const rows = readFileSync("crates/agent_ui/src/dx_forge_panel/rows.rs", "utf8");
 const tabs = readFileSync("crates/agent_ui/src/dx_forge_panel/tabs.rs", "utf8");
 const icons = readFileSync("crates/icons/src/icons.rs", "utf8");
+const dxIcons = readFileSync("crates/ui/src/dx_icons.rs", "utf8");
 const receiptHistoryRoot = readFileSync("crates/agent_ui/src/dx_receipt_history.rs", "utf8");
 const sourceSetsRoot = readFileSync("crates/agent_ui/src/dx_source_sets.rs", "utf8");
 const sourceSetCache = readFileSync("crates/agent_ui/src/dx_source_sets/cache.rs", "utf8");
@@ -319,7 +322,7 @@ test("Forge panel reads package-status without runtime overclaims", () => {
     "package status should be visible before machine cache evidence",
   );
   assert.match(panelView, /"Package Status"/);
-  assert.match(panelView, /No Forge package status found/);
+  assert.match(panelView, /No package status found/);
   assert.match(packageStatusCache, /const PACKAGE_STATUS_CACHE_TTL: Duration = Duration::from_secs\(5\);/);
   assert.match(packageStatus, /const MAX_PACKAGE_STATUS_BYTES: u64 = 1024 \* 1024;/);
   assert.match(packageStatusCache, /OnceLock<[\s\S]*Mutex<Option<\(Instant, Vec<String>, Vec<DxForgeSourceRow>\)>>/);
@@ -418,7 +421,7 @@ test("Forge panel surfaces bounded machine-cache evidence without freshness over
     "package and media workflow sections should keep their source-backed order",
   );
   assert.match(panelView, /"Machine Caches"/);
-  assert.match(panelView, /No Forge machine caches found/);
+  assert.match(panelView, /No machine caches found/);
   assert.match(machineCache, /const MACHINE_CACHE_CACHE_TTL: Duration = Duration::from_secs\(5\);/);
   assert.match(machineCache, /const MAX_MACHINE_CACHE_ROOTS: usize = 4;/);
   assert.match(machineCache, /const MAX_MACHINE_CACHE_FILES: usize = 64;/);
@@ -462,7 +465,7 @@ test("Forge panel surfaces bounded machine-cache evidence without freshness over
   assert.match(snapshotState, /Missing Forge receipt, remote-registry, package-status, or machine-cache root/);
   assert.match(snapshotState, /input\.machine_cache_count > 0/);
   assert.match(panelView, /&snapshot\.machine_caches/);
-  assert.match(panelView, /Open a workspace to read Forge machine caches/);
+  assert.match(panelView, /Open a workspace to inspect machine caches/);
   assert.match(panelView, /row_id: "dx-forge-machine-cache"/);
   assert.match(panelView, /open_id: "dx-forge-open-machine-cache-root"/);
   assert.match(panelView, /open_tooltip: "Open machine cache root"/);
@@ -492,7 +495,7 @@ test("Forge panel reads Forge remote registry and makes provider targets concret
   assert.match(panel, /invalidate_remote_registry_snapshot_cache\(\)/);
   assert.match(panelView, /fn remote_registry_section/);
   assert.match(panelView, /"Remote Registry"/);
-  assert.match(panelView, /No Forge remote registry found/);
+  assert.match(panelView, /No remote registry found/);
   const remotesBranch =
     panelView.match(/DxForgePanelTab::Remotes => vec!\[[\s\S]*?\],/)?.[0] ?? "";
   assert.match(remotesBranch, /remote_target_strip\(snapshot, workspace, panel, cx\)/);
@@ -517,7 +520,7 @@ test("Forge panel reads Forge remote registry and makes provider targets concret
   assert.match(remoteRegistrySources, /disabled_count/);
   assert.match(remoteRegistrySources, /branch_mapping_count/);
   assert.match(remoteRegistrySources, /auth_backend_count/);
-  assert.match(remoteRegistrySources, /registry file only; live remote health unchecked/);
+  assert.match(remoteRegistrySources, /registry file only; health unchecked/);
   assert.match(remoteRegistry, /let registry_open_path = path\.display\(\)\.to_string\(\)/);
   assert.match(remoteRegistry, /open_path: registry_open_path\.clone\(\)/);
   assert.match(
@@ -596,10 +599,10 @@ test("Forge panel renders real receipt, restore, and media states", () => {
   assert.match(panelView, /fn media_section/);
   assert.match(panelView, /WithScrollbar/);
   assert.match(panelView, /vertical_scrollbar_for\(scroll_handle, window, cx\)/);
-  assert.match(panelView, /No Forge receipts found/);
+  assert.match(panelView, /No receipts found/);
   assert.match(
     panelView,
-    /Forge receipts found, but no known summaries were readable/,
+    /Receipt summaries unavailable/,
   );
   assert.match(panelView, /No restore previews found/);
   assert.match(panelView, /No media outputs found/);
@@ -712,7 +715,7 @@ test("Forge panel uses workflow tabs with Git-style selectable rows", () => {
   assert.match(forgeTabBody, /\.toggle_state\(selected\)/);
   assert.match(forgeTabBody, /\.selected_bottom_border\(true\)/);
   assert.match(forgeTabBody, /\.start_slot\(\s*Icon::new\(tab_icon\(tab\)\)/);
-  assert.match(forgeTabBody, /\.end_slot\(\s*Label::new\(count\.to_string\(\)\)/);
+  assert.match(forgeTabBody, /\.end_slot\(\s*Label::new\(format!\("\(\{count\}\)"\)\)/);
   assert.match(
     forgeTabBody,
     /panel\.focus_panel\(window, cx\)[\s\S]*panel\.set_active_tab\(tab, cx\)/,
@@ -1302,7 +1305,44 @@ test("Forge panel source surface is closed against UI slop and proof overclaims"
 
   assert.match(allForgePanelSources, /source-only receipt evidence/);
   assert.match(allForgePanelSources, /receipt file only; live checks not executed/);
-  assert.match(allForgePanelSources, /live remote health unchecked/);
+  assert.match(allForgePanelSources, /health unchecked/);
+});
+
+test("Forge panel copy stays concise and honors the DX cog icon contract", () => {
+  assert.match(dxIcons, /DxUiIcon::Settings => IconName::DxCog/);
+  assert.doesNotMatch(forgeSources, /IconName::Settings/);
+
+  for (const phrase of [
+    "Open a workspace to read",
+    "no known summaries were readable",
+    "no known receipt summaries were readable",
+    "Forge receipt root is missing",
+    "No Forge remote registry found",
+    "No Forge package status found",
+    "No Forge machine caches found",
+    "No Forge receipts found",
+    "live remote health unchecked",
+    "Forge is configured, but no receipts were found",
+    "Forge root configured; no receipts yet",
+    "Missing tools/dx-forge receipt root",
+    "is available in the DX icon catalog; no local remote is registered",
+  ]) {
+    assert.doesNotMatch(forgeSources, escapedTextPattern(phrase));
+  }
+
+  for (const phrase of [
+    "Open a workspace to inspect Forge history",
+    "Receipt summaries unavailable",
+    "Receipt history is unavailable",
+    "No remote registry found",
+    "No package status found",
+    "No machine caches found",
+    "No receipts found",
+    "History configured; no receipts yet",
+    "health unchecked",
+  ]) {
+    assert.match(forgeSources, escapedTextPattern(phrase));
+  }
 });
 
 test("Forge panel opens exact source-owned paths in multi-root workspaces", () => {

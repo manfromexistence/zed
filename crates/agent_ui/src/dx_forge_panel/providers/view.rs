@@ -1,4 +1,4 @@
-use gpui::{AnyElement, App, MouseButton, SharedString, WeakEntity};
+use gpui::{AnyElement, App, MouseButton, SharedString, WeakEntity, rems};
 use ui::{
     ButtonStyle, IconButtonShape, IconName, Indicator, ListItem, ListItemSpacing, Tooltip,
     prelude::*,
@@ -100,12 +100,10 @@ fn provider_group_controls(
         .is_some_and(|panel| panel.read(cx).item_active(&item_key));
     let row_key = item_key.clone();
     let panel_for_row = panel.clone();
-    let selection_checkbox = selection_checkbox(
-        SharedString::from(format!("remote-{}", group.key())),
-        item_key,
-        checked,
-        panel,
-    );
+    let checkbox_id = SharedString::from(format!("remote-{}", group.key()));
+    let hover_checkbox_id = SharedString::from(format!("remote-{}-hover", group.key()));
+    let checkbox = selection_checkbox(checkbox_id, item_key.clone(), checked, panel);
+    let hover_checkbox = selection_checkbox(hover_checkbox_id, item_key, checked, panel);
     let open_button = IconButton::new(
         format!("dx-forge-open-provider-group-{}", group.key()),
         IconName::ArrowUpRight,
@@ -135,19 +133,19 @@ fn provider_group_controls(
     )))
     .anchor_scroll(scroll_anchor)
     .inset(true)
+    .height(rems(1.75))
     .spacing(ListItemSpacing::Dense)
     .toggle_state(active)
-    .start_slot(selection_checkbox)
+    .start_slot(
+        Icon::new(group_icon(group))
+            .size(IconSize::Small)
+            .color(Color::Muted),
+    )
     .child(
         h_flex()
             .w_full()
             .min_w_0()
             .gap_1p5()
-            .child(
-                Icon::new(group_icon(group))
-                    .size(IconSize::Small)
-                    .color(Color::Muted),
-            )
             .child(provider_buttons_for_group(group, snapshot, workspace, cx))
             .child(
                 Label::new(group.title())
@@ -168,7 +166,11 @@ fn provider_group_controls(
                     .color(state.color),
             ),
     )
-    .end_slot(provider_group_actions(open_button.into_any_element()))
+    .end_slot(checkbox)
+    .end_slot_on_hover(provider_group_actions(
+        open_button.into_any_element(),
+        hover_checkbox,
+    ))
     .tooltip(move |_, cx| Tooltip::with_meta(tooltip_title.clone(), None, tooltip_meta.clone(), cx))
     .on_click(move |_, window, cx| {
         panel_for_row
@@ -194,10 +196,11 @@ fn provider_buttons_for_group(
         )))
         .flex_none()
         .gap_0p5()
+        .occlude()
         .on_mouse_down(MouseButton::Left, |_, _, cx| {
             cx.stop_propagation();
         })
-        .on_click(|_, _, cx| {
+        .on_mouse_up(MouseButton::Left, |_, _, cx| {
             cx.stop_propagation();
         })
         .children(
@@ -207,16 +210,19 @@ fn provider_buttons_for_group(
         .into_any_element()
 }
 
-fn provider_group_actions(open_button: AnyElement) -> AnyElement {
+fn provider_group_actions(open_button: AnyElement, selection_checkbox: AnyElement) -> AnyElement {
     h_flex()
         .flex_none()
+        .gap_1()
+        .occlude()
         .on_mouse_down(MouseButton::Left, |_, _, cx| {
             cx.stop_propagation();
         })
-        .on_click(|_, _, cx| {
+        .on_mouse_up(MouseButton::Left, |_, _, cx| {
             cx.stop_propagation();
         })
         .child(open_button)
+        .child(selection_checkbox)
         .into_any_element()
 }
 

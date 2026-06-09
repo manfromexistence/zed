@@ -5,7 +5,7 @@ use ui::{WithScrollbar, prelude::*};
 use workspace::{Workspace, dock::side_panel_header_controls};
 
 use super::{
-    controls::{open_exact_abs_path_button, toolbar},
+    controls::{open_exact_abs_path_button, status_actions},
     panel::{DxForgePanel, DxForgePanelTab},
     providers::remote_target_strip,
     rows::{empty_row, section_header, status_strip},
@@ -32,13 +32,6 @@ pub(super) fn render_panel(
         .min_w_0()
         .bg(cx.theme().colors().panel_background)
         .child(panel_header(workspace, panel_id, cx))
-        .child(status_strip(
-            snapshot.state,
-            snapshot.state_detail.clone(),
-            snapshot.workspace_scope.clone(),
-            cx,
-        ))
-        .child(toolbar(snapshot, workspace, panel, cx))
         .child(render_tab_bar(snapshot, active_tab, panel, cx))
         .child(
             v_flex()
@@ -75,6 +68,13 @@ pub(super) fn render_panel(
                         .vertical_scrollbar_for(scroll_handle, window, cx),
                 ),
         )
+        .child(status_strip(
+            snapshot.state,
+            snapshot.state_detail.clone(),
+            snapshot.workspace_scope.clone(),
+            status_actions(snapshot, workspace, panel, cx),
+            cx,
+        ))
 }
 
 fn panel_header(
@@ -92,7 +92,7 @@ fn panel_header(
                 .gap_1()
                 .flex_1()
                 .min_w_0()
-                .child(Icon::new(IconName::Forgejo).size(IconSize::Small))
+                .child(Icon::new(dx_icon(DxUiIcon::Forge)).size(IconSize::Small))
                 .child(Label::new("Forge").size(LabelSize::Small).truncate()),
         )
         .child(side_panel_header_controls(
@@ -112,11 +112,11 @@ fn remote_registry_section(
     source_section(
         SourceSection {
             header_id: "dx-forge-remote-registry-header",
-            title: "Remote Registry",
+            title: "Remotes",
             icon: IconName::CloudDownload,
             empty_id: "dx-forge-remote-registry-empty",
-            workspace_empty: "Open a workspace to read Forge remotes",
-            empty: "No Forge remote registry found",
+            workspace_empty: "Open a workspace to inspect remotes",
+            empty: "No remote registry found",
             row_id: "dx-forge-remote-registry",
             open_id: "dx-forge-open-remote-registry",
             open_tooltip: "Open remote registry",
@@ -141,8 +141,8 @@ fn package_status_section(
             title: "Package Status",
             icon: IconName::Box,
             empty_id: "dx-forge-package-status-empty",
-            workspace_empty: "Open a workspace to read Forge package status",
-            empty: "No Forge package status found",
+            workspace_empty: "Open a workspace to inspect package status",
+            empty: "No package status found",
             row_id: "dx-forge-package-status",
             open_id: "dx-forge-open-package-status",
             open_tooltip: "Open package status",
@@ -164,14 +164,14 @@ fn machine_cache_section(
     source_section(
         SourceSection {
             header_id: "dx-forge-machine-caches-header",
-            title: "Machine Caches",
+            title: "Machine Cache",
             icon: IconName::Binary,
             empty_id: "dx-forge-machine-caches-empty",
-            workspace_empty: "Open a workspace to read Forge machine caches",
-            empty: "No Forge machine caches found",
+            workspace_empty: "Open a workspace to inspect machine caches",
+            empty: "No machine caches found",
             row_id: "dx-forge-machine-cache",
             open_id: "dx-forge-open-machine-cache-root",
-            open_tooltip: "Open machine cache root",
+            open_tooltip: "Open machine cache",
         },
         &snapshot.machine_caches,
         snapshot,
@@ -198,7 +198,7 @@ fn receipt_section(
 ) -> AnyElement {
     let mut stack = v_flex().w_full().min_w_0().child(section_header(
         "dx-forge-receipts-header",
-        "Repository History",
+        "History",
         IconName::FileTextOutlined,
         snapshot.receipt_count,
         cx,
@@ -208,13 +208,13 @@ fn receipt_section(
         stack = stack.child(empty_row(
             "dx-forge-receipts-empty",
             if snapshot.workspace_roots.is_empty() {
-                "Open a workspace to read Forge receipts"
+                "Open a workspace to inspect Forge history"
             } else if snapshot.receipt_count > 0 {
-                "Forge receipts found, but no known summaries were readable"
+                "Receipt summaries unavailable"
             } else if snapshot.history_root_exists {
-                "No Forge receipts found"
+                "No receipts found"
             } else {
-                "Forge receipt root is missing"
+                "Receipt history is unavailable"
             },
             cx,
         ));
@@ -247,10 +247,10 @@ fn restore_section(
     source_section(
         SourceSection {
             header_id: "dx-forge-restores-header",
-            title: "Restore Previews",
+            title: "Restores",
             icon: IconName::Download,
             empty_id: "dx-forge-restores-empty",
-            workspace_empty: "Open a workspace to read restore previews",
+            workspace_empty: "Open a workspace to inspect restore previews",
             empty: "No restore previews found",
             row_id: "dx-forge-restore",
             open_id: "dx-forge-open-restore",
@@ -273,10 +273,10 @@ fn media_section(
     source_section(
         SourceSection {
             header_id: "dx-forge-media-header",
-            title: "Media Outputs",
+            title: "Media",
             icon: dx_icon(DxUiIcon::Media),
             empty_id: "dx-forge-media-empty",
-            workspace_empty: "Open a workspace to read media outputs",
+            workspace_empty: "Open a workspace to inspect media outputs",
             empty: "No media outputs found",
             row_id: "dx-forge-media",
             open_id: "dx-forge-open-media",

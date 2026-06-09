@@ -192,7 +192,7 @@ const CONTENT: (Section<4>, Section<3>) = (
         title: "Configure",
         entries: [
             SectionEntry {
-                icon: IconName::Settings,
+                icon: IconName::DxCog,
                 title: "Open Settings",
                 action: &OpenSettings,
                 visibility_guard: SectionVisibility::Always,

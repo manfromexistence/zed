@@ -12,22 +12,22 @@ pub(super) fn provider_tooltip_meta(
     enabled: bool,
 ) -> String {
     let mut lines = vec![
-        format!("{} target - {}", provider.group.title(), state.label),
+        format!("Status: {}", state.label),
         state.detail.clone(),
     ];
 
     if let Some(remote) = snapshot.remote_provider_for(provider.id) {
-        lines.push(format!("Configured remote: {}", remote.remote_name));
+        lines.push(format!("Remote: {}", remote.remote_name));
         lines.push(format!("Registry: {}", remote.registry_path));
         lines.push(remote.detail.clone());
     } else if let Some(path) = target_path {
         lines.push(format!("Registry: {path}"));
     } else {
-        lines.push("No local remote registry entry for this provider".to_string());
+        lines.push("No remote found".to_string());
     }
 
     if !enabled {
-        lines.push("Open a workspace with .forge/remotes.json to enable this target".to_string());
+        lines.push("Open a workspace with remotes.json".to_string());
     }
 
     lines.join("\n")
@@ -46,11 +46,11 @@ pub(super) fn remote_target_tooltip(
     ];
 
     if let Some(path) = target_path {
-        lines.push(format!("Local evidence: {path}"));
+        lines.push(format!("Path: {path}"));
     }
 
     if !enabled {
-        lines.push("No local evidence path is available for this lane".to_string());
+        lines.push("No path found".to_string());
     }
 
     lines.join("\n")

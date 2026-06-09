@@ -184,9 +184,9 @@ fn machine_cache_row(
     let metadata = metadata_detail(&summary);
 
     DxForgeSourceRow {
-        label: "Machine Caches".to_string(),
+        label: "Machine Cache".to_string(),
         detail: format!(
-            "{} {} detected · Machine family: {} · freshness unchecked: {}",
+            "{} {} · {} · {}",
             summary.total,
             plural(summary.total, "machine cache", "machine caches"),
             family,
@@ -195,7 +195,7 @@ fn machine_cache_row(
         path: display_path(workspace_root, dx_root),
         open_path: dx_root.display().to_string(),
         receipts: vec![DxForgeReceiptDrilldown {
-            label: "Machine family".to_string(),
+            label: "Format".to_string(),
             detail: family,
         }],
         warnings: warnings(&summary),
@@ -218,7 +218,7 @@ fn family_detail(summary: &MachineCacheSummary) -> String {
     }
 
     if parts.is_empty() {
-        "no readable machine cache family".to_string()
+        "no readable cache format".to_string()
     } else {
         parts.join(", ")
     }
@@ -226,7 +226,7 @@ fn family_detail(summary: &MachineCacheSummary) -> String {
 
 fn metadata_detail(summary: &MachineCacheSummary) -> String {
     if summary.missing_metadata_sidecars == 0 {
-        return "metadata sidecars present".to_string();
+        return "metadata present".to_string();
     }
 
     format!(
@@ -244,7 +244,7 @@ fn warnings(summary: &MachineCacheSummary) -> Vec<String> {
     let mut warnings = Vec::new();
     if summary.missing_metadata_sidecars > 0 {
         warnings.push(format!(
-            "{} metadata sidecar(s) missing; freshness unchecked",
+            "{} metadata missing",
             summary.missing_metadata_sidecars
         ));
     }

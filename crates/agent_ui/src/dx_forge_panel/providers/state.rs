@@ -18,8 +18,8 @@ pub(super) fn remote_target_state(
 ) -> RemoteTargetState {
     if snapshot.workspace_roots.is_empty() {
         return target_state(
-            "offline",
-            "Open a workspace to inspect Forge targets",
+            "No workspace",
+            "Open a workspace to inspect remotes",
             Color::Muted,
             IconName::Info,
         );
@@ -40,8 +40,8 @@ pub(super) fn provider_target_state(
 ) -> RemoteTargetState {
     if snapshot.workspace_roots.is_empty() {
         return target_state(
-            "offline",
-            "Open a workspace to inspect Forge targets",
+            "No workspace",
+            "Open a workspace to inspect remotes",
             Color::Muted,
             IconName::Info,
         );
@@ -49,11 +49,8 @@ pub(super) fn provider_target_state(
 
     let Some(remote) = snapshot.remote_provider_for(provider.id) else {
         return target_state(
-            "catalog",
-            format!(
-                "{} is available in the DX icon catalog; no local remote is registered",
-                provider.label
-            ),
+            "Available",
+            format!("No {} remote found", provider.label),
             Color::Muted,
             IconName::Circle,
         );
@@ -75,7 +72,7 @@ fn group_target_state(
     let configured_count = snapshot.configured_provider_count_for_group(group.key());
     if configured_count == 0 {
         return target_state(
-            "review",
+            "Review",
             format!(
                 "{} registered {}; none enabled",
                 registry_count,
@@ -87,9 +84,9 @@ fn group_target_state(
     }
 
     target_state(
-        "configured",
+        "Ready",
         format!(
-            "{} of {} registered {} enabled; live remote health unchecked",
+            "{}/{} registered {} enabled; health unchecked",
             configured_count,
             registry_count,
             plural(registry_count, "remote", "remotes"),
@@ -102,9 +99,9 @@ fn group_target_state(
 fn provider_state_from_remote(remote: &DxForgeRemoteProvider) -> RemoteTargetState {
     if !remote.enabled {
         return target_state(
-            "disabled",
+            "Disabled",
             format!(
-                "{} remote '{}' is registered but disabled",
+                "{} '{}' registered but disabled",
                 remote.label, remote.remote_name
             ),
             Color::Warning,
@@ -114,12 +111,12 @@ fn provider_state_from_remote(remote: &DxForgeRemoteProvider) -> RemoteTargetSta
 
     target_state(
         if remote.primary {
-            "primary"
+            "Primary"
         } else {
-            "configured"
+            "Ready"
         },
         format!(
-            "{} remote '{}' configured; live remote health unchecked",
+            "{} '{}' configured; health unchecked",
             remote.label, remote.remote_name
         ),
         Color::Success,
@@ -130,8 +127,8 @@ fn provider_state_from_remote(remote: &DxForgeRemoteProvider) -> RemoteTargetSta
 fn code_target_state(snapshot: &DxForgePanelSnapshot) -> RemoteTargetState {
     if !snapshot.history_root_exists {
         return target_state(
-            "waiting",
-            "Missing tools/dx-forge receipt root",
+            "Waiting",
+            "Receipt history is unavailable",
             Color::Muted,
             IconName::Info,
         );
@@ -139,8 +136,8 @@ fn code_target_state(snapshot: &DxForgePanelSnapshot) -> RemoteTargetState {
 
     if snapshot.receipt_count > 0 && snapshot.summarized_receipt_count == 0 {
         return target_state(
-            "review",
-            "Forge receipts found; no known summaries readable",
+            "Review",
+            "Receipt summaries unavailable",
             Color::Warning,
             IconName::Warning,
         );
@@ -148,9 +145,9 @@ fn code_target_state(snapshot: &DxForgePanelSnapshot) -> RemoteTargetState {
 
     if snapshot.visible_blocker_count > 0 {
         return target_state(
-            "review",
+            "Review",
             format!(
-                "{} visible Forge {}",
+                "{} {}",
                 snapshot.visible_blocker_count,
                 plural(snapshot.visible_blocker_count, "blocker", "blockers"),
             ),
@@ -161,9 +158,9 @@ fn code_target_state(snapshot: &DxForgePanelSnapshot) -> RemoteTargetState {
 
     if snapshot.receipt_count > 0 {
         return target_state(
-            "ready",
+            "Ready",
             format!(
-                "{} Forge {} available",
+                "{} {} available",
                 snapshot.receipt_count,
                 plural(snapshot.receipt_count, "receipt", "receipts"),
             ),
@@ -173,8 +170,8 @@ fn code_target_state(snapshot: &DxForgePanelSnapshot) -> RemoteTargetState {
     }
 
     target_state(
-        "waiting",
-        "Forge root configured; no receipts yet",
+        "Waiting",
+        "History configured; no receipts yet",
         Color::Muted,
         IconName::Circle,
     )
@@ -185,8 +182,8 @@ fn storage_target_state(snapshot: &DxForgePanelSnapshot) -> RemoteTargetState {
 
     if !snapshot.history_root_exists {
         return target_state(
-            "waiting",
-            "Waiting for tools/dx-forge/restores",
+            "Waiting",
+            "Waiting for restore previews",
             Color::Muted,
             IconName::Info,
         );
@@ -194,7 +191,7 @@ fn storage_target_state(snapshot: &DxForgePanelSnapshot) -> RemoteTargetState {
 
     if snapshot.visible_restore_warning_count > 0 {
         return target_state(
-            "review",
+            "Review",
             format!(
                 "{} restore {}",
                 snapshot.visible_restore_warning_count,
@@ -211,7 +208,7 @@ fn storage_target_state(snapshot: &DxForgePanelSnapshot) -> RemoteTargetState {
 
     if restore_preview_count != 0 {
         return target_state(
-            "ready",
+            "Ready",
             format!(
                 "{} restore {} available",
                 restore_preview_count,
@@ -223,7 +220,7 @@ fn storage_target_state(snapshot: &DxForgePanelSnapshot) -> RemoteTargetState {
     }
 
     target_state(
-        "waiting",
+        "Waiting",
         "No restore previews found",
         Color::Muted,
         IconName::Circle,
@@ -240,7 +237,7 @@ fn media_target_state(snapshot: &DxForgePanelSnapshot) -> RemoteTargetState {
 
     if warning_count > 0 {
         return target_state(
-            "review",
+            "Review",
             format!(
                 "{} media {}",
                 warning_count,
@@ -253,7 +250,7 @@ fn media_target_state(snapshot: &DxForgePanelSnapshot) -> RemoteTargetState {
 
     if media_output_count != 0 {
         return target_state(
-            "ready",
+            "Ready",
             format!(
                 "{} media {} available",
                 media_output_count,
@@ -265,7 +262,7 @@ fn media_target_state(snapshot: &DxForgePanelSnapshot) -> RemoteTargetState {
     }
 
     target_state(
-        "waiting",
+        "Waiting",
         "No media outputs found",
         Color::Muted,
         IconName::Circle,
