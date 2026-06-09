@@ -7,15 +7,15 @@ pub(crate) enum ClipboardOperationMode {
 impl ClipboardOperationMode {
     pub(crate) fn ready_label(self) -> &'static str {
         match self {
-            Self::Copy => "Ready to copy",
-            Self::Move => "Ready to move",
+            Self::Copy => "Copy",
+            Self::Move => "Move",
         }
     }
 
     pub(crate) fn paste_tooltip(self) -> &'static str {
         match self {
-            Self::Copy => "Copy clipboard items here",
-            Self::Move => "Move clipboard items here",
+            Self::Copy => "Copy Here",
+            Self::Move => "Move Here",
         }
     }
 }

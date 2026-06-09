@@ -60,7 +60,7 @@ impl StorageRootShortcut {
         } else if self.is_available() {
             "Available".to_string()
         } else {
-            "Not configured".to_string()
+            "Unavailable".to_string()
         }
     }
 }
@@ -126,7 +126,7 @@ fn collect_drive_shortcuts(shortcuts: &mut Vec<StorageRootShortcut>, limit: usiz
             total_bytes: disk.total_space(),
         };
         let tooltip = format!(
-            "Open drive root at {} ({})",
+            "Open drive at {} ({})",
             path.display(),
             capacity.capacity_label()
         );
@@ -159,10 +159,10 @@ fn known_root_shortcut(
         .unwrap_or_default();
     let available = path.is_absolute() && path.is_dir();
     let tooltip = if available {
-        format!("Open {label} root at {}", path.display())
+        format!("Open {label} at {}", path.display())
     } else {
         format!(
-            "{label} folder not found; set {} or use Open Project",
+            "{label} folder not found. Set {} or use Open Project.",
             env_names.first().copied().unwrap_or("the matching root")
         )
     };

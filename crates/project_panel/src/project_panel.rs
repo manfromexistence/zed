@@ -66,11 +66,11 @@ use std::{
 };
 use theme_settings::ThemeSettings;
 use ui::{
-    ButtonStyle, Chip, Color, ContextMenu, ContextMenuEntry, DecoratedIcon, Icon, IconButton,
-    IconButtonShape, IconDecoration, IconDecorationKind, IndentGuideColors, IndentGuideLayout,
-    Indicator, KeyBinding, Label, LabelSize, ListHeader, ListItem, ListItemSpacing, PopoverMenu,
-    ProjectEmptyState, ScrollAxes, ScrollableHandle, Scrollbars, StickyCandidate, TintColor,
-    Tooltip, WithScrollbar, prelude::*, v_flex,
+    ButtonStyle, Chip, Color, ContextMenu, ContextMenuEntry, DecoratedIcon, Divider, Icon,
+    IconButton, IconButtonShape, IconDecoration, IconDecorationKind, IndentGuideColors,
+    IndentGuideLayout, Indicator, KeyBinding, Label, LabelSize, ListHeader, ListItem,
+    ListItemSpacing, PopoverMenu, ProjectEmptyState, ScrollAxes, ScrollableHandle, Scrollbars,
+    StickyCandidate, TintColor, Tooltip, WithScrollbar, prelude::*, v_flex,
 };
 use util::{
     ResultExt, TakeUntilExt, TryFutureExt,
@@ -189,11 +189,11 @@ impl DxExplorerSourceKind {
 
     fn label(self) -> &'static str {
         match self {
-            Self::Empty => "No source",
-            Self::LocalWorkspace => "Local source",
-            Self::WslWorkspace => "WSL source",
-            Self::RemoteWorkspace => "Remote source",
-            Self::ReadOnlyWorkspace => "Read-only source",
+            Self::Empty => "No project",
+            Self::LocalWorkspace => "Local",
+            Self::WslWorkspace => "WSL",
+            Self::RemoteWorkspace => "Remote",
+            Self::ReadOnlyWorkspace => "Read-only",
         }
     }
 }
@@ -4329,27 +4329,22 @@ impl ProjectPanel {
         let mut metrics = Vec::new();
         if overview.visible_file_count > 0 {
             metrics.push(Self::render_dx_explorer_metric(
-                Self::dx_explorer_count_label(
-                    overview.visible_file_count,
-                    "visible file",
-                    "visible files",
-                ),
+                Self::dx_explorer_count_label(overview.visible_file_count, "file", "files"),
             ));
-            metrics.push(Self::render_dx_explorer_metric(format!(
-                "{} visible",
-                storage::format_file_size(overview.visible_file_bytes)
+            metrics.push(Self::render_dx_explorer_metric(storage::format_file_size(
+                overview.visible_file_bytes,
             )));
         }
         if overview.cached_direct_file_count > 0 {
             metrics.push(Self::render_dx_explorer_metric(
                 Self::dx_explorer_count_label(
                     overview.cached_direct_file_count,
-                    "cached child file",
-                    "cached child files",
+                    "indexed file",
+                    "indexed files",
                 ),
             ));
             metrics.push(Self::render_dx_explorer_metric(format!(
-                "{} cached",
+                "{} indexed",
                 storage::format_file_size(overview.cached_direct_file_bytes)
             )));
         }
@@ -4368,7 +4363,7 @@ impl ProjectPanel {
                 .border_color(cx.theme().colors().border.opacity(0.6))
                 .bg(cx.theme().colors().panel_background)
                 .child(
-                    ListHeader::new("Folder files")
+                    ListHeader::new("Folder Storage")
                         .start_slot(
                             Icon::new(dx_icon(DxUiIcon::Storage))
                                 .size(IconSize::XSmall)
@@ -4472,13 +4467,10 @@ impl ProjectPanel {
             })
             .collect::<Vec<_>>();
         let tooltip = if largest_files.is_empty() {
-            format!(
-                "{} / {file_count} / {storage_label} / {heat_label}",
-                item.path_label
-            )
+            format!("{} - {file_count} - {storage_label}", item.path_label)
         } else {
             format!(
-                "{} / {file_count} / {storage_label} / {heat_label} / Largest: {}",
+                "{} - {file_count} - {storage_label} - Largest files: {}",
                 item.path_label,
                 largest_files.join(" / ")
             )
@@ -4493,9 +4485,7 @@ impl ProjectPanel {
         .toggle_state(is_selected)
         .tab_index(0_isize)
         .track_focus(&self.focus_handle(cx))
-        .tooltip(move |_window, cx| {
-            Tooltip::with_meta("Folder file summary", None, tooltip.clone(), cx)
-        })
+        .tooltip(move |_window, cx| Tooltip::with_meta("Folder", None, tooltip.clone(), cx))
         .on_click(cx.listener(move |this, _, window, cx| {
             this.focus_handle(cx).focus(window, cx);
             this.expand_entry(target.worktree_id, target.entry_id, cx);
@@ -4702,15 +4692,14 @@ impl ProjectPanel {
                 this.child(Self::render_dx_explorer_metric(
                     Self::dx_explorer_count_label(
                         summary.skipped_entry_count,
-                        "skipped",
-                        "skipped",
+                        "omitted",
+                        "omitted",
                     ),
                 ))
             })
             .when(summary.visible_file_bytes > 0, |this| {
-                this.child(Self::render_dx_explorer_metric(format!(
-                    "{} storage",
-                    storage::format_file_size(summary.visible_file_bytes)
+                this.child(Self::render_dx_explorer_metric(storage::format_file_size(
+                    summary.visible_file_bytes,
                 )))
             })
             .when(summary.selected_entry_count > 0, |this| {
@@ -4722,8 +4711,8 @@ impl ProjectPanel {
                 this.child(Self::render_dx_explorer_metric(
                     Self::dx_explorer_count_label(
                         summary.expanded_dir_count,
-                        "open folder",
-                        "open folders",
+                        "expanded folder",
+                        "expanded folders",
                     ),
                 ))
             })
@@ -4799,6 +4788,7 @@ impl ProjectPanel {
                             }),
                     ),
             )
+            .child(Divider::vertical().color(ui::DividerColor::BorderFaded))
             .child(
                 h_flex()
                     .id("dx-explorer-filter-controls")
@@ -4876,6 +4866,7 @@ impl ProjectPanel {
                         }),
                     ),
             )
+            .child(Divider::vertical().color(ui::DividerColor::BorderFaded))
             .child(
                 h_flex()
                     .id("dx-explorer-view-controls")
@@ -4928,6 +4919,7 @@ impl ProjectPanel {
                             })),
                     ),
             )
+            .child(Divider::vertical().color(ui::DividerColor::BorderFaded))
             .child(
                 h_flex()
                     .id("dx-explorer-edit-controls")
@@ -5038,9 +5030,10 @@ impl ProjectPanel {
         let can_paste_to_selection = clipboard_operation_for_paste.is_some();
         let paste_tooltip = clipboard_operation_for_paste
             .map(|operation| operation.mode.paste_tooltip())
-            .unwrap_or("Paste files here");
+            .unwrap_or("Paste Here");
         let toolbar_focus_handle = self.focus_handle(cx);
         let copy_selection_focus_handle = toolbar_focus_handle.clone();
+        let copy_selection_tooltip_focus_handle = copy_selection_focus_handle.clone();
         let cut_selection_focus_handle = toolbar_focus_handle.clone();
         let cut_selection_tooltip_focus_handle = cut_selection_focus_handle.clone();
         let duplicate_selection_focus_handle = toolbar_focus_handle.clone();
@@ -5109,7 +5102,14 @@ impl ProjectPanel {
                             .icon_size(IconSize::Small)
                             .tab_index(0_isize)
                             .track_focus(&copy_selection_focus_handle)
-                            .tooltip(Tooltip::text("Copy selected"))
+                            .tooltip(move |_window, cx| {
+                                Tooltip::for_action_in(
+                                    "Copy selected",
+                                    &Copy {},
+                                    &copy_selection_tooltip_focus_handle,
+                                    cx,
+                                )
+                            })
                             .on_click(cx.listener(|this, _, window, cx| {
                                 this.focus_handle(cx).focus(window, cx);
                                 this.copy(&Copy {}, window, cx);
@@ -5125,7 +5125,7 @@ impl ProjectPanel {
                                 .track_focus(&cut_selection_focus_handle)
                                 .tooltip(move |_window, cx| {
                                     Tooltip::for_action_in(
-                                        "Prepare selected items to move",
+                                        "Cut selected",
                                         &Cut {},
                                         &cut_selection_tooltip_focus_handle,
                                         cx,

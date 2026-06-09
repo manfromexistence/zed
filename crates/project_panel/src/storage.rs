@@ -147,13 +147,13 @@ impl StorageSortMode {
     pub(crate) fn label(self) -> &'static str {
         match self {
             Self::Size => "Size",
-            Self::FileCount => "File Count",
+            Self::FileCount => "Files",
             Self::Modified => "Modified",
         }
     }
 
     pub(crate) fn status_label(self) -> String {
-        format!("Sorted by {}", self.label())
+        self.label().to_string()
     }
 
     pub(crate) fn menu_label(self, current: Self) -> String {
@@ -253,11 +253,11 @@ pub(crate) fn storage_heat_level(file_bytes: u64, max_file_bytes: u64) -> u8 {
 
 pub(crate) fn heat_label(heat_level: u8) -> &'static str {
     match heat_level {
-        4 => "largest",
-        3 => "large",
-        2 => "medium",
-        1 => "small",
-        _ => "empty",
+        4 => "High",
+        3 => "Medium",
+        2 => "Low",
+        1 => "Low",
+        _ => "Empty",
     }
 }
 

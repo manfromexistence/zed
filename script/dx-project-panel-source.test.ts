@@ -78,7 +78,13 @@ test("project panel visible tree materialization has named caps before collectio
 test("project panel DX Explorer header is source-backed and action-wired", () => {
   const source = read("crates/project_panel/src/project_panel.rs");
   const dxIcons = read("crates/ui/src/dx_icons.rs");
+  const projectPanelUiSources = [
+    source,
+    read("crates/project_panel/src/media_preview.rs"),
+    read("crates/project_panel/src/storage_roots_view.rs"),
+  ].join("\n");
   const dxExplorerSummary = functionBody(source, "dx_explorer_summary");
+  const renderDxExplorerMetric = functionBody(source, "render_dx_explorer_metric");
   const renderDxExplorerHeader = functionBody(source, "render_dx_explorer_header");
   const renderSidePanelHeaderControls = functionBody(
     source,
@@ -167,14 +173,23 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   assert.match(renderDxExplorerHeader, /ListHeader::new\("DX Explorer"\)/);
   assert.match(renderDxExplorerHeader, /let source_label = summary\.source_kind\.label\(\);/);
   assert.doesNotMatch(renderDxExplorerHeader, /source_label = if is_read_only/);
-  assert.match(source, /Self::LocalWorkspace => "Local source"/);
-  assert.match(source, /Self::WslWorkspace => "WSL source"/);
-  assert.match(source, /Self::RemoteWorkspace => "Remote source"/);
-  assert.match(source, /Self::ReadOnlyWorkspace => "Read-only source"/);
+  assert.match(source, /Self::LocalWorkspace => "Local"/);
+  assert.match(source, /Self::WslWorkspace => "WSL"/);
+  assert.match(source, /Self::RemoteWorkspace => "Remote"/);
+  assert.match(source, /Self::ReadOnlyWorkspace => "Read-only"/);
+  assert.doesNotMatch(source, /(?:Local|WSL|Remote|Read-only) source/);
+  assert.doesNotMatch(
+    projectPanelUiSources,
+    /\b(?:IconName::Settings|IconName::Sliders|DxUiIcon::Settings|DxUiIcon::Style)\b/,
+    "Project Panel should not use settings/sliders glyphs for explorer chrome",
+  );
   assert.match(renderDxExplorerHeader, /summary\.skipped_entry_count/);
   assert.match(renderDxExplorerHeader, /summary\.visible_file_count/);
   assert.match(renderDxExplorerHeader, /summary\.visible_folder_count/);
-  assert.match(renderDxExplorerHeader, /storage::format_file_size\(summary\.visible_file_bytes\)/);
+  assert.match(
+    renderDxExplorerHeader,
+    /storage::format_file_size\(\s*summary\.visible_file_bytes,\s*\)/,
+  );
   assert.match(renderDxExplorerHeader, /summary\.cached_media_item_count/);
   assert.match(
     renderDxExplorerHeader,
@@ -186,10 +201,31 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
     /h_flex\(\)[\s\S]*\.child\(\s*Icon::new\(dx_icon\(DxUiIcon::Project\)\)[\s\S]*\.child\(Label::new\("DX Explorer"\)/,
     "DX Explorer header should not rebuild shared ListHeader chrome by hand",
   );
+  assert.doesNotMatch(
+    renderDxExplorerHeader,
+    /Label::new\("DX Explorer"\)/,
+    "DX Explorer title should come from shared ListHeader chrome",
+  );
+  assert.match(
+    renderDxExplorerMetric,
+    /Label::new\(label\)[\s\S]*\.size\(LabelSize::Small\)[\s\S]*\.color\(Color::Muted\)[\s\S]*\.truncate\(\)/,
+    "DX Explorer metric text should stay small, muted, and truncating",
+  );
+  assert.doesNotMatch(
+    renderDxExplorerMetric,
+    /Chip::new|ButtonLike::new|\.border_|\.bg\(/,
+    "DX Explorer metric text should not grow local chrome",
+  );
   assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-source-controls"\)/);
   assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-filter-controls"\)/);
   assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-view-controls"\)/);
   assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-edit-controls"\)/);
+  assert.equal(
+    renderDxExplorerHeader.match(/Divider::vertical\(\)\.color\(ui::DividerColor::BorderFaded\)/g)
+      ?.length,
+    3,
+    "DX Explorer header should separate action groups with the same faded dividers used by Zed panels",
+  );
   assert.match(
     renderSidePanelHeaderControls,
     /side_panel_header_controls\(\s*id_prefix,[\s\S]*self\.workspace\.clone\(\),[\s\S]*cx\.entity\(\)\.entity_id\(\),[\s\S]*cx,/,
@@ -615,7 +651,7 @@ test("project panel selection toolbar exposes file-browser operation state", () 
     "selection toolbar render must not query the OS clipboard",
   );
   assert.match(renderSelectedEntriesToolbar, /operation\.mode\.paste_tooltip\(\)/);
-  assert.match(renderSelectedEntriesToolbar, /unwrap_or\("Paste files here"\)/);
+  assert.match(renderSelectedEntriesToolbar, /unwrap_or\("Paste Here"\)/);
   assert.match(renderSelectedEntriesToolbar, /\.when\(!is_read_only && can_paste_to_selection/);
   assert.match(renderSelectedEntriesToolbar, /this\.paste\(&Paste \{\}, window, cx\)/);
   assert.match(
@@ -625,12 +661,12 @@ test("project panel selection toolbar exposes file-browser operation state", () 
   );
   assert.match(
     renderSelectedEntriesToolbar,
-    /"project-panel-copy-selection"[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&copy_selection_focus_handle\)[\s\S]*Tooltip::text\("Copy selected"\)/,
-    "Copy selected should stay keyboard reachable without advertising unavailable read-only keybinding state",
+    /"project-panel-copy-selection"[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&copy_selection_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"Copy selected",\s*&Copy \{\},\s*&copy_selection_tooltip_focus_handle,[\s\S]*cx/,
+    "Copy selected should stay keyboard reachable and expose its Project Panel action keybinding",
   );
   assert.match(
     renderSelectedEntriesToolbar,
-    /"project-panel-cut-selection"[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&cut_selection_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"Prepare selected items to move",\s*&Cut \{\},\s*&cut_selection_tooltip_focus_handle,[\s\S]*cx/,
+    /"project-panel-cut-selection"[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&cut_selection_focus_handle\)[\s\S]*Tooltip::for_action_in\(\s*"Cut selected",\s*&Cut \{\},\s*&cut_selection_tooltip_focus_handle,[\s\S]*cx/,
     "Cut selected should be keyboard reachable and expose its Project Panel action keybinding",
   );
   assert.match(
@@ -655,7 +691,7 @@ test("project panel selection toolbar exposes file-browser operation state", () 
   );
   assert.doesNotMatch(
     renderSelectedEntriesToolbar,
-    /Tooltip::text\("Prepare selected items to move"\)|Tooltip::text\("Duplicate selected"\)|Tooltip::text\(paste_tooltip\)|Tooltip::text\("Trash selected"\)/,
+    /Tooltip::text\("Cut selected"\)|Tooltip::text\("Duplicate selected"\)|Tooltip::text\(paste_tooltip\)|Tooltip::text\("Trash selected"\)/,
     "selection toolbar action buttons should use action-aware tooltips instead of plain text",
   );
   assert.doesNotMatch(
@@ -960,14 +996,14 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   });
   assert.match(renderStorageDrilldown, /\.id\("dx-explorer-storage-drilldown"\)/);
   assert.match(renderStorageDrilldown, /dx_icon\(DxUiIcon::Storage\)/);
-  assert.match(renderStorageDrilldown, /ListHeader::new\("Folder files"\)/);
+  assert.match(renderStorageDrilldown, /ListHeader::new\("Folder Storage"\)/);
   assert.match(
     renderStorageDrilldown,
-    /ListHeader::new\("Folder files"\)[\s\S]*\.start_slot\([\s\S]*Icon::new\(dx_icon\(DxUiIcon::Storage\)\)/,
+    /ListHeader::new\("Folder Storage"\)[\s\S]*\.start_slot\([\s\S]*Icon::new\(dx_icon\(DxUiIcon::Storage\)\)/,
   );
   assert.match(
     renderStorageDrilldown,
-    /ListHeader::new\("Folder files"\)[\s\S]*\.end_slot(?:::<[^>]+>)?\([\s\S]*sort_mode\.status_label\(\)[\s\S]*\.children\(metrics\)[\s\S]*PopoverMenu::new\("dx-explorer-storage-sort-menu"\)/,
+    /ListHeader::new\("Folder Storage"\)[\s\S]*\.end_slot(?:::<[^>]+>)?\([\s\S]*sort_mode\.status_label\(\)[\s\S]*\.children\(metrics\)[\s\S]*PopoverMenu::new\("dx-explorer-storage-sort-menu"\)/,
   );
   assert.match(
     renderStorageDrilldown,
@@ -979,7 +1015,7 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   );
   assert.doesNotMatch(
     renderStorageDrilldown,
-    /Label::new\("Folder files"\)/,
+    /Label::new\("Folder Storage"\)/,
     "storage drilldown section header should use the shared ListHeader component",
   );
   assert.match(renderStorageDrilldown, /\.children\(rows\)/);
@@ -1171,11 +1207,16 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(storageDrilldownItems, /StorageFolderItem/);
   assert.match(storageDrilldownItems, /StorageFolderItem::from_entry/);
   assert.match(storageDrilldownItems, /rank_storage_folder_items\(items, storage_sort_mode\)/);
-  assert.match(renderStorageDrilldown, /ListHeader::new\("Folder files"\)/);
+  assert.match(renderStorageDrilldown, /ListHeader::new\("Folder Storage"\)/);
   assert.match(renderStorageDrilldown, /StorageSortMode::ALL/);
   assert.match(renderStorageDrilldown, /PopoverMenu::new\("dx-explorer-storage-sort-menu"\)/);
   assert.match(renderStorageDrilldown, /sort_mode\.status_label\(\)/);
   assert.match(renderStorageDrilldown, /mode\.menu_label\(sort_mode\)/);
+  assert.doesNotMatch(
+    renderStorageDrilldown,
+    /Folder files|cached child file|cached child files|Sorted by/,
+    "Folder storage header should use polished product text instead of implementation/cache wording",
+  );
   assert.match(
     renderStorageDrilldown,
     /this\.storage_sort_mode = mode;[\s\S]*this\.update_visible_entries\(\s*None,\s*false,\s*false,[\s\S]*cx\.notify\(\);/,
@@ -1185,7 +1226,13 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(renderStorageDrilldownRow, /storage::format_modified_label\(item\.latest_modified_at\)/);
   assert.match(renderStorageDrilldownRow, /storage::heat_label\(item\.heat_level\)/);
   assert.match(renderStorageDrilldownRow, /item\.path_label/);
-  assert.match(renderStorageDrilldownRow, /Tooltip::with_meta\("Folder file summary"/);
+  assert.match(renderStorageDrilldownRow, /Tooltip::with_meta\("Folder"/);
+  assert.match(renderStorageDrilldownRow, /Largest files:/);
+  assert.doesNotMatch(
+    renderStorageDrilldownRow,
+    /Folder file summary|Largest:|\{heat_label\}/,
+    "Folder storage tooltips should avoid generated-summary and heat-label debug wording",
+  );
   assert.match(renderStorageDrilldownRow, /item\s*\.\s*largest_files/);
   assert.match(
     renderStorageDrilldownRow,
@@ -1241,10 +1288,10 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(source, /if !this\.storage_root_shortcuts_allowed\(cx\) \{[\s\S]*this\.storage_root_shortcuts\.clear\(\);[\s\S]*cx\.notify\(\);[\s\S]*return;[\s\S]*\}/);
   assert.match(source, /fn open_dx_explorer_storage_root\([\s\S]*if !self\.storage_root_shortcuts_allowed\(cx\) \{[\s\S]*return;[\s\S]*\}/);
   assert.doesNotMatch(source, /render_dx_explorer_storage_root_strip\(is_local_or_wsl, is_read_only, cx\)/);
-  assert.match(renderRootStrip, /ListHeader::new\("Storage roots"\)/);
+  assert.match(renderRootStrip, /ListHeader::new\("Storage"\)/);
   assert.match(
     renderRootStrip,
-    /ListHeader::new\("Storage roots"\)[\s\S]*\.start_slot\(Icon::new\(dx_icon\(DxUiIcon::Storage\)\)\.size\(IconSize::XSmall\)\)/,
+    /ListHeader::new\("Storage"\)[\s\S]*\.start_slot\(Icon::new\(dx_icon\(DxUiIcon::Storage\)\)\.size\(IconSize::XSmall\)\)/,
   );
   assert.match(
     renderRootStrip,
@@ -1389,8 +1436,8 @@ test("project panel storage overview and root shortcuts stay cached and professi
   );
   assert.match(
     rootStatusLabel,
-    /Some\(capacity\)[\s\S]*capacity\.capacity_label\(\)[\s\S]*self\.is_available\(\)[\s\S]*"Available"[\s\S]*"Not configured"/,
-    "storage root rows must show honest capacity/available/not-configured status",
+    /Some\(capacity\)[\s\S]*capacity\.capacity_label\(\)[\s\S]*self\.is_available\(\)[\s\S]*"Available"[\s\S]*"Unavailable"/,
+    "storage root rows must show honest capacity/available/unavailable status",
   );
   assert.match(storageRoots, /DX_HOME/);
   assert.match(storageRoots, /OneDriveConsumer/);
@@ -1510,7 +1557,7 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   assert.match(media, /use ui::\{[\s\S]*ListHeader/);
   assert.match(
     renderFolderMediaGallery,
-    /ListHeader::new\("Media"\)[\s\S]*\.start_slot\(Icon::new\(dx_icon\(DxUiIcon::Media\)\)[\s\S]*\.end_slot(?:::<AnyElement>)?\([\s\S]*visible_count[\s\S]*summary/,
+    /ListHeader::new\("Media"\)[\s\S]*\.start_slot\(Icon::new\(dx_icon\(DxUiIcon::Media\)\)[\s\S]*\.end_slot(?:::<AnyElement>)?\([\s\S]*visible_count[\s\S]*preview\.total_count/,
     "media gallery popover should use the shared ListHeader component with DX media icon and summary slot",
   );
   assert.match(
@@ -2333,12 +2380,12 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     mediaPreviewCardTooltipMeta,
-    /let size_label = media_size_label\(item\.size\);[\s\S]*Duration unavailable[\s\S]*Size: \{size_label\}/,
+    /let size_label = media_size_label\(item\.size\);[\s\S]*Unknown duration[\s\S]*\{size_label\}/,
     "media hover details must include snapshot size and manifest duration with an honest unavailable state",
   );
   assert.match(
     mediaPreviewCardTooltipMeta,
-    /Thumbnail unavailable/,
+    /No thumbnail/,
     "video hover details must not imply a background frame job exists when no frame preview is available",
   );
   assert.doesNotMatch(
@@ -2363,8 +2410,8 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     videoFramePreviewLabel,
-    /VideoFramePreviewKind::Center[\s\S]*"Center thumbnail"[\s\S]*VideoFramePreviewKind::Preview[\s\S]*"Thumbnail"/,
-    "video hover details must label center/middle frames separately from generic preview frames",
+    /VideoFramePreviewKind::Center[\s\S]*"Thumbnail"[\s\S]*VideoFramePreviewKind::Preview[\s\S]*"Thumbnail"/,
+    "video hover details should use concise thumbnail language",
   );
   assert.match(
     videoFrameCandidateRank,

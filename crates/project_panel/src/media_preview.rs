@@ -206,7 +206,7 @@ pub(crate) fn render_folder_media_gallery(
             ListHeader::new("Media")
                 .start_slot(Icon::new(dx_icon(DxUiIcon::Media)).size(IconSize::XSmall))
                 .end_slot(
-                    Label::new(format!("{visible_count} shown / {summary}"))
+                    Label::new(format!("{visible_count} of {}", preview.total_count))
                         .size(LabelSize::XSmall)
                         .color(Color::Muted)
                         .single_line()
@@ -279,9 +279,7 @@ pub(crate) fn render_folder_media_shelf(
         .border_color(cx.theme().colors().border.opacity(0.6))
         .bg(cx.theme().colors().panel_background)
         .when_some(metadata_probe_tooltip, |this, tooltip| {
-            this.tooltip(move |_window, cx| {
-                Tooltip::with_meta("Media metadata", None, tooltip.clone(), cx)
-            })
+            this.tooltip(move |_window, cx| Tooltip::with_meta("Media", None, tooltip.clone(), cx))
         })
         .child(
             ListHeader::new("Media")
@@ -322,9 +320,9 @@ fn render_media_shelf_overflow_card(
         .total_count
         .saturating_sub(MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS.saturating_sub(1));
     let tooltip = if hidden_count > 0 {
-        format!("Show {hidden_count} more media items")
+        format!("Show {hidden_count} more")
     } else {
-        "Show media gallery".to_string()
+        "Show gallery".to_string()
     };
     let gallery_preview = preview.clone();
     let menu_id = format!(
@@ -755,24 +753,19 @@ fn media_gallery_card_container(
 fn media_preview_card_tooltip_meta(item: &MediaPreviewItem) -> String {
     let size_label = media_size_label(item.size);
     match item.kind {
-        MediaPreviewKind::Image => format!("Size: {size_label}"),
+        MediaPreviewKind::Image => size_label,
         MediaPreviewKind::Video => {
-            let time_label = item
-                .duration_label
-                .as_deref()
-                .unwrap_or("Duration unavailable");
+            let time_label = item.duration_label.as_deref().unwrap_or("Unknown duration");
             if let Some(preview) = item.video_frame_preview.as_ref() {
                 let frame_label = video_frame_preview_label(preview);
-                format!("{frame_label} / Time: {time_label} / Size: {size_label}")
+                format!("{frame_label} - {time_label} - {size_label}")
             } else {
-                format!("Thumbnail unavailable / Time: {time_label} / Size: {size_label}")
+                format!("No thumbnail - {time_label} - {size_label}")
             }
         }
         MediaPreviewKind::Audio => format!(
-            "Time: {} / Size: {size_label}",
-            item.duration_label
-                .as_deref()
-                .unwrap_or("Duration unavailable")
+            "{} - {size_label}",
+            item.duration_label.as_deref().unwrap_or("Unknown duration")
         ),
     }
 }
@@ -936,7 +929,7 @@ fn video_frame_preview_kind_for_rank(rank: u8) -> VideoFramePreviewKind {
 
 fn video_frame_preview_label(preview: &VideoFramePreview) -> &'static str {
     match preview.kind {
-        VideoFramePreviewKind::Center => "Center thumbnail",
+        VideoFramePreviewKind::Center => "Thumbnail",
         VideoFramePreviewKind::Preview => "Thumbnail",
     }
 }

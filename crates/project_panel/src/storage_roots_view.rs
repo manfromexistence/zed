@@ -43,7 +43,7 @@ pub(crate) fn render_storage_root_strip(
             .border_color(cx.theme().colors().border.opacity(0.6))
             .bg(cx.theme().colors().panel_background)
             .child(
-                ListHeader::new("Storage roots")
+                ListHeader::new("Storage")
                     .start_slot(Icon::new(dx_icon(DxUiIcon::Storage)).size(IconSize::XSmall)),
             )
             .child(
@@ -84,7 +84,7 @@ fn render_storage_root_strip_row(
     .size(ButtonSize::Compact)
     .width(rems(18.))
     .disabled(!available)
-    .tooltip(move |_window, cx| Tooltip::with_meta("Storage root", None, tooltip.clone(), cx))
+    .tooltip(move |_window, cx| Tooltip::with_meta("Storage", None, tooltip.clone(), cx))
     .when(available, |this| {
         let row_focus_handle = focus_handle.clone();
         let click_focus_handle = row_focus_handle.clone();
