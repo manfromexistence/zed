@@ -204,10 +204,10 @@ pub(crate) fn render_folder_media_gallery(
         .p_2()
         .child(
             ListHeader::new("Media")
-                .start_slot(Icon::new(dx_icon(DxUiIcon::Media)).size(IconSize::XSmall))
+                .start_slot(Icon::new(dx_icon(DxUiIcon::Media)).size(IconSize::Small))
                 .end_slot(
                     Label::new(format!("{visible_count} of {}", preview.total_count))
-                        .size(LabelSize::XSmall)
+                        .size(LabelSize::Small)
                         .color(Color::Muted)
                         .single_line()
                         .truncate(),
@@ -283,7 +283,7 @@ pub(crate) fn render_folder_media_shelf(
         })
         .child(
             ListHeader::new("Media")
-                .start_slot(Icon::new(dx_icon(DxUiIcon::Media)).size(IconSize::XSmall))
+                .start_slot(Icon::new(dx_icon(DxUiIcon::Media)).size(IconSize::Small))
                 .end_slot::<AnyElement>(panel_controls),
         )
         .child(

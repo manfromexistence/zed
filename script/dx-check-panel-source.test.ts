@@ -126,7 +126,7 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   assert.match(renderHeader, /\.start_slot\(/);
   assert.match(renderHeader, /\.end_slot\(side_panel_header_controls/);
   assert.match(renderStatusStrip, /ListItem::new\("dx-check-status"\)/);
-  assert.match(renderStatusStrip, /\.spacing\(ListItemSpacing::Dense\)/);
+  assert.match(renderStatusStrip, /\.spacing\(ListItemSpacing::Sparse\)/);
   assert.match(renderStatusStrip, /\.selectable\(false\)/);
   assert.match(renderStatusStrip, /status_label\(/);
   assert.match(renderToolbar, /IconButton::new\("dx-check-open-receipt", IconName::FileTextOutlined\)/);

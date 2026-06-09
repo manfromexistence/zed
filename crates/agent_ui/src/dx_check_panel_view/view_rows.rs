@@ -32,7 +32,7 @@ pub(super) fn status_label(label: impl Into<SharedString>, color: Color, _cx: &A
         .child(Indicator::dot().color(color))
         .child(
             Label::new(label)
-                .size(LabelSize::XSmall)
+                .size(LabelSize::Small)
                 .color(color)
                 .truncate(),
         )
@@ -46,7 +46,7 @@ pub(super) fn detail_row(
     let label = label.into();
     ListItem::new(format!("dx-check-detail-{}", stable_id(label.as_ref())))
         .inset(true)
-        .spacing(ListItemSpacing::ExtraDense)
+        .spacing(ListItemSpacing::Sparse)
         .selectable(false)
         .child(
             h_flex()
@@ -56,13 +56,13 @@ pub(super) fn detail_row(
                 .justify_between()
                 .child(
                     Label::new(label)
-                        .size(LabelSize::XSmall)
+                        .size(LabelSize::Small)
                         .color(Color::Muted)
                         .flex_none(),
                 )
                 .child(
                     Label::new(value.into())
-                        .size(LabelSize::XSmall)
+                        .size(LabelSize::Small)
                         .color(Color::Default)
                         .truncate(),
                 ),
@@ -84,15 +84,14 @@ pub(super) fn notice_row(
     let id = id.into();
     let mut content = v_flex().min_w_0().gap_0p5().child(
         Label::new(message.to_string())
-            .size(LabelSize::XSmall)
-            .color(color)
+            .size(LabelSize::Small)
             .truncate(),
     );
 
     if let Some(next_action) = next_action {
         content = content.child(
             Label::new(next_action.to_string())
-                .size(LabelSize::XSmall)
+                .size(LabelSize::Small)
                 .color(Color::Muted)
                 .truncate(),
         );
@@ -101,7 +100,7 @@ pub(super) fn notice_row(
     ListItem::new(id)
         .inset(true)
         .spacing(ListItemSpacing::Sparse)
-        .start_slot(Icon::new(icon).size(IconSize::XSmall).color(color))
+        .start_slot(Icon::new(icon).size(IconSize::Small).color(color))
         .child(content)
         .into_any_element()
 }
@@ -131,19 +130,19 @@ pub(super) fn quick_fix_row(index: usize, fix: &DxCheckPanelQuickFix) -> AnyElem
                 .justify_between()
                 .child(
                     Label::new(fix.label.clone())
-                        .size(LabelSize::XSmall)
+                        .size(LabelSize::Small)
                         .truncate(),
                 )
                 .child(
                     Label::new(risk)
-                        .size(LabelSize::XSmall)
+                        .size(LabelSize::Small)
                         .color(Color::Muted)
                         .truncate(),
                 ),
         )
         .child(
             Label::new(fix.next_action.clone())
-                .size(LabelSize::XSmall)
+                .size(LabelSize::Small)
                 .color(Color::Muted)
                 .truncate(),
         );
@@ -151,7 +150,7 @@ pub(super) fn quick_fix_row(index: usize, fix: &DxCheckPanelQuickFix) -> AnyElem
     if let Some(command) = fix.command.as_ref() {
         content = content.child(
             Label::new(command.clone())
-                .size(LabelSize::XSmall)
+                .size(LabelSize::Small)
                 .color(Color::Accent)
                 .truncate(),
         );
@@ -162,7 +161,7 @@ pub(super) fn quick_fix_row(index: usize, fix: &DxCheckPanelQuickFix) -> AnyElem
         .spacing(ListItemSpacing::Sparse)
         .start_slot(
             Icon::new(IconName::ListTodo)
-                .size(IconSize::XSmall)
+                .size(IconSize::Small)
                 .color(Color::Muted),
         )
         .child(content)
@@ -195,20 +194,20 @@ pub(super) fn adapter_plan_row(index: usize, plan: &DxCheckPanelAdapterPlan) -> 
                 )
                 .child(
                     Label::new(plan.target.clone())
-                        .size(LabelSize::XSmall)
+                        .size(LabelSize::Small)
                         .color(Color::Muted)
                         .truncate(),
                 ),
         )
         .child(
             Label::new(detail)
-                .size(LabelSize::XSmall)
+                .size(LabelSize::Small)
                 .color(Color::Muted)
                 .truncate(),
         )
         .child(
             Label::new(plan.command.clone())
-                .size(LabelSize::XSmall)
+                .size(LabelSize::Small)
                 .color(Color::Accent)
                 .truncate_start(),
         );
@@ -216,7 +215,7 @@ pub(super) fn adapter_plan_row(index: usize, plan: &DxCheckPanelAdapterPlan) -> 
     if let Some(run_command) = plan.run_command.as_ref() {
         content = content.child(
             Label::new(run_command.clone())
-                .size(LabelSize::XSmall)
+                .size(LabelSize::Small)
                 .color(Color::Muted)
                 .truncate_start(),
         );
@@ -227,7 +226,7 @@ pub(super) fn adapter_plan_row(index: usize, plan: &DxCheckPanelAdapterPlan) -> 
         .spacing(ListItemSpacing::Sparse)
         .start_slot(
             Icon::new(IconName::Terminal)
-                .size(IconSize::XSmall)
+                .size(IconSize::Small)
                 .color(Color::Muted),
         )
         .child(content)
@@ -237,16 +236,16 @@ pub(super) fn adapter_plan_row(index: usize, plan: &DxCheckPanelAdapterPlan) -> 
 pub(super) fn empty_row(message: &'static str) -> AnyElement {
     ListItem::new(format!("dx-check-empty-{}", stable_id(message)))
         .inset(true)
-        .spacing(ListItemSpacing::ExtraDense)
+        .spacing(ListItemSpacing::Sparse)
         .selectable(false)
         .start_slot(
             Icon::new(IconName::Info)
-                .size(IconSize::XSmall)
+                .size(IconSize::Small)
                 .color(Color::Muted),
         )
         .child(
             Label::new(message)
-                .size(LabelSize::XSmall)
+                .size(LabelSize::Small)
                 .color(Color::Muted)
                 .truncate(),
         )
@@ -285,13 +284,13 @@ pub(super) fn web_audit_row(index: usize, audit: &DxCheckPanelWebAudit, cx: &App
                 )
                 .child(
                     Label::new(audit.detail.clone())
-                        .size(LabelSize::XSmall)
+                        .size(LabelSize::Small)
                         .color(Color::Muted)
                         .truncate(),
                 )
                 .child(
                     Label::new(source.to_string())
-                        .size(LabelSize::XSmall)
+                        .size(LabelSize::Small)
                         .color(Color::Muted)
                         .truncate_start(),
                 ),

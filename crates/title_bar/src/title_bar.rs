@@ -811,7 +811,7 @@ impl TitleBar {
             .upgrade()
             .and_then(|workspace| workspace.read(cx).active_item(cx))
             .map(|item| item.screen_kind(cx))
-            .unwrap_or(WorkspaceScreenKind::Editor)
+            .unwrap_or(WorkspaceScreenKind::Agent)
     }
 
     fn dispatch_new_screen_action(kind: WorkspaceScreenKind, window: &mut Window, cx: &mut App) {

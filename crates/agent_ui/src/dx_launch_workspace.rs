@@ -360,36 +360,42 @@ fn render_sources_rail(
             rail_controls,
         ))
         .child(rail_rainbow_glow("dx-sources-rail-rainbow-glow", 0.))
-        .child(rail_section(
-            "dx-sources-controller-section",
-            "Source Controller",
-            dx_icon(DxUiIcon::Source),
-            DxLaunchRailSection::SourceController,
-            rail_controls,
-            sources::source_controller_state(&status.source_sets, cx),
-            true,
-            cx,
-        ))
-        .child(rail_section(
-            "dx-sources-stack-section",
-            "Sources",
-            IconName::Book,
-            DxLaunchRailSection::SourceStack,
-            rail_controls,
-            sources::source_set_stack(&status.source_sets, source_row_controls, cx),
-            true,
-            cx,
-        ))
-        .child(rail_section(
-            "dx-sources-tools-section",
-            "Next Actions",
-            IconName::ListTodo,
-            DxLaunchRailSection::SourceTools,
-            rail_controls,
-            source_actions,
-            false,
-            cx,
-        ))
+        .when(status.source_sets.total_sources > 0, |this| {
+            this.child(rail_section(
+                "dx-sources-controller-section",
+                "Source Controller",
+                dx_icon(DxUiIcon::Source),
+                DxLaunchRailSection::SourceController,
+                rail_controls,
+                sources::source_controller_state(&status.source_sets, cx),
+                true,
+                cx,
+            ))
+        })
+        .when(status.source_sets.total_sources > 0, |this| {
+            this.child(rail_section(
+                "dx-sources-stack-section",
+                "Sources",
+                IconName::Book,
+                DxLaunchRailSection::SourceStack,
+                rail_controls,
+                sources::source_set_stack(&status.source_sets, source_row_controls, cx),
+                true,
+                cx,
+            ))
+        })
+        .when(has_source_actions(status), |this| {
+            this.child(rail_section(
+                "dx-sources-tools-section",
+                "Next Actions",
+                IconName::ListTodo,
+                DxLaunchRailSection::SourceTools,
+                rail_controls,
+                source_actions,
+                false,
+                cx,
+            ))
+        })
         .into_any_element()
 }
 
@@ -425,57 +431,106 @@ fn render_right_rail(
         ))
         .child(rail_rainbow_glow("dx-progress-rail-rainbow-glow", 0.18))
         .child(diagnostics_menu(status.clone()))
-        .child(rail_section(
-            "dx-agent-overview-section",
-            "Progress",
-            dx_icon(DxUiIcon::Agent),
-            DxLaunchRailSection::AgentOverview,
-            rail_controls,
-            agent_workspace::agent_overview_section(status, guided_cards, cx),
-            true,
-            cx,
-        ))
-        .child(rail_section(
-            "dx-agent-threads-section",
-            "Environment",
-            dx_icon(DxUiIcon::Project),
-            DxLaunchRailSection::AgentThreads,
-            rail_controls,
-            agent_workspace::agent_environment_section(status, cx),
-            true,
-            cx,
-        ))
-        .child(rail_section(
-            "dx-agent-tasks-section",
-            "Sources",
-            dx_icon(DxUiIcon::Source),
-            DxLaunchRailSection::AgentTasks,
-            rail_controls,
-            agent_workspace::agent_sources_section(status, cx),
-            true,
-            cx,
-        ))
-        .child(rail_section(
-            "dx-agent-subagents-section",
-            "Subagents",
-            dx_icon(DxUiIcon::Agent),
-            DxLaunchRailSection::AgentSubagents,
-            rail_controls,
-            agent_workspace::agent_subagents_section(status, cx),
-            true,
-            cx,
-        ))
-        .child(rail_section(
-            "dx-agent-approvals-section",
-            "Readiness",
-            dx_icon(DxUiIcon::Permissions),
-            DxLaunchRailSection::AgentApprovals,
-            rail_controls,
-            agent_workspace::agent_approvals_section(status, cx),
-            false,
-            cx,
-        ))
+        .when(has_agent_progress(status), |this| {
+            this.child(rail_section(
+                "dx-agent-overview-section",
+                "Progress",
+                dx_icon(DxUiIcon::Agent),
+                DxLaunchRailSection::AgentOverview,
+                rail_controls,
+                agent_workspace::agent_overview_section(status, guided_cards, cx),
+                true,
+                cx,
+            ))
+        })
+        .when(has_agent_environment(status), |this| {
+            this.child(rail_section(
+                "dx-agent-threads-section",
+                "Environment",
+                dx_icon(DxUiIcon::Project),
+                DxLaunchRailSection::AgentThreads,
+                rail_controls,
+                agent_workspace::agent_environment_section(status, cx),
+                true,
+                cx,
+            ))
+        })
+        .when(status.source_sets.total_sources > 0, |this| {
+            this.child(rail_section(
+                "dx-agent-tasks-section",
+                "Sources",
+                dx_icon(DxUiIcon::Source),
+                DxLaunchRailSection::AgentTasks,
+                rail_controls,
+                agent_workspace::agent_sources_section(status, cx),
+                true,
+                cx,
+            ))
+        })
+        .when(has_agent_subagents(status), |this| {
+            this.child(rail_section(
+                "dx-agent-subagents-section",
+                "Subagents",
+                dx_icon(DxUiIcon::Agent),
+                DxLaunchRailSection::AgentSubagents,
+                rail_controls,
+                agent_workspace::agent_subagents_section(status, cx),
+                true,
+                cx,
+            ))
+        })
+        .when(has_agent_readiness(status), |this| {
+            this.child(rail_section(
+                "dx-agent-approvals-section",
+                "Readiness",
+                dx_icon(DxUiIcon::Permissions),
+                DxLaunchRailSection::AgentApprovals,
+                rail_controls,
+                agent_workspace::agent_approvals_section(status, cx),
+                false,
+                cx,
+            ))
+        })
         .into_any_element()
+}
+
+fn has_source_actions(status: &DxLaunchWorkspaceStatus) -> bool {
+    status
+        .source_sets
+        .sets
+        .iter()
+        .flat_map(|set| set.sources.iter())
+        .any(|source| {
+            !matches!(
+                source.kind,
+                crate::dx_source_sets::DxSourceKind::WorkspaceRoot
+            )
+        })
+        || !status.deploy_targets.targets.is_empty()
+}
+
+fn has_agent_progress(status: &DxLaunchWorkspaceStatus) -> bool {
+    status.agent_bridge.active_task_count > 0
+        || status.background_thread_count > 0
+        || status.launch_status.latest_present
+}
+
+fn has_agent_environment(status: &DxLaunchWorkspaceStatus) -> bool {
+    status.visible_worktree_count > 0
+        || status.agent_bridge.connected_accounts_summary.connected > 0
+        || status.agent_bridge.connected_accounts_summary.needs_auth > 0
+        || status.agent_bridge.automation_count > 0
+}
+
+fn has_agent_subagents(status: &DxLaunchWorkspaceStatus) -> bool {
+    status.agent_bridge.active_task_count > 0 || !status.subagent_rows.is_empty()
+}
+
+fn has_agent_readiness(status: &DxLaunchWorkspaceStatus) -> bool {
+    status.launch_readiness.acceptance_count > 0
+        || status.launch_readiness.passed_count > 0
+        || status.launch_readiness.warning_count > 0
+        || status.launch_readiness.failed_count > 0
 }
 
 fn rail_rainbow_glow(id: &'static str, phase_offset: f32) -> AnyElement {
@@ -591,9 +646,7 @@ fn subagent_summary(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {
     ));
 
     if status.subagent_rows.is_empty() {
-        return stack
-            .child(muted_card("No live subagent state", cx))
-            .into_any_element();
+        return stack.into_any_element();
     }
 
     for (ix, row) in status.subagent_rows.iter().take(6).enumerate() {

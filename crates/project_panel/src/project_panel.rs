@@ -4366,7 +4366,7 @@ impl ProjectPanel {
                     ListHeader::new("Folder Storage")
                         .start_slot(
                             Icon::new(dx_icon(DxUiIcon::Storage))
-                                .size(IconSize::XSmall)
+                                .size(IconSize::Small)
                                 .color(Color::Muted),
                         )
                         .end_slot::<AnyElement>(
@@ -4481,7 +4481,7 @@ impl ProjectPanel {
             item.worktree_id.to_usize(),
             item.entry_id.to_usize()
         )))
-        .spacing(ListItemSpacing::ExtraDense)
+        .spacing(ListItemSpacing::Sparse)
         .toggle_state(is_selected)
         .tab_index(0_isize)
         .track_focus(&self.focus_handle(cx))
@@ -4504,7 +4504,7 @@ impl ProjectPanel {
                 .child(render_dx_explorer_storage_heat_indicator(item.heat_level))
                 .child(
                     Label::new(heat_label)
-                        .size(LabelSize::XSmall)
+                        .size(LabelSize::Small)
                         .color(Color::Muted)
                         .truncate(),
                 )
@@ -4512,7 +4512,7 @@ impl ProjectPanel {
         )
         .child(
             Label::new(item.label)
-                .size(LabelSize::XSmall)
+                .size(LabelSize::Small)
                 .color(Color::Default)
                 .truncate(),
         )
@@ -4524,7 +4524,7 @@ impl ProjectPanel {
                 .when_some(modified_label, |this, modified_label| {
                     this.child(
                         Label::new(modified_label)
-                            .size(LabelSize::XSmall)
+                            .size(LabelSize::Small)
                             .color(Color::Muted)
                             .truncate(),
                     )
@@ -4532,14 +4532,14 @@ impl ProjectPanel {
                 .when(!largest_files.is_empty(), |this| {
                     this.child(
                         Label::new(largest_files.join(" / "))
-                            .size(LabelSize::XSmall)
+                            .size(LabelSize::Small)
                             .color(Color::Muted)
                             .truncate(),
                     )
                 })
                 .child(
                     Label::new(format!("{file_count} / {storage_label}"))
-                        .size(LabelSize::XSmall)
+                        .size(LabelSize::Small)
                         .color(Color::Muted)
                         .truncate(),
                 )
@@ -4978,28 +4978,49 @@ impl ProjectPanel {
         v_flex()
             .id("dx-explorer-header")
             .w_full()
-            .px_2()
-            .py_1()
+            .px_1()
+            .py_0p5()
             .border_b_1()
             .border_color(cx.theme().colors().border.opacity(0.6))
             .bg(cx.theme().colors().panel_background)
             .child(
-                ListHeader::new("DX Explorer")
-                    .start_slot(
-                        Icon::new(dx_icon(DxUiIcon::Project))
-                            .size(IconSize::XSmall)
-                            .color(Color::Accent),
-                    )
-                    .end_slot::<AnyElement>(
+                h_flex()
+                    .id("dx-explorer-title-row")
+                    .h(px(32.0))
+                    .w_full()
+                    .min_w_0()
+                    .items_center()
+                    .justify_between()
+                    .gap_2()
+                    .child(
                         h_flex()
-                            .id("dx-explorer-header-actions")
                             .min_w_0()
                             .items_center()
                             .gap_1()
-                            .child(header_metrics)
-                            .child(header_controls)
-                            .into_any_element(),
-                    ),
+                            .child(
+                                Icon::new(dx_icon(DxUiIcon::Project))
+                                    .size(IconSize::Small)
+                                    .color(Color::Accent),
+                            )
+                            .child(
+                                Label::new("Project")
+                                    .size(LabelSize::Small)
+                                    .color(Color::Default)
+                                    .truncate(),
+                            ),
+                    )
+                    .child(header_controls),
+            )
+            .child(
+                h_flex()
+                    .id("dx-explorer-summary-row")
+                    .h(px(28.0))
+                    .w_full()
+                    .min_w_0()
+                    .items_center()
+                    .gap_2()
+                    .px_1()
+                    .child(header_metrics),
             )
             .into_any_element()
     }

@@ -629,7 +629,7 @@ test("Forge panel uses Git-style controls instead of metric cards", () => {
   assert.match(rows, /pub\(super\) fn section_header/);
   assert.match(statusStripBody, /ListItem::new\("dx-forge-status"\)/);
   assert.match(statusStripBody, /\.selectable\(false\)/);
-  assert.match(statusStripBody, /\.spacing\(ListItemSpacing::Dense\)/);
+  assert.match(statusStripBody, /\.spacing\(ListItemSpacing::Sparse\)/);
   assert.match(statusStripBody, /\.start_slot\(/);
   assert.match(statusStripBody, /\.end_slot\(/);
   assert.match(rows, /ListHeader/);

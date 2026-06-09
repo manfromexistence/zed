@@ -156,12 +156,7 @@ pub(super) fn agent_sources_section(status: &DxLaunchWorkspaceStatus, cx: &App) 
             cx,
         ));
 
-    if status.source_sets.total_sources == 0 {
-        stack.child(muted_card("No active source context", cx))
-    } else {
-        stack
-    }
-    .into_any_element()
+    stack.into_any_element()
 }
 
 pub(super) fn agent_subagents_section(status: &DxLaunchWorkspaceStatus, cx: &App) -> AnyElement {

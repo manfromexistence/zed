@@ -223,7 +223,7 @@ impl DxCheckPanel {
 
     fn render_status_strip(&self, snapshot: &DxCheckPanelSnapshot, cx: &App) -> AnyElement {
         ListItem::new("dx-check-status")
-            .spacing(ListItemSpacing::Dense)
+            .spacing(ListItemSpacing::Sparse)
             .selectable(false)
             .start_slot(
                 Icon::new(IconName::Check)
@@ -258,7 +258,7 @@ impl DxCheckPanel {
                             snapshot.warn_count,
                             snapshot.skipped_count,
                         ))
-                        .size(LabelSize::XSmall)
+                        .size(LabelSize::Small)
                         .color(Color::Muted)
                         .truncate(),
                     ),

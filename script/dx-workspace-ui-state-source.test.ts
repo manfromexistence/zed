@@ -567,12 +567,12 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(agentPanel, /host_kind: AgentPanelHostKind::Sidechat,[\s\S]*?manual_zoom_override: Some\(false\)/);
   assert.match(agentPanel, /fullscreen_sources_rail_open/);
   assert.match(agentPanel, /fullscreen_progress_rail_open/);
-  assert.match(agentPanel, /fullscreen_sources_rail_open: true/);
-  assert.match(agentPanel, /fullscreen_progress_rail_open: true/);
+  assert.match(agentPanel, /fullscreen_sources_rail_open: false/);
+  assert.match(agentPanel, /fullscreen_progress_rail_open: false/);
   assert.match(agentPanel, /pub\(crate\) fn new_builder_workspace\(/);
   assert.match(agentPanel, /panel\.host_kind = AgentPanelHostKind::BuilderWorkspace/);
-  assert.match(agentPanel, /panel\.fullscreen_sources_rail_pinned = true/);
-  assert.match(agentPanel, /panel\.fullscreen_progress_rail_pinned = true/);
+  assert.match(agentPanel, /panel\.fullscreen_sources_rail_pinned = false/);
+  assert.match(agentPanel, /panel\.fullscreen_progress_rail_pinned = false/);
   assert.match(agentPanel, /pub\(crate\) fn new_automation_workspace\(/);
   assert.match(agentPanel, /panel\.host_kind = AgentPanelHostKind::AutomationWorkspace/);
   assert.match(agentPanel, /fn render_automation_workspace_screen\(/);
@@ -1279,7 +1279,7 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(agentPanel, /dx_session_id_label/);
   assert.doesNotMatch(agentPanel, /dx_session_label/);
   assert.match(agentPanel, /ToolCallStatus::WaitingForConfirmation/);
-  assert.match(dxLaunchWorkspace, /muted_card\("No live subagent state", cx\)/);
+  assert.doesNotMatch(dxLaunchWorkspace, /muted_card\("No live subagent state", cx\)/);
   assert.match(dxLaunchWorkspace, /fn metric_row\(/);
   assert.match(dxLaunchWorkspace, /ListItem::new\(rail_stable_id\("dx-launch-metric"/);
   assert.match(dxLaunchWorkspace, /fn signal_row\(/);
@@ -1289,8 +1289,8 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(agentPanel, /collapsed_dx_launch_rail_sections: HashSet<DxLaunchRailSection>/);
   assert.match(agentPanel, /fullscreen_sources_rail_pinned: bool/);
   assert.match(agentPanel, /fullscreen_progress_rail_pinned: bool/);
-  assert.match(agentPanel, /fullscreen_sources_rail_pinned: true/);
-  assert.match(agentPanel, /fullscreen_progress_rail_pinned: true/);
+  assert.match(agentPanel, /fullscreen_sources_rail_pinned: false/);
+  assert.match(agentPanel, /fullscreen_progress_rail_pinned: false/);
   assert.match(agentPanel, /default_collapsed_dx_launch_rail_sections/);
   assert.match(agentPanel, /DxLaunchRailSection::SourceTools/);
   assert.match(agentPanel, /DxLaunchRailSection::AgentOverview/);
@@ -1335,7 +1335,7 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(sourcesRail, /source_actions/);
   assert.doesNotMatch(
     sourcesRail,
-    /_sidebar_actions|_source_row_controls|_source_actions|Vec::new\(\)/,
+    /_sidebar_actions|Vec::new\(\)|No source actions yet/,
   );
   assert.doesNotMatch(sourcesRail, /dx-workspace-state-section/);
   assert.match(progressRail, /\.absolute\(\)/);
@@ -1454,11 +1454,13 @@ test("agent launch rails use professional operator-facing copy", () => {
   assert.doesNotMatch(agentPanel, /render_dx_launch_sidebar_actions/);
   assert.match(sourcesRail, /"Source Controller"/);
   assert.match(sourcesRail, /"Next Actions"/);
+  assert.match(sourcesRail, /status\.source_sets\.total_sources > 0/);
+  assert.match(sourcesRail, /has_source_actions\(status\)/);
   assert.match(sourceController, /"Workspace roots"/);
   assert.match(sourceController, /"Managed receipts"/);
   assert.match(sourceActions, /"Review Source"/);
   assert.match(sourceActions, /"Review Deploy Readiness"/);
-  assert.match(sourceActions, /"No source actions yet"/);
+  assert.doesNotMatch(sourceActions, /"No source actions yet"/);
   assert.match(guidedCards, /"Prepare Handoff"/);
   assert.match(guidedCards, /"Review Gate"/);
   assert.match(guidedCards, /"Review Audit"/);
@@ -1486,7 +1488,7 @@ test("agent launch rails use professional operator-facing copy", () => {
   assert.match(agentApprovals, /"Trusted bridge"/);
   assert.match(agentApprovals, /"Blocked tools"/);
   assert.match(subagentSummary, /"Active Tasks"/);
-  assert.match(subagentSummary, /"No live subagent state"/);
+  assert.doesNotMatch(subagentSummary, /"No live subagent state"/);
   assert.doesNotMatch(
     dxLaunchWorkspace,
     /source bridge wired|source bridge missing|No automation receipts|Fresh proof|worktree\(s\)|task\(s\)/,

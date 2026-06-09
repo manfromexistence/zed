@@ -1,3 +1,19 @@
+[2026-06-09] - AI Default Screen And Panel Chrome Polish
+
+CHANGED:
+- `crates\title_bar\src\title_bar.rs` now treats an empty/default workspace as the AI screen for screen-dock active state instead of lighting the Code icon.
+- `crates\agent_ui\src\agent_panel.rs`, `dx_launch_workspace.rs`, and `dx_launch_workspace\agent_workspace.rs` now start fullscreen AI rails closed and gate rail sections behind real source, readiness, environment, or subagent state instead of showing no-data placeholder cards.
+- `crates\agent_ui\src\dx_forge_panel\*.rs` and `dx_check_panel_view*.rs` now lift status rows, tabs, and finding/detail rows to readable Git-panel-style GPUI sizing instead of cramped XSmall/extra-dense chrome.
+- `crates\project_panel\src\project_panel.rs`, `media_preview.rs`, and `storage_roots_view.rs` now split the Project top chrome into title/summary rows and use clearer small-size media/storage header chrome.
+- Focused source guards now pin the AI default active state, quiet rail behavior, and updated Project/Forge/Check panel chrome contracts.
+
+PASSED:
+- `rustfmt --edition 2024` on touched Rust files
+- `node --test script\dx-title-bar-source.test.ts script\dx-workspace-ui-state-source.test.ts script\dx-workspace-reentrant-source.test.ts script\dx-agent-workspaces-source.test.ts script\dx-forge-panel-source.test.ts script\dx-check-panel-source.test.ts script\dx-project-panel-source.test.ts`
+
+NOTES:
+- Source-only by instruction. `just run`, Cargo build/check/test/clippy, and runtime visual proof were not run.
+
 [2026-06-09] - Agent Rails Compile Follow-Up
 
 FIXED:

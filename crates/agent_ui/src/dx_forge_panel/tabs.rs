@@ -68,7 +68,7 @@ fn forge_tab(
         .selected_bottom_border(true)
         .start_slot(
             Icon::new(tab_icon(tab))
-                .size(IconSize::XSmall)
+                .size(IconSize::Small)
                 .color(if selected {
                     Color::Default
                 } else {

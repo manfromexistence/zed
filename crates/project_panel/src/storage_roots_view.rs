@@ -44,7 +44,7 @@ pub(crate) fn render_storage_root_strip(
             .bg(cx.theme().colors().panel_background)
             .child(
                 ListHeader::new("Storage")
-                    .start_slot(Icon::new(dx_icon(DxUiIcon::Storage)).size(IconSize::XSmall)),
+                    .start_slot(Icon::new(dx_icon(DxUiIcon::Storage)).size(IconSize::Small)),
             )
             .child(
                 div()

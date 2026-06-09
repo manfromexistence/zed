@@ -1697,10 +1697,10 @@ impl AgentPanel {
             last_context_source: None,
             show_trust_workspace_message: false,
             is_active: false,
-            fullscreen_sources_rail_open: true,
-            fullscreen_progress_rail_open: true,
-            fullscreen_sources_rail_pinned: true,
-            fullscreen_progress_rail_pinned: true,
+            fullscreen_sources_rail_open: false,
+            fullscreen_progress_rail_open: false,
+            fullscreen_sources_rail_pinned: false,
+            fullscreen_progress_rail_pinned: false,
             collapsed_dx_launch_rail_sections: Self::default_collapsed_dx_launch_rail_sections(),
         };
 
@@ -1716,10 +1716,10 @@ impl AgentPanel {
         let mut panel = Self::new(workspace, window, cx);
         panel.host_kind = AgentPanelHostKind::BuilderWorkspace;
         panel.manual_zoom_override = Some(true);
-        panel.fullscreen_sources_rail_open = true;
-        panel.fullscreen_progress_rail_open = true;
-        panel.fullscreen_sources_rail_pinned = true;
-        panel.fullscreen_progress_rail_pinned = true;
+        panel.fullscreen_sources_rail_open = false;
+        panel.fullscreen_progress_rail_open = false;
+        panel.fullscreen_sources_rail_pinned = false;
+        panel.fullscreen_progress_rail_pinned = false;
         panel.ensure_thread_initialized(window, cx);
         panel
     }
@@ -6964,24 +6964,6 @@ impl AgentPanel {
                 cx,
             ));
             card_count += 1;
-        }
-
-        if card_count == 0 {
-            stack = stack.child(
-                v_flex()
-                    .id("dx-source-actions-empty")
-                    .rounded_sm()
-                    .border_1()
-                    .border_color(cx.theme().colors().border_variant)
-                    .px_2()
-                    .py_1()
-                    .child(
-                        Label::new("No source actions yet")
-                            .size(LabelSize::XSmall)
-                            .color(Color::Muted)
-                            .truncate(),
-                    ),
-            );
         }
 
         stack.into_any_element()

@@ -137,6 +137,16 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
   assert.match(agentScreenButton, /toggle_state\(selected\)/);
   assert.match(titleBarSource, /fn agent_screen_is_active\(&self, cx: &App\) -> bool/);
   assert.match(agentScreenActive, /self\.active_screen_kind\(cx\) == WorkspaceScreenKind::Agent/);
+  assert.match(
+    titleBarSource,
+    /fn active_screen_kind\(&self, cx: &App\) -> WorkspaceScreenKind[\s\S]*?\.unwrap_or\(WorkspaceScreenKind::Agent\)/,
+    "empty/default workspace chrome should mark the AI screen as active instead of Code",
+  );
+  assert.doesNotMatch(
+    titleBarSource,
+    /\.unwrap_or\(WorkspaceScreenKind::Editor\)/,
+    "default AI screen should not fall back to the Code icon in the screen dock",
+  );
   assert.match(titleBarSource, /WorkspaceScreenKind::Agent => "AI"/);
   assert.match(titleBarSource, /WorkspaceScreenKind::Editor => "Code"/);
   assert.match(titleBarSource, /WorkspaceScreenKind::Automations => "Automations"/);

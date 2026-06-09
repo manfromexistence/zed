@@ -14,7 +14,7 @@ pub(super) fn status_strip(
 
     ListItem::new("dx-forge-status")
         .selectable(false)
-        .spacing(ListItemSpacing::Dense)
+        .spacing(ListItemSpacing::Sparse)
         .start_slot(Icon::new(icon).size(IconSize::Small).color(color))
         .child(
             h_flex()
@@ -29,7 +29,7 @@ pub(super) fn status_strip(
                 )
                 .child(
                     Label::new(detail)
-                        .size(LabelSize::XSmall)
+                        .size(LabelSize::Small)
                         .color(Color::Muted)
                         .truncate()
                         .flex_1(),
@@ -57,7 +57,7 @@ pub(super) fn section_header(
         .child(
             ListHeader::new(title)
                 .inset(true)
-                .start_slot(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted))
+                .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
                 .end_slot(count_label(count, Color::Muted, cx)),
         )
         .into_any_element()
@@ -72,7 +72,7 @@ pub(super) fn status_label(label: impl Into<SharedString>, color: Color, _cx: &A
         .child(Indicator::dot().color(color))
         .child(
             Label::new(label)
-                .size(LabelSize::XSmall)
+                .size(LabelSize::Small)
                 .color(color)
                 .truncate(),
         )
@@ -85,7 +85,7 @@ pub(super) fn count_label(count: usize, color: Color, _cx: &App) -> AnyElement {
         .items_center()
         .child(
             Label::new(count.to_string())
-                .size(LabelSize::XSmall)
+                .size(LabelSize::Small)
                 .color(color)
                 .truncate(),
         )
@@ -104,7 +104,7 @@ pub(super) fn empty_row(id: &'static str, label: &'static str, _cx: &App) -> Any
         )
         .child(
             Label::new(label)
-                .size(LabelSize::XSmall)
+                .size(LabelSize::Small)
                 .color(Color::Muted)
                 .truncate(),
         )

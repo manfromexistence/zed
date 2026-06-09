@@ -120,7 +120,7 @@ test("DX agent workspace taxonomy has first-class Zed screens", () => {
   assert.match(agentWorkspace, /status\.agent_bridge\.trusted_tool_bridge/);
   assert.match(agentWorkspace, /status\.source_sets\.attachment_summary\(\)/);
   assert.match(agentWorkspace, /subagent_summary\(status, cx\)/);
-  assert.match(agentWorkspace, /No active source context/);
+  assert.doesNotMatch(agentWorkspace, /No active source context/);
   assert.match(agentWorkspace, /Blocked trusted tool approval receipts need review/);
   assert.match(dxWorkspace, /compact_status_row\(\s*"dx-subagents-more"/);
   assert.ok(!dxWorkspace.includes('"+{} more"'));

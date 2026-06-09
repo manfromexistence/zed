@@ -168,9 +168,10 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   });
 
   assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-header"\)/);
+  assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-title-row"\)/);
+  assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-summary-row"\)/);
   assert.match(renderDxExplorerHeader, /ProjectPanelSettings::get_global\(cx\)/);
   assert.match(renderDxExplorerHeader, /dx_icon\(DxUiIcon::Project\)/);
-  assert.match(renderDxExplorerHeader, /ListHeader::new\("DX Explorer"\)/);
   assert.match(renderDxExplorerHeader, /let source_label = summary\.source_kind\.label\(\);/);
   assert.doesNotMatch(renderDxExplorerHeader, /source_label = if is_read_only/);
   assert.match(source, /Self::LocalWorkspace => "Local"/);
@@ -193,18 +194,18 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   assert.match(renderDxExplorerHeader, /summary\.cached_media_item_count/);
   assert.match(
     renderDxExplorerHeader,
-    /\.child\(\s*ListHeader::new\("DX Explorer"\)[\s\S]*\.start_slot\([\s\S]*Icon::new\(dx_icon\(DxUiIcon::Project\)\)[\s\S]*\.end_slot::<AnyElement>\([\s\S]*\.id\("dx-explorer-header-actions"\)/,
-    "DX Explorer top chrome should use the shared ListHeader component with real action slots",
+    /\.id\("dx-explorer-title-row"\)[\s\S]*Icon::new\(dx_icon\(DxUiIcon::Project\)\)[\s\S]*Label::new\("Project"\)[\s\S]*\.child\(header_controls\)/,
+    "DX Explorer top chrome should keep title and actions in a readable Git-panel-style title row",
   );
-  assert.doesNotMatch(
+  assert.match(
     renderDxExplorerHeader,
-    /h_flex\(\)[\s\S]*\.child\(\s*Icon::new\(dx_icon\(DxUiIcon::Project\)\)[\s\S]*\.child\(Label::new\("DX Explorer"\)/,
-    "DX Explorer header should not rebuild shared ListHeader chrome by hand",
+    /\.id\("dx-explorer-summary-row"\)[\s\S]*\.child\(header_metrics\)/,
+    "DX Explorer metrics should live in their own row instead of crowding the title actions",
   );
   assert.doesNotMatch(
     renderDxExplorerHeader,
     /Label::new\("DX Explorer"\)/,
-    "DX Explorer title should come from shared ListHeader chrome",
+    "DX Explorer should use the product-facing Project title in the top row",
   );
   assert.match(
     renderDxExplorerMetric,
@@ -1239,7 +1240,7 @@ test("project panel storage overview and root shortcuts stay cached and professi
     /ListItem::new\(SharedString::from\(format!\([\s\S]*"dx-explorer-storage-drilldown-\{\}-\{\}"[\s\S]*item\.worktree_id\.to_usize\(\),[\s\S]*item\.entry_id\.to_usize\(\)[\s\S]*\)\)\)/,
     "storage drilldown rows must use stable real-entry ListItem ids",
   );
-  assert.match(renderStorageDrilldownRow, /\.spacing\(ListItemSpacing::ExtraDense\)/);
+  assert.match(renderStorageDrilldownRow, /\.spacing\(ListItemSpacing::Sparse\)/);
   assert.match(renderStorageDrilldownRow, /\.toggle_state\(is_selected\)/);
   assert.match(renderStorageDrilldownRow, /\.tab_index\(0(?:_isize)?\)/);
   assert.match(renderStorageDrilldownRow, /\.track_focus\(&self\.focus_handle\(cx\)\)/);
@@ -1291,7 +1292,7 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(renderRootStrip, /ListHeader::new\("Storage"\)/);
   assert.match(
     renderRootStrip,
-    /ListHeader::new\("Storage"\)[\s\S]*\.start_slot\(Icon::new\(dx_icon\(DxUiIcon::Storage\)\)\.size\(IconSize::XSmall\)\)/,
+    /ListHeader::new\("Storage"\)[\s\S]*\.start_slot\(Icon::new\(dx_icon\(DxUiIcon::Storage\)\)\.size\(IconSize::Small\)\)/,
   );
   assert.match(
     renderRootStrip,

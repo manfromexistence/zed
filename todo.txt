@@ -1,5 +1,5 @@
 IN PROGRESS:
-- None. Sidebar chat reorder compile repair is build-verified and ready for manual runtime UX review.
+- None. AI default screen, rail quiet state, and DX panel top-chrome polish are source-verified and ready for manual runtime UX review.
 
 PENDING:
 - Run governed DX Agents connection/tool runtime proof once authorized, covering main sidebar Connections and Tools routing, real social/provider receipts, QR payload display, credential expiry/error visuals, trusted tool bridge approvals, and native workspace-tab layout.
@@ -8,6 +8,7 @@ PENDING:
 - Continue the DX/Zed ecosystem integration with bounded source-only slices for remaining receipt scans, semantic icon hotspots, and governed runtime proof when explicitly authorized.
 
 COMPLETED:
+- AI default screen and DX panel top-chrome polish is source-verified: empty/default workspace chrome now marks the AI screen active instead of Code, fullscreen AI rails start closed and no longer render no-data placeholder cards, Forge/Check status rows and tabs use readable Git-panel-style GPUI sizing, and the Project panel header/storage/media chrome uses clearer title/summary rows and small icons. Runtime/native proof, Cargo, build, and `just run` remain deferred by instruction.
 - Agent rails compile follow-up is build-verified: the source-controller helper now has workspace-scoped visibility, Check panel section shells return concrete `Stateful<Div>` values so existing `.child(...)` composition stays intact, the retained receipt-review prompt helper is narrowly silenced while hidden from the UI, and authorized `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run` built and launched Zed successfully.
 - AI Screen rails plus Forge/Check panel polish is source-verified: the fullscreen Agent left rail now shows a real Source Controller instead of duplicate sidebar commands, the right rail uses Progress/Environment/Sources/Subagents/Readiness sections backed by existing workspace/source/agent state, Forge and Check panels use shared Git-panel-grade header/tab/indicator primitives instead of badge-heavy straight text, and focused source guards passed. Runtime/native proof, Cargo, build, and `just run` remain deferred by instruction.
 - Sidebar chat reorder compile repair is build-verified: the manual thread reorder path now gives the seen-thread set an explicit `HashSet<agent_ui::ThreadId>` type so the J6 incremental build can compile the reordered sidebar code. Authorized `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run` built and launched Zed successfully.
