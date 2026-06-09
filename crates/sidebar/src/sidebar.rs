@@ -7696,8 +7696,8 @@ impl Sidebar {
                         "sidebar-toolbar-acp-registry",
                         IconName::Sparkle,
                         "ACP Registry",
-                        |_this, _, window, cx| {
-                            window.dispatch_action(Box::new(zed_actions::AcpRegistry), cx);
+                        |this, _, window, cx| {
+                            this.dispatch_workspace_action(&zed_actions::AcpRegistry, window, cx);
                         },
                     ))
                     .child(button(
@@ -7720,20 +7720,18 @@ impl Sidebar {
                         "sidebar-toolbar-plugins",
                         dx_icon(DxUiIcon::Plugins),
                         "Plugins",
-                        |_this, _, window, cx| {
-                            window.dispatch_action(
-                                zed_actions::assistant::OpenTools.boxed_clone(),
-                                cx,
-                            );
+                        |this, _, window, cx| {
+                            this.activate_workspace_screen(WorkspaceScreenKind::Tools, window, cx);
                         },
                     ))
                     .child(button(
                         "sidebar-toolbar-connections",
                         dx_icon(DxUiIcon::Connections),
                         "Connections",
-                        |_this, _, window, cx| {
-                            window.dispatch_action(
-                                zed_actions::assistant::OpenConnections.boxed_clone(),
+                        |this, _, window, cx| {
+                            this.activate_workspace_screen(
+                                WorkspaceScreenKind::Connections,
+                                window,
                                 cx,
                             );
                         },
@@ -7751,9 +7749,10 @@ impl Sidebar {
                         "sidebar-toolbar-automations",
                         dx_icon(DxUiIcon::Automations),
                         "Automations",
-                        |_this, _, window, cx| {
-                            window.dispatch_action(
-                                zed_actions::assistant::OpenAutomations.boxed_clone(),
+                        |this, _, window, cx| {
+                            this.activate_workspace_screen(
+                                WorkspaceScreenKind::Automations,
+                                window,
                                 cx,
                             );
                         },
@@ -7873,8 +7872,8 @@ impl Sidebar {
                 "sidebar-activity-acp-registry",
                 IconName::Sparkle,
                 "ACP Registry",
-                |_this, _, window, cx| {
-                    window.dispatch_action(Box::new(zed_actions::AcpRegistry), cx);
+                |this, _, window, cx| {
+                    this.dispatch_workspace_action(&zed_actions::AcpRegistry, window, cx);
                 },
             )
             .into_any_element(),
@@ -7901,8 +7900,8 @@ impl Sidebar {
                 "sidebar-activity-plugins",
                 dx_icon(DxUiIcon::Plugins),
                 "Plugins",
-                |_this, _, window, cx| {
-                    window.dispatch_action(zed_actions::assistant::OpenTools.boxed_clone(), cx);
+                |this, _, window, cx| {
+                    this.activate_workspace_screen(WorkspaceScreenKind::Tools, window, cx);
                 },
             )
             .into_any_element(),
@@ -7911,9 +7910,8 @@ impl Sidebar {
                 "sidebar-activity-connections",
                 dx_icon(DxUiIcon::Connections),
                 "Connections",
-                |_this, _, window, cx| {
-                    window
-                        .dispatch_action(zed_actions::assistant::OpenConnections.boxed_clone(), cx);
+                |this, _, window, cx| {
+                    this.activate_workspace_screen(WorkspaceScreenKind::Connections, window, cx);
                 },
             )
             .into_any_element(),
@@ -7932,9 +7930,8 @@ impl Sidebar {
                 "sidebar-activity-automations",
                 dx_icon(DxUiIcon::Automations),
                 "Automations",
-                |_this, _, window, cx| {
-                    window
-                        .dispatch_action(zed_actions::assistant::OpenAutomations.boxed_clone(), cx);
+                |this, _, window, cx| {
+                    this.activate_workspace_screen(WorkspaceScreenKind::Automations, window, cx);
                 },
             )
             .into_any_element(),
@@ -7956,7 +7953,7 @@ impl Sidebar {
                 dx_icon(DxUiIcon::Settings),
                 "Settings",
                 |_this, _, window, cx| {
-                    window.dispatch_action(Box::new(zed_actions::agent::OpenSettings), cx);
+                    window.dispatch_action(Box::new(zed_actions::OpenSettings), cx);
                 },
             )
             .into_any_element(),
@@ -9056,6 +9053,35 @@ impl Sidebar {
 
     fn active_workspace(&self, _cx: &App) -> Option<Entity<Workspace>> {
         self.active_workspace.clone()
+    }
+
+    fn dispatch_workspace_action(
+        &self,
+        action: &dyn gpui::Action,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(workspace) = self.active_workspace(cx) else {
+            return;
+        };
+
+        let focus_handle = workspace.read(cx).focus_handle(cx);
+        focus_handle.dispatch_action(action, window, cx);
+    }
+
+    fn activate_workspace_screen(
+        &self,
+        kind: WorkspaceScreenKind,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(workspace) = self.active_workspace(cx) else {
+            return;
+        };
+
+        workspace.update(cx, |workspace, cx| {
+            workspace.activate_screen_kind(kind, window, cx);
+        });
     }
 
     fn focus_agent_panel(&self, window: &mut Window, cx: &mut Context<Self>) {

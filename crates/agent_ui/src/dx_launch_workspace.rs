@@ -631,6 +631,8 @@ fn compact_status_row(
     value: impl Into<SharedString>,
     cx: &App,
 ) -> AnyElement {
+    let value = value.into();
+
     h_flex()
         .id(id)
         .items_center()
@@ -641,6 +643,7 @@ fn compact_status_row(
         .px_1()
         .py_0p5()
         .hover(|this| this.bg(cx.theme().colors().element_hover))
+        .tooltip(Tooltip::text(format!("{label}: {value}")))
         .child(
             h_flex()
                 .gap_1p5()
@@ -652,12 +655,6 @@ fn compact_status_row(
                         .color(Color::Default)
                         .truncate(),
                 ),
-        )
-        .child(
-            Label::new(value.into())
-                .size(LabelSize::XSmall)
-                .color(Color::Muted)
-                .truncate(),
         )
         .into_any_element()
 }
@@ -672,7 +669,11 @@ fn subagent_row(id: SharedString, row: &DxSubagentStatusRow, cx: &App) -> AnyEle
         .px_1()
         .py_0p5()
         .hover(|this| this.bg(cx.theme().colors().element_hover))
-        .tooltip(Tooltip::text(row.detail.clone()))
+        .tooltip(Tooltip::text(format!(
+            "{}: {}",
+            row.status.label(),
+            row.detail
+        )))
         .child(subagent_pixel_icon(row.status))
         .child(
             Label::new(row.label.clone())
@@ -701,12 +702,6 @@ fn subagent_status_badge(status: DxSubagentStatus) -> AnyElement {
             Icon::new(subagent_status_icon(status))
                 .size(IconSize::Indicator)
                 .color(Color::Custom(color)),
-        )
-        .child(
-            Label::new(status.label())
-                .size(LabelSize::XSmall)
-                .color(Color::Custom(color))
-                .truncate(),
         )
         .into_any_element()
 }

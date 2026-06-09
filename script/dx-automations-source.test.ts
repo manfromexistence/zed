@@ -256,8 +256,8 @@ test("DX Automations have a first-class workspace tab contract", () => {
     pane,
     /WorkspaceScreenKind::Agent\s*\|\s*WorkspaceScreenKind::Automations\s*\|\s*WorkspaceScreenKind::Connections\s*\|\s*WorkspaceScreenKind::Tools\s*\|\s*WorkspaceScreenKind::Onboarding/s,
   );
-  assert.match(sidebar, /"sidebar-toolbar-automations"[\s\S]*?zed_actions::assistant::OpenAutomations\.boxed_clone\(\)/);
-  assert.match(sidebar, /"sidebar-activity-automations"[\s\S]*?zed_actions::assistant::OpenAutomations\.boxed_clone\(\)/);
+  assert.match(sidebar, /"sidebar-toolbar-automations"[\s\S]*?activate_workspace_screen\(\s*WorkspaceScreenKind::Automations/);
+  assert.match(sidebar, /"sidebar-activity-automations"[\s\S]*?activate_workspace_screen\(WorkspaceScreenKind::Automations/);
   assert.match(titleBar, /WorkspaceScreenKind::Automations/);
   assert.match(titleBar, /zed_actions::assistant::OpenAutomations\.boxed_clone\(\)/);
   assert.doesNotMatch(automationScreen, /dummy|fake|OpenProjectDebugTasks/);

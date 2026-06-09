@@ -27,8 +27,8 @@ test("DX connection UI uses semantic icons and real Zed sidebar routes", () => {
   assert.match(dxIcons, /DxUiIcon::Credentials => IconName::LockOutlined/);
   assert.match(dxIcons, /DxUiIcon::Permissions => IconName::UserCheck/);
 
-  assert.match(sidebar, /"sidebar-toolbar-connections"[\s\S]*?dx_icon\(DxUiIcon::Connections\)[\s\S]*?"Connections"[\s\S]*?zed_actions::assistant::OpenConnections/);
-  assert.match(sidebar, /"sidebar-activity-connections"[\s\S]*?dx_icon\(DxUiIcon::Connections\)[\s\S]*?"Connections"[\s\S]*?zed_actions::assistant::OpenConnections/);
+  assert.match(sidebar, /"sidebar-toolbar-connections"[\s\S]*?dx_icon\(DxUiIcon::Connections\)[\s\S]*?"Connections"[\s\S]*?activate_workspace_screen\(\s*WorkspaceScreenKind::Connections/);
+  assert.match(sidebar, /"sidebar-activity-connections"[\s\S]*?dx_icon\(DxUiIcon::Connections\)[\s\S]*?"Connections"[\s\S]*?activate_workspace_screen\(WorkspaceScreenKind::Connections/);
   assert.match(agentPanel, /"dx-launch-connections"[\s\S]*?dx_icon\(DxUiIcon::Connections\)[\s\S]*?"Connections"[\s\S]*?zed_actions::assistant::OpenConnections/);
 });
 

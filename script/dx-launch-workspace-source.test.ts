@@ -117,6 +117,9 @@ test("empty workspaces render the no-project Agent state inside DX launch chrome
 test("collapsed workspace activity bar stays icon-only with hover details", () => {
   const sidebar = read("crates/sidebar/src/sidebar.rs");
   const activityBar = read("crates/sidebar/src/coding_activity_bar.rs");
+  const genToolbar = functionBody(sidebar, "render_gen_toolbar");
+  const activityToolbar = functionBody(sidebar, "render_coding_activity_bar");
+  const bottomBar = functionBody(sidebar, "render_sidebar_bottom_bar");
 
   assert.match(sidebar, /const CODING_ACTIVITY_BAR_WIDTH: Pixels = px\(48\.0\);/);
   assert.match(activityBar, /\.id\("workspace-sidebar-activity-bar"\)/);
@@ -151,6 +154,19 @@ test("collapsed workspace activity bar stays icon-only with hover details", () =
   assert.match(sidebar, /"sidebar-toolbar-extensions"[\s\S]*?dx_icon\(DxUiIcon::Extensions\)/);
   assert.match(sidebar, /"sidebar-toolbar-automations"[\s\S]*?dx_icon\(DxUiIcon::Automations\)/);
   assert.match(sidebar, /"sidebar-toolbar-settings"[\s\S]*?dx_icon\(DxUiIcon::Settings\)/);
+  assert.match(genToolbar, /\.on_click\(cx\.listener\(on_click\)\)/);
+  assert.match(activityToolbar, /\.on_click\(cx\.listener\(on_click\)\)/);
+  assert.match(bottomBar, /"sidebar-bottom-add-folder"[\s\S]*?\.on_click\(cx\.listener/);
+  assert.match(bottomBar, /IconButton::new\("history", IconName::Clock\)[\s\S]*?\.on_click\(cx\.listener/);
+  assert.match(sidebar, /fn dispatch_workspace_action\([\s\S]*?focus_handle\.dispatch_action\(action, window, cx\)/);
+  assert.match(sidebar, /"sidebar-toolbar-acp-registry"[\s\S]*?dispatch_workspace_action\(&zed_actions::AcpRegistry/);
+  assert.match(sidebar, /"sidebar-activity-acp-registry"[\s\S]*?dispatch_workspace_action\(&zed_actions::AcpRegistry/);
+  assert.match(sidebar, /fn activate_workspace_screen\([\s\S]*?WorkspaceScreenKind[\s\S]*?workspace\.activate_screen_kind\(kind, window, cx\)/);
+  assert.match(sidebar, /"sidebar-toolbar-plugins"[\s\S]*?activate_workspace_screen\(WorkspaceScreenKind::Tools/);
+  assert.match(sidebar, /"sidebar-activity-plugins"[\s\S]*?activate_workspace_screen\(WorkspaceScreenKind::Tools/);
+  assert.match(sidebar, /"sidebar-toolbar-automations"[\s\S]*?activate_workspace_screen\(\s*WorkspaceScreenKind::Automations/);
+  assert.match(sidebar, /"sidebar-activity-automations"[\s\S]*?activate_workspace_screen\(WorkspaceScreenKind::Automations/);
+  assert.doesNotMatch(sidebar, /zed_actions::agent::OpenSettings/);
   assert.doesNotMatch(sidebar, /"sidebar-toolbar-acp-registry"[\s\S]*?IconName::AcpRegistry/);
   assert.doesNotMatch(sidebar, /"sidebar-toolbar-extensions"[\s\S]*?IconName::ZedSrcExtension/);
   assert.doesNotMatch(sidebar, /"sidebar-toolbar-new-chat"/);

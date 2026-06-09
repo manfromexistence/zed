@@ -24,15 +24,11 @@ use language_model::{
     FastModeConfirmation, LanguageModelEffortLevel, LanguageModelId, LanguageModelProviderId,
     LanguageModelRegistry, Speed,
 };
-use liquid_glass::load_liquid_glass_backdrop_carrier;
 use settings::update_settings_file;
 use ui::{ButtonLike, SpinnerLabel, SpinnerVariant, SplitButton, SplitButtonStyle, Tab};
 use workspace::SERIALIZATION_THROTTLE_TIME;
 use workspace::notifications::NotificationId;
 
-use super::composer_liquid_glass::{
-    composer_glass_surface_style, render_composer_liquid_glass_layer,
-};
 use super::composer_profile_options::{
     ComposerOptionEntry, ComposerOptionSlot, ComposerProfileKind,
 };
@@ -3853,18 +3849,7 @@ impl ThreadView {
         let max_content_width = AgentSettings::get_global(cx).max_content_width;
         let has_messages = self.list_state.item_count() > 0;
         let expands_editor_area = editor_expanded && has_messages;
-        let glass_source = window
-            .use_keyed_state(
-                (
-                    "agent-composer-liquid-glass-source",
-                    cx.entity_id().as_u64(),
-                ),
-                cx,
-                |_, _| load_liquid_glass_backdrop_carrier(),
-            )
-            .read(cx)
-            .clone();
-        let glass_surface_style = composer_glass_surface_style(cx);
+        let colors = cx.theme().colors();
 
         h_flex()
             .px_2()
@@ -3894,8 +3879,8 @@ impl ThreadView {
                     .overflow_hidden()
                     .rounded_md()
                     .border_1()
-                    .border_color(glass_surface_style.border)
-                    .bg(glass_surface_style.background)
+                    .border_color(colors.border)
+                    .bg(colors.panel_background)
                     .p_1p5()
                     .shadow_sm()
                     .flex_shrink_1()
@@ -3906,13 +3891,6 @@ impl ThreadView {
                     .when(expands_editor_area, |this| this.h_full())
                     .justify_between()
                     .gap_1()
-                    .child(render_composer_liquid_glass_layer(glass_source))
-                    .when_some(
-                        glass_surface_style.readability_overlay,
-                        |this, background| {
-                            this.child(div().absolute().inset_0().size_full().bg(background))
-                        },
-                    )
                     .child(
                         v_flex()
                             .relative()

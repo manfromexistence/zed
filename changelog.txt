@@ -1,3 +1,35 @@
+[2026-06-09] - Sidebar Workspace Action Routing
+
+CHANGED:
+- `crates\sidebar\src\sidebar.rs` now routes expanded and collapsed sidebar Plugins, Connections, and Automations through the active `Workspace::activate_screen_kind` path so those buttons open/focus their real workspace screens instead of depending on sidebar focus action dispatch.
+- `crates\sidebar\src\sidebar.rs` now dispatches ACP Registry through the active workspace focus handle, and collapsed sidebar Settings now opens global settings rather than the Agent configuration action.
+- `script\dx-launch-workspace-source.test.ts`, `script\dx-agent-workspaces-source.test.ts`, `script\dx-automations-source.test.ts`, and `script\dx-agent-connections-ui-source.test.ts` now guard the real sidebar action routes and clickable toolbar/bottom-bar chrome.
+
+PASSED:
+- `rustfmt --edition 2024` on touched Rust files
+- `node --test script\dx-launch-workspace-source.test.ts script\dx-agent-workspaces-source.test.ts script\dx-automations-source.test.ts script\dx-agent-connections-ui-source.test.ts script\dx-agent-composer-liquid-glass-source.test.ts`
+- `git diff --check`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)"` across touched source, guard, todo, and changelog files returned no real conflict markers
+
+NOTES:
+- Source-only by instruction. `just run`, Cargo build/check/test/clippy, and runtime visual proof were not run.
+
+[2026-06-09] - AI Composer Glass Removal
+
+CHANGED:
+- `crates\agent_ui\src\conversation_view\thread_view.rs` now renders the Agent composer with normal GPUI panel chrome instead of mounting a Liquid Glass backdrop layer.
+- `crates\agent_ui\src\conversation_view.rs`, `crates\agent_ui\Cargo.toml`, and the removed `composer_liquid_glass.rs` module drop the Agent composer Liquid Glass dependency path.
+- `crates\agent_ui\src\dx_launch_workspace.rs` keeps the Agent fullscreen right-rail accordion sections and row labels, but hides compact badge value/status text from the visible rail chrome while keeping row values in tooltips.
+- `script\dx-agent-composer-liquid-glass-source.test.ts` now guards the non-glass composer contract so the Liquid Glass input box does not return by accident.
+
+PASSED:
+- `rustfmt --edition 2024` on touched Rust files
+- `node --test script\dx-agent-composer-liquid-glass-source.test.ts`
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. `just run`, Cargo build/check/test/clippy, and runtime visual proof were not run.
+
 [2026-06-09] - Screen Dock Navigation Polish
 
 CHANGED:

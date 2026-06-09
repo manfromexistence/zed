@@ -69,10 +69,11 @@ test("DX agent workspace taxonomy has first-class Zed screens", () => {
   assert.match(agentWorkspace, /"dx-agent-overview-active-thread"[\s\S]*?dx_icon\(DxUiIcon::Agent\)/);
   assert.match(agentWorkspace, /"dx-agent-threads-active"[\s\S]*?dx_icon\(DxUiIcon::Agent\)/);
 
-  assert.match(sidebar, /"sidebar-toolbar-connections"[\s\S]*?zed_actions::assistant::OpenConnections/);
-  assert.match(sidebar, /"sidebar-activity-connections"[\s\S]*?zed_actions::assistant::OpenConnections/);
-  assert.match(sidebar, /"sidebar-toolbar-plugins"[\s\S]*?zed_actions::assistant::OpenTools/);
-  assert.match(sidebar, /"sidebar-activity-plugins"[\s\S]*?zed_actions::assistant::OpenTools/);
+  assert.match(sidebar, /fn activate_workspace_screen\([\s\S]*?workspace\.activate_screen_kind\(kind, window, cx\)/);
+  assert.match(sidebar, /"sidebar-toolbar-connections"[\s\S]*?activate_workspace_screen\(\s*WorkspaceScreenKind::Connections/);
+  assert.match(sidebar, /"sidebar-activity-connections"[\s\S]*?activate_workspace_screen\(WorkspaceScreenKind::Connections/);
+  assert.match(sidebar, /"sidebar-toolbar-plugins"[\s\S]*?activate_workspace_screen\(WorkspaceScreenKind::Tools/);
+  assert.match(sidebar, /"sidebar-activity-plugins"[\s\S]*?activate_workspace_screen\(WorkspaceScreenKind::Tools/);
 
   assert.match(dxWorkspace, /^mod agent_workspace;$/m);
   assert.match(dxWorkspace, /pub background_thread_count: usize/);
