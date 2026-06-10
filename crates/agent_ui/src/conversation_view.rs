@@ -16,7 +16,7 @@ use agent_servers::{AgentServer, GEMINI_TERMINAL_AUTH_METHOD_ID};
 use agent_settings::{AgentProfileId, AgentSettings};
 use anyhow::{Result, anyhow};
 #[cfg(feature = "audio")]
-use audio::{Audio, AudioPlaybackHandle, AudioSettings, Sound};
+use audio::{Audio, AudioPlaybackHandle, AudioSettings, DxSoundEvent};
 use buffer_diff::BufferDiff;
 use client::zed_urls;
 use collections::{HashMap, HashSet, IndexMap};
@@ -2625,7 +2625,7 @@ impl ConversationView {
             };
         let settings = AgentSettings::get_global(cx);
         if settings.play_sound_when_agent_done.should_play(visible) {
-            Audio::play_sound(Sound::AgentDone, cx);
+            Audio::play_dx_sound(DxSoundEvent::SuccessChime, cx);
         }
     }
 

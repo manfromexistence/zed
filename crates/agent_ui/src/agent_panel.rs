@@ -100,7 +100,7 @@ use agent_settings::AgentSettings;
 use ai_onboarding::AgentPanelOnboarding;
 use anyhow::Result;
 #[cfg(feature = "audio")]
-use audio::{Audio, Sound};
+use audio::{Audio, DxSoundEvent};
 use chrono::{DateTime, Utc};
 use client::{UserStore, zed_urls};
 use cloud_api_types::Plan;
@@ -3055,7 +3055,7 @@ impl AgentPanel {
     fn play_terminal_notification_sound(&self, visible: bool, cx: &mut App) {
         let settings = AgentSettings::get_global(cx);
         if settings.play_sound_when_agent_done.should_play(visible) {
-            Audio::play_sound(Sound::AgentDone, cx);
+            Audio::play_dx_sound(DxSoundEvent::SuccessChime, cx);
         }
     }
 

@@ -10,6 +10,9 @@ mod audio_settings;
 pub use audio_settings::AudioSettings;
 pub use audio_settings::LIVE_SETTINGS;
 
+mod dx_sounds;
+pub use dx_sounds::{DxSoundEvent, DxSoundPolicy};
+
 mod audio_pipeline;
 pub use audio_pipeline::{Audio, AudioPlaybackHandle};
 pub use audio_pipeline::{AudioDeviceInfo, AvailableAudioDevices};

@@ -1,3 +1,23 @@
+[2026-06-10] - DX Sound Playback Wiring
+
+ADDED:
+- `crates\audio\src\dx_sounds.rs` defines semantic DX sound events, safe default playback policy, and per-event cooldowns over the bundled sound assets.
+- `script\dx-sound-source.test.ts` guards asset/enumeration sync, throttled semantic playback, and the first safe UI call sites.
+
+CHANGED:
+- `crates\audio\src\audio_pipeline.rs` now exposes `Audio::play_dx_sound`, reusing the existing decoded source cache and output mixer while throttling repeated semantic events.
+- Workspace screen activation and panel open/close paths now play semantic screen/panel sounds after real state changes.
+- Sidebar chat reorder, chat-to-grid drops, and allowed thread delete/archive actions now play semantic drag/drop/delete sounds.
+- Agent completion notifications now use the DX success chime through the existing agent-done sound preference.
+
+PASSED:
+- `node --test .\script\dx-sound-source.test.ts`
+- `rustfmt --edition 2024 crates\audio\src\audio.rs crates\audio\src\audio_pipeline.rs crates\audio\src\dx_sounds.rs crates\sidebar\src\sidebar.rs crates\workspace\src\workspace.rs crates\workspace\src\dock.rs crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\conversation_view.rs`
+
+NOTES:
+- Typing and hover sounds are represented as explicit opt-in semantic events but are not wired to hot-path editor input yet; that needs a user-facing preference first to avoid hurting editor latency.
+- Source-only pass. Cargo, build, runtime native proof, and `just run` remain deferred by instruction.
+
 [2026-06-10] - DX Sound Asset Pack Foundation
 
 ADDED:

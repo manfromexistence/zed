@@ -22,6 +22,7 @@ use agent_ui::{
     NewThread, RemoveSelectedThread, RenameSelectedThread, TerminalId, ThreadId, ThreadImportModal,
     channels_with_threads, import_threads_from_other_channels,
 };
+use audio::{Audio, DxSoundEvent};
 use chrono::{DateTime, Utc};
 use editor::Editor;
 use feature_flags::{
@@ -6079,8 +6080,10 @@ impl Sidebar {
                     let workspace = thread.workspace.clone();
                     let draft_id = thread.metadata.thread_id;
                     self.remove_draft(draft_id, &workspace, window, cx);
+                    Audio::play_dx_sound(DxSoundEvent::DeleteSoft, cx);
                 } else if let Some(session_id) = thread.metadata.session_id.clone() {
                     self.archive_thread(&session_id, window, cx);
+                    Audio::play_dx_sound(DxSoundEvent::DeleteSoft, cx);
                 }
             }
             Some(ListEntry::Terminal(terminal)) => {
@@ -6199,6 +6202,7 @@ impl Sidebar {
         self.manual_thread_order = ordered_thread_ids;
         self.thread_sort_mode = SidebarThreadSortMode::Manual;
         self.update_entries(cx);
+        Audio::play_dx_sound(DxSoundEvent::DragWatchTick, cx);
         self.serialize(cx);
         cx.notify();
     }
@@ -8576,6 +8580,7 @@ impl Sidebar {
         self.grid_shortcuts.insert(0, shortcut);
         self.grid_shortcuts.truncate(MAX_SIDEBAR_GRID_SHORTCUTS);
         self.grid_entry_cache.borrow_mut().clear();
+        Audio::play_dx_sound(DxSoundEvent::ChatDropMagic, cx);
         self.serialize(cx);
         cx.notify();
     }

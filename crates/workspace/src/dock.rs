@@ -5,6 +5,7 @@ use crate::status_bar::HideStatusItem;
 use crate::{DraggedDock, Event, FocusFollowsMouse, ModalLayer, Pane, WorkspaceSettings};
 use crate::{Workspace, status_bar::StatusItemView};
 use anyhow::Context as _;
+use audio::{Audio, DxSoundEvent};
 use client::proto;
 use db::kvp::KeyValueStore;
 
@@ -1299,6 +1300,7 @@ impl Dock {
                         if this.is_panel_stacked(panel_id)
                             && this.unstack_panel(panel_id, window, cx)
                         {
+                            Audio::play_dx_sound(DxSoundEvent::PanelClose, cx);
                             return;
                         }
                         if this
@@ -1306,6 +1308,7 @@ impl Dock {
                             .is_some_and(|p| p.panel_id() == panel_id)
                         {
                             this.set_open(false, window, cx);
+                            Audio::play_dx_sound(DxSoundEvent::PanelClose, cx);
                         }
                     }
                 },

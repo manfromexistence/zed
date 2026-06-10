@@ -17,6 +17,7 @@ use std::{
         Arc,
         atomic::{AtomicBool, Ordering},
     },
+    time::Instant,
 };
 use util::ResultExt;
 
@@ -28,7 +29,7 @@ pub use rodio_ext::RodioExt;
 
 use crate::audio_settings::LIVE_SETTINGS;
 
-use crate::Sound;
+use crate::{DxSoundEvent, DxSoundPolicy, Sound};
 
 use super::{CHANNEL_COUNT, SAMPLE_RATE};
 pub const BUFFER_SIZE: usize = // echo canceller and livekit want 10ms of audio
@@ -60,6 +61,7 @@ pub struct Audio {
     output: Option<(MixerDeviceSink, Mixer)>,
     pub echo_canceller: EchoCanceller,
     source_cache: HashMap<Sound, Buffered<Decoder<Cursor<Vec<u8>>>>>,
+    dx_sound_last_played: HashMap<DxSoundEvent, Instant>,
 }
 
 impl Global for Audio {}
@@ -182,6 +184,40 @@ impl Audio {
             output_mixer.add(source);
             Some(())
         });
+    }
+
+    pub fn play_dx_sound(event: DxSoundEvent, cx: &mut App) {
+        if event.policy() == DxSoundPolicy::ExplicitOptIn {
+            return;
+        }
+
+        let output_audio_device = AudioSettings::get_global(cx).output_audio_device.clone();
+        cx.update_default_global(|this: &mut Self, cx| {
+            if !this.should_play_dx_sound(event) {
+                return Some(());
+            }
+
+            let source = this.sound_source(event.sound(), cx).log_err()?;
+            let output_mixer = this
+                .ensure_output_exists(output_audio_device)
+                .context("Could not get output mixer")
+                .log_err()?;
+
+            output_mixer.add(source);
+            Some(())
+        });
+    }
+
+    fn should_play_dx_sound(&mut self, event: DxSoundEvent) -> bool {
+        let now = Instant::now();
+        if let Some(last_played) = self.dx_sound_last_played.get(&event)
+            && now.duration_since(*last_played) < event.cooldown()
+        {
+            return false;
+        }
+
+        self.dx_sound_last_played.insert(event, now);
+        true
     }
 
     pub fn play_wav_file(path: &Path, cx: &mut App) -> Result<()> {
