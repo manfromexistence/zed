@@ -251,16 +251,6 @@ pub(crate) fn storage_heat_level(file_bytes: u64, max_file_bytes: u64) -> u8 {
     scaled.clamp(1, 4) as u8
 }
 
-pub(crate) fn heat_label(heat_level: u8) -> &'static str {
-    match heat_level {
-        4 => "High",
-        3 => "Medium",
-        2 => "Low",
-        1 => "Low",
-        _ => "Empty",
-    }
-}
-
 pub(crate) fn format_file_size(bytes: u64) -> String {
     const UNITS: [&str; 5] = ["B", "KB", "MB", "GB", "TB"];
     let mut value = bytes as f64;

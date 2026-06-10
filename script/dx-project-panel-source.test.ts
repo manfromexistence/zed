@@ -133,7 +133,7 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
     /visible_file_bytes: visible_summary\.file_bytes/,
     "DX Explorer storage counts must read the cached visible summary",
   );
-  assert.match(dxExplorerSummary, /selected_entry_count,/);
+  assert.doesNotMatch(dxExplorerSummary, /selected_entry_count,/);
   assert.match(
     dxExplorerSummary,
     /expanded_dir_count:[\s\S]*self[\s\S]*\.state[\s\S]*expanded_dir_ids[\s\S]*\.sum\(\)/,
@@ -225,7 +225,8 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   );
   assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-source-controls"\)/);
   assert.match(renderDxExplorerHeader, /\.id\("dx-explorer-edit-controls"\)/);
-  assert.match(renderDxExplorerHeader, /PopoverMenu::new\("dx-explorer-project-options-menu"\)/);
+  assert.match(renderDxExplorerHeader, /SharedString::from\(format!\("dx-explorer-project-options-menu-\{panel_id:\?\}"\)\)/);
+  assert.match(renderDxExplorerHeader, /PopoverMenu::new\(project_options_menu_id\)/);
   assert.match(renderDxExplorerHeader, /action_checked_with_disabled\(/);
   assert.doesNotMatch(renderDxExplorerHeader, /\.id\("dx-explorer-filter-controls"\)/);
   assert.doesNotMatch(renderDxExplorerHeader, /\.id\("dx-explorer-view-controls"\)/);
@@ -280,7 +281,7 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   );
   assert.match(
     renderDxExplorerHeader,
-    /"dx-explorer-project-options"[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&project_options_focus_handle\)[\s\S]*Tooltip::text\("Project options"\)/,
+    /IconButton::new\(project_options_button_id,[\s\S]*IconName::Ellipsis[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&project_options_focus_handle\)[\s\S]*Tooltip::text\("Project options"\)/,
     "Secondary Project controls should move behind a focus-tracked overflow menu",
   );
   assert.match(
@@ -354,7 +355,7 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   );
   assert.match(
     source,
-    /let dx_explorer_summary =\s*self\.dx_explorer_summary\(selected_entry_count, dx_explorer_source_kind\);/,
+    /let dx_explorer_summary =\s*self\.dx_explorer_summary\(dx_explorer_source_kind\);/,
   );
   assert.match(
     source,
@@ -1017,15 +1018,15 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   );
   assert.match(
     renderStorageDrilldown,
-    /ListHeader::new\("Folder Storage"\)[\s\S]*\.end_slot(?:::<[^>]+>)?\([\s\S]*sort_mode\.status_label\(\)[\s\S]*\.children\(metrics\)[\s\S]*PopoverMenu::new\("dx-explorer-storage-sort-menu"\)/,
+    /ListHeader::new\("Folder Storage"\)[\s\S]*\.end_slot(?:::<[^>]+>)?\([\s\S]*sort_mode\.status_label\(\)[\s\S]*\.children\(metrics\)[\s\S]*PopoverMenu::new\(storage_sort_menu_id\)/,
   );
   assert.match(
     renderStorageDrilldown,
-    /IconButton::new\(\s*"dx-explorer-storage-sort-button",[\s\S]*IconName::ListFilter,[\s\S]*\)[\s\S]*\.shape\(IconButtonShape::Square\)[\s\S]*\.style\(ButtonStyle::Subtle\)[\s\S]*\.icon_size\(IconSize::Small\)[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&self\.focus_handle\(cx\)\)/,
+    /IconButton::new\(\s*storage_sort_button_id,[\s\S]*IconName::ListFilter,[\s\S]*\)[\s\S]*\.shape\(IconButtonShape::Square\)[\s\S]*\.style\(ButtonStyle::Subtle\)[\s\S]*\.icon_size\(IconSize::Small\)[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&self\.focus_handle\(cx\)\)/,
   );
   assert.match(
     renderStorageDrilldown,
-    /div\(\)[\s\S]*\.flex_none\(\)[\s\S]*\.child\([\s\S]*PopoverMenu::new\("dx-explorer-storage-sort-menu"\)/,
+    /div\(\)[\s\S]*\.flex_none\(\)[\s\S]*\.child\([\s\S]*PopoverMenu::new\(storage_sort_menu_id\)/,
   );
   assert.doesNotMatch(
     renderStorageDrilldown,
@@ -1132,7 +1133,8 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(storage, /StorageSortMode::Modified/);
   assert.match(storage, /pub\(crate\) fn status_label\(self\) -> String/);
   assert.match(storage, /pub\(crate\) fn menu_label\(self, current: Self\) -> String/);
-  assert.match(storage, /pub\(crate\) fn heat_label\(heat_level: u8\) -> &'static str/);
+  assert.doesNotMatch(storage, /pub\(crate\) fn heat_label\(heat_level: u8\) -> &'static str/);
+  assert.match(storage, /pub\(crate\) fn storage_heat_level\(file_bytes: u64, max_file_bytes: u64\) -> u8/);
   assert.match(storage, /pub\(crate\) fn format_file_size\(bytes: u64\) -> String/);
   assert.match(storage, /pub\(crate\) struct FolderStorageSummary/);
   assert.match(storage, /largest_files:\s*Vec<FolderStorageFile>/);
@@ -1223,7 +1225,8 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(storageDrilldownItems, /rank_storage_folder_items\(items, storage_sort_mode\)/);
   assert.match(renderStorageDrilldown, /ListHeader::new\("Folder Storage"\)/);
   assert.match(renderStorageDrilldown, /StorageSortMode::ALL/);
-  assert.match(renderStorageDrilldown, /PopoverMenu::new\("dx-explorer-storage-sort-menu"\)/);
+  assert.match(renderStorageDrilldown, /SharedString::from\(format!\("dx-explorer-storage-sort-menu-\{panel_id:\?\}"\)\)/);
+  assert.match(renderStorageDrilldown, /IconButton::new\(\s*storage_sort_button_id,\s*IconName::ListFilter/);
   assert.match(renderStorageDrilldown, /sort_mode\.status_label\(\)/);
   assert.match(renderStorageDrilldown, /mode\.menu_label\(sort_mode\)/);
   assert.doesNotMatch(
@@ -1238,7 +1241,7 @@ test("project panel storage overview and root shortcuts stay cached and professi
   );
   assert.match(renderStorageDrilldownRow, /format_file_size\(item\.file_bytes\)/);
   assert.match(renderStorageDrilldownRow, /storage::format_modified_label\(item\.latest_modified_at\)/);
-  assert.match(renderStorageDrilldownRow, /storage::heat_label\(item\.heat_level\)/);
+  assert.doesNotMatch(renderStorageDrilldownRow, /storage::heat_label\(item\.heat_level\)/);
   assert.match(renderStorageDrilldownRow, /item\.path_label/);
   assert.match(renderStorageDrilldownRow, /Tooltip::with_meta\("Folder"/);
   assert.match(renderStorageDrilldownRow, /Largest files:/);
@@ -1264,7 +1267,8 @@ test("project panel storage overview and root shortcuts stay cached and professi
     /\.on_click\(cx\.listener\(move \|this, _, window, cx\|[\s\S]*this\.focus_handle\(cx\)\.focus\(window, cx\)[\s\S]*this\.expand_entry\(target\.worktree_id, target\.entry_id, cx\)[\s\S]*this\.update_visible_entries\([\s\S]*Some\(\(target\.worktree_id, target\.entry_id\)\)[\s\S]*true,[\s\S]*window,[\s\S]*cx/,
     "storage drilldown ListItem clicks must focus, expand, select, and scroll to the real folder",
   );
-  assert.match(renderStorageDrilldownRow, /\.start_slot::<AnyElement>\([\s\S]*render_dx_explorer_storage_heat_indicator\(item\.heat_level\)[\s\S]*Label::new\(heat_label\)/);
+  assert.match(renderStorageDrilldownRow, /\.start_slot::<AnyElement>\([\s\S]*render_dx_explorer_storage_heat_indicator\(item\.heat_level\)[\s\S]*\.into_any_element\(\)/);
+  assert.doesNotMatch(renderStorageDrilldownRow, /Label::new\(heat_label\)/);
   assert.match(renderStorageDrilldownRow, /\.child\([\s\S]*Label::new\(item\.label\)[\s\S]*\.truncate\(\)/);
   assert.match(renderStorageDrilldownRow, /\.end_slot::<AnyElement>\([\s\S]*Label::new\(format!\("\{file_count\} \/ \{storage_label\}"\)\)/);
   assert.doesNotMatch(

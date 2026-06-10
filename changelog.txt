@@ -1,3 +1,18 @@
+[2026-06-10] - Forge Tabs Project Storage And Voice TTS Polish
+
+FIXED:
+- `crates\agent_ui\src\dx_forge_panel\tabs.rs` and `panel_view.rs` now scope Forge tab IDs per panel entity, stretch tab triggers across the bar, and switch tabs without refocusing the dock during click handling.
+- `crates\project_panel\src\project_panel.rs` and `storage.rs` no longer render Low/High folder-storage heat labels, and Project/storage popover trigger IDs are scoped per panel entity for fullscreen/panel hosts.
+- `crates\agent_ui\src\conversation_view\voice_controls.rs` and `thread_view.rs` now separate mic/STT from speaker/Kokoro TTS, read the latest assistant response from the speaker button, surface TTS readiness text, and refresh Flow voice readiness after an idle delay without launching heavy model work.
+
+PASSED:
+- `node --test script\dx-agent-voice-controls-source.test.ts script\dx-project-panel-source.test.ts script\dx-forge-panel-source.test.ts`
+- `rustfmt --edition 2024 --check` on touched Rust files
+- `git diff --check`
+
+NOTES:
+- Source-only pass by current prompt. `just run`, Cargo build/check/test/clippy, and runtime native proof were not run.
+
 [2026-06-09] - J6 Validation And AI Screen Dock Active State
 
 FIXED:

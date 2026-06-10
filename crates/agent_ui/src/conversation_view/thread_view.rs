@@ -643,6 +643,7 @@ pub struct ThreadView {
     flow_transcription_id: u64,
     flow_playback_id: u64,
     _flow_speech_task: Option<Task<()>>,
+    _flow_voice_runtime_refresh_task: Option<Task<()>>,
     pub add_context_menu_handle: PopoverMenuHandle<ContextMenu>,
     pub thinking_effort_menu_handle: PopoverMenuHandle<ContextMenu>,
     pub fast_mode_menu_handle: PopoverMenuHandle<ContextMenu>,
@@ -927,6 +928,7 @@ impl ThreadView {
             stt_ready: flow_voice_runtime.stt_available(),
             stt_status: flow_voice_runtime.stt_readiness_summary().into(),
             tts_ready: flow_voice_runtime.tts_available(),
+            tts_status: flow_voice_runtime.tts_readiness_summary().into(),
         };
 
         let mut this = Self {
@@ -998,6 +1000,7 @@ impl ThreadView {
             flow_transcription_id: 0,
             flow_playback_id: 0,
             _flow_speech_task: None,
+            _flow_voice_runtime_refresh_task: None,
             add_context_menu_handle: PopoverMenuHandle::default(),
             thinking_effort_menu_handle: PopoverMenuHandle::default(),
             fast_mode_menu_handle: PopoverMenuHandle::default(),
@@ -1016,6 +1019,7 @@ impl ThreadView {
 
         this.sync_generating_indicator(cx);
         this.sync_editor_mode_for_empty_state(cx);
+        this.schedule_flow_voice_runtime_refresh(cx);
         let list_state_for_scroll = this.list_state.clone();
         let thread_view = cx.entity().downgrade();
 
@@ -1073,6 +1077,21 @@ impl ThreadView {
                 if let Some(thread) = this.as_native_thread(cx) {
                     thread.update(cx, |_thread, cx| cx.notify());
                 }
+            })
+            .ok();
+        }));
+    }
+
+    fn schedule_flow_voice_runtime_refresh(&mut self, cx: &mut Context<Self>) {
+        self._flow_voice_runtime_refresh_task = Some(cx.spawn(async move |this, cx| {
+            cx.background_executor().timer(Duration::from_secs(2)).await;
+            let runtime = cx
+                .background_executor()
+                .spawn(async move { FlowSpeechRuntime::detect() })
+                .await;
+            this.update(cx, |this, cx| {
+                this.refresh_flow_voice_runtime_availability(&runtime);
+                cx.notify();
             })
             .ok();
         }));
@@ -4183,6 +4202,9 @@ impl ThreadView {
             cx.listener(|this, _event, window, cx| {
                 this.toggle_flow_voice_recording(window, cx);
             }),
+            cx.listener(|this, _event, _window, cx| {
+                this.toggle_flow_read_aloud_latest_response(cx);
+            }),
         )
     }
 
@@ -4191,6 +4213,7 @@ impl ThreadView {
         self.composer_voice_availability.stt_ready = runtime.stt_available();
         self.composer_voice_availability.stt_status = runtime.stt_readiness_summary().into();
         self.composer_voice_availability.tts_ready = runtime.tts_available();
+        self.composer_voice_availability.tts_status = runtime.tts_readiness_summary().into();
     }
 
     fn toggle_flow_voice_recording(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -4404,6 +4427,31 @@ impl ThreadView {
             self.composer_voice_state
                 .set_ready("Flow voice error dismissed");
             cx.notify();
+        }
+    }
+
+    fn toggle_flow_read_aloud_latest_response(&mut self, cx: &mut Context<Self>) {
+        if matches!(
+            self.composer_voice_state.phase(),
+            ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking
+        ) {
+            self.stop_flow_voice_playback(cx);
+            return;
+        }
+
+        let latest_response_text = {
+            let thread = self.thread.read(cx);
+            Self::latest_agent_response_content(thread.entries(), cx)
+        };
+
+        match latest_response_text {
+            Some(text) => self.speak_agent_response_text(text, cx),
+            None => {
+                let message = "No agent response is available for Kokoro read-aloud";
+                self.composer_voice_state.set_error(message);
+                self.show_flow_voice_toast(message, cx);
+                cx.notify();
+            }
         }
     }
 

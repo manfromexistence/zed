@@ -36,6 +36,7 @@ pub struct Tab {
     selected_bottom_border: bool,
     position: TabPosition,
     close_side: TabCloseSide,
+    fill_available_width: bool,
     start_slot: Option<AnyElement>,
     end_slot: Option<AnyElement>,
     children: SmallVec<[AnyElement; 2]>,
@@ -52,6 +53,7 @@ impl Tab {
             selected_bottom_border: false,
             position: TabPosition::First,
             close_side: TabCloseSide::End,
+            fill_available_width: false,
             start_slot: None,
             end_slot: None,
             children: SmallVec::new(),
@@ -88,6 +90,11 @@ impl Tab {
 
     pub fn selected_bottom_border(mut self, selected_bottom_border: bool) -> Self {
         self.selected_bottom_border = selected_bottom_border;
+        self
+    }
+
+    pub fn fill_available_width(mut self) -> Self {
+        self.fill_available_width = true;
         self
     }
 }
@@ -150,6 +157,7 @@ impl RenderOnce for Tab {
 
         self.div
             .h(Tab::container_height(cx))
+            .when(self.fill_available_width, |this| this.flex_1().min_w_0())
             .bg(tab_bg)
             .border_color(cx.theme().colors().border)
             .map(|this| match self.position {
@@ -194,6 +202,9 @@ impl RenderOnce for Tab {
                     .group("")
                     .relative()
                     .h(Tab::content_height(cx))
+                    .when(self.fill_available_width, |this| {
+                        this.w_full().min_w_0().justify_center()
+                    })
                     .px(DynamicSpacing::Base04.px(cx))
                     .gap(DynamicSpacing::Base04.rems(cx))
                     .text_color(text_color)

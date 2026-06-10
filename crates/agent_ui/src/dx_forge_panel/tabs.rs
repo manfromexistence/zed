@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use gpui::{App, IntoElement, WeakEntity};
+use gpui::{App, EntityId, IntoElement, WeakEntity};
 use ui::{DxUiIcon, IconName, Tab, TabBar, TabPosition, Tooltip, dx_icon, prelude::*};
 
 use super::{
@@ -12,16 +12,18 @@ use super::{
 pub(super) fn render_tab_bar(
     snapshot: &DxForgePanelSnapshot,
     active_tab: DxForgePanelTab,
+    panel_id: EntityId,
     panel: &WeakEntity<DxForgePanel>,
     _cx: &App,
 ) -> impl IntoElement {
-    TabBar::new("dx-forge-tab-bar")
+    TabBar::new(SharedString::from(format!("dx-forge-tab-bar-{panel_id:?}")))
         .child(forge_tab(
             "dx-forge-tab-repository",
             "Repository",
             visible_row_count_for_tab(snapshot, DxForgePanelTab::Repository),
             DxForgePanelTab::Repository,
             active_tab,
+            panel_id,
             panel,
         ))
         .child(forge_tab(
@@ -30,6 +32,7 @@ pub(super) fn render_tab_bar(
             visible_row_count_for_tab(snapshot, DxForgePanelTab::Packages),
             DxForgePanelTab::Packages,
             active_tab,
+            panel_id,
             panel,
         ))
         .child(forge_tab(
@@ -38,6 +41,7 @@ pub(super) fn render_tab_bar(
             visible_row_count_for_tab(snapshot, DxForgePanelTab::Media),
             DxForgePanelTab::Media,
             active_tab,
+            panel_id,
             panel,
         ))
         .child(forge_tab(
@@ -46,6 +50,7 @@ pub(super) fn render_tab_bar(
             visible_row_count_for_tab(snapshot, DxForgePanelTab::Remotes),
             DxForgePanelTab::Remotes,
             active_tab,
+            panel_id,
             panel,
         ))
 }
@@ -56,13 +61,15 @@ fn forge_tab(
     count: usize,
     tab: DxForgePanelTab,
     active_tab: DxForgePanelTab,
+    panel_id: EntityId,
     panel: &WeakEntity<DxForgePanel>,
 ) -> impl IntoElement {
     let selected = active_tab == tab;
     let panel = panel.clone();
     let title = format!("{label} ({count})");
 
-    Tab::new(id)
+    Tab::new(SharedString::from(format!("{id}-{panel_id:?}")))
+        .fill_available_width()
         .position(tab_position(tab, active_tab))
         .toggle_state(selected)
         .selected_bottom_border(true)
@@ -82,10 +89,9 @@ fn forge_tab(
                 .truncate(),
         )
         .tooltip(Tooltip::text(title))
-        .on_click(move |_, window, cx| {
+        .on_click(move |_, _window, cx| {
             panel
                 .update(cx, |panel, cx| {
-                    panel.focus_panel(window, cx);
                     panel.set_active_tab(tab, cx);
                 })
                 .ok();

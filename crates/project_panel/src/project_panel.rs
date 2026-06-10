@@ -4320,6 +4320,11 @@ impl ProjectPanel {
             .collect::<Vec<_>>();
         let sort_mode = self.storage_sort_mode;
         let panel = cx.entity().downgrade();
+        let panel_id = cx.entity().entity_id();
+        let storage_sort_menu_id =
+            SharedString::from(format!("dx-explorer-storage-sort-menu-{panel_id:?}"));
+        let storage_sort_button_id =
+            SharedString::from(format!("dx-explorer-storage-sort-button-{panel_id:?}"));
         let mut metrics = Vec::new();
         if overview.visible_file_count > 0 {
             metrics.push(Self::render_dx_explorer_metric(
@@ -4372,10 +4377,10 @@ impl ProjectPanel {
                                 .children(metrics)
                                 .child(
                                     div().flex_none().child(
-                                        PopoverMenu::new("dx-explorer-storage-sort-menu")
+                                        PopoverMenu::new(storage_sort_menu_id)
                                         .trigger_with_tooltip(
                                             IconButton::new(
-                                                "dx-explorer-storage-sort-button",
+                                                storage_sort_button_id,
                                                 IconName::ListFilter,
                                             )
                                             .shape(IconButtonShape::Square)
@@ -4448,7 +4453,6 @@ impl ProjectPanel {
         let file_count = Self::dx_explorer_count_label(item.file_count, "file", "files");
         let storage_label = storage::format_file_size(item.file_bytes);
         let modified_label = storage::format_modified_label(item.latest_modified_at);
-        let heat_label = storage::heat_label(item.heat_level);
         let largest_files = item
             .largest_files
             .iter()
@@ -4496,12 +4500,6 @@ impl ProjectPanel {
                 .items_center()
                 .gap_1()
                 .child(render_dx_explorer_storage_heat_indicator(item.heat_level))
-                .child(
-                    Label::new(heat_label)
-                        .size(LabelSize::Small)
-                        .color(Color::Muted)
-                        .truncate(),
-                )
                 .into_any_element(),
         )
         .child(
@@ -4656,6 +4654,11 @@ impl ProjectPanel {
         let new_folder_tooltip_focus_handle = new_folder_focus_handle.clone();
         let project_options_focus_handle = header_focus_handle.clone();
         let panel_for_project_options = cx.entity().downgrade();
+        let panel_id = cx.entity().entity_id();
+        let project_options_menu_id =
+            SharedString::from(format!("dx-explorer-project-options-menu-{panel_id:?}"));
+        let project_options_button_id =
+            SharedString::from(format!("dx-explorer-project-options-{panel_id:?}"));
 
         let header_summary_meta = [
             format!("Source: {source_label}"),
@@ -4810,9 +4813,9 @@ impl ProjectPanel {
                     ),
             )
             .child(
-                PopoverMenu::new("dx-explorer-project-options-menu")
+                PopoverMenu::new(project_options_menu_id)
                     .trigger_with_tooltip(
-                        IconButton::new("dx-explorer-project-options", IconName::Ellipsis)
+                        IconButton::new(project_options_button_id, IconName::Ellipsis)
                             .shape(IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
                             .icon_size(IconSize::Small)

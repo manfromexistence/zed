@@ -40,6 +40,7 @@ pub(super) struct ComposerVoiceAvailability {
     pub(super) stt_ready: bool,
     pub(super) stt_status: SharedString,
     pub(super) tts_ready: bool,
+    pub(super) tts_status: SharedString,
 }
 
 impl Default for ComposerVoiceState {
@@ -152,12 +153,30 @@ impl ComposerVoiceState {
             ComposerVoicePhase::Ready => "Record voice input with Flow".into(),
         }
     }
+
+    fn read_aloud_tooltip(&self, availability: &ComposerVoiceAvailability) -> SharedString {
+        match self.phase {
+            ComposerVoicePhase::Recording | ComposerVoicePhase::Transcribing => {
+                "Finish Flow voice input before reading aloud".into()
+            }
+            ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking => {
+                "Stop Kokoro read-aloud".into()
+            }
+            ComposerVoicePhase::Ready | ComposerVoicePhase::Error if !availability.tts_ready => {
+                availability.tts_status.clone()
+            }
+            ComposerVoicePhase::Ready | ComposerVoicePhase::Error => {
+                "Read the latest agent response aloud with Kokoro".into()
+            }
+        }
+    }
 }
 
 pub(super) fn render_voice_buttons(
     state: &ComposerVoiceState,
     availability: ComposerVoiceAvailability,
     on_voice_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+    on_read_aloud_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
 ) -> Vec<AnyElement> {
     let voice_icon = match state.phase {
         ComposerVoicePhase::Recording | ComposerVoicePhase::Transcribing => IconName::Stop,
@@ -176,6 +195,26 @@ pub(super) fn render_voice_buttons(
         ComposerVoicePhase::Ready | ComposerVoicePhase::Error => false,
         ComposerVoicePhase::Recording | ComposerVoicePhase::Transcribing => false,
     };
+    let read_aloud_active = matches!(
+        state.phase,
+        ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking
+    );
+    let read_aloud_icon = if read_aloud_active {
+        IconName::Stop
+    } else {
+        IconName::AudioOn
+    };
+    let read_aloud_color = if read_aloud_active {
+        Color::Accent
+    } else if !availability.tts_ready {
+        Color::Warning
+    } else {
+        Color::Muted
+    };
+    let read_aloud_disabled = matches!(
+        state.phase,
+        ComposerVoicePhase::Recording | ComposerVoicePhase::Transcribing
+    );
 
     vec![
         IconButton::new("agent-composer-voice-input", voice_icon)
@@ -184,6 +223,13 @@ pub(super) fn render_voice_buttons(
             .disabled(voice_disabled)
             .tooltip(Tooltip::text(state.voice_tooltip(&availability)))
             .on_click(on_voice_click)
+            .into_any_element(),
+        IconButton::new("agent-composer-read-aloud", read_aloud_icon)
+            .icon_size(IconSize::Small)
+            .icon_color(read_aloud_color)
+            .disabled(read_aloud_disabled)
+            .tooltip(Tooltip::text(state.read_aloud_tooltip(&availability)))
+            .on_click(on_read_aloud_click)
             .into_any_element(),
     ]
 }

@@ -34,7 +34,7 @@ pub(super) fn render_panel(
         .min_w_0()
         .bg(cx.theme().colors().panel_background)
         .child(panel_header(workspace, panel_id, cx))
-        .child(render_tab_bar(snapshot, active_tab, panel, cx))
+        .child(render_tab_bar(snapshot, active_tab, panel_id, panel, cx))
         .child(
             v_flex()
                 .id("dx-forge-panel-content")
