@@ -1815,7 +1815,7 @@ test("Zed handoff docs register the DX Style panel/read-model guard", () => {
   );
 });
 
-test("DX Style visual generator mirror helper reports Zed fallback freshness", () => {
+test("DX Style visual generator mirror helper reports DX Code fixture freshness", () => {
   const output = execFileSync(
     process.execPath,
     [join(dxStyleRoot(), "scripts/sync_zed_visual_generator_fixtures.mjs"), "--check"],
@@ -1824,7 +1824,7 @@ test("DX Style visual generator mirror helper reports Zed fallback freshness", (
       encoding: "utf8",
       env: {
         ...process.env,
-        DX_ZED_ROOT: process.cwd(),
+        DX_CODE_ROOT: process.cwd(),
       },
     },
   );
@@ -4070,9 +4070,9 @@ test("DX Style has a real right-dock GPUI shell", () => {
   assert.match(root, /use crate::dx_project_context::DxProjectContext;/);
   assert.match(root, /fn dx_style_root\(\) -> PathBuf/);
   assert.match(root, /DxProjectContext::shared_fallback_root\(\)\.join\("style"\)/);
-  assert.match(root, /fn dx_zed_root\(\) -> PathBuf/);
-  assert.match(root, /DxProjectContext::shared_fallback_root\(\)\.join\("zed"\)/);
-  assert.doesNotMatch(root, /DX_STYLE_ROOT|DX_ZED_ROOT|r"G:\\Dx\\style"|r"G:\\Dx\\zed"/);
+  assert.match(root, /fn dx_code_root\(\) -> PathBuf/);
+  assert.match(root, /DxProjectContext::shared_fallback_root\(\)\.join\("code"\)/);
+  assert.doesNotMatch(root, /DX_STYLE_ROOT|DX_ZED_ROOT|r"G:\\Dx\\style"|r"G:\\Dx\\code"/);
   assert.match(root, /grouped_class_reverse_css_map\.rs/);
   assert.match(root, /grouped_class_reverse_css_delta\.rs/);
   assert.match(root, /GROUPED_CLASS_REVERSE_CSS_MAP_SCHEMA/);

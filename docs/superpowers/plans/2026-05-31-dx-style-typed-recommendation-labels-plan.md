@@ -1,7 +1,7 @@
 # DX Style Typed Recommendation Labels Plan
 
 Date: 2026-05-31
-Scope: `G:\Dx\style` grouped-class read model/context contract and `G:\Dx\zed` source guards.
+Scope: `G:\Dx\style` grouped-class read model/context contract and `G:\Dx\code` source guards.
 
 ## Goal
 

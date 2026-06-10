@@ -1,7 +1,7 @@
 # DX Style Typed Recommendation Match Helper Plan
 
 Date: 2026-05-31
-Scope: `G:\Dx\style` grouped-class read model and `G:\Dx\zed` source guards.
+Scope: `G:\Dx\style` grouped-class read model and `G:\Dx\code` source guards.
 
 ## Goal
 

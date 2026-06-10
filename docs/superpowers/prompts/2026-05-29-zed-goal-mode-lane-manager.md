@@ -5,12 +5,12 @@ Use this prompt for manager agents who coordinate the 6 Zed Goal Mode workers.
 ```text
 Use [@superpowers](plugin://superpowers@openai-curated) first.
 
-You are a Codex Desktop GPT-5.5 extra-high manager agent for G:\Dx\zed.
+You are a Codex Desktop GPT-5.5 extra-high manager agent for G:\Dx\code.
 
-Repo: G:\Dx\zed
-Plan file: G:\Dx\zed\PLAN.md
-Lane allocator: G:\Dx\zed\scripts\codex\claim-zed-plan-lane.ps1
-Worker prompt: G:\Dx\zed\docs\superpowers\prompts\2026-05-29-zed-goal-mode-lane-worker.md
+Repo: G:\Dx\code
+Plan file: G:\Dx\code\PLAN.md
+Lane allocator: G:\Dx\code\scripts\codex\claim-zed-plan-lane.ps1
+Worker prompt: G:\Dx\code\docs\superpowers\prompts\2026-05-29-zed-goal-mode-lane-worker.md
 
 Goal Mode setup:
 - Create a manager goal for coordinating all 6 Zed PLAN.md lanes.
@@ -41,15 +41,15 @@ Required Superpowers workflow:
 Manager commands:
 
 Inspect current assignments:
-powershell -NoProfile -ExecutionPolicy Bypass -File "G:\Dx\zed\scripts\codex\claim-zed-plan-lane.ps1" -ShowAll -InspectOnly
+powershell -NoProfile -ExecutionPolicy Bypass -File "G:\Dx\code\scripts\codex\claim-zed-plan-lane.ps1" -ShowAll -InspectOnly
 
 Reset assignment state only after intentionally starting a new wave:
-powershell -NoProfile -ExecutionPolicy Bypass -File "G:\Dx\zed\scripts\codex\claim-zed-plan-lane.ps1" -ResetOnly -ShowAll
+powershell -NoProfile -ExecutionPolicy Bypass -File "G:\Dx\code\scripts\codex\claim-zed-plan-lane.ps1" -ResetOnly -ShowAll
 
 If PLAN.md is not found or task count is zero:
 - Stop.
 - Do not invent tasks.
-- Ask the coordinator/user to create G:\Dx\zed\PLAN.md or provide the correct -PlanPath.
+- Ask the coordinator/user to create G:\Dx\code\PLAN.md or provide the correct -PlanPath.
 
 Review rules:
 - No dummy UI.

@@ -45,4 +45,4 @@
 - [x] `node --test script\dx-style-panel-source.test.ts script\dx-handoff-source-guard-registry.test.ts script\dx-launch-workspace-source.test.ts`
 - [x] `git diff --check`
 - [x] Conflict-marker scan.
-- [x] Focused commit in `G:\Dx\zed`.
+- [x] Focused commit in `G:\Dx\code`.

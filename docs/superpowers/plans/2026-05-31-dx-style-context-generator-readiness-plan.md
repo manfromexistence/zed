@@ -13,7 +13,7 @@
 ### Task 1: Bridge Readiness Markers
 
 **Files:**
-- Modify: `G:\Dx\zed\crates\agent_ui\src\dx_style_panel.rs`
+- Modify: `G:\Dx\code\crates\agent_ui\src\dx_style_panel.rs`
 
 - [x] Require `generatorForContext`, `orderedCatalog`, and `suggested_generator` markers when declaring the Web Preview Style bridge ready.
 - [x] Update the ready next action so it no longer says cursor-scoped handoff still needs wiring.
@@ -21,7 +21,7 @@
 ### Task 2: Native Summary Handoff
 
 **Files:**
-- Modify: `G:\Dx\zed\crates\agent_ui\src\dx_style_panel\panel_view.rs`
+- Modify: `G:\Dx\code\crates\agent_ui\src\dx_style_panel\panel_view.rs`
 
 - [x] Show the active CSS declaration generator hint in the native panel summary.
 - [x] Preserve existing disabled state and Web Preview handoff behavior.
@@ -29,10 +29,10 @@
 ### Task 3: Guards, Handoff, Verification
 
 **Files:**
-- Modify: `G:\Dx\zed\script\dx-style-panel-source.test.ts`
-- Modify: `G:\Dx\zed\DX.md`
-- Modify: `G:\Dx\zed\todo.txt`
-- Modify: `G:\Dx\zed\changelog.txt`
+- Modify: `G:\Dx\code\script\dx-style-panel-source.test.ts`
+- Modify: `G:\Dx\code\DX.md`
+- Modify: `G:\Dx\code\todo.txt`
+- Modify: `G:\Dx\code\changelog.txt`
 
 - [x] Guard the readiness markers and native summary metric.
 - [x] Document the source-only checkpoint and keep runtime proof unclaimed.

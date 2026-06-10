@@ -35,12 +35,12 @@
 ### Task 3: Zed Mirror, Diagnostics, And Guards
 
 **Files:**
-- Modify: `G:\Dx\zed\crates\web_preview\src\dx_style_generator_surface\recipes.rs`
-- Modify: `G:\Dx\zed\crates\web_preview\src\dx_style_generator_surface\script.rs`
-- Modify: `G:\Dx\zed\script\dx-style-panel-source.test.ts`
-- Modify: `G:\Dx\zed\DX.md`
-- Modify: `G:\Dx\zed\todo.txt`
-- Modify: `G:\Dx\zed\changelog.txt`
+- Modify: `G:\Dx\code\crates\web_preview\src\dx_style_generator_surface\recipes.rs`
+- Modify: `G:\Dx\code\crates\web_preview\src\dx_style_generator_surface\script.rs`
+- Modify: `G:\Dx\code\script\dx-style-panel-source.test.ts`
+- Modify: `G:\Dx\code\DX.md`
+- Modify: `G:\Dx\code\todo.txt`
+- Modify: `G:\Dx\code\changelog.txt`
 
 - [x] Mirror `runtime_value_dependencies` into Web Preview recipe metadata.
 - [x] Add `metadata_unused_controls` diagnostics.

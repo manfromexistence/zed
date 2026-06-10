@@ -13,8 +13,8 @@
 ### Task 1: Native Dispatch Path
 
 **Files:**
-- Modify: `G:\Dx\zed\crates\web_preview\src\web_preview_view.rs`
-- Modify: `G:\Dx\zed\crates\web_preview\src\dx_style_source_apply.rs`
+- Modify: `G:\Dx\code\crates\web_preview\src\web_preview_view.rs`
+- Modify: `G:\Dx\code\crates\web_preview\src\dx_style_source_apply.rs`
 
 - [x] Add a native writer dispatcher that parses the source-apply receipt and refuses unless all mutation gates are true.
 - [x] When gates pass, locate the original singleton editor by same-session native editor identity, verify source path/length/digest/span, apply one editor transaction, and verify post-write digest.
@@ -24,7 +24,7 @@
 ### Task 2: Source Guards
 
 **Files:**
-- Modify: `G:\Dx\zed\script\dx-style-panel-source.test.ts`
+- Modify: `G:\Dx\code\script\dx-style-panel-source.test.ts`
 
 - [x] Guard the dispatcher function, editor transaction call, `MultiBufferOffset` byte-range edit, before/after digest checks, and post-write readback receipt fields.
 - [x] Guard that the source-only path still refuses current mutation.
@@ -32,9 +32,9 @@
 ### Task 3: Handoff
 
 **Files:**
-- Modify: `G:\Dx\zed\DX.md`
-- Modify: `G:\Dx\zed\todo.txt`
-- Modify: `G:\Dx\zed\changelog.txt`
+- Modify: `G:\Dx\code\DX.md`
+- Modify: `G:\Dx\code\todo.txt`
+- Modify: `G:\Dx\code\changelog.txt`
 
 - [x] Document that the native writer implementation path now exists but remains disabled by source-owned mutation/runtime gates.
 - [x] Keep 100/100 unclaimed until authorized runtime/WebView/build proof runs.

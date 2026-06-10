@@ -14,7 +14,7 @@
 
 **Files:**
 - Modify: `G:\Dx\style\scripts\sync_zed_visual_generator_fixtures.mjs`
-- Add generated mirror: `G:\Dx\zed\crates\agent_ui\src\dx_style_panel\editor-write-bridge-preflight.generated.json`
+- Add generated mirror: `G:\Dx\code\crates\agent_ui\src\dx_style_panel\editor-write-bridge-preflight.generated.json`
 
 - [x] Add `fixtures/grouped-class-editor-write-bridge-preflight.json` to the mirror pair list.
 - [x] Generate the Zed mirror with the existing `--write` path.
@@ -22,7 +22,7 @@
 ### Task 2: Generated Fallback Consumer
 
 **Files:**
-- Modify: `G:\Dx\zed\crates\agent_ui\src\dx_style_panel\editor_write_bridge.rs`
+- Modify: `G:\Dx\code\crates\agent_ui\src\dx_style_panel\editor_write_bridge.rs`
 
 - [x] Include the generated preflight JSON in Zed.
 - [x] Parse the generated mirror when the live DX Style fixture is missing or invalid.
@@ -32,10 +32,10 @@
 ### Task 3: Guards, Docs, Verification
 
 **Files:**
-- Modify: `G:\Dx\zed\script\dx-style-panel-source.test.ts`
-- Modify: `G:\Dx\zed\DX.md`
-- Modify: `G:\Dx\zed\todo.txt`
-- Modify: `G:\Dx\zed\changelog.txt`
+- Modify: `G:\Dx\code\script\dx-style-panel-source.test.ts`
+- Modify: `G:\Dx\code\DX.md`
+- Modify: `G:\Dx\code\todo.txt`
+- Modify: `G:\Dx\code\changelog.txt`
 
 - [x] Guard the sync helper, generated mirror, and generated fallback parsing path.
 - [x] Document the source-only checkpoint and keep runtime proof unclaimed.

@@ -25,12 +25,12 @@
 ### Task 2: Zed Consumption
 
 **Files:**
-- Create: `G:\Dx\zed\crates\agent_ui\src\dx_style_panel\css_hint_catalog.rs`
-- Create: `G:\Dx\zed\crates\agent_ui\src\dx_style_panel\css-declaration-hint-catalog.generated.json`
-- Modify: `G:\Dx\zed\crates\agent_ui\src\dx_style_panel.rs`
-- Modify: `G:\Dx\zed\crates\agent_ui\src\dx_style_panel\css_cursor_context.rs`
-- Modify: `G:\Dx\zed\crates\agent_ui\src\dx_style_panel\active_context.rs`
-- Modify: `G:\Dx\zed\crates\web_preview\src\dx_style_generator_surface\script.rs`
+- Create: `G:\Dx\code\crates\agent_ui\src\dx_style_panel\css_hint_catalog.rs`
+- Create: `G:\Dx\code\crates\agent_ui\src\dx_style_panel\css-declaration-hint-catalog.generated.json`
+- Modify: `G:\Dx\code\crates\agent_ui\src\dx_style_panel.rs`
+- Modify: `G:\Dx\code\crates\agent_ui\src\dx_style_panel\css_cursor_context.rs`
+- Modify: `G:\Dx\code\crates\agent_ui\src\dx_style_panel\active_context.rs`
+- Modify: `G:\Dx\code\crates\web_preview\src\dx_style_generator_surface\script.rs`
 
 - [ ] Parse the generated mirror through a small cached lookup helper.
 - [ ] Replace Zed-owned CSS property matching with the source-owned catalog lookup.
@@ -41,10 +41,10 @@
 
 **Files:**
 - Modify: `G:\Dx\style\scripts\sync_zed_visual_generator_fixtures.mjs`
-- Modify: `G:\Dx\zed\script\dx-style-panel-source.test.ts`
-- Modify: `G:\Dx\zed\DX.md`
-- Modify: `G:\Dx\zed\todo.txt`
-- Modify: `G:\Dx\zed\changelog.txt`
+- Modify: `G:\Dx\code\script\dx-style-panel-source.test.ts`
+- Modify: `G:\Dx\code\DX.md`
+- Modify: `G:\Dx\code\todo.txt`
+- Modify: `G:\Dx\code\changelog.txt`
 - Modify: `G:\Dx\style\README.md`
 - Modify: `G:\Dx\style\PLAN.md`
 - Modify: `G:\Dx\style\CHANGELOG.md`

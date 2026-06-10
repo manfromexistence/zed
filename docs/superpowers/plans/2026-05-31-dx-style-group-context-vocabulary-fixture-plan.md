@@ -20,9 +20,9 @@
 ### Task 2: Zed Mirror And Web Preview
 
 **Files:**
-- Modify generated mirror: `G:\Dx\zed\crates\web_preview\src\dx_style_generator_surface\group-context-contract.generated.json`
-- Modify: `G:\Dx\zed\crates\web_preview\src\dx_style_generator_surface\group_context_contract.rs`
-- Modify: `G:\Dx\zed\crates\web_preview\src\dx_style_generator_surface\script.rs`
+- Modify generated mirror: `G:\Dx\code\crates\web_preview\src\dx_style_generator_surface\group-context-contract.generated.json`
+- Modify: `G:\Dx\code\crates\web_preview\src\dx_style_generator_surface\group_context_contract.rs`
+- Modify: `G:\Dx\code\crates\web_preview\src\dx_style_generator_surface\script.rs`
 
 - [x] Mirror the fixture into Zed.
 - [x] Pass the new fields through the Web Preview contract adapter.

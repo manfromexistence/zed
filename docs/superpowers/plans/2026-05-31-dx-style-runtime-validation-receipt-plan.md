@@ -25,8 +25,8 @@
 ### Task 2: Zed Native Review
 
 **Files:**
-- Modify: `G:\Dx\zed\crates\web_preview\src\dx_style_source_apply.rs`
-- Modify: `G:\Dx\zed\crates\web_preview\src\web_preview_view.rs`
+- Modify: `G:\Dx\code\crates\web_preview\src\dx_style_source_apply.rs`
+- Modify: `G:\Dx\code\crates\web_preview\src\web_preview_view.rs`
 
 - [x] Emit a real `runtime_validation_receipt` object from native source-apply review.
 - [x] Keep the receipt fail-closed with `authorized_runtime_validation=false`, no mutation, no post-write readback digest, and no verified timestamp.
@@ -36,9 +36,9 @@
 ### Task 3: Web Preview Copied Packet And Guards
 
 **Files:**
-- Modify: `G:\Dx\zed\crates\web_preview\src\dx_style_generator_surface\script.rs`
-- Modify: `G:\Dx\zed\script\dx-style-panel-source.test.ts`
-- Generated mirror: `G:\Dx\zed\crates\web_preview\src\dx_style_generator_surface\source-apply-contract.generated.json`
+- Modify: `G:\Dx\code\crates\web_preview\src\dx_style_generator_surface\script.rs`
+- Modify: `G:\Dx\code\script\dx-style-panel-source.test.ts`
+- Generated mirror: `G:\Dx\code\crates\web_preview\src\dx_style_generator_surface\source-apply-contract.generated.json`
 
 - [x] Add Web Preview copied `runtime_validation_receipt` evidence as `not_performed_in_web_preview`.
 - [x] Teach Web Preview readiness that missing `runtime_validation_receipt` is a hard blocker.
@@ -47,9 +47,9 @@
 ### Task 4: Handoff And Verification
 
 **Files:**
-- Modify: `G:\Dx\zed\DX.md`
-- Modify: `G:\Dx\zed\todo.txt`
-- Modify: `G:\Dx\zed\changelog.txt`
+- Modify: `G:\Dx\code\DX.md`
+- Modify: `G:\Dx\code\todo.txt`
+- Modify: `G:\Dx\code\changelog.txt`
 
 - [x] Document that the runtime validation receipt gate exists but remains unverified without authorized runtime/WebView/build proof.
 - [x] Run targeted rustfmt checks, fixture sync check, focused Node source guards, `git diff --check`, and conflict-marker scan.

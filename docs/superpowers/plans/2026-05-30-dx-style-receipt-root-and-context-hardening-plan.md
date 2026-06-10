@@ -13,10 +13,10 @@
 ### Task 1: Shared Receipt Root Resolver
 
 **Files:**
-- Create: `G:\Dx\zed\crates\agent_ui\src\dx_style_panel\receipt_roots.rs`
-- Modify: `G:\Dx\zed\crates\agent_ui\src\dx_style_panel.rs`
-- Modify: `G:\Dx\zed\crates\agent_ui\src\dx_style_panel\group_registry.rs`
-- Modify: `G:\Dx\zed\crates\agent_ui\src\dx_style_panel\apply_gate.rs`
+- Create: `G:\Dx\code\crates\agent_ui\src\dx_style_panel\receipt_roots.rs`
+- Modify: `G:\Dx\code\crates\agent_ui\src\dx_style_panel.rs`
+- Modify: `G:\Dx\code\crates\agent_ui\src\dx_style_panel\group_registry.rs`
+- Modify: `G:\Dx\code\crates\agent_ui\src\dx_style_panel\apply_gate.rs`
 
 - [ ] Add a focused helper that accepts an optional active source path and workspace root.
 - [ ] Only walk source ancestors when the source path is absolute, so relative `ProjectPath` values do not accidentally resolve against Zed's process cwd.
@@ -26,7 +26,7 @@
 ### Task 2: Absolute Active Source Context
 
 **Files:**
-- Modify: `G:\Dx\zed\crates\agent_ui\src\dx_style_panel\active_context.rs`
+- Modify: `G:\Dx\code\crates\agent_ui\src\dx_style_panel\active_context.rs`
 
 - [ ] Read the active item's `ProjectPath` as the display-relative label.
 - [ ] Resolve the absolute active source path through `workspace.project().read(cx).absolute_path(&project_path, cx)`.
@@ -36,7 +36,7 @@
 ### Task 3: Active Buffer Size Guard
 
 **Files:**
-- Modify: `G:\Dx\zed\crates\agent_ui\src\dx_style_panel\active_context.rs`
+- Modify: `G:\Dx\code\crates\agent_ui\src\dx_style_panel\active_context.rs`
 
 - [ ] Use `display_snapshot.buffer_snapshot().len().0` to reject oversized active buffers before calling `editor.text(cx)`.
 - [ ] Keep the existing post-clone byte check as a defensive second guard.
@@ -45,10 +45,10 @@
 ### Task 4: Source Guards And Docs
 
 **Files:**
-- Modify: `G:\Dx\zed\script\dx-style-panel-source.test.ts`
-- Modify: `G:\Dx\zed\DX.md`
-- Modify: `G:\Dx\zed\todo.txt`
-- Modify: `G:\Dx\zed\changelog.txt`
+- Modify: `G:\Dx\code\script\dx-style-panel-source.test.ts`
+- Modify: `G:\Dx\code\DX.md`
+- Modify: `G:\Dx\code\todo.txt`
+- Modify: `G:\Dx\code\changelog.txt`
 
 - [ ] Guard the new receipt root module, absolute path resolution, source-root fallback ordering, and pre-clone buffer size check.
 - [ ] Record that this is source-only hardening and does not claim runtime/WebView proof.

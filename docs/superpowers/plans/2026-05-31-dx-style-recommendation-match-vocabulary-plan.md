@@ -1,7 +1,7 @@
 # DX Style Recommendation Match Vocabulary Plan
 
 Date: 2026-05-31
-Scope: `G:\Dx\style` grouped-class contract and `G:\Dx\zed` Web Preview bridge.
+Scope: `G:\Dx\style` grouped-class contract and `G:\Dx\code` Web Preview bridge.
 
 ## Goal
 

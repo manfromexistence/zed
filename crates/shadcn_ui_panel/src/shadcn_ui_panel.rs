@@ -2418,7 +2418,7 @@ fn magic_registry_root() -> PathBuf {
 }
 
 fn repo_root() -> PathBuf {
-    std::env::current_dir().unwrap_or_else(|_| PathBuf::from("G:/Zed"))
+    std::env::current_dir().unwrap_or_else(|_| PathBuf::from("G:/Dx/code"))
 }
 
 fn shadcn_catalog_cached() -> Vec<CatalogItem> {

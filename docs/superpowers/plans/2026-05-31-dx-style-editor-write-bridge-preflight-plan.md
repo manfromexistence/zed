@@ -14,7 +14,7 @@
 
 **Current honest score:** 89/100 for the source-only integration lane. Zed now validates trusted review packets against session source identity, native editor identity, active path/span/source length/digest, and cursor-scoped dry-run edit previews. The source-owned write-bridge preflight still lists an older loose guard, so it no longer describes the actual future mutation checklist precisely enough.
 
-**Chosen next course:** Tighten the write-bridge preflight contract and Zed fallback/readiness evidence. Do not enable `can_mutate_source`, do not enable `can_apply`, do not add a native writer, do not run `just run`, and do not run Cargo.
+**Chosen next course:** Tighten the write-bridge preflight contract and DX Code fallback/readiness evidence. Do not enable `can_mutate_source`, do not enable `can_apply`, do not add a native writer, do not run `just run`, and do not run Cargo.
 
 ## Task 1: Source-Owned Preflight Checklist
 
@@ -45,7 +45,7 @@
 - Modify: `todo.txt`
 - Modify: `changelog.txt`
 
-- [x] Guard the new DX Style fixture fields and the Zed fallback guard list.
+- [x] Guard the new DX Style fixture fields and the DX Code fallback guard list.
 - [x] Guard the copied Web Preview review packet preflight evidence.
 - [x] Record the checkpoint as source-only preflight alignment.
 - [x] Record that runtime proof, WebView proof, Cargo/build proof, and source mutation remain unproven.
@@ -56,4 +56,4 @@
 - [x] `node --test script\dx-style-panel-source.test.ts script\dx-handoff-source-guard-registry.test.ts script\dx-launch-workspace-source.test.ts`.
 - [x] `git diff --check`.
 - [x] Conflict-marker scan.
-- [x] Focused commit in `G:\Dx\zed`.
+- [x] Focused commit in `G:\Dx\code`.

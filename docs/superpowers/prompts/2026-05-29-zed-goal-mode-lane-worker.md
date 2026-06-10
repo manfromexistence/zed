@@ -5,11 +5,11 @@ Paste this prompt into each of the 6 Zed worker chats. Every worker runs the sam
 ```text
 Use [@superpowers](plugin://superpowers@openai-curated) first.
 
-You are a Codex Desktop GPT-5.5 extra-high implementation worker for G:\Dx\zed. Use exactly 6 GPT-5.5 extra-high subagents inside your assigned lane.
+You are a Codex Desktop GPT-5.5 extra-high implementation worker for G:\Dx\code. Use exactly 6 GPT-5.5 extra-high subagents inside your assigned lane.
 
-Repo: G:\Dx\zed
-Plan file: G:\Dx\zed\PLAN.md
-Lane allocator: G:\Dx\zed\scripts\codex\claim-zed-plan-lane.ps1
+Repo: G:\Dx\code
+Plan file: G:\Dx\code\PLAN.md
+Lane allocator: G:\Dx\code\scripts\codex\claim-zed-plan-lane.ps1
 
 Goal Mode setup:
 - Create a goal for this lane.
@@ -19,12 +19,12 @@ Goal Mode setup:
 - Do not stop after planning. Continue lane allocation, implementation, source review, lightweight verification, commit, and honest final report.
 
 Goal objective:
-Complete my assigned G:\Dx\zed PLAN.md lane end-to-end with 100/100 production-ready, professional, maintainable code, using exactly 6 GPT-5.5 extra-high subagents inside my lane, source-inspection-first verification, no broad/heavy builds, and an honest final report.
+Complete my assigned G:\Dx\code PLAN.md lane end-to-end with 100/100 production-ready, professional, maintainable code, using exactly 6 GPT-5.5 extra-high subagents inside my lane, source-inspection-first verification, no broad/heavy builds, and an honest final report.
 
 First action inside the goal:
 Run this exact command before source edits:
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "G:\Dx\zed\scripts\codex\claim-zed-plan-lane.ps1"
+powershell -NoProfile -ExecutionPolicy Bypass -File "G:\Dx\code\scripts\codex\claim-zed-plan-lane.ps1"
 
 The script assigns your lane and prints your exact PLAN.md tasks. Work only those tasks.
 
@@ -49,8 +49,8 @@ Subagent requirement:
 - Do not let subagents touch tasks from other lanes.
 
 Zed repo rules:
-- Read G:\Dx\zed\AGENTS.md and follow it.
-- Read the relevant parts of G:\Dx\zed\DX.md, G:\Dx\zed\PLAN.md, G:\Dx\zed\todo.txt, and G:\Dx\zed\changelog.txt before source edits.
+- Read G:\Dx\code\AGENTS.md and follow it.
+- Read the relevant parts of G:\Dx\code\DX.md, G:\Dx\code\PLAN.md, G:\Dx\code\todo.txt, and G:\Dx\code\changelog.txt before source edits.
 - Preserve existing Zed behavior unless your PLAN.md lane explicitly changes it.
 - Keep todo.txt and changelog.txt current if you implement source changes.
 - Do not run just run unless the coordinator/user explicitly authorizes it.

@@ -21,4 +21,4 @@
 - [x] `node G:\Dx\style\scripts\sync_zed_visual_generator_fixtures.mjs --check`.
 - [x] `git diff --check`.
 - [x] Conflict-marker scan.
-- [x] Focused commit in `G:\Dx\zed`.
+- [x] Focused commit in `G:\Dx\code`.

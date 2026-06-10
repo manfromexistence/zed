@@ -13,10 +13,10 @@
 ### Task 1: Active Context Provenance
 
 **Files:**
-- Modify: `G:\Dx\zed\crates\agent_ui\src\dx_style_panel\css_hint_catalog.rs`
-- Modify: `G:\Dx\zed\crates\agent_ui\src\dx_style_panel\css_cursor_context.rs`
-- Modify: `G:\Dx\zed\crates\agent_ui\src\dx_style_panel\active_context.rs`
-- Modify: `G:\Dx\zed\crates\agent_ui\src\dx_style_panel\panel_view.rs`
+- Modify: `G:\Dx\code\crates\agent_ui\src\dx_style_panel\css_hint_catalog.rs`
+- Modify: `G:\Dx\code\crates\agent_ui\src\dx_style_panel\css_cursor_context.rs`
+- Modify: `G:\Dx\code\crates\agent_ui\src\dx_style_panel\active_context.rs`
+- Modify: `G:\Dx\code\crates\agent_ui\src\dx_style_panel\panel_view.rs`
 
 - [x] Parse and preserve the matched CSS hint ordinal, property pattern, match mode, and value filters.
 - [x] Include the provenance fields in `zed.dx_style.active_context.v1`.
@@ -25,10 +25,10 @@
 ### Task 2: Web Preview And Native Review
 
 **Files:**
-- Modify: `G:\Dx\zed\crates\web_preview\src\dx_style_generator_surface.rs`
-- Modify: `G:\Dx\zed\crates\web_preview\src\dx_style_generator_surface\script.rs`
-- Modify: `G:\Dx\zed\crates\web_preview\src\dx_style_generator_surface\css_declaration_dry_run_script.rs`
-- Modify: `G:\Dx\zed\crates\web_preview\src\dx_style_source_apply.rs`
+- Modify: `G:\Dx\code\crates\web_preview\src\dx_style_generator_surface.rs`
+- Modify: `G:\Dx\code\crates\web_preview\src\dx_style_generator_surface\script.rs`
+- Modify: `G:\Dx\code\crates\web_preview\src\dx_style_generator_surface\css_declaration_dry_run_script.rs`
+- Modify: `G:\Dx\code\crates\web_preview\src\dx_style_source_apply.rs`
 
 - [x] Include a structured `css_declaration_hint` packet in Web Preview review and native review requests.
 - [x] Preserve the same packet in native review receipts.
@@ -42,8 +42,8 @@
 - Modify: `G:\Dx\style\src\core\engine\css_declaration_dry_run.rs`
 - Modify: matching `G:\Dx\style\fixtures\*.json`
 - Modify: generated Zed fixture mirrors
-- Modify: `G:\Dx\zed\script\dx-style-panel-source.test.ts`
-- Modify: `G:\Dx\zed\DX.md`, `G:\Dx\zed\todo.txt`, and `G:\Dx\zed\changelog.txt`
+- Modify: `G:\Dx\code\script\dx-style-panel-source.test.ts`
+- Modify: `G:\Dx\code\DX.md`, `G:\Dx\code\todo.txt`, and `G:\Dx\code\changelog.txt`
 
 - [x] Require CSS declaration hint provenance in source-owned review guards.
 - [x] Mirror fixture changes into Zed.

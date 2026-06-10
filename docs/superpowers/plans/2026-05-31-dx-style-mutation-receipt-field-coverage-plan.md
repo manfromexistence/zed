@@ -13,7 +13,7 @@
 ### Task 1: Native Dispatch Receipt Coverage
 
 **Files:**
-- Modify: `G:\Dx\zed\crates\web_preview\src\web_preview_view.rs`
+- Modify: `G:\Dx\code\crates\web_preview\src\web_preview_view.rs`
 
 - [x] Read `source_write_readiness.required_mutation_write_receipt_fields` from the trusted source-apply receipt.
 - [x] After constructing the mutation write receipt, compare actual fields against the required field list.
@@ -23,10 +23,10 @@
 ### Task 2: Source Guards And Handoff
 
 **Files:**
-- Modify: `G:\Dx\zed\script\dx-style-panel-source.test.ts`
-- Modify: `G:\Dx\zed\DX.md`
-- Modify: `G:\Dx\zed\todo.txt`
-- Modify: `G:\Dx\zed\changelog.txt`
+- Modify: `G:\Dx\code\script\dx-style-panel-source.test.ts`
+- Modify: `G:\Dx\code\DX.md`
+- Modify: `G:\Dx\code\todo.txt`
+- Modify: `G:\Dx\code\changelog.txt`
 
 - [x] Guard the required-field extraction and missing-field fail-closed status.
 - [x] Document that actual mutation receipt field coverage is checked but runtime proof remains unverified.

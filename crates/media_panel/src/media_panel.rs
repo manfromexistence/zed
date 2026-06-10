@@ -4971,7 +4971,7 @@ fn preview_file_stem(label: &str) -> String {
 }
 
 fn repo_root() -> PathBuf {
-    std::env::current_dir().unwrap_or_else(|_| PathBuf::from("G:/Zed"))
+    std::env::current_dir().unwrap_or_else(|_| PathBuf::from("G:/Dx/code"))
 }
 
 fn escape_html(text: &str) -> String {

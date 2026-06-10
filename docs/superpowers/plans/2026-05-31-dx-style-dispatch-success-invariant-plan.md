@@ -13,7 +13,7 @@
 ### Task 1: Dispatch Status Semantics
 
 **Files:**
-- Modify: `G:\Dx\zed\crates\web_preview\src\web_preview_view.rs`
+- Modify: `G:\Dx\code\crates\web_preview\src\web_preview_view.rs`
 
 - [x] Compute `single_editor_transaction` and `mutation_performed` before status selection.
 - [x] Return `failed_no_editor_transaction` when no editor transaction id exists.
@@ -24,10 +24,10 @@
 ### Task 2: Source Guards And Handoff
 
 **Files:**
-- Modify: `G:\Dx\zed\script\dx-style-panel-source.test.ts`
-- Modify: `G:\Dx\zed\DX.md`
-- Modify: `G:\Dx\zed\todo.txt`
-- Modify: `G:\Dx\zed\changelog.txt`
+- Modify: `G:\Dx\code\script\dx-style-panel-source.test.ts`
+- Modify: `G:\Dx\code\DX.md`
+- Modify: `G:\Dx\code\todo.txt`
+- Modify: `G:\Dx\code\changelog.txt`
 
 - [x] Guard the success invariant and failure statuses.
 - [x] Document the stricter dispatch success semantics.

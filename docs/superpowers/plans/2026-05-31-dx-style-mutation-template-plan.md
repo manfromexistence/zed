@@ -25,9 +25,9 @@
 ### Task 2: Zed Template Emission
 
 **Files:**
-- Modify: `G:\Dx\zed\crates\web_preview\src\dx_style_source_apply.rs`
-- Modify: `G:\Dx\zed\crates\web_preview\src\dx_style_generator_surface\script.rs`
-- Modify: `G:\Dx\zed\crates\web_preview\src\web_preview_view.rs`
+- Modify: `G:\Dx\code\crates\web_preview\src\dx_style_source_apply.rs`
+- Modify: `G:\Dx\code\crates\web_preview\src\dx_style_generator_surface\script.rs`
+- Modify: `G:\Dx\code\crates\web_preview\src\web_preview_view.rs`
 
 - [ ] Emit a native review-only mutation write receipt template.
 - [ ] Emit a Web Preview copied template marked `not_performed_in_web_preview`.
@@ -36,11 +36,11 @@
 ### Task 3: Readiness And Guards
 
 **Files:**
-- Modify: `G:\Dx\zed\crates\agent_ui\src\dx_style_panel\editor_write_bridge.rs`
-- Modify: `G:\Dx\zed\script\dx-style-panel-source.test.ts`
-- Modify: `G:\Dx\zed\DX.md`
-- Modify: `G:\Dx\zed\todo.txt`
-- Modify: `G:\Dx\zed\changelog.txt`
+- Modify: `G:\Dx\code\crates\agent_ui\src\dx_style_panel\editor_write_bridge.rs`
+- Modify: `G:\Dx\code\script\dx-style-panel-source.test.ts`
+- Modify: `G:\Dx\code\DX.md`
+- Modify: `G:\Dx\code\todo.txt`
+- Modify: `G:\Dx\code\changelog.txt`
 
 - [ ] Add fallback bridge review field support.
 - [ ] Add readiness blockers for missing mutation template evidence.

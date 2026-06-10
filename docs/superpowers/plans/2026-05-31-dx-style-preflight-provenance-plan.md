@@ -13,7 +13,7 @@
 ### Task 1: Snapshot Provenance
 
 **Files:**
-- Modify: `G:\Dx\zed\crates\agent_ui\src\dx_style_panel\editor_write_bridge.rs`
+- Modify: `G:\Dx\code\crates\agent_ui\src\dx_style_panel\editor_write_bridge.rs`
 
 - [x] Add resolved preflight source and source detail fields.
 - [x] Preserve the existing live/generated/emergency resolution order.
@@ -22,7 +22,7 @@
 ### Task 2: Native Panel Surface
 
 **Files:**
-- Modify: `G:\Dx\zed\crates\agent_ui\src\dx_style_panel\panel_view.rs`
+- Modify: `G:\Dx\code\crates\agent_ui\src\dx_style_panel\panel_view.rs`
 
 - [x] Show compact preflight provenance beside the existing bridge summary.
 - [x] Avoid adding fake controls or mutation affordances.
@@ -30,10 +30,10 @@
 ### Task 3: Guards, Docs, Verification
 
 **Files:**
-- Modify: `G:\Dx\zed\script\dx-style-panel-source.test.ts`
-- Modify: `G:\Dx\zed\DX.md`
-- Modify: `G:\Dx\zed\todo.txt`
-- Modify: `G:\Dx\zed\changelog.txt`
+- Modify: `G:\Dx\code\script\dx-style-panel-source.test.ts`
+- Modify: `G:\Dx\code\DX.md`
+- Modify: `G:\Dx\code\todo.txt`
+- Modify: `G:\Dx\code\changelog.txt`
 
 - [x] Guard the source fields, generated mirror provenance, and panel metric.
 - [x] Document source-only behavior and keep runtime proof unclaimed.

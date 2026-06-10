@@ -24,7 +24,7 @@
 ### Task 2: Zed Bridge Snapshot
 
 **Files:**
-- Modify: `G:\Dx\zed\crates\agent_ui\src\dx_style_panel\editor_write_bridge.rs`
+- Modify: `G:\Dx\code\crates\agent_ui\src\dx_style_panel\editor_write_bridge.rs`
 
 - [ ] Read the mutation write receipt schema and required fields from the source-owned fixture.
 - [ ] Include both in `StyleEditorWriteBridgeSnapshot::to_json`.
@@ -33,8 +33,8 @@
 ### Task 3: Native And Web Preview Readiness
 
 **Files:**
-- Modify: `G:\Dx\zed\crates\web_preview\src\dx_style_source_apply.rs`
-- Modify: `G:\Dx\zed\crates\web_preview\src\dx_style_generator_surface\script.rs`
+- Modify: `G:\Dx\code\crates\web_preview\src\dx_style_source_apply.rs`
+- Modify: `G:\Dx\code\crates\web_preview\src\dx_style_generator_surface\script.rs`
 
 - [ ] Add a known mutation write receipt schema and field list.
 - [ ] Report named drift blockers when the bridge schema is missing or the required field list contains unsupported fields.
@@ -43,10 +43,10 @@
 ### Task 4: Guards And Handoff
 
 **Files:**
-- Modify: `G:\Dx\zed\script\dx-style-panel-source.test.ts`
-- Modify: `G:\Dx\zed\DX.md`
-- Modify: `G:\Dx\zed\todo.txt`
-- Modify: `G:\Dx\zed\changelog.txt`
+- Modify: `G:\Dx\code\script\dx-style-panel-source.test.ts`
+- Modify: `G:\Dx\code\DX.md`
+- Modify: `G:\Dx\code\todo.txt`
+- Modify: `G:\Dx\code\changelog.txt`
 
 - [ ] Extend source guards for the new source-owned schema and fields.
 - [ ] Update handoff docs to 98/100 source-only readiness.

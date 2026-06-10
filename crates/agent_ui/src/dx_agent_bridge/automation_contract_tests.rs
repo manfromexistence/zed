@@ -24,8 +24,8 @@ fn automation_rows_parse_composer_ready_contract_fields() {
             },
             "destination": {
                 "kind": "workspace",
-                "label": "G:\\Dx\\zed",
-                "target": "G:\\Dx\\zed"
+                "label": "G:\\Dx\\code",
+                "target": "G:\\Dx\\code"
             },
             "last_run_at": "2026-06-06T09:00:00Z",
             "next_run_at": "2026-06-07T09:00:00Z",

@@ -26,9 +26,9 @@
 ### Task 2: Zed Mirror And Web Preview Validation
 
 **Files:**
-- Modify: `G:\Dx\zed\crates\web_preview\src\dx_style_generator_surface\group_context_contract.rs`
-- Modify: `G:\Dx\zed\crates\web_preview\src\dx_style_generator_surface\script.rs`
-- Modify: `G:\Dx\zed\crates\web_preview\src\dx_style_generator_surface\group-context-contract.generated.json`
+- Modify: `G:\Dx\code\crates\web_preview\src\dx_style_generator_surface\group_context_contract.rs`
+- Modify: `G:\Dx\code\crates\web_preview\src\dx_style_generator_surface\script.rs`
+- Modify: `G:\Dx\code\crates\web_preview\src\dx_style_generator_surface\group-context-contract.generated.json`
 
 - [ ] Pass `review_output_fields` through the Zed group-context contract adapter.
 - [ ] Refresh the embedded generated fixture mirror with `node G:\Dx\style\scripts\sync_zed_visual_generator_fixtures.mjs --write`.
@@ -38,10 +38,10 @@
 ### Task 3: Guards, Docs, Verification, Commit
 
 **Files:**
-- Modify: `G:\Dx\zed\script\dx-style-panel-source.test.ts`
-- Modify: `G:\Dx\zed\DX.md`
-- Modify: `G:\Dx\zed\todo.txt`
-- Modify: `G:\Dx\zed\changelog.txt`
+- Modify: `G:\Dx\code\script\dx-style-panel-source.test.ts`
+- Modify: `G:\Dx\code\DX.md`
+- Modify: `G:\Dx\code\todo.txt`
+- Modify: `G:\Dx\code\changelog.txt`
 
 - [ ] Extend source guards for the contract field, fixture values, diagnostics, adapter, Web Preview validation, and copied metadata line.
 - [ ] Update handoff docs with the source-only boundary.

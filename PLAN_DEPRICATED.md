@@ -2,7 +2,7 @@
 
 Date: 2026-05-21
 Launch target: 2026-05-22
-Primary repo: `G:\Zed`
+Primary repo: `G:\Dx\code`
 Canonical DX hub: `G:\Dx`
 Supporting DX tools: `G:\Dx\www`, `G:\Dx\cli`, `G:\Dx\agent`, `G:\WWW`, `G:\Workspaces\flow`
 
@@ -165,12 +165,12 @@ Live website score is 72/100. The next highest-value WWW change is not another p
 Physical moves are risky today because:
 
 - `G:\WWW\www\target\debug\dx-www.exe` is currently running a dev server.
-- `G:\Zed` is the active editor checkout and already has target/cache paths configured for the G drive.
+- `G:\Dx\code` is the active editor checkout and already has target/cache paths configured for the G drive.
 - `G:\Workspaces\flow` has an untracked `tools/` folder that should be preserved before any relocation.
 
 The launch hub should therefore expose these paths:
 
-- `G:\Dx\zed` -> `G:\Zed`
+- `G:\Dx\code` -> `G:\Dx\code`
 - `G:\Dx\www-inspirations` -> `G:\WWW`
 - `G:\Dx\flow` -> `G:\Workspaces\flow`
 - `G:\Dx\token` -> `G:\Dx\inspirations\agent-archive\cursed\token`
@@ -277,7 +277,7 @@ Checks:
 #### Chat B Prompt: Token / RLM / Serializer
 
 ```text
-You are Codex GPT-5.5 Extra High working as the DX token-efficiency worker. Work in G:\Dx, G:\Workspaces\flow, and G:\Zed only where needed. Do not mutate unrelated source. Write real code first, then run lightweight checks at milestones.
+You are Codex GPT-5.5 Extra High working as the DX token-efficiency worker. Work in G:\Dx, G:\Workspaces\flow, and G:\Dx\code only where needed. Do not mutate unrelated source. Write real code first, then run lightweight checks at milestones.
 
 Important source paths:
 Primary token source: G:\Dx\inspirations\agent-archive\cursed\token
@@ -305,7 +305,7 @@ Checks:
 #### Chat C Prompt: DX Agents + Zed GPUI Bridge
 
 ```text
-You are Codex GPT-5.5 Extra High working as the DX Agents integration worker. Work in G:\Dx\agent, G:\Dx\cli, and G:\Zed. Write real code first. Use lightweight checks only after coherent changes.
+You are Codex GPT-5.5 Extra High working as the DX Agents integration worker. Work in G:\Dx\agent, G:\Dx\cli, and G:\Dx\code. Write real code first. Use lightweight checks only after coherent changes.
 
 Goal: connect the ZeroClaw-derived dx-agents runtime to Zed's GPUI. The agent stays CLI-first, but Zed gets a professional GUI bridge.
 
@@ -337,7 +337,7 @@ Checks:
 #### Chat D Prompt: Zed AI Panel Full-Width UI
 
 ```text
-You are Codex GPT-5.5 Extra High working as the Zed GPUI launch UX worker. Work in G:\Zed on branch dev. Do not remove existing Zed AI features. Write real GPUI code, not dummy UI. Avoid repeated full builds.
+You are Codex GPT-5.5 Extra High working as the Zed GPUI launch UX worker. Work in G:\Dx\code on branch dev. Do not remove existing Zed AI features. Write real GPUI code, not dummy UI. Avoid repeated full builds.
 
 Goal: make the Zed AI panel feel like DX: full-width by default, Codex Desktop-inspired on the right, NotebookLM-inspired sources on the left, with smooth professional organization.
 
@@ -368,7 +368,7 @@ Checks:
 #### Chat E Prompt: Launch Status + Final Integration
 
 ```text
-You are Codex GPT-5.5 Extra High working as the launch integrator. Work across G:\Zed and G:\Dx after the feature workers make progress. Your job is to make the repo launch-trackable, not to rebuild everything from scratch.
+You are Codex GPT-5.5 Extra High working as the launch integrator. Work across G:\Dx\code and G:\Dx after the feature workers make progress. Your job is to make the repo launch-trackable, not to rebuild everything from scratch.
 
 Goal:
 - Create or update a 100-point DX launch status file.
@@ -809,7 +809,7 @@ At milestone boundaries:
 
 ## Disk And Workspace Policy
 
-- Keep the active Zed checkout at `G:\Zed` for launch stability, exposed through `G:\Dx\zed`.
+- Keep the active Zed checkout at `G:\Dx\code` for launch stability, exposed through `G:\Dx\code`.
 - Keep Flow and DX tools on G drive, exposed through the `G:\Dx` launch hub.
 - Clean only rebuildable outputs when G drive becomes tight.
 - Do not delete source code, models, provider integrations, docs, or hand-authored assets.

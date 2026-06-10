@@ -78,7 +78,7 @@ impl CatalogSourceDiscoveryConfig {
                 r"G:\Flow",
                 r"G:\Dx",
                 r"F:\Zed",
-                r"G:\Zed",
+                r"G:\Dx\code",
             ] {
                 push_unique_path(&mut self.candidate_roots, PathBuf::from(root));
             }

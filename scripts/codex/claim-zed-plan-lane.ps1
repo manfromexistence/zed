@@ -24,7 +24,7 @@ function Resolve-RepoRoot {
 
     $root = (& git rev-parse --show-toplevel 2>$null)
     if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($root)) {
-        throw "Run this script inside G:\Dx\zed or pass -RepoRoot."
+        throw "Run this script inside G:\Dx\code or pass -RepoRoot."
     }
 
     return ($root.Trim() -replace "/", "\")

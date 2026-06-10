@@ -1856,8 +1856,8 @@ fn candidate_model_dirs(primary: &Path) -> Vec<PathBuf> {
     let mut dirs = vec![primary.to_path_buf()];
     if cfg!(target_os = "windows") && Path::new("G:/").exists() {
         for path in [
-            "G:/Zed/models",
-            "G:/Zed/models/llama.cpp",
+            "G:/Dx/code/models",
+            "G:/Dx/code/models/llama.cpp",
             "G:/Models",
             "G:/models",
             "G:/AI/models",
@@ -2109,7 +2109,7 @@ fn is_low_spec_system() -> bool {
 
 fn default_models_dir() -> PathBuf {
     if cfg!(target_os = "windows") && Path::new("G:/").exists() {
-        PathBuf::from("G:/Zed/models/llama.cpp")
+        PathBuf::from("G:/Dx/code/models/llama.cpp")
     } else {
         default_user_data_dir().join("models").join("llama.cpp")
     }
@@ -2117,7 +2117,7 @@ fn default_models_dir() -> PathBuf {
 
 fn default_cache_dir() -> PathBuf {
     if cfg!(target_os = "windows") && Path::new("G:/").exists() {
-        PathBuf::from("G:/Zed/models/huggingface")
+        PathBuf::from("G:/Dx/code/models/huggingface")
     } else {
         default_user_data_dir().join("models").join("huggingface")
     }
@@ -2125,7 +2125,7 @@ fn default_cache_dir() -> PathBuf {
 
 fn default_tools_dir() -> PathBuf {
     if cfg!(target_os = "windows") && Path::new("G:/").exists() {
-        PathBuf::from("G:/Zed/tools/llama.cpp")
+        PathBuf::from("G:/Dx/code/tools/llama.cpp")
     } else {
         default_user_data_dir().join("tools").join("llama.cpp")
     }

@@ -42,7 +42,7 @@ PASSED:
 - `node --test script\dx-title-bar-source.test.ts`
 - `rustfmt --edition 2024 --check` on touched Rust files
 - `git diff --check`
-- `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run` built and launched Zed successfully after stopping the stale dev process that was locking `G:\Zed\target\debug\zed.exe`
+- `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run` built and launched Zed successfully after stopping the stale dev process that was locking `G:\Dx\code\target\debug\zed.exe`
 
 NOTES:
 - The final successful incremental J6 compile completed in 26.73 seconds after the target binary lock was cleared.
@@ -633,7 +633,7 @@ PASSED:
 - `just run` with `CARGO_BUILD_JOBS=6` and `CARGO_INCREMENTAL=1`; Zed launched and reported a detected main window.
 
 NOTES:
-- The first validation attempts were blocked by stale `Cargo.lock` and then by low G-drive build headroom. Rebuildable `G:\Zed\target\debug\deps`, `incremental`, and `build` cache directories were cleared to recover space before the successful rebuild.
+- The first validation attempts were blocked by stale `Cargo.lock` and then by low G-drive build headroom. Rebuildable `G:\Dx\code\target\debug\deps`, `incremental`, and `build` cache directories were cleared to recover space before the successful rebuild.
 
 [2026-06-08] - Project Panel Cloud Root And Icon Semantics
 
@@ -1678,7 +1678,7 @@ PASSED:
 
 NOTES:
 - The final runtime pass still reports existing `G:\Dx\media` warnings, but the touched Zed source compiled and launched.
-- To make the post-clean incremental pass possible on a nearly full G: drive, the largest unrelated per-crate Cargo incremental cache folders were removed while keeping compiled artifacts in `G:\Zed\target\debug\deps`.
+- To make the post-clean incremental pass possible on a nearly full G: drive, the largest unrelated per-crate Cargo incremental cache folders were removed while keeping compiled artifacts in `G:\Dx\code\target\debug\deps`.
 
 [2026-06-06] - Panel Header Close-Only Polish
 
@@ -1721,12 +1721,12 @@ CHANGED:
 
 PASSED:
 - `node --test script\dx-agent-voice-controls-source.test.ts script\dx-handoff-source-guard-registry.test.ts script\dx-agent-thread-view-source.test.ts script\dx-message-editor-source.test.ts`
-- `rustfmt --edition 2024 --check G:\Dx\flow\src\bin\flow-dictate.rs G:\Dx\zed\crates\agent_ui\src\flow_speech_runtime.rs`
+- `rustfmt --edition 2024 --check G:\Dx\flow\src\bin\flow-dictate.rs G:\Dx\code\crates\agent_ui\src\flow_speech_runtime.rs`
 - `cargo test --manifest-path tools\flow-dictation-host\Cargo.toml --target-dir G:\Dx\flow\target -j1 prepares_silent_recording_without_dropping_samples -- --nocapture`
 - `cargo build --manifest-path tools\flow-dictation-host\Cargo.toml --target-dir G:\Dx\flow\target -j1`
 - `$env:OMP_NUM_THREADS='2'; $env:MKL_NUM_THREADS='2'; $env:ORT_NUM_THREADS='2'; .\target\debug\flow-dictate.exe --file G:\Temp\UserTemp\flow-parakeet-silent-smoke.wav --model parakeet-tdt-0.6b-v3-int8`
 - `git -C G:\Dx\flow diff --check -- src/bin/flow-dictate.rs`
-- `git -C G:\Dx\zed diff --check -- crates/agent_ui/src/flow_speech_runtime.rs script/dx-agent-voice-controls-source.test.ts DX.md todo.txt changelog.txt`
+- `git -C G:\Dx\code diff --check -- crates/agent_ui/src/flow_speech_runtime.rs script/dx-agent-voice-controls-source.test.ts DX.md todo.txt changelog.txt`
 - `rg -n "^(<<<<<<<|=======|>>>>>>>)" ...` across the touched Flow and Zed voice files returned no matches.
 
 NOTES:
@@ -1744,7 +1744,7 @@ PASSED:
 - `node --test script\dx-agent-voice-controls-source.test.ts script\dx-handoff-source-guard-registry.test.ts script\dx-agent-thread-view-source.test.ts script\dx-message-editor-source.test.ts`
 - `rustfmt --edition 2024 --check G:\Dx\flow\src\bin\flow-dictate.rs G:\Dx\flow\src\models\stt.rs`
 - `git -C G:\Dx\flow diff --check -- src/bin/flow-dictate.rs src/models/stt.rs tools/flow-dictation-host/README.md`
-- `git -C G:\Dx\zed diff --check -- script/dx-agent-voice-controls-source.test.ts DX.md todo.txt changelog.txt`
+- `git -C G:\Dx\code diff --check -- script/dx-agent-voice-controls-source.test.ts DX.md todo.txt changelog.txt`
 - `rg -n "^(<<<<<<<|=======|>>>>>>>)" ...` across the touched Flow and Zed voice-readiness files returned no matches.
 
 NOTES:
@@ -2817,7 +2817,7 @@ PASSED:
 - `$env:CARGO_BUILD_JOBS='6'; just run` completed locked Zed and CLI builds, launched Zed process `25728`, and produced no compile warnings.
 
 NOTES:
-- The first clean-build retry failed because the prior dev Zed process still held `G:\Zed\target\debug\zed.exe`; only that dev process was closed, then the final run succeeded.
+- The first clean-build retry failed because the prior dev Zed process still held `G:\Dx\code\target\debug\zed.exe`; only that dev process was closed, then the final run succeeded.
 - Hands-on visual proof for the exact split/resize/sidebar interactions remains a manual UX validation pass in the launched editor.
 
 [2026-06-02] - Local Llama And Stacked Side Panel Polish
@@ -5884,14 +5884,14 @@ NOTES:
 CHANGED:
 - Fast-forwarded local `main` to upstream `zed-industries/zed` main tip `6e58a92713` and merged the refreshed main branch into `dev`.
 - Resolved merge integration across `Cargo.toml`, `Cargo.lock`, Agent tool wiring, GPUI platform/window updates, sidebar/titlebar behavior, onboarding, Web Preview source-edit paths, and local `just run` launch target handling.
-- Updated `justfile` launch recipes to run the binary from the configured `G:/Zed/target` build directory, report the launched process id, and fail if Zed exits immediately instead of using the repo-local `./target` path.
+- Updated `justfile` launch recipes to run the binary from the configured `G:/Dx/code/target` build directory, report the launched process id, and fail if Zed exits immediately instead of using the repo-local `./target` path.
 
 FIXED:
 - Adjusted post-merge API drift in editor project-path calls, Agent DX tool imports, runtime-proof import cleanup, Agent UI type/import visibility, Web Preview manifest/source-edit helpers, onboarding GPUI APIs, and sidebar scroll state.
 
 PASSED:
 - `$env:CARGO_BUILD_JOBS='4'; just run`
-- `zed` and `cli` built successfully with `--locked`, and Zed launched from `G:/Zed/target/debug/zed.exe`.
+- `zed` and `cli` built successfully with `--locked`, and Zed launched from `G:/Dx/code/target/debug/zed.exe`.
 
 NOTES:
 - The first attempted `just --jobs 4 run` was unsupported by this local `just` binary, so the verified j4 path used `CARGO_BUILD_JOBS=4` with the repository-approved `just run` recipe.
@@ -7882,7 +7882,7 @@ NOTES:
 [2026-05-23] - DX Deploy Canonical Repo Migration
 
 CHANGED:
-- Moved the current DX Deploy panel slice from stale `G:\Zed` into canonical `G:\Dx\zed` with relative paths preserved for the Deploy launch evidence, quick actions, bucket scores, launch outcome, launch scope, approval evidence, source guard, and status docs.
+- Moved the current DX Deploy panel slice from stale `G:\Dx\code` into canonical `G:\Dx\code` with relative paths preserved for the Deploy launch evidence, quick actions, bucket scores, launch outcome, launch scope, approval evidence, source guard, and status docs.
 
 NOTES:
 - No whole-repo copy, Cargo command, local server, browser automation, cloud write, or live deploy ran during the migration.
@@ -10233,7 +10233,7 @@ NOTES:
 
 CHANGED:
 - Replaced stale G-drive final-proof wording in the WebPreview panel live-validation result gate with configured build-target guidance.
-- WebPreview file-preview staging no longer falls back to `G:/Zed` if the process current directory cannot be resolved; it now uses a temporary Zed staging root.
+- WebPreview file-preview staging no longer falls back to `G:/Dx/code` if the process current directory cannot be resolved; it now uses a temporary Zed staging root.
 - `todo.txt` now records the relocated F-drive target as the active final-proof path and marks the current Browser/Chrome hardening set at 99.7/100.
 
 NOTES:
@@ -10284,7 +10284,7 @@ CHANGED:
 - `todo.txt` now points the remaining 99/100 runtime proof work at the relocated F: checkout.
 
 NOTES:
-- The original `G:\Zed` source tree was left in place as a fallback; only build artifacts were cleaned with the user-requested `cargo clean`.
+- The original `G:\Dx\code` source tree was left in place as a fallback; only build artifacts were cleaned with the user-requested `cargo clean`.
 
 [2026-05-18] - Agent Final Result Diagnostics Parity
 
@@ -11493,7 +11493,7 @@ NOTES:
 [2026-05-17] - Agent Plugin Runtime Build Headroom Guard
 
 ADDED:
-- Added a Just `ensure-build-headroom` preflight that checks the configured `G:/Zed/target` drive has at least 25 GB free before runnable Cargo builds start.
+- Added a Just `ensure-build-headroom` preflight that checks the configured `G:/Dx/code/target` drive has at least 25 GB free before runnable Cargo builds start.
 
 CHANGED:
 - `just run`, `just continue`, `just run-cranelift`, and `just build` now depend on the headroom guard.
@@ -14594,7 +14594,7 @@ CHANGED:
 - `todo.txt` now marks the right-side Icon, Font, Media, and UI panel polish loop as 100/100 code-complete.
 
 NOTES:
-- Ran final `just run`; the debug binary at `G:\Zed\target\debug\zed.exe` was rebuilt and Zed launched successfully.
+- Ran final `just run`; the debug binary at `G:\Dx\code\target\debug\zed.exe` was rebuilt and Zed launched successfully.
 - The Codex command timed out because the launched Zed app remained open for manual QA, with process `zed` still running afterward.
 - Existing untracked local logs, inspiration clones, `models`, and `tools` were preserved.
 
@@ -14668,7 +14668,7 @@ CHANGED:
 
 NOTES:
 - Preserved the current working WebPreview input path and normal editor input/caret behavior; this pass only touches the new right-panel UI.
-- Ran `just run`; Cargo finished the debug build and launched `G:\Zed\target\debug\zed.exe` once. The Codex tool timed out afterward because the Zed app remained open for manual QA.
+- Ran `just run`; Cargo finished the debug build and launched `G:\Dx\code\target\debug\zed.exe` once. The Codex tool timed out afterward because the Zed app remained open for manual QA.
 
 [2026-05-14] - Right Panel Dock And Preview Follow-Up
 
@@ -14698,7 +14698,7 @@ CHANGED:
 
 NOTES:
 - Preserved the current working WebPreview input path and normal editor input/caret behavior; this pass only touches right-panel chrome, static catalog loading, and generated preview pages.
-- Ran `just run`; it rebuilt and launched `G:\Zed\target\debug\zed.exe`. The command timed out afterward because the Zed app remained open for manual QA.
+- Ran `just run`; it rebuilt and launched `G:\Dx\code\target\debug\zed.exe`. The command timed out afterward because the Zed app remained open for manual QA.
 
 [2026-05-14] - WebPreview File Viewers And Right Panel Follow-Up
 
@@ -14760,7 +14760,7 @@ ADDED:
 - The top-right titlebar hidden-feature actions now include a real shadcn/ui button that toggles the new panel.
 - `crates/workspace/src/pane.rs` adds a `DraggedShadcnAsset` payload and pane-level drag/drop routing into active editor items.
 - `crates/editor/src/items.rs` can insert shadcn assets into an active project through the new installer crate.
-- `G:\Zed\inspirations` now includes cloned reference sources for shadcn/ui, Magic UI, and 21st.dev Magic MCP.
+- `G:\Dx\code\inspirations` now includes cloned reference sources for shadcn/ui, Magic UI, and 21st.dev Magic MCP.
 
 CHANGED:
 - shadcn/ui previews open through the Windows WebPreview path when available, with external URL fallback on other platforms.
@@ -14827,10 +14827,10 @@ CHANGED:
 - `crates/language_models/src/provider/llama_cpp.rs` keeps exact llama.cpp `/tokenize` checks before completion so the smaller fast Qwen context still trims oversized Zed prompts safely.
 
 FIXED:
-- `crates/language_models/src/provider/llama_cpp.rs` now stops a Zed-managed local llama-server from `G:\Zed\tools\llama.cpp` when the selected AI panel model changes, so choosing Gemma no longer fails just because Qwen is already running on port 8080.
+- `crates/language_models/src/provider/llama_cpp.rs` now stops a Zed-managed local llama-server from `G:\Dx\code\tools\llama.cpp` when the selected AI panel model changes, so choosing Gemma no longer fails just because Qwen is already running on port 8080.
 
 NOTES:
-- Scanned G: for Qwen GGUF files; only the existing Qwen 3.5 0.8B GGUF and Flow's Qwen 3 0.6B GGUF were found, so the new 4B selector entries are configured to download into `G:\Zed\models\llama.cpp` when selected.
+- Scanned G: for Qwen GGUF files; only the existing Qwen 3.5 0.8B GGUF and Flow's Qwen 3 0.6B GGUF were found, so the new 4B selector entries are configured to download into `G:\Dx\code\models\llama.cpp` when selected.
 - Measured Qwen 3.5 0.8B via llama.cpp CLI/server at 4096 context: warmed tiny prompt completion was about 0.5s with roughly 38 output tokens/sec.
 - Started Gemma 4 E4B directly with llama-server at 8192 context and verified a native `/apply-template` plus `/completion` request returned `gemma-ok`.
 
@@ -14846,7 +14846,7 @@ FIXED:
 - Prevented oversized local prompts from surfacing as hard llama.cpp context errors when Qwen can still answer with the newest relevant context.
 
 NOTES:
-- Verified the running Qwen server at `http://127.0.0.1:8080` has `Qwen3.5-0.8B-GGUF` loaded from `G:/Zed/models/llama.cpp/Qwen3.5-0.8B-Q4_0.gguf`.
+- Verified the running Qwen server at `http://127.0.0.1:8080` has `Qwen3.5-0.8B-GGUF` loaded from `G:/Dx/code/models/llama.cpp/Qwen3.5-0.8B-Q4_0.gguf`.
 - Smoke-tested the running server directly with `/apply-template`, `/completion`, and `/tokenize`; it returned `qwen-ok`.
 - Ran `rustfmt` on the touched Rust file.
 
@@ -14984,7 +14984,7 @@ ADDED:
 - `changelog.txt` to document branch, merge, and local build-environment changes.
 
 CHANGED:
-- `.cargo/config.toml` now pins Cargo build output to `G:/Zed/target`.
+- `.cargo/config.toml` now pins Cargo build output to `G:/Dx/code/target`.
 - `.cargo/config.toml` now uses 4 Cargo jobs for the verified 12-logical-CPU, 24GB RAM machine.
 - `justfile` now describes the upgraded G-drive build profile instead of the old <8GB low-memory profile.
 - Local `main` now matches `upstream/main` at `de14e3fcad`.
@@ -15173,9 +15173,9 @@ NOTES:
 [2026-05-10] - Temporary Worktree Cleanup
 
 CHANGED:
-- Removed the temporary `G:\Zed-speed` worktree.
-- Removed the temporary `G:\Zed-forge-run` worktree folder using a long-path-safe Windows path after Git hit a filename-too-long deletion error.
-- Pruned Git worktree metadata so only the active `G:\Zed` checkout remains.
+- Removed the temporary `G:\Dx\code-speed` worktree.
+- Removed the temporary `G:\Dx\code-forge-run` worktree folder using a long-path-safe Windows path after Git hit a filename-too-long deletion error.
+- Pruned Git worktree metadata so only the active `G:\Dx\code` checkout remains.
 
 NOTES:
 - The lightweight `speed` and `forge` branch refs were not deleted; only the disk-heavy worktree folders were removed.
@@ -15194,7 +15194,7 @@ CHANGED:
 
 FIXED:
 - Local model selection no longer waits on a remote provider or model list; the AI panel can show the configured local model immediately.
-- The local runtime uses `G:/Zed/models/huggingface`, `G:/Zed/models/llama.cpp`, and `G:/Zed/tools/llama.cpp` by default on this Windows/G-drive setup.
+- The local runtime uses `G:/Dx/code/models/huggingface`, `G:/Dx/code/models/llama.cpp`, and `G:/Dx/code/tools/llama.cpp` by default on this Windows/G-drive setup.
 
 NOTES:
 - The provider starts `llama-server` on first use, finding it from settings, G-drive tools, PATH, or downloading the latest matching llama.cpp release asset.
@@ -15204,7 +15204,7 @@ NOTES:
 [2026-05-10] - Direct Llama.cpp Qwen Default
 
 ADDED:
-- Downloaded `G:\Zed\models\llama.cpp\Qwen3.5-0.8B-Q4_0.gguf` for fast local default testing.
+- Downloaded `G:\Dx\code\models\llama.cpp\Qwen3.5-0.8B-Q4_0.gguf` for fast local default testing.
 
 CHANGED:
 - `assets/settings/default.json` now makes Qwen 3.5 0.8B Q4_0 the normal and low-spec local default, with Gemma 4 E4B retained as an optional configured model.
@@ -15235,7 +15235,7 @@ FIXED:
 - Fixed the Gemma selection bug where a healthy Qwen server on port 8080 could be reused even though Gemma was selected in the AI panel.
 
 NOTES:
-- Verified Gemma 4 E4B Q4_K_M from `G:\Zed\models\llama.cpp\gemma-4-E4B-it-Q4_K_M.gguf` at 32768 context with llama.cpp native `/apply-template` and `/completion`.
+- Verified Gemma 4 E4B Q4_K_M from `G:\Dx\code\models\llama.cpp\gemma-4-E4B-it-Q4_K_M.gguf` at 32768 context with llama.cpp native `/apply-template` and `/completion`.
 
 [2026-05-10] - Gemma Local Runtime Handoff
 
@@ -15274,7 +15274,7 @@ CHANGED:
 
 FIXED:
 - WebPreview page inputs should now receive keyboard input after the user clicks into the native preview instead of having those key messages swallowed by the editor window accelerator path.
-- Normal editor typing should no longer reread and sort the workspace root through the sidebar grid on every render, which was a plausible cause of delayed text/caret paint in a large `G:\Zed` checkout.
+- Normal editor typing should no longer reread and sort the workspace root through the sidebar grid on every render, which was a plausible cause of delayed text/caret paint in a large `G:\Dx\code` checkout.
 
 NOTES:
 - Microsoft WebView2 composition hosting exposes mouse input forwarding but not a direct `SendKeyEvent` path in the current bindings; keyboard delivery depends on `MoveFocus` plus normal Windows key-message routing.
@@ -15348,7 +15348,7 @@ FIXED:
 - Qwen 3.5 0.8B should spend less CPU/RAM on oversized server slots and long default generations.
 
 NOTES:
-- Stopped the stale `G:\Zed\tools\llama.cpp\b9090\llama-server.exe` that was still using the old `32768` context and `4` slots.
+- Stopped the stale `G:\Dx\code\tools\llama.cpp\b9090\llama-server.exe` that was still using the old `32768` context and `4` slots.
 - Smoke-tested the tuned Qwen launch directly: `/props` reported `16384` context and `1` slot, and a tiny native `/apply-template` + `/completion` request answered `OK` in 165 ms.
 - Did not run `just run` yet; this pass used code inspection, local WebView2 docs/source research, `rustfmt`, `git diff --check`, and targeted llama.cpp smoke testing.
 
@@ -16056,7 +16056,7 @@ PASSED:
 - Focused source scan for collapsed provider group state, provider headers, model-count badges, expand/collapse controls, and the provider-collapse test.
 - `git diff --check -- crates/agent_ui/src/language_model_selector.rs crates/agent_ui/src/ui/model_selector_components.rs`
 - Focused conflict-marker scan across the changed model-picker files.
-- Authorized `just run` with `CARGO_BUILD_JOBS=6` completed the Zed and CLI dev builds and launched `G:\Zed\target\debug\zed.exe`.
+- Authorized `just run` with `CARGO_BUILD_JOBS=6` completed the Zed and CLI dev builds and launched `G:\Dx\code\target\debug\zed.exe`.
 
 NOTES:
 - This is scoped to the AI panel language model picker path. Settings-provider configuration surfaces were not changed.

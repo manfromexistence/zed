@@ -148,36 +148,36 @@ fn scan_dx_style_panel() -> DxStylePanelSnapshot {
         .join("fixtures")
         .join("grouped-class-source-apply-contract.json");
     let group_registry_path = root.join("src").join("core").join("group").join("mod.rs");
-    let zed_root = dx_zed_root();
-    let web_preview_host_path = zed_root
+    let code_root = dx_code_root();
+    let web_preview_host_path = code_root
         .join("crates")
         .join("web_preview")
         .join("src")
         .join("web_preview_view.rs");
-    let dx_style_generator_surface_path = zed_root
+    let dx_style_generator_surface_path = code_root
         .join("crates")
         .join("web_preview")
         .join("src")
         .join("dx_style_generator_surface.rs");
-    let dx_style_generator_script_path = zed_root
+    let dx_style_generator_script_path = code_root
         .join("crates")
         .join("web_preview")
         .join("src")
         .join("dx_style_generator_surface")
         .join("script.rs");
-    let dx_style_css_declaration_dry_run_script_path = zed_root
+    let dx_style_css_declaration_dry_run_script_path = code_root
         .join("crates")
         .join("web_preview")
         .join("src")
         .join("dx_style_generator_surface")
         .join("css_declaration_dry_run_script.rs");
-    let dx_style_source_apply_session_script_path = zed_root
+    let dx_style_source_apply_session_script_path = code_root
         .join("crates")
         .join("web_preview")
         .join("src")
         .join("dx_style_generator_surface")
         .join("source_apply_session_script.rs");
-    let dx_style_source_apply_path = zed_root
+    let dx_style_source_apply_path = code_root
         .join("crates")
         .join("web_preview")
         .join("src")
@@ -539,8 +539,8 @@ fn scan_dx_style_panel() -> DxStylePanelSnapshot {
             .to_string(),
             detail: format!(
                 "{} + {}",
-                relative_or_display(&zed_root, &web_preview_host_path),
-                relative_or_display(&zed_root, &dx_style_generator_surface_path),
+                relative_or_display(&code_root, &web_preview_host_path),
+                relative_or_display(&code_root, &dx_style_generator_surface_path),
             ),
         },
     ];
@@ -573,8 +573,8 @@ fn dx_style_root() -> PathBuf {
     DxProjectContext::shared_fallback_root().join("style")
 }
 
-fn dx_zed_root() -> PathBuf {
-    DxProjectContext::shared_fallback_root().join("zed")
+fn dx_code_root() -> PathBuf {
+    DxProjectContext::shared_fallback_root().join("code")
 }
 
 fn read_text_limited(path: &Path) -> Option<String> {

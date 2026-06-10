@@ -13,7 +13,7 @@
 ### Task 1: Native Field Coverage
 
 **Files:**
-- Modify: `G:\Dx\zed\crates\web_preview\src\dx_style_source_apply.rs`
+- Modify: `G:\Dx\code\crates\web_preview\src\dx_style_source_apply.rs`
 
 - [x] Add native helper to compare the actual `runtime_validation_receipt` against `required_runtime_validation_receipt_fields`.
 - [x] Feed missing actual receipt fields into `source_write_readiness`.
@@ -23,7 +23,7 @@
 ### Task 2: Web Preview Field Coverage
 
 **Files:**
-- Modify: `G:\Dx\zed\crates\web_preview\src\dx_style_generator_surface\script.rs`
+- Modify: `G:\Dx\code\crates\web_preview\src\dx_style_generator_surface\script.rs`
 
 - [x] Compare the copied `runtimeValidationReceiptPacket` against bridge required fields.
 - [x] Add the same named readiness blocker and missing-field evidence in Web Preview readiness.
@@ -31,10 +31,10 @@
 ### Task 3: Source Guards And Handoff
 
 **Files:**
-- Modify: `G:\Dx\zed\script\dx-style-panel-source.test.ts`
-- Modify: `G:\Dx\zed\DX.md`
-- Modify: `G:\Dx\zed\todo.txt`
-- Modify: `G:\Dx\zed\changelog.txt`
+- Modify: `G:\Dx\code\script\dx-style-panel-source.test.ts`
+- Modify: `G:\Dx\code\DX.md`
+- Modify: `G:\Dx\code\todo.txt`
+- Modify: `G:\Dx\code\changelog.txt`
 
 - [x] Guard native and Web Preview runtime receipt field coverage.
 - [x] Document that actual receipt field coverage is checked while runtime proof remains unverified.

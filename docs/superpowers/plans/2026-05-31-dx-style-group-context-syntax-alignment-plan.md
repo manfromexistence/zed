@@ -11,7 +11,7 @@
 ### Task 1: Zed Context Alignment
 
 **Files:**
-- Modify: `G:\Dx\zed\crates\agent_ui\src\dx_style_panel\group_context.rs`
+- Modify: `G:\Dx\code\crates\agent_ui\src\dx_style_panel\group_context.rs`
 
 - [x] Rename alias-call syntax output to `alias_reference`.
 - [x] Rename inline utility syntax output to `inline_utilities`.
@@ -21,10 +21,10 @@
 ### Task 2: Guards And Docs
 
 **Files:**
-- Modify: `G:\Dx\zed\script\dx-style-panel-source.test.ts`
-- Modify: `G:\Dx\zed\DX.md`
-- Modify: `G:\Dx\zed\todo.txt`
-- Modify: `G:\Dx\zed\changelog.txt`
+- Modify: `G:\Dx\code\script\dx-style-panel-source.test.ts`
+- Modify: `G:\Dx\code\DX.md`
+- Modify: `G:\Dx\code\todo.txt`
+- Modify: `G:\Dx\code\changelog.txt`
 
 - [x] Guard the aligned syntax names and source declaration status.
 - [x] Document source-only behavior and keep mutation disabled.

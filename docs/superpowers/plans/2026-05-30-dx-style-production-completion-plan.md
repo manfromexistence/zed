@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Turn the DX Style integration across `G:\Dx\style` and `G:\Dx\zed` into a professional, source-backed Style sidebar where GPUI hosts editor state and dock placement while Web Preview owns the visual CSS generator cockpit.
+**Goal:** Turn the DX Style integration across `G:\Dx\style` and `G:\Dx\code` into a professional, source-backed Style sidebar where GPUI hosts editor state and dock placement while Web Preview owns the visual CSS generator cockpit.
 
 **Architecture:** Zed GPUI remains the native shell: panel registration, editor cursor context, source identity, readiness gates, and native review receipts. Web Preview owns generator-heavy UI: controls, visual previews, copy/review actions, CSS declaration dry-run review, and source-apply request construction. DX Style owns contracts, fixtures, catalogs, recipes, and receipt shape so Zed does not hardcode style policy.
 
@@ -42,9 +42,9 @@ The source architecture is directionally strong: real right-dock panel, source-o
 ### Task 1: Plan And Score Checkpoint
 
 **Files:**
-- Create: `G:\Dx\zed\docs\superpowers\plans\2026-05-30-dx-style-production-completion-plan.md`
-- Modify: `G:\Dx\zed\todo.txt`
-- Modify: `G:\Dx\zed\changelog.txt`
+- Create: `G:\Dx\code\docs\superpowers\plans\2026-05-30-dx-style-production-completion-plan.md`
+- Modify: `G:\Dx\code\todo.txt`
+- Modify: `G:\Dx\code\changelog.txt`
 
 - [ ] Write this plan with the honest score, tried work, gaps, and next tasks.
 - [ ] Update `todo.txt` with the checkpoint score and the next exact source-only course of action.

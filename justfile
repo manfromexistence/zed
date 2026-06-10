@@ -1,11 +1,11 @@
 # Justfile for running Zed on this upgraded Windows dev machine.
-# Cargo output is pinned to G:/Zed/target in .cargo/config.toml.
+# Cargo output is pinned to G:/Dx/code/target in .cargo/config.toml.
 # Agent note: do not invoke any recipe here during source-only or no-`just run`
 # passes. These recipes wrap Cargo and are reserved for an explicitly authorized
 # validation window.
 set shell := ["powershell.exe", "-NoLogo", "-Command"]
 
-build_target_dir := "G:/Zed/target"
+build_target_dir := "G:/Dx/code/target"
 min_build_free_gb := "18"
 min_incremental_free_gb := "4"
 
@@ -24,7 +24,7 @@ launch-zed:
 run: ensure-build-headroom
     @echo "Running Zed with fast incremental G-drive build settings..."
     @echo "Building the zed binary"
-    @$jobs = if ([string]::IsNullOrWhiteSpace($env:CARGO_BUILD_JOBS)) { "6" } else { $env:CARGO_BUILD_JOBS }; $incremental = if ([string]::IsNullOrWhiteSpace($env:CARGO_INCREMENTAL)) { "1" } else { $env:CARGO_INCREMENTAL }; $env:CARGO_BUILD_JOBS = $jobs; $env:CARGO_INCREMENTAL = $incremental; Write-Host "Using Cargo config: locked Cargo.lock, $jobs job(s), G:/Zed/target, rust-lld linker, no debug info, incremental=$incremental"
+    @$jobs = if ([string]::IsNullOrWhiteSpace($env:CARGO_BUILD_JOBS)) { "6" } else { $env:CARGO_BUILD_JOBS }; $incremental = if ([string]::IsNullOrWhiteSpace($env:CARGO_INCREMENTAL)) { "1" } else { $env:CARGO_INCREMENTAL }; $env:CARGO_BUILD_JOBS = $jobs; $env:CARGO_INCREMENTAL = $incremental; Write-Host "Using Cargo config: locked Cargo.lock, $jobs job(s), G:/Dx/code/target, rust-lld linker, no debug info, incremental=$incremental"
     cargo build --locked -p zed --bin zed
     @echo "Build complete! Launching Zed once..."
     @just launch-zed
@@ -33,7 +33,7 @@ run: ensure-build-headroom
 run-full: ensure-build-headroom
     @echo "Running Zed with full incremental G-drive build settings..."
     @echo "Building the zed binary plus the development CLI companion"
-    @$jobs = if ([string]::IsNullOrWhiteSpace($env:CARGO_BUILD_JOBS)) { "6" } else { $env:CARGO_BUILD_JOBS }; $incremental = if ([string]::IsNullOrWhiteSpace($env:CARGO_INCREMENTAL)) { "1" } else { $env:CARGO_INCREMENTAL }; $env:CARGO_BUILD_JOBS = $jobs; $env:CARGO_INCREMENTAL = $incremental; Write-Host "Using Cargo config: locked Cargo.lock, $jobs job(s), G:/Zed/target, rust-lld linker, no debug info, incremental=$incremental"
+    @$jobs = if ([string]::IsNullOrWhiteSpace($env:CARGO_BUILD_JOBS)) { "6" } else { $env:CARGO_BUILD_JOBS }; $incremental = if ([string]::IsNullOrWhiteSpace($env:CARGO_INCREMENTAL)) { "1" } else { $env:CARGO_INCREMENTAL }; $env:CARGO_BUILD_JOBS = $jobs; $env:CARGO_INCREMENTAL = $incremental; Write-Host "Using Cargo config: locked Cargo.lock, $jobs job(s), G:/Dx/code/target, rust-lld linker, no debug info, incremental=$incremental"
     cargo build --locked -p zed --bin zed
     cargo build --locked -p cli --bin cli
     @echo "Build complete! Launching Zed once..."
@@ -104,7 +104,7 @@ show-memory-guide:
     @echo "Current verified machine profile:"
     @echo "  CPU: Ryzen 5 5600G, 6 cores / 12 logical processors"
     @echo "  RAM: 24 GB installed"
-    @echo "  Build output: G:/Zed/target"
+    @echo "  Build output: G:/Dx/code/target"
     @echo "  Cargo workers: 6 by default, override with CARGO_BUILD_JOBS"
     @echo "  Runnable build preflight: at least 18 GB free on G:"
     @echo "  Runnable build mode: CARGO_INCREMENTAL=1 for faster local UI iteration"

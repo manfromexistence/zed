@@ -15,7 +15,7 @@
 **Files:**
 - Modify: `G:\Dx\style\src\core\engine\grouped_class_editor_write_bridge.rs`
 - Modify: `G:\Dx\style\fixtures\grouped-class-editor-write-bridge-preflight.json`
-- Modify: `G:\Dx\zed\crates\agent_ui\src\dx_style_panel\editor_write_bridge.rs`
+- Modify: `G:\Dx\code\crates\agent_ui\src\dx_style_panel\editor_write_bridge.rs`
 
 - [x] Add dispatch-time runtime validation receipt revalidation as a required editor guard.
 - [x] Add dispatch-time explicit mutation action revalidation as a required editor guard.
@@ -24,7 +24,7 @@
 ### Task 2: Native Dispatch Guard
 
 **Files:**
-- Modify: `G:\Dx\zed\crates\web_preview\src\web_preview_view.rs`
+- Modify: `G:\Dx\code\crates\web_preview\src\web_preview_view.rs`
 
 - [x] Block dispatch when runtime validation receipt schema/status is not validated.
 - [x] Block dispatch when authorized runtime validation, WebView review round trip, native dry-run replay, or post-write digest proof is missing.
@@ -34,10 +34,10 @@
 ### Task 3: Source Guards, Handoff, Verification
 
 **Files:**
-- Modify: `G:\Dx\zed\script\dx-style-panel-source.test.ts`
-- Modify: `G:\Dx\zed\DX.md`
-- Modify: `G:\Dx\zed\todo.txt`
-- Modify: `G:\Dx\zed\changelog.txt`
+- Modify: `G:\Dx\code\script\dx-style-panel-source.test.ts`
+- Modify: `G:\Dx\code\DX.md`
+- Modify: `G:\Dx\code\todo.txt`
+- Modify: `G:\Dx\code\changelog.txt`
 
 - [x] Guard the new bridge contract strings and final dispatch status names.
 - [x] Document the source-only checkpoint and keep runtime proof unclaimed.

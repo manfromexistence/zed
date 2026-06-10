@@ -1,7 +1,7 @@
 # DX Style Expected Recommendation Surface Plan
 
 Date: 2026-05-31
-Scope: `G:\Dx\zed` source-only DX Style Web Preview bridge.
+Scope: `G:\Dx\code` source-only DX Style Web Preview bridge.
 
 ## Goal
 
