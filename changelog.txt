@@ -1,3 +1,17 @@
+[2026-06-10] - Authorized J6 Sound Validation
+
+FIXED:
+- `Cargo.lock` now includes the `audio` dependency in the `editor` package stanza, so `cargo build --locked -p zed --bin zed` no longer tries to rewrite the lockfile before launch.
+- `crates\audio\src\audio_pipeline.rs` now emits the debug-build audio optimization warning only when opening an output stream instead of on every DX micro-sound playback.
+
+PASSED:
+- `node --test script\dx-sound-source.test.ts`
+- `git diff --check`
+- `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run`
+
+NOTES:
+- The authorized j6 run built and launched Zed successfully. Fresh runtime log entries after launch still include environment/provider issues for missing AMD AGS GPU-driver metadata and ChatGPT subscription authentication; those are not compile warnings and were not changed in this pass.
+
 [2026-06-10] - DX WWW Turbo Web Preview Bridge
 
 ADDED:
