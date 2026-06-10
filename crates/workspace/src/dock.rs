@@ -1138,6 +1138,12 @@ impl Dock {
                 active_panel.panel.set_active(open, window, cx);
             }
 
+            let sound = if open {
+                DxSoundEvent::PanelOpen
+            } else {
+                DxSoundEvent::PanelClose
+            };
+            Audio::play_dx_sound(sound, cx);
             cx.notify();
         }
     }
@@ -1292,8 +1298,8 @@ impl Dock {
                             .iter()
                             .position(|entry| entry.panel.panel_id() == Entity::entity_id(panel))
                         {
-                            this.set_open(true, window, cx);
                             this.activate_panel(ix, window, cx);
+                            this.set_open(true, window, cx);
                             window.focus(&panel.read(cx).focus_handle(cx), cx);
                         }
                     }
@@ -1302,7 +1308,6 @@ impl Dock {
                         if this.is_panel_stacked(panel_id)
                             && this.unstack_panel(panel_id, window, cx)
                         {
-                            Audio::play_dx_sound(DxSoundEvent::PanelClose, cx);
                             return;
                         }
                         if this
@@ -1310,7 +1315,6 @@ impl Dock {
                             .is_some_and(|p| p.panel_id() == panel_id)
                         {
                             this.set_open(false, window, cx);
-                            Audio::play_dx_sound(DxSoundEvent::PanelClose, cx);
                         }
                     }
                 },
@@ -1466,7 +1470,8 @@ impl Dock {
             self.stacked_panel_ids.clear();
         }
 
-        if Some(panel_ix) != self.active_panel_index {
+        let did_change_active_panel = Some(panel_ix) != self.active_panel_index;
+        if did_change_active_panel {
             if let Some(active_panel) = self.active_panel_entry() {
                 active_panel.panel.set_active(false, window, cx);
             }
@@ -1477,6 +1482,9 @@ impl Dock {
             }
 
             cx.notify();
+        }
+        if did_change_active_panel && self.is_open {
+            Audio::play_dx_sound(DxSoundEvent::MenuSnap, cx);
         }
         if cleared_stack {
             self.persist_stack_state(cx);

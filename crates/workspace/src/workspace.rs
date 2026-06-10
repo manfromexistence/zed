@@ -4666,19 +4666,13 @@ impl Workspace {
 
     /// Open the panel of the given type
     pub fn open_panel<T: Panel>(&mut self, window: &mut Window, cx: &mut Context<Self>) {
-        let mut did_open = false;
         for dock in self.all_docks() {
             if let Some(panel_index) = dock.read(cx).panel_index_for_type::<T>() {
                 dock.update(cx, |dock, cx| {
                     dock.activate_panel(panel_index, window, cx);
                     dock.set_open(true, window, cx);
                 });
-                did_open = true;
             }
-        }
-
-        if did_open {
-            Audio::play_dx_sound(DxSoundEvent::PanelOpen, cx);
         }
     }
 
@@ -4696,18 +4690,12 @@ impl Workspace {
     }
 
     pub fn close_panel<T: Panel>(&self, window: &mut Window, cx: &mut Context<Self>) {
-        let mut did_close = false;
         for dock in self.all_docks().iter() {
             dock.update(cx, |dock, cx| {
                 if dock.panel::<T>().is_some() {
                     dock.set_open(false, window, cx);
-                    did_close = true;
                 }
             })
-        }
-
-        if did_close {
-            Audio::play_dx_sound(DxSoundEvent::PanelClose, cx);
         }
     }
 

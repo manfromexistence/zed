@@ -98,8 +98,10 @@ test("safe UI surfaces use semantic DX sound events", () => {
   assert.match(workspace, /DxSoundEvent::ScreenLaunch/);
   assert.match(workspace, /DxSoundEvent::ActionConfirm/);
   assert.match(dock, /DxSoundEvent::ActionConfirm/);
-  assert.match(workspace, /DxSoundEvent::PanelOpen/);
-  assert.match(workspace, /DxSoundEvent::PanelClose/);
+  assert.match(dock, /DxSoundEvent::PanelOpen/);
+  assert.match(dock, /DxSoundEvent::PanelClose/);
+  assert.match(dock, /did_change_active_panel && self\.is_open/);
+  assert.match(dock, /DxSoundEvent::MenuSnap/);
   assert.match(agentPanel, /DxSoundEvent::SuccessChime/);
   assert.match(conversationView, /DxSoundEvent::SuccessChime/);
 });
