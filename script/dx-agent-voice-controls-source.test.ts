@@ -929,12 +929,6 @@ test("voice playback keeps audio feature wiring and fallback states", () => {
     "fn latest_agent_response_content",
     "fn is_blocked_on_terminal_command",
   );
-  const toggleReadAloudLatestResponse = sourceSlice(
-    threadView,
-    "fn toggle_flow_read_aloud_latest_response",
-    "fn speak_flow_text",
-  );
-
   assert.match(agentUiCargo, /audio = \["dep:audio"\]/);
   assert.match(zedCargo, /agent_ui = \{ workspace = true, features = \["audio"\] \}/);
   assert.match(threadView, /#\[cfg\(feature = "audio"\)\]/);
@@ -980,10 +974,7 @@ test("voice playback keeps audio feature wiring and fallback states", () => {
   assert.match(speakFlowText, /show_flow_voice_toast\(message, cx\)/);
   assert.match(threadView, /struct FlowTextToSpeechRequest/);
   assert.doesNotMatch(voiceControls, /agent-composer-read-aloud/);
-  assert.match(threadView, /fn toggle_flow_read_aloud_latest_response/);
-  assert.match(toggleReadAloudLatestResponse, /Self::latest_agent_response_content\(thread\.entries\(\), cx\)/);
-  assert.match(toggleReadAloudLatestResponse, /self\.speak_agent_response_text\(text, cx\)/);
-  assert.doesNotMatch(toggleReadAloudLatestResponse, /toggle_flow_voice_recording|start_flow_voice_recording|transcribe_recording|insert_transcript_text/);
+  assert.doesNotMatch(threadView, /fn toggle_flow_read_aloud_latest_response/);
   assert.match(threadView, /fn latest_agent_response_content/);
   assert.match(renderThreadControls, /agent-response-text-to-speech/);
   assert.match(renderThreadControls, /IconName::AudioOn/);

@@ -4427,31 +4427,6 @@ impl ThreadView {
         }
     }
 
-    fn toggle_flow_read_aloud_latest_response(&mut self, cx: &mut Context<Self>) {
-        if matches!(
-            self.composer_voice_state.phase(),
-            ComposerVoicePhase::Synthesizing | ComposerVoicePhase::Speaking
-        ) {
-            self.stop_flow_voice_playback(cx);
-            return;
-        }
-
-        let latest_response_text = {
-            let thread = self.thread.read(cx);
-            Self::latest_agent_response_content(thread.entries(), cx)
-        };
-
-        match latest_response_text {
-            Some(text) => self.speak_agent_response_text(text, cx),
-            None => {
-                let message = "No agent response is available for Kokoro read-aloud";
-                self.composer_voice_state.set_error(message);
-                self.show_flow_voice_toast(message, cx);
-                cx.notify();
-            }
-        }
-    }
-
     fn speak_agent_response_text(&mut self, text: String, cx: &mut Context<Self>) {
         self.speak_flow_text(FlowTextToSpeechRequest::agent_response(text), cx);
     }

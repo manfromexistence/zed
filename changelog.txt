@@ -3,14 +3,16 @@
 FIXED:
 - `crates\agent_ui\src\dx_check_panel_view*.rs` now gives finding, notice, adapter-plan, and quick-fix rows real flex width, full-width tabs, and a constrained scrollbar host so Findings text no longer collapses to `...`.
 - `crates\title_bar\src\title_bar.rs` and `crates\workspace\src\screen_carousel.rs` now use the Sparkle icon for the AI screen entry.
-- `crates\agent_ui\src\conversation_view\voice_controls.rs` and `thread_view.rs` remove the composer speaker button while keeping response read-aloud controls, and the idle mic uses muted chrome instead of warning yellow when STT is not ready.
+- `crates\agent_ui\src\conversation_view\voice_controls.rs` and `thread_view.rs` remove the composer speaker button and the stale composer read-aloud wrapper while keeping response read-aloud controls, and the idle mic uses muted chrome instead of warning yellow when STT is not ready.
 
 PASSED:
 - `node --test script\dx-check-panel-source.test.ts script\dx-agent-voice-controls-source.test.ts script\dx-title-bar-source.test.ts script\dx-agent-workspaces-source.test.ts`
 - `rustfmt --edition 2024 crates\agent_ui\src\dx_check_panel_view.rs crates\agent_ui\src\dx_check_panel_view\tabs.rs crates\agent_ui\src\dx_check_panel_view\view_rows.rs crates\agent_ui\src\conversation_view\voice_controls.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\title_bar\src\title_bar.rs crates\workspace\src\screen_carousel.rs`
+- `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run`
 
 NOTES:
-- Source-only pass. Cargo, build, runtime native proof, and `just run` remain deferred by instruction.
+- Authorized J6 validation initially exposed a stale composer read-aloud wrapper warning, then hit the expected binary lock from the previously launched Zed process.
+- Cleared rebuildable `target\debug\incremental` cache for headroom, stopped the stale launched Zed process, and the final `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run` built and launched Zed successfully in 23.77s with no warnings.
 
 [2026-06-10] - DX Sound Playback Wiring
 
