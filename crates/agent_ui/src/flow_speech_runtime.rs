@@ -6,11 +6,13 @@ use cpal::{
 };
 use std::{
     env, fs,
+    io::{BufRead, BufReader, Write},
     path::{Path, PathBuf},
-    process::{Child, Command, Output, Stdio},
+    process::{Child, ChildStdin, ChildStdout, Command, Output, Stdio},
     sync::{
         Arc, Mutex,
         atomic::{AtomicBool, AtomicU32, AtomicUsize, Ordering},
+        mpsc::{self, Receiver},
     },
     thread,
     time::{Duration, Instant, SystemTime},
@@ -74,12 +76,45 @@ enum FlowSttArtifactShape {
     WhisperCpp { model_file: &'static str },
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 struct KokoroTtsRuntime {
     data_root: PathBuf,
     python: PathBuf,
     runner: PathBuf,
     model_dir: PathBuf,
+    server: Arc<Mutex<Option<KokoroTtsServer>>>,
+}
+
+struct KokoroTtsServer {
+    child: Child,
+    stdin: ChildStdin,
+    stdout_lines: Receiver<String>,
+    process_tree: FlowSpeechProcessTreeGuard,
+}
+
+impl std::fmt::Debug for KokoroTtsRuntime {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("KokoroTtsRuntime")
+            .field("data_root", &self.data_root)
+            .field("python", &self.python)
+            .field("runner", &self.runner)
+            .field("model_dir", &self.model_dir)
+            .finish_non_exhaustive()
+    }
+}
+
+impl Drop for KokoroTtsServer {
+    fn drop(&mut self) {
+        self.terminate();
+    }
+}
+
+impl KokoroTtsServer {
+    fn terminate(&mut self) {
+        self.process_tree.terminate();
+        let _ = self.child.kill();
+        let _ = self.child.wait();
+    }
 }
 
 #[derive(Debug)]
@@ -704,38 +739,79 @@ impl KokoroTtsRuntime {
             python,
             runner,
             model_dir,
+            server: Arc::new(Mutex::new(None)),
         })
     }
 
     fn synthesize(&self, text: &str, cancellation: &FlowSpeechCancellation) -> Result<PathBuf> {
-        let output_dir = env::temp_dir().join("zed-kokoro-tts");
-        fs::create_dir_all(&output_dir)?;
-        fs::create_dir_all(self.data_root.join("huggingface"))?;
-        fs::create_dir_all(self.data_root.join("torch"))?;
-        let output_path = output_dir.join(format!(
-            "zed-composer-kokoro-{}.wav",
-            Uuid::new_v4().as_simple()
-        ));
+        match self.synthesize_with_cached_server(text, cancellation) {
+            Ok(output_path) => Ok(output_path),
+            Err(error) if cancellation.is_cancelled() => Err(error),
+            Err(error) => {
+                log::debug!(
+                    "Cached Friday Kokoro TTS server failed; falling back to one-shot synthesis: {error:#}"
+                );
+                self.clear_cached_server();
+                self.synthesize_once(text, cancellation)
+            }
+        }
+    }
 
-        let mut command = Command::new(&self.python);
+    fn synthesize_with_cached_server(
+        &self,
+        text: &str,
+        cancellation: &FlowSpeechCancellation,
+    ) -> Result<PathBuf> {
+        let output_path = self.prepare_tts_output_path()?;
+        let result = self.synthesize_to_output_with_cached_server(text, &output_path, cancellation);
+        if let Err(error) = result {
+            let _ = fs::remove_file(&output_path);
+            return Err(error);
+        }
+        self.validate_tts_output(&output_path)?;
+        Ok(output_path)
+    }
+
+    fn synthesize_to_output_with_cached_server(
+        &self,
+        text: &str,
+        output_path: &Path,
+        cancellation: &FlowSpeechCancellation,
+    ) -> Result<()> {
+        let mut server_guard = self
+            .server
+            .lock()
+            .map_err(|_| anyhow!("Friday Kokoro TTS server lock was poisoned"))?;
+        if server_guard.is_none() {
+            *server_guard = Some(self.start_server()?);
+        }
+        let server = server_guard
+            .as_mut()
+            .context("Friday Kokoro TTS server is not available")?;
+        let request = serde_json::json!({
+            "text": text,
+            "output": output_path.display().to_string(),
+            "speaker": DEFAULT_KOKORO_VOICE,
+        });
+        server.write_request(&request)?;
+        let response =
+            server.read_response(TTS_COMMAND_TIMEOUT, Some(cancellation), "Friday Kokoro TTS")?;
+        ensure_kokoro_server_success(&response, "Friday Kokoro TTS")?;
+        Ok(())
+    }
+
+    fn synthesize_once(
+        &self,
+        text: &str,
+        cancellation: &FlowSpeechCancellation,
+    ) -> Result<PathBuf> {
+        let output_path = self.prepare_tts_output_path()?;
+        let mut command = self.kokoro_command();
         command
-            .arg(&self.runner)
-            .arg("--model-kind")
-            .arg("kokoro")
-            .arg("--model-dir")
-            .arg(&self.model_dir)
             .arg("--text")
             .arg(text)
             .arg("--output")
-            .arg(&output_path)
-            .arg("--language")
-            .arg("English")
-            .arg("--speaker")
-            .arg(DEFAULT_KOKORO_VOICE)
-            .arg("--device")
-            .arg("cpu");
-        apply_tts_process_env(&mut command, &self.data_root);
-        apply_windows_process_flags(&mut command);
+            .arg(&output_path);
 
         let output = match run_command_with_timeout(
             command,
@@ -753,16 +829,106 @@ impl KokoroTtsRuntime {
             let _ = fs::remove_file(&output_path);
             return Err(command_error("Friday Kokoro TTS failed", output));
         }
+        self.validate_tts_output(&output_path)?;
+        Ok(output_path)
+    }
+
+    fn start_server(&self) -> Result<KokoroTtsServer> {
+        self.prepare_tts_dirs()?;
+        let mut command = self.kokoro_command();
+        command
+            .arg("--server")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null());
+        let mut child = command
+            .spawn()
+            .context("Failed to start Friday Kokoro TTS server")?;
+        let process_tree = match create_flow_speech_process_tree_guard(&child) {
+            Ok(process_tree) => process_tree,
+            Err(error) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(error)
+                    .context("Failed to protect Friday Kokoro TTS server process tree");
+            }
+        };
+        let stdin = child
+            .stdin
+            .take()
+            .context("Friday Kokoro TTS server stdin is unavailable")?;
+        let stdout = child
+            .stdout
+            .take()
+            .context("Friday Kokoro TTS server stdout is unavailable")?;
+        let stdout_lines = spawn_kokoro_server_stdout_reader(stdout);
+        let mut server = KokoroTtsServer {
+            child,
+            stdin,
+            stdout_lines,
+            process_tree,
+        };
+        let response = server.read_response(
+            TTS_COMMAND_TIMEOUT,
+            None,
+            "Friday Kokoro TTS server startup",
+        )?;
+        ensure_kokoro_server_success(&response, "Friday Kokoro TTS server startup")?;
+        Ok(server)
+    }
+
+    fn clear_cached_server(&self) {
+        if let Ok(mut server) = self.server.lock() {
+            server.take();
+        }
+    }
+
+    fn kokoro_command(&self) -> Command {
+        let mut command = Command::new(&self.python);
+        command
+            .arg(&self.runner)
+            .arg("--model-kind")
+            .arg("kokoro")
+            .arg("--model-dir")
+            .arg(&self.model_dir)
+            .arg("--language")
+            .arg("English")
+            .arg("--speaker")
+            .arg(DEFAULT_KOKORO_VOICE)
+            .arg("--device")
+            .arg("cpu");
+        apply_tts_process_env(&mut command, &self.data_root);
+        apply_windows_process_flags(&mut command);
+        command
+    }
+
+    fn prepare_tts_output_path(&self) -> Result<PathBuf> {
+        self.prepare_tts_dirs()?;
+        let output_dir = env::temp_dir().join("zed-kokoro-tts");
+        fs::create_dir_all(&output_dir)?;
+        Ok(output_dir.join(format!(
+            "zed-composer-kokoro-{}.wav",
+            Uuid::new_v4().as_simple()
+        )))
+    }
+
+    fn prepare_tts_dirs(&self) -> Result<()> {
+        fs::create_dir_all(self.data_root.join("huggingface"))?;
+        fs::create_dir_all(self.data_root.join("torch"))?;
+        Ok(())
+    }
+
+    fn validate_tts_output(&self, output_path: &Path) -> Result<()> {
         if !output_path.exists() {
             return Err(anyhow!(
                 "Friday Kokoro TTS finished without writing {}",
                 output_path.display()
             ));
         }
-        let audio_size = match fs::metadata(&output_path) {
+        let audio_size = match fs::metadata(output_path) {
             Ok(metadata) => metadata.len(),
             Err(error) => {
-                let _ = fs::remove_file(&output_path);
+                let _ = fs::remove_file(output_path);
                 return Err(anyhow!(
                     "Could not inspect {}: {}",
                     output_path.display(),
@@ -771,15 +937,118 @@ impl KokoroTtsRuntime {
             }
         };
         if audio_size <= 44 {
-            let _ = fs::remove_file(&output_path);
+            let _ = fs::remove_file(output_path);
             return Err(anyhow!(
                 "Friday Kokoro TTS wrote an empty WAV file at {}",
                 output_path.display()
             ));
         }
-
-        Ok(output_path)
+        Ok(())
     }
+}
+
+impl KokoroTtsServer {
+    fn write_request(&mut self, request: &serde_json::Value) -> Result<()> {
+        serde_json::to_writer(&mut self.stdin, request)
+            .context("Failed to write Friday Kokoro TTS server request")?;
+        self.stdin
+            .write_all(b"\n")
+            .context("Failed to finish Friday Kokoro TTS server request")?;
+        self.stdin
+            .flush()
+            .context("Failed to flush Friday Kokoro TTS server request")?;
+        Ok(())
+    }
+
+    fn read_response(
+        &mut self,
+        timeout: Duration,
+        cancellation: Option<&FlowSpeechCancellation>,
+        label: &str,
+    ) -> Result<serde_json::Value> {
+        let started_at = Instant::now();
+        loop {
+            if let Some(cancellation) = cancellation
+                && cancellation.is_cancelled()
+            {
+                self.terminate();
+                return Err(anyhow!("{label} was canceled"));
+            }
+
+            if let Some(status) = self
+                .child
+                .try_wait()
+                .with_context(|| format!("Failed to inspect {label} process"))?
+            {
+                return Err(anyhow!("{label} exited early with {status}"));
+            }
+
+            let elapsed = started_at.elapsed();
+            if elapsed >= timeout {
+                self.terminate();
+                return Err(anyhow!("{label} timed out after {}s", timeout.as_secs()));
+            }
+
+            let remaining = timeout.saturating_sub(elapsed);
+            let poll_interval = remaining.min(COMMAND_POLL_INTERVAL);
+            match self.stdout_lines.recv_timeout(poll_interval) {
+                Ok(line) => {
+                    let line = line.trim();
+                    if line.is_empty() {
+                        continue;
+                    }
+                    return serde_json::from_str(line)
+                        .with_context(|| format!("Failed to parse {label} JSON response"));
+                }
+                Err(mpsc::RecvTimeoutError::Timeout) => {}
+                Err(mpsc::RecvTimeoutError::Disconnected) => {
+                    return Err(anyhow!("{label} stdout closed before a response"));
+                }
+            }
+        }
+    }
+}
+
+fn spawn_kokoro_server_stdout_reader(stdout: ChildStdout) -> Receiver<String> {
+    let (sender, receiver) = mpsc::channel();
+    thread::spawn(move || {
+        let mut reader = BufReader::new(stdout);
+        loop {
+            let mut line = String::new();
+            match reader.read_line(&mut line) {
+                Ok(0) => break,
+                Ok(_) => {
+                    if sender.send(line).is_err() {
+                        break;
+                    }
+                }
+                Err(error) => {
+                    let _ = sender.send(
+                        serde_json::json!({
+                            "ok": false,
+                            "error": format!("stdout read failed: {error}"),
+                        })
+                        .to_string(),
+                    );
+                    break;
+                }
+            }
+        }
+    });
+    receiver
+}
+
+fn ensure_kokoro_server_success(response: &serde_json::Value, label: &str) -> Result<()> {
+    if response.get("ok").and_then(|value| value.as_bool()) == Some(true) {
+        return Ok(());
+    }
+
+    let detail = response
+        .get("error")
+        .and_then(|value| value.as_str())
+        .filter(|error| !error.trim().is_empty())
+        .unwrap_or("unknown Kokoro server error");
+    Err(anyhow!("{label} failed: {detail}"))
 }
 
 impl FlowRecordingSession {

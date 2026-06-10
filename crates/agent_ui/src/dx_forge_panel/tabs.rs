@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use gpui::{App, EntityId, IntoElement, WeakEntity};
+use gpui::{App, EntityId, IntoElement, MouseButton, WeakEntity};
 use ui::{DxUiIcon, IconName, Tab, TabBar, TabPosition, Tooltip, dx_icon, prelude::*};
 
 use super::{
@@ -16,7 +16,7 @@ pub(super) fn render_tab_bar(
     panel: &WeakEntity<DxForgePanel>,
     _cx: &App,
 ) -> impl IntoElement {
-    TabBar::new(SharedString::from(format!("dx-forge-tab-bar-{panel_id:?}")))
+    TabBar::new(("dx-forge-tab-bar", panel_id))
         .child(forge_tab(
             "dx-forge-tab-repository",
             "Repository",
@@ -68,7 +68,7 @@ fn forge_tab(
     let panel = panel.clone();
     let title = format!("{label} ({count})");
 
-    Tab::new(SharedString::from(format!("{id}-{panel_id:?}")))
+    Tab::new((id, panel_id))
         .fill_available_width()
         .position(tab_position(tab, active_tab))
         .toggle_state(selected)
@@ -89,7 +89,14 @@ fn forge_tab(
                 .truncate(),
         )
         .tooltip(Tooltip::text(title))
+        .on_mouse_down(MouseButton::Left, |_, _, cx| {
+            cx.stop_propagation();
+        })
+        .on_mouse_up(MouseButton::Left, |_, _, cx| {
+            cx.stop_propagation();
+        })
         .on_click(move |_, _window, cx| {
+            cx.stop_propagation();
             panel
                 .update(cx, |panel, cx| {
                     panel.set_active_tab(tab, cx);

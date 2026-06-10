@@ -1,3 +1,17 @@
+[2026-06-10] - Voice Status and Forge Tab Stability
+
+CHANGED:
+- Agent composer voice busy states now show readable pulsed phase labels with the real Flow/Kokoro status detail instead of collapsing to ellipsis-only text.
+- Friday Kokoro read-aloud now tries a cached JSON-lines TTS server first so repeated playback can reuse the loaded model, while preserving the old one-shot process path as fallback.
+- Forge workflow tabs now use typed GPUI ids and stop pointer-event propagation before switching tabs, preventing tab clicks from also triggering the panel root focus/window path.
+- Focused source guards now cover the cached Kokoro server path, updated Dx audio fallback copy, and safer Forge tab id/event behavior.
+
+PASSED:
+- `node --test script\dx-agent-voice-controls-source.test.ts script\dx-forge-panel-source.test.ts`
+
+NOTES:
+- This pass did not run Cargo or `just run`; live microphone, audio playback, and Forge tab runtime proof still need an authorized runtime validation window.
+
 [2026-06-10] - DX Agent Prompt and Response Copy Polish
 
 CHANGED:

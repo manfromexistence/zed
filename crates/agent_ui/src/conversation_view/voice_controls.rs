@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use gpui::{AnyElement, App, ClickEvent, IntoElement, Window};
+use gpui::{Animation, AnimationExt, AnyElement, App, ClickEvent, IntoElement, Window};
 use ui::{
     Button, ButtonCommon, ButtonSize, Clickable, Color, Icon, IconButton, IconButtonShape,
     IconName, IconSize, Label, LabelSize, Tooltip,
@@ -202,11 +202,11 @@ pub(super) fn render_voice_recording_panel(
 
     let (title, tone, detail) = match state.phase {
         ComposerVoicePhase::Recording => ("Listening", Color::Error, recording_detail(state)),
-        ComposerVoicePhase::Transcribing => {
-            ("Transcribing", Color::Accent, "Preparing text".into())
+        ComposerVoicePhase::Transcribing => ("Transcribing", Color::Accent, state.message.clone()),
+        ComposerVoicePhase::Synthesizing => {
+            ("Generating audio", Color::Accent, state.message.clone())
         }
-        ComposerVoicePhase::Synthesizing => ("Generating audio", Color::Accent, "Working".into()),
-        ComposerVoicePhase::Speaking => ("Reading", Color::Accent, "Playing".into()),
+        ComposerVoicePhase::Speaking => ("Reading", Color::Accent, state.message.clone()),
         ComposerVoicePhase::Error => ("Voice unavailable", Color::Warning, state.message.clone()),
         ComposerVoicePhase::Ready => unreachable!(),
     };
@@ -260,17 +260,12 @@ pub(super) fn render_voice_recording_panel(
                                 v_flex()
                                     .min_w_0()
                                     .gap_0p5()
-                                    .child(
-                                        Label::new(title)
-                                            .size(LabelSize::Small)
-                                            .color(tone)
-                                            .truncate(),
-                                    )
+                                    .child(render_voice_phase_title(title, state.phase, tone))
                                     .child(
                                         Label::new(detail)
                                             .size(LabelSize::XSmall)
                                             .color(Color::Muted)
-                                            .truncate(),
+                                            .single_line(),
                                     ),
                             ),
                     )
@@ -363,6 +358,41 @@ pub(super) fn render_voice_recording_panel(
             })
             .into_any_element(),
     )
+}
+
+fn render_voice_phase_title(
+    title: &'static str,
+    phase: ComposerVoicePhase,
+    tone: Color,
+) -> AnyElement {
+    let label = Label::new(title)
+        .size(LabelSize::Small)
+        .color(tone)
+        .single_line();
+
+    if !matches!(
+        phase,
+        ComposerVoicePhase::Transcribing
+            | ComposerVoicePhase::Synthesizing
+            | ComposerVoicePhase::Speaking
+    ) {
+        return label.into_any_element();
+    }
+
+    label
+        .with_animations(
+            "agent_voice_phase_shimmer",
+            vec![Animation::new(Duration::from_millis(900)).repeat()],
+            |label, _, delta| {
+                let alpha = if delta < 0.5 {
+                    0.62 + delta * 0.56
+                } else {
+                    0.9 - (delta - 0.5) * 0.56
+                };
+                label.alpha(alpha)
+            },
+        )
+        .into_any_element()
 }
 
 fn render_voice_level_meter(level: f32, tone: Color, cx: &App) -> AnyElement {

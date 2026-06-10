@@ -1686,6 +1686,9 @@ PENDING:
 - Run the governed Zed validation pass only when explicitly authorized for this large repo.
 
 COMPLETED:
+- Replaced ellipsis-only voice busy rendering with readable pulsed phase labels and source-backed STT/TTS detail text.
+- Added a cached Friday Kokoro JSON-lines server path for repeated read-aloud while preserving the existing one-shot TTS command as fallback.
+- Hardened Forge workflow tabs with typed GPUI ids and pointer-event propagation guards so tab clicks do not also trigger the panel root focus path.
 - Added focused Agent composer voice-control source coverage and passed targeted source/format/diff checks for the initial Flow speech integration slice.
 - Added source-backed recording telemetry, selected microphone-device routing, stricter Friday Kokoro readiness checks, temp-WAV cleanup, and registered the voice guard in the lightweight source-guard registry.
 - Added drop-based STT temp WAV cleanup and an active-editor transcript insertion helper with cursor-local spacing and undo isolation.
