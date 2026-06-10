@@ -1,5 +1,5 @@
 IN PROGRESS:
-- None. Forge tab/fullscreen, Project Panel storage-label, and Flow voice TTS speaker fixes are source-verified and ready for authorized runtime UX review.
+- None. DX sound asset foundation is source-verified and ready for the later settings/trigger wiring pass.
 
 PENDING:
 - Run governed DX Agents connection/tool runtime proof once authorized, covering main sidebar Connections and Tools routing, real social/provider receipts, QR payload display, credential expiry/error visuals, trusted tool bridge approvals, and native workspace-tab layout.
@@ -8,6 +8,7 @@ PENDING:
 - Continue the DX/Zed ecosystem integration with bounded source-only slices for remaining receipt scans, semantic icon hotspots, and governed runtime proof when explicitly authorized.
 
 COMPLETED:
+- DX sound asset foundation is source-verified: selected short UI, typing, delete, drag/drop, and magic sounds from `F:\Downloads` are converted into normalized bundled WAV assets under `assets\sounds`, and `audio::Sound` exposes semantic DX variants for future settings-gated playback. Runtime/native proof, trigger wiring, Cargo, build, and `just run` remain deferred.
 - Forge tab/fullscreen, Project Panel storage-label, and Flow voice TTS speaker fixes are source-verified: Forge tabs now use panel-scoped IDs, stretch tab triggers across the available tab bar, and switch tabs without refocusing the dock; Project Panel storage rows no longer show Low/High heat text and Project/storage popovers use panel-scoped IDs; Agent composer mic/STT and speaker/Kokoro TTS are separate controls with a light idle readiness refresh. Runtime/native proof, Cargo, build, and `just run` remain deferred by instruction.
 - Authorized J6 validation follow-up is build-verified: repaired the Project Panel options tooltip compile error, removed Forge/provider and Project/Agent warning sources, made the title-bar screen dock prefer the visible Agent screen or zoomed Agent panel before lighting Code, updated the focused title-bar source guard, stopped the stale dev Zed process that was locking `G:\Zed\target\debug\zed.exe`, and `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run` built and launched Zed successfully without compiler warnings.
 - DX readiness-state honesty pass is source-verified: Forge source-only package/remote/machine-cache evidence now renders as neutral Evidence instead of green Ready, Check status color requires a real pass/ready status plus result signal before success, runtime-green claims wait until import/status blockers are audited, QR/link copy says supported instead of ready until payload proof exists, and fullscreen Agent rail toggles disable/no-op when matching rail content is unavailable. Runtime/native proof, Cargo, build, and `just run` remain deferred by instruction.

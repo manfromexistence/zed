@@ -1,3 +1,20 @@
+[2026-06-10] - DX Sound Asset Pack Foundation
+
+ADDED:
+- `assets\sounds\dx_hover_soft.wav`, `dx_panel_open.wav`, `dx_panel_close.wav`, `dx_action_confirm.wav`, `dx_menu_snap.wav`, `dx_pop_confirm.wav`, `dx_screen_launch.wav`, `dx_attention_beep.wav`, and `dx_success_chime.wav` as normalized short UI sound assets.
+- `assets\sounds\dx_typing_key.wav`, `dx_delete_soft.wav`, `dx_drag_watch_tick.wav`, `dx_chat_drop_magic.wav`, `dx_magic_heal.wav`, `dx_magic_fire.wav`, and `dx_magic_wand.wav` as semantic typing, delete, drag/drop, and magic sound assets.
+
+CHANGED:
+- `crates\audio\src\audio.rs` now exposes semantic `Sound` variants for the DX sound assets so future UI wiring can use the existing cached bundled sound pipeline instead of hardcoded file paths.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\audio\src\audio.rs`
+- `git diff --check`
+- `ffprobe` duration scan for all `assets\sounds\dx_*.wav`
+
+NOTES:
+- Asset/setup pass only. The sounds are not yet triggered by UI events; the next pass should add settings-gated semantic playback with throttling before enabling typing, delete, drag/drop, or panel sounds.
+
 [2026-06-10] - Forge Tabs Project Storage And Voice TTS Polish
 
 FIXED:
