@@ -864,9 +864,14 @@ impl WindowsWindowInner {
                     .log_err();
             } else {
                 if let Some(ctx) = ImeContext::get(handle) {
-                    ImmNotifyIME(*ctx, NI_COMPOSITIONSTR, CPS_COMPLETE, 0)
-                        .ok()
-                        .log_err();
+                    let result = ImmNotifyIME(*ctx, NI_COMPOSITIONSTR, CPS_COMPLETE, 0).ok();
+                    match result {
+                        Err(error) if error.code().0 != 0 => {
+                            Err::<(), _>(error).log_err();
+                        }
+                        // Some IME implementations report false without setting a Windows error.
+                        _ => {}
+                    }
                 }
                 ImmAssociateContextEx(handle, HIMC::default(), 0)
                     .ok()

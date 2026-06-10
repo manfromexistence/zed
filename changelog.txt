@@ -1,3 +1,18 @@
+[2026-06-10] - Authorized J6 Voice and Forge Follow-up
+
+FIXED:
+- Forge tab-bar rendering now keeps the panel id available for the stable tab-bar identity while using simple per-tab ids for selectable tab triggers.
+- Windows IME completion now ignores the zero-error false return from `ImmNotifyIME`, removing the misleading `The operation completed successfully` runtime error while preserving logging for real IME failures.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\agent_ui\src\dx_forge_panel\tabs.rs crates\gpui_windows\src\events.rs`
+- `node --test script\dx-forge-panel-source.test.ts`
+- `git diff --check`
+- `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run`
+
+NOTES:
+- The authorized J6 run built the editor and launched the main window successfully after repairing the Forge tab compile error.
+
 [2026-06-10] - Agent Voice and Workspace Action Stability
 
 FIXED:

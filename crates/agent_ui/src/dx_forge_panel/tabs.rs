@@ -12,7 +12,7 @@ use super::{
 pub(super) fn render_tab_bar(
     snapshot: &DxForgePanelSnapshot,
     active_tab: DxForgePanelTab,
-    _panel_id: EntityId,
+    panel_id: EntityId,
     panel: &WeakEntity<DxForgePanel>,
     _cx: &App,
 ) -> impl IntoElement {
