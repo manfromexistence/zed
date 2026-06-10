@@ -339,6 +339,11 @@ impl LanguageModels {
                                     //
                                     // These fail noisily, so we don't log them.
                                 }
+                                "openai-subscribed" => {
+                                    // ChatGPT Subscription is usable only after an
+                                    // explicit sign-in, so the startup auth probe is
+                                    // expected to fail on unsigned-in workspaces.
+                                }
                                 "copilot_chat" => {
                                     // Copilot Chat returns an error if Copilot is not enabled, so we don't log those errors.
                                 }
@@ -2307,7 +2312,7 @@ impl acp_thread::AgentModelSelector for NativeAgentModelSelector {
     }
 }
 
-pub static ZED_AGENT_ID: LazyLock<AgentId> = LazyLock::new(|| AgentId::new("Zed Agent"));
+pub static ZED_AGENT_ID: LazyLock<AgentId> = LazyLock::new(|| AgentId::new("DX Agent"));
 
 impl acp_thread::AgentConnection for NativeAgentConnection {
     fn agent_id(&self) -> AgentId {

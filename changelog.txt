@@ -1,3 +1,18 @@
+[2026-06-10] - DX Agent Prompt and Response Copy Polish
+
+CHANGED:
+- Native Agent identity now presents as DX Agent in the ACP/native agent surface while keeping source compatibility symbols intact.
+- Native Agent system prompts now introduce the assistant as the DX coding agent running inside the DX editor.
+- Agent response action rows now include a real Copy Agent Response button beside the existing read-aloud, feedback, share, markdown, and scroll controls.
+- Unsigned-in ChatGPT Subscription startup auth probes no longer log as app errors, matching the existing quiet handling for other optional providers.
+- Optional Windows GPU driver-version probing now falls back to `Unknown Driver` without logging a renderer error when AMD AGS is not installed.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\agent\src\agent.rs crates\agent\src\templates.rs crates\agent_ui\src\conversation_view\thread_view.rs`
+
+NOTES:
+- This pass targets visible/prompt-facing agent branding and response-copy UX. Wider Zed service names in documentation and compatibility code are left intact unless they are part of visible DX app chrome.
+
 [2026-06-10] - Dx Sidebar Action and Agent Branding Polish
 
 CHANGED:

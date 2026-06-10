@@ -6469,6 +6469,12 @@ impl ThreadView {
         let agent_response_text =
             Self::latest_agent_response_content(thread.read(cx).entries(), cx);
         if let Some(agent_response_text) = agent_response_text {
+            container = container.child(
+                CopyButton::new("copy-agent-response", agent_response_text.clone())
+                    .icon_size(IconSize::Small)
+                    .tooltip_label("Copy Agent Response"),
+            );
+
             let voice_phase = self.composer_voice_state.phase();
             let read_aloud_disabled = matches!(
                 voice_phase,
