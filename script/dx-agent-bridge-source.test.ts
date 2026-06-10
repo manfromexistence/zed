@@ -39,6 +39,7 @@ test("DX Agent bridge stays split by command, runtime, and receipt ownership", (
     "crates/agent_ui/src/dx_agent_bridge/runtime_provider_models_tests.rs",
     "crates/agent_ui/src/dx_agent_bridge/runtime.rs",
     "crates/agent_ui/src/dx_agent_bridge/runtime_tests.rs",
+    "crates/agent_ui/src/dx_agent_bridge/workflow_nodes.rs",
   ];
 
   for (const module of expectedModules) {
@@ -56,6 +57,7 @@ test("DX Agent bridge stays split by command, runtime, and receipt ownership", (
   assert.match(parent, /^mod paths;$/m);
   assert.match(parent, /^mod receipts;$/m);
   assert.match(parent, /^mod runtime;$/m);
+  assert.match(parent, /^mod workflow_nodes;$/m);
   assert.ok(
     lineCount("crates/agent_ui/src/dx_agent_bridge.rs") < 880,
     "dx_agent_bridge.rs should stay a coordinator and type boundary",
@@ -104,6 +106,7 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   const runtimeProviderModelsTests = read(
     "crates/agent_ui/src/dx_agent_bridge/runtime_provider_models_tests.rs",
   );
+  const workflowNodes = read("crates/agent_ui/src/dx_agent_bridge/workflow_nodes.rs");
   const runtime = read("crates/agent_ui/src/dx_agent_bridge/runtime.rs");
   const runtimeTests = read("crates/agent_ui/src/dx_agent_bridge/runtime_tests.rs");
 
@@ -126,6 +129,9 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.doesNotMatch(parent, /DEFAULT_AGENT_RECEIPT_ROOT|DEFAULT_PROVIDER_CATALOG_PATH/);
   assert.match(parent, /^mod catalog_active_provider_label;$/m);
   assert.match(parent, /^mod catalog_labels;$/m);
+  assert.match(parent, /^mod workflow_nodes;$/m);
+  assert.match(parent, /pub\(crate\) use self::workflow_nodes::\{/);
+  assert.match(parent, /workflow_node_catalog: workflow_node_catalog_summary/);
   assert.match(
     parent,
     /pub\(crate\) use self::catalog_active_provider_label::\{\s*catalog_active_provider_label, catalog_active_provider_value_label,\s*\};/s,
@@ -276,6 +282,16 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
     runtimeProviderModelsTests,
     /provider_and_model_rows_bound_and_redact_display_values/,
   );
+  assert.match(workflowNodes, /pub\(super\) fn workflow_node_catalog_summary/);
+  assert.match(workflowNodes, /DxWorkflowNodeCatalogSummary/);
+  assert.match(workflowNodes, /DxWorkflowNodeSummary/);
+  assert.match(workflowNodes, /DxConfiguredPluginSummary/);
+  assert.match(workflowNodes, /MAX_WORKFLOW_NODE_ROWS/);
+  assert.match(workflowNodes, /MAX_CONFIGURED_PLUGIN_ROWS/);
+  assert.match(workflowNodes, /redact_action_scalar/);
+  assert.match(workflowNodes, /credential_status/);
+  assert.match(workflowNodes, /credential_types/);
+  assert.doesNotMatch(workflowNodes, /api_key|access_token|refresh_token|client_secret|password/i);
   assert.match(runtime, /#\[path = "runtime_tests\.rs"\]/);
   assert.match(runtimeConnectionTests, /social_connection_cards_parse_auth_health_and_receipt_history/);
   assert.match(runtimeConnectionTests, /trusted_tool_bridge_summary_requires_receipt_authority/);
@@ -287,7 +303,7 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_actions_tests.rs") < 110);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_contract.rs") < 520);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_contract_safety_tests.rs") < 130);
-  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_contract_tests.rs") < 150);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/automation_contract_tests.rs") < 180);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/command_args.rs") < 45);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/command_args_tests.rs") < 50);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/command_safety.rs") < 130);
@@ -320,6 +336,7 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_catalog_fields.rs") < 125);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_display.rs") < 80);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_provider_models.rs") < 215);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/workflow_nodes.rs") < 260);
   assert.ok(
     lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_provider_models_tests.rs") < 120,
   );

@@ -56,12 +56,12 @@ test("DX agent workspace taxonomy has first-class Zed screens", () => {
   assert.match(pane, /WorkspaceScreenKind::Connections/);
   assert.match(pane, /WorkspaceScreenKind::Tools/);
   assert.match(titleBar, /WorkspaceScreenKind::Connections => "Connections"/);
-  assert.match(titleBar, /WorkspaceScreenKind::Tools => "Tools"/);
+  assert.match(titleBar, /WorkspaceScreenKind::Tools => "Plugins"/);
   assert.match(titleBar, /WorkspaceScreenKind::Connections => dx_icon\(DxUiIcon::Connections\)/);
   assert.match(titleBar, /WorkspaceScreenKind::Tools => dx_icon\(DxUiIcon::Plugins\)/);
   assert.match(titleBar, /WorkspaceScreenKind::Agent => IconName::Sparkle/);
   assert.match(carousel, /WorkspaceScreenKind::Connections => "Connections"/);
-  assert.match(carousel, /WorkspaceScreenKind::Tools => "Tools"/);
+  assert.match(carousel, /WorkspaceScreenKind::Tools => "Plugins"/);
   assert.match(carousel, /WorkspaceScreenKind::Agent => IconName::Sparkle/);
   assert.match(agentScreen, /Icon::new\(dx_icon\(DxUiIcon::Agent\)\)/);
   assert.match(dxWorkspace, /"dx-agent-overview-section"[\s\S]*?dx_icon\(DxUiIcon::Agent\)/);
@@ -74,8 +74,12 @@ test("DX agent workspace taxonomy has first-class Zed screens", () => {
     sidebar,
     /fn activate_workspace_screen\([\s\S]*?workspace\.activate_screen_kind\(kind, window, cx\)/,
   );
+  const sidebarTopActions = sidebar.slice(
+    sidebar.indexOf('"sidebar-toolbar-connections"'),
+    sidebar.indexOf("fn dispatch_workspace_action"),
+  );
   assert.doesNotMatch(
-    sidebar,
+    sidebarTopActions,
     /WorkspaceScreenKind::(?:Connections|Tools|Automations) => \{[\s\S]*?dispatch_workspace_action/,
     "sidebar top actions should use the workspace screen router instead of split first-class action paths",
   );
@@ -168,7 +172,13 @@ test("Connections workspace is wired to provider, channel, social, gateway, and 
 test("Tools workspace exposes trusted bridge contracts without fake approvals", () => {
   const dxWorkspace = read("crates/agent_ui/src/dx_launch_workspace.rs");
   const screen = read("crates/agent_ui/src/dx_launch_workspace/tools_screen.rs");
+  const workflowNodeScreen = read(
+    "crates/agent_ui/src/dx_launch_workspace/tools_screen/workflow_nodes.rs",
+  );
+  const workflowNodeIcons = read("crates/agent_ui/src/workflow_node_icons.rs");
+  const pluginScreenSources = `${screen}\n${workflowNodeScreen}`;
   const toolsScreen = read("crates/agent_ui/src/tools_screen.rs");
+  const agentUi = read("crates/agent_ui/src/agent_ui.rs");
   const bridge = read("crates/agent_ui/src/dx_agent_bridge.rs");
 
   assert.ok(existsSync("crates/agent_ui/src/dx_launch_workspace/tools_screen.rs"));
@@ -179,23 +189,41 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
   assert.match(toolsScreen, /fn show_toolbar\(&self\) -> bool \{\s*false\s*\}/);
   assert.match(toolsScreen, /fn can_split\(&self\) -> bool \{\s*false\s*\}/);
 
-  for (const title of ["Browser", "Computer", "MCP", "DX Plugins", "Receipts", "Permissions"]) {
+  assert.match(toolsScreen, /"Plugins"\.into\(\)/);
+  assert.match(toolsScreen, /"Plugins Screen Opened"/);
+
+  for (const title of ["Workflow Nodes", "Browser", "Computer", "MCP", "Receipts", "Permissions"]) {
     assert.match(screen, new RegExp(`section_title\\("${title}"`));
   }
+  assert.match(screen, /workflow_nodes::render_workflow_node_plugins\(snapshot, cx\)/);
+  assert.match(pluginScreenSources, /MAX_WORKFLOW_NODE_PLUGIN_CARDS/);
+  assert.match(pluginScreenSources, /take\(MAX_WORKFLOW_NODE_PLUGIN_CARDS\)/);
+  assert.match(pluginScreenSources, /render_plugin_config_menu/);
+  assert.match(pluginScreenSources, /dx\.serializer\.machine/);
+  assert.match(agentUi, /^mod workflow_node_icons;$/m);
+  assert.match(pluginScreenSources, /workflow_node_icon_for/);
+  assert.match(workflowNodeIcons, /pub\(crate\) fn workflow_node_icon_for/);
+  assert.match(workflowNodeIcons, /IconName::Github/);
+  assert.match(workflowNodeIcons, /IconName::DatabaseZap/);
+  assert.match(workflowNodeIcons, /dx_icon\(DxUiIcon::Plugins\)/);
+  assert.doesNotMatch(pluginScreenSources, /\bBadge|Chip|Pill|TagList|badge_/i);
+  assert.doesNotMatch(pluginScreenSources, /<iframe|iframe|WebView|webview|embed_url|external_workflow_url/i);
   assert.match(screen, /trusted_tool_bridge/);
   assert.match(screen, /trusted_tool_ids/);
-  assert.match(screen, /approved_plugin_tool_count/);
-  assert.match(screen, /approved_automation_tool_count/);
+  assert.match(pluginScreenSources, /workflow_node_catalog/);
+  assert.match(pluginScreenSources, /configured_plugins/);
+  assert.match(pluginScreenSources, /approved_plugin_tool_count/);
+  assert.match(pluginScreenSources, /approved_automation_tool_count/);
   assert.match(screen, /blocked_tool_count/);
   assert.match(screen, /bridge_contract_id/);
   assert.match(screen, /agents::dx_agent_receipt_state\(snapshot, cx\)/);
   assert.match(screen, /No approved Browser tool receipt is available yet\./);
   assert.match(screen, /No approved Computer tool receipt is available yet\./);
   assert.match(screen, /MCP tool receipts are pending trusted bridge approval\./);
-  assert.match(screen, /AiSettingItem::new/);
-  assert.match(screen, /ListItem::new/);
+  assert.match(pluginScreenSources, /ListItem::new/);
 
   for (const field of [
+    "workflow_node_catalog",
     "present",
     "trust_policy",
     "approved_plugin_tool_count",
@@ -207,4 +235,20 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
   ]) {
     assert.match(bridge, new RegExp(`pub ${field}:`));
   }
+
+  assert.ok(
+    existsSync("crates/agent_ui/src/dx_agent_bridge/workflow_nodes.rs"),
+    "expected focused workflow-node bridge parser module",
+  );
+  const workflowNodes = read("crates/agent_ui/src/dx_agent_bridge/workflow_nodes.rs");
+  assert.match(workflowNodes, /DxWorkflowNodeCatalogSummary/);
+  assert.match(workflowNodes, /DxWorkflowNodeSummary/);
+  assert.match(workflowNodes, /DxConfiguredPluginSummary/);
+  assert.match(workflowNodes, /MAX_WORKFLOW_NODE_ROWS/);
+  assert.match(workflowNodes, /MAX_CONFIGURED_PLUGIN_ROWS/);
+  assert.match(workflowNodes, /dx\.serializer\.machine/);
+  assert.match(workflowNodes, /credential_status/);
+  assert.match(workflowNodes, /credential_types/);
+  assert.match(workflowNodes, /redact_action_scalar/);
+  assert.doesNotMatch(workflowNodes, /<iframe|iframe|WebView|webview|embed_url|external_workflow_url/i);
 });

@@ -4,6 +4,7 @@ import test from "node:test";
 
 const sourcePath = "crates/agent_ui/src/conversation_view/thread_view.rs";
 const source = readFileSync(sourcePath, "utf8");
+const workflowNodeIconSource = readFileSync("crates/agent_ui/src/workflow_node_icons.rs", "utf8");
 
 const cycleThinkingEffort = sliceBetween(
   "fn cycle_thinking_effort(",
@@ -33,6 +34,44 @@ test("thread view source guard stays scoped to production thread view code", () 
   assert.equal(sourcePath, "crates/agent_ui/src/conversation_view/thread_view.rs");
   assert.doesNotMatch(sourcePath, /test/i);
   assert.doesNotMatch(cycleThinkingEffort, /#\[cfg\(test\)\]/);
+});
+
+test("configured workflow-node plugins render above the chat input from bridge receipts", () => {
+  const renderMessageEditor = sliceBetween(
+    "pub(crate) fn render_message_editor(",
+    "\n    fn render_profile_option_slots(",
+  );
+  const pluginStrip = sliceBetween(
+    "fn render_configured_plugin_strip(",
+    "\n    fn insert_configured_plugin_prompt(",
+  );
+  const promptInsert = sliceBetween(
+    "fn insert_configured_plugin_prompt(",
+    "\n    fn render_profile_option_slots(",
+  );
+
+  assert.match(renderMessageEditor, /self\.render_configured_plugin_strip\(cx\)/);
+  assertBefore(
+    renderMessageEditor,
+    "self.render_configured_plugin_strip(cx)",
+    "self.message_editor.clone()",
+    "configured plugins must appear above the chat input",
+  );
+  assert.match(pluginStrip, /dx_agent_bridge_snapshot_for_roots/);
+  assert.match(pluginStrip, /workflow_node_catalog\.configured_plugins/);
+  assert.match(pluginStrip, /MAX_VISIBLE_CONFIGURED_PLUGIN_OPTIONS/);
+  assert.match(pluginStrip, /IconButton::new/);
+  assert.match(pluginStrip, /render_configured_plugin_menu/);
+  assert.match(pluginStrip, /configured_plugin_icon/);
+  assert.match(source, /workflow_node_icon_for/);
+  assert.match(workflowNodeIconSource, /IconName::Github/);
+  assert.match(workflowNodeIconSource, /dx_icon\(DxUiIcon::Plugins\)/);
+  assert.match(promptInsert, /message_editor\.update\(cx, \|editor, cx\|/);
+  assert.match(promptInsert, /Use configured plugin/);
+  assert.match(promptInsert, /run_command/);
+  assert.doesNotMatch(pluginStrip, /list_agent_plugins|inspect_agent_plugin_runtime_status|prepare_agent_plugin_runtime/);
+  assert.doesNotMatch(pluginStrip, /api_key|access_token|refresh_token|client_secret|password/i);
+  assert.doesNotMatch(promptInsert, /api_key|access_token|refresh_token|client_secret|password/i);
 });
 
 function sliceBetween(start: string, end: string): string {

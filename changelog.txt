@@ -1,3 +1,22 @@
+[2026-06-10] - DX Plugins Workflow Node Catalog Surface
+
+ADDED:
+- The Plugins workspace now renders a serializer-backed Workflow Nodes section as GPUI cards, using bounded `dx.serializer.machine` catalog receipts before Browser, Computer, MCP, Receipts, and Permissions.
+- The DX Agents bridge now summarizes workflow-node catalog receipts, including node cards, configured plugin options, serializer/source metadata, trust/runtime details, and redacted credential status.
+- The Agent composer now shows configured workflow-node plugins above the input with icon-backed GPUI menus that insert a structured plugin-use prompt for the AI bridge.
+
+CHANGED:
+- Visible Tools copy now presents as Plugins across the workspace tab, title-bar screen dock, and carousel while keeping compatibility action/types intact.
+- Focused source guards now pin the serializer-backed catalog path, non-badge plugin cards, credential menu behavior, configured composer strip, and forbidden upstream source exclusions.
+
+PASSED:
+- `rustfmt --edition 2024 --config skip_children=true --check crates\agent_ui\src\dx_agent_bridge.rs crates\agent_ui\src\dx_agent_bridge\workflow_nodes.rs crates\agent_ui\src\dx_agent_bridge\receipts\trusted_tool_bridge.rs crates\agent_ui\src\dx_launch_workspace\tools_screen.rs crates\agent_ui\src\dx_launch_workspace\tools_screen\workflow_nodes.rs crates\agent_ui\src\tools_screen.rs crates\title_bar\src\title_bar.rs crates\workspace\src\screen_carousel.rs crates\agent_ui\src\conversation_view\thread_view.rs`
+- `node --test script\dx-plugin-catalog-source.test.ts script\dx-agent-workspaces-source.test.ts script\dx-agent-bridge-source.test.ts script\dx-agent-thread-view-source.test.ts script\dx-title-bar-source.test.ts`
+- Focused forbidden-source and raw-secret scans over the touched production files.
+
+NOTES:
+- Cargo, `just run`, local servers, native launch, and visual runtime proof remain deferred by instruction. This slice is a source-verified bridge/UI foundation for the DX Code Plugins panel and Agent composer handoff.
+
 [2026-06-10] - Authorized J6 Voice and Forge Follow-up
 
 FIXED:

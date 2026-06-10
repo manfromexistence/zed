@@ -1,8 +1,10 @@
 use crate::{
     DEFAULT_THREAD_TITLE, SelectPermissionGranularity,
     agent_configuration::configure_context_server_modal::default_markdown_style,
+    dx_agent_bridge::{DxConfiguredPluginSummary, dx_agent_bridge_snapshot_for_roots},
     open_abs_path_at_point,
     thread_metadata_store::{ThreadId, ThreadMetadataStore},
+    workflow_node_icons::workflow_node_icon_for,
 };
 use agent_client_protocol::schema as acp;
 use std::{cell::RefCell, ops::Range};
@@ -679,6 +681,7 @@ pub(crate) struct AgentResponseAnchor {
 const RESPONSE_ANCHOR_SCROLL_RETRY_FRAMES: usize = 6;
 const FLOATING_MESSAGE_EDITOR_SAFE_PADDING_PX: f32 = 118.0;
 const MAX_VISIBLE_PROFILE_OPTION_SLOTS: usize = 4;
+const MAX_VISIBLE_CONFIGURED_PLUGIN_OPTIONS: usize = 6;
 const COMPOSER_MIN_LINES: usize = 2;
 const COMPOSER_COLLAPSED_MAX_LINES: usize = 2;
 const COMPOSER_EMPTY_STATE_MAX_LINES: usize = 8;
@@ -3916,6 +3919,7 @@ impl ThreadView {
                                     })
                                     .pt_0p5()
                                     .pr_2p5()
+                                    .child(self.render_configured_plugin_strip(cx))
                                     .child(self.message_editor.clone())
                                     .when_some(
                                         render_voice_recording_panel(
@@ -4012,6 +4016,109 @@ impl ThreadView {
                     ),
             )
             .into_any()
+    }
+
+    fn render_configured_plugin_strip(&self, cx: &mut Context<Self>) -> AnyElement {
+        let workspace_roots = self
+            .workspace
+            .upgrade()
+            .map(|workspace| {
+                workspace
+                    .read(cx)
+                    .root_paths(cx)
+                    .into_iter()
+                    .map(|path| path.display().to_string())
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        let snapshot = dx_agent_bridge_snapshot_for_roots(cx, &workspace_roots);
+        let configured_plugins = &snapshot.workflow_node_catalog.configured_plugins;
+
+        if configured_plugins.is_empty() {
+            return div().into_any_element();
+        }
+
+        h_flex()
+            .id("agent-configured-plugin-strip")
+            .w_full()
+            .pb_1()
+            .gap_0p5()
+            .flex_wrap()
+            .children(
+                configured_plugins
+                    .iter()
+                    .take(MAX_VISIBLE_CONFIGURED_PLUGIN_OPTIONS)
+                    .cloned()
+                    .map(|plugin| self.render_configured_plugin_menu(plugin)),
+            )
+            .into_any_element()
+    }
+
+    fn render_configured_plugin_menu(&self, plugin: DxConfiguredPluginSummary) -> AnyElement {
+        let label = plugin.display_name.clone();
+        let icon = configured_plugin_icon(&plugin);
+        PopoverMenu::new(format!("agent-configured-plugin-menu-{}", plugin.id))
+            .trigger_with_tooltip(
+                IconButton::new(
+                    format!("agent-configured-plugin-trigger-{}", plugin.id),
+                    icon,
+                )
+                .icon_size(IconSize::Small)
+                .icon_color(Color::Muted),
+                Tooltip::text(label.clone()),
+            )
+            .anchor(gpui::Anchor::BottomLeft)
+            .offset(gpui::Point {
+                x: px(0.0),
+                y: px(-2.0),
+            })
+            .menu({
+                let message_editor = self.message_editor.clone();
+                move |window, cx| {
+                    let plugin = plugin.clone();
+                    let message_editor = message_editor.clone();
+                    Some(ContextMenu::build(window, cx, move |menu, _window, _cx| {
+                        menu.header(plugin.display_name.clone())
+                            .custom_row({
+                                let plugin = plugin.clone();
+                                move |_window, _cx| configured_plugin_status_row(&plugin)
+                            })
+                            .entry("Use configured plugin", None, {
+                                let plugin = plugin.clone();
+                                let message_editor = message_editor.clone();
+                                move |window, cx| {
+                                    Self::insert_configured_plugin_prompt(
+                                        message_editor.clone(),
+                                        plugin.clone(),
+                                        window,
+                                        cx,
+                                    );
+                                }
+                            })
+                    }))
+                }
+            })
+            .into_any_element()
+    }
+
+    fn insert_configured_plugin_prompt(
+        message_editor: Entity<MessageEditor>,
+        plugin: DxConfiguredPluginSummary,
+        window: &mut Window,
+        cx: &mut App,
+    ) {
+        let prompt = format!(
+            "Use configured plugin `{}` for this task.\n- plugin_id: {}\n- node_id: {}\n- run_command: {}\n- credential_status: {}\n",
+            plugin.display_name,
+            plugin.id,
+            plugin.node_id,
+            plugin.run_command,
+            plugin.credential_status
+        );
+        message_editor.focus_handle(cx).focus(window, cx);
+        message_editor.update(cx, |editor, cx| {
+            editor.insert_text(&prompt, window, cx);
+        });
     }
 
     fn render_profile_option_slots(&self, cx: &mut Context<Self>) -> Vec<AnyElement> {
@@ -11168,6 +11275,41 @@ impl Render for ThreadView {
             .children(self.render_token_limit_callout(cx))
             .child(self.render_message_editor(window, cx))
     }
+}
+
+fn configured_plugin_status_row(plugin: &DxConfiguredPluginSummary) -> AnyElement {
+    let icon = configured_plugin_icon(plugin);
+    h_flex()
+        .id(format!("agent-configured-plugin-status-{}", plugin.id))
+        .min_w(rems(16.))
+        .max_w(rems(28.))
+        .gap_2()
+        .child(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
+        .child(
+            v_flex()
+                .min_w_0()
+                .gap_0p5()
+                .child(
+                    Label::new(plugin.status.clone())
+                        .size(LabelSize::XSmall)
+                        .color(Color::Default),
+                )
+                .child(
+                    Label::new(format!("{} / {}", plugin.node_id, plugin.credential_status))
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted)
+                        .line_height_style(LineHeightStyle::UiLabel),
+                ),
+        )
+        .into_any_element()
+}
+
+fn configured_plugin_icon(plugin: &DxConfiguredPluginSummary) -> IconName {
+    workflow_node_icon_for(
+        plugin.icon.as_deref(),
+        Some(plugin.node_id.as_str()),
+        plugin.display_name.as_str(),
+    )
 }
 
 fn composer_slot_contract_row(slot: ComposerOptionSlot) -> AnyElement {

@@ -25,6 +25,7 @@ mod local_files;
 mod paths;
 mod receipts;
 mod runtime;
+mod workflow_nodes;
 
 use self::command_safety::{
     bridge_command_label, is_dx_agents_command, is_public_dx_agents_command,
@@ -51,6 +52,9 @@ pub(crate) use self::commands::{
     DxAgentMetadataCommand, DxAgentPublicCommand, run_dx_agent_metadata_command,
     run_dx_agent_public_command,
 };
+pub(crate) use self::workflow_nodes::{
+    DxConfiguredPluginSummary, DxWorkflowNodeCatalogSummary, DxWorkflowNodeSummary,
+};
 
 use self::{
     automation_contract::{automation_composer, automations},
@@ -62,6 +66,7 @@ use self::{
         DxAgentSocialActionKind, catalog_summary, connected_accounts_summary, models, providers,
         social_accounts, social_action_summary,
     },
+    workflow_nodes::workflow_node_catalog_summary,
 };
 
 #[derive(Clone)]
@@ -85,6 +90,7 @@ pub(crate) struct DxAgentBridgeSnapshot {
     pub providers: Vec<DxAgentProvider>,
     pub models: Vec<DxAgentModel>,
     pub catalog: DxAgentCatalogSummary,
+    pub workflow_node_catalog: DxWorkflowNodeCatalogSummary,
     pub trusted_tool_bridge: DxAgentTrustedToolBridgeSummary,
     pub contract_summary: DxAgentContractSummary,
     pub import_summary: DxAgentImportSummary,
@@ -556,6 +562,25 @@ fn read_bridge_snapshot(settings: DxAgentSettingsSnapshot) -> DxAgentBridgeSnaps
     let automation_value = read_json(&settings.receipt_root.join("automate-list-latest.json"));
     let provider_value = read_json(&settings.receipt_root.join("providers-list-latest.json"));
     let model_value = read_json(&settings.receipt_root.join("models-list-latest.json"));
+    let workflow_node_catalog_path = settings
+        .receipt_root
+        .join("workflow-node-catalog-latest.json");
+    let workflow_node_catalog_value = read_first_json(
+        &settings.receipt_root,
+        &[
+            "workflow-node-catalog-latest.json",
+            "plugins-workflow-node-catalog-latest.json",
+            "plugin-workflow-node-catalog-latest.json",
+        ],
+    )
+    .or_else(|| {
+        read_json(
+            &settings
+                .receipt_root
+                .join("plugins")
+                .join("workflow-node-catalog-latest.json"),
+        )
+    });
     let receipts_value = read_json(&settings.receipt_root.join("receipts-list-latest.json"));
     let contract_value = read_first_json(&settings.receipt_root, &["contract-latest.json"]);
     let import_summary_value = read_first_json(
@@ -664,6 +689,11 @@ fn read_bridge_snapshot(settings: DxAgentSettingsSnapshot) -> DxAgentBridgeSnaps
             provider_value.as_ref(),
             model_value.as_ref(),
             settings.provider_catalog_path.clone(),
+            root_exists,
+        ),
+        workflow_node_catalog: workflow_node_catalog_summary(
+            workflow_node_catalog_value.as_ref(),
+            workflow_node_catalog_path,
             root_exists,
         ),
         trusted_tool_bridge: trusted_tool_bridge_summary(

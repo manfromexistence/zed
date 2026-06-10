@@ -8,6 +8,8 @@ use crate::dx_agent_bridge::DxAgentBridgeSnapshot;
 
 use super::{DxLaunchWorkspaceStatus, agents, metric_row, muted_card, section_title};
 
+mod workflow_nodes;
+
 pub(crate) fn render_tools_screen(
     status: Option<&DxLaunchWorkspaceStatus>,
     cx: &mut App,
@@ -16,6 +18,8 @@ pub(crate) fn render_tools_screen(
         let snapshot = &status.agent_bridge;
         v_flex()
             .gap_2()
+            .child(section_title("Workflow Nodes", dx_icon(DxUiIcon::Plugins)))
+            .child(workflow_nodes::render_workflow_node_plugins(snapshot, cx))
             .child(section_title("Browser", dx_icon(DxUiIcon::Browser)))
             .child(trusted_tool_state(
                 snapshot,
@@ -36,8 +40,6 @@ pub(crate) fn render_tools_screen(
             ))
             .child(section_title("MCP", dx_icon(DxUiIcon::Mcp)))
             .child(mcp_state(snapshot))
-            .child(section_title("DX Plugins", dx_icon(DxUiIcon::Plugins)))
-            .child(plugin_state(snapshot))
             .child(section_title("Receipts", IconName::FileTextOutlined))
             .child(agents::dx_agent_receipt_state(snapshot, cx))
             .child(section_title("Permissions", dx_icon(DxUiIcon::Permissions)))
@@ -59,8 +61,8 @@ pub(crate) fn render_tools_screen(
                 .p_4()
                 .child(screen_header(
                     dx_icon(DxUiIcon::Plugins),
-                    "Tools",
-                    "Browser, computer, MCP, plugins, receipts, and permission bridge state.",
+                    "Plugins",
+                    "Workflow nodes, browser, computer, MCP, receipts, and permission bridge state.",
                 ))
                 .child(body),
         )
@@ -164,60 +166,6 @@ fn mcp_state(snapshot: &DxAgentBridgeSnapshot) -> AnyElement {
     .into_any_element()
 }
 
-fn plugin_state(snapshot: &DxAgentBridgeSnapshot) -> AnyElement {
-    let status = if snapshot.trusted_tool_bridge.approved_plugin_tool_count > 0 {
-        AiSettingItemStatus::Running
-    } else if snapshot.trusted_tool_bridge.present {
-        AiSettingItemStatus::Starting
-    } else {
-        AiSettingItemStatus::Stopped
-    };
-
-    AiSettingItem::new(
-        "dx-tools-dx-plugins",
-        "DX Plugins",
-        status,
-        AiSettingItemSource::Custom,
-    )
-    .icon(
-        Icon::new(dx_icon(DxUiIcon::Plugins))
-            .size(IconSize::Small)
-            .color(Color::Muted),
-    )
-    .detail_label(match status {
-        AiSettingItemStatus::Running => "Approved",
-        AiSettingItemStatus::Starting => "Pending approval",
-        _ => "Receipt required",
-    })
-    .details(tool_detail_stack(vec![
-        tool_detail_row(
-            "dx-tools-dx-plugins-approved".into(),
-            IconName::ToolWeb,
-            "Approved plugin tools",
-            snapshot
-                .trusted_tool_bridge
-                .approved_plugin_tool_count
-                .to_string(),
-        ),
-        tool_detail_row(
-            "dx-tools-dx-plugins-automation".into(),
-            dx_icon(DxUiIcon::Automations),
-            "Automation tools",
-            snapshot
-                .trusted_tool_bridge
-                .approved_automation_tool_count
-                .to_string(),
-        ),
-        tool_detail_row(
-            "dx-tools-dx-plugins-contract".into(),
-            IconName::FileTextOutlined,
-            "Contract",
-            snapshot.trusted_tool_bridge.bridge_contract_id.clone(),
-        ),
-    ]))
-    .into_any_element()
-}
-
 fn permission_state(snapshot: &DxAgentBridgeSnapshot) -> AnyElement {
     let status = if snapshot.trusted_tool_bridge.blocked_tool_count > 0 {
         AiSettingItemStatus::Error
@@ -260,6 +208,24 @@ fn permission_state(snapshot: &DxAgentBridgeSnapshot) -> AnyElement {
                     dx_icon(DxUiIcon::Permissions),
                     "Policy",
                     snapshot.trusted_tool_bridge.trust_policy.clone(),
+                ),
+                tool_detail_row(
+                    "dx-tools-permissions-approved-plugin".into(),
+                    IconName::ToolWeb,
+                    "Approved plugin tools",
+                    snapshot
+                        .trusted_tool_bridge
+                        .approved_plugin_tool_count
+                        .to_string(),
+                ),
+                tool_detail_row(
+                    "dx-tools-permissions-approved-automation".into(),
+                    dx_icon(DxUiIcon::Automations),
+                    "Automation tools",
+                    snapshot
+                        .trusted_tool_bridge
+                        .approved_automation_tool_count
+                        .to_string(),
                 ),
                 tool_detail_row(
                     "dx-tools-permissions-blocked".into(),
