@@ -1,5 +1,5 @@
 IN PROGRESS:
-- None. Authorized J6 sound validation is build-verified.
+- None. Latest Dx branding/storage/sound polish is build-verified.
 
 PENDING:
 - Add user-facing DX sound preferences before enabling hot-path typing and hover playback.
@@ -9,6 +9,7 @@ PENDING:
 - Continue the DX/Zed ecosystem integration with bounded source-only slices for remaining receipt scans, semantic icon hotspots, and governed runtime proof when explicitly authorized.
 
 COMPLETED:
+- Dx branding/storage/sound polish is build-verified: Project Panel storage intelligence and root shortcuts stay hidden until storage details are opened, DX sounds now play at five percent gain, visible Zed/Zed Agent UI copy has been safely rebranded to Dx/Dx Agent without renaming compatibility identifiers, packaged app icons use the DX rainbow mark, and authorized `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run` built and launched the app successfully after moving rebuildable target cache behind a junction and refreshing the corrupt LiveKit Cargo git checkout.
 - Project Panel storage details are build-verified: media shelves and the normal tree stay visible by default, while largest-folder/storage-intelligence rows and folder-size chips are hidden until the user opens storage details from the Project header or options menu. The background folder-storage warming path is gated behind the same toggle, the menu closure compile error is repaired, and authorized `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run` built and launched Zed successfully.
 - Authorized J6 sound validation is build-verified: repaired the locked `editor` package dependency list in `Cargo.lock`, narrowed the debug audio optimization warning to output-stream initialization instead of every DX micro-sound playback, verified the DX sound source guard, and ran `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run` successfully with the Zed main window detected.
 - DX WWW turbo Web Preview bridge is source-verified: Web Preview now samples loopback DX WWW hot-reload/devtools contracts through a short-lived cache, stores a compact native session snapshot, and exposes source-owned runtime capabilities without starting servers, polling, leaking raw tokens, or mutating source. Runtime WebView proof, Cargo, build, and `just run` remain deferred.
@@ -1652,6 +1653,12 @@ COMPLETED:
 - Added native source-apply receipt preservation for Web Preview reverse CSS delta replacement payload diagnostics, with review blocked when those diagnostics are non-empty.
 - Added real split/close controls to the project, git, outline, and collab panel headers through the shared dock helper, including panel-id-aware disabled state, compact tooltips, and source guards. Also cleaned recent Agent/Style sidebar wording and stale source-test expectations. Passed focused `rustfmt --check`, 43/43 focused Node source tests, and `git diff --check`. Skipped by policy: Cargo and `just run`.
 - Polished recent tool-panel and Agent/Style rail copy so transient recents show action counts instead of saved counts, missing-entry cleanup uses Remove/missing language instead of Clean/stale, preview requests say they are opening, and DX Style source states avoid runtime-ready overclaims. Six subagents audited the slice; 25/25 focused source guards and targeted `rustfmt --check` passed. Skipped by policy: Cargo and `just run`.
+
+- Hide Project Panel storage roots unless storage details are explicitly opened.
+- Reduce DX interaction sound gain to five percent.
+- Safely rebrand visible Zed/Zed Agent UI copy to Dx/Dx Agent while preserving compatibility identifiers.
+- Replace packaged app icons and the shared Zed logo asset with the DX rainbow D mark from the WWW examples.
+- Verify the Project Panel storage toggle, sound gain, branding/icon resource changes, and `just run` with six Cargo jobs.
 
 BLOCKED:
 - None

@@ -165,7 +165,7 @@ pub(super) fn dx_style_panel_state(snapshot: &DxStylePanelSnapshot, cx: &App) ->
 
     if snapshot.readiness.receipt_count == 0 {
         stack = stack.child(muted_card(
-            "No DX Style build/check receipt has been read by Zed.",
+            "No DX Style build/check receipt has been read by Dx.",
             cx,
         ));
     }

@@ -1,18 +1,22 @@
-[2026-06-10] - Project Panel Storage Details Toggle
+[2026-06-10] - Dx Branding, Storage, and Sound Polish
 
 CHANGED:
 - `crates\project_panel\src\project_panel.rs` now hides largest-folder/storage-intelligence rows by default while keeping the media shelf and normal file tree visible.
 - Project header chrome and the Project options menu now expose a real storage-details toggle for users who want the largest folder/file storage view.
 - Folder-size hover chips and background folder-storage warming are gated behind the same storage-details toggle so the hidden view does not keep doing unnecessary tree work.
+- DX interaction sounds now play at five percent gain.
+- Visible product strings now use Dx/Dx Agent branding while keeping compatibility identifiers and source-level names intact.
+- Packaged app PNG/ICO icons and the shared logo SVG now use the DX rainbow mark from the WWW examples.
 
 PASSED:
 - `node --test script\dx-project-panel-source.test.ts`
+- `node --test script\dx-sound-source.test.ts`
 - `rustfmt --edition 2024 --check crates\project_panel\src\project_panel.rs`
 - `git diff --check`
 - `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run`
 
 NOTES:
-- The authorized j6 run built the Zed binary and launched the main window successfully after freeing rebuildable incremental target cache on G:.
+- The authorized j6 run built the app and launched the main window successfully after moving the rebuildable Cargo target cache behind `G:\Dx\code\target` to an F: junction and refreshing a corrupt `livekit-rust-sdks` Cargo git checkout.
 
 [2026-06-10] - Authorized J6 Sound Validation
 
@@ -16382,6 +16386,15 @@ NOTES:
 - The disabled WebPreview onboarding code remains in place for a future dedicated repair pass, but it is not reachable from first-open, titlebar, welcome, restore registration, or completion paths.
 
 [2026-06-03] - Core Panel Split Controls Polish
+
+CHANGED:
+- Project Panel storage-root shortcuts now render and refresh only while storage details are explicitly visible, keeping the top panel focused on media and the normal file tree by default.
+- DX sound event playback now uses five percent gain.
+- Visible Zed/Zed Agent product copy across app menus, onboarding, agent setup, update status, package metadata, and selected panel messages now presents as Dx/Dx Agent while preserving internal compatibility identifiers.
+- Packaged app PNG/ICO resources and the shared logo vector now use the DX rainbow D mark from the WWW example assets.
+
+PENDING VERIFICATION:
+- Focused source guards, `git diff --check`, and `just run` with six Cargo jobs.
 
 CHANGED:
 - `crates\workspace\src\dock.rs` now exposes shared side-panel split and close controls with real panel-id-aware enabled state instead of assuming the active side panel.

@@ -1,10 +1,17 @@
-<svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g clip-path="url(#clip0_1957_1318)">
-<path fill-rule="evenodd" clip-rule="evenodd" d="M9 6C7.34315 6 6 7.34315 6 9V75H0V9C0 4.02944 4.02944 0 9 0H89.3787C93.3878 0 95.3955 4.84715 92.5607 7.68198L43.0551 57.1875H57V51H63V58.6875C63 61.1728 60.9853 63.1875 58.5 63.1875H37.0551L26.7426 73.5H73.5V36H79.5V73.5C79.5 76.8137 76.8137 79.5 73.5 79.5H20.7426L10.2426 90H87C88.6569 90 90 88.6569 90 87V21H96V87C96 91.9706 91.9706 96 87 96H6.62132C2.61224 96 0.604504 91.1529 3.43934 88.318L52.7574 39H39V45H33V37.5C33 35.0147 35.0147 33 37.5 33H58.7574L69.2574 22.5H22.5V60H16.5V22.5C16.5 19.1863 19.1863 16.5 22.5 16.5H75.2574L85.7574 6H9Z" fill="black"/>
-</g>
-<defs>
-<clipPath id="clip0_1957_1318">
-<rect width="96" height="96" fill="white"/>
-</clipPath>
-</defs>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Dx logo</title>
+  <desc>A solid D symbol filled with the Dx rainbow gradient on a transparent background.</desc>
+  <defs>
+    <linearGradient id="dxLogoGradient" x1="248" y1="128" x2="888" y2="896" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#00E5FF"/>
+      <stop offset="0.14" stop-color="#0A84FF"/>
+      <stop offset="0.28" stop-color="#BF5AF2"/>
+      <stop offset="0.42" stop-color="#FF2D55"/>
+      <stop offset="0.56" stop-color="#FF9500"/>
+      <stop offset="0.7" stop-color="#FFD60A"/>
+      <stop offset="0.84" stop-color="#32D74B"/>
+      <stop offset="1" stop-color="#00E5FF"/>
+    </linearGradient>
+  </defs>
+  <path d="M248 128H514C723.316 128 888 296.517 888 512C888 727.483 723.316 896 514 896H248V128Z" fill="url(#dxLogoGradient)"/>
 </svg>

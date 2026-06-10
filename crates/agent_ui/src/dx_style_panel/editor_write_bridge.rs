@@ -203,7 +203,7 @@ fn resolved_preflight(
 fn preflight_source_label(source: &str) -> &'static str {
     match source {
         "live_style_fixture" => "Live DX Style fixture",
-        "generated_zed_mirror" => "Generated Zed mirror",
+        "generated_zed_mirror" => "Generated Dx mirror",
         "emergency_fail_closed" => "Emergency fail-closed",
         _ => "Unknown preflight source",
     }

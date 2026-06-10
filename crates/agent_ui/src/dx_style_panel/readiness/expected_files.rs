@@ -30,7 +30,7 @@ pub(super) const EXPECTED_STYLE_FILES: &[ExpectedReadinessFile] = &[
         label: "Style panel plan",
         relative_path: "PLAN.md",
         kind: ReadinessKind::Doc,
-        marker: Some("Zed Style Right Panel"),
+        marker: Some("Dx Style Right Panel"),
     },
     ExpectedReadinessFile {
         label: "Compatibility table",

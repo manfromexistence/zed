@@ -886,7 +886,7 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   );
   assert.match(
     renderDxExplorerHeader,
-    /IconButton::new\(storage_details_button_id,\s*dx_icon\(DxUiIcon::Storage\)\)[\s\S]*\.tooltip\(Tooltip::text\(if storage_details_visible[\s\S]*Show storage details[\s\S]*this\.storage_details_visible = !this\.storage_details_visible/,
+    /IconButton::new\(storage_details_button_id,\s*dx_icon\(DxUiIcon::Storage\)\)[\s\S]*\.tooltip\(Tooltip::text\(if storage_details_visible[\s\S]*Show storage details[\s\S]*this\.toggle_storage_details_visible\(window, cx\)/,
     "Project Panel header must expose a real storage-details toggle without rendering largest folders by default",
   );
   assert.match(
@@ -1341,7 +1341,8 @@ test("project panel storage overview and root shortcuts stay cached and professi
     /if !self\.storage_root_shortcuts_allowed\(cx\) \{[\s\S]*return None;[\s\S]*\}/,
     "local storage-root shortcuts must not render for read-only or remote-only project contexts",
   );
-  assert.match(source, /fn storage_root_shortcuts_allowed\(&self, cx: &mut Context<Self>\) -> bool \{[\s\S]*!project\.is_read_only\(cx\)[\s\S]*project\.is_local\(\) \|\| project\.is_via_wsl_with_host_interop\(cx\)/);
+  assert.match(source, /fn storage_root_shortcuts_allowed\(&self, cx: &mut Context<Self>\) -> bool \{[\s\S]*if !self\.storage_details_visible \{[\s\S]*return false;[\s\S]*\}[\s\S]*!project\.is_read_only\(cx\)[\s\S]*project\.is_local\(\) \|\| project\.is_via_wsl_with_host_interop\(cx\)/);
+  assert.match(source, /fn toggle_storage_details_visible\(&mut self, window: &mut Window, cx: &mut Context<Self>\) \{[\s\S]*self\.storage_details_visible = !self\.storage_details_visible;[\s\S]*if self\.storage_details_visible \{[\s\S]*self\.refresh_dx_explorer_storage_roots\(cx\);[\s\S]*\} else \{[\s\S]*self\.storage_root_shortcuts\.clear\(\);[\s\S]*\}[\s\S]*self\.update_visible_entries\(None, false, false, window, cx\);[\s\S]*cx\.notify\(\);[\s\S]*\}/);
   assert.match(source, /if this\.storage_root_shortcuts_allowed\(cx\) \{[\s\S]*this\.refresh_dx_explorer_storage_roots\(cx\);[\s\S]*\}/);
   assert.match(source, /fn refresh_dx_explorer_storage_roots\(&mut self, cx: &mut Context<Self>\)[\s\S]*if !self\.storage_root_shortcuts_allowed\(cx\) \{[\s\S]*self\.storage_root_shortcuts\.clear\(\);[\s\S]*return;[\s\S]*\}/);
   assert.match(source, /if !this\.storage_root_shortcuts_allowed\(cx\) \{[\s\S]*this\.storage_root_shortcuts\.clear\(\);[\s\S]*cx\.notify\(\);[\s\S]*return;[\s\S]*\}/);

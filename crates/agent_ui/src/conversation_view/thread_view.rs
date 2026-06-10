@@ -1761,8 +1761,7 @@ impl ThreadView {
                 ThreadError::PaymentRequired => (
                     "payment_required",
                     None,
-                    "You reached your free usage limit. Upgrade to Zed Pro for more prompts."
-                        .into(),
+                    "You reached your free usage limit. Upgrade to Dx Pro for more prompts.".into(),
                 ),
                 ThreadError::Refusal => {
                     let model_or_agent_name = self.current_model_name(cx);
@@ -4546,9 +4545,9 @@ impl ThreadView {
                         {
                             let _ = std::fs::remove_file(&audio_path);
                             this.composer_voice_state
-                                .set_error("Zed audio playback is not available in this build");
+                                .set_error("Dx audio playback is not available in this build");
                             this.show_flow_voice_toast(
-                                "Zed audio playback is not available in this build",
+                                "Dx audio playback is not available in this build",
                                 cx,
                             );
                         }
@@ -6534,7 +6533,7 @@ impl ThreadView {
 
             let tooltip_meta = || {
                 SharedString::new(
-                    "Rating the thread sends all of your current conversation to the Zed team.",
+                    "Rating the thread sends all of your current conversation to the Dx team.",
                 )
             };
 
@@ -10303,7 +10302,7 @@ impl ThreadView {
 
     fn render_payment_required_error(&self, cx: &mut Context<Self>) -> Callout {
         const ERROR_MESSAGE: &str =
-            "You reached your free usage limit. Upgrade to Zed Pro for more prompts.";
+            "You reached your free usage limit. Upgrade to Dx Pro for more prompts.";
 
         Callout::new()
             .severity(Severity::Error)

@@ -145,7 +145,7 @@ fn mcp_state(snapshot: &DxAgentBridgeSnapshot) -> AnyElement {
         tool_detail_row(
             "dx-tools-mcp-zed-route".into(),
             IconName::Server,
-            "Zed route",
+            "Dx route",
             "MCP Servers opens the Context Servers extension registry.",
         ),
         tool_detail_row(

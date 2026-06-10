@@ -4547,9 +4547,26 @@ impl ProjectPanel {
     }
 
     fn storage_root_shortcuts_allowed(&self, cx: &mut Context<Self>) -> bool {
+        if !self.storage_details_visible {
+            return false;
+        }
+
         let project = self.project.read(cx);
         !project.is_read_only(cx)
             && (project.is_local() || project.is_via_wsl_with_host_interop(cx))
+    }
+
+    fn toggle_storage_details_visible(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.storage_details_visible = !self.storage_details_visible;
+
+        if self.storage_details_visible {
+            self.refresh_dx_explorer_storage_roots(cx);
+        } else {
+            self.storage_root_shortcuts.clear();
+        }
+
+        self.update_visible_entries(None, false, false, window, cx);
+        cx.notify();
     }
 
     fn render_dx_explorer_storage_root_strip(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
@@ -4871,12 +4888,7 @@ impl ProjectPanel {
                                         if has_worktree {
                                             panel_for_storage_details
                                                 .update_in(cx, |this, window, cx| {
-                                                    this.storage_details_visible =
-                                                        !this.storage_details_visible;
-                                                    this.update_visible_entries(
-                                                        None, false, false, window, cx,
-                                                    );
-                                                    cx.notify();
+                                                    this.toggle_storage_details_visible(window, cx);
                                                 })
                                                 .log_err();
                                         }
@@ -4937,9 +4949,7 @@ impl ProjectPanel {
                         "Show storage details"
                     }))
                     .on_click(cx.listener(|this, _, window, cx| {
-                        this.storage_details_visible = !this.storage_details_visible;
-                        this.update_visible_entries(None, false, false, window, cx);
-                        cx.notify();
+                        this.toggle_storage_details_visible(window, cx);
                     })),
             )
             .child(self.render_side_panel_header_controls("dx-explorer", cx));

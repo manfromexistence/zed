@@ -76,7 +76,7 @@ test("DX sound playback uses semantic events with throttling", () => {
   assert.match(dxSounds, /pub enum DxSoundPolicy/);
   assert.doesNotMatch(dxSounds, /Self::TypingKey \| Self::HoverSoft => DxSoundPolicy::ExplicitOptIn/);
   assert.match(dxSounds, /HoverSoft[\s\S]+DxSoundPolicy::ExplicitOptIn/);
-  assert.match(dxSounds, /pub\(crate\) fn gain\(self\) -> f32 \{\s*0\.10\s*\}/);
+  assert.match(dxSounds, /pub\(crate\) fn gain\(self\) -> f32 \{\s*0\.05\s*\}/);
   assert.match(audioPipeline, /dx_sound_last_played: HashMap<DxSoundEvent, Instant>/);
   assert.match(audioPipeline, /pub fn play_dx_sound\(event: DxSoundEvent, cx: &mut App\)/);
   assert.match(audioPipeline, /fn should_play_dx_sound/);
