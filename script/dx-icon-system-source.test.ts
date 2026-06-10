@@ -148,15 +148,14 @@ test("DX shell chrome uses semantic icons instead of scattered literals", () => 
   const screenKindIcon = functionBody(titleBar, "screen_kind_icon");
   const hiddenButtons = functionBody(titleBar, "render_hidden_feature_buttons");
 
-  for (const icon of ["Agent", "Browser", "Icons", "Fonts", "Media", "Ui", "Check"]) {
+  for (const icon of ["Browser", "Icons", "Fonts", "Media", "Ui", "Check"]) {
     assert.ok(
       titleBar.includes(`dx_icon(DxUiIcon::${icon})`),
       `title bar should use semantic DX icon ${icon}`,
     );
   }
 
-  assert.match(dxIcons, /DxUiIcon::Agent => IconName::ZedAgent/);
-  assert.match(dxIcons, /DxUiIcon::Ai => IconName::ZedAssistant/);
+  assert.match(dxIcons, /DxUiIcon::Agent \| DxUiIcon::Ai => IconName::Sparkle/);
   assert.match(forgePanel, /dx_icon\(DxUiIcon::Forge\)/);
   assert.match(forgePanelView, /icon: dx_icon\(DxUiIcon::Media\)/);
   assert.match(forgeProviderView, /ProviderGroup::Media => dx_icon\(DxUiIcon::Media\)/);
@@ -166,7 +165,7 @@ test("DX shell chrome uses semantic icons instead of scattered literals", () => 
   assert.match(launchStylePanel, /dx_icon\(DxUiIcon::Style\)/);
   assert.doesNotMatch(launchStylePanel, /IconName::Sliders/);
   assert.doesNotMatch(agentButton, /IconName::ZedAssistant/);
-  assert.match(agentButton, /dx_icon\(DxUiIcon::Agent\)/);
+  assert.match(agentButton, /IconName::Sparkle/);
   assert.doesNotMatch(screenKindIcon, /IconName::ToolWeb/);
   assert.doesNotMatch(
     hiddenButtons,
@@ -250,12 +249,13 @@ test("DX loading and tool surfaces use semantic icon helpers", () => {
   assert.match(agentRegistryUi, /Icon::new\(dx_icon\(DxUiIcon::Search\)\)/);
   assert.doesNotMatch(agentRegistryUi, /Icon::new\(IconName::MagnifyingGlass\)/);
 
-  for (const icon of ["Search", "Plugins", "Automations", "Evidence", "Media", "Check"]) {
+  for (const icon of ["Evidence", "Media", "Check"]) {
     assert.ok(
       agentPanel.includes(`dx_icon(DxUiIcon::${icon})`),
       `Agent launch surface should use semantic DX icon ${icon}`,
     );
   }
+  assert.doesNotMatch(agentPanel, /IconName::ZedAgent|IconName::ZedAssistant/);
 
   for (const icon of ["Receipts", "Evidence", "Storage", "Settings", "Source"]) {
     assert.ok(

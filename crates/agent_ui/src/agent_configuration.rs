@@ -458,7 +458,7 @@ impl AgentConfiguration {
             AiSettingItemSource::Custom,
         )
         .icon(
-            Icon::new(IconName::ZedAgent)
+            Icon::new(IconName::Sparkle)
                 .size(IconSize::Small)
                 .color(Color::Muted),
         )

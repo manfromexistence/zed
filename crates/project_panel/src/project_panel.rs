@@ -7991,14 +7991,6 @@ impl ProjectPanel {
                                 )
                             })
                             .child(hover_badge)
-                            .when(is_sticky && sticky_index == Some(0), |this| {
-                                this.child(
-                                    self.render_side_panel_header_controls(
-                                        "project-panel-sticky",
-                                        cx,
-                                    ),
-                                )
-                            })
                             .into_any_element(),
                     )
                     .child(if let Some(icon) = &icon {
@@ -9427,13 +9419,7 @@ impl Render for ProjectPanel {
                                             active_media_folder.worktree_id,
                                             active_media_folder.selected_media_entry_id,
                                             self.focus_handle(cx),
-                                            Some(
-                                                self.render_side_panel_header_controls(
-                                                    "project-panel-media",
-                                                    cx,
-                                                )
-                                                .into_any_element(),
-                                            ),
+                                            None,
                                             cx,
                                         )),
                                 )

@@ -22,7 +22,7 @@ const AGENT_CHROME_PLAYWRIGHT_ADAPTER_TOOL_NAME: &str = "prepare_managed_chrome_
 const AGENT_CHROME_PLAYWRIGHT_ADAPTER_ROOT_NAME: &str = "zed-managed-chrome-runner";
 const AGENT_CHROME_PLAYWRIGHT_RUNNER_SCRIPT_NAME: &str = "managed_chrome_runner.mjs";
 
-/// Prepares managed roots for the DX/Zed Agent Plugin Runtime without touching real browser profiles.
+/// Prepares managed roots for the Dx Agent Plugin Runtime without touching real browser profiles.
 ///
 /// By default this is a dry run. Set `create_managed_roots` to create the managed directories and
 /// `write_bootstrap_manifest` to write a small plan file. This tool never downloads packages,

@@ -49,7 +49,7 @@ fn profile_name_snapshot_exceeds_limit(snapshot: &MultiBufferSnapshot) -> bool {
 
 fn profile_icon(profile_id: &AgentProfileId) -> IconName {
     match profile_id.as_str() {
-        builtin_profiles::WRITE => IconName::ZedAgent,
+        builtin_profiles::WRITE => IconName::Sparkle,
         builtin_profiles::ASK | builtin_profiles::LEGACY_MINIMAL => IconName::Chat,
         builtin_profiles::MEDIA => dx_icon(DxUiIcon::Media),
         builtin_profiles::SEARCH => dx_icon(DxUiIcon::Search),
@@ -832,7 +832,7 @@ impl ManageProfilesModal {
                                         .inset(true)
                                         .spacing(ListItemSpacing::Sparse)
                                         .start_slot(
-                                            Icon::new(IconName::ZedAssistant)
+                                            Icon::new(IconName::Sparkle)
                                                 .size(IconSize::Small)
                                                 .color(Color::Muted),
                                         )
@@ -1109,7 +1109,7 @@ impl Render for ManageProfilesModal {
                         .pb_1()
                         .child(ProfileModalHeader::new(
                             format!("{profile_name} — Configure Default Model"),
-                            Some(IconName::ZedAgent),
+                            Some(IconName::Sparkle),
                         ))
                         .child(ListSeparator)
                         .child(v_flex().w(rems(34.)).child(model_picker.clone()))

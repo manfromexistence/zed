@@ -1942,10 +1942,10 @@ impl Sidebar {
         let resolve_agent_icon = |agent_id: &AgentId| -> (IconName, Option<SharedString>) {
             let agent = Agent::from(agent_id.clone());
             let icon = match agent {
-                Agent::NativeAgent => IconName::ZedAgent,
+                Agent::NativeAgent => IconName::Sparkle,
                 Agent::Custom { .. } => IconName::Terminal,
 
-                _ => IconName::ZedAgent,
+                _ => IconName::Sparkle,
             };
             let icon_from_external_svg = agent_server_store
                 .as_ref()
@@ -2841,7 +2841,7 @@ impl Sidebar {
                     let sidebar = sidebar.clone();
                     menu.separator().item(
                         ContextMenuEntry::new("Filter Threads")
-                            .icon(IconName::MagnifyingGlass)
+                            .icon(IconName::Filter)
                             .icon_color(Color::Muted)
                             .handler(move |window, cx| {
                                 sidebar
@@ -7901,8 +7901,16 @@ impl Sidebar {
                         "sidebar-toolbar-settings",
                         dx_icon(DxUiIcon::Settings),
                         "Settings",
-                        |_this, _, window, cx| {
-                            window.dispatch_action(Box::new(zed_actions::OpenSettings), cx);
+                        |this, _, window, cx| {
+                            if this.active_workspace(cx).is_some() {
+                                this.dispatch_workspace_action(
+                                    &zed_actions::OpenSettings,
+                                    window,
+                                    cx,
+                                );
+                            } else {
+                                window.dispatch_action(Box::new(zed_actions::OpenSettings), cx);
+                            }
                         },
                     )),
             )
@@ -8092,8 +8100,12 @@ impl Sidebar {
                 "sidebar-activity-settings",
                 dx_icon(DxUiIcon::Settings),
                 "Settings",
-                |_this, _, window, cx| {
-                    window.dispatch_action(Box::new(zed_actions::OpenSettings), cx);
+                |this, _, window, cx| {
+                    if this.active_workspace(cx).is_some() {
+                        this.dispatch_workspace_action(&zed_actions::OpenSettings, window, cx);
+                    } else {
+                        window.dispatch_action(Box::new(zed_actions::OpenSettings), cx);
+                    }
                 },
             )
             .into_any_element(),
@@ -9216,30 +9228,6 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        match kind {
-            WorkspaceScreenKind::Automations => {
-                let action = zed_actions::assistant::OpenAutomations.boxed_clone();
-                self.dispatch_workspace_action(action.as_ref(), window, cx);
-                return;
-            }
-            WorkspaceScreenKind::Connections => {
-                let action = zed_actions::assistant::OpenConnections.boxed_clone();
-                self.dispatch_workspace_action(action.as_ref(), window, cx);
-                return;
-            }
-            WorkspaceScreenKind::Tools => {
-                let action = zed_actions::assistant::OpenTools.boxed_clone();
-                self.dispatch_workspace_action(action.as_ref(), window, cx);
-                return;
-            }
-            WorkspaceScreenKind::Agent
-            | WorkspaceScreenKind::Browser
-            | WorkspaceScreenKind::Editor
-            | WorkspaceScreenKind::Onboarding
-            | WorkspaceScreenKind::Other
-            | WorkspaceScreenKind::Terminal => {}
-        }
-
         let Some(workspace) = self.active_workspace(cx) else {
             return;
         };
@@ -9351,7 +9339,7 @@ impl Sidebar {
         render_import_onboarding_banner(
             "acp",
             "Looking for threads from external agents?",
-            "Import threads from agents like Claude Agent, Codex, and more, whether started in Zed or another client.",
+            "Import threads from agents like Claude Agent, Codex, and more, whether started in Dx or another client.",
             if verbose_labels {
                 "Import Threads from External Agents"
             } else {

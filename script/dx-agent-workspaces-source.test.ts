@@ -6,13 +6,6 @@ const read = (path: string) => readFileSync(path, "utf8");
 const lineCount = (path: string) => read(path).split(/\r?\n/).length;
 const enumBody = (source: string, name: string) =>
   source.match(new RegExp(`enum ${name} \\{[\\s\\S]*?\\}`))?.[0] ?? "";
-const sidebarWorkspaceActionArm = (kind: string, action: string) =>
-  new RegExp(
-    `WorkspaceScreenKind::${kind} => \\{\\s*` +
-      `let action = zed_actions::assistant::${action}\\.boxed_clone\\(\\);\\s*` +
-      `self\\.dispatch_workspace_action\\(action\\.as_ref\\(\\), window, cx\\);\\s*` +
-      `return;\\s*\\}`,
-  );
 
 test("DX agent workspace taxonomy has first-class Zed screens", () => {
   const item = read("crates/workspace/src/item.rs");
@@ -77,11 +70,14 @@ test("DX agent workspace taxonomy has first-class Zed screens", () => {
   assert.match(agentWorkspace, /"dx-agent-environment-worktrees"[\s\S]*?dx_icon\(DxUiIcon::Project\)/);
   assert.match(agentWorkspace, /"dx-agent-sources-total"[\s\S]*?dx_icon\(DxUiIcon::Source\)/);
 
-  assert.match(sidebar, sidebarWorkspaceActionArm("Connections", "OpenConnections"));
-  assert.match(sidebar, sidebarWorkspaceActionArm("Tools", "OpenTools"));
   assert.match(
     sidebar,
     /fn activate_workspace_screen\([\s\S]*?workspace\.activate_screen_kind\(kind, window, cx\)/,
+  );
+  assert.doesNotMatch(
+    sidebar,
+    /WorkspaceScreenKind::(?:Connections|Tools|Automations) => \{[\s\S]*?dispatch_workspace_action/,
+    "sidebar top actions should use the workspace screen router instead of split first-class action paths",
   );
   assert.match(sidebar, /"sidebar-toolbar-connections"[\s\S]*?activate_workspace_screen\(\s*WorkspaceScreenKind::Connections/);
   assert.match(sidebar, /"sidebar-activity-connections"[\s\S]*?activate_workspace_screen\(WorkspaceScreenKind::Connections/);

@@ -251,8 +251,8 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   );
   assert.equal(
     source.match(/\bself\.render_side_panel_header_controls\(/g)?.length,
-    4,
-    "Project Panel should reuse the side-panel chrome helper for header, selection, sticky, and media controls",
+    2,
+    "Project Panel should reuse the side-panel chrome helper only for the Project header and selection controls",
   );
   assert.equal(
     source.match(/\bside_panel_header_controls\(/g)?.length,
@@ -817,10 +817,10 @@ test("project panel display strings, sticky rows, and undo batches are bounded",
   assert.match(source, /const MAX_PROJECT_PANEL_STICKY_PARENTS: usize = 128;/);
   assert.match(undo, /const MAX_PROJECT_PANEL_UNDO_BATCH_CHANGES: usize = 4_096;/);
   assert.match(detailsForEntry, /utils::bounded_project_panel_label\(filename\)/);
-  assert.match(renderEntry, /is_sticky && sticky_index == Some\(0\)/);
-  assert.match(
+  assert.doesNotMatch(
     renderEntry,
-    /self\.render_side_panel_header_controls\(\s*"project-panel-sticky",[\s\S]*cx,\s*\)/,
+    /render_side_panel_header_controls\(\s*"project-panel-sticky"/,
+    "sticky tree rows must not inject side-panel close controls into the file tree",
   );
   assertBefore({
     body: renderStickyEntries,

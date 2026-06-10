@@ -1,3 +1,21 @@
+[2026-06-10] - Dx Sidebar Action and Agent Branding Polish
+
+CHANGED:
+- Visible native-agent icon surfaces now use Sparkles instead of the old Zed Agent/Zed AI mark across Agent UI, sidebar threads, setup/configuration, thread items, model selectors, and DX UI icon mapping.
+- Sidebar thread actions now use the Filter icon for filtering, selected thread rows use theme selected/border tokens, and inactive timestamp/detail text uses a readable theme-muted color instead of a custom low-opacity text color.
+- Project Panel media and sticky tree rows no longer render stray side-panel close controls inside accordion/content headers.
+- Sidebar screen shortcuts now route Plugins/Tools, Connections, Automations, and other top actions through the workspace screen system, while Settings has an active-workspace fallback.
+- Font/Media/UI titlebar buttons now dispatch through the active workspace focus path when opening a panel, and the sign-in dropdown no longer duplicates Settings.
+
+PASSED:
+- `node --test script\dx-title-bar-source.test.ts script\dx-agent-workspaces-source.test.ts script\dx-project-panel-source.test.ts script\dx-icon-system-source.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true ...` across the touched Rust source files.
+- `git diff --check`
+- Changed-file conflict-marker scan returned no matches.
+
+NOTES:
+- This pass keeps compatibility identifiers such as `ZED_AGENT_ID` and internal schema names intact. It does not run Cargo or `just run` unless explicitly authorized.
+
 [2026-06-10] - Dx Branding, Storage, and Sound Polish
 
 CHANGED:

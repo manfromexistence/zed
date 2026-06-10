@@ -344,7 +344,7 @@ fn adapter_package_json() -> Result<String, String> {
         "version": "0.1.6",
         "private": true,
         "type": "module",
-        "description": "Managed Playwright adapter for DX/Zed Agent Chrome plugin receipts.",
+        "description": "Managed Playwright adapter for Dx Agent Chrome plugin receipts.",
         "scripts": {
             "run-payload": "node managed_chrome_runner.mjs"
         },
@@ -360,7 +360,7 @@ fn adapter_manifest_json(plan: &ManagedChromePlaywrightAdapterPlan) -> Result<St
         "schema": AGENT_CHROME_PLAYWRIGHT_ADAPTER_MANIFEST_SCHEMA,
         "generated_at_ms": current_epoch_millis(),
         "adapter": {
-            "name": "DX/Zed Managed Chrome Playwright Adapter",
+            "name": "Dx Managed Chrome Playwright Adapter",
             "version": "0.1.6",
             "root": path_string(&plan.adapter_root),
             "runner_script": path_string(&plan.runner_script_path),
@@ -404,13 +404,13 @@ fn current_epoch_millis() -> u64 {
         .unwrap_or_default()
 }
 
-const MANAGED_CHROME_ADAPTER_README: &str = r#"# DX/Zed Managed Chrome Playwright Adapter
+const MANAGED_CHROME_ADAPTER_README: &str = r#"# Dx Managed Chrome Playwright Adapter
 
-This directory is a managed runner artifact for the Zed Agent Chrome plugin.
+This directory is a managed runner artifact for the Dx Agent Chrome plugin.
 
 The adapter is intentionally inert until a future permissioned executor invokes it with a
 schema-versioned request and receipt path. It never uses a real Chrome, Edge, or Firefox user
-profile. All browser state must stay in the managed profile root provided by Zed.
+profile. All browser state must stay in the managed profile root provided by Dx.
 
 Supported execution actions:
 

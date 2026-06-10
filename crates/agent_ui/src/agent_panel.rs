@@ -5847,7 +5847,7 @@ impl AgentPanel {
                                     !showing_terminal && is_agent_selected(Agent::NativeAgent),
                                     |this| this.action(Box::new(NewThread)),
                                 )
-                                .icon(IconName::ZedAgent)
+                                .icon(IconName::Sparkle)
                                 .icon_color(Color::Muted)
                                 .handler({
                                     let workspace = workspace.clone();
@@ -6193,7 +6193,7 @@ impl AgentPanel {
                     .size(IconSize::Small)
                     .color(icon_color)
             } else {
-                let icon_name = selected_agent_builtin_icon.unwrap_or(IconName::ZedAgent);
+                let icon_name = selected_agent_builtin_icon.unwrap_or(IconName::Sparkle);
                 Icon::new(icon_name).size(IconSize::Small).color(icon_color)
             };
 
