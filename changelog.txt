@@ -1,3 +1,23 @@
+[2026-06-10] - DX WWW Turbo Web Preview Bridge
+
+ADDED:
+- `crates\web_preview\src\web_preview_view.rs` now exposes a loopback-only DX WWW turbo bridge collector that reads `/_dx/hot-reload/version?resource=...` and `/_dx/devtools/session` through the existing Web Preview IPC channel.
+- `script\dx-www-turbo-web-preview-source.test.ts` guards the source-owned bridge contract, loopback scope, cache/no-polling behavior, token redaction, and native session snapshot wiring.
+- `docs\superpowers\plans\2026-06-10-dx-www-turbo-web-preview.md` records the lane plan and verification boundary.
+- `DX.md` records the new Web Preview DX-WWW receipt/status consumer surface without claiming Turbo task execution.
+
+CHANGED:
+- Web Preview session snapshots now include a compact `dx_www_turbo_bridge` summary and clear it on navigation start to avoid stale runtime state.
+- The DX Studio bridge now asks the base Web Preview bridge to refresh DX WWW readiness when its public API aliases attach.
+
+PASSED:
+- `node --test script\dx-www-turbo-web-preview-source.test.ts`
+- `rustfmt --edition 2024 --check crates\web_preview\src\web_preview_view.rs`
+- `git diff --check`
+
+NOTES:
+- Source-only pass. No dev server is started, no source mutation is performed, no raw hot-reload token is exposed, and Cargo/build/runtime WebView proof plus `just run` remain deferred by instruction.
+
 [2026-06-10] - DX Interaction Sound Wiring
 
 CHANGED:

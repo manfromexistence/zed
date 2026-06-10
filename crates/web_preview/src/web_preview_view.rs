@@ -818,6 +818,7 @@ pub struct WebPreviewView {
     onboarding_complete: Option<OnboardingCompleteCallback>,
     onboarding_completion_handoff: bool,
     latest_dx_studio_selection: Option<Value>,
+    latest_dx_www_turbo_bridge: Option<Value>,
     latest_dx_studio_edit_receipt: Option<Value>,
     latest_dx_style_source_apply_receipt: Option<Value>,
     latest_page_diagnostics: Option<Value>,
@@ -1205,6 +1206,7 @@ impl WebPreviewView {
             onboarding_complete,
             onboarding_completion_handoff: false,
             latest_dx_studio_selection: None,
+            latest_dx_www_turbo_bridge: None,
             latest_dx_studio_edit_receipt: None,
             latest_dx_style_source_apply_receipt: None,
             latest_page_diagnostics: None,
@@ -2047,6 +2049,7 @@ impl WebPreviewView {
             },
             "dx_studio": dx_studio,
             "dx_studio_selection": self.latest_dx_studio_selection_summary(),
+            "dx_www_turbo_bridge": self.latest_dx_www_turbo_bridge_summary(),
             "dx_studio_edit_receipt": self.latest_dx_studio_edit_receipt_summary(),
             "dx_style_source_apply_receipt": self.latest_dx_style_source_apply_receipt_summary(),
             "profile_dir": self.workspace_context.profile_dir.display().to_string(),
@@ -2400,6 +2403,34 @@ impl WebPreviewView {
             "operations": selection.pointer("/selection/operations").cloned(),
             "breakpoint": selection.pointer("/selection/breakpoint").cloned(),
             "source_edit_plan": selection.get("source_edit_plan").cloned(),
+        }))
+    }
+
+    fn latest_dx_www_turbo_bridge_summary(&self) -> Option<Value> {
+        let bridge = self.latest_dx_www_turbo_bridge.as_ref()?;
+        Some(serde_json::json!({
+            "captured_at_ms": bridge.get("captured_at_ms").cloned(),
+            "url": bridge.pointer("/bridge/url").and_then(Value::as_str),
+            "origin": bridge.pointer("/bridge/origin").and_then(Value::as_str),
+            "status": bridge.pointer("/bridge/status").and_then(Value::as_str),
+            "reason": bridge.pointer("/bridge/reason").and_then(Value::as_str),
+            "route": bridge.pointer("/bridge/route").and_then(Value::as_str),
+            "resource": bridge.pointer("/bridge/resource").and_then(Value::as_str),
+            "hot_reload": {
+                "endpoint": bridge.pointer("/bridge/hot_reload/endpoint").and_then(Value::as_str),
+                "event_stream_endpoint": bridge.pointer("/bridge/hot_reload/event_stream_endpoint").and_then(Value::as_str),
+                "protocol": bridge.pointer("/bridge/hot_reload/protocol").and_then(Value::as_str),
+                "transport": bridge.pointer("/bridge/hot_reload/transport").and_then(Value::as_str),
+                "version": bridge.pointer("/bridge/hot_reload/version").cloned(),
+                "token_present": bridge.pointer("/bridge/hot_reload/token_present").and_then(Value::as_bool),
+                "capabilities": bridge.pointer("/bridge/hot_reload/capabilities").cloned(),
+            },
+            "devtools": {
+                "endpoint": bridge.pointer("/bridge/devtools/endpoint").and_then(Value::as_str),
+                "status": bridge.pointer("/bridge/devtools/status").and_then(Value::as_str),
+                "schema": bridge.pointer("/bridge/devtools/schema").and_then(Value::as_str),
+            },
+            "capabilities": bridge.pointer("/bridge/capabilities").cloned(),
         }))
     }
 
@@ -21355,6 +21386,19 @@ impl WebPreviewView {
         let _ = self.evaluate_script(&script);
     }
 
+    fn dx_www_turbo_bridge_snapshot(&self, payload: &Value) -> Value {
+        let bridge = payload
+            .get("bridge")
+            .cloned()
+            .unwrap_or_else(|| payload.clone());
+        serde_json::json!({
+            "schema": "zed.web_preview.dx_www_turbo_bridge_snapshot.v1",
+            "captured_at_ms": Self::current_epoch_millis(),
+            "session_id": self.session_id.as_ref(),
+            "bridge": bridge,
+        })
+    }
+
     fn page_diagnostics_snapshot(&self, payload: &Value, window: &Window) -> Value {
         let mut page = payload.clone();
         if let Some(page) = page.as_object_mut() {
@@ -30609,6 +30653,7 @@ impl WebPreviewView {
                 BrowserEvent::NavigationStarted { url, navigation_id } => {
                     self.load_state = PreviewLoadState::Loading;
                     self.active_browser_navigation_id = navigation_id;
+                    self.latest_dx_www_turbo_bridge = None;
                     self.page_title = None;
                     self.clear_favicon();
                     if let Some(url) = url {
@@ -31793,6 +31838,24 @@ impl WebPreviewView {
                     Err(_) => {
                         self.report_action_panic(
                             "DX Studio selection crashed while collecting source metadata",
+                            cx,
+                        );
+                    }
+                }
+            }
+            "dx-www-turbo-bridge" => {
+                match catch_unwind(AssertUnwindSafe(|| -> Result<()> {
+                    let snapshot = self.dx_www_turbo_bridge_snapshot(&payload);
+                    self.latest_dx_www_turbo_bridge = Some(snapshot);
+                    Ok(())
+                })) {
+                    Ok(Ok(())) => {}
+                    Ok(Err(error)) => {
+                        self.report_action_error("DX WWW turbo bridge snapshot failed", error, cx);
+                    }
+                    Err(_) => {
+                        self.report_action_panic(
+                            "DX WWW turbo bridge crashed while collecting runtime contract",
                             cx,
                         );
                     }
@@ -36277,6 +36340,7 @@ impl Item for WebPreviewView {
                 dx_style_source_apply_session_sequence,
                 onboarding_complete,
                 latest_dx_studio_selection: None,
+                latest_dx_www_turbo_bridge: None,
                 latest_dx_studio_edit_receipt: None,
                 latest_dx_style_source_apply_receipt: None,
                 latest_page_diagnostics: None,
@@ -40688,6 +40752,191 @@ pub(crate) const WEB_PREVIEW_BRIDGE_SCRIPT: &str = r#"
     };
   };
 
+  const DX_WWW_TURBO_BRIDGE_SCHEMA = "zed.web_preview.dx_www_turbo_bridge.v1";
+  const DX_WWW_HOT_RELOAD_VERSION_ENDPOINT = "/_dx/hot-reload/version";
+  const DX_WWW_HOT_RELOAD_EVENT_STREAM_ENDPOINT = "/_dx/hot-reload/events";
+  const DX_WWW_DEVTOOLS_SESSION_ENDPOINT = "/_dx/devtools/session";
+  const DX_WWW_TURBO_BRIDGE_CACHE_MS = 2000;
+  let latestDxWwwTurboBridge = null;
+  let latestDxWwwTurboBridgeAt = 0;
+
+  const dxWwwLoopbackHost = () => {
+    const host = String(window.location.hostname || "").toLowerCase();
+    return host === "localhost" || host === "127.0.0.1" || host === "::1" || host === "[::1]";
+  };
+
+  const dxWwwScopedResource = (dxStudio) => {
+    const target = dxStudio?.hot_reload_targets?.[0] || dxStudio?.route || "/";
+    if (!target) return "route:/";
+    const text = String(target);
+    if (text.startsWith("route:") || text.startsWith("style:") || text.startsWith("asset:")) {
+      return limitText(text, 260) || "route:/";
+    }
+    if (text.startsWith("/")) {
+      return limitText(`route:${text}`, 260) || "route:/";
+    }
+    return limitText(`route:/${text.replace(/^\/+/, "")}`, 260) || "route:/";
+  };
+
+  const dxWwwUrlWithResource = (path, resource) => {
+    const url = new URL(path, window.location.href);
+    url.searchParams.set("resource", resource);
+    return url;
+  };
+
+  const dxWwwFetchJson = async (url, timeoutMs) => {
+    const controller = typeof AbortController === "function" ? new AbortController() : null;
+    const timeout = controller ? window.setTimeout(() => controller.abort(), timeoutMs) : null;
+    try {
+      const response = await fetch(String(url), {
+        cache: "no-store",
+        credentials: "same-origin",
+        signal: controller ? controller.signal : undefined
+      });
+      let json = null;
+      const contentType = response.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        try {
+          json = await response.json();
+        } catch (_error) {
+          json = null;
+        }
+      }
+      return { ok: response.ok, status: response.status, json };
+    } catch (error) {
+      return {
+        ok: false,
+        status: 0,
+        json: null,
+        error: error && error.name === "AbortError" ? "timeout" : limitText(error?.message || error, 180)
+      };
+    } finally {
+      if (timeout) window.clearTimeout(timeout);
+    }
+  };
+
+  const dxWwwTurboBridgeStatus = (hotReloadResult, hotReload) => {
+    if (!dxWwwLoopbackHost()) {
+      return { status: "blocked", reason: "non_loopback_origin" };
+    }
+    if (hotReloadResult.status === 404) {
+      return { status: "not_dx_www", reason: "hot_reload_endpoint_missing" };
+    }
+    if (hotReload.source_owned_contract || String(hotReload.protocol || "").startsWith("dx.hot-reload")) {
+      return { status: "connected", reason: "source_owned_hot_reload_contract" };
+    }
+    if (hotReloadResult.ok) {
+      return { status: "endpoint_present", reason: "hot_reload_endpoint_responded" };
+    }
+    return {
+      status: "unavailable",
+      reason: hotReloadResult.error || `http_${hotReloadResult.status || "unknown"}`
+    };
+  };
+
+  const collectDxWwwTurboBridge = async (action = "auto") => {
+    const now = Date.now();
+    if (latestDxWwwTurboBridge && now - latestDxWwwTurboBridgeAt < DX_WWW_TURBO_BRIDGE_CACHE_MS) {
+      post({
+        kind: "dx-www-turbo-bridge",
+        action,
+        timestamp: new Date().toISOString(),
+        cache_hit: true,
+        bridge: latestDxWwwTurboBridge
+      });
+      return latestDxWwwTurboBridge;
+    }
+
+    const dxStudio = dxStudioSnapshot();
+    const resource = dxWwwScopedResource(dxStudio);
+    const hotReloadUrl = dxWwwUrlWithResource(DX_WWW_HOT_RELOAD_VERSION_ENDPOINT, resource);
+    const eventStreamUrl = dxWwwUrlWithResource(DX_WWW_HOT_RELOAD_EVENT_STREAM_ENDPOINT, resource);
+    let hotReloadResult = { ok: false, status: 0, json: null, error: "non_loopback_origin" };
+    let devtoolsResult = { ok: false, status: 0, json: null, error: "non_loopback_origin" };
+
+    if (dxWwwLoopbackHost()) {
+      hotReloadResult = await dxWwwFetchJson(hotReloadUrl, 900);
+      devtoolsResult = await dxWwwFetchJson(new URL(DX_WWW_DEVTOOLS_SESSION_ENDPOINT, window.location.href), 900);
+    }
+
+    const hotReloadJson = hotReloadResult.json || {};
+    const hotReload = {
+      endpoint: DX_WWW_HOT_RELOAD_VERSION_ENDPOINT,
+      endpoint_url: String(hotReloadUrl),
+      event_stream_endpoint: DX_WWW_HOT_RELOAD_EVENT_STREAM_ENDPOINT,
+      event_stream_url: String(eventStreamUrl),
+      http_status: hotReloadResult.status,
+      ok: hotReloadResult.ok && hotReloadJson.ok !== false,
+      protocol: limitText(hotReloadJson.protocol, 120),
+      protocol_format: limitText(hotReloadJson.protocol_format, 120),
+      transport: limitText(hotReloadJson.transport, 80),
+      source: limitText(hotReloadJson.source, 120),
+      source_owned_contract: hotReloadJson.source_owned_contract === true,
+      version: hotReloadJson.version ?? null,
+      token_present: Boolean(hotReloadJson.token),
+      instruction: limitText(hotReloadJson.instruction, 120),
+      resource,
+      capabilities: hotReloadJson.capabilities || null,
+      boundaries: hotReloadJson.boundaries || null,
+      receipt_schema: limitText(hotReloadJson.receipt?.schema, 160)
+    };
+    const status = dxWwwTurboBridgeStatus(hotReloadResult, hotReload);
+    const devtoolsJson = devtoolsResult.json || {};
+    const devtoolsAvailable = devtoolsResult.ok && devtoolsResult.status < 400;
+
+    const bridge = {
+      schema: DX_WWW_TURBO_BRIDGE_SCHEMA,
+      action,
+      timestamp: new Date().toISOString(),
+      url: window.location.href,
+      origin: window.location.origin,
+      loopback_origin: dxWwwLoopbackHost(),
+      status: status.status,
+      reason: status.reason,
+      route: dxStudio.route || null,
+      resource,
+      dx_studio: {
+        status: dxStudio.status,
+        marker_count: dxStudio.marker_count,
+        has_route_marker: dxStudio.readiness?.has_route_marker || false,
+        has_hot_reload_target: dxStudio.readiness?.has_hot_reload_target || false,
+        has_studio_manifest: dxStudio.readiness?.has_studio_manifest || false
+      },
+      hot_reload: hotReload,
+      devtools: {
+        endpoint: DX_WWW_DEVTOOLS_SESSION_ENDPOINT,
+        http_status: devtoolsResult.status,
+        status: devtoolsAvailable ? "available" : devtoolsResult.status === 404 ? "not_available" : "unavailable",
+        schema: limitText(devtoolsJson.schema, 160),
+        session_id: limitText(devtoolsJson.session_id, 160),
+        diagnostics_endpoint: "/_dx/devtools/diagnostics",
+        source_map_endpoint: "/_dx/devtools/source-map"
+      },
+      capabilities: {
+        hot_reload: status.status === "connected" || status.status === "endpoint_present",
+        sse_hot_reload: status.status === "connected",
+        devtools_session: devtoolsAvailable,
+        diagnostics: devtoolsAvailable,
+        source_map: devtoolsAvailable,
+        style_preview: devtoolsAvailable,
+        no_node_modules_required: true,
+        starts_dev_server: false,
+        mutates_source: false
+      }
+    };
+
+    latestDxWwwTurboBridge = bridge;
+    latestDxWwwTurboBridgeAt = now;
+    post({
+      kind: "dx-www-turbo-bridge",
+      action,
+      timestamp: bridge.timestamp,
+      cache_hit: false,
+      bridge
+    });
+    return bridge;
+  };
+
   const domTreeNode = (node, depth, siblingIndex, budget) => {
     if (!node) return null;
     if (budget.nodes >= MAX_DOM_SNAPSHOT_NODES) {
@@ -41567,6 +41816,10 @@ pub(crate) const WEB_PREVIEW_BRIDGE_SCRIPT: &str = r#"
   installRuntimeCapture();
 
   window.__zedWebPreview = {
+    collectDxWwwTurboBridge(action = "auto") {
+      return collectDxWwwTurboBridge(action);
+    },
+
     collectPageDiagnostics(action = "copy") {
       const root = document.documentElement;
       const body = document.body;
@@ -41811,6 +42064,7 @@ pub(crate) const WEB_PREVIEW_BRIDGE_SCRIPT: &str = r#"
           body_text_length: body?.innerText?.length || 0
         },
         dx_studio: dxStudioSnapshot(),
+        dx_www_turbo_bridge: latestDxWwwTurboBridge,
         navigation_timing: navigationTimingSnapshot(),
         selector_probe: readinessSelectorSnapshot(),
         action_target_sample: actionTargets.targets.slice(0, 24)
@@ -42542,6 +42796,22 @@ pub(crate) const WEB_PREVIEW_BRIDGE_SCRIPT: &str = r#"
       window.__zedWebPreview.__cleanup = cleanup;
     }
   };
+
+  const scheduleDxWwwTurboBridgeCollection = (reason) => {
+    const collect = () => {
+      try {
+        void window.__zedWebPreview.collectDxWwwTurboBridge(reason);
+      } catch (_error) {}
+    };
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", () => window.setTimeout(collect, 75), { once: true });
+    } else {
+      window.setTimeout(collect, 75);
+    }
+  };
+
+  scheduleDxWwwTurboBridgeCollection("document-ready");
 })();
 "#;
 
