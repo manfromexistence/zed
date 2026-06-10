@@ -1,3 +1,19 @@
+[2026-06-10] - Project Panel Storage Details Toggle
+
+CHANGED:
+- `crates\project_panel\src\project_panel.rs` now hides largest-folder/storage-intelligence rows by default while keeping the media shelf and normal file tree visible.
+- Project header chrome and the Project options menu now expose a real storage-details toggle for users who want the largest folder/file storage view.
+- Folder-size hover chips and background folder-storage warming are gated behind the same storage-details toggle so the hidden view does not keep doing unnecessary tree work.
+
+PASSED:
+- `node --test script\dx-project-panel-source.test.ts`
+- `rustfmt --edition 2024 --check crates\project_panel\src\project_panel.rs`
+- `git diff --check`
+- `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run`
+
+NOTES:
+- The authorized j6 run built the Zed binary and launched the main window successfully after freeing rebuildable incremental target cache on G:.
+
 [2026-06-10] - Authorized J6 Sound Validation
 
 FIXED:

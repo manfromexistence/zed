@@ -844,6 +844,7 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   const storageOverview = functionBody(storage, "storage_overview");
   const storageDrilldownItems = functionBody(storage, "storage_folder_items");
   const renderStorageDrilldown = functionBody(source, "render_dx_explorer_storage_drilldown");
+  const renderDxExplorerHeader = functionBody(source, "render_dx_explorer_header");
   const renderProjectPanel = functionBody(source, "render");
   const renderStorageDrilldownRow = functionBody(
     source,
@@ -873,6 +874,26 @@ test("project panel folder storage summaries are cache-only on the visible-row p
     /const MAX_PROJECT_PANEL_FOLDER_STORAGE_CHILD_FILES: usize = 512;/,
     "direct-child folder storage warming must be capped per folder",
   );
+  assert.match(
+    source,
+    /storage_details_visible:\s*bool/,
+    "Project Panel storage intelligence must have explicit visible state",
+  );
+  assert.match(
+    source,
+    /storage_details_visible:\s*false/,
+    "largest folder storage intelligence must be opt-in by default",
+  );
+  assert.match(
+    renderDxExplorerHeader,
+    /IconButton::new\(storage_details_button_id,\s*dx_icon\(DxUiIcon::Storage\)\)[\s\S]*\.tooltip\(Tooltip::text\(if storage_details_visible[\s\S]*Show storage details[\s\S]*this\.storage_details_visible = !this\.storage_details_visible/,
+    "Project Panel header must expose a real storage-details toggle without rendering largest folders by default",
+  );
+  assert.match(
+    renderStorageDrilldown,
+    /if !self\.storage_details_visible[\s\S]*return None;/,
+    "Folder Storage drilldown must render only after the user asks for storage details",
+  );
   assert.match(storage, /pub\(crate\) struct FolderStorageSummary/);
   assert.match(storage, /pub\(crate\) struct StorageFolderItem/);
   assert.match(storage, /pub path_label: String/);
@@ -897,8 +918,8 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   );
   assert.match(
     detailsForEntry,
-    /let folder_storage_summary = entry[\s\S]*kind[\s\S]*is_dir\(\)[\s\S]*then\(\|\| self\.cached_folder_storage_summary\(worktree_id, entry\.id\)\)[\s\S]*flatten\(\);/,
-    "details_for_entry must not warm folder storage cache misses on the visible-row path",
+    /let folder_storage_summary = if self\.storage_details_visible && entry\.kind\.is_dir\(\)[\s\S]*self\.cached_folder_storage_summary\(worktree_id, entry\.id\)[\s\S]*\} else \{[\s\S]*None[\s\S]*\};/,
+    "details_for_entry must keep folder-size chips opt-in and cache-only on the visible-row path",
   );
   assert.doesNotMatch(
     detailsForEntry,
@@ -931,8 +952,8 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   );
   assert.match(
     updateVisibleEntries,
-    /let visible_folder_storage_summary_keys =[\s\S]*Self::visible_folder_storage_summary_keys\(&self\.state\);[\s\S]*let cached_folder_storage_summaries =[\s\S]*self\.cached_folder_storage_summaries_for_keys\(&visible_folder_storage_summary_keys\);/,
-    "visible-entry refresh must snapshot only cache entries relevant to currently visible folder rows",
+    /let visible_folder_storage_summary_keys = if storage_details_visible[\s\S]*Self::visible_folder_storage_summary_keys\(&self\.state\)[\s\S]*HashSet::default\(\)[\s\S]*let cached_folder_storage_summaries =[\s\S]*self\.cached_folder_storage_summaries_for_keys\(&visible_folder_storage_summary_keys\);/,
+    "visible-entry refresh must snapshot cache entries only when storage details are visible",
   );
   assert.match(
     source,
@@ -953,6 +974,26 @@ test("project panel folder storage summaries are cache-only on the visible-row p
     updateVisibleEntries,
     /folder_storage_summaries\.entry\(cache_key\)\.or_insert\(summary\)/,
     "background folder storage results must populate cache misses without overwriting fresher summaries",
+  );
+  assert.match(
+    updateVisibleEntries,
+    /let storage_details_visible = self\.storage_details_visible;/,
+    "visible-entry refresh must snapshot the storage-details toggle before background work",
+  );
+  assert.match(
+    updateVisibleEntries,
+    /let visible_folder_storage_summary_keys = if storage_details_visible[\s\S]*Self::visible_folder_storage_summary_keys\(&self\.state\)[\s\S]*HashSet::default\(\)/,
+    "folder storage cache keys must stay empty while storage details are hidden",
+  );
+  assert.match(
+    updateVisibleEntries,
+    /if storage_details_visible\s*&&\s*entry_is_visible\s*&&\s*entry\.kind\.is_dir\(\)/,
+    "background folder storage warming must be disabled while storage details are hidden",
+  );
+  assert.match(
+    detailsForEntry,
+    /if self\.storage_details_visible && entry\.kind\.is_dir\(\)[\s\S]*self\.cached_folder_storage_summary\(worktree_id, entry\.id\)[\s\S]*None/,
+    "tree rows must not show folder-size chips until storage details are enabled",
   );
   assert.match(
     updateVisibleEntries,

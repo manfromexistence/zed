@@ -319,6 +319,7 @@ pub struct ProjectPanel {
     storage_root_refresh_requested_at: Cell<Option<Instant>>,
     storage_root_refresh_task: Task<()>,
     storage_sort_mode: storage::StorageSortMode,
+    storage_details_visible: bool,
     generated_media_metadata:
         RefCell<HashMap<(WorktreeId, ProjectEntryId), media_preview::GeneratedMediaMetadataIndex>>,
     media_metadata_generation_tasks: RefCell<HashMap<(WorktreeId, ProjectEntryId), Task<()>>>,
@@ -1062,6 +1063,7 @@ impl ProjectPanel {
                 storage_root_refresh_requested_at: Cell::new(None),
                 storage_root_refresh_task: Task::ready(()),
                 storage_sort_mode: storage::StorageSortMode::default(),
+                storage_details_visible: false,
                 generated_media_metadata: Default::default(),
                 media_metadata_generation_tasks: Default::default(),
                 folder_media_previews: Default::default(),
@@ -4307,6 +4309,10 @@ impl ProjectPanel {
     }
 
     fn render_dx_explorer_storage_drilldown(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        if !self.storage_details_visible {
+            return None;
+        }
+
         let overview = self.state.dx_explorer_storage_overview.clone();
         let items = self.state.dx_explorer_storage_drilldown.clone();
         if items.is_empty() && overview.visible_file_count == 0 && overview.cached_folder_count == 0
@@ -4652,6 +4658,7 @@ impl ProjectPanel {
         let new_file_tooltip_focus_handle = new_file_focus_handle.clone();
         let new_folder_focus_handle = header_focus_handle.clone();
         let new_folder_tooltip_focus_handle = new_folder_focus_handle.clone();
+        let storage_details_focus_handle = header_focus_handle.clone();
         let project_options_focus_handle = header_focus_handle.clone();
         let panel_for_project_options = cx.entity().downgrade();
         let panel_id = cx.entity().entity_id();
@@ -4659,6 +4666,9 @@ impl ProjectPanel {
             SharedString::from(format!("dx-explorer-project-options-menu-{panel_id:?}"));
         let project_options_button_id =
             SharedString::from(format!("dx-explorer-project-options-{panel_id:?}"));
+        let storage_details_button_id =
+            SharedString::from(format!("dx-explorer-storage-details-{panel_id:?}"));
+        let storage_details_visible = self.storage_details_visible;
 
         let header_summary_meta = [
             format!("Source: {source_label}"),
@@ -4826,6 +4836,8 @@ impl ProjectPanel {
                     .anchor(gpui::Anchor::TopRight)
                     .menu(move |window, cx| {
                         let panel = panel_for_project_options.clone();
+                        let panel_for_storage_details = panel.clone();
+                        let panel_for_collapse_folders = panel.clone();
                         Some(ContextMenu::build(window, cx, move |menu, _window, _cx| {
                             menu.header("Project View")
                                 .action_checked_with_disabled(
@@ -4849,6 +4861,28 @@ impl ProjectPanel {
                                     !has_worktree,
                                 )
                                 .entry(
+                                    if storage_details_visible {
+                                        "Hide storage details"
+                                    } else {
+                                        "Show storage details"
+                                    },
+                                    None,
+                                    move |_window, cx| {
+                                        if has_worktree {
+                                            panel_for_storage_details
+                                                .update_in(cx, |this, window, cx| {
+                                                    this.storage_details_visible =
+                                                        !this.storage_details_visible;
+                                                    this.update_visible_entries(
+                                                        None, false, false, window, cx,
+                                                    );
+                                                    cx.notify();
+                                                })
+                                                .log_err();
+                                        }
+                                    },
+                                )
+                                .entry(
                                     "Project symbols",
                                     Some(ToggleProjectSymbols.boxed_clone()),
                                     move |window, cx| {
@@ -4865,7 +4899,7 @@ impl ProjectPanel {
                                     Some(CollapseAllEntries.boxed_clone()),
                                     move |_window, cx| {
                                         if has_worktree {
-                                            panel
+                                            panel_for_collapse_folders
                                                 .update_in(cx, |this, window, cx| {
                                                     this.focus_handle(cx).focus(window, cx);
                                                     this.collapse_all_entries(
@@ -4880,6 +4914,33 @@ impl ProjectPanel {
                                 )
                         }))
                     }),
+            )
+            .child(
+                IconButton::new(storage_details_button_id, dx_icon(DxUiIcon::Storage))
+                    .shape(IconButtonShape::Square)
+                    .style(ButtonStyle::Subtle)
+                    .icon_size(IconSize::Small)
+                    .icon_color(if storage_details_visible {
+                        Color::Accent
+                    } else {
+                        Color::Muted
+                    })
+                    .disabled(!has_worktree)
+                    .when(has_worktree, |button| {
+                        button
+                            .tab_index(0_isize)
+                            .track_focus(&storage_details_focus_handle)
+                    })
+                    .tooltip(Tooltip::text(if storage_details_visible {
+                        "Hide storage details"
+                    } else {
+                        "Show storage details"
+                    }))
+                    .on_click(cx.listener(|this, _, window, cx| {
+                        this.storage_details_visible = !this.storage_details_visible;
+                        this.update_visible_entries(None, false, false, window, cx);
+                        cx.notify();
+                    })),
             )
             .child(self.render_side_panel_header_controls("dx-explorer", cx));
 
@@ -5610,6 +5671,7 @@ impl ProjectPanel {
                     .map(|folder| (folder.worktree_id, folder.entry_id))
             })
             .flatten();
+        let storage_details_visible = self.storage_details_visible;
         let active_media_shelf_entry_ids: HashSet<ProjectEntryId> =
             active_media_folder_for_visibility
                 .as_ref()
@@ -5634,8 +5696,11 @@ impl ProjectPanel {
             .keys()
             .copied()
             .collect::<HashSet<_>>();
-        let visible_folder_storage_summary_keys =
-            Self::visible_folder_storage_summary_keys(&self.state);
+        let visible_folder_storage_summary_keys = if storage_details_visible {
+            Self::visible_folder_storage_summary_keys(&self.state)
+        } else {
+            HashSet::default()
+        };
         let cached_folder_storage_summaries =
             self.cached_folder_storage_summaries_for_keys(&visible_folder_storage_summary_keys);
         let cached_folder_storage_summary_keys = cached_folder_storage_summaries
@@ -5800,7 +5865,8 @@ impl ProjectPanel {
                             let entry_is_visible = (!hide_gitignore || !entry.is_ignored)
                                 && (!hide_hidden || !entry.is_hidden);
                             let cache_key = (worktree_id, entry.id);
-                            if entry_is_visible
+                            if storage_details_visible
+                                && entry_is_visible
                                 && entry.kind.is_dir()
                                 && !cached_folder_storage_summary_keys.contains(&cache_key)
                             {
@@ -6117,18 +6183,23 @@ impl ProjectPanel {
                             .entry(*cache_key)
                             .or_insert_with(|| summary.clone());
                     }
-                    let visible_summary = new_state.dx_explorer_visible_summary;
-                    new_state.dx_explorer_storage_overview = storage::storage_overview(
-                        visible_summary.file_count,
-                        visible_summary.file_bytes,
-                        Self::visible_storage_entries(&new_state),
-                        &folder_storage_summary_cache,
-                    );
-                    new_state.dx_explorer_storage_drilldown = storage::storage_folder_items(
-                        Self::visible_storage_entries(&new_state),
-                        &folder_storage_summary_cache,
-                        storage_sort_mode,
-                    );
+                    if storage_details_visible {
+                        let visible_summary = new_state.dx_explorer_visible_summary;
+                        new_state.dx_explorer_storage_overview = storage::storage_overview(
+                            visible_summary.file_count,
+                            visible_summary.file_bytes,
+                            Self::visible_storage_entries(&new_state),
+                            &folder_storage_summary_cache,
+                        );
+                        new_state.dx_explorer_storage_drilldown = storage::storage_folder_items(
+                            Self::visible_storage_entries(&new_state),
+                            &folder_storage_summary_cache,
+                            storage_sort_mode,
+                        );
+                    } else {
+                        new_state.dx_explorer_storage_overview = Default::default();
+                        new_state.dx_explorer_storage_drilldown.clear();
+                    }
                     (new_state, media_preview_updates, folder_storage_summary_updates)
                 })
                 .await;
@@ -6136,8 +6207,11 @@ impl ProjectPanel {
                 let mut new_state = new_state;
                 let folder_storage_cache_current =
                     this.folder_storage_cache_generation.get() == folder_storage_cache_generation;
-                let visible_folder_storage_summary_keys =
-                    Self::visible_folder_storage_summary_keys(&new_state);
+                let visible_folder_storage_summary_keys = if this.storage_details_visible {
+                    Self::visible_folder_storage_summary_keys(&new_state)
+                } else {
+                    HashSet::default()
+                };
                 if folder_storage_cache_current {
                     let mut folder_storage_summaries =
                         this.folder_storage_summaries.borrow_mut();
@@ -8616,11 +8690,11 @@ impl ProjectPanel {
                     .map(|worktree| worktree.read(cx).absolutize(&entry.path))
                     .unwrap_or_default()
             });
-        let folder_storage_summary = entry
-            .kind
-            .is_dir()
-            .then(|| self.cached_folder_storage_summary(worktree_id, entry.id))
-            .flatten();
+        let folder_storage_summary = if self.storage_details_visible && entry.kind.is_dir() {
+            self.cached_folder_storage_summary(worktree_id, entry.id)
+        } else {
+            None
+        };
         let media_preview = if entry.kind.is_dir() && is_expanded {
             self.cached_folder_media_preview(worktree_id, entry.id)
         } else {
