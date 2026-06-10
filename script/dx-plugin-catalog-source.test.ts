@@ -8,10 +8,26 @@ const manifestPath = "crates/agent/src/tools/dx_plugin_manifest.rs";
 const manifestEntriesPath = "crates/agent/src/tools/dx_plugin_manifest/entries.rs";
 const catalogPath = "crates/agent/src/tools/agent_plugin_catalog_tool.rs";
 const toolsPath = "crates/agent/src/tools.rs";
+const pluginMetadataSurfacePaths = [
+  manifestPath,
+  manifestEntriesPath,
+  catalogPath,
+  "crates/agent_ui/src/dx_agent_bridge.rs",
+  "crates/agent_ui/src/dx_agent_bridge/workflow_nodes.rs",
+  "crates/agent_ui/src/dx_agent_bridge/workflow_nodes/contract.rs",
+  "crates/agent_ui/src/dx_agent_bridge/workflow_nodes/configured.rs",
+  "crates/agent_ui/src/dx_launch_workspace/tools_screen.rs",
+  "crates/agent_ui/src/dx_launch_workspace/tools_screen/catalog.rs",
+  "crates/agent_ui/src/dx_launch_workspace/tools_screen/details.rs",
+  "crates/agent_ui/src/dx_launch_workspace/tools_screen/workflow_nodes.rs",
+  "crates/agent_ui/src/conversation_view/thread_view.rs",
+];
 
 const forbiddenUpstreamSource = /\b(?:n8n|OpenClaw|ZeroClaw|claude-plugins-official|external_plugins|inspirations[\\/])/i;
 const forbiddenPluginSourceHooks =
   /CatalogSourceKind::ZeroclawProviders|zeroclaw_providers_input|ZEROCLAW_HOME|\.zeroclaw|G:\\\\Dx\\\\inspirations/i;
+const rawSecretJsonKey =
+  /"(?:(?:api|auth)[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|password|private[_-]?key|secret(?:_value)?)"\s*:/i;
 
 test("DX first-party plugin manifest model is typed and complete", () => {
   assert.ok(existsSync(manifestPath), "expected focused DX plugin manifest module");
@@ -105,6 +121,15 @@ test("DX plugin catalog source does not reference forbidden upstream plugin sour
   for (const [path, source] of scanned) {
     assert.doesNotMatch(source, forbiddenUpstreamSource, `${path} must stay DX-native`);
     assert.doesNotMatch(source, forbiddenPluginSourceHooks, `${path} must not hook plugin sources to provider/inspiration history`);
+  }
+});
+
+test("DX plugin metadata/detail surfaces avoid upstream sources and raw secret keys", () => {
+  for (const path of pluginMetadataSurfacePaths) {
+    const source = read(path);
+    assert.doesNotMatch(source, forbiddenUpstreamSource, `${path} must stay DX-native`);
+    assert.doesNotMatch(source, forbiddenPluginSourceHooks, `${path} must not hook metadata to provider/inspiration history`);
+    assert.doesNotMatch(source, rawSecretJsonKey, `${path} must not expose raw secret fields`);
   }
 });
 

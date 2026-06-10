@@ -182,6 +182,10 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
   );
   const workflowNodeIcons = read("crates/agent_ui/src/workflow_node_icons.rs");
   const pluginScreenSources = `${screen}\n${catalogScreen}\n${detailScreen}\n${workflowNodeScreen}`;
+  const forbiddenPluginSource =
+    /\b(?:n8n|OpenClaw|ZeroClaw|claude-plugins-official|external_plugins|inspirations[\\/]|G:\\\\Dx\\\\inspirations)\b/i;
+  const rawSecretUiPattern =
+    /\b(?:api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|password|private[_-]?key|authorization|bearer)\b/i;
   const toolsScreen = read("crates/agent_ui/src/tools_screen.rs");
   const agentUi = read("crates/agent_ui/src/agent_ui.rs");
   const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
@@ -232,8 +236,28 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
   assert.match(catalogScreen, /render_selected_workflow_node_detail/);
   assert.match(detailScreen, /render_workflow_node_configuration/);
   assert.match(detailScreen, /render_workflow_node_contract/);
+  assert.match(detailScreen, /render_workflow_node_permissions/);
+  assert.match(detailScreen, /render_workflow_node_ports/);
+  assert.match(detailScreen, /render_workflow_node_dynamic_options/);
+  assert.match(detailScreen, /render_workflow_node_receipts/);
+  assert.match(detailScreen, /render_workflow_node_actions/);
+  assert.match(detailScreen, /render_workflow_node_trust/);
   assert.match(detailScreen, /Credential Setup/);
+  assert.match(detailScreen, /Permissions/);
+  assert.match(detailScreen, /Inputs/);
+  assert.match(detailScreen, /Outputs/);
+  assert.match(detailScreen, /Dynamic Options/);
+  assert.match(detailScreen, /Receipts/);
+  assert.match(detailScreen, /Actions/);
+  assert.match(detailScreen, /Trust/);
   assert.match(detailScreen, /DX Agents credential bridge/);
+  assert.match(detailScreen, /node\.permissions/);
+  assert.match(detailScreen, /node\.inputs/);
+  assert.match(detailScreen, /node\.outputs/);
+  assert.match(detailScreen, /node\.dynamic_options/);
+  assert.match(detailScreen, /node\.receipts/);
+  assert.match(detailScreen, /node\.actions/);
+  assert.match(detailScreen, /node\.trust/);
   assert.match(workflowNodeScreen, /selected: bool/);
   assert.match(workflowNodeScreen, /on_select: impl Fn/);
   assert.match(workflowNodeScreen, /hover\(\|this\| this\.bg/);
@@ -248,6 +272,9 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
   assert.match(workflowNodeIcons, /svgl\.json/);
   assert.match(workflowNodeIcons, /WORKFLOW_NODE_ICON_PREVIEW_CACHE/);
   assert.match(workflowNodeIcons, /dx_icon\(DxUiIcon::Plugins\)/);
+  assert.doesNotMatch(pluginScreenSources, forbiddenPluginSource);
+  assert.doesNotMatch(pluginScreenSources, rawSecretUiPattern);
+  assert.doesNotMatch(pluginScreenSources, /\b(?:node|plugin)\.run_command\b/);
   assert.doesNotMatch(pluginScreenSources, /\bBadge|Chip|Pill|TagList|badge_/i);
   assert.doesNotMatch(pluginScreenSources, /<iframe|iframe|WebView|webview|embed_url|external_workflow_url/i);
   assert.match(screen, /trusted_tool_bridge/);
@@ -295,11 +322,15 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
     "expected focused workflow-node bridge parser module",
   );
   const workflowNodes = read("crates/agent_ui/src/dx_agent_bridge/workflow_nodes.rs");
+  const workflowNodeConfigured = read(
+    "crates/agent_ui/src/dx_agent_bridge/workflow_nodes/configured.rs",
+  );
+  const workflowNodeBridgeSources = `${workflowNodes}\n${workflowNodeConfigured}`;
   assert.match(workflowNodes, /DxWorkflowNodeCatalogSummary/);
   assert.match(workflowNodes, /DxWorkflowNodeSummary/);
-  assert.match(workflowNodes, /DxConfiguredPluginSummary/);
+  assert.match(workflowNodeBridgeSources, /DxConfiguredPluginSummary/);
   assert.match(workflowNodes, /MAX_WORKFLOW_NODE_ROWS/);
-  assert.match(workflowNodes, /MAX_CONFIGURED_PLUGIN_ROWS/);
+  assert.match(workflowNodeBridgeSources, /MAX_CONFIGURED_PLUGIN_ROWS/);
   assert.match(workflowNodes, /dx\.serializer\.machine/);
   assert.match(workflowNodes, /credential_status/);
   assert.match(workflowNodes, /credential_types/);

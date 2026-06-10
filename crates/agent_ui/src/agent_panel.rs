@@ -155,6 +155,7 @@ const DX_LAUNCH_WORKSPACE_STATUS_REFRESH_DELAY: Duration = Duration::from_millis
 const DX_CONFIGURED_PLUGIN_OPTIONS_CACHE_TTL: Duration = Duration::from_secs(30);
 const DX_CONFIGURED_PLUGIN_OPTIONS_REFRESH_DELAY: Duration = Duration::from_millis(160);
 const DX_CONFIGURED_PLUGIN_OPTIONS_LIMIT: usize = 12;
+const DX_CONFIGURED_PLUGIN_ID_LIMIT: usize = 96;
 const DX_TRUSTED_TOOL_POLICY: &str = "receipt_authorized_only";
 const MAX_LAST_CREATED_ENTRY_KIND_JSON_BYTES: usize = 4 * 1024;
 const MAX_SERIALIZED_AGENT_PANEL_JSON_BYTES: usize = 256 * 1024;
@@ -1263,27 +1264,29 @@ struct DxConfiguredPluginOptionsInput {
 fn valid_configured_plugin_identity(value: &str) -> bool {
     let value = value.trim();
     !value.is_empty()
+        && value.len() <= DX_CONFIGURED_PLUGIN_ID_LIMIT
+        && value
+            .bytes()
+            .all(|byte| matches!(byte, b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'.' | b'_' | b'-' | b':' | b'/' | b'@'))
         && !value.starts_with("missing_")
         && !matches!(value, "unknown" | "unavailable" | "disabled")
 }
 
 fn usable_configured_plugin_state(value: &str) -> bool {
     let value = value.trim().to_ascii_lowercase();
-    valid_configured_plugin_identity(&value)
-        && !matches!(
-            value.as_str(),
-            "blocked"
-                | "denied"
-                | "error"
-                | "expired"
-                | "failed"
-                | "invalid"
-                | "needs_configuration"
-                | "pending"
-                | "revoked"
-                | "stale"
-                | "unknown"
-        )
+    matches!(
+        value.as_str(),
+        "active"
+            | "authorized"
+            | "available"
+            | "configured"
+            | "connected"
+            | "enabled"
+            | "healthy"
+            | "not_required"
+            | "ready"
+            | "valid"
+    )
 }
 
 impl DxWorkspaceSnapshot {
@@ -7745,8 +7748,14 @@ impl AgentPanel {
         trusted_tool_ids: &HashSet<String>,
     ) -> bool {
         trusted_tool_ids.contains(&plugin.action_id)
+            && valid_configured_plugin_identity(&plugin.id)
+            && valid_configured_plugin_identity(&plugin.node_id)
             && valid_configured_plugin_identity(&plugin.action_id)
             && valid_configured_plugin_identity(&plugin.receipt_id)
+            && plugin.trust_policy == DX_TRUSTED_TOOL_POLICY
+            && plugin.approved_by_trusted_bridge
+            && plugin.writes_receipt
+            && !plugin.secrets_exposed
             && usable_configured_plugin_state(&plugin.status)
             && usable_configured_plugin_state(&plugin.credential_status)
     }

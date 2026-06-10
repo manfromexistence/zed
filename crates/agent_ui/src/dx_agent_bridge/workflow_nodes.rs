@@ -6,9 +6,24 @@ use super::{
     array_field, bool_field, redact_action_scalar, string_array_field, string_field, usize_field,
 };
 
+mod configured;
+mod contract;
+
+pub(crate) use self::configured::DxConfiguredPluginSummary;
+use self::configured::configured_plugin_rows;
+pub(crate) use self::contract::{
+    DxWorkflowNodeActionSummary, DxWorkflowNodeCredentialSummary,
+    DxWorkflowNodeDynamicOptionSummary, DxWorkflowNodePermissionSummary, DxWorkflowNodePortSummary,
+    DxWorkflowNodeReceiptSummary, DxWorkflowNodeTrustSummary,
+};
+use self::contract::{
+    workflow_node_action_rows, workflow_node_credential_rows, workflow_node_dynamic_option_rows,
+    workflow_node_permission_rows, workflow_node_port_rows, workflow_node_receipt_rows,
+    workflow_node_trust_summary,
+};
+
 const MAX_WORKFLOW_NODE_ROWS: usize = 768;
 const MAX_WORKFLOW_NODE_CANDIDATES: usize = 2048;
-const MAX_CONFIGURED_PLUGIN_ROWS: usize = 12;
 const MAX_DETAIL_ITEMS: usize = 8;
 const MAX_DISPLAY_CHARS: usize = 180;
 const SERIALIZER_MACHINE_FORMAT: &str = "dx.serializer.machine";
@@ -47,20 +62,17 @@ pub(crate) struct DxWorkflowNodeSummary {
     pub dynamic_option_count: usize,
     pub configured: bool,
     pub configure_action: String,
-}
-
-#[derive(Clone, PartialEq, Eq)]
-pub(crate) struct DxConfiguredPluginSummary {
-    pub id: String,
-    pub node_id: String,
-    pub display_name: String,
-    pub icon: Option<String>,
-    pub status: String,
-    pub credential_status: String,
-    pub run_command: String,
-    pub action_id: String,
-    pub receipt_id: String,
-    pub action_label: String,
+    pub permissions: Vec<DxWorkflowNodePermissionSummary>,
+    pub inputs: Vec<DxWorkflowNodePortSummary>,
+    pub outputs: Vec<DxWorkflowNodePortSummary>,
+    pub credentials: Vec<DxWorkflowNodeCredentialSummary>,
+    pub dynamic_options: Vec<DxWorkflowNodeDynamicOptionSummary>,
+    pub receipts: Vec<DxWorkflowNodeReceiptSummary>,
+    pub actions: Vec<DxWorkflowNodeActionSummary>,
+    pub trust: DxWorkflowNodeTrustSummary,
+    pub source_package_version: String,
+    pub source_root_id: String,
+    pub source_path: String,
 }
 
 pub(super) fn workflow_node_catalog_summary(
@@ -138,9 +150,10 @@ fn workflow_node_row(value: &Value) -> Option<DxWorkflowNodeSummary> {
     let display_name = display_string_field(value, &["name"])
         .or_else(|| display_string_field(value, &["display_name"]))
         .unwrap_or_else(|| id.clone());
-    let credential_types =
-        display_string_array_field(value, &["credential_types"], MAX_DETAIL_ITEMS);
     let configured = bool_field(value, &["configured"]).unwrap_or(false);
+    let inputs = workflow_node_port_rows(value, &["inputs"]);
+    let outputs = workflow_node_port_rows(value, &["outputs"]);
+    let dynamic_options = workflow_node_dynamic_option_rows(value);
 
     Some(DxWorkflowNodeSummary {
         id,
@@ -156,51 +169,33 @@ fn workflow_node_row(value: &Value) -> Option<DxWorkflowNodeSummary> {
             .unwrap_or_else(|| "unknown_source_package".to_string()),
         credential_status: display_string_field(value, &["credential_status"])
             .unwrap_or_else(|| "missing_credential_metadata".to_string()),
-        credential_types,
-        input_count: usize_field(value, &["input_count"]).unwrap_or_default(),
-        output_count: usize_field(value, &["output_count"]).unwrap_or_default(),
+        credential_types: display_string_array_field(
+            value,
+            &["credential_types"],
+            MAX_DETAIL_ITEMS,
+        ),
+        input_count: usize_field(value, &["input_count"]).unwrap_or(inputs.len()),
+        output_count: usize_field(value, &["output_count"]).unwrap_or(outputs.len()),
         parameter_count: usize_field(value, &["parameter_count"]).unwrap_or_default(),
-        dynamic_option_count: usize_field(value, &["dynamic_option_count"]).unwrap_or_default(),
+        dynamic_option_count: usize_field(value, &["dynamic_option_count"])
+            .unwrap_or(dynamic_options.len()),
         configured,
         configure_action: display_string_field(value, &["configure_action"])
             .unwrap_or_else(|| "Open credential configuration".to_string()),
-    })
-}
-
-fn configured_plugin_rows(value: &Value) -> Vec<DxConfiguredPluginSummary> {
-    array_field(value, &["configured_plugins"])
-        .or_else(|| array_field(value, &["enabled_plugins"]))
-        .map(|plugins| {
-            plugins
-                .iter()
-                .filter_map(configured_plugin_row)
-                .take(MAX_CONFIGURED_PLUGIN_ROWS)
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
-fn configured_plugin_row(value: &Value) -> Option<DxConfiguredPluginSummary> {
-    let id = display_string_field(value, &["id"])?;
-    let node_id = display_string_field(value, &["node_id"]).unwrap_or_else(|| id.clone());
-    Some(DxConfiguredPluginSummary {
-        display_name: display_string_field(value, &["name"])
-            .or_else(|| display_string_field(value, &["display_name"]))
-            .unwrap_or_else(|| id.clone()),
-        icon: display_string_field(value, &["icon"]),
-        status: display_string_field(value, &["status"]).unwrap_or_else(|| "unknown".to_string()),
-        credential_status: display_string_field(value, &["credential_status"])
-            .unwrap_or_else(|| "missing_receipt_field".to_string()),
-        run_command: display_string_field(value, &["run_command"])
-            .unwrap_or_else(|| "missing_run_command".to_string()),
-        action_id: display_string_field(value, &["action_id"])
-            .unwrap_or_else(|| "missing_action_id".to_string()),
-        receipt_id: display_string_field(value, &["receipt_id"])
-            .unwrap_or_else(|| "missing_receipt_id".to_string()),
-        action_label: display_string_field(value, &["action_label"])
-            .unwrap_or_else(|| "Use plugin".to_string()),
-        id,
-        node_id,
+        permissions: workflow_node_permission_rows(value),
+        inputs,
+        outputs,
+        credentials: workflow_node_credential_rows(value),
+        dynamic_options,
+        receipts: workflow_node_receipt_rows(value),
+        actions: workflow_node_action_rows(value),
+        trust: workflow_node_trust_summary(value),
+        source_package_version: display_string_field(value, &["source_package_version"])
+            .unwrap_or_else(|| "missing_source_package_version".to_string()),
+        source_root_id: display_string_field(value, &["source_root_id"])
+            .unwrap_or_else(|| "missing_source_root_id".to_string()),
+        source_path: display_string_field(value, &["source_path"])
+            .unwrap_or_else(|| "missing_source_path".to_string()),
     })
 }
 

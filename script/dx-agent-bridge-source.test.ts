@@ -40,6 +40,8 @@ test("DX Agent bridge stays split by command, runtime, and receipt ownership", (
     "crates/agent_ui/src/dx_agent_bridge/runtime.rs",
     "crates/agent_ui/src/dx_agent_bridge/runtime_tests.rs",
     "crates/agent_ui/src/dx_agent_bridge/workflow_nodes.rs",
+    "crates/agent_ui/src/dx_agent_bridge/workflow_nodes/contract.rs",
+    "crates/agent_ui/src/dx_agent_bridge/workflow_nodes/configured.rs",
   ];
 
   for (const module of expectedModules) {
@@ -107,8 +109,19 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
     "crates/agent_ui/src/dx_agent_bridge/runtime_provider_models_tests.rs",
   );
   const workflowNodes = read("crates/agent_ui/src/dx_agent_bridge/workflow_nodes.rs");
+  const workflowNodeContract = read(
+    "crates/agent_ui/src/dx_agent_bridge/workflow_nodes/contract.rs",
+  );
+  const workflowNodeConfigured = read(
+    "crates/agent_ui/src/dx_agent_bridge/workflow_nodes/configured.rs",
+  );
+  const workflowNodeSources = `${workflowNodes}\n${workflowNodeContract}\n${workflowNodeConfigured}`;
   const runtime = read("crates/agent_ui/src/dx_agent_bridge/runtime.rs");
   const runtimeTests = read("crates/agent_ui/src/dx_agent_bridge/runtime_tests.rs");
+  const forbiddenWorkflowNodeSources =
+    /\b(?:n8n|OpenClaw|ZeroClaw|claude-plugins-official|external_plugins|inspirations[\\/]|G:\\\\Dx\\\\inspirations)\b/i;
+  const rawSecretDisplayPattern =
+    /\b(?:api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|password|private[_-]?key|authorization|bearer)\b/i;
 
   assert.doesNotMatch(parent, /fn run_bridge_command/);
   assert.doesNotMatch(parent, /fn contract_summary/);
@@ -132,6 +145,12 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.match(parent, /^mod workflow_nodes;$/m);
   assert.match(parent, /pub\(crate\) use self::workflow_nodes::\{/);
   assert.match(parent, /workflow_node_catalog: workflow_node_catalog_summary/);
+  assert.match(workflowNodes, /^mod contract;$/m);
+  assert.match(workflowNodes, /^mod configured;$/m);
+  assert.match(workflowNodes, /pub\(crate\) use self::contract::\{/);
+  assert.match(workflowNodes, /pub\(crate\) use self::configured::DxConfiguredPluginSummary/);
+  assert.match(workflowNodes, /use self::contract::\{/);
+  assert.match(workflowNodes, /use self::configured::configured_plugin_rows/);
   assert.match(
     parent,
     /pub\(crate\) use self::catalog_active_provider_label::\{\s*catalog_active_provider_label, catalog_active_provider_value_label,\s*\};/s,
@@ -286,14 +305,87 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.match(workflowNodes, /DxWorkflowNodeCatalogSummary/);
   assert.match(workflowNodes, /DxWorkflowNodeSummary/);
   assert.match(workflowNodes, /DxConfiguredPluginSummary/);
+  assert.match(workflowNodeSources, /DxWorkflowNodePortSummary/);
+  assert.match(workflowNodeSources, /DxWorkflowNodePermissionSummary/);
+  assert.match(workflowNodeSources, /DxWorkflowNodeCredentialSummary/);
+  assert.match(workflowNodeSources, /DxWorkflowNodeDynamicOptionSummary/);
+  assert.match(workflowNodeSources, /DxWorkflowNodeReceiptSummary/);
+  assert.match(workflowNodeSources, /DxWorkflowNodeActionSummary/);
+  assert.match(workflowNodeSources, /DxWorkflowNodeTrustSummary/);
   assert.match(workflowNodes, /MAX_WORKFLOW_NODE_ROWS/);
-  assert.match(workflowNodes, /MAX_CONFIGURED_PLUGIN_ROWS/);
+  assert.match(workflowNodeSources, /MAX_CONFIGURED_PLUGIN_ROWS/);
+  assert.match(workflowNodeSources, /MAX_WORKFLOW_NODE_PORT_ROWS/);
+  assert.match(workflowNodeSources, /MAX_WORKFLOW_NODE_PERMISSION_ROWS/);
+  assert.match(workflowNodeSources, /MAX_WORKFLOW_NODE_DYNAMIC_OPTION_ROWS/);
+  assert.match(workflowNodeSources, /MAX_WORKFLOW_NODE_ACTION_ROWS/);
   assert.match(workflowNodes, /redact_action_scalar/);
   assert.match(workflowNodes, /credential_status/);
   assert.match(workflowNodes, /credential_types/);
-  assert.match(workflowNodes, /missing_credential_metadata/);
+  assert.doesNotMatch(workflowNodeSources, forbiddenWorkflowNodeSources);
+  assert.doesNotMatch(workflowNodeSources, rawSecretDisplayPattern);
+  assert.doesNotMatch(workflowNodes, /(?<!display_)string_field\(value, &\["(?:description|source_package|source_package_version|source_root_id|source_path|credential_status|configure_action)"\]\)/);
+  assert.doesNotMatch(workflowNodes, /(?<!display_)string_array_field\(value, &\["credential_types"\]\)/);
+  for (const field of [
+    "permissions",
+    "inputs",
+    "outputs",
+    "credentials",
+    "dynamic_options",
+    "receipts",
+    "actions",
+    "trust",
+    "source_package_version",
+    "source_root_id",
+    "source_path",
+  ]) {
+    assert.match(workflowNodes, new RegExp(`pub ${field}:`));
+  }
+  for (const field of [
+    "source_package",
+    "source_package_version",
+    "source_root_id",
+    "source_path",
+    "credential_status",
+  ]) {
+    assert.match(workflowNodes, new RegExp(`${field}:\\s*display_string_field\\(value, &\\["${field}"\\]`));
+  }
+  for (const field of [
+    "source_root_id",
+    "source_path",
+    "trust_policy",
+    "approved_by_trusted_bridge",
+    "writes_receipt",
+    "secrets_exposed",
+  ]) {
+    assert.match(workflowNodeSources, new RegExp(`pub ${field}:`));
+  }
+  assert.match(
+    workflowNodes,
+    /credential_types:\s*display_string_array_field\(\s*value,\s*&\["credential_types"\],\s*MAX_DETAIL_ITEMS,\s*\)/,
+  );
+  for (const helper of [
+    "workflow_node_permission_rows",
+    "workflow_node_port_rows",
+    "workflow_node_credential_rows",
+    "workflow_node_dynamic_option_rows",
+    "workflow_node_receipt_rows",
+    "workflow_node_action_rows",
+    "workflow_node_trust_summary",
+  ]) {
+    assert.match(workflowNodeSources, new RegExp(`\\b${helper}\\(`));
+  }
+  assert.match(workflowNodeSources, /missing_credential_metadata/);
+  assert.match(workflowNodeSources, /missing_permissions/);
+  assert.match(workflowNodeSources, /missing_trust_policy/);
+  assert.match(workflowNodes, /missing_source_package_version/);
+  assert.match(workflowNodes, /missing_source_root_id/);
+  assert.match(workflowNodes, /missing_source_path/);
   assert.match(workflowNodes, /unknown_source_package/);
-  assert.match(workflowNodes, /missing_action_id/);
+  assert.match(workflowNodeSources, /missing_action_id/);
+  assert.match(workflowNodeSources, /missing_receipt_id/);
+  assert.match(workflowNodeContract, /requires_user_enablement_for_input[\s\S]*?unwrap_or\(true\)/);
+  assert.match(workflowNodeContract, /approved_by_trusted_bridge[\s\S]*?unwrap_or\(false\)/);
+  assert.match(workflowNodeContract, /writes_receipts[\s\S]*?unwrap_or\(false\)/);
   assert.doesNotMatch(workflowNodes, /credential_types\.is_empty\(\)\s*\|\|\s*configured/);
   assert.doesNotMatch(
     workflowNodes,
@@ -339,6 +431,8 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/receipts/receipt_strings.rs") < 75);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/receipts/trusted_tool_bridge.rs") < 95);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_catalog.rs") < 90);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/workflow_nodes/contract.rs") < 280);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/workflow_nodes/configured.rs") < 95);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_connection_tests.rs") < 120);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_catalog_tests.rs") < 130);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_catalog_fields.rs") < 125);

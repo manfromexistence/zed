@@ -1,27 +1,29 @@
-[2026-06-11] - DX Plugins Selected Detail and Safe Composer Cache
+[2026-06-11] - DX Plugins Rich Metadata and Receipt-Gated Composer
 
 CHANGED:
-- The Plugins workspace now renders a persistent selected workflow-node detail pane beside the virtualized catalog, showing credential setup, declared credential types, serializer contract, runtime/trust/source, ports, parameter counts, and dynamic option counts from `dx.serializer.machine` metadata.
+- The Plugins workspace now renders a persistent selected workflow-node detail pane beside the virtualized catalog, showing credential setup, declared credential types, serializer contract, runtime/trust/source, permissions, inputs, outputs, credentials, dynamic options, receipts, actions, and trust from `dx.serializer.machine` metadata.
 - Workflow-node cards are selectable GPUI cards with selected styling while preserving the existing SVGL/DX icon rendering path and virtualized list behavior.
 - Configured plugin composer shortcuts now come from an AgentPanel-owned background cache that syncs safe options into the active ThreadView instead of reading bridge receipts during chat composer render.
+- Workflow-node bridge parsing is split across focused coordinator, metadata-contract, and configured-plugin modules so the catalog, detail pane, and composer gate share typed metadata without growing a monster file.
 
 HARDENED:
-- Configured plugin composer options are filtered through the trusted tool bridge, requiring receipt-authorized policy, a trusted action id, valid action/receipt identifiers, and usable plugin/credential states before they become prompt options.
+- Configured plugin composer options are filtered through the trusted tool bridge, requiring receipt-authorized policy, trusted action id, bounded safe ids, allowlisted ready states, per-plugin trusted approval, receipt-writing proof, and no secret exposure before they become prompt options.
 - ThreadView now renders only cached configured plugin options and has a source guard preventing bridge snapshot, receipt-root, or direct filesystem reads in the composer strip.
-- Workflow-node parser defaults now fail closed for missing source package, credential status, and configured-plugin action id metadata.
+- Workflow-node parser defaults now fail closed for missing source package version, source root id, source path, permissions, trust policy, credential status, receipt id, and configured-plugin action id metadata.
 - The runtime-status artifact label no longer references `inspirations/`, keeping the DX plugin source scan free of forbidden upstream/source-root names.
+- Source guards now scan manifest, bridge, Plugins panel, and composer surfaces for forbidden upstream plugin sources and raw secret-key JSON exposure.
 
 PASSED:
-- `rustfmt crates/agent_ui/src/agent_panel.rs crates/agent_ui/src/conversation_view/thread_view.rs crates/agent_ui/src/dx_agent_bridge/workflow_nodes.rs crates/agent_ui/src/dx_launch_workspace.rs crates/agent_ui/src/dx_launch_workspace/tools_screen.rs crates/agent_ui/src/dx_launch_workspace/tools_screen/catalog.rs crates/agent_ui/src/dx_launch_workspace/tools_screen/details.rs crates/agent_ui/src/dx_launch_workspace/tools_screen/workflow_nodes.rs`
-- `rustfmt crates/agent/src/tools/agent_plugin_runtime_status_tool.rs`
+- `rustfmt crates/agent_ui/src/agent_panel.rs crates/agent_ui/src/dx_agent_bridge.rs crates/agent_ui/src/dx_agent_bridge/workflow_nodes.rs crates/agent_ui/src/dx_agent_bridge/workflow_nodes/contract.rs crates/agent_ui/src/dx_agent_bridge/workflow_nodes/configured.rs crates/agent_ui/src/dx_launch_workspace/tools_screen/details.rs`
+- `rustfmt --check crates/agent_ui/src/agent_panel.rs crates/agent_ui/src/dx_agent_bridge.rs crates/agent_ui/src/dx_agent_bridge/workflow_nodes.rs crates/agent_ui/src/dx_agent_bridge/workflow_nodes/contract.rs crates/agent_ui/src/dx_agent_bridge/workflow_nodes/configured.rs crates/agent_ui/src/dx_launch_workspace/tools_screen/details.rs`
 - `node --test script\dx-agent-workspaces-source.test.ts script\dx-agent-thread-view-source.test.ts script\dx-agent-bridge-source.test.ts script\dx-plugin-catalog-source.test.ts`
-- Focused forbidden-upstream scan over `crates/agent/src/tools`, `crates/agent_ui/src/dx_agent_bridge`, and `crates/agent_ui/src/dx_launch_workspace/tools_screen`.
-- Focused render-path IO scan over `crates/agent_ui/src/dx_launch_workspace/tools_screen`.
+- Focused forbidden-upstream scan over DX plugin manifest/catalog source plus bridge, Plugins panel, and composer guard surfaces.
+- Focused render-path IO scan over Plugins panel and workflow-node bridge surfaces; a broader exploratory scan still reports unrelated existing AgentPanel persistence and ThreadView audio cleanup IO outside this patch.
 - `rg -n "^(<<<<<<<|=======|>>>>>>>)"` across touched source, guard, todo, changelog, and DX files returned no real conflict markers.
 - `git diff --check`
 
 NOTES:
-- Cargo, `just run`, local servers, native launch, and visual runtime proof remain deferred by instruction.
+- Cargo, `just run`, local servers, native launch, and visual runtime proof remain deferred by instruction. Next source pass should add canonical source-root integrity checks and explicit `dx.browser` / `dx.computer` / `dx.driven` runtime-status aliases.
 
 [2026-06-10] - DX Plugins Extension-Style Catalog and SVGL Icons
 

@@ -59,6 +59,8 @@ test("configured workflow-node plugins render above the chat input from bridge r
     "fn insert_configured_plugin_prompt(",
     "\n    fn render_profile_option_slots(",
   );
+  const configuredPluginPromptLeakPattern =
+    /\b(?:run_command|source_path|source_root_id|source_package_version|credential_types|api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|password|private[_-]?key|authorization|bearer)\b/i;
 
   assert.match(renderMessageEditor, /self\.render_configured_plugin_strip\(cx\)/);
   assertBefore(
@@ -77,6 +79,27 @@ test("configured workflow-node plugins render above the chat input from bridge r
   assert.match(panelRefreshMethod, /dx_agent_bridge_snapshot_from_settings_for_roots/);
   assert.match(panelRefreshMethod, /workflow_node_catalog\s*\.\s*configured_plugins/);
   assert.match(panelRefreshMethod, /trusted_tool_bridge\s*\.\s*trusted_tool_ids/);
+  assert.match(agentPanelSource, /const DX_CONFIGURED_PLUGIN_ID_LIMIT: usize = 96;/);
+  assert.match(agentPanelSource, /value\.len\(\) <= DX_CONFIGURED_PLUGIN_ID_LIMIT/);
+  assert.match(agentPanelSource, /\.bytes\(\)[\s\S]*matches!\(byte/);
+  for (const state of [
+    "active",
+    "authorized",
+    "available",
+    "configured",
+    "connected",
+    "enabled",
+    "healthy",
+    "not_required",
+    "ready",
+    "valid",
+  ]) {
+    assert.match(agentPanelSource, new RegExp(`"${state}"`));
+  }
+  assert.match(agentPanelSource, /plugin\.trust_policy == DX_TRUSTED_TOOL_POLICY/);
+  assert.match(agentPanelSource, /plugin\.approved_by_trusted_bridge/);
+  assert.match(agentPanelSource, /plugin\.writes_receipt/);
+  assert.match(agentPanelSource, /!plugin\.secrets_exposed/);
   assert.doesNotMatch(pluginStrip, /dx_agent_bridge_snapshot_for_roots/);
   assert.doesNotMatch(pluginStrip, /dx_agent_bridge_snapshot_from_settings_for_roots/);
   assert.doesNotMatch(pluginStrip, /root_paths\(cx\)/);
@@ -99,6 +122,8 @@ test("configured workflow-node plugins render above the chat input from bridge r
   assert.doesNotMatch(pluginStrip, /list_agent_plugins|inspect_agent_plugin_runtime_status|prepare_agent_plugin_runtime/);
   assert.doesNotMatch(pluginStrip, /api_key|access_token|refresh_token|client_secret|password/i);
   assert.doesNotMatch(promptInsert, /api_key|access_token|refresh_token|client_secret|password/i);
+  assert.doesNotMatch(pluginStrip, configuredPluginPromptLeakPattern);
+  assert.doesNotMatch(promptInsert, configuredPluginPromptLeakPattern);
 });
 
 function sliceBetween(start: string, end: string): string {

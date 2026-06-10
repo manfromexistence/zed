@@ -270,11 +270,11 @@ fn social_action_command_matches_prefix(command: &str, prefix: &str) -> bool {
 }
 
 #[cfg(test)]
-#[path = "runtime_connection_tests.rs"]
-mod runtime_connection_tests;
-#[cfg(test)]
 #[path = "runtime_catalog_tests.rs"]
 mod runtime_catalog_tests;
+#[cfg(test)]
+#[path = "runtime_connection_tests.rs"]
+mod runtime_connection_tests;
 #[cfg(test)]
 #[path = "runtime_tests.rs"]
 mod runtime_tests;
