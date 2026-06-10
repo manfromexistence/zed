@@ -57,7 +57,9 @@ use self::list_labels::{bounded_items, yes_no};
 
 pub(crate) use automation_screen::render_automation_screen;
 pub(crate) use connections_screen::render_connections_screen;
-pub(crate) use tools_screen::render_tools_screen;
+pub(crate) use tools_screen::{
+    DxPluginsCatalogState, render_tools_screen, render_workflow_node_catalog_rows,
+};
 
 #[derive(Clone)]
 pub(crate) struct DxLaunchWorkspaceStatus {

@@ -1,5 +1,6 @@
 use std::{
     fmt,
+    ops::Range,
     path::PathBuf,
     rc::Rc,
     sync::{
@@ -65,9 +66,10 @@ use crate::dx_launch_source_audit::launch_source_audit_snapshot_for_roots;
 use crate::dx_launch_status::launch_status_snapshot_for_roots;
 use crate::dx_launch_workspace::{
     DxLaunchRailControls, DxLaunchRailSection, DxLaunchRailSide, DxLaunchRailState,
-    DxLaunchWorkspaceStatus, DxSourceRowControl, DxSubagentStatus, DxSubagentStatusRow,
-    has_progress_rail_content, has_sources_rail_content, render_automation_screen,
-    render_connections_screen, render_tools_screen, render_workspace_chrome,
+    DxLaunchWorkspaceStatus, DxPluginsCatalogState, DxSourceRowControl, DxSubagentStatus,
+    DxSubagentStatusRow, has_progress_rail_content, has_sources_rail_content,
+    render_automation_screen, render_connections_screen, render_tools_screen,
+    render_workflow_node_catalog_rows, render_workspace_chrome,
 };
 use crate::dx_proof_freshness::proof_freshness_snapshot;
 use crate::dx_receipt_history::tool_history_snapshot;
@@ -1191,6 +1193,8 @@ pub struct AgentPanel {
     _workspace_subscription: Option<Subscription>,
     _project_subscription: Subscription,
     dx_workspace_snapshot: DxWorkspaceSnapshot,
+    tools_catalog_state: DxPluginsCatalogState,
+    _tools_catalog_query_subscription: Subscription,
     dx_launch_workspace_status_cache: Option<DxLaunchWorkspaceStatusCache>,
     dx_launch_workspace_status_refresh_pending: bool,
     dx_launch_workspace_status_refresh_generation: u64,
@@ -1574,7 +1578,7 @@ impl AgentPanel {
         })
     }
 
-    pub(crate) fn new(workspace: &Workspace, _window: &mut Window, cx: &mut Context<Self>) -> Self {
+    pub(crate) fn new(workspace: &Workspace, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let fs = workspace.app_state().fs.clone();
         let user_store = workspace.app_state().user_store.clone();
         let project = workspace.project();
@@ -1657,6 +1661,13 @@ impl AgentPanel {
             },
         );
 
+        let tools_catalog_state = DxPluginsCatalogState::new(window, cx);
+        let tools_catalog_query_editor = tools_catalog_state.query_editor();
+        let _tools_catalog_query_subscription =
+            cx.subscribe(&tools_catalog_query_editor, |this, _editor, event, cx| {
+                this.tools_catalog_state.on_query_editor_event(event, cx);
+            });
+
         cx.on_release(|this, cx| {
             this.dismiss_all_terminal_notifications(cx);
         })
@@ -1688,6 +1699,8 @@ impl AgentPanel {
             _workspace_subscription: workspace_subscription,
             _project_subscription,
             dx_workspace_snapshot,
+            tools_catalog_state,
+            _tools_catalog_query_subscription,
             dx_launch_workspace_status_cache: None,
             dx_launch_workspace_status_refresh_pending: false,
             dx_launch_workspace_status_refresh_generation: 0,
@@ -6924,9 +6937,28 @@ impl AgentPanel {
         render_connections_screen(status.as_ref(), cx)
     }
 
-    fn render_tools_workspace_screen(&mut self, cx: &mut Context<Self>) -> AnyElement {
+    fn render_tools_workspace_screen(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let status = self.cached_dx_launch_workspace_status(cx);
-        render_tools_screen(status.as_ref(), cx)
+        render_tools_screen(status.as_ref(), &mut self.tools_catalog_state, window, cx)
+    }
+
+    pub(crate) fn render_tools_workflow_node_rows(
+        &mut self,
+        range: Range<usize>,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Vec<AnyElement> {
+        let status = self.cached_dx_launch_workspace_status(cx);
+        render_workflow_node_catalog_rows(
+            &self.tools_catalog_state,
+            status.as_ref().map(|status| &status.agent_bridge),
+            range,
+            cx,
+        )
     }
 
     fn default_collapsed_dx_launch_rail_sections() -> HashSet<DxLaunchRailSection> {
@@ -8025,7 +8057,7 @@ impl Render for AgentPanel {
                 return self.render_connections_workspace_screen(cx);
             }
             AgentPanelHostKind::ToolsWorkspace => {
-                return self.render_tools_workspace_screen(cx);
+                return self.render_tools_workspace_screen(window, cx);
             }
             AgentPanelHostKind::Sidechat | AgentPanelHostKind::BuilderWorkspace => {}
         }

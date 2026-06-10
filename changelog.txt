@@ -1,3 +1,24 @@
+[2026-06-10] - DX Plugins Extension-Style Catalog and SVGL Icons
+
+CHANGED:
+- The Plugins workspace now owns persistent Extensions-style catalog state with a search editor, All/Configured/Needs Setup filters, category filters, and a virtualized workflow-node list backed by the existing serializer catalog receipt.
+- Workflow-node plugin cards and configured plugin composer shortcuts now resolve icons through the DX icon data path, materializing allowlisted SVGL brand SVGs into a bounded target cache and rendering them with original colors.
+- Configured plugin prompt insertion now uses plugin id, node id, action id, receipt id, and credential status instead of inserting a shell run command into the Agent composer.
+
+HARDENED:
+- Workflow-node and category element ids now use bounded sanitized ids with stable hashes, so catalog-provided labels do not become raw GPUI ids.
+- The bridge keeps configured plugin defaults fail-closed for missing status/credential/receipt fields while preserving the existing redacted `run_command` display field for receipt compatibility.
+- Focused source guards now pin the persistent Plugins catalog state, virtualized list, SVGL icon pipeline, and configured-plugin prompt contract.
+
+PASSED:
+- `rustfmt --edition 2024 crates\agent_ui\src\workflow_node_icons.rs crates\agent_ui\src\dx_launch_workspace.rs crates\agent_ui\src\dx_launch_workspace\tools_screen.rs crates\agent_ui\src\dx_launch_workspace\tools_screen\catalog.rs crates\agent_ui\src\dx_launch_workspace\tools_screen\workflow_nodes.rs crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\dx_agent_bridge\workflow_nodes.rs`
+- `node --test script\dx-agent-workspaces-source.test.ts script\dx-agent-thread-view-source.test.ts script\dx-agent-bridge-source.test.ts script\dx-title-bar-source.test.ts`
+- `git diff --check`
+- Focused forbidden-upstream scan over the touched source and guard files.
+
+NOTES:
+- Cargo, `just run`, local servers, native launch, and visual runtime proof remain deferred by instruction.
+
 [2026-06-10] - DX Plugins Workflow Node Catalog Surface
 
 ADDED:

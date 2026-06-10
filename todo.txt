@@ -1,5 +1,5 @@
 IN PROGRESS:
-- None. Latest DX Plugins workflow-node catalog pass is source-verified.
+- None. Latest DX Plugins extension-style catalog/icon pass is source-verified.
 
 PENDING:
 - Add a persistent Flow STT host/daemon integration so transcription can avoid per-clip process/model startup and match the cached Kokoro TTS path.
@@ -13,6 +13,7 @@ PENDING:
 - Continue the DX/Zed ecosystem integration with bounded source-only slices for remaining receipt scans, semantic icon hotspots, and governed runtime proof when explicitly authorized.
 
 COMPLETED:
+- DX Plugins extension-style catalog/icon pass is source-verified: the Plugins workspace now owns persistent Extensions-style search/filter state, renders workflow-node plugins through a virtualized GPUI catalog with category filters, resolves workflow-node and configured-plugin icons through the DX/SVGL icon data path with original-color SVG rendering, uses sanitized stable element ids for untrusted catalog labels, and keeps configured plugin composer actions keyed by plugin/action/receipt identifiers instead of shell command prompts.
 - DX Plugins workflow-node catalog is source-verified: the old visible Tools surface now presents as Plugins, the Plugins workspace renders serializer-backed workflow-node cards before Browser, Computer, MCP, Receipts, and Permissions, configured workflow-node plugins are exposed above the Agent composer with icon-backed GPUI menu actions, and the DX Agents bridge reads bounded `dx.serializer.machine` catalog receipts without raw credential material.
 - Authorized J6 voice/Forge follow-up is build-verified: restored the Forge tab-bar panel id needed for stable tab-bar identity, kept per-tab ids simple for clickable tabs, ignored the Windows IME zero-error false return that logged `The operation completed successfully`, and `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run` built and launched the editor successfully.
 - Agent voice/workspace action stability is source-verified: response copy now uses the normal muted response-row icon treatment, voice busy states use the animated DX loading glyph, Kokoro TTS prewarms its cached server after voice readiness detection, sidebar Plugins/Connections/Automations dispatch real workspace actions, and Forge tabs use stable click-only GPUI routing.

@@ -6,8 +6,8 @@ use super::{
     array_field, bool_field, redact_action_scalar, string_array_field, string_field, usize_field,
 };
 
-const MAX_WORKFLOW_NODE_ROWS: usize = 48;
-const MAX_WORKFLOW_NODE_CANDIDATES: usize = 1024;
+const MAX_WORKFLOW_NODE_ROWS: usize = 768;
+const MAX_WORKFLOW_NODE_CANDIDATES: usize = 2048;
 const MAX_CONFIGURED_PLUGIN_ROWS: usize = 12;
 const MAX_DETAIL_ITEMS: usize = 8;
 const MAX_DISPLAY_CHARS: usize = 180;
@@ -58,6 +58,8 @@ pub(crate) struct DxConfiguredPluginSummary {
     pub status: String,
     pub credential_status: String,
     pub run_command: String,
+    pub action_id: String,
+    pub receipt_id: String,
     pub action_label: String,
 }
 
@@ -193,12 +195,14 @@ fn configured_plugin_row(value: &Value) -> Option<DxConfiguredPluginSummary> {
             .or_else(|| display_string_field(value, &["display_name"]))
             .unwrap_or_else(|| id.clone()),
         icon: display_string_field(value, &["icon"]),
-        status: display_string_field(value, &["status"])
-            .unwrap_or_else(|| "configured".to_string()),
+        status: display_string_field(value, &["status"]).unwrap_or_else(|| "unknown".to_string()),
         credential_status: display_string_field(value, &["credential_status"])
-            .unwrap_or_else(|| "ready".to_string()),
+            .unwrap_or_else(|| "missing_receipt_field".to_string()),
         run_command: display_string_field(value, &["run_command"])
-            .unwrap_or_else(|| format!("dx agents plugins run --id {id} --json")),
+            .unwrap_or_else(|| "missing_run_command".to_string()),
+        action_id: display_string_field(value, &["action_id"]).unwrap_or_else(|| id.clone()),
+        receipt_id: display_string_field(value, &["receipt_id"])
+            .unwrap_or_else(|| "missing_receipt_id".to_string()),
         action_label: display_string_field(value, &["action_label"])
             .unwrap_or_else(|| "Use plugin".to_string()),
         id,

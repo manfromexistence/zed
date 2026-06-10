@@ -49,7 +49,10 @@ test("DX agent workspace taxonomy has first-class Zed screens", () => {
   assert.match(agentPanel, /render_connections_workspace_screen/);
   assert.match(agentPanel, /render_tools_workspace_screen/);
   assert.match(agentPanel, /render_connections_screen\(status\.as_ref\(\), cx\)/);
-  assert.match(agentPanel, /render_tools_screen\(status\.as_ref\(\), cx\)/);
+  assert.match(
+    agentPanel,
+    /render_tools_screen\(status\.as_ref\(\), &mut self\.tools_catalog_state, window, cx\)/,
+  );
 
   assert.match(workspace, /WorkspaceScreenKind::Connections => \{[\s\S]*?zed_actions::assistant::OpenConnections\.boxed_clone\(\)/);
   assert.match(workspace, /WorkspaceScreenKind::Tools => \{[\s\S]*?zed_actions::assistant::OpenTools\.boxed_clone\(\)/);
@@ -172,18 +175,22 @@ test("Connections workspace is wired to provider, channel, social, gateway, and 
 test("Tools workspace exposes trusted bridge contracts without fake approvals", () => {
   const dxWorkspace = read("crates/agent_ui/src/dx_launch_workspace.rs");
   const screen = read("crates/agent_ui/src/dx_launch_workspace/tools_screen.rs");
+  const catalogScreen = read("crates/agent_ui/src/dx_launch_workspace/tools_screen/catalog.rs");
   const workflowNodeScreen = read(
     "crates/agent_ui/src/dx_launch_workspace/tools_screen/workflow_nodes.rs",
   );
   const workflowNodeIcons = read("crates/agent_ui/src/workflow_node_icons.rs");
-  const pluginScreenSources = `${screen}\n${workflowNodeScreen}`;
+  const pluginScreenSources = `${screen}\n${catalogScreen}\n${workflowNodeScreen}`;
   const toolsScreen = read("crates/agent_ui/src/tools_screen.rs");
   const agentUi = read("crates/agent_ui/src/agent_ui.rs");
+  const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
   const bridge = read("crates/agent_ui/src/dx_agent_bridge.rs");
 
   assert.ok(existsSync("crates/agent_ui/src/dx_launch_workspace/tools_screen.rs"));
   assert.match(dxWorkspace, /^mod tools_screen;$/m);
-  assert.match(dxWorkspace, /pub\(crate\) use tools_screen::render_tools_screen;/);
+  assert.match(dxWorkspace, /pub\(crate\) use tools_screen::\{/);
+  assert.match(dxWorkspace, /DxPluginsCatalogState/);
+  assert.match(dxWorkspace, /render_workflow_node_catalog_rows/);
   assert.match(toolsScreen, /AgentPanel::new_tools_workspace\(workspace, window, cx\)/);
   assert.match(toolsScreen, /WorkspaceScreenKind::Tools/);
   assert.match(toolsScreen, /fn show_toolbar\(&self\) -> bool \{\s*false\s*\}/);
@@ -191,20 +198,42 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
 
   assert.match(toolsScreen, /"Plugins"\.into\(\)/);
   assert.match(toolsScreen, /"Plugins Screen Opened"/);
+  assert.match(agentPanel, /tools_catalog_state: DxPluginsCatalogState/);
+  assert.match(agentPanel, /DxPluginsCatalogState::new\(window, cx\)/);
+  assert.match(
+    agentPanel,
+    /render_tools_screen\(status\.as_ref\(\), &mut self\.tools_catalog_state, window, cx\)/,
+  );
 
   for (const title of ["Workflow Nodes", "Browser", "Computer", "MCP", "Receipts", "Permissions"]) {
     assert.match(screen, new RegExp(`section_title\\("${title}"`));
   }
-  assert.match(screen, /workflow_nodes::render_workflow_node_plugins\(snapshot, cx\)/);
-  assert.match(pluginScreenSources, /MAX_WORKFLOW_NODE_PLUGIN_CARDS/);
-  assert.match(pluginScreenSources, /take\(MAX_WORKFLOW_NODE_PLUGIN_CARDS\)/);
+  assert.match(screen, /catalog::render_workflow_node_catalog\(/);
+  assert.match(catalogScreen, /pub\(crate\) struct DxPluginsCatalogState/);
+  assert.match(catalogScreen, /UniformListScrollHandle/);
+  assert.match(catalogScreen, /query_editor: Entity<Editor>/);
+  assert.match(catalogScreen, /enum PluginCatalogFilter/);
+  assert.match(catalogScreen, /category_filter: Option<String>/);
+  assert.match(catalogScreen, /filtered_node_indices/);
+  assert.match(catalogScreen, /EditorElement::new/);
+  assert.match(catalogScreen, /BufferSearchBar/);
+  assert.match(catalogScreen, /ToggleButtonGroup::single_row/);
+  assert.match(catalogScreen, /ToggleButtonGroupStyle::Outlined/);
+  assert.match(catalogScreen, /filter-all-categories/);
+  assert.match(catalogScreen, /uniform_list\(\s*"dx-workflow-node-plugins"/);
+  assert.match(catalogScreen, /track_scroll\(&state\.list\)/);
+  assert.match(catalogScreen, /vertical_scrollbar_for\(&state\.list, window, cx\)/);
+  assert.match(catalogScreen, /MAX_FILTERED_WORKFLOW_NODE_RESULTS/);
   assert.match(pluginScreenSources, /render_plugin_config_menu/);
   assert.match(pluginScreenSources, /dx\.serializer\.machine/);
   assert.match(agentUi, /^mod workflow_node_icons;$/m);
-  assert.match(pluginScreenSources, /workflow_node_icon_for/);
-  assert.match(workflowNodeIcons, /pub\(crate\) fn workflow_node_icon_for/);
-  assert.match(workflowNodeIcons, /IconName::Github/);
-  assert.match(workflowNodeIcons, /IconName::DatabaseZap/);
+  assert.match(pluginScreenSources, /workflow_node_icon_asset_for/);
+  assert.match(workflowNodeIcons, /pub\(crate\) enum WorkflowNodeIconAsset/);
+  assert.match(workflowNodeIcons, /pub\(crate\) fn workflow_node_icon_asset_for/);
+  assert.match(workflowNodeIcons, /Icon::from_external_svg_with_original_colors/);
+  assert.match(workflowNodeIcons, /dx_icon_data_dir/);
+  assert.match(workflowNodeIcons, /svgl\.json/);
+  assert.match(workflowNodeIcons, /WORKFLOW_NODE_ICON_PREVIEW_CACHE/);
   assert.match(workflowNodeIcons, /dx_icon\(DxUiIcon::Plugins\)/);
   assert.doesNotMatch(pluginScreenSources, /\bBadge|Chip|Pill|TagList|badge_/i);
   assert.doesNotMatch(pluginScreenSources, /<iframe|iframe|WebView|webview|embed_url|external_workflow_url/i);

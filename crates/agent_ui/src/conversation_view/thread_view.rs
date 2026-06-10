@@ -4,7 +4,9 @@ use crate::{
     dx_agent_bridge::{DxConfiguredPluginSummary, dx_agent_bridge_snapshot_for_roots},
     open_abs_path_at_point,
     thread_metadata_store::{ThreadId, ThreadMetadataStore},
-    workflow_node_icons::workflow_node_icon_for,
+    workflow_node_icons::{
+        WorkflowNodeIconAsset, workflow_node_element_id, workflow_node_icon_asset_for,
+    },
 };
 use agent_client_protocol::schema as acp;
 use std::{cell::RefCell, ops::Range};
@@ -4057,48 +4059,52 @@ impl ThreadView {
     fn render_configured_plugin_menu(&self, plugin: DxConfiguredPluginSummary) -> AnyElement {
         let label = plugin.display_name.clone();
         let icon = configured_plugin_icon(&plugin);
-        PopoverMenu::new(format!("agent-configured-plugin-menu-{}", plugin.id))
-            .trigger_with_tooltip(
-                IconButton::new(
-                    format!("agent-configured-plugin-trigger-{}", plugin.id),
-                    icon,
-                )
-                .icon_size(IconSize::Small)
-                .icon_color(Color::Muted),
-                Tooltip::text(label.clone()),
-            )
-            .anchor(gpui::Anchor::BottomLeft)
-            .offset(gpui::Point {
-                x: px(0.0),
-                y: px(-2.0),
-            })
-            .menu({
-                let message_editor = self.message_editor.clone();
-                move |window, cx| {
-                    let plugin = plugin.clone();
-                    let message_editor = message_editor.clone();
-                    Some(ContextMenu::build(window, cx, move |menu, _window, _cx| {
-                        menu.header(plugin.display_name.clone())
-                            .custom_row({
-                                let plugin = plugin.clone();
-                                move |_window, _cx| configured_plugin_status_row(&plugin)
-                            })
-                            .entry("Use configured plugin", None, {
-                                let plugin = plugin.clone();
-                                let message_editor = message_editor.clone();
-                                move |window, cx| {
-                                    Self::insert_configured_plugin_prompt(
-                                        message_editor.clone(),
-                                        plugin.clone(),
-                                        window,
-                                        cx,
-                                    );
-                                }
-                            })
-                    }))
-                }
-            })
-            .into_any_element()
+        PopoverMenu::new(workflow_node_element_id(
+            "agent-configured-plugin-menu",
+            &plugin.id,
+        ))
+        .trigger_with_tooltip(
+            ButtonLike::new(workflow_node_element_id(
+                "agent-configured-plugin-trigger",
+                &plugin.id,
+            ))
+            .style(ButtonStyle::Subtle)
+            .size(ButtonSize::Compact)
+            .child(icon.render(IconSize::Small, Color::Muted)),
+            Tooltip::text(label.clone()),
+        )
+        .anchor(gpui::Anchor::BottomLeft)
+        .offset(gpui::Point {
+            x: px(0.0),
+            y: px(-2.0),
+        })
+        .menu({
+            let message_editor = self.message_editor.clone();
+            move |window, cx| {
+                let plugin = plugin.clone();
+                let message_editor = message_editor.clone();
+                Some(ContextMenu::build(window, cx, move |menu, _window, _cx| {
+                    menu.header(plugin.display_name.clone())
+                        .custom_row({
+                            let plugin = plugin.clone();
+                            move |_window, _cx| configured_plugin_status_row(&plugin)
+                        })
+                        .entry("Use configured plugin", None, {
+                            let plugin = plugin.clone();
+                            let message_editor = message_editor.clone();
+                            move |window, cx| {
+                                Self::insert_configured_plugin_prompt(
+                                    message_editor.clone(),
+                                    plugin.clone(),
+                                    window,
+                                    cx,
+                                );
+                            }
+                        })
+                }))
+            }
+        })
+        .into_any_element()
     }
 
     fn insert_configured_plugin_prompt(
@@ -4108,11 +4114,12 @@ impl ThreadView {
         cx: &mut App,
     ) {
         let prompt = format!(
-            "Use configured plugin `{}` for this task.\n- plugin_id: {}\n- node_id: {}\n- run_command: {}\n- credential_status: {}\n",
+            "Use configured plugin `{}` for this task.\n- plugin_id: {}\n- node_id: {}\n- action_id: {}\n- receipt_id: {}\n- credential_status: {}\n",
             plugin.display_name,
             plugin.id,
             plugin.node_id,
-            plugin.run_command,
+            plugin.action_id,
+            plugin.receipt_id,
             plugin.credential_status
         );
         message_editor.focus_handle(cx).focus(window, cx);
@@ -11280,11 +11287,14 @@ impl Render for ThreadView {
 fn configured_plugin_status_row(plugin: &DxConfiguredPluginSummary) -> AnyElement {
     let icon = configured_plugin_icon(plugin);
     h_flex()
-        .id(format!("agent-configured-plugin-status-{}", plugin.id))
+        .id(workflow_node_element_id(
+            "agent-configured-plugin-status",
+            &plugin.id,
+        ))
         .min_w(rems(16.))
         .max_w(rems(28.))
         .gap_2()
-        .child(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
+        .child(icon.render(IconSize::Small, Color::Muted))
         .child(
             v_flex()
                 .min_w_0()
@@ -11304,8 +11314,8 @@ fn configured_plugin_status_row(plugin: &DxConfiguredPluginSummary) -> AnyElemen
         .into_any_element()
 }
 
-fn configured_plugin_icon(plugin: &DxConfiguredPluginSummary) -> IconName {
-    workflow_node_icon_for(
+fn configured_plugin_icon(plugin: &DxConfiguredPluginSummary) -> WorkflowNodeIconAsset {
+    workflow_node_icon_asset_for(
         plugin.icon.as_deref(),
         Some(plugin.node_id.as_str()),
         plugin.display_name.as_str(),

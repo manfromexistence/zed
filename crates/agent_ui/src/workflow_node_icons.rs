@@ -1,17 +1,181 @@
-use ui::{DxUiIcon, IconName, dx_icon};
+use std::collections::HashMap;
+use std::fmt::Write as _;
+use std::path::PathBuf;
+use std::sync::OnceLock;
 
-pub(crate) fn workflow_node_icon_for(
+use gpui::{AnyElement, IntoElement, SharedString};
+use serde::Deserialize;
+use ui::{Color, DxUiIcon, Icon, IconName, IconSize, dx_icon, dx_icon_data_dir};
+
+const WORKFLOW_NODE_ICON_PREVIEW_CACHE_VERSION: &str = "v1";
+const WORKFLOW_NODE_ICON_ID_PREVIEW_CHARS: usize = 36;
+const WORKFLOW_NODE_ICON_CANDIDATE_LIMIT: usize = 8;
+const WORKFLOW_NODE_SVGL_ICON_NAMES: &[&str] = &[
+    "airtable",
+    "anthropic",
+    "discord",
+    "dropbox",
+    "figma",
+    "github",
+    "gitlab",
+    "gmail",
+    "google-analytics",
+    "google-calendar",
+    "google-drive",
+    "google-sheets",
+    "hubspot",
+    "jira",
+    "linear",
+    "mailchimp",
+    "microsoft-teams",
+    "mongodb",
+    "mysql",
+    "notion",
+    "openai",
+    "postgresql",
+    "redis",
+    "salesforce",
+    "shopify",
+    "slack",
+    "stripe",
+    "telegram",
+    "trello",
+    "twilio",
+    "whatsapp",
+    "youtube",
+    "zoom",
+];
+
+static WORKFLOW_NODE_ICON_PREVIEW_CACHE: OnceLock<HashMap<String, SharedString>> = OnceLock::new();
+
+#[derive(Clone)]
+pub(crate) enum WorkflowNodeIconAsset {
+    Embedded(IconName),
+    ExternalSvg(SharedString),
+}
+
+impl WorkflowNodeIconAsset {
+    pub(crate) fn render(&self, size: IconSize, color: Color) -> AnyElement {
+        match self {
+            WorkflowNodeIconAsset::Embedded(icon) => Icon::new(*icon).size(size).color(color),
+            WorkflowNodeIconAsset::ExternalSvg(svg) => {
+                Icon::from_external_svg_with_original_colors(svg.clone()).size(size)
+            }
+        }
+        .into_any_element()
+    }
+}
+
+pub(crate) fn workflow_node_icon_asset_for(
+    icon_hint: Option<&str>,
+    category_hint: Option<&str>,
+    display_name: &str,
+) -> WorkflowNodeIconAsset {
+    for candidate in workflow_node_svg_candidates(icon_hint, category_hint, display_name) {
+        if let Some(path) = workflow_node_svg_preview_cache().get(candidate.as_str()) {
+            return WorkflowNodeIconAsset::ExternalSvg(path.clone());
+        }
+    }
+
+    WorkflowNodeIconAsset::Embedded(workflow_node_fallback_icon_for(
+        icon_hint,
+        category_hint,
+        display_name,
+    ))
+}
+
+pub(crate) fn workflow_node_element_id(prefix: &str, raw: &str) -> SharedString {
+    let mut sanitized = String::with_capacity(prefix.len() + raw.len().min(48) + 18);
+    sanitized.push_str(prefix);
+    sanitized.push('-');
+    for character in raw
+        .chars()
+        .filter(|character| character.is_ascii_alphanumeric() || matches!(character, '-' | '_'))
+        .take(WORKFLOW_NODE_ICON_ID_PREVIEW_CHARS)
+    {
+        sanitized.push(character.to_ascii_lowercase());
+    }
+    if sanitized.ends_with('-') {
+        sanitized.push_str("item");
+    }
+    let _ = write!(&mut sanitized, "-{:016x}", fnv1a64(raw));
+    sanitized.into()
+}
+
+fn workflow_node_svg_candidates(
+    icon_hint: Option<&str>,
+    category_hint: Option<&str>,
+    display_name: &str,
+) -> Vec<String> {
+    let hints = workflow_node_hints(icon_hint, category_hint, display_name);
+    let mut candidates = Vec::with_capacity(WORKFLOW_NODE_ICON_CANDIDATE_LIMIT);
+
+    push_explicit_source_candidate(icon_hint, &mut candidates);
+    push_named_candidate(&hints, &mut candidates, "google drive", "google-drive");
+    push_named_candidate(&hints, &mut candidates, "google sheets", "google-sheets");
+    push_named_candidate(
+        &hints,
+        &mut candidates,
+        "google calendar",
+        "google-calendar",
+    );
+    push_named_candidate(
+        &hints,
+        &mut candidates,
+        "google analytics",
+        "google-analytics",
+    );
+    push_named_candidate(
+        &hints,
+        &mut candidates,
+        "microsoft teams",
+        "microsoft-teams",
+    );
+    push_named_candidate(&hints, &mut candidates, "postgres", "postgresql");
+    push_named_candidate(&hints, &mut candidates, "email", "gmail");
+    push_named_candidate(&hints, &mut candidates, "mail", "gmail");
+
+    for name in WORKFLOW_NODE_SVGL_ICON_NAMES {
+        push_named_candidate(&hints, &mut candidates, name, name);
+        if candidates.len() >= WORKFLOW_NODE_ICON_CANDIDATE_LIMIT {
+            break;
+        }
+    }
+
+    candidates
+}
+
+fn push_explicit_source_candidate(icon_hint: Option<&str>, candidates: &mut Vec<String>) {
+    let Some(icon_hint) = icon_hint else {
+        return;
+    };
+    let Some((pack, slug)) = icon_hint.split_once(':') else {
+        return;
+    };
+    if pack.trim().eq_ignore_ascii_case("svgl") {
+        push_unique_candidate(candidates, normalized_icon_slug(slug));
+    }
+}
+
+fn push_named_candidate(hints: &str, candidates: &mut Vec<String>, needle: &str, candidate: &str) {
+    if hints.contains(needle) {
+        push_unique_candidate(candidates, candidate.to_string());
+    }
+}
+
+fn push_unique_candidate(candidates: &mut Vec<String>, candidate: String) {
+    if candidate.is_empty() || candidates.iter().any(|item| item == &candidate) {
+        return;
+    }
+    candidates.push(candidate);
+}
+
+fn workflow_node_fallback_icon_for(
     icon_hint: Option<&str>,
     category_hint: Option<&str>,
     display_name: &str,
 ) -> IconName {
-    let hints = [
-        icon_hint.unwrap_or_default(),
-        category_hint.unwrap_or_default(),
-        display_name,
-    ]
-    .join(" ")
-    .to_ascii_lowercase();
+    let hints = workflow_node_hints(icon_hint, category_hint, display_name);
 
     if hints.contains("github") {
         IconName::Github
@@ -72,5 +236,138 @@ pub(crate) fn workflow_node_icon_for(
         IconName::ToolWeb
     } else {
         dx_icon(DxUiIcon::Plugins)
+    }
+}
+
+fn workflow_node_hints(
+    icon_hint: Option<&str>,
+    category_hint: Option<&str>,
+    display_name: &str,
+) -> String {
+    [
+        icon_hint.unwrap_or_default(),
+        category_hint.unwrap_or_default(),
+        display_name,
+    ]
+    .join(" ")
+    .replace(['_', '-', '.', ':', '/'], " ")
+    .to_ascii_lowercase()
+}
+
+fn workflow_node_svg_preview_cache() -> &'static HashMap<String, SharedString> {
+    WORKFLOW_NODE_ICON_PREVIEW_CACHE.get_or_init(load_workflow_node_svg_preview_cache)
+}
+
+fn load_workflow_node_svg_preview_cache() -> HashMap<String, SharedString> {
+    let Some(pack) = load_svgl_icon_pack() else {
+        return HashMap::new();
+    };
+
+    let mut cache = HashMap::with_capacity(WORKFLOW_NODE_SVGL_ICON_NAMES.len());
+    for name in WORKFLOW_NODE_SVGL_ICON_NAMES {
+        let Some(icon) = pack.icons.get(*name) else {
+            continue;
+        };
+        if let Ok(path) = write_workflow_node_icon_preview(name, icon) {
+            cache.insert((*name).to_string(), path.into());
+        }
+    }
+    cache
+}
+
+fn load_svgl_icon_pack() -> Option<SvglIconPack> {
+    let path = dx_icon_data_dir().join("svgl.json");
+    let text = std::fs::read_to_string(path).ok()?;
+    serde_json::from_str::<SvglIconPack>(&text).ok()
+}
+
+fn write_workflow_node_icon_preview(name: &str, icon: &SvglIconBody) -> std::io::Result<String> {
+    let path = workflow_node_icon_preview_path(name);
+    if !path.exists() {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(
+            &path,
+            wrap_workflow_node_icon_body(&icon.body, icon.width(), icon.height()),
+        )?;
+    }
+    Ok(path.to_string_lossy().replace('\\', "/"))
+}
+
+fn workflow_node_icon_preview_path(name: &str) -> PathBuf {
+    repo_root()
+        .join("target")
+        .join("workflow-node-icons")
+        .join(WORKFLOW_NODE_ICON_PREVIEW_CACHE_VERSION)
+        .join("svgl")
+        .join(format!("{}.svg", sanitize_file_component(name)))
+}
+
+fn wrap_workflow_node_icon_body(body: &str, width: u32, height: u32) -> String {
+    let body = body.trim();
+    if body.starts_with("<svg") {
+        body.to_string()
+    } else {
+        format!(
+            r#"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" width="{width}" height="{height}"><g fill="currentColor">{body}</g></svg>"#
+        )
+    }
+}
+
+fn repo_root() -> PathBuf {
+    std::env::current_dir().unwrap_or_else(|_| PathBuf::from("G:/Dx/code"))
+}
+
+fn sanitize_file_component(value: &str) -> String {
+    let mut sanitized = String::with_capacity(value.len());
+    for character in value.chars() {
+        if character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | '.') {
+            sanitized.push(character);
+        } else {
+            sanitized.push('-');
+        }
+    }
+    sanitized
+}
+
+fn normalized_icon_slug(value: &str) -> String {
+    value
+        .trim()
+        .trim_matches('"')
+        .replace(['_', ' ', '.'], "-")
+        .to_ascii_lowercase()
+}
+
+fn fnv1a64(value: &str) -> u64 {
+    let mut hash = 0xcbf29ce484222325_u64;
+    for byte in value.as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    hash
+}
+
+#[derive(Deserialize)]
+struct SvglIconPack {
+    icons: HashMap<String, SvglIconBody>,
+}
+
+#[derive(Deserialize)]
+struct SvglIconBody {
+    body: String,
+    #[serde(default)]
+    width: Option<u32>,
+    #[serde(default)]
+    height: Option<u32>,
+}
+
+impl SvglIconBody {
+    fn width(&self) -> u32 {
+        self.width.unwrap_or(24).max(1)
+    }
+
+    fn height(&self) -> u32 {
+        self.height.unwrap_or(24).max(1)
     }
 }

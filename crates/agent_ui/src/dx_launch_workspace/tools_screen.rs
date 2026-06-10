@@ -1,25 +1,35 @@
-use gpui::{AnyElement, App, IntoElement, SharedString};
+use std::ops::Range;
+
+use gpui::{AnyElement, App, Context, IntoElement, SharedString, Window};
 use ui::{
     AiSettingItem, AiSettingItemSource, AiSettingItemStatus, IconName, ListItem, ListItemSpacing,
     prelude::*,
 };
 
+use crate::AgentPanel;
 use crate::dx_agent_bridge::DxAgentBridgeSnapshot;
 
 use super::{DxLaunchWorkspaceStatus, agents, metric_row, muted_card, section_title};
 
+mod catalog;
 mod workflow_nodes;
+
+pub(crate) use catalog::DxPluginsCatalogState;
 
 pub(crate) fn render_tools_screen(
     status: Option<&DxLaunchWorkspaceStatus>,
-    cx: &mut App,
+    state: &mut DxPluginsCatalogState,
+    window: &mut Window,
+    cx: &mut Context<AgentPanel>,
 ) -> AnyElement {
     let body = if let Some(status) = status {
         let snapshot = &status.agent_bridge;
         v_flex()
             .gap_2()
             .child(section_title("Workflow Nodes", dx_icon(DxUiIcon::Plugins)))
-            .child(workflow_nodes::render_workflow_node_plugins(snapshot, cx))
+            .child(catalog::render_workflow_node_catalog(
+                snapshot, state, window, cx,
+            ))
             .child(section_title("Browser", dx_icon(DxUiIcon::Browser)))
             .child(trusted_tool_state(
                 snapshot,
@@ -67,6 +77,15 @@ pub(crate) fn render_tools_screen(
                 .child(body),
         )
         .into_any_element()
+}
+
+pub(crate) fn render_workflow_node_catalog_rows(
+    state: &DxPluginsCatalogState,
+    snapshot: Option<&DxAgentBridgeSnapshot>,
+    range: Range<usize>,
+    cx: &mut App,
+) -> Vec<AnyElement> {
+    catalog::render_workflow_node_rows(state, snapshot, range, cx)
 }
 
 fn trusted_tool_state(
