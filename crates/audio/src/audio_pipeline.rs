@@ -156,7 +156,7 @@ impl Audio {
     fn ensure_output_exists(&mut self, output_audio_device: Option<DeviceId>) -> Result<&Mixer> {
         if self.output.is_none() {
             #[cfg(debug_assertions)]
-            log::warn!(
+            log::debug!(
                 "Audio does not sound correct without optimizations. Use a release build to debug audio issues"
             );
 
