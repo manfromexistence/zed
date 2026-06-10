@@ -1,10 +1,15 @@
-use gpui::{AnyElement, App, IntoElement, SharedString};
+use gpui::{AnyElement, App, ClickEvent, IntoElement, SharedString, Window};
 use ui::{Button, ButtonStyle, ContextMenu, IconName, PopoverMenu, Tooltip, prelude::*};
 
 use crate::dx_agent_bridge::{DxConfiguredPluginSummary, DxWorkflowNodeSummary};
 use crate::workflow_node_icons::{workflow_node_element_id, workflow_node_icon_asset_for};
 
-pub(super) fn workflow_node_card(node: &DxWorkflowNodeSummary, cx: &App) -> AnyElement {
+pub(super) fn workflow_node_card(
+    node: &DxWorkflowNodeSummary,
+    selected: bool,
+    on_select: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+    cx: &App,
+) -> AnyElement {
     let icon = workflow_node_icon_asset_for(
         node.icon.as_deref(),
         Some(node.category.as_str()),
@@ -20,8 +25,18 @@ pub(super) fn workflow_node_card(node: &DxWorkflowNodeSummary, cx: &App) -> AnyE
                 .gap_2()
                 .rounded_md()
                 .border_1()
-                .border_color(cx.theme().colors().border_variant)
-                .bg(cx.theme().colors().elevated_surface_background.opacity(0.5))
+                .border_color(if selected {
+                    cx.theme().colors().border
+                } else {
+                    cx.theme().colors().border_variant
+                })
+                .bg(if selected {
+                    cx.theme().colors().element_selected
+                } else {
+                    cx.theme().colors().elevated_surface_background.opacity(0.5)
+                })
+                .hover(|this| this.bg(cx.theme().colors().element_hover))
+                .on_click(on_select)
                 .child(
                     h_flex()
                         .gap_2()

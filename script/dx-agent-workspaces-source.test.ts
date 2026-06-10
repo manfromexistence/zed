@@ -176,11 +176,12 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
   const dxWorkspace = read("crates/agent_ui/src/dx_launch_workspace.rs");
   const screen = read("crates/agent_ui/src/dx_launch_workspace/tools_screen.rs");
   const catalogScreen = read("crates/agent_ui/src/dx_launch_workspace/tools_screen/catalog.rs");
+  const detailScreen = read("crates/agent_ui/src/dx_launch_workspace/tools_screen/details.rs");
   const workflowNodeScreen = read(
     "crates/agent_ui/src/dx_launch_workspace/tools_screen/workflow_nodes.rs",
   );
   const workflowNodeIcons = read("crates/agent_ui/src/workflow_node_icons.rs");
-  const pluginScreenSources = `${screen}\n${catalogScreen}\n${workflowNodeScreen}`;
+  const pluginScreenSources = `${screen}\n${catalogScreen}\n${detailScreen}\n${workflowNodeScreen}`;
   const toolsScreen = read("crates/agent_ui/src/tools_screen.rs");
   const agentUi = read("crates/agent_ui/src/agent_ui.rs");
   const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
@@ -189,6 +190,7 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
   assert.ok(existsSync("crates/agent_ui/src/dx_launch_workspace/tools_screen.rs"));
   assert.match(dxWorkspace, /^mod tools_screen;$/m);
   assert.match(dxWorkspace, /pub\(crate\) use tools_screen::\{/);
+  assert.match(screen, /^mod details;$/m);
   assert.match(dxWorkspace, /DxPluginsCatalogState/);
   assert.match(dxWorkspace, /render_workflow_node_catalog_rows/);
   assert.match(toolsScreen, /AgentPanel::new_tools_workspace\(workspace, window, cx\)/);
@@ -212,8 +214,11 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
   assert.match(catalogScreen, /pub\(crate\) struct DxPluginsCatalogState/);
   assert.match(catalogScreen, /UniformListScrollHandle/);
   assert.match(catalogScreen, /query_editor: Entity<Editor>/);
+  assert.match(catalogScreen, /selected_node_id: Option<String>/);
   assert.match(catalogScreen, /enum PluginCatalogFilter/);
   assert.match(catalogScreen, /category_filter: Option<String>/);
+  assert.match(catalogScreen, /set_selected_node/);
+  assert.match(catalogScreen, /selected_node\(/);
   assert.match(catalogScreen, /filtered_node_indices/);
   assert.match(catalogScreen, /EditorElement::new/);
   assert.match(catalogScreen, /BufferSearchBar/);
@@ -224,6 +229,14 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
   assert.match(catalogScreen, /track_scroll\(&state\.list\)/);
   assert.match(catalogScreen, /vertical_scrollbar_for\(&state\.list, window, cx\)/);
   assert.match(catalogScreen, /MAX_FILTERED_WORKFLOW_NODE_RESULTS/);
+  assert.match(catalogScreen, /render_selected_workflow_node_detail/);
+  assert.match(detailScreen, /render_workflow_node_configuration/);
+  assert.match(detailScreen, /render_workflow_node_contract/);
+  assert.match(detailScreen, /Credential Setup/);
+  assert.match(detailScreen, /DX Agents credential bridge/);
+  assert.match(workflowNodeScreen, /selected: bool/);
+  assert.match(workflowNodeScreen, /on_select: impl Fn/);
+  assert.match(workflowNodeScreen, /hover\(\|this\| this\.bg/);
   assert.match(pluginScreenSources, /render_plugin_config_menu/);
   assert.match(pluginScreenSources, /dx\.serializer\.machine/);
   assert.match(agentUi, /^mod workflow_node_icons;$/m);
@@ -250,6 +263,18 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
   assert.match(screen, /No approved Computer tool receipt is available yet\./);
   assert.match(screen, /MCP tool receipts are pending trusted bridge approval\./);
   assert.match(pluginScreenSources, /ListItem::new/);
+  for (const [name, source] of [
+    ["tools_screen.rs", screen],
+    ["tools_screen/catalog.rs", catalogScreen],
+    ["tools_screen/details.rs", detailScreen],
+    ["tools_screen/workflow_nodes.rs", workflowNodeScreen],
+  ] as const) {
+    assert.doesNotMatch(
+      source,
+      /\b(?:read_json|read_first_json|latest_receipts)\b|std::fs|serde_json::from_(?:slice|str)|read_to_end/,
+      `${name} must render from bridge snapshots instead of direct receipt IO`,
+    );
+  }
 
   for (const field of [
     "workflow_node_catalog",

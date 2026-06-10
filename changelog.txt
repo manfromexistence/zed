@@ -1,3 +1,28 @@
+[2026-06-11] - DX Plugins Selected Detail and Safe Composer Cache
+
+CHANGED:
+- The Plugins workspace now renders a persistent selected workflow-node detail pane beside the virtualized catalog, showing credential setup, declared credential types, serializer contract, runtime/trust/source, ports, parameter counts, and dynamic option counts from `dx.serializer.machine` metadata.
+- Workflow-node cards are selectable GPUI cards with selected styling while preserving the existing SVGL/DX icon rendering path and virtualized list behavior.
+- Configured plugin composer shortcuts now come from an AgentPanel-owned background cache that syncs safe options into the active ThreadView instead of reading bridge receipts during chat composer render.
+
+HARDENED:
+- Configured plugin composer options are filtered through the trusted tool bridge, requiring receipt-authorized policy, a trusted action id, valid action/receipt identifiers, and usable plugin/credential states before they become prompt options.
+- ThreadView now renders only cached configured plugin options and has a source guard preventing bridge snapshot, receipt-root, or direct filesystem reads in the composer strip.
+- Workflow-node parser defaults now fail closed for missing source package, credential status, and configured-plugin action id metadata.
+- The runtime-status artifact label no longer references `inspirations/`, keeping the DX plugin source scan free of forbidden upstream/source-root names.
+
+PASSED:
+- `rustfmt crates/agent_ui/src/agent_panel.rs crates/agent_ui/src/conversation_view/thread_view.rs crates/agent_ui/src/dx_agent_bridge/workflow_nodes.rs crates/agent_ui/src/dx_launch_workspace.rs crates/agent_ui/src/dx_launch_workspace/tools_screen.rs crates/agent_ui/src/dx_launch_workspace/tools_screen/catalog.rs crates/agent_ui/src/dx_launch_workspace/tools_screen/details.rs crates/agent_ui/src/dx_launch_workspace/tools_screen/workflow_nodes.rs`
+- `rustfmt crates/agent/src/tools/agent_plugin_runtime_status_tool.rs`
+- `node --test script\dx-agent-workspaces-source.test.ts script\dx-agent-thread-view-source.test.ts script\dx-agent-bridge-source.test.ts script\dx-plugin-catalog-source.test.ts`
+- Focused forbidden-upstream scan over `crates/agent/src/tools`, `crates/agent_ui/src/dx_agent_bridge`, and `crates/agent_ui/src/dx_launch_workspace/tools_screen`.
+- Focused render-path IO scan over `crates/agent_ui/src/dx_launch_workspace/tools_screen`.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)"` across touched source, guard, todo, changelog, and DX files returned no real conflict markers.
+- `git diff --check`
+
+NOTES:
+- Cargo, `just run`, local servers, native launch, and visual runtime proof remain deferred by instruction.
+
 [2026-06-10] - DX Plugins Extension-Style Catalog and SVGL Icons
 
 CHANGED:

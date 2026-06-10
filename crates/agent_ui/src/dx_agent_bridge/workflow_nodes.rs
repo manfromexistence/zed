@@ -49,7 +49,7 @@ pub(crate) struct DxWorkflowNodeSummary {
     pub configure_action: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub(crate) struct DxConfiguredPluginSummary {
     pub id: String,
     pub node_id: String,
@@ -153,16 +153,9 @@ fn workflow_node_row(value: &Value) -> Option<DxWorkflowNodeSummary> {
         trust_status: display_string_field(value, &["trust_status"])
             .unwrap_or_else(|| "unverified".to_string()),
         source_package: display_string_field(value, &["source_package"])
-            .unwrap_or_else(|| "workflow-node-catalog".to_string()),
-        credential_status: display_string_field(value, &["credential_status"]).unwrap_or_else(
-            || {
-                if credential_types.is_empty() || configured {
-                    "not_required".to_string()
-                } else {
-                    "needs_configuration".to_string()
-                }
-            },
-        ),
+            .unwrap_or_else(|| "unknown_source_package".to_string()),
+        credential_status: display_string_field(value, &["credential_status"])
+            .unwrap_or_else(|| "missing_credential_metadata".to_string()),
         credential_types,
         input_count: usize_field(value, &["input_count"]).unwrap_or_default(),
         output_count: usize_field(value, &["output_count"]).unwrap_or_default(),
@@ -200,7 +193,8 @@ fn configured_plugin_row(value: &Value) -> Option<DxConfiguredPluginSummary> {
             .unwrap_or_else(|| "missing_receipt_field".to_string()),
         run_command: display_string_field(value, &["run_command"])
             .unwrap_or_else(|| "missing_run_command".to_string()),
-        action_id: display_string_field(value, &["action_id"]).unwrap_or_else(|| id.clone()),
+        action_id: display_string_field(value, &["action_id"])
+            .unwrap_or_else(|| "missing_action_id".to_string()),
         receipt_id: display_string_field(value, &["receipt_id"])
             .unwrap_or_else(|| "missing_receipt_id".to_string()),
         action_label: display_string_field(value, &["action_label"])

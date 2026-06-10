@@ -1,7 +1,7 @@
 use crate::{
     DEFAULT_THREAD_TITLE, SelectPermissionGranularity,
     agent_configuration::configure_context_server_modal::default_markdown_style,
-    dx_agent_bridge::{DxConfiguredPluginSummary, dx_agent_bridge_snapshot_for_roots},
+    dx_agent_bridge::DxConfiguredPluginSummary,
     open_abs_path_at_point,
     thread_metadata_store::{ThreadId, ThreadMetadataStore},
     workflow_node_icons::{
@@ -642,6 +642,7 @@ pub struct ThreadView {
     flow_voice_runtime: FlowSpeechRuntime,
     flow_recording_session: Option<FlowRecordingSession>,
     flow_speech_cancellation: Option<FlowSpeechCancellation>,
+    configured_plugins: Vec<DxConfiguredPluginSummary>,
     #[cfg(feature = "audio")]
     flow_playback_handle: Option<AudioPlaybackHandle>,
     flow_transcription_id: u64,
@@ -1000,6 +1001,7 @@ impl ThreadView {
             flow_voice_runtime: flow_voice_runtime.clone(),
             flow_recording_session: None,
             flow_speech_cancellation: None,
+            configured_plugins: Vec::new(),
             #[cfg(feature = "audio")]
             flow_playback_handle: None,
             flow_transcription_id: 0,
@@ -4020,22 +4022,19 @@ impl ThreadView {
             .into_any()
     }
 
-    fn render_configured_plugin_strip(&self, cx: &mut Context<Self>) -> AnyElement {
-        let workspace_roots = self
-            .workspace
-            .upgrade()
-            .map(|workspace| {
-                workspace
-                    .read(cx)
-                    .root_paths(cx)
-                    .into_iter()
-                    .map(|path| path.display().to_string())
-                    .collect::<Vec<_>>()
-            })
-            .unwrap_or_default();
-        let snapshot = dx_agent_bridge_snapshot_for_roots(cx, &workspace_roots);
-        let configured_plugins = &snapshot.workflow_node_catalog.configured_plugins;
+    pub(crate) fn set_configured_plugin_options(
+        &mut self,
+        configured_plugins: Vec<DxConfiguredPluginSummary>,
+        cx: &mut Context<Self>,
+    ) {
+        if self.configured_plugins != configured_plugins {
+            self.configured_plugins = configured_plugins;
+            cx.notify();
+        }
+    }
 
+    fn render_configured_plugin_strip(&self, _cx: &mut Context<Self>) -> AnyElement {
+        let configured_plugins = &self.configured_plugins;
         if configured_plugins.is_empty() {
             return div().into_any_element();
         }

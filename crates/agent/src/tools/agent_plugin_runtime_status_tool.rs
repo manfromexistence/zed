@@ -8452,7 +8452,7 @@ fn validation_matrix() -> Value {
             ".codex-*.log",
             "models/",
             "tools/",
-            "inspirations/"
+            "reference-captures/"
         ]
     })
 }

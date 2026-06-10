@@ -14,7 +14,9 @@ use ui::{
 };
 
 use crate::AgentPanel;
-use crate::dx_agent_bridge::{DxAgentBridgeSnapshot, DxWorkflowNodeCatalogSummary};
+use crate::dx_agent_bridge::{
+    DxAgentBridgeSnapshot, DxWorkflowNodeCatalogSummary, DxWorkflowNodeSummary,
+};
 use crate::workflow_node_icons::workflow_node_element_id;
 
 use super::workflow_nodes;
@@ -35,6 +37,7 @@ pub(crate) struct DxPluginsCatalogState {
     pub(crate) query_editor: Entity<Editor>,
     filter: PluginCatalogFilter,
     category_filter: Option<String>,
+    selected_node_id: Option<String>,
 }
 
 impl DxPluginsCatalogState {
@@ -50,6 +53,7 @@ impl DxPluginsCatalogState {
             query_editor,
             filter: PluginCatalogFilter::All,
             category_filter: None,
+            selected_node_id: None,
         }
     }
 
@@ -86,6 +90,33 @@ impl DxPluginsCatalogState {
             self.scroll_to_top();
             cx.notify();
         }
+    }
+
+    pub(crate) fn set_selected_node(&mut self, node_id: String, cx: &mut Context<AgentPanel>) {
+        if self.selected_node_id.as_deref() != Some(node_id.as_str()) {
+            self.selected_node_id = Some(node_id);
+            cx.notify();
+        }
+    }
+
+    fn selected_node<'a>(
+        &self,
+        catalog: &'a DxWorkflowNodeCatalogSummary,
+        cx: &mut App,
+    ) -> Option<&'a DxWorkflowNodeSummary> {
+        if let Some(selected_node_id) = self.selected_node_id.as_deref() {
+            if let Some(node) = catalog
+                .nodes
+                .iter()
+                .find(|node| node.id.as_str() == selected_node_id)
+            {
+                return Some(node);
+            }
+        }
+
+        self.filtered_node_indices(catalog, cx)
+            .first()
+            .and_then(|index| catalog.nodes.get(*index))
     }
 
     pub(crate) fn filtered_node_indices(
@@ -158,28 +189,46 @@ pub(crate) fn render_workflow_node_catalog(
         .child(render_catalog_summary(catalog, cx))
         .child(render_catalog_controls(state, cx))
         .child(render_category_filter_row(catalog, state, cx))
-        .child(v_flex().w_full().min_h(rems_from_px(420.)).overflow_y_hidden().map(|this| {
-            if catalog.nodes.is_empty() {
-                return this
-                    .child(super::muted_card(
-                        "Run DX JS workflow-node catalog generation to load dx.serializer.machine node metadata.",
-                        cx,
-                    ))
-                    .into_any_element();
-            }
-            if count == 0 {
-                return this.child(render_empty_state(state, cx)).into_any_element();
-            }
+        .child(
+            h_flex()
+                .w_full()
+                .items_start()
+                .gap_3()
+                .child(
+                    v_flex()
+                        .flex_1()
+                        .min_w(rems_from_px(360.))
+                        .min_h(rems_from_px(420.))
+                        .overflow_y_hidden()
+                        .map(|this| {
+                            if catalog.nodes.is_empty() {
+                                return this
+                                    .child(super::muted_card(
+                                        "Run DX JS workflow-node catalog generation to load dx.serializer.machine node metadata.",
+                                        cx,
+                                    ))
+                                    .into_any_element();
+                            }
+                            if count == 0 {
+                                return this.child(render_empty_state(state, cx)).into_any_element();
+                            }
 
-            this.child(
-                uniform_list("dx-workflow-node-plugins", count, cx.processor(AgentPanel::render_tools_workflow_node_rows))
-                    .flex_grow_1()
-                    .pb_4()
-                    .track_scroll(&state.list),
-            )
-            .vertical_scrollbar_for(&state.list, window, cx)
-            .into_any_element()
-        }))
+                            this.child(
+                                uniform_list(
+                                    "dx-workflow-node-plugins",
+                                    count,
+                                    cx.processor(AgentPanel::render_tools_workflow_node_rows),
+                                )
+                                .flex_grow_1()
+                                .pb_4()
+                                .track_scroll(&state.list),
+                            )
+                            .vertical_scrollbar_for(&state.list, window, cx)
+                            .into_any_element()
+                        }),
+                )
+                .child(render_selected_workflow_node_detail(catalog, state, cx)),
+        )
         .when(!catalog.configured_plugins.is_empty(), |this| {
             this.child(super::section_title(
                 "Configured Plugins",
@@ -194,7 +243,7 @@ pub(crate) fn render_workflow_node_rows(
     state: &DxPluginsCatalogState,
     snapshot: Option<&DxAgentBridgeSnapshot>,
     range: Range<usize>,
-    cx: &mut App,
+    cx: &mut Context<AgentPanel>,
 ) -> Vec<AnyElement> {
     let Some(snapshot) = snapshot else {
         return range
@@ -203,6 +252,7 @@ pub(crate) fn render_workflow_node_rows(
     };
     let catalog = &snapshot.workflow_node_catalog;
     let indices = state.filtered_node_indices(catalog, cx);
+    let selected_node_id = state.selected_node(catalog, cx).map(|node| node.id.clone());
     range
         .map(|row_index| {
             let Some(node_index) = indices.get(row_index).copied() else {
@@ -211,9 +261,25 @@ pub(crate) fn render_workflow_node_rows(
             let Some(node) = catalog.nodes.get(node_index) else {
                 return workflow_nodes::missing_workflow_node_card("Missing plugin metadata.");
             };
-            workflow_nodes::workflow_node_card(node, cx)
+            let node_id = node.id.clone();
+            workflow_nodes::workflow_node_card(
+                node,
+                selected_node_id.as_deref() == Some(node.id.as_str()),
+                cx.listener(move |this, _event, _window, cx| {
+                    this.set_plugin_catalog_selected_node(node_id.clone(), cx);
+                }),
+                cx,
+            )
         })
         .collect()
+}
+
+fn render_selected_workflow_node_detail(
+    catalog: &DxWorkflowNodeCatalogSummary,
+    state: &DxPluginsCatalogState,
+    cx: &mut Context<AgentPanel>,
+) -> AnyElement {
+    super::details::render_selected_workflow_node_detail(state.selected_node(catalog, cx), cx)
 }
 
 fn render_catalog_summary(
@@ -266,22 +332,19 @@ fn render_catalog_controls(
                     ToggleButtonSimple::new(
                         "All",
                         cx.listener(|this, _event, _window, cx| {
-                            this.tools_catalog_state
-                                .set_filter(PluginCatalogFilter::All, cx);
+                            this.set_plugin_catalog_filter(PluginCatalogFilter::All, cx);
                         }),
                     ),
                     ToggleButtonSimple::new(
                         "Configured",
                         cx.listener(|this, _event, _window, cx| {
-                            this.tools_catalog_state
-                                .set_filter(PluginCatalogFilter::Configured, cx);
+                            this.set_plugin_catalog_filter(PluginCatalogFilter::Configured, cx);
                         }),
                     ),
                     ToggleButtonSimple::new(
                         "Needs Setup",
                         cx.listener(|this, _event, _window, cx| {
-                            this.tools_catalog_state
-                                .set_filter(PluginCatalogFilter::NeedsSetup, cx);
+                            this.set_plugin_catalog_filter(PluginCatalogFilter::NeedsSetup, cx);
                         }),
                     ),
                 ],
@@ -367,7 +430,7 @@ fn render_category_filter_row(
                 })
                 .toggle_state(state.category_filter.is_none())
                 .on_click(cx.listener(|this, _event, _window, cx| {
-                    this.tools_catalog_state.set_category_filter(None, cx);
+                    this.set_plugin_catalog_category_filter(None, cx);
                 })),
         )
         .children(category_counts.into_iter().map(|(category, count)| {
@@ -385,8 +448,7 @@ fn render_category_filter_row(
                     move |_, cx| Tooltip::with_meta("Indexed category", None, category.clone(), cx)
                 })
                 .on_click(cx.listener(move |this, _event, _window, cx| {
-                    this.tools_catalog_state
-                        .set_category_filter(Some(category.clone()), cx);
+                    this.set_plugin_catalog_category_filter(Some(category.clone()), cx);
                 }))
         }))
         .into_any_element()

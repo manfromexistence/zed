@@ -43,7 +43,7 @@ use crate::ManageProfiles;
 use crate::agent_connection_store::AgentConnectionStore;
 use crate::completion_provider::AgentContextSource;
 use crate::dx_agent_bridge::{
-    DxAgentSettingsSnapshot, dx_agent_bridge_settings_snapshot,
+    DxAgentSettingsSnapshot, DxConfiguredPluginSummary, dx_agent_bridge_settings_snapshot,
     dx_agent_bridge_snapshot_from_settings_for_roots,
 };
 use crate::dx_check_score::{DxCheckScoreInput, check_score_snapshot};
@@ -67,7 +67,7 @@ use crate::dx_launch_status::launch_status_snapshot_for_roots;
 use crate::dx_launch_workspace::{
     DxLaunchRailControls, DxLaunchRailSection, DxLaunchRailSide, DxLaunchRailState,
     DxLaunchWorkspaceStatus, DxPluginsCatalogState, DxSourceRowControl, DxSubagentStatus,
-    DxSubagentStatusRow, has_progress_rail_content, has_sources_rail_content,
+    DxSubagentStatusRow, PluginCatalogFilter, has_progress_rail_content, has_sources_rail_content,
     render_automation_screen, render_connections_screen, render_tools_screen,
     render_workflow_node_catalog_rows, render_workspace_chrome,
 };
@@ -152,6 +152,10 @@ const TERMINAL_AGENT_TELEMETRY_ID: &str = "terminal";
 const MAX_LAST_USED_AGENT_JSON_BYTES: usize = 16 * 1024;
 const DX_LAUNCH_WORKSPACE_STATUS_CACHE_TTL: Duration = Duration::from_secs(30);
 const DX_LAUNCH_WORKSPACE_STATUS_REFRESH_DELAY: Duration = Duration::from_millis(160);
+const DX_CONFIGURED_PLUGIN_OPTIONS_CACHE_TTL: Duration = Duration::from_secs(30);
+const DX_CONFIGURED_PLUGIN_OPTIONS_REFRESH_DELAY: Duration = Duration::from_millis(160);
+const DX_CONFIGURED_PLUGIN_OPTIONS_LIMIT: usize = 12;
+const DX_TRUSTED_TOOL_POLICY: &str = "receipt_authorized_only";
 const MAX_LAST_CREATED_ENTRY_KIND_JSON_BYTES: usize = 4 * 1024;
 const MAX_SERIALIZED_AGENT_PANEL_JSON_BYTES: usize = 256 * 1024;
 const MAX_THREAD_CLIPBOARD_DECODED_BYTES: usize = 16 * 1024 * 1024;
@@ -1198,6 +1202,9 @@ pub struct AgentPanel {
     dx_launch_workspace_status_cache: Option<DxLaunchWorkspaceStatusCache>,
     dx_launch_workspace_status_refresh_pending: bool,
     dx_launch_workspace_status_refresh_generation: u64,
+    configured_plugin_options_cache: Option<DxConfiguredPluginOptionsCache>,
+    configured_plugin_options_refresh_pending: bool,
+    configured_plugin_options_refresh_generation: u64,
     host_kind: AgentPanelHostKind,
     zoomed: bool,
     manual_zoom_override: Option<bool>,
@@ -1240,6 +1247,43 @@ struct DxLaunchWorkspaceStatusInput {
     active_status: SharedString,
     subagent_rows: Vec<DxSubagentStatusRow>,
     agent_settings: DxAgentSettingsSnapshot,
+}
+
+struct DxConfiguredPluginOptionsCache {
+    refreshed_at: Instant,
+    workspace_roots: Vec<String>,
+    plugins: Vec<DxConfiguredPluginSummary>,
+}
+
+struct DxConfiguredPluginOptionsInput {
+    workspace_roots: Vec<String>,
+    agent_settings: DxAgentSettingsSnapshot,
+}
+
+fn valid_configured_plugin_identity(value: &str) -> bool {
+    let value = value.trim();
+    !value.is_empty()
+        && !value.starts_with("missing_")
+        && !matches!(value, "unknown" | "unavailable" | "disabled")
+}
+
+fn usable_configured_plugin_state(value: &str) -> bool {
+    let value = value.trim().to_ascii_lowercase();
+    valid_configured_plugin_identity(&value)
+        && !matches!(
+            value.as_str(),
+            "blocked"
+                | "denied"
+                | "error"
+                | "expired"
+                | "failed"
+                | "invalid"
+                | "needs_configuration"
+                | "pending"
+                | "revoked"
+                | "stale"
+                | "unknown"
+        )
 }
 
 impl DxWorkspaceSnapshot {
@@ -1704,6 +1748,9 @@ impl AgentPanel {
             dx_launch_workspace_status_cache: None,
             dx_launch_workspace_status_refresh_pending: false,
             dx_launch_workspace_status_refresh_generation: 0,
+            configured_plugin_options_cache: None,
+            configured_plugin_options_refresh_pending: false,
+            configured_plugin_options_refresh_generation: 0,
             host_kind: AgentPanelHostKind::Sidechat,
             zoomed: false,
             manual_zoom_override: Some(false),
@@ -1729,6 +1776,7 @@ impl AgentPanel {
         };
 
         panel.ensure_native_agent_connection(cx);
+        panel.refresh_configured_plugin_options(cx);
         panel
     }
 
@@ -4584,6 +4632,8 @@ impl AgentPanel {
                     this._thread_view_subscription =
                         Self::subscribe_to_active_thread_view(&server_view, window, cx);
                     this.observe_active_draft_for_empty_editor(&server_view, cx);
+                    this.sync_configured_plugin_options_to_active_thread(cx);
+                    this.refresh_configured_plugin_options(cx);
                     cx.emit(AgentPanelEvent::ActiveViewChanged);
                     this.serialize(cx);
                     cx.notify();
@@ -4615,6 +4665,8 @@ impl AgentPanel {
                 None
             }
         };
+        self.sync_configured_plugin_options_to_active_thread(cx);
+        self.refresh_configured_plugin_options(cx);
         self.serialize(cx);
     }
 
@@ -6961,6 +7013,30 @@ impl AgentPanel {
         )
     }
 
+    pub(crate) fn set_plugin_catalog_filter(
+        &mut self,
+        filter: PluginCatalogFilter,
+        cx: &mut Context<Self>,
+    ) {
+        self.tools_catalog_state.set_filter(filter, cx);
+    }
+
+    pub(crate) fn set_plugin_catalog_category_filter(
+        &mut self,
+        category: Option<String>,
+        cx: &mut Context<Self>,
+    ) {
+        self.tools_catalog_state.set_category_filter(category, cx);
+    }
+
+    pub(crate) fn set_plugin_catalog_selected_node(
+        &mut self,
+        node_id: String,
+        cx: &mut Context<Self>,
+    ) {
+        self.tools_catalog_state.set_selected_node(node_id, cx);
+    }
+
     fn default_collapsed_dx_launch_rail_sections() -> HashSet<DxLaunchRailSection> {
         let mut collapsed = HashSet::default();
         collapsed.insert(DxLaunchRailSection::SourceTools);
@@ -7528,11 +7604,151 @@ impl AgentPanel {
                         panel.dx_launch_workspace_status_refresh_generation = panel
                             .dx_launch_workspace_status_refresh_generation
                             .wrapping_add(1);
+                        panel.configured_plugin_options_cache = None;
+                        panel.configured_plugin_options_refresh_pending = false;
+                        panel.configured_plugin_options_refresh_generation = panel
+                            .configured_plugin_options_refresh_generation
+                            .wrapping_add(1);
+                        panel.sync_configured_plugin_options_to_active_thread(cx);
+                        panel.refresh_configured_plugin_options(cx);
                         cx.notify();
                     }
                 });
             }
         });
+    }
+
+    fn refresh_configured_plugin_options(&mut self, cx: &mut Context<Self>) {
+        let workspace_roots = &self.dx_workspace_snapshot.roots;
+        let cache_is_fresh = self
+            .configured_plugin_options_cache
+            .as_ref()
+            .is_some_and(|cache| {
+                cache.workspace_roots.as_slice() == workspace_roots.as_slice()
+                    && cache.refreshed_at.elapsed() <= DX_CONFIGURED_PLUGIN_OPTIONS_CACHE_TTL
+            });
+
+        if cache_is_fresh {
+            self.sync_configured_plugin_options_to_active_thread(cx);
+            return;
+        }
+
+        if self.configured_plugin_options_refresh_pending {
+            self.sync_configured_plugin_options_to_active_thread(cx);
+            return;
+        }
+
+        self.configured_plugin_options_refresh_pending = true;
+        self.configured_plugin_options_refresh_generation = self
+            .configured_plugin_options_refresh_generation
+            .wrapping_add(1);
+        let generation = self.configured_plugin_options_refresh_generation;
+
+        cx.spawn(async move |panel, cx| {
+            cx.background_executor()
+                .timer(DX_CONFIGURED_PLUGIN_OPTIONS_REFRESH_DELAY)
+                .await;
+            let Some(input) = panel
+                .update(cx, |panel, cx| {
+                    if panel.configured_plugin_options_refresh_generation != generation {
+                        panel.configured_plugin_options_refresh_pending = false;
+                        return None;
+                    }
+
+                    Some(panel.configured_plugin_options_input(cx))
+                })
+                .ok()
+                .flatten()
+            else {
+                return;
+            };
+
+            let workspace_roots = input.workspace_roots.clone();
+            let plugins = cx
+                .background_spawn(async move {
+                    let snapshot = dx_agent_bridge_snapshot_from_settings_for_roots(
+                        input.agent_settings,
+                        &input.workspace_roots,
+                    );
+                    let trusted_tool_ids = snapshot
+                        .trusted_tool_bridge
+                        .trusted_tool_ids
+                        .iter()
+                        .cloned()
+                        .collect::<HashSet<_>>();
+
+                    if !snapshot.trusted_tool_bridge.present
+                        || snapshot.trusted_tool_bridge.trust_policy != DX_TRUSTED_TOOL_POLICY
+                    {
+                        return Vec::new();
+                    }
+
+                    snapshot
+                        .workflow_node_catalog
+                        .configured_plugins
+                        .into_iter()
+                        .filter(|plugin| {
+                            Self::configured_plugin_option_is_authorized(plugin, &trusted_tool_ids)
+                        })
+                        .take(DX_CONFIGURED_PLUGIN_OPTIONS_LIMIT)
+                        .collect::<Vec<_>>()
+                })
+                .await;
+
+            panel
+                .update(cx, |panel, cx| {
+                    if panel.configured_plugin_options_refresh_generation != generation {
+                        panel.configured_plugin_options_refresh_pending = false;
+                        return;
+                    }
+
+                    panel.configured_plugin_options_cache = Some(DxConfiguredPluginOptionsCache {
+                        refreshed_at: Instant::now(),
+                        workspace_roots,
+                        plugins,
+                    });
+                    panel.configured_plugin_options_refresh_pending = false;
+                    panel.sync_configured_plugin_options_to_active_thread(cx);
+                    cx.notify();
+                })
+                .ok();
+        })
+        .detach();
+    }
+
+    fn configured_plugin_options_input(
+        &self,
+        cx: &Context<Self>,
+    ) -> DxConfiguredPluginOptionsInput {
+        DxConfiguredPluginOptionsInput {
+            workspace_roots: self.dx_workspace_snapshot.roots.clone(),
+            agent_settings: dx_agent_bridge_settings_snapshot(cx),
+        }
+    }
+
+    fn sync_configured_plugin_options_to_active_thread(&self, cx: &mut Context<Self>) {
+        let plugins = self
+            .configured_plugin_options_cache
+            .as_ref()
+            .map(|cache| cache.plugins.clone())
+            .unwrap_or_default();
+
+        if let Some(active_thread) = self.active_visible_thread_view(cx) {
+            active_thread.update(cx, |thread_view, cx| {
+                thread_view.set_configured_plugin_options(plugins, cx);
+            });
+        }
+    }
+
+    fn configured_plugin_option_is_authorized(
+        plugin: &DxConfiguredPluginSummary,
+        trusted_tool_ids: &HashSet<String>,
+    ) -> bool {
+        trusted_tool_ids.contains(&plugin.action_id)
+            && valid_configured_plugin_identity(&plugin.action_id)
+            && valid_configured_plugin_identity(&plugin.receipt_id)
+            && usable_configured_plugin_state(&plugin.status)
+            && usable_configured_plugin_state(&plugin.credential_status)
     }
 
     fn cached_dx_launch_workspace_status(

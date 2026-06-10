@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use gpui::{AnyElement, App, Context, IntoElement, SharedString, Window};
+use gpui::{AnyElement, Context, IntoElement, SharedString, Window};
 use ui::{
     AiSettingItem, AiSettingItemSource, AiSettingItemStatus, IconName, ListItem, ListItemSpacing,
     prelude::*,
@@ -12,9 +12,10 @@ use crate::dx_agent_bridge::DxAgentBridgeSnapshot;
 use super::{DxLaunchWorkspaceStatus, agents, metric_row, muted_card, section_title};
 
 mod catalog;
+mod details;
 mod workflow_nodes;
 
-pub(crate) use catalog::DxPluginsCatalogState;
+pub(crate) use catalog::{DxPluginsCatalogState, PluginCatalogFilter};
 
 pub(crate) fn render_tools_screen(
     status: Option<&DxLaunchWorkspaceStatus>,
@@ -83,7 +84,7 @@ pub(crate) fn render_workflow_node_catalog_rows(
     state: &DxPluginsCatalogState,
     snapshot: Option<&DxAgentBridgeSnapshot>,
     range: Range<usize>,
-    cx: &mut App,
+    cx: &mut Context<AgentPanel>,
 ) -> Vec<AnyElement> {
     catalog::render_workflow_node_rows(state, snapshot, range, cx)
 }

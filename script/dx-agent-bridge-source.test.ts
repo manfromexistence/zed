@@ -291,6 +291,14 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.match(workflowNodes, /redact_action_scalar/);
   assert.match(workflowNodes, /credential_status/);
   assert.match(workflowNodes, /credential_types/);
+  assert.match(workflowNodes, /missing_credential_metadata/);
+  assert.match(workflowNodes, /unknown_source_package/);
+  assert.match(workflowNodes, /missing_action_id/);
+  assert.doesNotMatch(workflowNodes, /credential_types\.is_empty\(\)\s*\|\|\s*configured/);
+  assert.doesNotMatch(
+    workflowNodes,
+    /action_id:[\s\S]{0,120}unwrap_or_else\(\|\| id\.clone\(\)\)/,
+  );
   assert.doesNotMatch(workflowNodes, /api_key|access_token|refresh_token|client_secret|password/i);
   assert.match(runtime, /#\[path = "runtime_tests\.rs"\]/);
   assert.match(runtimeConnectionTests, /social_connection_cards_parse_auth_health_and_receipt_history/);

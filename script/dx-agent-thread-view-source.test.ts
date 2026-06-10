@@ -4,6 +4,7 @@ import test from "node:test";
 
 const sourcePath = "crates/agent_ui/src/conversation_view/thread_view.rs";
 const source = readFileSync(sourcePath, "utf8");
+const agentPanelSource = readFileSync("crates/agent_ui/src/agent_panel.rs", "utf8");
 const workflowNodeIconSource = readFileSync("crates/agent_ui/src/workflow_node_icons.rs", "utf8");
 
 const cycleThinkingEffort = sliceBetween(
@@ -37,6 +38,15 @@ test("thread view source guard stays scoped to production thread view code", () 
 });
 
 test("configured workflow-node plugins render above the chat input from bridge receipts", () => {
+  const threadViewStruct = sliceBetween(
+    "pub struct ThreadView {",
+    "\n}\n\n#[derive(Clone)]\npub(crate) struct AgentResponseAnchor",
+  );
+  const panelRefreshMethod = sliceBetweenIn(
+    agentPanelSource,
+    "fn refresh_configured_plugin_options(",
+    "\n    fn configured_plugin_options_input(",
+  );
   const renderMessageEditor = sliceBetween(
     "pub(crate) fn render_message_editor(",
     "\n    fn render_profile_option_slots(",
@@ -57,8 +67,21 @@ test("configured workflow-node plugins render above the chat input from bridge r
     "self.message_editor.clone()",
     "configured plugins must appear above the chat input",
   );
-  assert.match(pluginStrip, /dx_agent_bridge_snapshot_for_roots/);
-  assert.match(pluginStrip, /workflow_node_catalog\.configured_plugins/);
+  assert.match(threadViewStruct, /configured_plugins: Vec<DxConfiguredPluginSummary>/);
+  assert.match(source, /configured_plugins: Vec::new\(\)/);
+  assert.match(source, /pub\(crate\) fn set_configured_plugin_options\(/);
+  assert.match(source, /self\.configured_plugins = configured_plugins/);
+  assert.match(agentPanelSource, /configured_plugin_options_cache: Option<DxConfiguredPluginOptionsCache>/);
+  assert.match(agentPanelSource, /refresh_configured_plugin_options\(cx\)/);
+  assert.match(agentPanelSource, /sync_configured_plugin_options_to_active_thread\(cx\)/);
+  assert.match(panelRefreshMethod, /dx_agent_bridge_snapshot_from_settings_for_roots/);
+  assert.match(panelRefreshMethod, /workflow_node_catalog\s*\.\s*configured_plugins/);
+  assert.match(panelRefreshMethod, /trusted_tool_bridge\s*\.\s*trusted_tool_ids/);
+  assert.doesNotMatch(pluginStrip, /dx_agent_bridge_snapshot_for_roots/);
+  assert.doesNotMatch(pluginStrip, /dx_agent_bridge_snapshot_from_settings_for_roots/);
+  assert.doesNotMatch(pluginStrip, /root_paths\(cx\)/);
+  assert.doesNotMatch(pluginStrip, /\bread_(?:first_)?json\b|\blatest_receipts\b|\breceipt_root\b|std::fs|serde_json::from_/);
+  assert.match(pluginStrip, /self\.configured_plugins/);
   assert.match(pluginStrip, /MAX_VISIBLE_CONFIGURED_PLUGIN_OPTIONS/);
   assert.match(pluginStrip, /ButtonLike::new/);
   assert.match(pluginStrip, /render_configured_plugin_menu/);
@@ -79,13 +102,17 @@ test("configured workflow-node plugins render above the chat input from bridge r
 });
 
 function sliceBetween(start: string, end: string): string {
-  const startIndex = source.indexOf(start);
+  return sliceBetweenIn(source, start, end);
+}
+
+function sliceBetweenIn(haystack: string, start: string, end: string): string {
+  const startIndex = haystack.indexOf(start);
   assert.notEqual(startIndex, -1, `expected ${start}`);
 
-  const endIndex = source.indexOf(end, startIndex + start.length);
+  const endIndex = haystack.indexOf(end, startIndex + start.length);
   assert.notEqual(endIndex, -1, `expected ${end} after ${start}`);
 
-  return source.slice(startIndex, endIndex);
+  return haystack.slice(startIndex, endIndex);
 }
 
 function assertBefore(
