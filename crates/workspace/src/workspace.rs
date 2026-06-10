@@ -5887,6 +5887,7 @@ impl Workspace {
         let new_pane = self.add_pane(window, cx);
         self.center
             .split(&pane_to_split, &new_pane, split_direction, cx);
+        Audio::play_dx_sound(DxSoundEvent::ActionConfirm, cx);
         cx.notify();
         new_pane
     }
@@ -5906,6 +5907,7 @@ impl Workspace {
             pane.add_item(item, true, true, None, window, cx)
         });
         self.center.split(&pane, &new_pane, direction, cx);
+        Audio::play_dx_sound(DxSoundEvent::ActionConfirm, cx);
         cx.notify();
     }
 

@@ -203,7 +203,7 @@ impl Audio {
                 .context("Could not get output mixer")
                 .log_err()?;
 
-            output_mixer.add(source);
+            output_mixer.add(source.amplify(event.gain()));
             Some(())
         });
     }

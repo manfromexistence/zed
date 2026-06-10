@@ -1,4 +1,5 @@
 use super::*;
+use audio::{Audio, DxSoundEvent};
 
 const ORDERED_LIST_MAX_MARKER_LEN: usize = 16;
 
@@ -547,6 +548,7 @@ impl Editor {
             }
             if should_queue_power_mode_effect {
                 this.queue_power_mode_insert_effect(cx);
+                Audio::play_dx_sound(DxSoundEvent::TypingKey, cx);
             }
         });
     }

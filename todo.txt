@@ -1,5 +1,5 @@
 IN PROGRESS:
-- None. Check panel readability/scrolling and AI composer icon polish are build-verified.
+- None. DX interaction sounds are source-verified at 10% gain.
 
 PENDING:
 - Add user-facing DX sound preferences before enabling hot-path typing and hover playback.
@@ -9,6 +9,7 @@ PENDING:
 - Continue the DX/Zed ecosystem integration with bounded source-only slices for remaining receipt scans, semantic icon hotspots, and governed runtime proof when explicitly authorized.
 
 COMPLETED:
+- DX interaction sound wiring is source-verified: DX sounds now play at 10% gain, typing is enabled through the editor's accepted non-bulk input path, delete/backspace use the soft delete sound, sidebar chat drag start/drop/reorder use watch/magic sounds, and panel/side split state changes use semantic confirm/close sounds. Runtime/native proof, Cargo, build, and `just run` remain deferred.
 - Check panel readability and AI composer polish are build-verified: Finding rows now keep real text width instead of truncating to `...`, Check tabs fill the panel width, the Check body owns a constrained scrollbar host, the AI screen uses the Sparkle icon, and the composer voice control is mic-only with muted idle coloring and no stale read-aloud wrapper.
 - DX sound playback wiring is source-verified: semantic `DxSoundEvent` playback now maps bundled sounds through the audio cache with per-event cooldowns, screen/panel/sidebar/agent completion surfaces use semantic sounds, and source guards keep assets, policies, and call sites in sync. Runtime/native proof, Cargo, build, and `just run` remain deferred.
 - DX sound asset foundation is source-verified: selected short UI, typing, delete, drag/drop, and magic sounds from `F:\Downloads` are converted into normalized bundled WAV assets under `assets\sounds`, and `audio::Sound` exposes semantic DX variants for future settings-gated playback. Runtime/native proof, trigger wiring, Cargo, build, and `just run` remain deferred.

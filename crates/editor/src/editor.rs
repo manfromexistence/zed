@@ -72,6 +72,7 @@ mod rewrap;
 mod selection;
 
 pub(crate) use actions::*;
+use audio::{Audio, DxSoundEvent};
 pub use clipboard::ClipboardSelection;
 pub use code_actions::CodeActionProvider;
 pub use completions::CompletionProvider;
@@ -5043,6 +5044,7 @@ impl Editor {
             linked_edits.apply_with_left_expansion(cx);
             this.refresh_edit_prediction(true, false, window, cx);
             refresh_linked_ranges(this, window, cx);
+            Audio::play_dx_sound(DxSoundEvent::DeleteSoft, cx);
         });
     }
 
@@ -5066,6 +5068,7 @@ impl Editor {
             linked_edits.apply(cx);
             this.refresh_edit_prediction(true, false, window, cx);
             refresh_linked_ranges(this, window, cx);
+            Audio::play_dx_sound(DxSoundEvent::DeleteSoft, cx);
         });
     }
 

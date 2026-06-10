@@ -9,6 +9,9 @@ const dxSounds = existsSync("crates/audio/src/dx_sounds.rs")
   : "";
 const sidebar = readFileSync("crates/sidebar/src/sidebar.rs", "utf8");
 const workspace = readFileSync("crates/workspace/src/workspace.rs", "utf8");
+const dock = readFileSync("crates/workspace/src/dock.rs", "utf8");
+const editor = readFileSync("crates/editor/src/editor.rs", "utf8");
+const editorInput = readFileSync("crates/editor/src/input.rs", "utf8");
 const agentPanel = readFileSync("crates/agent_ui/src/agent_panel.rs", "utf8");
 const conversationView = readFileSync(
   "crates/agent_ui/src/conversation_view.rs",
@@ -16,6 +19,7 @@ const conversationView = readFileSync(
 );
 const sidebarCargo = readFileSync("crates/sidebar/Cargo.toml", "utf8");
 const workspaceCargo = readFileSync("crates/workspace/Cargo.toml", "utf8");
+const editorCargo = readFileSync("crates/editor/Cargo.toml", "utf8");
 
 const requiredAssets = [
   "dx_action_confirm",
@@ -70,21 +74,30 @@ test("DX sound playback uses semantic events with throttling", () => {
   assert.match(audio, /pub use dx_sounds::\{DxSoundEvent, DxSoundPolicy\};/);
   assert.match(dxSounds, /pub enum DxSoundEvent/);
   assert.match(dxSounds, /pub enum DxSoundPolicy/);
-  assert.match(dxSounds, /TypingKey[\s\S]+DxSoundPolicy::ExplicitOptIn/);
+  assert.doesNotMatch(dxSounds, /Self::TypingKey \| Self::HoverSoft => DxSoundPolicy::ExplicitOptIn/);
   assert.match(dxSounds, /HoverSoft[\s\S]+DxSoundPolicy::ExplicitOptIn/);
+  assert.match(dxSounds, /pub\(crate\) fn gain\(self\) -> f32 \{\s*0\.10\s*\}/);
   assert.match(audioPipeline, /dx_sound_last_played: HashMap<DxSoundEvent, Instant>/);
   assert.match(audioPipeline, /pub fn play_dx_sound\(event: DxSoundEvent, cx: &mut App\)/);
   assert.match(audioPipeline, /fn should_play_dx_sound/);
+  assert.match(audioPipeline, /source\.amplify\(event\.gain\(\)\)/);
   assert.match(audioPipeline, /event\.cooldown\(\)/);
 });
 
 test("safe UI surfaces use semantic DX sound events", () => {
   assert.match(sidebarCargo, /^audio\.workspace = true$/m);
   assert.match(workspaceCargo, /^audio\.workspace = true$/m);
+  assert.match(editorCargo, /^audio\.workspace = true$/m);
+  assert.match(editorInput, /DxSoundEvent::TypingKey/);
+  assert.match(editorInput, /should_queue_power_mode_effect[\s\S]+Audio::play_dx_sound\(DxSoundEvent::TypingKey, cx\)/);
+  assert.match(editor, /DxSoundEvent::DeleteSoft/);
   assert.match(sidebar, /DxSoundEvent::DragWatchTick/);
   assert.match(sidebar, /DxSoundEvent::ChatDropMagic/);
+  assert.match(sidebar, /DxSoundEvent::MagicHeal/);
   assert.match(sidebar, /DxSoundEvent::DeleteSoft/);
   assert.match(workspace, /DxSoundEvent::ScreenLaunch/);
+  assert.match(workspace, /DxSoundEvent::ActionConfirm/);
+  assert.match(dock, /DxSoundEvent::ActionConfirm/);
   assert.match(workspace, /DxSoundEvent::PanelOpen/);
   assert.match(workspace, /DxSoundEvent::PanelClose/);
   assert.match(agentPanel, /DxSoundEvent::SuccessChime/);

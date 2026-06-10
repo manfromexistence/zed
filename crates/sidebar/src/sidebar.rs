@@ -6202,7 +6202,7 @@ impl Sidebar {
         self.manual_thread_order = ordered_thread_ids;
         self.thread_sort_mode = SidebarThreadSortMode::Manual;
         self.update_entries(cx);
-        Audio::play_dx_sound(DxSoundEvent::DragWatchTick, cx);
+        Audio::play_dx_sound(DxSoundEvent::MagicHeal, cx);
         self.serialize(cx);
         cx.notify();
     }
@@ -6967,6 +6967,7 @@ impl Sidebar {
                 ))
             })
             .on_drag(dragged_thread, |dragged, _, _, cx| {
+                Audio::play_dx_sound(DxSoundEvent::DragWatchTick, cx);
                 cx.new(|_| dragged.clone())
             })
             .child(thread_item)

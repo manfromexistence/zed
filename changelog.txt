@@ -1,3 +1,17 @@
+[2026-06-10] - DX Interaction Sound Wiring
+
+CHANGED:
+- `crates\audio\src\dx_sounds.rs` and `audio_pipeline.rs` now apply a 10% gain to all semantic DX sounds while preserving normal Zed sound volume.
+- `crates\editor\src\input.rs`, `editor.rs`, and `Cargo.toml` wire typing sounds through accepted non-bulk editor input and soft delete sounds through backspace/delete actions.
+- `crates\sidebar\src\sidebar.rs`, `crates\workspace\src\dock.rs`, and `workspace.rs` add semantic sounds for sidebar chat drag start/drop/reorder and panel/pane split or stack interactions.
+
+PASSED:
+- `node --test script\dx-sound-source.test.ts`
+- `rustfmt --edition 2024 crates\audio\src\dx_sounds.rs crates\audio\src\audio_pipeline.rs crates\editor\src\input.rs crates\editor\src\editor.rs crates\sidebar\src\sidebar.rs crates\workspace\src\dock.rs crates\workspace\src\workspace.rs`
+
+NOTES:
+- Source-only pass. Cargo, build, runtime native proof, and `just run` remain deferred by instruction.
+
 [2026-06-10] - Check Panel And AI Composer Polish
 
 FIXED:

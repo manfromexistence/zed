@@ -975,6 +975,7 @@ impl Dock {
         if let Some(active_panel) = self.active_panel() {
             active_panel.panel_focus_handle(cx).focus(window, cx);
         }
+        Audio::play_dx_sound(DxSoundEvent::ActionConfirm, cx);
         self.persist_stack_state(cx);
         cx.notify();
         true
@@ -1032,6 +1033,7 @@ impl Dock {
         }
 
         self.persist_stack_state(cx);
+        Audio::play_dx_sound(DxSoundEvent::PanelClose, cx);
         cx.notify();
         true
     }

@@ -52,9 +52,13 @@ impl DxSoundEvent {
 
     pub(crate) fn policy(self) -> DxSoundPolicy {
         match self {
-            Self::TypingKey | Self::HoverSoft => DxSoundPolicy::ExplicitOptIn,
+            Self::HoverSoft => DxSoundPolicy::ExplicitOptIn,
             _ => DxSoundPolicy::EnabledByDefault,
         }
+    }
+
+    pub(crate) fn gain(self) -> f32 {
+        0.10
     }
 
     pub(crate) fn cooldown(self) -> Duration {
