@@ -1562,6 +1562,12 @@ struct FlowSpeechProcessTreeGuard {
     job: windows::Win32::Foundation::HANDLE,
 }
 
+#[cfg(target_os = "windows")]
+// SAFETY: Windows job object handles are process-owned kernel handles that may
+// be closed or terminated from any thread. This guard has unique ownership of
+// the handle and never exposes references to the raw handle.
+unsafe impl Send for FlowSpeechProcessTreeGuard {}
+
 #[cfg(not(target_os = "windows"))]
 struct FlowSpeechProcessTreeGuard;
 
