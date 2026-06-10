@@ -1,7 +1,9 @@
 IN PROGRESS:
-- None. Latest Dx branding/storage/sound polish is build-verified.
+- None. Latest Agent voice/workspace action stability pass is source-verified.
 
 PENDING:
+- Add a persistent Flow STT host/daemon integration so transcription can avoid per-clip process/model startup and match the cached Kokoro TTS path.
+- Run governed runtime proof for the response copy icon, animated voice loader, warmed TTS path, sidebar Plugins/Connections/Automations routing, and Forge Packages tab when `just run` is explicitly authorized.
 - Run governed runtime proof for the DX Agent prompt identity and Copy Agent Response action after the next authorized launch.
 - Add user-facing DX sound preferences before enabling hot-path typing and hover playback.
 - Run governed runtime proof for the sidebar screen/panel action routing, Project Panel chrome cleanup, and Sparkles/Dx Agent branding polish when `just run` is explicitly requested.
@@ -11,6 +13,7 @@ PENDING:
 - Continue the DX/Zed ecosystem integration with bounded source-only slices for remaining receipt scans, semantic icon hotspots, and governed runtime proof when explicitly authorized.
 
 COMPLETED:
+- Agent voice/workspace action stability is source-verified: response copy now uses the normal muted response-row icon treatment, voice busy states use the animated DX loading glyph, Kokoro TTS prewarms its cached server after voice readiness detection, sidebar Plugins/Connections/Automations dispatch real workspace actions, and Forge tabs use stable click-only GPUI routing.
 - Voice runtime J6 validation is build-verified: repaired the cached Kokoro TTS server's Windows process-tree `Send` boundary, confirmed the touched speech runtime formats cleanly, and authorized `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run` built and launched the editor successfully.
 - DX Agent prompt/copy polish is source-verified: native Agent display identity now says DX Agent, both native system prompt templates introduce the assistant as the DX coding agent running inside the DX editor, the Agent response action row exposes a real Copy Agent Response button backed by the shared clipboard component, and optional startup auth/GPU-driver probes no longer emit misleading app-error logs.
 - Dx sidebar/action polish is source-verified: visible native-agent icons now use Sparkles in Agent, sidebar, picker, setup, thread, and model surfaces; visible retry/import copy now says Dx; sidebar thread filters use the filter icon and selected thread rows use theme selected/border tokens; Project Panel media/tree sticky rows no longer inject stray close controls; top sidebar screen shortcuts route through the workspace screen system; Font/Media/UI titlebar buttons dispatch through the active workspace focus path; and the sign-in menu no longer exposes the duplicate Settings item.

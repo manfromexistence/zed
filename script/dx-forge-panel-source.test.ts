@@ -723,7 +723,7 @@ test("Forge panel uses workflow tabs with Git-style selectable rows", () => {
   assert.match(tabs, /TabPosition/);
   assert.match(tabs, /TabBar::new\(\("dx-forge-tab-bar", panel_id\)\)/);
   const forgeTabBody = extractRustFunction(tabs, "forge_tab");
-  assert.match(forgeTabBody, /Tab::new\(\(id, panel_id\)\)/);
+  assert.match(forgeTabBody, /Tab::new\(id\)/);
   assert.match(forgeTabBody, /\.fill_available_width\(\)/);
   assert.match(forgeTabBody, /\.position\(tab_position\(tab, active_tab\)\)/);
   assert.match(forgeTabBody, /\.toggle_state\(selected\)/);
@@ -732,8 +732,8 @@ test("Forge panel uses workflow tabs with Git-style selectable rows", () => {
   assert.match(forgeTabBody, /let title = format!\("\{label\} \(\{count\}\)"\)/);
   assert.doesNotMatch(forgeTabBody, /\.end_slot\(count_/);
   assert.doesNotMatch(forgeTabBody, /focus_panel\(window, cx\)/);
-  assert.match(forgeTabBody, /\.on_mouse_down\(MouseButton::Left/);
-  assert.match(forgeTabBody, /\.on_mouse_up\(MouseButton::Left/);
+  assert.doesNotMatch(forgeTabBody, /\.on_mouse_down\(MouseButton::Left/);
+  assert.doesNotMatch(forgeTabBody, /\.on_mouse_up\(MouseButton::Left/);
   assert.match(forgeTabBody, /cx\.stop_propagation\(\);/);
   assert.match(forgeTabBody, /panel\.set_active_tab\(tab, cx\)/);
   const tabPositionBody = extractRustFunction(tabs, "tab_position");

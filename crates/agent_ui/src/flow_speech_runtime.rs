@@ -391,6 +391,10 @@ impl FlowSpeechRuntime {
         tts_runtime.synthesize(text, cancellation)
     }
 
+    pub(crate) fn warm_tts_server(&self) -> Result<()> {
+        self.tts_runtime()?.warm_server()
+    }
+
     pub(crate) fn stt_readiness_summary(&self) -> String {
         match self.ensure_stt_ready() {
             Ok(stt_model) => format!("{} ready", stt_model.label),
@@ -755,6 +759,17 @@ impl KokoroTtsRuntime {
                 self.synthesize_once(text, cancellation)
             }
         }
+    }
+
+    fn warm_server(&self) -> Result<()> {
+        let mut server_guard = self
+            .server
+            .lock()
+            .map_err(|_| anyhow!("Friday Kokoro TTS server lock was poisoned"))?;
+        if server_guard.is_none() {
+            *server_guard = Some(self.start_server()?);
+        }
+        Ok(())
     }
 
     fn synthesize_with_cached_server(

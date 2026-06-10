@@ -1,3 +1,20 @@
+[2026-06-10] - Agent Voice and Workspace Action Stability
+
+FIXED:
+- Agent response copy now uses the same muted icon treatment as the rest of the response action row while still writing the latest response to the clipboard.
+- Agent composer voice busy states now use the animated DX loading glyph for transcription, synthesis, and playback instead of a static icon.
+- Flow Kokoro TTS now prewarms its cached server after voice readiness detection so read-aloud avoids the first-click model startup when the editor has had time to idle.
+- Sidebar Plugins, Connections, and Automations now dispatch real workspace actions instead of silently doing nothing.
+- Forge workflow tabs now use stable GPUI tab ids and click-only routing so the Packages tab no longer travels through the fragile pointer-event path.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\conversation_view\voice_controls.rs crates\agent_ui\src\flow_speech_runtime.rs crates\agent_ui\src\dx_forge_panel\tabs.rs crates\sidebar\src\sidebar.rs`
+- `node --test script\dx-agent-voice-controls-source.test.ts script\dx-agent-connections-ui-source.test.ts script\dx-forge-panel-source.test.ts`
+- `git diff --check`
+
+NOTES:
+- STT still uses the current Flow dictation command path per recorded clip. A real low-latency STT jump needs a persistent Flow STT host/daemon follow-up instead of fake UI state.
+
 [2026-06-10] - Voice Status and Forge Tab Stability
 
 CHANGED:

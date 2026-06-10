@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 use gpui::{Animation, AnimationExt, AnyElement, App, ClickEvent, IntoElement, Window};
 use ui::{
     Button, ButtonCommon, ButtonSize, Clickable, Color, Icon, IconButton, IconButtonShape,
-    IconName, IconSize, Label, LabelSize, Tooltip,
+    IconName, IconSize, Label, LabelSize, Tooltip, dx_loading_icon,
 };
 use ui::{h_flex, prelude::*, v_flex};
 
@@ -251,11 +251,7 @@ pub(super) fn render_voice_recording_panel(
                             .flex_1()
                             .gap_1p5()
                             .items_center()
-                            .child(
-                                Icon::new(status_icon(state.phase))
-                                    .size(IconSize::XSmall)
-                                    .color(tone),
-                            )
+                            .child(render_status_icon(state.phase, tone))
                             .child(
                                 v_flex()
                                     .min_w_0()
@@ -445,10 +441,22 @@ fn format_clock(duration: Duration) -> String {
 fn status_icon(phase: ComposerVoicePhase) -> IconName {
     match phase {
         ComposerVoicePhase::Recording => IconName::Mic,
+        ComposerVoicePhase::Error => IconName::Warning,
         ComposerVoicePhase::Transcribing
         | ComposerVoicePhase::Synthesizing
-        | ComposerVoicePhase::Speaking => dx_icon(DxUiIcon::Loading),
-        ComposerVoicePhase::Error => IconName::Warning,
-        ComposerVoicePhase::Ready => IconName::Mic,
+        | ComposerVoicePhase::Speaking
+        | ComposerVoicePhase::Ready => IconName::Mic,
+    }
+}
+
+fn render_status_icon(phase: ComposerVoicePhase, tone: Color) -> AnyElement {
+    match phase {
+        ComposerVoicePhase::Transcribing
+        | ComposerVoicePhase::Synthesizing
+        | ComposerVoicePhase::Speaking => dx_loading_icon(IconSize::XSmall, tone, 1),
+        _ => Icon::new(status_icon(phase))
+            .size(IconSize::XSmall)
+            .color(tone)
+            .into_any_element(),
     }
 }

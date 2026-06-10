@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use gpui::{App, EntityId, IntoElement, MouseButton, WeakEntity};
+use gpui::{App, EntityId, IntoElement, WeakEntity};
 use ui::{DxUiIcon, IconName, Tab, TabBar, TabPosition, Tooltip, dx_icon, prelude::*};
 
 use super::{
@@ -12,7 +12,7 @@ use super::{
 pub(super) fn render_tab_bar(
     snapshot: &DxForgePanelSnapshot,
     active_tab: DxForgePanelTab,
-    panel_id: EntityId,
+    _panel_id: EntityId,
     panel: &WeakEntity<DxForgePanel>,
     _cx: &App,
 ) -> impl IntoElement {
@@ -23,7 +23,6 @@ pub(super) fn render_tab_bar(
             visible_row_count_for_tab(snapshot, DxForgePanelTab::Repository),
             DxForgePanelTab::Repository,
             active_tab,
-            panel_id,
             panel,
         ))
         .child(forge_tab(
@@ -32,7 +31,6 @@ pub(super) fn render_tab_bar(
             visible_row_count_for_tab(snapshot, DxForgePanelTab::Packages),
             DxForgePanelTab::Packages,
             active_tab,
-            panel_id,
             panel,
         ))
         .child(forge_tab(
@@ -41,7 +39,6 @@ pub(super) fn render_tab_bar(
             visible_row_count_for_tab(snapshot, DxForgePanelTab::Media),
             DxForgePanelTab::Media,
             active_tab,
-            panel_id,
             panel,
         ))
         .child(forge_tab(
@@ -50,7 +47,6 @@ pub(super) fn render_tab_bar(
             visible_row_count_for_tab(snapshot, DxForgePanelTab::Remotes),
             DxForgePanelTab::Remotes,
             active_tab,
-            panel_id,
             panel,
         ))
 }
@@ -61,14 +57,13 @@ fn forge_tab(
     count: usize,
     tab: DxForgePanelTab,
     active_tab: DxForgePanelTab,
-    panel_id: EntityId,
     panel: &WeakEntity<DxForgePanel>,
 ) -> impl IntoElement {
     let selected = active_tab == tab;
     let panel = panel.clone();
     let title = format!("{label} ({count})");
 
-    Tab::new((id, panel_id))
+    Tab::new(id)
         .fill_available_width()
         .position(tab_position(tab, active_tab))
         .toggle_state(selected)
@@ -89,12 +84,6 @@ fn forge_tab(
                 .truncate(),
         )
         .tooltip(Tooltip::text(title))
-        .on_mouse_down(MouseButton::Left, |_, _, cx| {
-            cx.stop_propagation();
-        })
-        .on_mouse_up(MouseButton::Left, |_, _, cx| {
-            cx.stop_propagation();
-        })
         .on_click(move |_, _window, cx| {
             cx.stop_propagation();
             panel

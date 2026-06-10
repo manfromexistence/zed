@@ -31,8 +31,9 @@ use zed_actions::{
         ResolveConflictsWithAgent, ReviewBranchDiff,
     },
     assistant::{
-        CreateSkillFromUrl, FocusAgent, FocusAgentFullscreen, OpenGlobalAgentsMdRules,
-        OpenProjectAgentsMdRules, OpenRulesLibrary, OpenSkillCreator, Toggle, ToggleFocus,
+        CreateSkillFromUrl, FocusAgent, FocusAgentFullscreen, OpenAutomations, OpenConnections,
+        OpenGlobalAgentsMdRules, OpenProjectAgentsMdRules, OpenRulesLibrary, OpenSkillCreator,
+        OpenTools, Toggle, ToggleFocus,
     },
 };
 
@@ -82,10 +83,11 @@ use crate::terminal_thread_metadata_store::{
 };
 use crate::thread_metadata_store::{ThreadId, ThreadMetadataStore, ThreadMetadataStoreEvent};
 use crate::{
-    AddContextServer, AgentDiffPane, ConversationView, CopyThreadToClipboard, Follow,
-    LoadThreadFromClipboard, NewTerminalThread, NewThread, OpenActiveThreadAsMarkdown,
-    OpenAgentDiff, ResetFastModeWarnings, ResetTrialEndUpsell, ResetTrialUpsell,
-    ShowAllSidebarThreadMetadata, ShowThreadMetadata, ToggleNewThreadMenu, ToggleOptionsMenu,
+    AddContextServer, AgentDiffPane, AutomationScreen, ConnectionsScreen, ConversationView,
+    CopyThreadToClipboard, Follow, LoadThreadFromClipboard, NewTerminalThread, NewThread,
+    OpenActiveThreadAsMarkdown, OpenAgentDiff, ResetFastModeWarnings, ResetTrialEndUpsell,
+    ResetTrialUpsell, ShowAllSidebarThreadMetadata, ShowThreadMetadata, ToggleNewThreadMenu,
+    ToggleOptionsMenu, ToolsScreen,
     agent_configuration::{AgentConfiguration, AssistantConfigurationEvent},
     conversation_view::{
         AcpThreadViewEvent, AgentResponseAnchor, ThreadView, reset_fast_mode_warnings,
@@ -499,6 +501,15 @@ pub fn init(cx: &mut App) {
                         workspace.focus_panel::<AgentPanel>(window, cx);
                         panel.update(cx, |panel, cx| panel.open_configuration(window, cx));
                     }
+                })
+                .register_action(|workspace, _: &OpenTools, window, cx| {
+                    ToolsScreen::open_or_focus(workspace, window, cx);
+                })
+                .register_action(|workspace, _: &OpenAutomations, window, cx| {
+                    AutomationScreen::open_or_focus(workspace, window, cx);
+                })
+                .register_action(|workspace, _: &OpenConnections, window, cx| {
+                    ConnectionsScreen::open_or_focus(workspace, window, cx);
                 })
                 .register_action(|workspace, action: &NewExternalAgentThread, window, cx| {
                     if let Some(panel) = workspace.panel::<AgentPanel>(cx) {

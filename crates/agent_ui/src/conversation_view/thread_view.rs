@@ -1089,6 +1089,14 @@ impl ThreadView {
                 .background_executor()
                 .spawn(async move { FlowSpeechRuntime::detect() })
                 .await;
+            let warm_runtime = runtime.clone();
+            cx.background_executor()
+                .spawn(async move {
+                    if let Err(error) = warm_runtime.warm_tts_server() {
+                        log::debug!("Flow Kokoro TTS prewarm skipped: {error:#}");
+                    }
+                })
+                .detach();
             this.update(cx, |this, cx| {
                 this.refresh_flow_voice_runtime_availability(&runtime);
                 cx.notify();
@@ -6470,9 +6478,20 @@ impl ThreadView {
             Self::latest_agent_response_content(thread.read(cx).entries(), cx);
         if let Some(agent_response_text) = agent_response_text {
             container = container.child(
-                CopyButton::new("copy-agent-response", agent_response_text.clone())
+                IconButton::new("copy-agent-response", IconName::Copy)
+                    .shape(ui::IconButtonShape::Square)
                     .icon_size(IconSize::Small)
-                    .tooltip_label("Copy Agent Response"),
+                    .icon_color(Color::Ignored)
+                    .tooltip(Tooltip::text("Copy Agent Response"))
+                    .on_click({
+                        let agent_response_text = agent_response_text.clone();
+                        move |_, _window, cx| {
+                            cx.stop_propagation();
+                            cx.write_to_clipboard(ClipboardItem::new_string(
+                                agent_response_text.clone(),
+                            ));
+                        }
+                    }),
             );
 
             let voice_phase = self.composer_voice_state.phase();

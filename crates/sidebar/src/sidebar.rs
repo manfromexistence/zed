@@ -9228,6 +9228,25 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        match kind {
+            WorkspaceScreenKind::Tools => {
+                let action = zed_actions::assistant::OpenTools.boxed_clone();
+                self.dispatch_workspace_action(action.as_ref(), window, cx);
+                return;
+            }
+            WorkspaceScreenKind::Connections => {
+                let action = zed_actions::assistant::OpenConnections.boxed_clone();
+                self.dispatch_workspace_action(action.as_ref(), window, cx);
+                return;
+            }
+            WorkspaceScreenKind::Automations => {
+                let action = zed_actions::assistant::OpenAutomations.boxed_clone();
+                self.dispatch_workspace_action(action.as_ref(), window, cx);
+                return;
+            }
+            _ => {}
+        }
+
         let Some(workspace) = self.active_workspace(cx) else {
             return;
         };
