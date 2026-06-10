@@ -66,6 +66,7 @@ fn check_tab(
     };
 
     Tab::new(id)
+        .fill_available_width()
         .position(tab_position(tab, active_tab))
         .toggle_state(selected)
         .selected_bottom_border(true)

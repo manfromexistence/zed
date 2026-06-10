@@ -4202,9 +4202,6 @@ impl ThreadView {
             cx.listener(|this, _event, window, cx| {
                 this.toggle_flow_voice_recording(window, cx);
             }),
-            cx.listener(|this, _event, _window, cx| {
-                this.toggle_flow_read_aloud_latest_response(cx);
-            }),
         )
     }
 

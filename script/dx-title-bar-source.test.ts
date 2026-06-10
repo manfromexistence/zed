@@ -121,8 +121,8 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
   );
   assert.match(
     agentScreenButton,
-    /"screen-dock-agent",\s*dx_icon\(DxUiIcon::Agent\)/s,
-    "screen dock should expose a real AI button",
+    /"screen-dock-agent",\s*IconName::Sparkle/s,
+    "screen dock should expose the AI screen with the Sparkle icon",
   );
   assert.match(
     agentScreenButton,
@@ -152,7 +152,7 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
   assert.match(titleBarSource, /WorkspaceScreenKind::Automations => "Automations"/);
   assert.match(titleBarSource, /WorkspaceScreenKind::Connections => "Connections"/);
   assert.match(titleBarSource, /WorkspaceScreenKind::Tools => "Tools"/);
-  assert.match(titleBarSource, /WorkspaceScreenKind::Agent => dx_icon\(DxUiIcon::Agent\)/);
+  assert.match(titleBarSource, /WorkspaceScreenKind::Agent => IconName::Sparkle/);
   assert.match(titleBarSource, /WorkspaceScreenKind::Automations => dx_icon\(DxUiIcon::Automations\)/);
   assert.match(titleBarSource, /WorkspaceScreenKind::Connections => dx_icon\(DxUiIcon::Connections\)/);
   assert.match(titleBarSource, /WorkspaceScreenKind::Tools => dx_icon\(DxUiIcon::Plugins\)/);

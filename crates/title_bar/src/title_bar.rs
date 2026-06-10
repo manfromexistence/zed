@@ -645,7 +645,7 @@ impl TitleBar {
 
     fn render_agent_screen_button(&self, selected: bool, _cx: &mut Context<Self>) -> AnyElement {
         let workspace = self.workspace.clone();
-        IconButton::new("screen-dock-agent", dx_icon(DxUiIcon::Agent))
+        IconButton::new("screen-dock-agent", IconName::Sparkle)
             .size(ButtonSize::Default)
             .icon_size(IconSize::Medium)
             .toggle_state(selected)
@@ -893,7 +893,7 @@ impl TitleBar {
 
     fn screen_kind_icon(kind: WorkspaceScreenKind) -> IconName {
         match kind {
-            WorkspaceScreenKind::Agent => dx_icon(DxUiIcon::Agent),
+            WorkspaceScreenKind::Agent => IconName::Sparkle,
             WorkspaceScreenKind::Automations => dx_icon(DxUiIcon::Automations),
             WorkspaceScreenKind::Connections => dx_icon(DxUiIcon::Connections),
             WorkspaceScreenKind::Tools => dx_icon(DxUiIcon::Plugins),

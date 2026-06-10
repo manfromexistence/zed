@@ -651,12 +651,15 @@ impl Render for DxCheckPanel {
             ))
             .child(
                 div()
-                    .size_full()
+                    .id("dx-check-panel-scroll-host")
+                    .flex_1()
+                    .min_h_0()
+                    .min_w_0()
+                    .overflow_hidden()
                     .child(
                         v_flex()
                             .id("dx-check-panel-content")
                             .track_scroll(&self.scroll_handle)
-                            .flex_1()
                             .size_full()
                             .min_h_0()
                             .min_w_0()

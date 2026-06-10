@@ -87,7 +87,11 @@ pub(super) fn notice_row(
     next_action: Option<&str>,
 ) -> AnyElement {
     let id = id.into();
-    let mut content = v_flex().min_w_0().gap_0p5().child(
+    let tooltip = match next_action {
+        Some(next_action) => format!("{message}\n{next_action}"),
+        None => message.to_string(),
+    };
+    let mut content = v_flex().flex_1().w_full().min_w_0().gap_0p5().child(
         Label::new(message.to_string())
             .size(LabelSize::Small)
             .truncate(),
@@ -107,6 +111,7 @@ pub(super) fn notice_row(
         .spacing(ListItemSpacing::Sparse)
         .start_slot(Icon::new(icon).size(IconSize::Small).color(color))
         .child(content)
+        .tooltip(Tooltip::text(tooltip))
         .into_any_element()
 }
 
@@ -132,6 +137,8 @@ pub(super) fn quick_fix_row(index: usize, fix: &DxCheckPanelQuickFix) -> AnyElem
         fix.command.as_deref().unwrap_or("No command")
     );
     let mut content = v_flex()
+        .flex_1()
+        .w_full()
         .min_w_0()
         .gap_0p5()
         .child(
@@ -187,6 +194,8 @@ pub(super) fn adapter_plan_row(index: usize, plan: &DxCheckPanelAdapterPlan) -> 
             .unwrap_or("No run command configured")
     );
     let mut content = v_flex()
+        .flex_1()
+        .w_full()
         .min_w_0()
         .gap_0p5()
         .child(
@@ -265,8 +274,9 @@ pub(super) fn web_audit_row(index: usize, audit: &DxCheckPanelWebAudit, _cx: &Ap
         .start_slot(Icon::new(icon).size(IconSize::Small).color(color))
         .child(
             v_flex()
-                .min_w_0()
                 .flex_1()
+                .w_full()
+                .min_w_0()
                 .gap_0p5()
                 .child(
                     Label::new(audit.label.clone())

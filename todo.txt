@@ -1,5 +1,5 @@
 IN PROGRESS:
-- None. DX sound playback is source-verified for low-frequency editor chrome events, with typing/hover kept as explicit opt-in events for a later settings pass.
+- None. Check panel readability/scrolling and AI composer icon polish are source-verified.
 
 PENDING:
 - Add user-facing DX sound preferences before enabling hot-path typing and hover playback.
@@ -9,6 +9,7 @@ PENDING:
 - Continue the DX/Zed ecosystem integration with bounded source-only slices for remaining receipt scans, semantic icon hotspots, and governed runtime proof when explicitly authorized.
 
 COMPLETED:
+- Check panel readability and AI composer polish are source-verified: Finding rows now keep real text width instead of truncating to `...`, Check tabs fill the panel width, the Check body owns a constrained scrollbar host, the AI screen uses the Sparkle icon, and the composer voice control is mic-only with muted idle coloring. Runtime/native proof, Cargo, build, and `just run` remain deferred.
 - DX sound playback wiring is source-verified: semantic `DxSoundEvent` playback now maps bundled sounds through the audio cache with per-event cooldowns, screen/panel/sidebar/agent completion surfaces use semantic sounds, and source guards keep assets, policies, and call sites in sync. Runtime/native proof, Cargo, build, and `just run` remain deferred.
 - DX sound asset foundation is source-verified: selected short UI, typing, delete, drag/drop, and magic sounds from `F:\Downloads` are converted into normalized bundled WAV assets under `assets\sounds`, and `audio::Sound` exposes semantic DX variants for future settings-gated playback. Runtime/native proof, trigger wiring, Cargo, build, and `just run` remain deferred.
 - Forge tab/fullscreen, Project Panel storage-label, and Flow voice TTS speaker fixes are source-verified: Forge tabs now use panel-scoped IDs, stretch tab triggers across the available tab bar, and switch tabs without refocusing the dock; Project Panel storage rows no longer show Low/High heat text and Project/storage popovers use panel-scoped IDs; Agent composer mic/STT and speaker/Kokoro TTS are separate controls with a light idle readiness refresh. Runtime/native proof, Cargo, build, and `just run` remain deferred by instruction.

@@ -109,12 +109,12 @@ test("composer renders a compact mic control before send", () => {
   assert.match(voiceControls, /stt_status: SharedString/);
   assert.match(voiceControls, /tts_status: SharedString/);
   assert.match(voiceControls, /IconName::Mic/);
-  assert.match(voiceButtons, /IconName::AudioOn/);
+  assert.doesNotMatch(voiceButtons, /IconName::AudioOn/);
   assert.match(voiceControls, /IconName::Stop/);
   assert.match(voiceIcon, /ComposerVoicePhase::Recording\s*\|\s*ComposerVoicePhase::Transcribing => IconName::Stop/);
   assert.match(voiceIcon, /ComposerVoicePhase::Speaking => IconName::Mic/);
   assert.doesNotMatch(voiceIcon, /ComposerVoicePhase::Speaking => IconName::Stop/);
-  assert.match(voiceButtons, /ComposerVoicePhase::Ready if !availability\.stt_ready => Color::Warning/);
+  assert.match(voiceButtons, /ComposerVoicePhase::Ready if !availability\.stt_ready => Color::Muted/);
   assert.match(voiceControls, /availability\.stt_status\.clone\(\)/);
   assert.match(voiceButtons, /\.disabled\(voice_disabled\)/);
   assert.match(voiceDisabled, /ComposerVoicePhase::Speaking => true/);
@@ -133,7 +133,8 @@ test("composer renders a compact mic control before send", () => {
   );
   assert.match(voiceControls, /Kokoro read-aloud is active/);
   assert.match(voiceButtons, /agent-composer-voice-input[\s\S]+\.on_click\(on_voice_click\)/);
-  assert.match(voiceButtons, /agent-composer-read-aloud[\s\S]+\.on_click\(on_read_aloud_click\)/);
+  assert.doesNotMatch(voiceButtons, /agent-composer-read-aloud/);
+  assert.doesNotMatch(voiceButtons, /on_read_aloud_click/);
   assert.doesNotMatch(voiceButtons, /on_speak_click/);
   assert.doesNotMatch(voiceButtons, /dummy|mock|placeholder|fake|demo/i);
   assert.doesNotMatch(recordingPanel, /dummy|mock|placeholder|fake|demo/i);
@@ -978,7 +979,7 @@ test("voice playback keeps audio feature wiring and fallback states", () => {
   assert.match(speakFlowText, /Friday Kokoro TTS is not ready/);
   assert.match(speakFlowText, /show_flow_voice_toast\(message, cx\)/);
   assert.match(threadView, /struct FlowTextToSpeechRequest/);
-  assert.match(voiceControls, /agent-composer-read-aloud/);
+  assert.doesNotMatch(voiceControls, /agent-composer-read-aloud/);
   assert.match(threadView, /fn toggle_flow_read_aloud_latest_response/);
   assert.match(toggleReadAloudLatestResponse, /Self::latest_agent_response_content\(thread\.entries\(\), cx\)/);
   assert.match(toggleReadAloudLatestResponse, /self\.speak_agent_response_text\(text, cx\)/);

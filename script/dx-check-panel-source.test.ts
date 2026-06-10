@@ -120,6 +120,9 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   const renderStatusStrip = functionBody(view, "render_status_strip");
   const renderToolbar = functionBody(view, "render_toolbar");
   const section = functionBody(rows, "section");
+  const noticeRow = functionBody(rows, "notice_row");
+  const quickFixRow = functionBody(rows, "quick_fix_row");
+  const adapterPlanRow = functionBody(rows, "adapter_plan_row");
   const checkTab = functionBody(tabs, "check_tab");
 
   assert.match(renderHeader, /h_flex\(\)/);
@@ -138,8 +141,15 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   assert.match(renderToolbar, /IconButton::new\("dx-check-refresh", IconName::RotateCw\)/);
   assert.match(tabs, /TabBar::new\("dx-check-tab-bar"\)/);
   assert.match(checkTab, /Tab::new\(id\)/);
+  assert.match(checkTab, /\.fill_available_width\(\)/);
   assert.match(checkTab, /\.position\(tab_position\(tab, active_tab\)\)/);
   assert.match(checkTab, /\.selected_bottom_border\(true\)/);
+  assert.match(view, /\.id\("dx-check-panel-scroll-host"\)/);
+  assert.match(view, /\.vertical_scrollbar_for\(&self\.scroll_handle, window, cx\)/);
+  assert.match(view, /\.track_scroll\(&self\.scroll_handle\)/);
+  assert.match(noticeRow, /v_flex\(\)\s*\.flex_1\(\)\s*\.w_full\(\)\s*\.min_w_0\(\)/s);
+  assert.match(quickFixRow, /v_flex\(\)\s*\.flex_1\(\)\s*\.w_full\(\)\s*\.min_w_0\(\)/s);
+  assert.match(adapterPlanRow, /v_flex\(\)\s*\.flex_1\(\)\s*\.w_full\(\)\s*\.min_w_0\(\)/s);
   assert.match(section, /v_flex\(\)\.id\(id\)/);
   assert.match(section, /ListHeader::new\(title\)/);
   assert.match(section, /\.toggle\(Some\(is_open\)\)/);

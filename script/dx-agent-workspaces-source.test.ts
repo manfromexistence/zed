@@ -66,10 +66,10 @@ test("DX agent workspace taxonomy has first-class Zed screens", () => {
   assert.match(titleBar, /WorkspaceScreenKind::Tools => "Tools"/);
   assert.match(titleBar, /WorkspaceScreenKind::Connections => dx_icon\(DxUiIcon::Connections\)/);
   assert.match(titleBar, /WorkspaceScreenKind::Tools => dx_icon\(DxUiIcon::Plugins\)/);
-  assert.match(titleBar, /WorkspaceScreenKind::Agent => dx_icon\(DxUiIcon::Agent\)/);
+  assert.match(titleBar, /WorkspaceScreenKind::Agent => IconName::Sparkle/);
   assert.match(carousel, /WorkspaceScreenKind::Connections => "Connections"/);
   assert.match(carousel, /WorkspaceScreenKind::Tools => "Tools"/);
-  assert.match(carousel, /WorkspaceScreenKind::Agent => dx_icon\(DxUiIcon::Agent\)/);
+  assert.match(carousel, /WorkspaceScreenKind::Agent => IconName::Sparkle/);
   assert.match(agentScreen, /Icon::new\(dx_icon\(DxUiIcon::Agent\)\)/);
   assert.match(dxWorkspace, /"dx-agent-overview-section"[\s\S]*?dx_icon\(DxUiIcon::Agent\)/);
   assert.match(dxWorkspace, /"dx-agent-subagents-section"[\s\S]*?dx_icon\(DxUiIcon::Agent\)/);
