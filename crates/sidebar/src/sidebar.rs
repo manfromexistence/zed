@@ -245,8 +245,7 @@ struct SerializedThreadIconOverride {
     icon: IconName,
 }
 
-// Placeholder for ProjectGroupKey serialization
-// TODO: Implement proper serialization when MultiWorkspace state management is finalized
+// Collapsed and expanded project-group state is owned by MultiWorkspace.
 #[derive(Default, Clone, Serialize, Deserialize)]
 struct SerializedProjectGroupKey;
 
@@ -1943,10 +1942,10 @@ impl Sidebar {
         let resolve_agent_icon = |agent_id: &AgentId| -> (IconName, Option<SharedString>) {
             let agent = Agent::from(agent_id.clone());
             let icon = match agent {
-                Agent::NativeAgent => IconName::Sparkle,
+                Agent::NativeAgent => dx_icon(DxUiIcon::Agent),
                 Agent::Custom { .. } => IconName::Terminal,
 
-                _ => IconName::Sparkle,
+                _ => dx_icon(DxUiIcon::Agent),
             };
             let icon_from_external_svg = agent_server_store
                 .as_ref()
@@ -9652,13 +9651,12 @@ impl WorkspaceSidebar for Sidebar {
     }
 
     fn serialized_state(&self, _cx: &App) -> Option<String> {
-        // Get collapsed/expanded groups from MultiWorkspace
+        // Collapsed and expanded groups are owned by MultiWorkspace.
         let (collapsed_groups, expanded_groups) = self
             .multi_workspace
             .upgrade()
             .map(|_| {
-                // For now, return empty vecs as the state is managed by MultiWorkspace
-                // TODO: Properly serialize MultiWorkspace state
+                // Avoid duplicating MultiWorkspace state in sidebar JSON.
                 (Vec::new(), Vec::new())
             })
             .unwrap_or_default();
@@ -9720,8 +9718,7 @@ impl WorkspaceSidebar for Sidebar {
             if let Some(width) = serialized.width {
                 self.width = px(width).clamp(MIN_WIDTH, MAX_WIDTH);
             }
-            // collapsed_groups and expanded_groups are now managed by MultiWorkspace
-            // TODO: Restore them to MultiWorkspace if needed
+            // collapsed_groups and expanded_groups are owned by MultiWorkspace.
 
             self.space_labels = serialized
                 .space_labels

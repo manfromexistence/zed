@@ -32,7 +32,7 @@ const escapeRegExp = (text: string) =>
   text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const jsonDefaultPattern = (field: string, value: string) =>
-  new RegExp(`"${field}":\\s*${escapeRegExp(value).replace(/\\ /g, "\\s*")}`);
+  new RegExp(`"${field}":\\s*${escapeRegExp(value).replace(/\s+/g, "\\s*")}`);
 
 const functionBody = (source: string, name: string): string => {
   const signature = new RegExp(
@@ -205,7 +205,7 @@ test("Agent panel and fullscreen AI screen share the Liquid Glass chat input con
   assert.match(
     renderMessageEditor,
     /\.when\(chat_input_full_width,\s*\|this\|\s*this\.flex_grow_1\(\)\)/,
-    "Fullscreen AI chat input must grow across its host instead of staying centered",
+    "Explicit full-width chat input mode must still be available for hosts that opt into it",
   );
   assert.match(
     renderMessageEditor,
@@ -254,8 +254,8 @@ test("Agent panel and fullscreen AI screen share the Liquid Glass chat input con
   );
   assert.match(
     panelRender,
-    /VisibleSurface::AgentThread\(conversation_view\) => \{[\s\S]*conversation_view\.set_chat_input_full_width\(chat_input_full_width, cx\);[\s\S]*parent[\s\S]*\.child\(self\.render_dx_launch_workspace\(\s*conversation_view\.clone\(\)\.into_any_element\(\),\s*window,\s*cx,\s*\)\)/,
-    "AgentPanel must render the ConversationView/ThreadView path in the side panel",
+    /VisibleSurface::AgentThread\(conversation_view\) => \{[\s\S]*conversation_view\.set_chat_input_full_width\(false, cx\);[\s\S]*parent[\s\S]*\.child\(self\.render_dx_launch_workspace\(\s*conversation_view\.clone\(\)\.into_any_element\(\),\s*window,\s*cx,\s*\)\)/,
+    "AgentPanel must render the shared ConversationView path with the bounded chat input",
   );
   assert.match(
     centerScreen,
@@ -352,6 +352,17 @@ test("Agent chat input add-context trigger carries DX web tool transparent logos
 });
 
 test("Agent Liquid Glass settings preserve the tuned recovered Rust effect values", () => {
+  const uiStateDefault = functionBodyAfter(
+    liquidGlassState,
+    "impl Default for UiState",
+    "default",
+  );
+  const agentLiquidGlassDefault = functionBodyAfter(
+    agentSettings,
+    "impl Default for AgentLiquidGlassSettings",
+    "default",
+  );
+
   assert.match(
     settingsContentAgent,
     /pub struct AgentLiquidGlassSettingsContent/,
@@ -409,12 +420,12 @@ test("Agent Liquid Glass settings preserve the tuned recovered Rust effect value
     ["glass_variant", "0"],
   ]) {
     assert.match(
-      liquidGlassState,
+      uiStateDefault,
       new RegExp(`${field}: ${escapeRegExp(value)}`),
       `expected tuned default ${field} = ${value}`,
     );
     assert.match(
-      agentSettings,
+      agentLiquidGlassDefault,
       new RegExp(`${field}: ${escapeRegExp(value)}`),
       `expected Agent runtime default ${field} = ${value}`,
     );
@@ -431,7 +442,7 @@ test("Agent Liquid Glass settings preserve the tuned recovered Rust effect value
     ["blur_downscale", "0.1"],
   ]) {
     assert.match(
-      liquidGlassState,
+      uiStateDefault,
       new RegExp(`${field}: ${escapeRegExp(value)}`),
       `expected recovered reference default ${field} = ${value}`,
     );
@@ -443,7 +454,7 @@ test("Agent Liquid Glass settings preserve the tuned recovered Rust effect value
     ["blur_downscale", "0.5"],
   ]) {
     assert.match(
-      agentSettings,
+      agentLiquidGlassDefault,
       new RegExp(`${field}: ${escapeRegExp(value)}`),
       `expected Agent chat input default ${field} = ${value}`,
     );

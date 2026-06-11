@@ -57,7 +57,6 @@ use zed_actions::OpenRemote;
 
 pub use onboarding_banner::restore_banner;
 
-#[allow(dead_code)]
 const MAX_PROJECT_NAME_LENGTH: usize = 40;
 const MAX_BRANCH_NAME_LENGTH: usize = 40;
 const MAX_SHORT_SHA_LENGTH: usize = 8;
@@ -910,7 +909,7 @@ impl TitleBar {
         vec![
             self.render_title_right_panel_button(
                 "titlebar-icon-picker",
-                IconName::SquareDot,
+                dx_icon(DxUiIcon::Icons),
                 "Icons",
                 icon_picker::ToggleFocus.boxed_clone(),
                 active_right_panel == Some("Icon Picker"),
@@ -940,7 +939,7 @@ impl TitleBar {
             // workflow graduates from parked implementation to production UI.
             self.render_title_right_panel_button(
                 "titlebar-dx-check-panel",
-                IconName::ToolDiagnostics,
+                dx_icon(DxUiIcon::Check),
                 "Check",
                 zed_actions::dx_check_panel::ToggleFocus.boxed_clone(),
                 active_right_panel == Some("Check"),
@@ -1063,7 +1062,6 @@ impl TitleBar {
             .into_any_element()
     }
 
-    #[allow(dead_code)]
     fn worktree_count(&self, cx: &App) -> usize {
         self.project.read(cx).visible_worktrees(cx).count()
     }
@@ -1390,7 +1388,6 @@ impl TitleBar {
             .into_any_element()
     }
 
-    #[allow(dead_code)]
     fn render_recent_projects_popover(
         &self,
         display_name: String,

@@ -697,6 +697,7 @@ const COMPOSER_COLLAPSED_MAX_HEIGHT_REMS: f32 = 18.;
 const COMPOSER_COLLAPSED_EDITOR_MAX_HEIGHT_REMS: f32 = 9.;
 
 struct DxWebToolLogo {
+    id: &'static str,
     label: &'static str,
     light_path: &'static str,
     dark_path: &'static str,
@@ -714,46 +715,55 @@ impl DxWebToolLogo {
 
 const DX_WEB_TOOL_LOGOS: &[DxWebToolLogo] = &[
     DxWebToolLogo {
+        id: "design",
         label: "Design",
         light_path: "icons/dx_web_tools/design-light-transparent.svg",
         dark_path: "icons/dx_web_tools/design-dark-transparent.svg",
     },
     DxWebToolLogo {
+        id: "graphics",
         label: "Graphics",
         light_path: "icons/dx_web_tools/graphics-light-transparent.svg",
         dark_path: "icons/dx_web_tools/graphics-dark-transparent.svg",
     },
     DxWebToolLogo {
+        id: "presentations",
         label: "Presentations",
         light_path: "icons/dx_web_tools/presentations-light-transparent.svg",
         dark_path: "icons/dx_web_tools/presentations-dark-transparent.svg",
     },
     DxWebToolLogo {
+        id: "spreadsheets",
         label: "Spreadsheets",
         light_path: "icons/dx_web_tools/spreadsheets-light-transparent.svg",
         dark_path: "icons/dx_web_tools/spreadsheets-dark-transparent.svg",
     },
     DxWebToolLogo {
+        id: "video",
         label: "Video",
         light_path: "icons/dx_web_tools/video-light-transparent.svg",
         dark_path: "icons/dx_web_tools/video-dark-transparent.svg",
     },
     DxWebToolLogo {
+        id: "music",
         label: "Music",
         light_path: "icons/dx_web_tools/music-light-transparent.svg",
         dark_path: "icons/dx_web_tools/music-dark-transparent.svg",
     },
     DxWebToolLogo {
+        id: "whiteboard",
         label: "Whiteboard",
         light_path: "icons/dx_web_tools/whiteboard-light-transparent.svg",
         dark_path: "icons/dx_web_tools/whiteboard-dark-transparent.svg",
     },
     DxWebToolLogo {
+        id: "shader",
         label: "Shader",
         light_path: "icons/dx_web_tools/shader-light-transparent.svg",
         dark_path: "icons/dx_web_tools/shader-dark-transparent.svg",
     },
     DxWebToolLogo {
+        id: "dx-web",
         label: "DX Web",
         light_path: "icons/dx_web_tools/www-light-transparent.svg",
         dark_path: "icons/dx_web_tools/www-dark-transparent.svg",
@@ -5820,7 +5830,7 @@ impl ThreadView {
             .justify_center()
             .children(DX_WEB_TOOL_LOGOS.iter().map(|logo| {
                 div()
-                    .id(format!("dx-web-tool-logo-{}", logo.label))
+                    .id(format!("dx-web-tool-logo-{}", logo.id))
                     .size_5()
                     .flex_none()
                     .rounded_sm()

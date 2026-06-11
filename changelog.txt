@@ -4,12 +4,16 @@ CHANGED:
 - Expanded sidebar top actions now mirror the collapsed activity-bar actions: New Chat, Search, Mobile Preview, CLI, Plugins, Connections, and Automations.
 - Collapsed sidebar chat shortcuts remain height-bounded and icon-only with hover details, including a More Chats overflow action.
 - AI fullscreen rail status refresh now starts immediately on a cold cache without doing DX launch status scans on the render path.
-- The right-side Icons panel button now uses an icon-grid glyph instead of a book-like glyph.
+- The right-side Icons and Check panel buttons now route through central DX icon mappings, with Check using the diagnostics glyph consistently.
+- Native Agent sidebar rows now use the semantic DX Agent icon mapping instead of a scattered literal.
+- The Agent chat input DX web-tool logo strip now uses stable slug IDs instead of label-derived element IDs.
+- Sidebar serialization guard fixtures now include manual thread ordering and thread icon override fields.
+- Liquid Glass source guards now pin the current bounded AgentPanel chat input behavior and check tuned defaults inside the actual `Default` implementations.
 
 PASSED:
-- `node --test script\dx-launch-workspace-source.test.ts script\dx-title-bar-source.test.ts script\dx-agent-composer-liquid-glass-source.test.ts`
-- `rustfmt --edition 2024 crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\dx_launch_workspace.rs crates\sidebar\src\sidebar.rs crates\title_bar\src\title_bar.rs`
-- `git diff --check -- crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\dx_launch_workspace.rs crates\sidebar\src\sidebar.rs crates\title_bar\src\title_bar.rs script\dx-launch-workspace-source.test.ts changelog.txt`
+- `node --test script\dx-agent-composer-liquid-glass-source.test.ts script\dx-icon-system-source.test.ts script\dx-launch-workspace-source.test.ts script\dx-title-bar-source.test.ts`
+- `rustfmt --edition 2024 --check crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\dx_check_panel_view.rs crates\sidebar\src\sidebar.rs crates\sidebar\src\sidebar_tests.rs crates\title_bar\src\title_bar.rs crates\ui\src\dx_icons.rs`
+- `git diff --check -- DX.md todo.txt changelog.txt crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\dx_check_panel_view.rs crates\sidebar\src\sidebar.rs crates\sidebar\src\sidebar_tests.rs crates\title_bar\src\title_bar.rs crates\ui\src\dx_icons.rs script\dx-agent-composer-liquid-glass-source.test.ts script\dx-icon-system-source.test.ts`
 - `rg -n "^(<<<<<<<|=======|>>>>>>>)" ...` returned no matches across touched source, guard, and changelog files.
 
 NOTES:

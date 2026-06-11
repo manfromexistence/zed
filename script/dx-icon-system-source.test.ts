@@ -156,6 +156,8 @@ test("DX shell chrome uses semantic icons instead of scattered literals", () => 
   }
 
   assert.match(dxIcons, /DxUiIcon::Agent \| DxUiIcon::Ai => IconName::Sparkle/);
+  assert.match(dxIcons, /DxUiIcon::Check => IconName::ToolDiagnostics/);
+  assert.match(dxIcons, /DxUiIcon::Icons => IconName::SquareDot/);
   assert.match(forgePanel, /dx_icon\(DxUiIcon::Forge\)/);
   assert.match(forgePanelView, /icon: dx_icon\(DxUiIcon::Media\)/);
   assert.match(forgeProviderView, /ProviderGroup::Media => dx_icon\(DxUiIcon::Media\)/);
@@ -216,10 +218,10 @@ test("DX loading and tool surfaces use semantic icon helpers", () => {
     assert.doesNotMatch(source, /IconName::LoadCircle/);
   }
 
-  assert.match(voiceControls, /dx_icon\(DxUiIcon::Loading\)/);
+  assert.match(voiceControls, /dx_loading_icon\(IconSize::XSmall, tone, 1\)/);
   assert.doesNotMatch(voiceControls, /IconName::LoadCircle/);
 
-  for (const icon of ["Plugins", "Extensions", "Automations", "Settings"]) {
+  for (const icon of ["Plugins", "Connections", "Automations", "Settings"]) {
     assert.ok(
       sidebar.includes(`dx_icon(DxUiIcon::${icon})`),
       `sidebar should use semantic DX icon ${icon}`,
@@ -266,6 +268,7 @@ test("DX loading and tool surfaces use semantic icon helpers", () => {
 
   assert.match(agentDiff, /IconButton::new\("review", dx_icon\(DxUiIcon::Receipts\)\)/);
   assert.match(checkPanelView, /Self::Sections => dx_icon\(DxUiIcon::Check\)/);
+  assert.match(checkPanelView, /Some\(dx_icon\(DxUiIcon::Check\)\)/);
   assert.match(checkPanelView, /Self::WebAudit => dx_icon\(DxUiIcon::Evidence\)/);
   assert.match(launchPromptSources, /DxSourceKind::MediaOutput => dx_icon\(DxUiIcon::Media\)/);
   assert.match(launchPromptSources, /DxSourceKind::DxToolchainConfig => dx_icon\(DxUiIcon::Settings\)/);

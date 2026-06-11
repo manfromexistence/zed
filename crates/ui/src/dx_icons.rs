@@ -52,7 +52,7 @@ pub fn dx_icon(icon: DxUiIcon) -> IconName {
         DxUiIcon::Automations => IconName::ListTodo,
         DxUiIcon::Browser | DxUiIcon::WebPreview => IconName::ToolWeb,
         DxUiIcon::Channels => IconName::QueueMessage,
-        DxUiIcon::Check => IconName::Check,
+        DxUiIcon::Check => IconName::ToolDiagnostics,
         DxUiIcon::CloudStorage => IconName::CloudDownload,
         DxUiIcon::Commands => IconName::Terminal,
         DxUiIcon::Computer => IconName::Screen,

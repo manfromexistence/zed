@@ -813,6 +813,9 @@ async fn test_restore_serialized_archive_view_does_not_panic(cx: &mut TestAppCon
         active_view: SerializedSidebarView::Archive,
         activity_bar_expanded: true,
         grid_shortcuts: Vec::new(),
+        thread_sort_mode: SidebarThreadSortMode::default(),
+        manual_thread_order: Vec::new(),
+        thread_icon_overrides: Vec::new(),
     })
     .expect("serialization should succeed");
 

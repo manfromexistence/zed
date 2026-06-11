@@ -682,7 +682,7 @@ impl Panel for DxCheckPanel {
     }
 
     fn icon(&self, _: &Window, _: &App) -> Option<IconName> {
-        Some(IconName::Check)
+        Some(dx_icon(DxUiIcon::Check))
     }
 
     fn icon_tooltip(&self, _: &Window, _: &App) -> Option<&'static str> {

@@ -8539,9 +8539,8 @@ impl Render for AgentPanel {
                 }
                 VisibleSurface::Uninitialized => parent,
                 VisibleSurface::AgentThread(conversation_view) => {
-                    let chat_input_full_width = false;
                     conversation_view.update(cx, |conversation_view, cx| {
-                        conversation_view.set_chat_input_full_width(chat_input_full_width, cx);
+                        conversation_view.set_chat_input_full_width(false, cx);
                     });
                     parent
                         .child(self.render_dx_launch_workspace(
