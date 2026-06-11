@@ -698,7 +698,15 @@ test("Forge panel uses Git-style controls instead of metric cards", () => {
   );
   assert.match(
     controls,
+    /IconButton::new\("dx-forge-open-history", IconName::FolderOpen\)[\s\S]*move \|_, window, cx\| \{[\s\S]*cx\.stop_propagation\(\);[\s\S]*open_exact_abs_path/,
+  );
+  assert.match(
+    controls,
     /IconButton::new\("dx-forge-refresh", IconName::RotateCw\)[\s\S]*\.tab_index\(0_isize\)/,
+  );
+  assert.match(
+    controls,
+    /IconButton::new\("dx-forge-refresh", IconName::RotateCw\)[\s\S]*move \|_, _, cx\| \{[\s\S]*cx\.stop_propagation\(\);[\s\S]*panel\.update/,
   );
   assert.match(controls, /IconButton::new\(id, IconName::ArrowUpRight\)/);
   assert.match(

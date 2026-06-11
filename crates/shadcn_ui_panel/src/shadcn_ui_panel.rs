@@ -1294,11 +1294,6 @@ impl ShadcnUiPanel {
         let pin_item = item.clone();
         let remove_item = item.clone();
         let source_available = !self.ui_item_missing(&item);
-        let pin_label = if pinned {
-            if source_available { "Unpin" } else { "Remove" }
-        } else {
-            "Pin"
-        };
         let can_insert = can_drag_into_editor(item.source);
         let primary_action = if item.install_only {
             "Install"
@@ -1306,6 +1301,11 @@ impl ShadcnUiPanel {
             "Insert"
         } else {
             "Open"
+        };
+        let pin_icon = if pinned && !source_available {
+            IconName::Trash
+        } else {
+            IconName::Pin
         };
         let copy_action = if item.install_only {
             "Copy Command"
@@ -1385,8 +1385,14 @@ impl ShadcnUiPanel {
             .end_slot_on_hover(
                 h_flex()
                     .flex_none()
-                    .gap_1()
-                    .flex_wrap()
+                    .gap_0p5()
+                    .occlude()
+                    .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
+                        cx.stop_propagation();
+                    })
+                    .on_mouse_up(gpui::MouseButton::Left, |_, _, cx| {
+                        cx.stop_propagation();
+                    })
                     .child(
                         Button::new(primary_id, primary_action)
                             .style(ButtonStyle::Subtle)
@@ -1409,9 +1415,11 @@ impl ShadcnUiPanel {
                             })),
                     )
                     .child(
-                        Button::new(copy_id, copy_action)
+                        IconButton::new(copy_id, IconName::Copy)
+                            .shape(ui::IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
-                            .size(ButtonSize::Compact)
+                            .icon_size(IconSize::Small)
+                            .tooltip(Tooltip::text(copy_action))
                             .on_click(cx.listener({
                                 let item = item.clone();
                                 move |panel, _, _, cx| {
@@ -1420,9 +1428,10 @@ impl ShadcnUiPanel {
                             })),
                     )
                     .child(
-                        Button::new(preview_id, "Preview")
+                        IconButton::new(preview_id, IconName::Eye)
+                            .shape(ui::IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
-                            .size(ButtonSize::Compact)
+                            .icon_size(IconSize::Small)
                             .tooltip(Tooltip::text(ui_history_preview_tooltip(
                                 can_insert,
                                 source_available,
@@ -1437,9 +1446,10 @@ impl ShadcnUiPanel {
                     )
                     .when(!source_available && !pinned, |this| {
                         this.child(
-                            Button::new(remove_id, "Remove")
+                            IconButton::new(remove_id, IconName::Trash)
+                                .shape(ui::IconButtonShape::Square)
                                 .style(ButtonStyle::Subtle)
-                                .size(ButtonSize::Compact)
+                                .icon_size(IconSize::Small)
                                 .tooltip(Tooltip::text("Remove this missing UI entry"))
                                 .on_click(cx.listener(move |panel, _, _, cx| {
                                     panel.remove_ui_history_entry(remove_item.clone(), pinned, cx);
@@ -1447,17 +1457,20 @@ impl ShadcnUiPanel {
                         )
                     })
                     .child(
-                        Button::new(docs_id, "Docs")
+                        IconButton::new(docs_id, IconName::ArrowUpRight)
+                            .shape(ui::IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
-                            .size(ButtonSize::Compact)
+                            .icon_size(IconSize::Small)
+                            .tooltip(Tooltip::text("Open documentation"))
                             .on_click(cx.listener(move |panel, _, _, cx| {
                                 panel.open_item_docs(item.clone(), cx);
                             })),
                     )
                     .child(
-                        Button::new(pin_id, pin_label)
+                        IconButton::new(pin_id, pin_icon)
+                            .shape(ui::IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
-                            .size(ButtonSize::Compact)
+                            .icon_size(IconSize::Small)
                             .tooltip(Tooltip::text(ui_history_pin_tooltip(
                                 pinned,
                                 source_available,

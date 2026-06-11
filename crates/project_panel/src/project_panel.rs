@@ -4485,6 +4485,22 @@ impl ProjectPanel {
         .track_focus(&self.focus_handle(cx))
         .tooltip(move |_window, cx| Tooltip::with_meta("Folder", None, tooltip.clone(), cx))
         .on_click(cx.listener(move |this, _, window, cx| {
+            let target_is_current_dir = {
+                let project = this.project.read(cx);
+                project
+                    .worktree_for_id(target.worktree_id, cx)
+                    .and_then(|worktree| {
+                        worktree
+                            .read(cx)
+                            .entry_for_id(target.entry_id)
+                            .map(|entry| entry.is_dir())
+                    })
+                    .unwrap_or(false)
+            };
+            if !target_is_current_dir {
+                return;
+            }
+
             this.focus_handle(cx).focus(window, cx);
             this.expand_entry(target.worktree_id, target.entry_id, cx);
             this.update_visible_entries(

@@ -1293,6 +1293,11 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(renderStorageDrilldownRow, /\.end_slot::<AnyElement>\(/);
   assert.match(
     renderStorageDrilldownRow,
+    /let target_is_current_dir = \{[\s\S]*worktree_for_id\(target\.worktree_id, cx\)[\s\S]*entry_for_id\(target\.entry_id\)[\s\S]*entry\.is_dir\(\)[\s\S]*unwrap_or\(false\)[\s\S]*if !target_is_current_dir \{[\s\S]*return;/,
+    "storage drilldown row clicks must fail closed when cached folder targets go stale",
+  );
+  assert.match(
+    renderStorageDrilldownRow,
     /\.on_click\(cx\.listener\(move \|this, _, window, cx\|[\s\S]*this\.focus_handle\(cx\)\.focus\(window, cx\)[\s\S]*this\.expand_entry\(target\.worktree_id, target\.entry_id, cx\)[\s\S]*this\.update_visible_entries\([\s\S]*Some\(\(target\.worktree_id, target\.entry_id\)\)[\s\S]*true,[\s\S]*window,[\s\S]*cx/,
     "storage drilldown ListItem clicks must focus, expand, select, and scroll to the real folder",
   );

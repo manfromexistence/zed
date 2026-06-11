@@ -113,6 +113,28 @@ test("UI panel history rows use shared GPUI list primitives", () => {
   assert.match(renderUiHistoryRow, /\.end_slot\(/);
   assert.match(renderUiHistoryRow, /IconName::Ellipsis/);
   assert.match(renderUiHistoryRow, /\.end_slot_on_hover\(/);
+  assert.match(renderUiHistoryRow, /\.occlude\(\)/);
+  assert.match(renderUiHistoryRow, /gpui::MouseButton::Left/);
+  assert.match(renderUiHistoryRow, /cx\.stop_propagation\(\);/);
+  assert.match(renderUiHistoryRow, /Button::new\(primary_id, primary_action\)/);
+  assert.match(renderUiHistoryRow, /IconButton::new\(copy_id, IconName::Copy\)/);
+  assert.match(renderUiHistoryRow, /IconButton::new\(preview_id, IconName::Eye\)/);
+  assert.match(renderUiHistoryRow, /IconButton::new\(remove_id, IconName::Trash\)/);
+  assert.match(renderUiHistoryRow, /IconButton::new\(docs_id, IconName::ArrowUpRight\)/);
+  assert.match(renderUiHistoryRow, /IconButton::new\(pin_id, pin_icon\)/);
+  assert.match(renderUiHistoryRow, /\.shape\(ui::IconButtonShape::Square\)/);
+  assert.match(renderUiHistoryRow, /\.icon_size\(IconSize::Small\)/);
+  assert.match(renderUiHistoryRow, /panel\.copy_item_code/);
+  assert.match(renderUiHistoryRow, /panel\.preview_item/);
+  assert.match(renderUiHistoryRow, /panel\.open_item_docs/);
+  assert.match(renderUiHistoryRow, /panel\.pin_ui_action/);
+  assert.match(renderUiHistoryRow, /panel\.unpin_ui_action/);
+  assert.match(renderUiHistoryRow, /panel\.remove_ui_history_entry/);
+  assert.doesNotMatch(renderUiHistoryRow, /\.flex_wrap\(\)/);
+  assert.doesNotMatch(
+    renderUiHistoryRow,
+    /(^|[^A-Za-z0-9_])Button::new\((?:copy_id|preview_id|remove_id|docs_id|pin_id),/,
+  );
   assert.match(renderUiHistoryRow, /\.tooltip\(Tooltip::text\(row_tooltip\)\)/);
   assert.doesNotMatch(
     renderUiHistoryRow,

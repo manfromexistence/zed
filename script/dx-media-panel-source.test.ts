@@ -255,6 +255,30 @@ test("media panel renders bridge state and filters fetched remote rows by query"
   assert.match(renderMediaHistoryRow, /\.end_slot\(/);
   assert.match(renderMediaHistoryRow, /IconName::Ellipsis/);
   assert.match(renderMediaHistoryRow, /\.end_slot_on_hover\(/);
+  assert.match(renderMediaHistoryRow, /\.occlude\(\)/);
+  assert.match(renderMediaHistoryRow, /gpui::MouseButton::Left/);
+  assert.match(renderMediaHistoryRow, /cx\.stop_propagation\(\);/);
+  assert.match(renderMediaHistoryRow, /IconButton::new\(preview_id, IconName::Eye\)/);
+  assert.match(renderMediaHistoryRow, /IconButton::new\(copy_id, IconName::Copy\)/);
+  assert.match(renderMediaHistoryRow, /IconButton::new\(insert_id, IconName::Plus\)/);
+  assert.match(renderMediaHistoryRow, /IconButton::new\(remove_id, IconName::Trash\)/);
+  assert.match(renderMediaHistoryRow, /IconButton::new\(pin_id, pin_icon\)/);
+  assert.match(renderMediaHistoryRow, /\.shape\(ui::IconButtonShape::Square\)/);
+  assert.match(renderMediaHistoryRow, /\.icon_size\(IconSize::Small\)/);
+  assert.match(renderMediaHistoryRow, /\.style\(ButtonStyle::Filled\)/);
+  assert.match(renderMediaHistoryRow, /panel\.preview_media_asset/);
+  assert.match(renderMediaHistoryRow, /panel\.preview_media_url/);
+  assert.match(renderMediaHistoryRow, /panel\.copy_media_source/);
+  assert.match(renderMediaHistoryRow, /panel\.insert_media\(/);
+  assert.match(renderMediaHistoryRow, /panel\.insert_media_url/);
+  assert.match(renderMediaHistoryRow, /panel\.pin_media/);
+  assert.match(renderMediaHistoryRow, /panel\.unpin_media/);
+  assert.match(renderMediaHistoryRow, /panel\.remove_media_history_entry/);
+  assert.doesNotMatch(renderMediaHistoryRow, /\.flex_wrap\(\)/);
+  assert.doesNotMatch(
+    renderMediaHistoryRow,
+    /Button::new\((?:preview_id|copy_id|insert_id|remove_id|pin_id), "(?:Preview|Copy|Insert|Insert URL|Remove|Pin|Unpin)"\)/,
+  );
   assert.match(renderMediaHistoryRow, /\.tooltip\(Tooltip::text\(row_tooltip\)\)/);
   assert.doesNotMatch(renderMediaHistoryRow, /\.border_1\(\)|\.rounded_sm\(\)|\.bg\(cx\.theme\(\)\.colors\(\)\.element_background\)/);
   assert.match(remotePanelRows, /\.spacing\(ListItemSpacing::Sparse\)/);

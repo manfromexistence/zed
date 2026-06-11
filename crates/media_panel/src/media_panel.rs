@@ -2007,10 +2007,10 @@ impl MediaPanel {
         let source_health = recent_media_source_health(&entry.source);
         let source_available = !media_history_entry_missing(&entry);
         let row_tooltip = format!("{}\n{}", entry.label.as_ref(), source_label.as_ref());
-        let pin_label = if pinned {
-            if source_available { "Unpin" } else { "Remove" }
+        let pin_icon = if pinned && !source_available {
+            IconName::Trash
         } else {
-            "Pin"
+            IconName::Pin
         };
         let actions = match entry.source.clone() {
             RecentMediaSource::Local {
@@ -2027,11 +2027,13 @@ impl MediaPanel {
                 let copy_asset = asset.clone();
                 let insert_asset = asset;
                 h_flex()
-                    .gap_1()
+                    .flex_none()
+                    .gap_0p5()
                     .child(
-                        Button::new(preview_id, "Preview")
+                        IconButton::new(preview_id, IconName::Eye)
+                            .shape(ui::IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
-                            .size(ButtonSize::Compact)
+                            .icon_size(IconSize::Small)
                             .tooltip(Tooltip::text(media_history_preview_tooltip(
                                 source_available,
                             )))
@@ -2041,9 +2043,11 @@ impl MediaPanel {
                             })),
                     )
                     .child(
-                        Button::new(copy_id, "Copy")
+                        IconButton::new(copy_id, IconName::Copy)
+                            .shape(ui::IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
-                            .size(ButtonSize::Compact)
+                            .icon_size(IconSize::Small)
+                            .tooltip(Tooltip::text("Copy media path"))
                             .on_click(cx.listener(move |panel, _, _, cx| {
                                 panel.record_recent_local_media(&copy_asset);
                                 let source = copy_asset.path.to_string_lossy().into_owned();
@@ -2051,9 +2055,10 @@ impl MediaPanel {
                             })),
                     )
                     .child(
-                        Button::new(insert_id, "Insert")
-                            .style(ButtonStyle::Subtle)
-                            .size(ButtonSize::Compact)
+                        IconButton::new(insert_id, IconName::Plus)
+                            .shape(ui::IconButtonShape::Square)
+                            .style(ButtonStyle::Filled)
+                            .icon_size(IconSize::Small)
                             .tooltip(Tooltip::text(media_history_insert_tooltip(
                                 source_available,
                             )))
@@ -2069,11 +2074,14 @@ impl MediaPanel {
                 let label = entry.label.to_string();
                 let kind = entry.kind;
                 h_flex()
-                    .gap_1()
+                    .flex_none()
+                    .gap_0p5()
                     .child(
-                        Button::new(preview_id, "Preview")
+                        IconButton::new(preview_id, IconName::Eye)
+                            .shape(ui::IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
-                            .size(ButtonSize::Compact)
+                            .icon_size(IconSize::Small)
+                            .tooltip(Tooltip::text("Preview remote media"))
                             .on_click(cx.listener({
                                 let url = url.clone();
                                 let label = label.clone();
@@ -2089,9 +2097,11 @@ impl MediaPanel {
                             })),
                     )
                     .child(
-                        Button::new(copy_id, "Copy")
+                        IconButton::new(copy_id, IconName::Copy)
+                            .shape(ui::IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
-                            .size(ButtonSize::Compact)
+                            .icon_size(IconSize::Small)
+                            .tooltip(Tooltip::text("Copy remote media URL"))
                             .on_click(cx.listener({
                                 let url = url.clone();
                                 let label = label.clone();
@@ -2102,9 +2112,11 @@ impl MediaPanel {
                             })),
                     )
                     .child(
-                        Button::new(insert_id, "Insert URL")
-                            .style(ButtonStyle::Subtle)
-                            .size(ButtonSize::Compact)
+                        IconButton::new(insert_id, IconName::Plus)
+                            .shape(ui::IconButtonShape::Square)
+                            .style(ButtonStyle::Filled)
+                            .icon_size(IconSize::Small)
+                            .tooltip(Tooltip::text("Insert remote media URL"))
                             .on_click(cx.listener(move |panel, _, window, cx| {
                                 panel.insert_media_url(
                                     url.clone(),
@@ -2161,14 +2173,21 @@ impl MediaPanel {
             .end_slot_on_hover(
                 h_flex()
                     .flex_none()
-                    .gap_1()
-                    .flex_wrap()
+                    .gap_0p5()
+                    .occlude()
+                    .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
+                        cx.stop_propagation();
+                    })
+                    .on_mouse_up(gpui::MouseButton::Left, |_, _, cx| {
+                        cx.stop_propagation();
+                    })
                     .child(actions)
                     .when(!source_available && !pinned, |this| {
                         this.child(
-                            Button::new(remove_id, "Remove")
+                            IconButton::new(remove_id, IconName::Trash)
+                                .shape(ui::IconButtonShape::Square)
                                 .style(ButtonStyle::Subtle)
-                                .size(ButtonSize::Compact)
+                                .icon_size(IconSize::Small)
                                 .tooltip(Tooltip::text("Remove this missing media entry"))
                                 .on_click(cx.listener(move |panel, _, _, cx| {
                                     panel.remove_media_history_entry(
@@ -2180,9 +2199,10 @@ impl MediaPanel {
                         )
                     })
                     .child(
-                        Button::new(pin_id, pin_label)
+                        IconButton::new(pin_id, pin_icon)
+                            .shape(ui::IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
-                            .size(ButtonSize::Compact)
+                            .icon_size(IconSize::Small)
                             .tooltip(Tooltip::text(media_history_pin_tooltip(
                                 pinned,
                                 source_available,

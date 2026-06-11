@@ -223,14 +223,19 @@ test("current handoff names the no-runtime-proof production-readiness boundary",
   const currentVerificationLane =
     dx.match(/## Current Verification Lane[\s\S]*?(?=\n## Lightweight Source Guard Registry)/)?.[0] ?? "";
   const currentPanelLane =
-    currentVerificationLane.match(/- Current DX panel GPUI sixth-pass polish:[^\n]+/)?.[0] ?? "";
+    currentVerificationLane.match(/- Current DX panel GPUI seventh-pass polish:[^\n]+/)?.[0] ?? "";
   const currentTodoState = todo.split(/\r?\n/).slice(0, 18).join("\n");
 
-  assert.ok(currentPanelLane, "expected current sixth-pass DX panel GPUI handoff lane");
+  assert.ok(currentPanelLane, "expected current seventh-pass DX panel GPUI handoff lane");
   assert.match(currentPanelLane, /source guards/);
+  assert.match(currentPanelLane, /Media recent\/pinned history rows/);
+  assert.match(currentPanelLane, /UI recent\/pinned history rows/);
+  assert.match(currentPanelLane, /Forge status actions now stop row-event propagation/);
+  assert.match(currentPanelLane, /Project storage drilldown rows fail closed/);
+  assert.match(currentPanelLane, /Check was audited as already aligned/);
   assert.match(currentPanelLane, /Cargo, build, `just run`, native launch, local servers, browser automation, and runtime visual proof remain deferred by instruction/);
   assert.doesNotMatch(currentPanelLane, /runtime-green|launch-ready|production-ready/i);
-  assert.match(currentTodoState, /DX panel GPUI sixth-pass polish is source-verified/);
+  assert.match(currentTodoState, /DX panel GPUI seventh-pass polish is source-verified/);
   assert.match(dx, /Current production readiness is source-audited only/i);
   assert.match(
     dx,

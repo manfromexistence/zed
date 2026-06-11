@@ -1,3 +1,22 @@
+[2026-06-11] - DX Panel GPUI Seventh-Pass Polish
+
+CHANGED:
+- `crates\media_panel\src\media_panel.rs` now preserves history-row preview, copy, insert, pin, unpin, and remove behavior behind compact tooltip-backed square icon rails with click-propagation guards.
+- `crates\shadcn_ui_panel\src\shadcn_ui_panel.rs` now keeps the history-row primary Install/Insert/Open action readable while moving secondary Copy, Preview, Docs, Pin, and Remove actions to square icon controls.
+- `crates\agent_ui\src\dx_forge_panel\controls.rs` now stops row-event propagation from Forge status action buttons.
+- `crates\project_panel\src\project_panel.rs` now fails closed when cached storage-drilldown folder targets go stale before expand/scroll.
+- Focused source guards and the handoff registry now cover the seventh-pass GPUI component contracts for Media, UI, Forge, Project, and Check preservation.
+
+PASSED:
+- `rustfmt --edition 2024` on touched Rust files
+- `rustfmt --edition 2024 --check` on touched Rust files
+- `node --test script\dx-forge-panel-source.test.ts script\dx-media-panel-source.test.ts script\dx-ui-panel-source.test.ts script\dx-check-panel-source.test.ts script\dx-project-panel-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- Anchored conflict-marker scan across touched files returned no matches
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. `just run`, Cargo build/check/test/clippy, native launch, browser automation, local servers, and runtime visual proof were not run.
+
 [2026-06-11] - DX Panel GPUI Sixth-Pass Polish
 
 CHANGED:

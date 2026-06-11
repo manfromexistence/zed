@@ -36,6 +36,7 @@ pub(super) fn status_actions(
                 .on_click({
                     let workspace = workspace.clone();
                     move |_, window, cx| {
+                        cx.stop_propagation();
                         if let Some(path) = history_path.clone().filter(|path| path.exists()) {
                             open_exact_abs_path(workspace.clone(), path, window, cx);
                         }
@@ -51,6 +52,7 @@ pub(super) fn status_actions(
                 .on_click({
                     let panel = panel.clone();
                     move |_, _, cx| {
+                        cx.stop_propagation();
                         panel.update(cx, |panel, cx| panel.refresh(cx)).ok();
                     }
                 }),
