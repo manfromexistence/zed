@@ -60,6 +60,7 @@ use super::{
     agent_plugin_bootstrap_tool::AgentPluginBootstrapTool,
     agent_plugin_catalog_tool::AgentPluginCatalogTool,
     agent_plugin_contracts::*,
+    dx_plugin_runtime_aliases::dx_plugin_runtime_aliases,
 };
 use crate::{AgentTool, ToolCallEventStream, ToolInput};
 use agent_client_protocol::schema as acp;
@@ -458,6 +459,7 @@ fn inspect_runtime_status(
     let runtime_green_blocker_summary = runtime_green_blocker_summary(status, roots);
     let runtime_green_readiness_scorecard =
         runtime_green_readiness_scorecard(status, &runtime_green_blocker_summary);
+    let dx_plugin_runtime_aliases = dx_plugin_runtime_aliases(&runtime_green_readiness_scorecard);
     let runtime_observability_digest_value = runtime_observability_digest(
         status,
         roots,
@@ -563,6 +565,7 @@ fn inspect_runtime_status(
         "bootstrap_readiness": bootstrap_readiness,
         "runtime_green_blocker_summary": runtime_green_blocker_summary,
         "runtime_green_readiness_scorecard": runtime_green_readiness_scorecard,
+        "dx_plugin_runtime_aliases": dx_plugin_runtime_aliases,
         "runtime_green_operator_handoff": runtime_green_operator_handoff,
         "runtime_observability_digest": runtime_observability_digest,
         "runtime_green_proof_path": runtime_green_proof_path,

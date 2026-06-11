@@ -1,3 +1,32 @@
+[2026-06-11] - DX Plugins Source Integrity and Runtime Aliases
+
+ADDED:
+- `crates/agent/src/tools/dx_plugin_manifest.rs` now emits `zed.dx_plugins.source_root_integrity.v1` with manifest/runtime source-root validation, existing-ancestor canonicalization, runtime-entrypoint containment, and fail-closed catalog/default-enabled behavior when violations exist.
+- First-party plugin manifests now include `zed.dx_plugins.runtime_status_alias.v1` metadata for `dx.browser`, `dx.computer`, and `dx.driven`.
+- `inspect_agent_plugin_runtime_status` now emits `dx_plugin_runtime_aliases` with `dx.browser`, `dx.computer`, and `dx.driven` mappings to existing Browser/WebPreview, managed Chrome, PC-use, and guarded workflow surfaces.
+- `crates/agent/src/tools/dx_plugin_runtime_aliases.rs` owns the alias packet builder so the already-large runtime-status tool does not absorb the new contract logic.
+- `script/dx-agent-plugin-runtime-status-source.test.ts` guards the runtime alias schema, lane mappings, non-authorization policy, Computer safety flags, and Driven no-executor claim.
+- `docs/superpowers/plans/2026-06-11-dx-plugins-source-integrity-runtime-aliases.md` records the source-only implementation plan and verification boundary.
+
+CHANGED:
+- `dx.computer` now declares the managed Playwright runner as `workspace_playwright_runner` instead of pointing its runtime entrypoint at the DXJS root.
+- `dx.driven` now uses the `repo_agent_ui_bridge_module` source root for its `crates/agent_ui/src/dx_agent_bridge.rs` runtime entrypoint while still declaring the bridge directory for related source.
+- Agent plugin catalog output derives `dx_default_enabled_plugins` from the validated DX plugin catalog summary instead of hard-coding first-party DX plugins when source integrity fails.
+
+HARDENED:
+- Source guards now prove every first-party manifest/runtime source root resolves through `allowlisted_source_roots` and that runtime-status aliases do not invent runtime-green readiness.
+- Runtime aliases remain display/lookup metadata only: they do not authorize actions, do not dispatch input, do not launch browsers, and do not claim `dx.driven` executor runtime readiness.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates/agent/src/tools.rs crates/agent/src/tools/dx_plugin_manifest.rs crates/agent/src/tools/dx_plugin_manifest/entries.rs crates/agent/src/tools/dx_plugin_runtime_aliases.rs crates/agent/src/tools/agent_plugin_catalog_tool.rs crates/agent/src/tools/agent_plugin_runtime_status_tool.rs`
+- `node --test script\dx-agent-workspaces-source.test.ts script\dx-agent-thread-view-source.test.ts script\dx-agent-bridge-source.test.ts script\dx-plugin-catalog-source.test.ts script\dx-agent-plugin-runtime-status-source.test.ts`
+- Focused forbidden-upstream scan over touched plugin source files returned no matches.
+- Focused conflict-marker scan over touched source, guard, and plan files returned no matches.
+- `git diff --check`
+
+NOTES:
+- Cargo, `just run`, local servers, native launch, and visual runtime proof remain deferred by instruction. Next source pass should tighten configured-plugin source-root/source-path authorization and trusted-bridge status gating before AI runtime-tool claims.
+
 [2026-06-11] - DX Plugins Rich Metadata and Receipt-Gated Composer
 
 CHANGED:

@@ -1,5 +1,6 @@
 use super::agent_plugin_contracts::*;
 use super::dx_plugin_manifest::{
+    DX_PLUGIN_RUNTIME_STATUS_ALIAS_SCHEMA, DX_PLUGIN_RUNTIME_STATUS_ALIASES_SCHEMA,
     DxPluginCatalogPaths, dx_first_party_plugin_catalog, dx_first_party_plugin_catalog_summary,
 };
 use crate::{
@@ -146,6 +147,7 @@ fn agent_plugin_catalog(
     let workspace_tools_root = project_root.as_ref().map(|root| root.join("tools"));
     let dx_plugin_catalog = dx_first_party_plugin_catalog(
         DxPluginCatalogPaths {
+            project_root: project_root.clone(),
             workspace_plugin_root: workspace_plugin_root.clone(),
             workspace_tools_root: workspace_tools_root.clone(),
             zed_data_plugin_root: default_plugin_root.clone(),
@@ -154,6 +156,10 @@ fn agent_plugin_catalog(
         AGENT_PLUGIN_RUNTIME_STATUS_TOOL_NAME,
     );
     let dx_plugin_catalog_summary = dx_first_party_plugin_catalog_summary(&dx_plugin_catalog);
+    let dx_default_enabled_plugins = dx_plugin_catalog_summary
+        .get("default_enabled_plugins")
+        .cloned()
+        .unwrap_or_else(|| Value::Array(Vec::new()));
 
     let mut plugins = vec![
         browser_plugin_manifest(),
@@ -201,7 +207,7 @@ fn agent_plugin_catalog(
             "summary_schema": AGENT_PLUGIN_CATALOG_SUMMARY_SCHEMA,
             "dx_plugin_catalog_summary": dx_plugin_catalog_summary,
             "default_enabled_plugins": ["zed.browser", "zed.chrome", "zed.pc_use"],
-            "dx_default_enabled_plugins": ["dx.browser", "dx.computer", "dx.driven"],
+            "dx_default_enabled_plugins": dx_default_enabled_plugins,
             "tool_name": AgentPluginCatalogTool::NAME,
             "tools": agent_plugin_catalog_tools_manifest(),
             "runtime_status": agent_plugin_catalog_runtime_status_manifest(),
@@ -275,6 +281,9 @@ fn agent_plugin_catalog_runtime_status_manifest() -> Value {
         "final_proof_audit_summary_schema": AGENT_PLUGIN_RUNTIME_GREEN_FINAL_PROOF_AUDIT_SUMMARY_SCHEMA,
         "runtime_observability_digest_schema": AGENT_PLUGIN_RUNTIME_OBSERVABILITY_DIGEST_SCHEMA,
         "runtime_observability_matrix_schema": AGENT_PLUGIN_RUNTIME_OBSERVABILITY_MATRIX_SCHEMA,
+        "dx_plugin_runtime_status_alias_schema": DX_PLUGIN_RUNTIME_STATUS_ALIAS_SCHEMA,
+        "dx_plugin_runtime_status_aliases_schema": DX_PLUGIN_RUNTIME_STATUS_ALIASES_SCHEMA,
+        "dx_plugin_runtime_status_aliases_field": "dx_plugin_runtime_aliases",
         "pc_use_proof_summary_schema": AGENT_PLUGIN_PC_USE_PROOF_SUMMARY_SCHEMA,
         "runtime_green_ready_outcomes": {
             "browser_final_validation_result": "runtime_green_candidate=true",

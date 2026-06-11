@@ -7,11 +7,15 @@ const read = (path: string) => readFileSync(path, "utf8");
 const manifestPath = "crates/agent/src/tools/dx_plugin_manifest.rs";
 const manifestEntriesPath = "crates/agent/src/tools/dx_plugin_manifest/entries.rs";
 const catalogPath = "crates/agent/src/tools/agent_plugin_catalog_tool.rs";
+const runtimeStatusPath = "crates/agent/src/tools/agent_plugin_runtime_status_tool.rs";
+const runtimeAliasesPath = "crates/agent/src/tools/dx_plugin_runtime_aliases.rs";
 const toolsPath = "crates/agent/src/tools.rs";
 const pluginMetadataSurfacePaths = [
   manifestPath,
   manifestEntriesPath,
   catalogPath,
+  runtimeStatusPath,
+  runtimeAliasesPath,
   "crates/agent_ui/src/dx_agent_bridge.rs",
   "crates/agent_ui/src/dx_agent_bridge/workflow_nodes.rs",
   "crates/agent_ui/src/dx_agent_bridge/workflow_nodes/contract.rs",
@@ -38,6 +42,8 @@ test("DX first-party plugin manifest model is typed and complete", () => {
     "DxPluginManifest",
     "DxPluginCatalog",
     "DxPluginCatalogDiscovery",
+    "DxPluginSourceRootIntegrity",
+    "DxPluginRuntimeStatusAlias",
     "DxPluginPermission",
     "DxPluginRuntime",
     "DxPluginPort",
@@ -71,6 +77,10 @@ test("DX first-party plugin manifest model is typed and complete", () => {
   assert.match(manifest, /zed\.dx_plugins\.manifest\.v1/);
   assert.match(manifest, /DX_PLUGIN_CATALOG_DISCOVERY_SCHEMA/);
   assert.match(manifest, /zed\.dx_plugins\.catalog_discovery\.v1/);
+  assert.match(manifest, /DX_PLUGIN_SOURCE_ROOT_INTEGRITY_SCHEMA/);
+  assert.match(manifest, /zed\.dx_plugins\.source_root_integrity\.v1/);
+  assert.match(manifest, /DX_PLUGIN_RUNTIME_STATUS_ALIASES_SCHEMA/);
+  assert.match(manifest, /zed\.dx_plugins\.runtime_status_aliases\.v1/);
 });
 
 test("DX catalog exposes Browser, Computer, and Driven as first-party manifests", () => {
@@ -108,11 +118,42 @@ test("DX plugin discovery is allowlisted to DX-owned source roots only", () => {
   assert.match(manifest, /source_root_policy: "dx_owned_source_roots_only"/);
   assert.match(manifest, /"crates\/agent\/src\/tools"/);
   assert.match(manifest, /"crates\/agent_ui\/src\/dx_agent_bridge"/);
+  assert.match(manifest, /"crates\/agent_ui\/src\/dx_agent_bridge\.rs"/);
   assert.match(manifest, /"crates\/web_preview\/src"/);
   assert.match(manifest, /"tools\/agent-plugins"/);
+  assert.match(manifest, /"workspace_playwright_runner"/);
+  assert.match(manifest, /"tools\/playwright"/);
   assert.match(manifest, /"G:\\\\Dx\\\\js"/);
   assert.match(manifest, /allowlisted_source_roots/);
-  assert.doesNotMatch(manifest, /read_dir|WalkDir|glob|canonicalize/);
+  assert.match(manifest, /validate_dx_plugin_catalog_sources/);
+  assert.match(manifest, /canonicalize_manifest_path_with_ancestors/);
+  assert.match(manifest, /runtime_entrypoint_is_under_source_root/);
+  assert.doesNotMatch(manifest, /read_dir|WalkDir|glob/);
+});
+
+test("DX plugin source roots resolve through the allowlist", () => {
+  const manifest = read(manifestPath);
+  const entries = read(manifestEntriesPath);
+  const allowlisted = new Set(
+    [...manifest.matchAll(/source_root\(\s*"([^"]+)"/g)].map((match) => match[1]),
+  );
+  const runtimeRoots = [...entries.matchAll(/runtime\(\s*"[^"]+",\s*"[^"]+",\s*"([^"]+)"/g)].map(
+    (match) => match[1],
+  );
+  const manifestRoots = [...entries.matchAll(/source_root_ids:\s*vec!\[([\s\S]*?)\]/g)].flatMap(
+    (match) => [...match[1].matchAll(/"([^"]+)"/g)].map((root) => root[1]),
+  );
+
+  assert.ok(allowlisted.has("repo_web_preview"));
+  assert.ok(allowlisted.has("workspace_playwright_runner"));
+  assert.ok(allowlisted.has("repo_agent_ui_bridge_module"));
+
+  for (const id of [...runtimeRoots, ...manifestRoots]) {
+    assert.ok(allowlisted.has(id), `unknown DX plugin source root: ${id}`);
+  }
+
+  assert.match(entries, /"dx\.computer"[\s\S]*?runtime\([\s\S]*?"workspace_playwright_runner"/);
+  assert.match(entries, /"dx\.driven"[\s\S]*?runtime\([\s\S]*?"repo_agent_ui_bridge_module"/);
 });
 
 test("DX plugin catalog source does not reference forbidden upstream plugin sources", () => {
@@ -145,4 +186,6 @@ test("DX plugin manifests are prepared for the Plugins panel and DX Agents bridg
   assert.match(manifest, /receipt_root/);
   assert.match(manifest, /runtime_status_tool/);
   assert.match(manifest, /catalog_tool/);
+  assert.match(manifest, /runtime_status_alias/);
+  assert.match(manifest, /source_integrity/);
 });

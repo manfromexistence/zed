@@ -1,6 +1,7 @@
 use super::{
-    DX_PLUGIN_MANIFEST_SCHEMA, DxPluginCredential, DxPluginManifest, DxPluginPermission,
-    DxPluginPort, DxPluginReceipt, DxPluginRuntime, DxPluginTrustStatus,
+    DX_PLUGIN_MANIFEST_SCHEMA, DX_PLUGIN_RUNTIME_STATUS_ALIAS_SCHEMA, DxPluginCredential,
+    DxPluginManifest, DxPluginPermission, DxPluginPort, DxPluginReceipt, DxPluginRuntime,
+    DxPluginRuntimeStatusAlias, DxPluginTrustStatus,
 };
 
 pub(super) fn first_party_plugin_manifests(receipt_root: String) -> Vec<DxPluginManifest> {
@@ -51,6 +52,17 @@ fn browser_manifest(receipt_root: String) -> DxPluginManifest {
             "crates/web_preview/src/web_preview_view.rs",
             false,
             &receipt_root,
+        ),
+        runtime_status_alias: runtime_status_alias(
+            "dx.browser",
+            vec!["zed.browser"],
+            vec!["browser_webpreview"],
+            vec!["plugins.browser"],
+            vec![
+                "runtime_green_readiness_scorecard.lanes[browser_webpreview]",
+                "plugins.browser.panel_live_proof_readiness_card",
+            ],
+            "alias_only_existing_browser_runtime_evidence_required",
         ),
         inputs: vec![
             port("url", "string", false, "Target URL or search text."),
@@ -160,10 +172,21 @@ fn computer_manifest(receipt_root: String) -> DxPluginManifest {
         runtime: runtime(
             "dxjs_managed_browser",
             "managed_chrome_playwright_adapter",
-            "dxjs_runtime",
+            "workspace_playwright_runner",
             "tools/playwright/zed-managed-chrome-runner/managed_chrome_runner.mjs",
             true,
             &receipt_root,
+        ),
+        runtime_status_alias: runtime_status_alias(
+            "dx.computer",
+            vec!["zed.chrome", "zed.pc_use"],
+            vec!["managed_chrome", "pc_use"],
+            vec!["plugins.chrome", "plugins.pc_use"],
+            vec![
+                "runtime_green_readiness_scorecard.lanes[managed_chrome]",
+                "runtime_green_readiness_scorecard.lanes[pc_use]",
+            ],
+            "alias_only_managed_browser_and_future_pc_use_evidence_required",
         ),
         inputs: vec![
             port("url", "string", false, "Managed browser URL target."),
@@ -241,7 +264,11 @@ fn computer_manifest(receipt_root: String) -> DxPluginManifest {
                 "Agent-screen recording and Web Preview video handoff",
             ),
         ],
-        source_root_ids: vec!["repo_agent_tools", "repo_agent_ui_bridge", "dxjs_runtime"],
+        source_root_ids: vec![
+            "repo_agent_tools",
+            "repo_agent_ui_bridge",
+            "workspace_playwright_runner",
+        ],
         available_to: vec!["zed_plugins_panel", "dx_agents_bridge", "agent_panel"],
     }
 }
@@ -282,10 +309,22 @@ fn driven_manifest(receipt_root: String) -> DxPluginManifest {
         runtime: runtime(
             "dx_workflow_nodes",
             "dx_agents_bridge",
-            "repo_agent_ui_bridge",
+            "repo_agent_ui_bridge_module",
             "crates/agent_ui/src/dx_agent_bridge.rs",
             false,
             &receipt_root,
+        ),
+        runtime_status_alias: runtime_status_alias(
+            "dx.driven",
+            Vec::new(),
+            vec!["guarded_workflow_surface"],
+            vec!["dx_plugin_runtime_aliases.aliases.dx.driven"],
+            vec![
+                "plan_dx_runtime_proof",
+                "import_dx_runtime_proof",
+                "dx.launch_audit.source_guard.v1",
+            ],
+            "metadata_only_no_executor_runtime_claim",
         ),
         inputs: vec![
             port("lane", "dx_lane_id", true, "DX lane or pass identifier."),
@@ -350,7 +389,11 @@ fn driven_manifest(receipt_root: String) -> DxPluginManifest {
                 "source guard and verification policy evidence",
             ),
         ],
-        source_root_ids: vec!["repo_agent_tools", "repo_agent_ui_bridge", "dxjs_runtime"],
+        source_root_ids: vec![
+            "repo_agent_tools",
+            "repo_agent_ui_bridge",
+            "repo_agent_ui_bridge_module",
+        ],
         available_to: vec!["zed_plugins_panel", "dx_agents_bridge", "agent_panel"],
     }
 }
@@ -385,6 +428,25 @@ fn runtime(
         cancellation: "agent_cancellation_token",
         receipt_root: receipt_root.to_string(),
         dxjs_required,
+    }
+}
+
+fn runtime_status_alias(
+    canonical_plugin_id: &'static str,
+    maps_to_runtime_plugin_ids: Vec<&'static str>,
+    maps_to_lane_ids: Vec<&'static str>,
+    runtime_status_fields: Vec<&'static str>,
+    readiness_fields: Vec<&'static str>,
+    claim_policy: &'static str,
+) -> DxPluginRuntimeStatusAlias {
+    DxPluginRuntimeStatusAlias {
+        schema: DX_PLUGIN_RUNTIME_STATUS_ALIAS_SCHEMA,
+        canonical_plugin_id,
+        maps_to_runtime_plugin_ids,
+        maps_to_lane_ids,
+        runtime_status_fields,
+        readiness_fields,
+        claim_policy,
     }
 }
 
