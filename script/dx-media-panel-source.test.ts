@@ -176,8 +176,30 @@ test("media panel renders bridge state and filters fetched remote rows by query"
   assert.match(renderRecentMediaSection, /\.start_slot\(Icon::new\(IconName::Clock\)\.size\(IconSize::Small\)\)/);
   assert.match(renderPinnedMediaSection, /ListHeader::new\("Pinned"\)/);
   assert.match(renderPinnedMediaSection, /\.start_slot\(Icon::new\(IconName::Star\)\.size\(IconSize::Small\)\)/);
-  assert.match(`${renderRecentMediaSection}\n${renderPinnedMediaSection}`, /\.end_slot\([\s\S]*Label::new\(availability_label\)/);
-  assert.doesNotMatch(`${renderRecentMediaSection}\n${renderPinnedMediaSection}`, /LabelSize::XSmall|IconSize::XSmall|\.justify_between\(\)/);
+  const historySectionChrome = `${renderRecentMediaSection}\n${renderPinnedMediaSection}`;
+  assert.match(historySectionChrome, /\.end_slot\([\s\S]*Label::new\(availability_label\)/);
+  assert.match(
+    historySectionChrome,
+    /IconButton::new\(\s*"media-panel-remove-missing-recent",\s*IconName::ListX/,
+  );
+  assert.match(
+    historySectionChrome,
+    /IconButton::new\(\s*"media-panel-remove-missing-pinned",\s*IconName::ListX/,
+  );
+  assert.match(
+    historySectionChrome,
+    /IconButton::new\("media-panel-clear-recent", IconName::Trash\)/,
+  );
+  assert.match(
+    historySectionChrome,
+    /IconButton::new\("media-panel-clear-pinned", IconName::Trash\)/,
+  );
+  assert.match(historySectionChrome, /\.shape\(ui::IconButtonShape::Square\)/);
+  assert.doesNotMatch(
+    historySectionChrome,
+    /Button::new\("media-panel-(?:remove-missing|clear)-(?:recent|pinned)", "(?:Remove|Clear)"\)/,
+  );
+  assert.doesNotMatch(historySectionChrome, /LabelSize::XSmall|IconSize::XSmall|\.justify_between\(\)/);
   assert.match(renderRemoteBrowserRow, /ListItem::new\("media-panel-remote-browser-row"\)/);
   assert.match(renderRemoteWarningRow, /ListItem::new\("media-panel-remote-warning-row"\)/);
   assert.match(renderStatusRow, /ListItem::new\("media-panel-status-row"\)/);
@@ -187,6 +209,8 @@ test("media panel renders bridge state and filters fetched remote rows by query"
   assert.match(renderMediaHistoryRow, /\.inset\(true\)/);
   assert.match(renderMediaHistoryRow, /\.spacing\(ListItemSpacing::Sparse\)/);
   assert.match(renderMediaHistoryRow, /\.end_slot\(/);
+  assert.match(renderMediaHistoryRow, /IconName::Ellipsis/);
+  assert.match(renderMediaHistoryRow, /\.end_slot_on_hover\(/);
   assert.match(renderMediaHistoryRow, /\.tooltip\(Tooltip::text\(row_tooltip\)\)/);
   assert.doesNotMatch(renderMediaHistoryRow, /\.border_1\(\)|\.rounded_sm\(\)|\.bg\(cx\.theme\(\)\.colors\(\)\.element_background\)/);
   assert.match(remotePanelRows, /\.spacing\(ListItemSpacing::Sparse\)/);

@@ -4355,9 +4355,9 @@ impl ProjectPanel {
             v_flex()
                 .id("dx-explorer-storage-drilldown")
                 .w_full()
-                .gap_1()
-                .px_2()
-                .py_1()
+                .gap_0p5()
+                .px_1()
+                .py_0p5()
                 .border_b_1()
                 .border_color(cx.theme().colors().border.opacity(0.6))
                 .bg(cx.theme().colors().panel_background)
@@ -4479,7 +4479,7 @@ impl ProjectPanel {
             item.worktree_id.to_usize(),
             item.entry_id.to_usize()
         )))
-        .spacing(ListItemSpacing::Sparse)
+        .spacing(ListItemSpacing::Dense)
         .toggle_state(is_selected)
         .tab_index(0_isize)
         .track_focus(&self.focus_handle(cx))
@@ -4882,7 +4882,7 @@ impl ProjectPanel {
                             .child(
                                 Icon::new(dx_icon(DxUiIcon::Project))
                                     .size(IconSize::Small)
-                                    .color(Color::Accent),
+                                    .color(Color::Muted),
                             )
                             .child(
                                 Label::new("Project")
@@ -4901,7 +4901,7 @@ impl ProjectPanel {
         id_prefix: &'static str,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
-        div().pr_1().child(side_panel_header_controls(
+        div().pr_0p5().child(side_panel_header_controls(
             id_prefix,
             self.workspace.clone(),
             cx.entity().entity_id(),
@@ -4941,9 +4941,9 @@ impl ProjectPanel {
             .w_full()
             .items_center()
             .justify_between()
-            .gap_2()
-            .px_2()
-            .py_1()
+            .gap_1()
+            .px_1()
+            .py_0p5()
             .border_b_1()
             .border_color(cx.theme().colors().border.opacity(0.6))
             .bg(cx.theme().colors().panel_background)
@@ -7274,10 +7274,12 @@ impl ProjectPanel {
         } else {
             SharedString::from(storage::format_file_size(size))
         };
+        let tooltip = label.clone();
         div()
             .visible_on_hover("list_item")
             .flex_none()
             .ml_1()
+            .tooltip(Tooltip::text(tooltip))
             .child(Chip::new(label).label_color(Color::Muted).truncate())
             .into_any_element()
     }

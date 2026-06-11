@@ -34,7 +34,7 @@ const MAX_SECTION_ROWS: usize = 8;
 const MAX_NOTICE_ROWS: usize = 4;
 const MAX_QUICK_FIX_ROWS: usize = 4;
 const MAX_ADAPTER_PLAN_ROWS: usize = 4;
-const MAX_WEB_AUDIT_ROWS: usize = 8;
+const MAX_WEB_AUDIT_ROWS: usize = 4;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 enum DxCheckPanelSectionKind {
@@ -134,6 +134,7 @@ impl DxCheckPanel {
             collapsed_sections: [
                 DxCheckPanelSectionKind::Receipt,
                 DxCheckPanelSectionKind::Commands,
+                DxCheckPanelSectionKind::AdapterPlans,
             ]
             .into_iter()
             .collect(),

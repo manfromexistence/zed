@@ -1791,19 +1791,26 @@ impl MediaPanel {
                                 )
                                 .when(missing_count > 0, |this| {
                                     this.child(
-                                        Button::new("media-panel-remove-missing-recent", "Remove")
-                                            .style(ButtonStyle::Subtle)
-                                            .size(ButtonSize::Compact)
-                                            .tooltip(Tooltip::text(REMOVE_MISSING_MEDIA_TOOLTIP))
-                                            .on_click(cx.listener(|panel, _, _, cx| {
+                                        IconButton::new(
+                                            "media-panel-remove-missing-recent",
+                                            IconName::ListX,
+                                        )
+                                        .shape(ui::IconButtonShape::Square)
+                                        .style(ButtonStyle::Subtle)
+                                        .icon_size(IconSize::Small)
+                                        .tooltip(Tooltip::text(REMOVE_MISSING_MEDIA_TOOLTIP))
+                                        .on_click(
+                                            cx.listener(|panel, _, _, cx| {
                                                 panel.remove_missing_recent_media(cx);
-                                            })),
+                                            }),
+                                        ),
                                     )
                                 })
                                 .child(
-                                    Button::new("media-panel-clear-recent", "Clear")
+                                    IconButton::new("media-panel-clear-recent", IconName::Trash)
+                                        .shape(ui::IconButtonShape::Square)
                                         .style(ButtonStyle::Subtle)
-                                        .size(ButtonSize::Compact)
+                                        .icon_size(IconSize::Small)
                                         .tooltip(Tooltip::text(CLEAR_RECENT_MEDIA_TOOLTIP))
                                         .on_click(cx.listener(|panel, _, _, cx| {
                                             panel.clear_recent_media(cx);
@@ -1864,19 +1871,26 @@ impl MediaPanel {
                                 )
                                 .when(missing_count > 0, |this| {
                                     this.child(
-                                        Button::new("media-panel-remove-missing-pinned", "Remove")
-                                            .style(ButtonStyle::Subtle)
-                                            .size(ButtonSize::Compact)
-                                            .tooltip(Tooltip::text(REMOVE_MISSING_MEDIA_TOOLTIP))
-                                            .on_click(cx.listener(|panel, _, _, cx| {
+                                        IconButton::new(
+                                            "media-panel-remove-missing-pinned",
+                                            IconName::ListX,
+                                        )
+                                        .shape(ui::IconButtonShape::Square)
+                                        .style(ButtonStyle::Subtle)
+                                        .icon_size(IconSize::Small)
+                                        .tooltip(Tooltip::text(REMOVE_MISSING_MEDIA_TOOLTIP))
+                                        .on_click(
+                                            cx.listener(|panel, _, _, cx| {
                                                 panel.remove_missing_pinned_media(cx);
-                                            })),
+                                            }),
+                                        ),
                                     )
                                 })
                                 .child(
-                                    Button::new("media-panel-clear-pinned", "Clear")
+                                    IconButton::new("media-panel-clear-pinned", IconName::Trash)
+                                        .shape(ui::IconButtonShape::Square)
                                         .style(ButtonStyle::Subtle)
-                                        .size(ButtonSize::Compact)
+                                        .icon_size(IconSize::Small)
                                         .tooltip(Tooltip::text(CLEAR_PINNED_MEDIA_TOOLTIP))
                                         .on_click(cx.listener(|panel, _, _, cx| {
                                             panel.clear_pinned_media(cx);
@@ -2062,6 +2076,11 @@ impl MediaPanel {
                     ),
             )
             .end_slot(
+                Icon::new(IconName::Ellipsis)
+                    .size(IconSize::Small)
+                    .color(Color::Muted),
+            )
+            .end_slot_on_hover(
                 h_flex()
                     .flex_none()
                     .gap_1()

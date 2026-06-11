@@ -204,7 +204,12 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   assert.match(rows, /fn check_snapshot_has_result_signal\(snapshot: &DxCheckPanelSnapshot\) -> bool/);
   assert.match(rows, /snapshot\.score_value\.is_some\(\)/);
   assert.match(rows, /!\s*snapshot\.sections\.is_empty\(\)/);
-  assert.match(view, /const MAX_WEB_AUDIT_ROWS: usize = 8;/);
+  assert.match(view, /const MAX_WEB_AUDIT_ROWS: usize = 4;/);
+  assert.match(
+    view,
+    /collapsed_sections:\s*\[[\s\S]*DxCheckPanelSectionKind::AdapterPlans/,
+    "Adapter Plans should default collapsed so the Check surface opens on the actionable rows",
+  );
   assert.match(view, /overflow_row\(\s*"dx-check-section-overflow"/);
   assert.match(view, /overflow_row\(\s*"dx-check-web-audit-overflow"/);
   assert.match(noticeRow, /Tooltip::text\(tooltip\)/);

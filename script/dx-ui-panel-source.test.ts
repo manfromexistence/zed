@@ -48,14 +48,38 @@ test("UI panel history rows use shared GPUI list primitives", () => {
   assert.match(renderRecentUiSection, /\.start_slot\(Icon::new\(IconName::Clock\)\.size\(IconSize::Small\)\)/);
   assert.match(renderPinnedUiSection, /ListHeader::new\("Pinned"\)/);
   assert.match(renderPinnedUiSection, /\.start_slot\(Icon::new\(IconName::Star\)\.size\(IconSize::Small\)\)/);
-  assert.match(`${renderRecentUiSection}\n${renderPinnedUiSection}`, /\.end_slot\([\s\S]*Label::new\(availability_label\)/);
-  assert.doesNotMatch(`${renderRecentUiSection}\n${renderPinnedUiSection}`, /LabelSize::XSmall|IconSize::XSmall|\.justify_between\(\)/);
+  const historySectionChrome = `${renderRecentUiSection}\n${renderPinnedUiSection}`;
+  assert.match(historySectionChrome, /\.end_slot\([\s\S]*Label::new\(availability_label\)/);
+  assert.match(
+    historySectionChrome,
+    /IconButton::new\(\s*"shadcn-ui-remove-missing-recent",\s*IconName::ListX/,
+  );
+  assert.match(
+    historySectionChrome,
+    /IconButton::new\(\s*"shadcn-ui-remove-missing-pinned",\s*IconName::ListX/,
+  );
+  assert.match(
+    historySectionChrome,
+    /IconButton::new\("shadcn-ui-clear-recent", IconName::Trash\)/,
+  );
+  assert.match(
+    historySectionChrome,
+    /IconButton::new\("shadcn-ui-clear-pinned", IconName::Trash\)/,
+  );
+  assert.match(historySectionChrome, /\.shape\(ui::IconButtonShape::Square\)/);
+  assert.doesNotMatch(
+    historySectionChrome,
+    /Button::new\("shadcn-ui-(?:remove-missing|clear)-(?:recent|pinned)", "(?:Remove|Clear)"\)/,
+  );
+  assert.doesNotMatch(historySectionChrome, /LabelSize::XSmall|IconSize::XSmall|\.justify_between\(\)/);
   assert.match(renderUiHistoryRow, /ListItem::new\(row_id\)/);
   assert.match(renderUiHistoryRow, /\.inset\(true\)/);
   assert.match(renderUiHistoryRow, /\.spacing\(ListItemSpacing::Sparse\)/);
   assert.match(renderUiHistoryRow, /\.selectable\(false\)/);
   assert.match(renderUiHistoryRow, /\.start_slot\(/);
   assert.match(renderUiHistoryRow, /\.end_slot\(/);
+  assert.match(renderUiHistoryRow, /IconName::Ellipsis/);
+  assert.match(renderUiHistoryRow, /\.end_slot_on_hover\(/);
   assert.match(renderUiHistoryRow, /\.tooltip\(Tooltip::text\(row_tooltip\)\)/);
   assert.doesNotMatch(
     renderUiHistoryRow,

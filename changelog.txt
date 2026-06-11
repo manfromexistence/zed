@@ -1,3 +1,23 @@
+[2026-06-11] - DX Panel GPUI Fourth-Pass Polish
+
+CHANGED:
+- `crates\media_panel\src\media_panel.rs` and `crates\shadcn_ui_panel\src\shadcn_ui_panel.rs` now use square icon buttons for recent/pinned history management and keep per-row actions in hover slots behind an ellipsis resting state.
+- `crates\agent_ui\src\dx_forge_panel\providers\view.rs` now preserves provider-group readiness dots inside hover action clusters.
+- `crates\agent_ui\src\dx_check_panel_view.rs` now caps visible web audit rows at four and starts Adapter Plans collapsed for a quieter Findings-first surface.
+- `crates\project_panel\src\project_panel.rs` now tightens Project header, selected-toolbar, side-panel-control, storage-drilldown, and entry-badge chrome while preserving full details in tooltips.
+- Focused source guards and the handoff registry now cover the fourth-pass GPUI component contracts for Media, UI, Check, Project, Forge, and workspace history copy.
+
+PASSED:
+- `rustfmt --edition 2024` on touched Rust files
+- `rustfmt --edition 2024 --check` on touched Rust files
+- `node --test script\dx-forge-panel-source.test.ts script\dx-media-panel-source.test.ts script\dx-ui-panel-source.test.ts script\dx-check-panel-source.test.ts script\dx-project-panel-source.test.ts script\dx-workspace-ui-state-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- Stale third-pass source-pattern scan returned no matches
+- Conflict-marker scan across touched files returned no matches
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. `just run`, Cargo build/check/test/clippy, native launch, browser automation, and runtime visual proof were not run.
+
 [2026-06-11] - DX Panel GPUI Third-Pass Polish
 
 CHANGED:

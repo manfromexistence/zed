@@ -1400,11 +1400,16 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.doesNotMatch(sourceRow, /Label::new\(source\.path\.clone\(\)\)/);
   assert.match(sourceRowControls, /element: h_flex\(\)/);
   assert.doesNotMatch(sourceRowControls, /\.full_width\(\)/);
-  assert.match(dxLaunchStylePanel, /metric_row\("Style", snapshot\.status\.clone\(\)\)/);
-  assert.match(dxLaunchStylePanel, /metric_row\(\s*"Generators",/);
+  assert.match(dxLaunchStylePanel, /^mod rows;$/m);
+  assert.match(dxLaunchStylePanel, /use rows::\{style_detail_row, style_note_row, style_path_row, style_section\};/);
+  assert.match(
+    dxLaunchStylePanel,
+    /style_section\(\s*"dx-style-overview-section",\s*"Style",\s*dx_icon\(DxUiIcon::Style\),\s*snapshot\.status\.clone\(\)/,
+  );
+  assert.match(dxLaunchStylePanel, /style_detail_row\(\s*"dx-style-generators",\s*"Generators",/);
   assert.match(dxLaunchStylePanel, /format!\("\{\} declared", snapshot\.visual_generator_count\)/);
-  assert.match(dxLaunchStylePanel, /metric_row\(\s*"Web Preview",/);
-  assert.match(dxLaunchStylePanel, /"Ready"/);
+  assert.match(dxLaunchStylePanel, /style_detail_row\(\s*"dx-style-web-preview",\s*"Web Preview",/);
+  assert.match(dxLaunchStylePanel, /"Bridge ready"/);
   assert.match(dxLaunchStylePanel, /"Bridge available"/);
   assert.match(dxLaunchStylePanel, /"Bridge missing"/);
   assert.match(
@@ -1548,7 +1553,7 @@ test("agent launch rails use professional operator-facing copy", () => {
   assert.match(dxCheckScore, /"\{\} worktrees, \{\} roots"/);
   assert.match(dxCheckScore, /"\{\} attachable, \{\} total"/);
 
-  assert.match(styleState, /"Ready"/);
+  assert.match(styleState, /"Bridge ready"/);
   assert.match(styleState, /"Bridge available"/);
   assert.match(styleState, /"Bridge missing"/);
   assert.match(webPreviewState, /"Ready"/);
@@ -1757,8 +1762,10 @@ test("recent tool panels use professional visible copy", () => {
 
   assert.match(mediaPanel, /media_history_availability_label/);
   assert.match(mediaPanel, /"Opening preview for "/);
-  assert.match(mediaPanel, /Button::new\("media-panel-remove-missing-recent", "Remove"\)/);
-  assert.match(mediaPanel, /Button::new\("media-panel-remove-missing-pinned", "Remove"\)/);
+  assert.match(mediaPanel, /IconButton::new\(\s*"media-panel-remove-missing-recent",\s*IconName::ListX/);
+  assert.match(mediaPanel, /IconButton::new\(\s*"media-panel-remove-missing-pinned",\s*IconName::ListX/);
+  assert.match(mediaPanel, /IconButton::new\("media-panel-clear-recent", IconName::Trash\)/);
+  assert.match(mediaPanel, /IconButton::new\("media-panel-clear-pinned", IconName::Trash\)/);
   assert.match(mediaPanel, /"media-panel-remove-missing-history"/);
   assert.match(mediaPanel, /\{available\} available/);
   assert.match(mediaPanel, /\{available\} available, \{missing\} missing/);
@@ -1773,8 +1780,10 @@ test("recent tool panels use professional visible copy", () => {
   assert.match(uiPanel, /"Preview in Web Preview"/);
   assert.match(uiPanel, /ui_history_availability_label/);
   assert.match(uiPanel, /"Opening preview for "/);
-  assert.match(uiPanel, /Button::new\("shadcn-ui-remove-missing-recent", "Remove"\)/);
-  assert.match(uiPanel, /Button::new\("shadcn-ui-remove-missing-pinned", "Remove"\)/);
+  assert.match(uiPanel, /IconButton::new\(\s*"shadcn-ui-remove-missing-recent",\s*IconName::ListX/);
+  assert.match(uiPanel, /IconButton::new\(\s*"shadcn-ui-remove-missing-pinned",\s*IconName::ListX/);
+  assert.match(uiPanel, /IconButton::new\("shadcn-ui-clear-recent", IconName::Trash\)/);
+  assert.match(uiPanel, /IconButton::new\("shadcn-ui-clear-pinned", IconName::Trash\)/);
   assert.match(uiPanel, /"shadcn-ui-remove-missing-history"/);
   assert.match(uiPanel, /\{available\} available/);
   assert.match(uiPanel, /\{available\} available, \{missing\} missing/);

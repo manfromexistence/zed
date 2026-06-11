@@ -172,6 +172,11 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   assert.doesNotMatch(renderDxExplorerHeader, /\.id\("dx-explorer-summary-row"\)/);
   assert.match(renderDxExplorerHeader, /ProjectPanelSettings::get_global\(cx\)/);
   assert.match(renderDxExplorerHeader, /dx_icon\(DxUiIcon::Project\)/);
+  assert.match(
+    renderDxExplorerHeader,
+    /Icon::new\(dx_icon\(DxUiIcon::Project\)\)[\s\S]*\.color\(Color::Muted\)/,
+    "Project header icon should stay quiet and native to the panel chrome",
+  );
   assert.match(renderDxExplorerHeader, /let source_label = summary\.source_kind\.label\(\);/);
   assert.doesNotMatch(renderDxExplorerHeader, /source_label = if is_read_only/);
   assert.match(source, /Self::LocalWorkspace => "Local"/);
@@ -241,6 +246,7 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
     /side_panel_header_controls\(\s*id_prefix,[\s\S]*self\.workspace\.clone\(\),[\s\S]*cx\.entity\(\)\.entity_id\(\),[\s\S]*cx,/,
     "Project Panel side-panel chrome must stay routed through Zed's shared Dock controls",
   );
+  assert.match(renderSidePanelHeaderControls, /div\(\)\.pr_0p5\(\)\.child\(side_panel_header_controls/);
   assert.match(
     renderDxExplorerHeader,
     /self\.render_side_panel_header_controls\("dx-explorer", cx\)/,
@@ -634,6 +640,11 @@ test("project panel selection toolbar exposes file-browser operation state", () 
   assert.match(renderSelectedEntriesToolbar, /\.id\("project-panel-clipboard-operation-status"\)/);
   assert.match(
     renderSelectedEntriesToolbar,
+    /\.id\("project-panel-selection-toolbar"\)[\s\S]*\.gap_1\(\)[\s\S]*\.px_1\(\)[\s\S]*\.py_0p5\(\)/,
+    "selection toolbar should keep compact Zed panel spacing",
+  );
+  assert.match(
+    renderSelectedEntriesToolbar,
     /Chip::new\(operation\.status_label\(\)\)[\s\S]*\.icon\(icon\)[\s\S]*\.icon_color\(Color::Muted\)[\s\S]*\.label_color\(Color::Muted\)[\s\S]*\.truncate\(\)/,
   );
   assert.doesNotMatch(
@@ -919,6 +930,8 @@ test("project panel folder storage summaries are cache-only on the visible-row p
     renderEntryInfoBadge,
     /Chip::new\(label\)[\s\S]*\.label_color\(Color::Muted\)[\s\S]*\.truncate\(\)/,
   );
+  assert.match(renderEntryInfoBadge, /let tooltip = label\.clone\(\);/);
+  assert.match(renderEntryInfoBadge, /\.tooltip\(Tooltip::text\(tooltip\)\)/);
   assert.doesNotMatch(
     renderEntryInfoBadge,
     /(?:cx:\s*&App|Label::new\(label\)|\.size\(LabelSize::XSmall\)|\.border_1\(\)|border_variant|element_background|\.rounded_sm\(\)|\.px_1\(\)|\.py_0p5\(\)|cx\.theme\(\))/,
@@ -1010,6 +1023,11 @@ test("project panel folder storage summaries are cache-only on the visible-row p
     message: "storage drilldown must be ranked in the background job before state is installed",
   });
   assert.match(renderStorageDrilldown, /\.id\("dx-explorer-storage-drilldown"\)/);
+  assert.match(
+    renderStorageDrilldown,
+    /\.id\("dx-explorer-storage-drilldown"\)[\s\S]*\.gap_0p5\(\)[\s\S]*\.px_1\(\)[\s\S]*\.py_0p5\(\)/,
+    "storage drilldown shell should stay compact in stacked side panels",
+  );
   assert.match(renderStorageDrilldown, /dx_icon\(DxUiIcon::Storage\)/);
   assert.match(renderStorageDrilldown, /ListHeader::new\("Folder Storage"\)/);
   assert.match(
@@ -1256,7 +1274,7 @@ test("project panel storage overview and root shortcuts stay cached and professi
     /ListItem::new\(SharedString::from\(format!\([\s\S]*"dx-explorer-storage-drilldown-\{\}-\{\}"[\s\S]*item\.worktree_id\.to_usize\(\),[\s\S]*item\.entry_id\.to_usize\(\)[\s\S]*\)\)\)/,
     "storage drilldown rows must use stable real-entry ListItem ids",
   );
-  assert.match(renderStorageDrilldownRow, /\.spacing\(ListItemSpacing::Sparse\)/);
+  assert.match(renderStorageDrilldownRow, /\.spacing\(ListItemSpacing::Dense\)/);
   assert.match(renderStorageDrilldownRow, /\.toggle_state\(is_selected\)/);
   assert.match(renderStorageDrilldownRow, /\.tab_index\(0(?:_isize)?\)/);
   assert.match(renderStorageDrilldownRow, /\.track_focus\(&self\.focus_handle\(cx\)\)/);

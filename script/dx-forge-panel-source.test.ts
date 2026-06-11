@@ -1174,7 +1174,7 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.match(providerGroupControlsBody, /\.child\(checkbox\)/);
   assert.match(
     providerGroupControlsBody,
-    /\.end_slot_on_hover\(provider_group_actions\([\s\S]*open_button\.into_any_element\(\),[\s\S]*hover_checkbox,[\s\S]*\)\)/,
+    /\.end_slot_on_hover\(provider_group_actions\([\s\S]*open_button\.into_any_element\(\),[\s\S]*hover_checkbox,[\s\S]*state\.color,[\s\S]*\)\)/,
   );
   assert.match(providerGroupControlsBody, /let checked = panel[\s\S]*item_checked\(&item_key\)/);
   assert.match(providerGroupControlsBody, /let active = panel[\s\S]*item_active\(&item_key\)/);
@@ -1201,6 +1201,7 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.match(providerGroupControlsBody, /remote_target_tooltip\(group, &state, target_path\.as_deref\(\), enabled\)/);
   assert.match(providerGroupControlsBody, /Indicator::dot\(\)\.color\(state\.color\)/);
   assert.match(providerGroupControlsBody, /format!\("Open \{\}", group\.title\(\)\)/);
+  assert.match(providerGroupActionsBody, /status_color: Color/);
   assert.match(
     providerButtonsBody,
     /providers_for\(group\)[\s\S]*provider_target_button\(provider, snapshot, workspace, cx\)/,
@@ -1210,6 +1211,7 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.match(providerButtonsBody, /cx\.stop_propagation\(\);/);
   assert.match(providerGroupActionsBody, /\.on_mouse_down\(MouseButton::Left/);
   assert.match(providerGroupActionsBody, /\.on_mouse_up\(MouseButton::Left/);
+  assert.match(providerGroupActionsBody, /Indicator::dot\(\)\.color\(status_color\)/);
   assert.match(providerGroupActionsBody, /\.child\(open_button\)/);
   assert.match(providerGroupActionsBody, /cx\.stop_propagation\(\);/);
   assert.match(providersView, /IconButtonShape::Square/);

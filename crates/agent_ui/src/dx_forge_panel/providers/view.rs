@@ -160,6 +160,7 @@ fn provider_group_controls(
         provider_buttons_for_group(group, snapshot, workspace, cx),
         open_button.into_any_element(),
         hover_checkbox,
+        state.color,
     ))
     .tooltip(move |_, cx| Tooltip::with_meta(tooltip_title.clone(), None, tooltip_meta.clone(), cx))
     .on_click(move |_, window, cx| {
@@ -204,6 +205,7 @@ fn provider_group_actions(
     provider_buttons: AnyElement,
     open_button: AnyElement,
     selection_checkbox: AnyElement,
+    status_color: Color,
 ) -> AnyElement {
     h_flex()
         .flex_none()
@@ -216,6 +218,7 @@ fn provider_group_actions(
             cx.stop_propagation();
         })
         .child(provider_buttons)
+        .child(Indicator::dot().color(status_color))
         .child(open_button)
         .child(selection_checkbox)
         .into_any_element()

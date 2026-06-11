@@ -169,23 +169,27 @@ test("DX.md exposes the lightweight source guard registry", () => {
   );
   assert.match(
     dx,
-    /script\/dx-project-panel-source\.test\.ts` - project panel .*file-browser operation toolbar.*cached storage roots.*storage-root capacity\/status label ownership.*folder storage overview.*storage ranking/,
+    /script\/dx-project-panel-source\.test\.ts` - project panel .*compact Project header icon\/side-panel controls\/selection toolbar.*file-browser operation toolbar.*cached storage roots.*storage-root capacity\/status label ownership.*folder storage overview.*dense storage drilldown rows.*storage ranking/,
   );
   assert.match(
     dx,
-    /script\/dx-project-panel-source\.test\.ts` - project panel .*tooltip-only largest-file drilldown detail/,
+    /script\/dx-project-panel-source\.test\.ts` - project panel .*tooltip-only largest-file drilldown detail.*entry info badge tooltips/,
   );
   assert.match(
     dx,
-    /script\/dx-media-panel-source\.test\.ts` - media panel .*recent\/pinned `ListHeader` history-section chrome boundaries/,
+    /script\/dx-media-panel-source\.test\.ts` - media panel .*square icon history-management actions.*hover action slots.*recent\/pinned `ListHeader` history-section chrome boundaries/,
   );
   assert.match(
     dx,
-    /script\/dx-ui-panel-source\.test\.ts` - UI panel status-row plus recent\/pinned `ListHeader` history-section/,
+    /script\/dx-ui-panel-source\.test\.ts` - UI panel status-row plus recent\/pinned `ListHeader` history-section.*square icon history-management actions.*hover action slots/,
   );
   assert.match(
     dx,
-    /script\/dx-forge-panel-source\.test\.ts` - DX Forge .*workflow tab and source-open tooltip wording/,
+    /script\/dx-forge-panel-source\.test\.ts` - DX Forge .*workflow tab and source-open tooltip wording.*provider-group hover readiness dots/,
+  );
+  assert.match(
+    dx,
+    /script\/dx-check-panel-source\.test\.ts` - DX Check .*capped web audit rows.*collapsed Adapter Plans default/,
   );
 });
 

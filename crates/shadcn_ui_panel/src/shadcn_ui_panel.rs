@@ -1151,19 +1151,26 @@ impl ShadcnUiPanel {
                                 )
                                 .when(missing_count > 0, |this| {
                                     this.child(
-                                        Button::new("shadcn-ui-remove-missing-recent", "Remove")
-                                            .style(ButtonStyle::Subtle)
-                                            .size(ButtonSize::Compact)
-                                            .tooltip(Tooltip::text(REMOVE_MISSING_UI_TOOLTIP))
-                                            .on_click(cx.listener(|panel, _, _, cx| {
+                                        IconButton::new(
+                                            "shadcn-ui-remove-missing-recent",
+                                            IconName::ListX,
+                                        )
+                                        .shape(ui::IconButtonShape::Square)
+                                        .style(ButtonStyle::Subtle)
+                                        .icon_size(IconSize::Small)
+                                        .tooltip(Tooltip::text(REMOVE_MISSING_UI_TOOLTIP))
+                                        .on_click(
+                                            cx.listener(|panel, _, _, cx| {
                                                 panel.remove_missing_recent_ui_actions(cx);
-                                            })),
+                                            }),
+                                        ),
                                     )
                                 })
                                 .child(
-                                    Button::new("shadcn-ui-clear-recent", "Clear")
+                                    IconButton::new("shadcn-ui-clear-recent", IconName::Trash)
+                                        .shape(ui::IconButtonShape::Square)
                                         .style(ButtonStyle::Subtle)
-                                        .size(ButtonSize::Compact)
+                                        .icon_size(IconSize::Small)
                                         .tooltip(Tooltip::text(CLEAR_RECENT_UI_TOOLTIP))
                                         .on_click(cx.listener(|panel, _, _, cx| {
                                             panel.clear_recent_ui_actions(cx);
@@ -1224,19 +1231,26 @@ impl ShadcnUiPanel {
                                 )
                                 .when(missing_count > 0, |this| {
                                     this.child(
-                                        Button::new("shadcn-ui-remove-missing-pinned", "Remove")
-                                            .style(ButtonStyle::Subtle)
-                                            .size(ButtonSize::Compact)
-                                            .tooltip(Tooltip::text(REMOVE_MISSING_UI_TOOLTIP))
-                                            .on_click(cx.listener(|panel, _, _, cx| {
+                                        IconButton::new(
+                                            "shadcn-ui-remove-missing-pinned",
+                                            IconName::ListX,
+                                        )
+                                        .shape(ui::IconButtonShape::Square)
+                                        .style(ButtonStyle::Subtle)
+                                        .icon_size(IconSize::Small)
+                                        .tooltip(Tooltip::text(REMOVE_MISSING_UI_TOOLTIP))
+                                        .on_click(
+                                            cx.listener(|panel, _, _, cx| {
                                                 panel.remove_missing_pinned_ui_actions(cx);
-                                            })),
+                                            }),
+                                        ),
                                     )
                                 })
                                 .child(
-                                    Button::new("shadcn-ui-clear-pinned", "Clear")
+                                    IconButton::new("shadcn-ui-clear-pinned", IconName::Trash)
+                                        .shape(ui::IconButtonShape::Square)
                                         .style(ButtonStyle::Subtle)
-                                        .size(ButtonSize::Compact)
+                                        .icon_size(IconSize::Small)
                                         .tooltip(Tooltip::text(CLEAR_PINNED_UI_TOOLTIP))
                                         .on_click(cx.listener(|panel, _, _, cx| {
                                             panel.clear_pinned_ui_actions(cx);
@@ -1358,6 +1372,11 @@ impl ShadcnUiPanel {
                     ),
             )
             .end_slot(
+                Icon::new(IconName::Ellipsis)
+                    .size(IconSize::Small)
+                    .color(Color::Muted),
+            )
+            .end_slot_on_hover(
                 h_flex()
                     .flex_none()
                     .gap_1()
