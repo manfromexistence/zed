@@ -1471,7 +1471,7 @@ impl MetalRenderer {
 
         let texture = self.sprite_atlas.metal_texture(texture_id);
         let Some(backdrop_texture) = self.liquid_glass_backdrop_texture.as_ref() else {
-            return false;
+            return true;
         };
         let texture_size = size(
             DevicePixels(texture.width() as i32),
@@ -1553,7 +1553,7 @@ impl MetalRenderer {
         viewport_size: Size<DevicePixels>,
     ) -> bool {
         let Some(backdrop_texture) = self.liquid_glass_backdrop_texture.as_ref() else {
-            return false;
+            return true;
         };
         let blit = command_buffer.new_blit_command_encoder();
         blit.copy_from_texture(

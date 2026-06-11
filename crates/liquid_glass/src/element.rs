@@ -60,13 +60,11 @@ impl LiquidGlassGeometry {
         source_bounds: Bounds<Pixels>,
         mouse_position: Point<Pixels>,
     ) -> Bounds<Pixels> {
+        let width = finite_or_default(self.width, 3.5);
+        let height = finite_or_default(self.height, 3.5);
         let pixel_scale = finite_or_default(self.pixel_scale, 100.0).abs().max(1.0);
-        let width = px((self.width * pixel_scale)
-            .abs()
-            .clamp(1.0, MAX_GLASS_AXIS_PX));
-        let height = px((self.height * pixel_scale)
-            .abs()
-            .clamp(1.0, MAX_GLASS_AXIS_PX));
+        let width = px((width * pixel_scale).abs().clamp(1.0, MAX_GLASS_AXIS_PX));
+        let height = px((height * pixel_scale).abs().clamp(1.0, MAX_GLASS_AXIS_PX));
         let glass_size = size(width, height);
 
         let center = if self.mouse_control && source_bounds.contains(&mouse_position) {
@@ -97,6 +95,10 @@ impl LiquidGlassStyle {
         glass_bounds: Bounds<Pixels>,
         source_image: Arc<RenderImage>,
     ) {
+        if !has_drawable_area(source_bounds) || !has_drawable_area(glass_bounds) {
+            return;
+        }
+
         if let Err(error) = window.paint_liquid_glass(
             source_bounds,
             source_image,
@@ -195,4 +197,11 @@ fn finite_or_default(value: f32, fallback: f32) -> f32 {
 
 fn normalized_axis(position: f32, viewport_axis: f32) -> f32 {
     (finite_or_default(position, viewport_axis * 0.5) / viewport_axis).clamp(0.0, 1.0)
+}
+
+fn has_drawable_area(bounds: Bounds<Pixels>) -> bool {
+    let width = bounds.size.width.as_f32();
+    let height = bounds.size.height.as_f32();
+
+    width.is_finite() && height.is_finite() && width > 0.0 && height > 0.0
 }

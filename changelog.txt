@@ -1,3 +1,21 @@
+[2026-06-11] - Liquid Glass Renderer Bounds Hardening
+
+FIXED:
+- Shared Liquid Glass painting now returns before GPU paint when the source bounds or glass bounds have zero, infinite, or non-finite dimensions.
+- Shared Liquid Glass geometry now sanitizes width and height before scaling, keeping public callers from creating NaN glass bounds.
+- Metal and WGPU Liquid Glass rendering now skip a batch when the platform backdrop texture is unavailable instead of treating the missing backdrop as instance-buffer overflow.
+- The Agent Liquid Glass source guard now pins the drawable-area preflight so the chat-input surface cannot regress to passing invalid dimensions into platform shader math.
+- Agent Liquid Glass settings copy now consistently names the Agent chat input, and the source guard pins persisted defaults against runtime defaults and the recovered reference state.
+
+PASSED:
+- `node --test script\dx-agent-composer-liquid-glass-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --config skip_children=true --check crates\liquid_glass\src\element.rs crates\settings_ui\src\page_data.rs crates\gpui_macos\src\metal_renderer.rs crates\gpui_wgpu\src\wgpu_renderer.rs`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)"` on touched source and ledger files returned no matches.
+- `git diff --check`
+
+NOTES:
+- Cargo/build/native runtime proof remains deferred by instruction.
+
 [2026-06-11] - Agent Liquid Glass Chat Input Container
 
 CHANGED:

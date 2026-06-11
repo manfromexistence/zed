@@ -7986,7 +7986,7 @@ fn ai_page(cx: &App) -> SettingsPage {
             ),
             liquid_glass_setting_item!(
                 "Mouse Control",
-                "Move the glass center with the pointer while it is over the Agent composer.",
+                "Move the glass center with the pointer while it is over the Agent chat input.",
                 "agent.liquid_glass.mouse_control",
                 mouse_control,
                 bool
@@ -8053,7 +8053,7 @@ fn ai_page(cx: &App) -> SettingsPage {
             ),
             liquid_glass_setting_item!(
                 "Glass Variant",
-                "Material geometry variant; it supplies the composer glass size when width or height is not overridden.",
+                "Material geometry variant; it supplies the chat-input glass size when width or height is not overridden.",
                 "agent.liquid_glass.glass_variant",
                 glass_variant,
                 usize

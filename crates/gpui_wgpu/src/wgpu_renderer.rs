@@ -1615,10 +1615,14 @@ impl WgpuRenderer {
         instance_offset: &mut u64,
         pass: &mut wgpu::RenderPass<'_>,
     ) -> bool {
+        if primitives.is_empty() {
+            return true;
+        }
+
         let tex_info = self.atlas.get_texture_info(texture_id);
         let data = unsafe { Self::instance_bytes(primitives) };
         let Some(backdrop_view) = self.resources().liquid_glass_backdrop_view.as_ref() else {
-            return false;
+            return true;
         };
         self.draw_instances_with_backdrop(
             data,
