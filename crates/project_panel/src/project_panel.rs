@@ -7278,7 +7278,6 @@ impl ProjectPanel {
         div()
             .visible_on_hover("list_item")
             .flex_none()
-            .ml_1()
             .tooltip(Tooltip::text(tooltip))
             .child(Chip::new(label).label_color(Color::Muted).truncate())
             .into_any_element()
@@ -7821,10 +7820,10 @@ impl ProjectPanel {
                     .selectable(false)
                     .end_slot::<AnyElement>(
                         h_flex()
-                            .gap_1()
+                            .gap_0p5()
                             .flex_none()
                             .ml_auto()
-                            .pr_1()
+                            .pr_0p5()
                             .justify_end()
                             .when_some(diagnostic_count, |this, count| {
                                 this.when(count.error_count > 0, |this| {

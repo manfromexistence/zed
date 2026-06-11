@@ -851,6 +851,7 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   const source = read("crates/project_panel/src/project_panel.rs");
   const storage = read("crates/project_panel/src/storage.rs");
   const detailsForEntry = functionBody(source, "details_for_entry");
+  const renderEntry = functionBody(source, "render_entry");
   const renderEntryInfoBadge = functionBody(source, "render_entry_info_badge");
   const storageOverview = functionBody(storage, "storage_overview");
   const storageDrilldownItems = functionBody(storage, "storage_folder_items");
@@ -898,6 +899,14 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   assert.match(source, /fn render_dx_explorer_storage_drilldown\(/);
   assert.match(source, /fn render_dx_explorer_storage_drilldown_row\(/);
   assert.doesNotMatch(source, /fn dx_explorer_storage_heat_level\(/);
+  assert.match(renderEntryInfoBadge, /\.visible_on_hover\("list_item"\)/);
+  assert.match(renderEntryInfoBadge, /Chip::new\(label\)\.label_color\(Color::Muted\)\.truncate\(\)/);
+  assert.doesNotMatch(renderEntryInfoBadge, /\.ml_1\(\)/);
+  assert.match(renderEntry, /\.end_slot::<AnyElement>\([\s\S]*h_flex\(\)[\s\S]*\.gap_0p5\(\)[\s\S]*\.pr_0p5\(\)[\s\S]*\.child\(hover_badge\)/);
+  assert.doesNotMatch(
+    renderEntry,
+    /\.end_slot::<AnyElement>\([\s\S]*h_flex\(\)[\s\S]*\.gap_1\(\)[\s\S]*\.pr_1\(\)[\s\S]*\.child\(hover_badge\)/,
+  );
   assert.match(source, /fn render_dx_explorer_storage_heat_indicator\(/);
   assert.match(source, /fn dx_explorer_storage_heat_indicator_width\(/);
   assert.match(source, /fn dx_explorer_storage_heat_color\(/);
@@ -1326,6 +1335,16 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(source, /fn open_dx_explorer_storage_root\([\s\S]*if !self\.storage_root_shortcuts_allowed\(cx\) \{[\s\S]*return;[\s\S]*\}/);
   assert.doesNotMatch(source, /render_dx_explorer_storage_root_strip\(is_local_or_wsl, is_read_only, cx\)/);
   assert.match(renderRootStrip, /ListHeader::new\("Storage"\)/);
+  assert.match(
+    renderRootStrip,
+    /\.id\("dx-explorer-storage-root-strip"\)[\s\S]*\.gap_0p5\(\)[\s\S]*\.px_1\(\)[\s\S]*\.py_0p5\(\)/,
+    "storage root strip should stay compact and aligned with the storage drilldown chrome",
+  );
+  assert.match(
+    renderRootStrip,
+    /\.id\("dx-explorer-storage-root-strip-scroll"\)[\s\S]*h_flex\(\)\.gap_0p5\(\)\.children\(rows\)/,
+    "storage root shortcut row spacing should be owned by the shared strip chrome",
+  );
   assert.match(
     renderRootStrip,
     /ListHeader::new\("Storage"\)[\s\S]*\.start_slot\(Icon::new\(dx_icon\(DxUiIcon::Storage\)\)\.size\(IconSize::Small\)\)/,

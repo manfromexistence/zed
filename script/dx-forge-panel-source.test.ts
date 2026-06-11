@@ -636,6 +636,7 @@ test("Forge panel uses Git-style controls instead of metric cards", () => {
   assert.match(statusStripBody, /ListItem::new\("dx-forge-status"\)/);
   assert.match(statusStripBody, /\.inset\(true\)/);
   assert.match(statusStripBody, /\.selectable\(false\)/);
+  assert.match(statusStripBody, /\.height\(rems\(1\.75\)\)/);
   assert.match(statusStripBody, /\.spacing\(ListItemSpacing::Sparse\)/);
   assert.match(statusStripBody, /\.start_slot\(/);
   assert.match(statusStripBody, /\.end_slot\(/);
@@ -672,6 +673,7 @@ test("Forge panel uses Git-style controls instead of metric cards", () => {
   assert.doesNotMatch(selectableRowBody, /\.start_slot\(selection_checkbox\)/);
   assert.match(workflowRows, /fn selectable_row_actions/);
   assert.match(selectableRowActionsBody, /\.on_mouse_down\(MouseButton::Left/);
+  assert.match(selectableRowActionsBody, /\.gap_0p5\(\)/);
   assert.match(selectableRowActionsBody, /cx\.stop_propagation\(\);/);
   assert.match(selectableRowActionsBody, /actions = actions\.child\(open_button\)/);
   assert.match(selectableRowActionsBody, /actions\.child\(selection_checkbox\)\.into_any_element\(\)/);
@@ -1202,6 +1204,7 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.match(providerGroupControlsBody, /Indicator::dot\(\)\.color\(state\.color\)/);
   assert.match(providerGroupControlsBody, /format!\("Open \{\}", group\.title\(\)\)/);
   assert.match(providerGroupActionsBody, /status_color: Color/);
+  assert.match(providerGroupActionsBody, /\.gap_0p5\(\)/);
   assert.match(
     providerButtonsBody,
     /providers_for\(group\)[\s\S]*provider_target_button\(provider, snapshot, workspace, cx\)/,

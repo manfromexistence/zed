@@ -33,7 +33,14 @@ test("UI panel history rows use shared GPUI list primitives", () => {
   const renderStatusRow = functionBody(uiPanel, "render_status_row");
   const renderRecentUiSection = functionBody(uiPanel, "render_recent_ui_section");
   const renderPinnedUiSection = functionBody(uiPanel, "render_pinned_ui_section");
+  const renderItemRow = functionBody(uiPanel, "render_item_row");
   const renderUiHistoryRow = functionBody(uiPanel, "render_ui_history_row");
+  const installPlanStart = renderItemRow.indexOf(".when_some(install_plan");
+  assert.ok(installPlanStart >= 0, "expected install plan branch");
+  const installPlanRemainder = renderItemRow.slice(installPlanStart);
+  const actionChildMatch = installPlanRemainder.match(/\.child\(\r?\n\s+h_flex\(\)/);
+  assert.ok(actionChildMatch?.index, "expected install plan branch to end before actions");
+  const installPlanChrome = installPlanRemainder.slice(0, actionChildMatch.index);
 
   assert.match(uiPanel, /use ui::\{[\s\S]*ListHeader,[\s\S]*ListItem,[\s\S]*ListItemSpacing/);
   assert.match(render, /let status = self\.status\.clone\(\);/);
@@ -48,6 +55,18 @@ test("UI panel history rows use shared GPUI list primitives", () => {
   assert.match(renderRecentUiSection, /\.start_slot\(Icon::new\(IconName::Clock\)\.size\(IconSize::Small\)\)/);
   assert.match(renderPinnedUiSection, /ListHeader::new\("Pinned"\)/);
   assert.match(renderPinnedUiSection, /\.start_slot\(Icon::new\(IconName::Star\)\.size\(IconSize::Small\)\)/);
+  assert.match(renderItemRow, /let install_plan_id = shadcn_element_id\("shadcn-install-plan-", item\.id\.as_ref\(\)\)/);
+  assert.match(installPlanChrome, /ListItem::new\(install_plan_id\)/);
+  assert.match(installPlanChrome, /\.inset\(true\)/);
+  assert.match(installPlanChrome, /\.spacing\(ListItemSpacing::Sparse\)/);
+  assert.match(installPlanChrome, /\.selectable\(false\)/);
+  assert.match(installPlanChrome, /Icon::new\(IconName::Info\)[\s\S]*\.size\(IconSize::Small\)[\s\S]*\.color\(Color::Accent\)/);
+  assert.match(installPlanChrome, /Label::new\(install_plan\)[\s\S]*\.size\(LabelSize::Small\)[\s\S]*\.color\(Color::Muted\)/);
+  assert.match(installPlanChrome, /Tooltip::text\("Install the source package before inserting"\)/);
+  assert.doesNotMatch(
+    installPlanChrome,
+    /\.p_1\(\)|\.rounded_sm\(\)|\.border_1\(\)|\.bg\(cx\.theme\(\)\.colors\(\)\.elevated_surface_background\)|IconSize::XSmall|LabelSize::XSmall/,
+  );
   const historySectionChrome = `${renderRecentUiSection}\n${renderPinnedUiSection}`;
   assert.match(historySectionChrome, /\.end_slot\([\s\S]*Label::new\(availability_label\)/);
   assert.match(

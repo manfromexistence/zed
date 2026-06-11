@@ -246,7 +246,12 @@ impl DxCheckPanel {
             .into_any_element()
     }
 
-    fn render_status_strip(&self, snapshot: &DxCheckPanelSnapshot, _cx: &App) -> AnyElement {
+    fn render_status_strip(
+        &self,
+        snapshot: &DxCheckPanelSnapshot,
+        panel: WeakEntity<DxCheckPanel>,
+        _cx: &App,
+    ) -> AnyElement {
         let color = status_color(snapshot);
         let outcome = outcome_label(
             snapshot.pass_count,
@@ -255,6 +260,8 @@ impl DxCheckPanel {
             snapshot.skipped_count,
         );
         let tooltip = format!("{}\n{outcome}", snapshot.status);
+        let receipt_path = snapshot.receipt_path.clone();
+        let receipt_enabled = snapshot.receipt_present && receipt_path.exists();
 
         ListItem::new("dx-check-status")
             .inset(true)
@@ -279,65 +286,56 @@ impl DxCheckPanel {
                             .truncate(),
                     ),
             )
+            .end_slot(
+                h_flex()
+                    .id("dx-check-status-actions")
+                    .flex_none()
+                    .gap_0p5()
+                    .occlude()
+                    .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
+                        cx.stop_propagation();
+                    })
+                    .on_mouse_up(gpui::MouseButton::Left, |_, _, cx| {
+                        cx.stop_propagation();
+                    })
+                    .child(
+                        IconButton::new("dx-check-open-receipt", IconName::FileTextOutlined)
+                            .shape(IconButtonShape::Square)
+                            .icon_size(IconSize::Small)
+                            .icon_color(Color::Muted)
+                            .style(ButtonStyle::Subtle)
+                            .disabled(!receipt_enabled)
+                            .tooltip(Tooltip::text(if receipt_enabled {
+                                "Open latest Check receipt"
+                            } else {
+                                "Latest Check receipt is not available"
+                            }))
+                            .on_click({
+                                let workspace = self.workspace.clone();
+                                move |_, window, cx| {
+                                    if receipt_path.exists() {
+                                        open_workspace_path(
+                                            workspace.clone(),
+                                            receipt_path.clone(),
+                                            window,
+                                            cx,
+                                        );
+                                    }
+                                }
+                            }),
+                    )
+                    .child(
+                        IconButton::new("dx-check-refresh", IconName::RotateCw)
+                            .shape(IconButtonShape::Square)
+                            .icon_size(IconSize::Small)
+                            .icon_color(Color::Muted)
+                            .tooltip(Tooltip::text("Refresh Check panel"))
+                            .on_click(move |_, _, cx| {
+                                panel.update(cx, |panel, cx| panel.refresh(cx)).ok();
+                            }),
+                    ),
+            )
             .tooltip(Tooltip::text(tooltip))
-            .into_any_element()
-    }
-
-    fn render_toolbar(
-        &self,
-        snapshot: &DxCheckPanelSnapshot,
-        panel: WeakEntity<DxCheckPanel>,
-        cx: &App,
-    ) -> AnyElement {
-        let receipt_path = snapshot.receipt_path.clone();
-        let receipt_enabled = snapshot.receipt_present && receipt_path.exists();
-
-        h_flex()
-            .id("dx-check-toolbar")
-            .h(Tab::container_height(cx))
-            .w_full()
-            .min_w_0()
-            .px_1()
-            .gap_1()
-            .justify_end()
-            .border_b_1()
-            .border_color(cx.theme().colors().border)
-            .child(
-                IconButton::new("dx-check-open-receipt", IconName::FileTextOutlined)
-                    .shape(IconButtonShape::Square)
-                    .icon_size(IconSize::Small)
-                    .icon_color(Color::Muted)
-                    .style(ButtonStyle::Subtle)
-                    .disabled(!receipt_enabled)
-                    .tooltip(Tooltip::text(if receipt_enabled {
-                        "Open latest Check receipt"
-                    } else {
-                        "Latest Check receipt is not available"
-                    }))
-                    .on_click({
-                        let workspace = self.workspace.clone();
-                        move |_, window, cx| {
-                            if receipt_path.exists() {
-                                open_workspace_path(
-                                    workspace.clone(),
-                                    receipt_path.clone(),
-                                    window,
-                                    cx,
-                                );
-                            }
-                        }
-                    }),
-            )
-            .child(
-                IconButton::new("dx-check-refresh", IconName::RotateCw)
-                    .shape(IconButtonShape::Square)
-                    .icon_size(IconSize::Small)
-                    .icon_color(Color::Muted)
-                    .tooltip(Tooltip::text("Refresh Check panel"))
-                    .on_click(move |_, _, cx| {
-                        panel.update(cx, |panel, cx| panel.refresh(cx)).ok();
-                    }),
-            )
             .into_any_element()
     }
 
@@ -688,8 +686,7 @@ impl Render for DxCheckPanel {
             .overflow_hidden()
             .bg(cx.theme().colors().panel_background)
             .child(self.render_header(&snapshot, panel_id, cx))
-            .child(self.render_status_strip(&snapshot, cx))
-            .child(self.render_toolbar(&snapshot, panel.clone(), cx))
+            .child(self.render_status_strip(&snapshot, panel.clone(), cx))
             .child(render_tab_bar(
                 &snapshot,
                 self.active_tab,

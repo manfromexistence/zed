@@ -926,6 +926,7 @@ impl ShadcnUiPanel {
         let preview_id = shadcn_element_id("shadcn-preview-", item.id.as_ref());
         let docs_id = shadcn_element_id("shadcn-docs-", item.id.as_ref());
         let pin_id = shadcn_element_id("shadcn-pin-", item.id.as_ref());
+        let install_plan_id = shadcn_element_id("shadcn-install-plan-", item.id.as_ref());
         let copy_action = if item.install_only {
             "Copy Command"
         } else {
@@ -1007,25 +1008,22 @@ impl ShadcnUiPanel {
             )
             .when_some(install_plan, |this, install_plan| {
                 this.child(
-                    h_flex()
-                        .gap_1()
-                        .items_center()
-                        .p_1()
-                        .rounded_sm()
-                        .border_1()
-                        .border_color(cx.theme().colors().border_variant)
-                        .bg(cx.theme().colors().elevated_surface_background)
-                        .child(
+                    ListItem::new(install_plan_id)
+                        .inset(true)
+                        .spacing(ListItemSpacing::Sparse)
+                        .selectable(false)
+                        .start_slot(
                             Icon::new(IconName::Info)
-                                .size(IconSize::XSmall)
+                                .size(IconSize::Small)
                                 .color(Color::Accent),
                         )
                         .child(
                             Label::new(install_plan)
-                                .size(LabelSize::XSmall)
+                                .size(LabelSize::Small)
                                 .color(Color::Muted)
                                 .truncate(),
-                        ),
+                        )
+                        .tooltip(Tooltip::text("Install the source package before inserting")),
                 )
             })
             .child(

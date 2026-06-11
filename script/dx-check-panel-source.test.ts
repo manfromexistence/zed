@@ -137,7 +137,7 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
 
   const renderHeader = functionBody(view, "render_header");
   const renderStatusStrip = functionBody(view, "render_status_strip");
-  const renderToolbar = functionBody(view, "render_toolbar");
+  const renderPanel = functionBody(view, "render");
   const renderSections = functionBody(view, "render_sections");
   const renderActiveTabSections = functionBody(view, "render_active_tab_sections");
   const section = functionBody(rows, "section");
@@ -159,14 +159,23 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   assert.match(renderStatusStrip, /ListItem::new\("dx-check-status"\)/);
   assert.match(renderStatusStrip, /\.spacing\(ListItemSpacing::Sparse\)/);
   assert.match(renderStatusStrip, /\.selectable\(false\)/);
+  assert.match(renderStatusStrip, /\.end_slot\(/);
+  assert.match(renderStatusStrip, /\.id\("dx-check-status-actions"\)/);
+  assert.match(renderStatusStrip, /\.gap_0p5\(\)/);
+  assert.match(renderStatusStrip, /\.occlude\(\)/);
+  assert.match(renderStatusStrip, /gpui::MouseButton::Left/);
+  assert.match(renderStatusStrip, /cx\.stop_propagation\(\);/);
+  assert.match(renderStatusStrip, /IconButton::new\("dx-check-open-receipt", IconName::FileTextOutlined\)/);
+  assert.match(renderStatusStrip, /IconButton::new\("dx-check-refresh", IconName::RotateCw\)/);
+  assert.match(renderStatusStrip, /\.style\(ButtonStyle::Subtle\)/);
+  assert.match(renderStatusStrip, /\.disabled\(!receipt_enabled\)/);
   assert.match(renderStatusStrip, /Tooltip::text\(tooltip\)/);
   assert.doesNotMatch(renderStatusStrip, /status_label\(/);
-  assert.match(renderToolbar, /\.justify_end\(\)/);
-  assert.match(renderToolbar, /IconButton::new\("dx-check-open-receipt", IconName::FileTextOutlined\)/);
-  assert.match(renderToolbar, /IconButton::new\("dx-check-refresh", IconName::RotateCw\)/);
-  assert.match(renderToolbar, /\.style\(ButtonStyle::Subtle\)/);
-  assert.doesNotMatch(renderToolbar, /(^|[^A-Za-z0-9_])Button::new\("dx-check-open-receipt"/);
-  assert.doesNotMatch(renderToolbar, /\.start_icon\(/);
+  assert.doesNotMatch(view, /fn render_toolbar\(/);
+  assert.doesNotMatch(view, /\.id\("dx-check-toolbar"\)|self\.render_toolbar/);
+  assert.doesNotMatch(renderPanel, /self\.render_toolbar/);
+  assert.doesNotMatch(renderStatusStrip, /(^|[^A-Za-z0-9_])Button::new\("dx-check-open-receipt"/);
+  assert.doesNotMatch(renderStatusStrip, /\.start_icon\(/);
   assert.match(tabs, /TabBar::new\("dx-check-tab-bar"\)/);
   assert.match(tabs, /snapshot\.adapter_plans\.len\(\)/);
   assert.match(checkTab, /Tab::new\(id\)/);

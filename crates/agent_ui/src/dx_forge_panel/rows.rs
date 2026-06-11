@@ -1,4 +1,4 @@
-use gpui::{AnyElement, App, EntityId, IntoElement, WeakEntity};
+use gpui::{AnyElement, App, EntityId, IntoElement, WeakEntity, rems};
 use ui::{IconName, ListHeader, ListItem, ListItemSpacing, Tab, Tooltip, prelude::*};
 use workspace::{Workspace, dock::side_panel_header_controls};
 
@@ -55,6 +55,7 @@ pub(super) fn status_strip(
     ListItem::new("dx-forge-status")
         .inset(true)
         .selectable(false)
+        .height(rems(1.75))
         .spacing(ListItemSpacing::Sparse)
         .start_slot(Icon::new(icon).size(IconSize::Small).color(color))
         .child(
@@ -65,7 +66,7 @@ pub(super) fn status_strip(
                     .truncate(),
             ),
         )
-        .end_slot(h_flex().flex_none().gap_1().child(actions))
+        .end_slot(h_flex().flex_none().gap_0p5().child(actions))
         .tooltip(move |_, cx| {
             Tooltip::with_meta(tooltip_title.clone(), None, tooltip_meta.clone(), cx)
         })

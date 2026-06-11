@@ -36,9 +36,9 @@ pub(crate) fn render_storage_root_strip(
         v_flex()
             .id("dx-explorer-storage-root-strip")
             .w_full()
-            .gap_1()
-            .px_2()
-            .py_1()
+            .gap_0p5()
+            .px_1()
+            .py_0p5()
             .border_b_1()
             .border_color(cx.theme().colors().border.opacity(0.6))
             .bg(cx.theme().colors().panel_background)
@@ -51,7 +51,7 @@ pub(crate) fn render_storage_root_strip(
                     .id("dx-explorer-storage-root-strip-scroll")
                     .w_full()
                     .overflow_x_scroll()
-                    .child(h_flex().gap_1().children(rows)),
+                    .child(h_flex().gap_0p5().children(rows)),
             )
             .into_any_element(),
     )

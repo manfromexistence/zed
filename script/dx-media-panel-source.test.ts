@@ -157,6 +157,7 @@ test("media panel renders bridge state and filters fetched remote rows by query"
   const renderStatusRow = functionBody(panelSource, "render_status_row");
   const renderRemoteHealthRow = functionBody(panelSource, "render_remote_health_row");
   const renderRemoteLoadingRow = functionBody(panelSource, "render_remote_loading_row");
+  const renderUrlInsert = functionBody(panelSource, "render_url_insert");
   const renderRecentMediaSection = functionBody(panelSource, "render_recent_media_section");
   const renderPinnedMediaSection = functionBody(panelSource, "render_pinned_media_section");
   const renderMediaHistoryRow = functionBody(panelSource, "render_media_history_row");
@@ -205,6 +206,30 @@ test("media panel renders bridge state and filters fetched remote rows by query"
   assert.match(renderStatusRow, /ListItem::new\("media-panel-status-row"\)/);
   assert.match(renderRemoteHealthRow, /ListItem::new\("media-panel-remote-health-row"\)/);
   assert.match(renderRemoteLoadingRow, /ListItem::new\("media-panel-remote-loading-row"\)/);
+  assert.match(renderUrlInsert, /ListItem::new\("media-panel-url-insert-row"\)/);
+  assert.match(renderUrlInsert, /\.inset\(true\)/);
+  assert.match(renderUrlInsert, /\.spacing\(ListItemSpacing::Sparse\)/);
+  assert.match(renderUrlInsert, /\.selectable\(false\)/);
+  assert.match(renderUrlInsert, /\.start_slot\(Icon::new\(media_kind_icon\(kind\)\)\.size\(IconSize::Small\)\)/);
+  assert.match(renderUrlInsert, /\.end_slot\([\s\S]*IconName::Ellipsis/);
+  assert.match(renderUrlInsert, /\.end_slot_on_hover\(/);
+  assert.match(renderUrlInsert, /\.occlude\(\)/);
+  assert.match(renderUrlInsert, /gpui::MouseButton::Left/);
+  assert.match(renderUrlInsert, /cx\.stop_propagation\(\);/);
+  assert.match(renderUrlInsert, /IconButton::new\("media-panel-preview-url", IconName::Eye\)/);
+  assert.match(renderUrlInsert, /IconButton::new\("media-panel-copy-url", IconName::Copy\)/);
+  assert.match(renderUrlInsert, /IconButton::new\("media-panel-pin-url", IconName::Pin\)/);
+  assert.match(renderUrlInsert, /IconButton::new\("media-panel-insert-url", IconName::Plus\)/);
+  assert.match(renderUrlInsert, /\.style\(ButtonStyle::Filled\)/);
+  assert.match(renderUrlInsert, /\.tooltip\(Tooltip::text\(row_tooltip\)\)/);
+  assert.doesNotMatch(
+    renderUrlInsert,
+    /Button::new\("media-panel-(?:preview|copy|pin|insert)-url", "(?:Preview|Copy|Pin|Insert URL)"\)/,
+  );
+  assert.doesNotMatch(
+    renderUrlInsert,
+    /\.border_1\(\)|\.rounded_sm\(\)|\.bg\(cx\.theme\(\)\.colors\(\)\.element_background\)|IconSize::XSmall/,
+  );
   assert.match(renderMediaHistoryRow, /ListItem::new\(row_id\)/);
   assert.match(renderMediaHistoryRow, /\.inset\(true\)/);
   assert.match(renderMediaHistoryRow, /\.spacing\(ListItemSpacing::Sparse\)/);

@@ -1301,19 +1301,23 @@ impl MediaPanel {
         let kind = candidate.kind;
         let url = candidate.url;
         let label = candidate.label;
+        let row_tooltip = format!("{label}\n{url}");
+        let preview_url = url.clone();
+        let preview_label = label.clone();
+        let copy_url = url.clone();
+        let copy_label = label.clone();
+        let pin_url = url.clone();
+        let pin_label = label.clone();
 
         Some(
-            h_flex()
-                .gap_2()
-                .items_center()
-                .p_2()
-                .rounded_sm()
-                .border_1()
-                .border_color(cx.theme().colors().border_variant)
-                .bg(cx.theme().colors().element_background)
-                .child(Icon::new(media_kind_icon(kind)).size(IconSize::Small))
+            ListItem::new("media-panel-url-insert-row")
+                .inset(true)
+                .spacing(ListItemSpacing::Sparse)
+                .selectable(false)
+                .start_slot(Icon::new(media_kind_icon(kind)).size(IconSize::Small))
                 .child(
                     v_flex()
+                        .min_w_0()
                         .flex_1()
                         .gap_0p5()
                         .child(Label::new(label.clone()).size(LabelSize::Small).truncate())
@@ -1324,21 +1328,34 @@ impl MediaPanel {
                                 .truncate(),
                         ),
                 )
-                .child(
+                .end_slot(
+                    Icon::new(IconName::Ellipsis)
+                        .size(IconSize::Small)
+                        .color(Color::Muted),
+                )
+                .end_slot_on_hover(
                     h_flex()
+                        .flex_none()
                         .gap_1()
+                        .occlude()
+                        .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
+                            cx.stop_propagation();
+                        })
+                        .on_mouse_up(gpui::MouseButton::Left, |_, _, cx| {
+                            cx.stop_propagation();
+                        })
                         .child(
-                            Button::new("media-panel-preview-url", "Preview")
+                            IconButton::new("media-panel-preview-url", IconName::Eye)
+                                .shape(ui::IconButtonShape::Square)
                                 .style(ButtonStyle::Subtle)
-                                .size(ButtonSize::Compact)
+                                .icon_size(IconSize::Small)
+                                .tooltip(Tooltip::text("Preview URL media"))
                                 .on_click(cx.listener({
-                                    let url = url.clone();
-                                    let label = label.clone();
                                     move |panel, _, window, cx| {
                                         panel.preview_media_url(
-                                            url.clone(),
+                                            preview_url.clone(),
                                             kind,
-                                            label.clone(),
+                                            preview_label.clone(),
                                             window,
                                             cx,
                                         );
@@ -1346,34 +1363,44 @@ impl MediaPanel {
                                 })),
                         )
                         .child(
-                            Button::new("media-panel-copy-url", "Copy")
+                            IconButton::new("media-panel-copy-url", IconName::Copy)
+                                .shape(ui::IconButtonShape::Square)
                                 .style(ButtonStyle::Subtle)
-                                .size(ButtonSize::Compact)
+                                .icon_size(IconSize::Small)
+                                .tooltip(Tooltip::text("Copy URL"))
                                 .on_click(cx.listener({
-                                    let url = url.clone();
-                                    let label = label.clone();
                                     move |panel, _, _, cx| {
-                                        panel.record_recent_remote_media(&url, kind, &label);
-                                        panel.copy_media_source(url.clone(), label.clone(), cx);
+                                        panel.record_recent_remote_media(
+                                            &copy_url,
+                                            kind,
+                                            &copy_label,
+                                        );
+                                        panel.copy_media_source(
+                                            copy_url.clone(),
+                                            copy_label.clone(),
+                                            cx,
+                                        );
                                     }
                                 })),
                         )
                         .child(
-                            Button::new("media-panel-pin-url", "Pin")
+                            IconButton::new("media-panel-pin-url", IconName::Pin)
+                                .shape(ui::IconButtonShape::Square)
                                 .style(ButtonStyle::Subtle)
-                                .size(ButtonSize::Compact)
+                                .icon_size(IconSize::Small)
+                                .tooltip(Tooltip::text("Pin URL media"))
                                 .on_click(cx.listener({
-                                    let url = url.clone();
-                                    let label = label.clone();
                                     move |panel, _, _, cx| {
-                                        panel.pin_remote_media(&url, kind, &label, cx);
+                                        panel.pin_remote_media(&pin_url, kind, &pin_label, cx);
                                     }
                                 })),
                         )
                         .child(
-                            Button::new("media-panel-insert-url", "Insert URL")
+                            IconButton::new("media-panel-insert-url", IconName::Plus)
+                                .shape(ui::IconButtonShape::Square)
                                 .style(ButtonStyle::Filled)
-                                .size(ButtonSize::Compact)
+                                .icon_size(IconSize::Small)
+                                .tooltip(Tooltip::text("Insert URL into the active editor"))
                                 .on_click(cx.listener(move |panel, _, window, cx| {
                                     panel.insert_media_url(
                                         url.clone(),
@@ -1384,7 +1411,8 @@ impl MediaPanel {
                                     );
                                 })),
                         ),
-                ),
+                )
+                .tooltip(Tooltip::text(row_tooltip)),
         )
     }
 

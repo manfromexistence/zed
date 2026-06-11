@@ -1,5 +1,5 @@
 IN PROGRESS:
-- None. DX panel GPUI fourth-pass polish is source-verified and ready for the later governed runtime proof window.
+- None. DX panel GPUI fifth-pass polish is source-verified and ready for the later governed runtime proof window.
 
 PENDING:
 - Run governed DX Agents connection/tool runtime proof once authorized, covering main sidebar Connections and Tools routing, real social/provider receipts, QR payload display, credential expiry/error visuals, trusted tool bridge approvals, and native workspace-tab layout.
@@ -8,6 +8,7 @@ PENDING:
 - Continue the DX/Zed ecosystem integration with bounded source-only slices for remaining receipt scans, semantic icon hotspots, and governed runtime proof when explicitly authorized.
 
 COMPLETED:
+- DX panel GPUI fifth-pass polish is source-verified: Media pasted-URL insertion now uses sparse `ListItem` chrome with tooltip-backed square icon actions, UI install-only guidance uses a sparse list row, Check folds receipt/refresh controls into the status row, Forge status/provider/workflow action chrome uses compact row height and gaps, and Project storage-root plus entry-metadata chrome is tighter while preserving file-tree behavior. Runtime/native proof, Cargo, build, and `just run` remain deferred by instruction.
 - DX panel GPUI fourth-pass polish is source-verified: Media and UI recent/pinned history sections now use square icon management actions and hover-only row action slots, Forge provider-group hover actions preserve readiness dots, Check caps visible web audits at four rows and starts with Adapter Plans collapsed, and Project chrome uses a muted Project icon, tighter side-panel/selection/storage spacing, dense storage rows, and tooltip-backed entry badges. Runtime/native proof, Cargo, build, and `just run` remain deferred by instruction.
 - DX panel GPUI third-pass polish is source-verified: Media and UI recent/pinned history sections now use shared `ListHeader` chrome, the UI panel status message renders as a sparse non-selectable row, Check uses compact icon-only receipt chrome plus stable informational rows and Findings ordering, Project storage drilldown keeps largest-file detail tooltip-only, and Forge tabs/source-open controls use clearer tooltips. Runtime/native proof, Cargo, build, and `just run` remain deferred by instruction.
 - DX panel GPUI follow-up polish is source-verified: Tools workspace sections/details now use Zed `ListHeader`/sparse `ListItem` chrome, Media and UI recent/pinned history rows now use shared list rows with action end slots, Check findings counts include adapter plans with case-normalized row status colors, Project options disable no-worktree actions visibly, and the Forge footer status row aligns with inset list grammar. Runtime/native proof, Cargo, build, and `just run` remain deferred by instruction.
