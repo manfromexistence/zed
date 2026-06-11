@@ -3768,6 +3768,7 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
+        self.activity_bar_expanded = true;
         self.selection = None;
         if let SidebarView::Archive(archive) = &self.view {
             archive.update(cx, |view, cx| {
@@ -8894,10 +8895,11 @@ impl Sidebar {
                 gpui::Anchor::TopLeft
             })
             .trigger(move |_is_active, _window, _cx| {
-                let icon = if on_right {
-                    IconName::ThreadsSidebarRightOpen
-                } else {
-                    IconName::ThreadsSidebarLeftOpen
+                let icon = match (on_right, is_activity_bar) {
+                    (true, true) => IconName::ThreadsSidebarRightClosed,
+                    (true, false) => IconName::ThreadsSidebarRightOpen,
+                    (false, true) => IconName::ThreadsSidebarLeftClosed,
+                    (false, false) => IconName::ThreadsSidebarLeftOpen,
                 };
                 IconButton::new("sidebar-close-toggle", icon)
                     .icon_size(if is_activity_bar {

@@ -167,7 +167,8 @@ test("DX shell chrome uses semantic icons instead of scattered literals", () => 
   assert.match(launchStylePanel, /dx_icon\(DxUiIcon::Style\)/);
   assert.doesNotMatch(launchStylePanel, /IconName::Sliders/);
   assert.doesNotMatch(agentButton, /IconName::ZedAssistant/);
-  assert.match(agentButton, /IconName::Sparkle/);
+  assert.match(agentButton, /dx_icon\(DxUiIcon::Agent\)/);
+  assert.doesNotMatch(agentButton, /IconName::Sparkle/);
   assert.doesNotMatch(screenKindIcon, /IconName::ToolWeb/);
   assert.doesNotMatch(
     hiddenButtons,

@@ -2836,12 +2836,7 @@ impl ThreadView {
             return None;
         }
 
-        // Temporarily always enable ACP edit controls. This is temporary, to lessen the
-        // impact of a nasty bug that causes them to sometimes be disabled when they shouldn't
-        // be, which blocks you from being able to accept or reject edits. This switches the
-        // bug to be that sometimes it's enabled when it shouldn't be, which at least doesn't
-        // block you from using the panel.
-        let pending_edits = false;
+        let pending_edits = thread.has_pending_edit_tool_calls();
 
         let plan_expanded = self.plan_expanded;
         let edits_expanded = self.edits_expanded;

@@ -781,6 +781,9 @@ test("Forge panel uses workflow tabs with Git-style selectable rows", () => {
   assert.match(tabPositionBody, /TabPosition::Last/);
   assert.match(tabPositionBody, /TabPosition::Middle/);
   assert.match(tabs, /fn tab_icon/);
+  assert.match(panelView, /\.track_scroll\(scroll_handle\)/);
+  assert.match(panelView, /\.overflow_y_scroll\(\)/);
+  assert.match(panelView, /\.vertical_scrollbar_for\(scroll_handle, window, cx\)/);
   assert.doesNotMatch(
     forgeTabBody,
     /h_flex\(\)|\.border_b_1\(\)|ghost_element|editor_background/,

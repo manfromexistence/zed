@@ -48,6 +48,8 @@ pub(super) fn render_panel(
                         .flex_1()
                         .min_h_0()
                         .min_w_0()
+                        .track_scroll(scroll_handle)
+                        .overflow_y_scroll()
                         .py_1()
                         .children(match active_tab {
                             DxForgePanelTab::Repository => {

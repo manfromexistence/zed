@@ -168,11 +168,14 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   assert.match(renderStatusStrip, /\.occlude\(\)/);
   assert.match(renderStatusStrip, /gpui::MouseButton::Left/);
   assert.match(renderStatusStrip, /cx\.stop_propagation\(\);/);
-  assert.match(renderStatusStrip, /IconButton::new\("dx-check-open-receipt", IconName::FileTextOutlined\)/);
+  assert.match(
+    renderStatusStrip,
+    /IconButton::new\(\s*"dx-check-open-receipt",\s*IconName::FileTextOutlined,\s*\)/,
+  );
   assert.match(renderStatusStrip, /IconButton::new\("dx-check-refresh", IconName::RotateCw\)/);
   assert.match(
     renderStatusStrip,
-    /IconButton::new\("dx-check-open-receipt", IconName::FileTextOutlined\)[\s\S]*\.tab_index\(0_isize\)[\s\S]*\.track_focus\(&focus_handle\)[\s\S]*\.disabled\(!receipt_enabled\)/,
+    /IconButton::new\(\s*"dx-check-open-receipt",\s*IconName::FileTextOutlined,\s*\)[\s\S]*\.tab_index\(0_isize\)[\s\S]*\.track_focus\(&focus_handle\)[\s\S]*\.disabled\(!receipt_enabled\)/,
   );
   assert.match(
     renderStatusStrip,
@@ -191,12 +194,17 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   assert.doesNotMatch(renderPanel, /self\.render_toolbar/);
   assert.doesNotMatch(renderStatusStrip, /(^|[^A-Za-z0-9_])Button::new\("dx-check-open-receipt"/);
   assert.doesNotMatch(renderStatusStrip, /\.start_icon\(/);
-  assert.match(tabs, /TabBar::new\("dx-check-tab-bar"\)/);
+  assert.match(tabs, /TabBar::new\(\("dx-check-tab-bar", panel_id\)\)/);
   assert.match(tabs, /snapshot\.adapter_plans\.len\(\)/);
   assert.match(checkTab, /Tab::new\(id\)/);
   assert.match(checkTab, /\.fill_available_width\(\)/);
   assert.match(checkTab, /\.position\(tab_position\(tab, active_tab\)\)/);
   assert.match(checkTab, /\.selected_bottom_border\(true\)/);
+  assert.match(checkTab, /\.end_slot\(/);
+  assert.match(checkTab, /Label::new\(count\.to_string\(\)\)/);
+  assert.match(checkTab, /cx\.stop_propagation\(\);/);
+  assert.doesNotMatch(checkTab, /SharedString::from\(format!\("\{label\} \(\{count\}\)"\)\)/);
+  assert.match(view, /render_tab_bar\([\s\S]*panel_id[\s\S]*panel\.clone\(\),[\s\S]*cx,/);
   assert.match(view, /\.id\("dx-check-panel-scroll-host"\)/);
   assert.match(view, /\.vertical_scrollbar_for\(&self\.scroll_handle, window, cx\)/);
   assert.match(view, /\.track_scroll\(&self\.scroll_handle\)/);

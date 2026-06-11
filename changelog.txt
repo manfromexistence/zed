@@ -1,3 +1,24 @@
+[2026-06-12] - AI Screen, Panel, And Sidebar Source Polish
+
+CHANGED:
+- The titlebar AI screen button now uses the central `DxUiIcon::Agent` semantic mapping instead of a raw Sparkle literal.
+- Fullscreen AI rail toolbar availability now checks cached launch-status presence without cloning or rebuilding live DX launch status during toolbar render.
+- Active Agent threads now stay in the Running rail state before queued follow-up messages can classify them as Queued.
+- Agent pending edit controls now read real pending edit tool-call state instead of a disabled placeholder.
+- Forge panel content now tracks the scroll handle on the actual scrollable content host.
+- Check panel tabs now use panel-scoped tab-bar ids, separate count slots, and click propagation guards.
+- Collapsed-sidebar search focus now expands the sidebar first, and the sidebar toggle icon reflects collapsed versus expanded state.
+- Source guards now pin the semantic AI screen icon route, render-path no-rebuild rail availability contract, Agent status ordering, pending edit state, Forge scroll host, Check tab contract, and sidebar focus/toggle behavior.
+
+PASSED:
+- `node --test script\dx-workspace-ui-state-source.test.ts script\dx-icon-system-source.test.ts script\dx-title-bar-source.test.ts script\dx-check-panel-source.test.ts script\dx-forge-panel-source.test.ts`
+- `rustfmt --edition 2024 --check crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\dx_check_panel_view.rs crates\agent_ui\src\dx_check_panel_view\tabs.rs crates\agent_ui\src\dx_forge_panel\panel_view.rs crates\sidebar\src\sidebar.rs crates\title_bar\src\title_bar.rs`
+- `git diff --check`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" ...` returned no matches across touched source, guard, and handoff files.
+
+NOTES:
+- Cargo/build/native visual proof and `just run` remain deferred by instruction.
+
 [2026-06-12] - DX Sidebar And Liquid Glass Source Polish
 
 CHANGED:

@@ -726,6 +726,7 @@ impl Render for DxCheckPanel {
             .child(render_tab_bar(
                 &snapshot,
                 self.active_tab,
+                panel_id,
                 panel.clone(),
                 cx,
             ))

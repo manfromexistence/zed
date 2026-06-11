@@ -121,8 +121,8 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
   );
   assert.match(
     agentScreenButton,
-    /"screen-dock-agent",\s*IconName::Sparkle/s,
-    "screen dock should expose the AI screen with the Sparkle icon",
+    /"screen-dock-agent",\s*dx_icon\(DxUiIcon::Agent\)/s,
+    "screen dock should expose the AI screen through the central DX Agent icon mapping",
   );
   assert.match(
     agentScreenButton,

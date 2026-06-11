@@ -392,7 +392,7 @@ test("core side panels expose dock close controls in visible headers", () => {
   }
 
   assert.doesNotMatch(projectPanel, /fn render_panel_header/);
-  assert.match(projectPanel, /side_panel_header_controls\(\s*"project-panel-media"/);
+  assert.match(projectPanel, /render_side_panel_header_controls\("dx-explorer", cx\)/);
   assert.match(
     projectSelectionToolbar,
     /side_panel_header_controls\(\s*"project-panel-selection"/,
@@ -535,8 +535,8 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   );
   assert.match(agentPanel, /"agent-toolbar-toggle-sources-rail"/);
   assert.match(agentPanel, /"agent-toolbar-toggle-progress-rail"/);
-  assert.match(agentPanel, /has_sources_rail_content/);
-  assert.match(agentPanel, /has_progress_rail_content/);
+  assert.match(agentPanel, /let rails_available = is_full_screen && self\.dx_launch_workspace_status_cache\.is_some\(\);/);
+  assert.doesNotMatch(toolbar, /has_sources_rail_content|has_progress_rail_content/);
   for (const [button, label] of [
     [toolbarBackButton, "Agent toolbar overlay back button"],
     [sourcesRailButton, "Agent sources rail toggle"],
@@ -564,14 +564,12 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(closePanelButton, /if let Some\(workspace\) = workspace\.upgrade\(\)/);
   assert.match(closePanelButton, /workspace\.close_side_panel_by_id\(panel_id, window, cx\)/);
   assert.doesNotMatch(closePanelButton, /CloseActiveSidePanel/);
-  assert.match(sourcesRailButton, /\.disabled\(!sources_rail_available\)/);
   assert.match(sourcesRailButton, /\.toggle_state\(sources_rail_open\)/);
-  assert.match(sourcesRailButton, /Sources rail has no sources yet/);
-  assert.match(sourcesRailButton, /if sources_rail_available[\s\S]*fullscreen_sources_rail_open = !this\.fullscreen_sources_rail_open[\s\S]*else[\s\S]*fullscreen_sources_rail_open = false/);
-  assert.match(progressRailButton, /\.disabled\(!progress_rail_available\)/);
+  assert.match(sourcesRailButton, /fullscreen_sources_rail_open = !this\.fullscreen_sources_rail_open/);
+  assert.doesNotMatch(sourcesRailButton, /sources_rail_available|Sources rail has no sources yet/);
   assert.match(progressRailButton, /\.toggle_state\(progress_rail_open\)/);
-  assert.match(progressRailButton, /Progress rail has no agent activity yet/);
-  assert.match(progressRailButton, /if progress_rail_available[\s\S]*fullscreen_progress_rail_open = !this\.fullscreen_progress_rail_open[\s\S]*else[\s\S]*fullscreen_progress_rail_open = false/);
+  assert.match(progressRailButton, /fullscreen_progress_rail_open = !this\.fullscreen_progress_rail_open/);
+  assert.doesNotMatch(progressRailButton, /progress_rail_available|Progress rail has no agent activity yet/);
   assert.match(agentPanel, /enum AgentPanelHostKind \{/);
   assert.match(agentPanel, /Sidechat,/);
   assert.match(agentPanel, /BuilderWorkspace,/);
@@ -580,8 +578,8 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(agentPanel, /host_kind: AgentPanelHostKind::Sidechat,[\s\S]*?manual_zoom_override: Some\(false\)/);
   assert.match(agentPanel, /fullscreen_sources_rail_open/);
   assert.match(agentPanel, /fullscreen_progress_rail_open/);
-  assert.match(agentPanel, /fullscreen_sources_rail_open: false/);
-  assert.match(agentPanel, /fullscreen_progress_rail_open: false/);
+  assert.match(agentPanel, /fullscreen_sources_rail_open: true/);
+  assert.match(agentPanel, /fullscreen_progress_rail_open: true/);
   assert.match(agentPanel, /pub\(crate\) fn new_builder_workspace\(/);
   assert.match(agentPanel, /panel\.host_kind = AgentPanelHostKind::BuilderWorkspace/);
   assert.match(agentPanel, /panel\.fullscreen_sources_rail_pinned = false/);
@@ -589,7 +587,10 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(agentPanel, /pub\(crate\) fn new_automation_workspace\(/);
   assert.match(agentPanel, /panel\.host_kind = AgentPanelHostKind::AutomationWorkspace/);
   assert.match(agentPanel, /fn render_automation_workspace_screen\(/);
-  assert.match(agentPanel, /render_automation_screen\(status\.as_ref\(\), cx\)/);
+  assert.match(
+    agentPanel,
+    /render_automation_screen\(\s*status\.as_ref\(\),\s*&mut self\.automation_catalog_state,\s*window,\s*cx,/,
+  );
   assert.match(focusAgentPanelFullscreen, /crate::AgentScreen::open_or_focus\(workspace, window, cx\);/);
   assert.match(agentScreen, /pub struct AgentScreen \{\s*panel: Entity<AgentPanel>,\s*\}/);
   assert.match(agentScreen, /AgentPanel::new_builder_workspace\(workspace, window, cx\)/);
@@ -927,7 +928,8 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(messageEditor, /\.pt_0p5\(\)/);
   assert.match(messageEditor, /\.pb_2\(\)/);
   assert.match(messageEditor, /this\.absolute\(\)\.left_0\(\)\.right_0\(\)\.bottom_0\(\)/);
-  assert.match(messageEditor, /this\.bg\(cx\.theme\(\)\.colors\(\)\.panel_background\)/);
+  assert.match(messageEditor, /let \(border_focused, border, panel_background\) =/);
+  assert.match(messageEditor, /\.when\(!has_messages, \|this\| this\.bg\(panel_background\)\)/);
   assert.match(renderEntry, /\.pb\(px\(FLOATING_MESSAGE_EDITOR_SAFE_PADDING_PX\)\)/);
   assert.match(threadView, /render_entry\(\s*index,\s*entries\.len\(\),\s*!this\.generating_indicator_in_list,/s);
   assert.match(threadView, /render_generating\(confirmation, cx\)[\s\S]*?\.pb\(px\(FLOATING_MESSAGE_EDITOR_SAFE_PADDING_PX\)\)/);
@@ -1105,7 +1107,7 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   assert.match(agentProfileSettings, /builtin_profiles::MEDIA => Some\(DxAiProfileMetadata/);
   assert.match(agentProfileSettings, /DxAiProfileKind::Media[\s\S]*?DxAiProfileBackendState::ProviderPending/);
   assert.match(manageProfilesModal, /fn profile_icon\(profile_id: &AgentProfileId\) -> IconName/);
-  assert.match(manageProfilesModal, /builtin_profiles::WRITE => IconName::ZedAgent/);
+  assert.match(manageProfilesModal, /builtin_profiles::WRITE => IconName::Sparkle/);
   assert.match(manageProfilesModal, /builtin_profiles::MEDIA => dx_icon\(DxUiIcon::Media\)/);
   assert.match(manageProfilesModal, /builtin_profiles::SEARCH => dx_icon\(DxUiIcon::Search\)/);
   assert.match(manageProfilesModal, /builtin_profiles::STUDY => IconName::Book/);
@@ -1205,6 +1207,16 @@ test("sidebar chat groups expose persistent sort and icon override controls", ()
   assert.match(sidebar, /IconButton::new\(\("thread-icon-picker", ix\), IconName::Sparkle\)/);
   assert.match(sidebar, /IconName::iter\(\)/);
   assert.match(sidebar, /SerializedThreadIconOverride/);
+  const focusSidebarFilter = functionBody(sidebar, "focus_sidebar_filter");
+  const sidebarToggleButton = functionBody(sidebar, "render_sidebar_toggle_button");
+  assert.match(
+    focusSidebarFilter,
+    /self\.activity_bar_expanded = true;/,
+    "focusing search from collapsed mode should expand the sidebar before moving focus",
+  );
+  assert.match(sidebarToggleButton, /match \(on_right, is_activity_bar\)/);
+  assert.match(sidebarToggleButton, /ThreadsSidebarLeftClosed/);
+  assert.match(sidebarToggleButton, /ThreadsSidebarRightClosed/);
   const serializedState = functionBody(sidebar, "serialized_state");
   const restoreSerializedState = functionBody(sidebar, "restore_serialized_state");
   assert.match(
@@ -1216,7 +1228,7 @@ test("sidebar chat groups expose persistent sort and icon override controls", ()
     /self\.manual_thread_order = serialized[\s\S]*?\.manual_thread_order[\s\S]*?\.take\(MAX_SIDEBAR_MANUAL_THREAD_ORDER\)[\s\S]*?\.collect\(\)/,
   );
   assert.match(threadItem, /let timestamp_color = if self\.selected \|\| self\.hovered/);
-  assert.match(threadItem, /Color::Custom\(color\.text\.opacity\(0\.68\)\)/);
+  assert.match(threadItem, /let timestamp_color = if self\.selected \|\| self\.hovered \{[\s\S]*Color::Default[\s\S]*\} else \{[\s\S]*Color::Muted[\s\S]*\};/);
   assert.match(threadItem, /Label::new\(timestamp\.clone\(\)\)[\s\S]*\.color\(timestamp_color\)/);
   assert.match(threadItem, /self\.hovered \|\| self\.focused/);
   assert.doesNotMatch(sidebar, /ContextMenuEntry::new\(format!\("\{icon_name:\?\}"\)\)/);
@@ -1249,8 +1261,8 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(dxLaunchWorkspace, /enum DxLaunchRailSection/);
   assert.match(dxLaunchWorkspace, /struct DxLaunchRailControls/);
   assert.match(dxLaunchWorkspace, /fn rail_section\(/);
-  assert.match(launchChrome, /show_sources_rail && has_sources_rail_content\(&status\)/);
-  assert.match(launchChrome, /show_progress_rail && has_progress_rail_content\(&status\)/);
+  assert.match(launchChrome, /\.when\(show_sources_rail, \|this\|/);
+  assert.match(launchChrome, /\.when\(show_progress_rail, \|this\|/);
   assert.match(
     hasSourcesRailContent,
     /status\.source_sets\.total_sources > 0 \|\| has_source_actions\(status\)/,
@@ -1304,6 +1316,11 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(agentPanel, /ThreadStatus::Generating/);
   assert.match(agentPanel, /has_in_progress_tool_calls/);
   assert.match(agentPanel, /has_queued_messages/);
+  assert.ok(
+    agentPanel.indexOf("thread.status() == ThreadStatus::Generating") <
+      agentPanel.indexOf("thread_view.has_queued_messages()"),
+    "active generating/tool-call threads should stay Running even when follow-up messages are queued",
+  );
   assert.match(agentPanel, /had_error/);
   assert.match(agentPanel, /pending_tool_call_for_session/);
   assert.match(agentPanel, /dx_subagent_status_from_tool_call/);
@@ -1332,10 +1349,19 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(agentPanel, /toggle_dx_launch_rail_section/);
   assert.match(toolbar, /"Hide sources rail"/);
   assert.match(toolbar, /"Show sources rail"/);
-  assert.match(toolbar, /"Sources rail has no sources yet"/);
   assert.match(toolbar, /"Hide progress rail"/);
   assert.match(toolbar, /"Show progress rail"/);
-  assert.match(toolbar, /"Progress rail has no agent activity yet"/);
+  assert.doesNotMatch(toolbar, /Sources rail has no sources yet|Progress rail has no agent activity yet/);
+  assert.match(
+    toolbar,
+    /let rails_available = is_full_screen && self\.dx_launch_workspace_status_cache\.is_some\(\);/,
+    "fullscreen rail toolbar availability must not clone or rebuild launch status during render",
+  );
+  const renderActivityBar = functionBody(threadView, "render_activity_bar");
+  assert.match(renderActivityBar, /let pending_edits = thread\.has_pending_edit_tool_calls\(\);/);
+  assert.doesNotMatch(renderActivityBar, /let pending_edits = false/);
+  assert.doesNotMatch(toolbar, /fullscreen_launch_status/);
+  assert.doesNotMatch(toolbar, /with_live_dx_launch_status\(cache\.status\.clone\(\), cx\)/);
   assert.doesNotMatch(toolbar, /Show or hide sources|Show or hide progress/);
   assert.match(agentPanel, /DxLaunchRailControls\s*\{/);
   assert.match(dxLaunchWorkspace, /enum DxLaunchRailSide/);
@@ -1473,7 +1499,7 @@ test("agent rails and project badges keep compact production layout", () => {
     projectPanel.indexOf(".child(if let Some(icon)", projectPanel.indexOf(".end_slot::<AnyElement>(")),
   );
   assert.match(badgeSlot, /\.ml_auto\(\)/);
-  assert.match(badgeSlot, /\.pr_1\(\)/);
+  assert.doesNotMatch(badgeSlot, /\.pr_1\(\)/);
   assert.match(badgeSlot, /\.justify_end\(\)/);
 });
 
@@ -1665,8 +1691,8 @@ test("core left panels expose close controls in native headers", () => {
   }
 
   assert.doesNotMatch(projectPanel, /fn render_panel_header/);
-  assert.match(projectPanel, /side_panel_header_controls\(\s*"project-panel-media",/);
-  assert.match(projectPanel, /side_panel_header_controls\(\s*"project-panel-sticky",/);
+  assert.match(projectPanel, /render_side_panel_header_controls\("dx-explorer", cx\)/);
+  assert.doesNotMatch(projectPanel, /side_panel_header_controls\(\s*"project-panel-sticky",/);
   assert.doesNotMatch(emptyProjectWrapper, /render_panel_header\(cx\)/);
   assert.match(
     projectSelectionToolbar,

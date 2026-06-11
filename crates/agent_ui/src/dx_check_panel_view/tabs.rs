@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use gpui::{App, IntoElement, SharedString, WeakEntity};
+use gpui::{App, EntityId, IntoElement, WeakEntity};
 use ui::{IconName, Tab, TabBar, TabPosition, Tooltip, prelude::*};
 
 use super::DxCheckPanel;
@@ -16,10 +16,11 @@ pub(super) enum DxCheckPanelTab {
 pub(super) fn render_tab_bar(
     snapshot: &DxCheckPanelSnapshot,
     active_tab: DxCheckPanelTab,
+    panel_id: EntityId,
     panel: WeakEntity<DxCheckPanel>,
     _cx: &App,
 ) -> impl IntoElement {
-    TabBar::new("dx-check-tab-bar")
+    TabBar::new(("dx-check-tab-bar", panel_id))
         .child(check_tab(
             "dx-check-tab-overview",
             "Overview",
@@ -60,13 +61,8 @@ fn check_tab(
 ) -> impl IntoElement {
     let selected = active_tab == tab;
     let title = format!("{label} ({count})");
-    let label = if count > 0 {
-        SharedString::from(format!("{label} ({count})"))
-    } else {
-        SharedString::from(label)
-    };
 
-    Tab::new(id)
+    let tab = Tab::new(id)
         .fill_available_width()
         .position(tab_position(tab, active_tab))
         .toggle_state(selected)
@@ -88,10 +84,22 @@ fn check_tab(
         )
         .tooltip(Tooltip::text(title))
         .on_click(move |_, _, cx| {
+            cx.stop_propagation();
             panel
                 .update(cx, |panel, cx| panel.set_active_tab(tab, cx))
                 .ok();
-        })
+        });
+
+    if count > 0 {
+        tab.end_slot(
+            Label::new(count.to_string())
+                .size(LabelSize::Small)
+                .color(Color::Muted)
+                .truncate(),
+        )
+    } else {
+        tab
+    }
 }
 
 fn tab_position(tab: DxCheckPanelTab, active_tab: DxCheckPanelTab) -> TabPosition {

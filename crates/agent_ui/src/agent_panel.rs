@@ -6192,14 +6192,7 @@ impl AgentPanel {
         };
 
         let is_full_screen = self.should_render_dx_launch_chrome(cx);
-        let fullscreen_launch_status = is_full_screen
-            .then(|| {
-                self.dx_launch_workspace_status_cache
-                    .as_ref()
-                    .map(|cache| self.with_live_dx_launch_status(cache.status.clone(), cx))
-            })
-            .flatten();
-        let rails_available = fullscreen_launch_status.is_some();
+        let rails_available = is_full_screen && self.dx_launch_workspace_status_cache.is_some();
         let sources_rail_open = self.fullscreen_sources_rail_open && rails_available;
         let progress_rail_open = self.fullscreen_progress_rail_open && rails_available;
         let agent_sources_rail_button = IconButton::new(
@@ -8346,18 +8339,18 @@ impl AgentPanel {
             return DxSubagentStatus::Blocked;
         }
 
-        if thread_view.is_loading_contents
-            || thread_view.has_queued_messages()
-            || matches!(parent_status, Some(DxSubagentStatus::Queued))
-        {
-            return DxSubagentStatus::Queued;
-        }
-
         if thread.status() == ThreadStatus::Generating
             || thread.has_in_progress_tool_calls()
             || matches!(parent_status, Some(DxSubagentStatus::Running))
         {
             return DxSubagentStatus::Running;
+        }
+
+        if thread_view.is_loading_contents
+            || thread_view.has_queued_messages()
+            || matches!(parent_status, Some(DxSubagentStatus::Queued))
+        {
+            return DxSubagentStatus::Queued;
         }
 
         DxSubagentStatus::Idle
