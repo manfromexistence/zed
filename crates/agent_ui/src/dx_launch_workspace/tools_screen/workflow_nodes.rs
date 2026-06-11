@@ -225,11 +225,22 @@ fn render_plugin_config_menu(
                     move |window, cx| {
                         if let Some(panel) = panel.upgrade() {
                             panel.update(cx, |this, cx| {
-                                this.draft_dx_workflow_node_configuration_prompt(
-                                    node.clone(),
-                                    window,
-                                    cx,
-                                );
+                                if node.configured
+                                    || node.credential_status == "not_required"
+                                    || node.credentials.is_empty()
+                                {
+                                    this.draft_dx_workflow_node_configuration_prompt(
+                                        node.clone(),
+                                        window,
+                                        cx,
+                                    );
+                                } else {
+                                    this.open_dx_workflow_node_credentials_modal(
+                                        node.clone(),
+                                        window,
+                                        cx,
+                                    );
+                                }
                             });
                         }
                     }
@@ -245,7 +256,7 @@ fn plugin_config_menu_action_label(node: &DxWorkflowNodeSummary) -> &'static str
     } else if node.credential_status == "not_required" {
         "Review plugin contract"
     } else {
-        "Draft setup request"
+        "Configure credentials"
     }
 }
 

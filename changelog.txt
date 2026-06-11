@@ -1,3 +1,25 @@
+[2026-06-11] - DX Plugins Secure Credential Modal
+
+ADDED:
+- Workflow-node credential metadata now includes bounded input summaries parsed from serializer `inputs` or `fields`, with a required secret fallback when a credential declares no explicit fields.
+- Credential-backed Plugins Configure actions now open a GPUI credential modal that renders masked input fields for the declared credential inputs.
+- Saved credentials are written through internal platform-keychain item names and the Agent draft receives only a non-secret local save summary plus bounded plugin/source metadata.
+
+HARDENED:
+- The modal rejects untrusted, non-first-party, or incomplete-source plugin metadata before storing credentials.
+- Raw credential values and keychain item names are never written to settings, receipts, logs, prompts, or source-rendered labels; fields are cleared after a successful save or cancel.
+- Source guards now cover credential input mapping, keychain-only storage, no forbidden upstream plugin sources, no raw secret-key terms in modal/UI surfaces, and focused bridge file-size boundaries.
+
+PASSED:
+- `rustfmt --edition 2024 --check` on the touched Rust files.
+- `node --test script/dx-agent-bridge-source.test.ts script/dx-agent-workspaces-source.test.ts script/dx-agent-thread-view-source.test.ts script/dx-plugin-catalog-source.test.ts script/dx-plugin-credentials-source.test.ts`
+- Focused forbidden-upstream and raw-secret scans over the touched Plugins credential files returned no matches.
+- Focused conflict-marker scan over touched docs, source, and guard files returned no matches.
+- `git diff --check`
+
+NOTES:
+- Cargo, `just run`, local servers, native launch, visual runtime proof, and live keychain write proof remain deferred by instruction.
+
 [2026-06-11] - DX Plugins Configure Bridge And Catalog Provenance
 
 CHANGED:

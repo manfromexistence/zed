@@ -42,6 +42,7 @@ test("DX Agent bridge stays split by command, runtime, and receipt ownership", (
     "crates/agent_ui/src/dx_agent_bridge/workflow_nodes.rs",
     "crates/agent_ui/src/dx_agent_bridge/workflow_nodes/contract.rs",
     "crates/agent_ui/src/dx_agent_bridge/workflow_nodes/configured.rs",
+    "crates/agent_ui/src/dx_agent_bridge/workflow_nodes/credentials.rs",
   ];
 
   for (const module of expectedModules) {
@@ -115,7 +116,10 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   const workflowNodeConfigured = read(
     "crates/agent_ui/src/dx_agent_bridge/workflow_nodes/configured.rs",
   );
-  const workflowNodeSources = `${workflowNodes}\n${workflowNodeContract}\n${workflowNodeConfigured}`;
+  const workflowNodeCredentials = read(
+    "crates/agent_ui/src/dx_agent_bridge/workflow_nodes/credentials.rs",
+  );
+  const workflowNodeSources = `${workflowNodes}\n${workflowNodeContract}\n${workflowNodeConfigured}\n${workflowNodeCredentials}`;
   const runtime = read("crates/agent_ui/src/dx_agent_bridge/runtime.rs");
   const runtimeTests = read("crates/agent_ui/src/dx_agent_bridge/runtime_tests.rs");
   const forbiddenWorkflowNodeSources =
@@ -149,10 +153,13 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.match(parent, /workflow_node_catalog: workflow_node_catalog_summary/);
   assert.match(workflowNodes, /^mod contract;$/m);
   assert.match(workflowNodes, /^mod configured;$/m);
+  assert.match(workflowNodes, /^mod credentials;$/m);
   assert.match(workflowNodes, /pub\(crate\) use self::contract::\{/);
+  assert.match(workflowNodes, /pub\(crate\) use self::credentials::\{/);
   assert.match(workflowNodes, /pub\(crate\) use self::configured::DxConfiguredPluginSummary/);
   assert.match(workflowNodes, /use self::contract::\{/);
   assert.match(workflowNodes, /use self::configured::\{/);
+  assert.match(workflowNodes, /use self::credentials::workflow_node_credential_rows/);
   assert.match(workflowNodes, /ConfiguredPluginIndex/);
   assert.match(workflowNodes, /configured_plugin_index/);
   assert.match(workflowNodes, /configured_plugin_rows/);
@@ -379,9 +386,12 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   ]) {
     assert.match(workflowNodeSources, new RegExp(`pub ${field}:`));
   }
+  assert.match(workflowNodes, /let credential_types = credential_type_values\(value, &credentials\)/);
+  assert.match(workflowNodes, /credential_types,/);
+  assert.match(workflowNodes, /fn credential_type_values/);
   assert.match(
     workflowNodes,
-    /credential_types:\s*display_string_array_field\(\s*value,\s*&\["credential_types"\],\s*MAX_DETAIL_ITEMS,\s*\)/,
+    /let declared = display_string_array_field\(value, &\["credential_types"\], MAX_DETAIL_ITEMS\)/,
   );
   for (const helper of [
     "workflow_node_permission_rows",
@@ -453,6 +463,7 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_catalog.rs") < 90);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/workflow_nodes/contract.rs") < 280);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/workflow_nodes/configured.rs") < 140);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/workflow_nodes/credentials.rs") < 180);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_connection_tests.rs") < 120);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_catalog_tests.rs") < 130);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_catalog_fields.rs") < 125);

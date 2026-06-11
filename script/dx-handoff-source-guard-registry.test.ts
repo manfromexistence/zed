@@ -143,6 +143,7 @@ const registeredGuardScripts = [
   "script/dx-agent-workspaces-source.test.ts",
   "script/dx-automations-source.test.ts",
   "script/dx-plugin-catalog-source.test.ts",
+  "script/dx-plugin-credentials-source.test.ts",
   "script/dx-icon-hover-source.test.ts",
   "script/web-preview-payload-source.test.ts",
   "script/dx-www-launch-evidence-source.test.ts",

@@ -266,7 +266,7 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
   assert.match(detailScreen, /catalog\.schema_version\.clone\(\)/);
   assert.doesNotMatch(pluginScreenSources, /"dx\.serializer\.machine"/);
   assert.match(workflowNodeScreen, /WeakEntity<AgentPanel>/);
-  assert.match(workflowNodeScreen, /Draft setup request/);
+  assert.match(workflowNodeScreen, /Configure credentials/);
   assert.match(workflowNodeScreen, /Review configuration/);
   assert.match(workflowNodeScreen, /Review plugin contract/);
   assert.match(workflowNodeScreen, /draft_dx_workflow_node_configuration_prompt/);

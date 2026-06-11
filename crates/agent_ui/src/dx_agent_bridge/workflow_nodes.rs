@@ -8,18 +8,22 @@ use super::{
 
 mod configured;
 mod contract;
+mod credentials;
 
 pub(crate) use self::configured::DxConfiguredPluginSummary;
 use self::configured::{ConfiguredPluginIndex, configured_plugin_index, configured_plugin_rows};
 pub(crate) use self::contract::{
-    DxWorkflowNodeActionSummary, DxWorkflowNodeCredentialSummary,
-    DxWorkflowNodeDynamicOptionSummary, DxWorkflowNodePermissionSummary, DxWorkflowNodePortSummary,
-    DxWorkflowNodeReceiptSummary, DxWorkflowNodeTrustSummary,
+    DxWorkflowNodeActionSummary, DxWorkflowNodeDynamicOptionSummary,
+    DxWorkflowNodePermissionSummary, DxWorkflowNodePortSummary, DxWorkflowNodeReceiptSummary,
+    DxWorkflowNodeTrustSummary,
 };
 use self::contract::{
-    workflow_node_action_rows, workflow_node_credential_rows, workflow_node_dynamic_option_rows,
-    workflow_node_permission_rows, workflow_node_port_rows, workflow_node_receipt_rows,
-    workflow_node_trust_summary,
+    workflow_node_action_rows, workflow_node_dynamic_option_rows, workflow_node_permission_rows,
+    workflow_node_port_rows, workflow_node_receipt_rows, workflow_node_trust_summary,
+};
+use self::credentials::workflow_node_credential_rows;
+pub(crate) use self::credentials::{
+    DxWorkflowNodeCredentialInputSummary, DxWorkflowNodeCredentialSummary,
 };
 
 const MAX_WORKFLOW_NODE_ROWS: usize = 768;
@@ -158,6 +162,8 @@ fn workflow_node_row(
     };
     let inputs = workflow_node_port_rows(value, &["inputs"]);
     let outputs = workflow_node_port_rows(value, &["outputs"]);
+    let credentials = workflow_node_credential_rows(value);
+    let credential_types = credential_type_values(value, &credentials);
     let dynamic_options = workflow_node_dynamic_option_rows(value);
 
     Some(DxWorkflowNodeSummary {
@@ -174,11 +180,7 @@ fn workflow_node_row(
             .unwrap_or_else(|| "unknown_source_package".to_string()),
         credential_status: display_string_field(value, &["credential_status"])
             .unwrap_or_else(|| "missing_credential_metadata".to_string()),
-        credential_types: display_string_array_field(
-            value,
-            &["credential_types"],
-            MAX_DETAIL_ITEMS,
-        ),
+        credential_types,
         input_count: usize_field(value, &["input_count"]).unwrap_or(inputs.len()),
         output_count: usize_field(value, &["output_count"]).unwrap_or(outputs.len()),
         parameter_count: usize_field(value, &["parameter_count"]).unwrap_or_default(),
@@ -190,7 +192,7 @@ fn workflow_node_row(
         permissions: workflow_node_permission_rows(value),
         inputs,
         outputs,
-        credentials: workflow_node_credential_rows(value),
+        credentials,
         dynamic_options,
         receipts: workflow_node_receipt_rows(value),
         actions: workflow_node_action_rows(value),
@@ -202,6 +204,22 @@ fn workflow_node_row(
         source_path: display_string_field(value, &["source_path"])
             .unwrap_or_else(|| "missing_source_path".to_string()),
     })
+}
+
+fn credential_type_values(
+    value: &Value,
+    credentials: &[DxWorkflowNodeCredentialSummary],
+) -> Vec<String> {
+    let declared = display_string_array_field(value, &["credential_types"], MAX_DETAIL_ITEMS);
+    if !declared.is_empty() {
+        return declared;
+    }
+
+    credentials
+        .iter()
+        .filter_map(|credential| display_string(credential.credential_type.clone()))
+        .take(MAX_DETAIL_ITEMS)
+        .collect()
 }
 
 fn display_string_field(value: &Value, path: &[&str]) -> Option<String> {

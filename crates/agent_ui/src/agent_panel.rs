@@ -71,6 +71,7 @@ use crate::dx_launch_workspace::{
     render_automation_screen, render_connections_screen, render_tools_screen,
     render_workflow_node_catalog_rows, render_workspace_chrome,
 };
+use crate::dx_plugin_credentials::DxPluginCredentialModal;
 use crate::dx_proof_freshness::proof_freshness_snapshot;
 use crate::dx_receipt_history::tool_history_snapshot;
 use crate::dx_receipts::receipt_snapshot_for_roots;
@@ -7511,6 +7512,52 @@ impl AgentPanel {
         }
 
         self.insert_dx_launch_prompt(Self::workflow_node_configuration_prompt(&node), window, cx);
+    }
+
+    pub(crate) fn open_dx_workflow_node_credentials_modal(
+        &mut self,
+        node: DxWorkflowNodeSummary,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if !self.has_open_project(cx) {
+            Self::show_deferred_toast(&self.workspace, "Open a project to configure a plugin", cx);
+            return;
+        }
+
+        if let Some(reason) = dx_plugin_credentials::credential_storage_unavailable_reason(&node) {
+            Self::show_deferred_toast(&self.workspace, reason, cx);
+            self.insert_dx_launch_prompt(
+                Self::workflow_node_configuration_prompt(&node),
+                window,
+                cx,
+            );
+            return;
+        }
+
+        let Some(workspace) = self.workspace.upgrade() else {
+            Self::show_deferred_toast(
+                &self.workspace,
+                "Open a workspace to configure a plugin",
+                cx,
+            );
+            return;
+        };
+        let panel = cx.weak_entity();
+        workspace.update(cx, |workspace, cx| {
+            workspace.toggle_modal(window, cx, |window, cx| {
+                DxPluginCredentialModal::new(node.clone(), panel.clone(), window, cx)
+            });
+        });
+    }
+
+    pub(crate) fn draft_dx_plugin_credentials_saved_prompt(
+        &mut self,
+        prompt: String,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.insert_dx_launch_prompt(prompt, window, cx);
     }
 
     fn workflow_node_configuration_prompt(node: &DxWorkflowNodeSummary) -> String {

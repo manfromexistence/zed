@@ -5,7 +5,6 @@ use super::display_string_field;
 
 pub(super) const MAX_WORKFLOW_NODE_PORT_ROWS: usize = 12;
 pub(super) const MAX_WORKFLOW_NODE_PERMISSION_ROWS: usize = 12;
-pub(super) const MAX_WORKFLOW_NODE_CREDENTIAL_ROWS: usize = 12;
 pub(super) const MAX_WORKFLOW_NODE_DYNAMIC_OPTION_ROWS: usize = 12;
 pub(super) const MAX_WORKFLOW_NODE_RECEIPT_ROWS: usize = 12;
 pub(super) const MAX_WORKFLOW_NODE_ACTION_ROWS: usize = 8;
@@ -26,18 +25,6 @@ pub(crate) struct DxWorkflowNodePermissionSummary {
     pub receipt_required: bool,
     pub status: String,
     pub description: String,
-}
-
-#[derive(Clone)]
-pub(crate) struct DxWorkflowNodeCredentialSummary {
-    pub id: String,
-    pub kind: String,
-    pub credential_type: String,
-    pub required: bool,
-    pub receipt_required: bool,
-    pub status: String,
-    pub receipt_id: String,
-    pub configure_action_id: String,
 }
 
 #[derive(Clone)]
@@ -106,18 +93,6 @@ pub(super) fn workflow_node_port_rows(
                 .iter()
                 .filter_map(port_row)
                 .take(MAX_WORKFLOW_NODE_PORT_ROWS)
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
-pub(super) fn workflow_node_credential_rows(value: &Value) -> Vec<DxWorkflowNodeCredentialSummary> {
-    array_field(value, &["credentials"])
-        .map(|items| {
-            items
-                .iter()
-                .filter_map(credential_row)
-                .take(MAX_WORKFLOW_NODE_CREDENTIAL_ROWS)
                 .collect()
         })
         .unwrap_or_default()
@@ -201,26 +176,6 @@ fn port_row(value: &Value) -> Option<DxWorkflowNodePortSummary> {
         kind: display_string_field(value, &["kind"]).unwrap_or_else(|| "unknown".to_string()),
         required: bool_field(value, &["required"]).unwrap_or(false),
         description: display_string_field(value, &["description"]).unwrap_or_default(),
-        id,
-    })
-}
-
-fn credential_row(value: &Value) -> Option<DxWorkflowNodeCredentialSummary> {
-    let id = display_string_field(value, &["id"])?;
-    Some(DxWorkflowNodeCredentialSummary {
-        kind: display_string_field(value, &["kind"]).unwrap_or_else(|| "credential".to_string()),
-        credential_type: display_string_field(value, &["credential_type"])
-            .or_else(|| display_string_field(value, &["type"]))
-            .unwrap_or_else(|| "missing_credential_metadata".to_string()),
-        required: bool_field(value, &["required"]).unwrap_or(true),
-        receipt_required: bool_field(value, &["receipt_required"]).unwrap_or(true),
-        status: display_string_field(value, &["status"])
-            .unwrap_or_else(|| "missing_credential_metadata".to_string()),
-        receipt_id: display_string_field(value, &["receipt_id"])
-            .unwrap_or_else(|| "missing_receipt_id".to_string()),
-        configure_action_id: display_string_field(value, &["configure_action_id"])
-            .or_else(|| display_string_field(value, &["action_id"]))
-            .unwrap_or_else(|| "missing_action_id".to_string()),
         id,
     })
 }
