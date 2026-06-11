@@ -1,8 +1,12 @@
 use std::sync::Arc;
 
+use agent_settings::{AgentLiquidGlassSettings, AgentSettings};
 use gpui::{
     AnyElement, App, ClickEvent, Context, DismissEvent, EventEmitter, FocusHandle, Focusable,
     Render, SharedString, Window, prelude::*,
+};
+use liquid_glass::{
+    LiquidGlassStyle, bounded_liquid_glass_layer, load_liquid_glass_backdrop_carrier,
 };
 use ui::{
     DxRainbowGlow, IconName, ListHeader, ListItem, ListItemSpacing, PopoverMenu, Tooltip,
@@ -317,31 +321,25 @@ pub(crate) fn render_workspace_chrome(
         .overflow_hidden()
         .bg(cx.theme().colors().panel_background)
         .child(div().size_full().min_w_0().overflow_hidden().child(center))
-        .when(
-            show_sources_rail && has_sources_rail_content(&status),
-            |this| {
-                this.child(render_sources_rail(
-                    source_row_controls,
-                    source_actions,
-                    &status,
-                    &rail_controls,
-                    window,
-                    cx,
-                ))
-            },
-        )
-        .when(
-            show_progress_rail && has_progress_rail_content(&status),
-            |this| {
-                this.child(render_right_rail(
-                    &status,
-                    guided_cards,
-                    &rail_controls,
-                    window,
-                    cx,
-                ))
-            },
-        )
+        .when(show_sources_rail, |this| {
+            this.child(render_sources_rail(
+                source_row_controls,
+                source_actions,
+                &status,
+                &rail_controls,
+                window,
+                cx,
+            ))
+        })
+        .when(show_progress_rail, |this| {
+            this.child(render_right_rail(
+                &status,
+                guided_cards,
+                &rail_controls,
+                window,
+                cx,
+            ))
+        })
         .into_any_element()
 }
 
@@ -365,10 +363,16 @@ fn render_sources_rail(
         .rounded_lg()
         .border_1()
         .border_color(cx.theme().colors().border)
-        .bg(cx.theme().colors().elevated_surface_background)
+        .bg(cx.theme().colors().panel_background.opacity(0.10))
         .shadow_md()
+        .relative()
+        .overflow_hidden()
         .overflow_y_scroll()
         .occlude()
+        .when_some(
+            rail_liquid_glass_surface("dx-sources-rail-liquid-glass", cx),
+            |this, glass| this.child(glass),
+        )
         .child(rail_pin_header(
             "dx-sources-rail-pin",
             "Sources",
@@ -377,6 +381,14 @@ fn render_sources_rail(
             rail_controls,
         ))
         .child(rail_rainbow_glow("dx-sources-rail-rainbow-glow", 0.))
+        .when(!has_sources_rail_content(status), |this| {
+            this.child(fullscreen_empty_rail_state(
+                "dx-sources-rail-empty",
+                "No source data yet",
+                "Open a folder or import DX receipts to populate this rail.",
+                cx,
+            ))
+        })
         .when(status.source_sets.total_sources > 0, |this| {
             this.child(rail_section(
                 "dx-sources-controller-section",
@@ -435,10 +447,16 @@ fn render_right_rail(
         .rounded_lg()
         .border_1()
         .border_color(cx.theme().colors().border)
-        .bg(cx.theme().colors().elevated_surface_background)
+        .bg(cx.theme().colors().panel_background.opacity(0.10))
         .shadow_md()
+        .relative()
+        .overflow_hidden()
         .overflow_y_scroll()
         .occlude()
+        .when_some(
+            rail_liquid_glass_surface("dx-progress-rail-liquid-glass", cx),
+            |this, glass| this.child(glass),
+        )
         .child(rail_pin_header(
             "dx-progress-rail-pin",
             "Agents",
@@ -448,6 +466,14 @@ fn render_right_rail(
         ))
         .child(rail_rainbow_glow("dx-progress-rail-rainbow-glow", 0.18))
         .child(diagnostics_menu(status.clone()))
+        .when(!has_progress_rail_content(status), |this| {
+            this.child(fullscreen_empty_rail_state(
+                "dx-progress-rail-empty",
+                "No agent activity yet",
+                "Agent progress, sources, subagents, and readiness receipts will appear here.",
+                cx,
+            ))
+        })
         .when(has_agent_progress(status), |this| {
             this.child(rail_section(
                 "dx-agent-overview-section",
@@ -571,6 +597,47 @@ fn rail_rainbow_glow(id: &'static str, phase_offset: f32) -> AnyElement {
         .into_any_element()
 }
 
+fn rail_liquid_glass_surface(id: &'static str, cx: &App) -> Option<AnyElement> {
+    let settings = AgentSettings::get_global(cx).liquid_glass.clone();
+    if !settings.enabled {
+        return None;
+    }
+
+    Some(
+        div()
+            .id(id)
+            .absolute()
+            .inset_0()
+            .overflow_hidden()
+            .child(bounded_liquid_glass_layer(
+                load_liquid_glass_backdrop_carrier(),
+                rail_liquid_glass_style(&settings),
+            ))
+            .into_any_element(),
+    )
+}
+
+fn rail_liquid_glass_style(settings: &AgentLiquidGlassSettings) -> LiquidGlassStyle {
+    LiquidGlassStyle {
+        power_factor: settings.power_factor,
+        a: settings.a,
+        b: settings.b,
+        c: settings.c,
+        d: settings.d,
+        f_power: settings.f_power,
+        noise: settings.noise,
+        glow_weight: settings.glow_weight,
+        glow_edge0: settings.glow_edge0,
+        glow_edge1: settings.glow_edge1,
+        glow_bias: settings.glow_bias,
+        chromatic_aberration: settings.chromatic_aberration,
+        aberration_samples: settings.aberration_samples,
+        blur_radius: settings.blur_radius,
+        blur_iterations: settings.blur_iterations,
+        blur_downscale: settings.blur_downscale,
+    }
+}
+
 fn rail_pin_header(
     id: &'static str,
     label: &'static str,
@@ -636,6 +703,42 @@ fn rail_section(
                     .bg(cx.theme().colors().border_variant),
             )
         })
+        .into_any_element()
+}
+
+fn fullscreen_empty_rail_state(
+    id: &'static str,
+    title: &'static str,
+    detail: &'static str,
+    _cx: &App,
+) -> AnyElement {
+    ListItem::new(id)
+        .inset(true)
+        .spacing(ListItemSpacing::Sparse)
+        .selectable(false)
+        .start_slot(
+            Icon::new(IconName::Info)
+                .size(IconSize::Small)
+                .color(Color::Muted),
+        )
+        .child(
+            v_flex()
+                .min_w_0()
+                .gap_0p5()
+                .child(
+                    Label::new(title)
+                        .size(LabelSize::Small)
+                        .color(Color::Default)
+                        .truncate(),
+                )
+                .child(
+                    Label::new(detail)
+                        .size(LabelSize::Small)
+                        .color(Color::Muted)
+                        .truncate(),
+                ),
+        )
+        .tooltip(Tooltip::text(detail))
         .into_any_element()
 }
 

@@ -6,6 +6,13 @@ const read = (path: string) => readFileSync(path, "utf8");
 const lineCount = (path: string) => read(path).split(/\r?\n/).length;
 const enumBody = (source: string, name: string) =>
   source.match(new RegExp(`enum ${name} \\{[\\s\\S]*?\\}`))?.[0] ?? "";
+const sliceBetween = (source: string, start: string, end: string): string => {
+  const startIndex = source.indexOf(start);
+  assert.notEqual(startIndex, -1, `expected ${start}`);
+  const endIndex = source.indexOf(end, startIndex + start.length);
+  assert.notEqual(endIndex, -1, `expected ${end} after ${start}`);
+  return source.slice(startIndex, endIndex);
+};
 
 test("DX agent workspace taxonomy has first-class Zed screens", () => {
   const item = read("crates/workspace/src/item.rs");
@@ -132,6 +139,48 @@ test("DX agent workspace taxonomy has first-class Zed screens", () => {
   assert.ok(!dxWorkspace.includes('"+{} more"'));
   assert.match(agentWorkspace, /compact_status_row\([\s\S]*?"dx-agent-approvals-gate"/);
   assert.doesNotMatch(agentWorkspace, /metric_row\(\s*"Gate review"/);
+});
+
+test("fullscreen AI rails stay visible with empty data and use Liquid Glass chrome", () => {
+  const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
+  const dxWorkspace = read("crates/agent_ui/src/dx_launch_workspace.rs");
+  const toolbar = sliceBetween(
+    agentPanel,
+    "fn render_toolbar(",
+    "\n    fn render_toolbar_response_indicator(",
+  );
+  const workspaceChrome = sliceBetween(
+    dxWorkspace,
+    "pub(crate) fn render_workspace_chrome(",
+    "\nfn render_sources_rail(",
+  );
+  const sourceRail = sliceBetween(
+    dxWorkspace,
+    "fn render_sources_rail(",
+    "\nfn render_right_rail(",
+  );
+  const progressRail = sliceBetween(
+    dxWorkspace,
+    "fn render_right_rail(",
+    "\nfn has_source_actions(",
+  );
+
+  assert.match(agentPanel, /fullscreen_sources_rail_open: true/);
+  assert.match(agentPanel, /fullscreen_progress_rail_open: true/);
+  assert.doesNotMatch(toolbar, /\.disabled\(!sources_rail_available\)/);
+  assert.doesNotMatch(toolbar, /\.disabled\(!progress_rail_available\)/);
+  assert.doesNotMatch(toolbar, /fullscreen_sources_rail_open = false/);
+  assert.doesNotMatch(toolbar, /fullscreen_progress_rail_open = false/);
+  assert.doesNotMatch(workspaceChrome, /show_sources_rail && has_sources_rail_content/);
+  assert.doesNotMatch(workspaceChrome, /show_progress_rail && has_progress_rail_content/);
+  assert.match(workspaceChrome, /show_sources_rail[\s\S]*render_sources_rail/);
+  assert.match(workspaceChrome, /show_progress_rail[\s\S]*render_right_rail/);
+  assert.match(dxWorkspace, /use liquid_glass::\{[\s\S]*bounded_liquid_glass_layer[\s\S]*load_liquid_glass_backdrop_carrier/);
+  assert.match(dxWorkspace, /fn rail_liquid_glass_surface/);
+  assert.match(sourceRail, /rail_liquid_glass_surface\("dx-sources-rail-liquid-glass"/);
+  assert.match(progressRail, /rail_liquid_glass_surface\("dx-progress-rail-liquid-glass"/);
+  assert.match(sourceRail, /fullscreen_empty_rail_state\([\s\S]*"No source data yet"/);
+  assert.match(progressRail, /fullscreen_empty_rail_state\([\s\S]*"No agent activity yet"/);
 });
 
 test("Connections workspace is wired to provider, channel, social, gateway, and credential state", () => {

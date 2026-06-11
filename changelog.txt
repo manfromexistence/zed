@@ -1,3 +1,18 @@
+[2026-06-11] - Agent Fullscreen Rail Liquid Glass
+
+CHANGED:
+- Fullscreen AI BuilderWorkspace now opens the left Sources rail and right Agents rail by default.
+- Rail toolbar buttons remain usable when the current DX status has no sources, agent progress, subagents, or readiness data.
+- The DX launch workspace renders requested rails without source/progress content gates and shows honest empty-state rows when data is missing.
+- Floating rails now mount the bounded Liquid Glass renderer as their background layer instead of using flat elevated-surface chrome.
+
+PASSED:
+- `node --test script\dx-agent-workspaces-source.test.ts`
+- `node --test script\dx-agent-workspaces-source.test.ts script\dx-agent-composer-liquid-glass-source.test.ts`
+
+NOTES:
+- Cargo/build/native runtime proof remains deferred by instruction.
+
 [2026-06-11] - DX Plugins Workflow Catalog Merge
 
 CHANGED:

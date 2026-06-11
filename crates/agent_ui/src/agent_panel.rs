@@ -69,9 +69,8 @@ use crate::dx_launch_workspace::{
     AutomationCatalogFilter, ConnectionCatalogFilter, DxAutomationCatalogState,
     DxConnectionsCatalogState, DxLaunchRailControls, DxLaunchRailSection, DxLaunchRailSide,
     DxLaunchRailState, DxLaunchWorkspaceStatus, DxPluginsCatalogState, DxSourceRowControl,
-    DxSubagentStatus, DxSubagentStatusRow, PluginCatalogFilter, has_progress_rail_content,
-    has_sources_rail_content, render_automation_catalog_rows as render_dx_automation_catalog_rows,
-    render_automation_screen,
+    DxSubagentStatus, DxSubagentStatusRow, PluginCatalogFilter,
+    render_automation_catalog_rows as render_dx_automation_catalog_rows, render_automation_screen,
     render_connections_catalog_rows as render_dx_connections_catalog_rows,
     render_connections_screen, render_tools_screen, render_workflow_node_catalog_rows,
     render_workspace_chrome,
@@ -1805,8 +1804,8 @@ impl AgentPanel {
             last_context_source: None,
             show_trust_workspace_message: false,
             is_active: false,
-            fullscreen_sources_rail_open: false,
-            fullscreen_progress_rail_open: false,
+            fullscreen_sources_rail_open: true,
+            fullscreen_progress_rail_open: true,
             fullscreen_sources_rail_pinned: false,
             fullscreen_progress_rail_pinned: false,
             collapsed_dx_launch_rail_sections: Self::default_collapsed_dx_launch_rail_sections(),
@@ -1825,8 +1824,8 @@ impl AgentPanel {
         let mut panel = Self::new(workspace, window, cx);
         panel.host_kind = AgentPanelHostKind::BuilderWorkspace;
         panel.manual_zoom_override = Some(true);
-        panel.fullscreen_sources_rail_open = false;
-        panel.fullscreen_progress_rail_open = false;
+        panel.fullscreen_sources_rail_open = true;
+        panel.fullscreen_progress_rail_open = true;
         panel.fullscreen_sources_rail_pinned = false;
         panel.fullscreen_progress_rail_pinned = false;
         panel.ensure_thread_initialized(window, cx);
@@ -6200,41 +6199,23 @@ impl AgentPanel {
                     .map(|cache| self.with_live_dx_launch_status(cache.status.clone(), cx))
             })
             .flatten();
-        let sources_rail_available = fullscreen_launch_status
-            .as_ref()
-            .is_some_and(has_sources_rail_content);
-        let progress_rail_available = fullscreen_launch_status
-            .as_ref()
-            .is_some_and(has_progress_rail_content);
-        let sources_rail_open = self.fullscreen_sources_rail_open && sources_rail_available;
-        let progress_rail_open = self.fullscreen_progress_rail_open && progress_rail_available;
+        let rails_available = fullscreen_launch_status.is_some();
+        let sources_rail_open = self.fullscreen_sources_rail_open && rails_available;
+        let progress_rail_open = self.fullscreen_progress_rail_open && rails_available;
         let agent_sources_rail_button = IconButton::new(
             "agent-toolbar-toggle-sources-rail",
             IconName::ThreadsSidebarLeftClosed,
         )
         .icon_size(IconSize::Small)
         .tab_index(0_isize)
-        .disabled(!sources_rail_available)
         .toggle_state(sources_rail_open)
-        .tooltip(Tooltip::text(if !sources_rail_available {
-            "Sources rail has no sources yet"
-        } else if sources_rail_open {
+        .tooltip(Tooltip::text(if sources_rail_open {
             "Hide sources rail"
         } else {
             "Show sources rail"
         }))
         .on_click(cx.listener(|this, _, _window, cx| {
-            let sources_rail_available = this
-                .dx_launch_workspace_status_cache
-                .as_ref()
-                .map(|cache| this.with_live_dx_launch_status(cache.status.clone(), cx))
-                .as_ref()
-                .is_some_and(has_sources_rail_content);
-            if sources_rail_available {
-                this.fullscreen_sources_rail_open = !this.fullscreen_sources_rail_open;
-            } else {
-                this.fullscreen_sources_rail_open = false;
-            }
+            this.fullscreen_sources_rail_open = !this.fullscreen_sources_rail_open;
             cx.notify();
         }));
         let agent_progress_rail_button = IconButton::new(
@@ -6243,27 +6224,14 @@ impl AgentPanel {
         )
         .icon_size(IconSize::Small)
         .tab_index(0_isize)
-        .disabled(!progress_rail_available)
         .toggle_state(progress_rail_open)
-        .tooltip(Tooltip::text(if !progress_rail_available {
-            "Progress rail has no agent activity yet"
-        } else if progress_rail_open {
+        .tooltip(Tooltip::text(if progress_rail_open {
             "Hide progress rail"
         } else {
             "Show progress rail"
         }))
         .on_click(cx.listener(|this, _, _window, cx| {
-            let progress_rail_available = this
-                .dx_launch_workspace_status_cache
-                .as_ref()
-                .map(|cache| this.with_live_dx_launch_status(cache.status.clone(), cx))
-                .as_ref()
-                .is_some_and(has_progress_rail_content);
-            if progress_rail_available {
-                this.fullscreen_progress_rail_open = !this.fullscreen_progress_rail_open;
-            } else {
-                this.fullscreen_progress_rail_open = false;
-            }
+            this.fullscreen_progress_rail_open = !this.fullscreen_progress_rail_open;
             cx.notify();
         }));
         let panel_id = cx.entity().entity_id();
