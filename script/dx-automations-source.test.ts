@@ -279,6 +279,7 @@ test("DX Automation workspace follows the Extensions-style GPUI page pattern", (
   const launchWorkspace = read("crates/agent_ui/src/dx_launch_workspace.rs");
   const chrome = read("crates/agent_ui/src/dx_launch_workspace/screen_chrome.rs");
   const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
+  const catalogChrome = read("crates/agent_ui/src/dx_launch_workspace/catalog_chrome.rs");
   const automationScreen = read(
     "crates/agent_ui/src/dx_launch_workspace/automation_screen.rs",
   );
@@ -307,6 +308,9 @@ test("DX Automation workspace follows the Extensions-style GPUI page pattern", (
   assert.match(chrome, /Headline::new\(title\)\.size\(HeadlineSize::Large\)/);
   assert.match(chrome, /ListHeader::new\(title\)/);
   assert.match(chrome, /elevated_surface_background\.opacity\(0\.5\)/);
+  assert.match(catalogChrome, /pub\(super\) fn render_catalog_row_labels/);
+  assert.match(catalogChrome, /pub\(super\) fn render_catalog_status_chip/);
+  assert.match(catalogChrome, /Chip::new\(label\)/);
 
   assert.match(agentPanel, /automation_catalog_state: DxAutomationCatalogState/);
   assert.match(agentPanel, /_automation_catalog_query_subscription: Subscription/);
@@ -323,10 +327,18 @@ test("DX Automation workspace follows the Extensions-style GPUI page pattern", (
   assert.match(automationCatalogSources, /ToggleButtonGroup::single_row/);
   assert.match(automationCatalogSources, /UniformListScrollHandle/);
   assert.match(automationCatalogSources, /uniform_list\(/);
+  assert.match(automationCatalog, /"dx-automation-catalog-list"/);
+  assert.match(automationCatalog, /"Automation Catalog"/);
+  assert.match(automationCatalog, /render_catalog_row_labels\(/);
+  assert.match(automationCatalog, /\.start_slot\(\s*Icon::new\(entry\.icon\(\)\)/);
+  assert.match(automationCatalog, /\.end_slot\(render_catalog_status_chip\(entry\.status\(snapshot\)\)\)/);
+  assert.match(automationCatalog, /\.tooltip\(Tooltip::text\(tooltip\)\)/);
   assert.match(automationCatalogSources, /render_selected_automation_detail/);
   assert.match(automationCatalogSources, /Composer contract/);
   assert.match(automationCatalogSources, /Execution proof/);
   assert.match(automationCatalogSources, /screen_detail_row\(/);
+  assert.doesNotMatch(automationCatalog, /AiSettingItem::new/);
+  assert.doesNotMatch(automationCatalog, /AiSettingItemSource/);
   assert.doesNotMatch(automationCatalogSources, /\b(?:Button::new|IconButton::new|run_dx_agent_public_command|run_dx_agents_public_action|DxAgentPublicCommand::Run)\b/);
   assert.match(sections, /screen_detail_row\(/);
   assert.match(sections, /screen_empty_state\(/);

@@ -239,38 +239,6 @@ pub(super) fn automation_details(automation: &DxAgentAutomation) -> AnyElement {
     ])
 }
 
-pub(super) fn automation_compact_details(automation: &DxAgentAutomation) -> AnyElement {
-    screen_detail_stack(vec![
-        automation_detail(
-            automation,
-            "compact-schedule",
-            dx_icon(DxUiIcon::Automations),
-            "Schedule",
-            automation.schedule.summary.clone(),
-        ),
-        automation_detail(
-            automation,
-            "compact-proof",
-            dx_icon(DxUiIcon::Receipts),
-            "Execution proof",
-            automation_proof_label(automation),
-        ),
-    ])
-}
-
-pub(super) fn compact_state_details(
-    id: String,
-    icon: IconName,
-    value: impl Into<SharedString>,
-) -> AnyElement {
-    screen_detail_stack(vec![screen_detail_row(
-        format!("dx-automation-compact-{id}").into(),
-        icon,
-        "State",
-        value,
-    )])
-}
-
 pub(super) fn automation_status(automation: &DxAgentAutomation) -> AiSettingItemStatus {
     if automation.has_failed_execution_proof() {
         AiSettingItemStatus::Error

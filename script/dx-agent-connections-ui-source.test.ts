@@ -121,6 +121,7 @@ test("DX Connections workspace follows the Extensions-style GPUI page pattern", 
   const connectionsScreen = read(
     "crates/agent_ui/src/dx_launch_workspace/connections_screen.rs",
   );
+  const catalogChrome = read("crates/agent_ui/src/dx_launch_workspace/catalog_chrome.rs");
   const connectionsCatalog = read(
     "crates/agent_ui/src/dx_launch_workspace/connections_screen/catalog.rs",
   );
@@ -141,6 +142,9 @@ test("DX Connections workspace follows the Extensions-style GPUI page pattern", 
   assert.match(chrome, /ListHeader::new\(title\)/);
   assert.match(chrome, /elevated_surface_background\.opacity\(0\.5\)/);
   assert.match(chrome, /border_color\(cx\.theme\(\)\.colors\(\)\.border_variant\)/);
+  assert.match(catalogChrome, /pub\(super\) fn render_catalog_row_labels/);
+  assert.match(catalogChrome, /pub\(super\) fn render_catalog_status_chip/);
+  assert.match(catalogChrome, /Chip::new\(label\)/);
 
   assert.match(agentPanel, /connections_catalog_state: DxConnectionsCatalogState/);
   assert.match(agentPanel, /_connections_catalog_query_subscription: Subscription/);
@@ -184,9 +188,17 @@ test("DX Connections workspace follows the Extensions-style GPUI page pattern", 
   assert.match(connectionsCatalogSources, /ToggleButtonGroup::single_row/);
   assert.match(connectionsCatalogSources, /UniformListScrollHandle/);
   assert.match(connectionsCatalogSources, /uniform_list\(/);
+  assert.match(connectionsCatalog, /"dx-connections-catalog-list"/);
+  assert.match(connectionsCatalog, /"Connection Catalog"/);
+  assert.match(connectionsCatalog, /render_catalog_row_labels\(/);
+  assert.match(connectionsCatalog, /\.start_slot\(\s*Icon::new\(entry\.icon\(\)\)/);
+  assert.match(connectionsCatalog, /\.end_slot\(render_catalog_status_chip\(entry\.status\(snapshot\)\)\)/);
+  assert.match(connectionsCatalog, /\.tooltip\(Tooltip::text\(tooltip\)\)/);
   assert.match(connectionsCatalogSources, /render_selected_connection_detail/);
   assert.match(connectionsCatalogSources, /Trusted tool bridge/);
   assert.match(connectionsCatalogSources, /Receipt authority/);
   assert.match(connectionsCatalogSources, /screen_detail_row\(/);
+  assert.doesNotMatch(connectionsCatalog, /AiSettingItem::new/);
+  assert.doesNotMatch(connectionsCatalog, /AiSettingItemSource/);
   assert.doesNotMatch(connectionsCatalogSources, /\b(?:Button::new|IconButton::new|run_dx_agent_public_command|run_dx_agents_public_action|DxAgentPublicCommand::Run)\b/);
 });

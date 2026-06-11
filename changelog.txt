@@ -1,3 +1,24 @@
+[2026-06-11] - DX Connections And Automations Catalog Row Chrome
+
+ADDED:
+- Shared catalog row helpers now render two-line labels and GPUI status chips for DX-owned catalog rows.
+- Focused source guards now require Connections and Automations catalog rows to use direct `ListItem` icon/label/status-chip slots, tooltips, and bordered catalog sections instead of nested settings rows.
+
+CHANGED:
+- Connections and Automations searchable catalogs now frame their virtualized lists inside `screen_section`/`ListHeader` cards with live entry counts.
+- Connections and Automations catalog rows now use semantic start icons, shared label blocks, status `Chip` end slots, and metadata tooltips while preserving selected-row state and receipt-backed right-side inspectors.
+- Removed compact-detail-only helpers that existed solely for the previous nested `AiSettingItem` catalog row implementation.
+
+HARDENED:
+- The catalog source guards keep these inspect-only row surfaces free of fake command buttons, public command dispatch, generic run commands, and upstream plugin-source references already covered by the broader DX source guards.
+
+PASSED:
+- `rustfmt --edition 2024 --check` on the touched Rust files.
+- `node --test script/dx-agent-connections-ui-source.test.ts script/dx-automations-source.test.ts`
+
+NOTES:
+- Cargo, `just run`, full builds, native launch, visual runtime proof, local servers, and browser automation remain deferred by instruction.
+
 [2026-06-11] - DX Connections And Automations Catalog State
 
 ADDED:

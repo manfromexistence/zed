@@ -5,9 +5,8 @@ use crate::dx_agent_bridge::{DxAgentBridgeSnapshot, DxAgentProvider, DxAgentSoci
 
 use super::ConnectionCatalogFilter;
 use super::details::{
-    channels_details, compact_state_details, credential_details, gateway_details,
-    provider_compact_details, provider_details, receipt_authority_details, social_compact_details,
-    social_details, trusted_tool_bridge_details,
+    channels_details, credential_details, gateway_details, provider_details,
+    receipt_authority_details, social_details, trusted_tool_bridge_details,
 };
 use super::status::{
     bridge_status, credential_health_label, credential_issue_count, credential_status,
@@ -173,22 +172,6 @@ impl ConnectionCatalogEntry {
                 .get(index)
                 .map(social_status)
                 .unwrap_or(AiSettingItemStatus::Stopped),
-        }
-    }
-
-    pub(super) fn compact_details(self, snapshot: &DxAgentBridgeSnapshot) -> AnyElement {
-        match self {
-            ConnectionCatalogEntry::Provider(index) => snapshot
-                .providers
-                .get(index)
-                .map(provider_compact_details)
-                .unwrap_or_else(|| v_flex().into_any_element()),
-            ConnectionCatalogEntry::SocialAccount(index) => snapshot
-                .social_accounts
-                .get(index)
-                .map(social_compact_details)
-                .unwrap_or_else(|| v_flex().into_any_element()),
-            _ => compact_state_details(self.id(snapshot), self.icon(), self.detail_label(snapshot)),
         }
     }
 

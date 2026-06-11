@@ -4,15 +4,16 @@ use gpui::{
     point, px, uniform_list,
 };
 use ui::{
-    AiSettingItem, AiSettingItemSource, ListItem, ListItemSpacing, ScrollableHandle,
-    ToggleButtonGroup, ToggleButtonGroupSize, ToggleButtonGroupStyle, ToggleButtonSimple,
-    WithScrollbar, prelude::*,
+    ListItem, ListItemSpacing, ScrollableHandle, ToggleButtonGroup, ToggleButtonGroupSize,
+    ToggleButtonGroupStyle, ToggleButtonSimple, Tooltip, WithScrollbar, prelude::*,
 };
 
 use crate::AgentPanel;
 use crate::dx_agent_bridge::DxAgentBridgeSnapshot;
 
-use super::super::catalog_chrome::render_catalog_search;
+use super::super::catalog_chrome::{
+    render_catalog_row_labels, render_catalog_search, render_catalog_status_chip,
+};
 use super::super::screen_chrome::{screen_empty_state, screen_section};
 
 mod details;
@@ -213,9 +214,7 @@ fn render_connection_list(
     window: &mut Window,
     cx: &mut Context<AgentPanel>,
 ) -> AnyElement {
-    v_flex()
-        .flex_1()
-        .min_w(rems_from_px(360.))
+    let body = v_flex()
         .min_h(rems_from_px(360.))
         .overflow_y_hidden()
         .map(|this| {
@@ -236,7 +235,19 @@ fn render_connection_list(
             )
             .vertical_scrollbar_for(&state.list, window, cx)
             .into_any_element()
-        })
+        });
+
+    v_flex()
+        .flex_1()
+        .min_w(rems_from_px(360.))
+        .child(screen_section(
+            "dx-connections-catalog-list",
+            "Connection Catalog",
+            dx_icon(DxUiIcon::Connections),
+            format!("{count} entries"),
+            body.into_any_element(),
+            cx,
+        ))
         .into_any_element()
 }
 
@@ -315,10 +326,21 @@ fn render_connection_catalog_row(
 ) -> AnyElement {
     let panel = cx.weak_entity();
     let click_entry_id = entry_id.clone();
+    let title = entry.title(snapshot);
+    let detail_label = entry.detail_label(snapshot);
+    let tooltip = format!("{title}: {detail_label}");
 
     ListItem::new(format!("dx-connections-catalog-row-{entry_id}"))
         .spacing(ListItemSpacing::Sparse)
+        .rounded()
         .toggle_state(selected)
+        .start_slot(
+            Icon::new(entry.icon())
+                .size(IconSize::Small)
+                .color(Color::Muted),
+        )
+        .end_slot(render_catalog_status_chip(entry.status(snapshot)))
+        .tooltip(Tooltip::text(tooltip))
         .on_click(move |_event, _window, cx| {
             panel
                 .update(cx, |panel, cx| {
@@ -326,21 +348,7 @@ fn render_connection_catalog_row(
                 })
                 .ok();
         })
-        .child(
-            AiSettingItem::new(
-                format!("dx-connections-catalog-item-{entry_id}"),
-                entry.title(snapshot),
-                entry.status(snapshot),
-                AiSettingItemSource::Custom,
-            )
-            .icon(
-                Icon::new(entry.icon())
-                    .size(IconSize::Small)
-                    .color(Color::Muted),
-            )
-            .detail_label(entry.detail_label(snapshot))
-            .details(entry.compact_details(snapshot)),
-        )
+        .child(render_catalog_row_labels(title, detail_label))
         .into_any_element()
 }
 

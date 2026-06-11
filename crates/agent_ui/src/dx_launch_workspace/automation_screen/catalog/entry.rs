@@ -5,8 +5,8 @@ use crate::dx_agent_bridge::{DxAgentAutomation, DxAgentBridgeSnapshot};
 
 use super::AutomationCatalogFilter;
 use super::details::{
-    automation_compact_details, automation_details, automation_status, compact_state_details,
-    composer_contract_details, failure_details, runtime_details,
+    automation_details, automation_status, composer_contract_details, failure_details,
+    runtime_details,
 };
 
 #[derive(Clone, Copy)]
@@ -128,17 +128,6 @@ impl AutomationCatalogEntry {
                 .get(index)
                 .map(automation_status)
                 .unwrap_or(AiSettingItemStatus::Stopped),
-        }
-    }
-
-    pub(super) fn compact_details(self, snapshot: &DxAgentBridgeSnapshot) -> AnyElement {
-        match self {
-            AutomationCatalogEntry::Automation(index) => snapshot
-                .automations
-                .get(index)
-                .map(automation_compact_details)
-                .unwrap_or_else(|| v_flex().into_any_element()),
-            _ => compact_state_details(self.id(snapshot), self.icon(), self.detail_label(snapshot)),
         }
     }
 

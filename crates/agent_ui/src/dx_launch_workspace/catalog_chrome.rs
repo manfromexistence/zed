@@ -1,7 +1,7 @@
 use editor::{Editor, EditorElement, EditorStyle};
 use gpui::{AnyElement, Context, Entity, IntoElement, KeyContext, TextStyle};
 use theme_settings::ThemeSettings;
-use ui::{IconName, prelude::*};
+use ui::{AiSettingItemStatus, Chip, IconName, prelude::*};
 
 use crate::AgentPanel;
 
@@ -27,6 +27,50 @@ pub(super) fn render_catalog_search(
         .rounded_md()
         .child(Icon::new(IconName::MagnifyingGlass).color(Color::Muted))
         .child(render_text_input(editor, cx))
+        .into_any_element()
+}
+
+pub(super) fn render_catalog_row_labels(
+    title: impl Into<SharedString>,
+    detail: impl Into<SharedString>,
+) -> AnyElement {
+    v_flex()
+        .min_w_0()
+        .gap_0p5()
+        .child(
+            Label::new(title.into())
+                .size(LabelSize::Default)
+                .color(Color::Default)
+                .truncate(),
+        )
+        .child(
+            Label::new(detail.into())
+                .size(LabelSize::Small)
+                .color(Color::Muted)
+                .truncate(),
+        )
+        .into_any_element()
+}
+
+pub(super) fn render_catalog_status_chip(status: AiSettingItemStatus) -> AnyElement {
+    let (label, color, icon) = match status {
+        AiSettingItemStatus::Running => ("Ready", Color::Success, IconName::Check),
+        AiSettingItemStatus::Error => ("Error", Color::Error, IconName::Warning),
+        AiSettingItemStatus::AuthRequired => ("Needs auth", Color::Warning, IconName::LockOutlined),
+        AiSettingItemStatus::ClientSecretRequired => {
+            ("Needs secret", Color::Warning, IconName::LockOutlined)
+        }
+        AiSettingItemStatus::Starting | AiSettingItemStatus::Authenticating => {
+            ("Pending", Color::Muted, IconName::Clock)
+        }
+        AiSettingItemStatus::Stopped => ("Inactive", Color::Muted, IconName::FileTextOutlined),
+    };
+
+    Chip::new(label)
+        .label_color(color)
+        .icon(icon)
+        .icon_color(color)
+        .truncate()
         .into_any_element()
 }
 

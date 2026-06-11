@@ -339,57 +339,6 @@ pub(super) fn social_details(account: &DxAgentSocialAccount) -> AnyElement {
     ])
 }
 
-pub(super) fn provider_compact_details(provider: &DxAgentProvider) -> AnyElement {
-    screen_detail_stack(vec![
-        provider_detail(
-            provider,
-            "compact-status",
-            dx_icon(DxUiIcon::Gateway),
-            "Status",
-            provider.status.clone(),
-        ),
-        provider_detail(
-            provider,
-            "compact-credential",
-            dx_icon(DxUiIcon::Credentials),
-            "Credential",
-            provider.credential_health.clone(),
-        ),
-    ])
-}
-
-pub(super) fn social_compact_details(account: &DxAgentSocialAccount) -> AnyElement {
-    screen_detail_stack(vec![
-        social_detail(
-            account,
-            "compact-state",
-            dx_icon(DxUiIcon::Connections),
-            "State",
-            account.account_state.clone(),
-        ),
-        social_detail(
-            account,
-            "compact-credential",
-            dx_icon(DxUiIcon::Credentials),
-            "Credential",
-            account.credential_health.clone(),
-        ),
-    ])
-}
-
-pub(super) fn compact_state_details(
-    id: String,
-    icon: IconName,
-    value: impl Into<SharedString>,
-) -> AnyElement {
-    screen_detail_stack(vec![screen_detail_row(
-        format!("dx-connections-compact-{id}").into(),
-        icon,
-        "State",
-        value,
-    )])
-}
-
 fn detail(
     suffix: &'static str,
     icon: IconName,
