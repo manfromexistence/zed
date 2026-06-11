@@ -135,6 +135,111 @@ impl WindowLayout {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct AgentLiquidGlassSettings {
+    pub enabled: bool,
+    pub power_factor: f32,
+    pub width: f32,
+    pub height: f32,
+    pub a: f32,
+    pub b: f32,
+    pub c: f32,
+    pub d: f32,
+    pub f_power: f32,
+    pub noise: f32,
+    pub glow_weight: f32,
+    pub glow_edge0: f32,
+    pub glow_edge1: f32,
+    pub glow_bias: f32,
+    pub chromatic_aberration: f32,
+    pub aberration_samples: u32,
+    pub blur_radius: f32,
+    pub blur_iterations: u32,
+    pub blur_downscale: f32,
+    pub mouse_control: bool,
+    pub position: [f32; 2],
+    pub pixel_scale: f32,
+    pub camera_position: [f32; 2],
+    pub velocity: f32,
+    pub camera_velocity: f32,
+    pub current_bg: usize,
+    pub glass_variant: usize,
+}
+
+impl Default for AgentLiquidGlassSettings {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            power_factor: 3.0,
+            width: 3.5,
+            height: 3.5,
+            a: 0.7,
+            b: 2.3,
+            c: 5.2,
+            d: 6.9,
+            f_power: 1.0,
+            noise: 0.0,
+            glow_weight: 0.054,
+            glow_edge0: 1.0,
+            glow_edge1: -1.0,
+            glow_bias: 0.353,
+            chromatic_aberration: 0.0,
+            aberration_samples: 1,
+            blur_radius: 0.0,
+            blur_iterations: 0,
+            blur_downscale: 0.1,
+            mouse_control: false,
+            position: [512.0, 384.0],
+            pixel_scale: 100.0,
+            camera_position: [0.0, 0.0],
+            velocity: 2.0,
+            camera_velocity: 2.0,
+            current_bg: 0,
+            glass_variant: 0,
+        }
+    }
+}
+
+impl From<settings::AgentLiquidGlassSettingsContent> for AgentLiquidGlassSettings {
+    fn from(content: settings::AgentLiquidGlassSettingsContent) -> Self {
+        let defaults = Self::default();
+
+        Self {
+            enabled: content.enabled.unwrap_or(defaults.enabled),
+            power_factor: content.power_factor.unwrap_or(defaults.power_factor),
+            width: content.width.unwrap_or(defaults.width),
+            height: content.height.unwrap_or(defaults.height),
+            a: content.a.unwrap_or(defaults.a),
+            b: content.b.unwrap_or(defaults.b),
+            c: content.c.unwrap_or(defaults.c),
+            d: content.d.unwrap_or(defaults.d),
+            f_power: content.f_power.unwrap_or(defaults.f_power),
+            noise: content.noise.unwrap_or(defaults.noise),
+            glow_weight: content.glow_weight.unwrap_or(defaults.glow_weight),
+            glow_edge0: content.glow_edge0.unwrap_or(defaults.glow_edge0),
+            glow_edge1: content.glow_edge1.unwrap_or(defaults.glow_edge1),
+            glow_bias: content.glow_bias.unwrap_or(defaults.glow_bias),
+            chromatic_aberration: content
+                .chromatic_aberration
+                .unwrap_or(defaults.chromatic_aberration),
+            aberration_samples: content
+                .aberration_samples
+                .unwrap_or(defaults.aberration_samples),
+            blur_radius: content.blur_radius.unwrap_or(defaults.blur_radius),
+            blur_iterations: content.blur_iterations.unwrap_or(defaults.blur_iterations),
+            blur_downscale: content.blur_downscale.unwrap_or(defaults.blur_downscale),
+            mouse_control: content.mouse_control.unwrap_or(defaults.mouse_control),
+            position: content.position.unwrap_or(defaults.position),
+            pixel_scale: content.pixel_scale.unwrap_or(defaults.pixel_scale),
+            camera_position: content.camera_position.unwrap_or(defaults.camera_position),
+            velocity: content.velocity.unwrap_or(defaults.velocity),
+            camera_velocity: content.camera_velocity.unwrap_or(defaults.camera_velocity),
+            current_bg: content.current_bg.unwrap_or(defaults.current_bg),
+            glass_variant: content.glass_variant.unwrap_or(defaults.glass_variant),
+        }
+    }
+}
+
 #[derive(Clone, Debug, RegisterSetting)]
 pub struct AgentSettings {
     pub enabled: bool,
@@ -170,6 +275,7 @@ pub struct AgentSettings {
     pub message_editor_min_lines: usize,
     pub show_turn_stats: bool,
     pub show_merge_conflict_indicator: bool,
+    pub liquid_glass: AgentLiquidGlassSettings,
     pub tool_permissions: ToolPermissions,
 }
 
@@ -681,6 +787,7 @@ impl Settings for AgentSettings {
             message_editor_min_lines: agent.message_editor_min_lines.unwrap(),
             show_turn_stats: agent.show_turn_stats.unwrap(),
             show_merge_conflict_indicator: agent.show_merge_conflict_indicator.unwrap(),
+            liquid_glass: agent.liquid_glass.map(Into::into).unwrap_or_default(),
             tool_permissions: compile_tool_permissions(agent.tool_permissions),
         }
     }

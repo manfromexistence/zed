@@ -7771,6 +7771,297 @@ fn ai_page(cx: &App) -> SettingsPage {
         items.into_boxed_slice()
     }
 
+    fn agent_liquid_glass_section() -> Box<[SettingsPageItem]> {
+        macro_rules! liquid_glass_setting_item {
+            ($title:literal, $description:literal, $path:literal, $field:ident, $ty:ty) => {
+                SettingsPageItem::SettingItem(SettingItem {
+                    title: $title,
+                    description: $description,
+                    field: Box::new(SettingField::<$ty> {
+                        json_path: Some($path),
+                        pick: |settings_content| {
+                            settings_content
+                                .agent
+                                .as_ref()?
+                                .liquid_glass
+                                .as_ref()?
+                                .$field
+                                .as_ref()
+                        },
+                        write: |settings_content, value, _| {
+                            settings_content
+                                .agent
+                                .get_or_insert_default()
+                                .liquid_glass
+                                .get_or_insert_default()
+                                .$field = value;
+                        },
+                    }),
+                    metadata: None,
+                    files: USER,
+                })
+            };
+        }
+
+        macro_rules! liquid_glass_vector_setting_item {
+            (
+                $title:literal,
+                $description:literal,
+                $path:literal,
+                $field:ident,
+                $index:expr,
+                $default:expr
+            ) => {
+                SettingsPageItem::SettingItem(SettingItem {
+                    title: $title,
+                    description: $description,
+                    field: Box::new(SettingField::<f32> {
+                        json_path: Some($path),
+                        pick: |settings_content| {
+                            settings_content
+                                .agent
+                                .as_ref()?
+                                .liquid_glass
+                                .as_ref()?
+                                .$field
+                                .as_ref()
+                                .map(|value| &value[$index])
+                        },
+                        write: |settings_content, value, _| {
+                            let liquid_glass = settings_content
+                                .agent
+                                .get_or_insert_default()
+                                .liquid_glass
+                                .get_or_insert_default();
+
+                            if let Some(component) = value {
+                                let mut vector = liquid_glass.$field.unwrap_or($default);
+                                vector[$index] = component;
+                                liquid_glass.$field = Some(vector);
+                            } else {
+                                liquid_glass.$field = None;
+                            }
+                        },
+                    }),
+                    metadata: None,
+                    files: USER,
+                })
+            };
+        }
+
+        vec![
+            SettingsPageItem::SectionHeader("Agent Liquid Glass"),
+            liquid_glass_setting_item!(
+                "Enabled",
+                "Use the GPUI Liquid Glass renderer on the Agent panel composer.",
+                "agent.liquid_glass.enabled",
+                enabled,
+                bool
+            ),
+            liquid_glass_setting_item!(
+                "Power Factor",
+                "Superellipse shape power used by the glass surface.",
+                "agent.liquid_glass.power_factor",
+                power_factor,
+                f32
+            ),
+            liquid_glass_setting_item!(
+                "Width",
+                "Glass quad width in world units before pixel scaling.",
+                "agent.liquid_glass.width",
+                width,
+                f32
+            ),
+            liquid_glass_setting_item!(
+                "Height",
+                "Glass quad height in world units before pixel scaling.",
+                "agent.liquid_glass.height",
+                height,
+                f32
+            ),
+            liquid_glass_setting_item!(
+                "Curve A",
+                "Distortion curve parameter a.",
+                "agent.liquid_glass.a",
+                a,
+                f32
+            ),
+            liquid_glass_setting_item!(
+                "Curve B",
+                "Distortion curve parameter b.",
+                "agent.liquid_glass.b",
+                b,
+                f32
+            ),
+            liquid_glass_setting_item!(
+                "Curve C",
+                "Distortion curve parameter c.",
+                "agent.liquid_glass.c",
+                c,
+                f32
+            ),
+            liquid_glass_setting_item!(
+                "Curve D",
+                "Distortion curve parameter d.",
+                "agent.liquid_glass.d",
+                d,
+                f32
+            ),
+            liquid_glass_setting_item!(
+                "Curve Power",
+                "Distortion curve power.",
+                "agent.liquid_glass.f_power",
+                f_power,
+                f32
+            ),
+            liquid_glass_setting_item!(
+                "Noise",
+                "Surface noise intensity.",
+                "agent.liquid_glass.noise",
+                noise,
+                f32
+            ),
+            liquid_glass_setting_item!(
+                "Glow Weight",
+                "Glow strength.",
+                "agent.liquid_glass.glow_weight",
+                glow_weight,
+                f32
+            ),
+            liquid_glass_setting_item!(
+                "Glow Edge 0",
+                "Glow smoothstep inner edge.",
+                "agent.liquid_glass.glow_edge0",
+                glow_edge0,
+                f32
+            ),
+            liquid_glass_setting_item!(
+                "Glow Edge 1",
+                "Glow smoothstep outer edge.",
+                "agent.liquid_glass.glow_edge1",
+                glow_edge1,
+                f32
+            ),
+            liquid_glass_setting_item!(
+                "Glow Bias",
+                "Glow additive bias.",
+                "agent.liquid_glass.glow_bias",
+                glow_bias,
+                f32
+            ),
+            liquid_glass_setting_item!(
+                "Chromatic Aberration",
+                "Chromatic aberration strength.",
+                "agent.liquid_glass.chromatic_aberration",
+                chromatic_aberration,
+                f32
+            ),
+            liquid_glass_setting_item!(
+                "Aberration Samples",
+                "Chromatic aberration sample count.",
+                "agent.liquid_glass.aberration_samples",
+                aberration_samples,
+                u32
+            ),
+            liquid_glass_setting_item!(
+                "Blur Radius",
+                "Blur kernel radius in pixels.",
+                "agent.liquid_glass.blur_radius",
+                blur_radius,
+                f32
+            ),
+            liquid_glass_setting_item!(
+                "Blur Iterations",
+                "Multi-pass blur iteration count.",
+                "agent.liquid_glass.blur_iterations",
+                blur_iterations,
+                u32
+            ),
+            liquid_glass_setting_item!(
+                "Blur Downscale",
+                "Blur downscale factor.",
+                "agent.liquid_glass.blur_downscale",
+                blur_downscale,
+                f32
+            ),
+            liquid_glass_setting_item!(
+                "Mouse Control",
+                "Preserve whether the standalone glass surface follows pointer movement.",
+                "agent.liquid_glass.mouse_control",
+                mouse_control,
+                bool
+            ),
+            liquid_glass_vector_setting_item!(
+                "Position X",
+                "Standalone glass center X position in pixels.",
+                "agent.liquid_glass.position.0",
+                position,
+                0,
+                [512.0, 384.0]
+            ),
+            liquid_glass_vector_setting_item!(
+                "Position Y",
+                "Standalone glass center Y position in pixels.",
+                "agent.liquid_glass.position.1",
+                position,
+                1,
+                [512.0, 384.0]
+            ),
+            liquid_glass_setting_item!(
+                "Pixel Scale",
+                "World-to-pixel scale factor.",
+                "agent.liquid_glass.pixel_scale",
+                pixel_scale,
+                f32
+            ),
+            liquid_glass_vector_setting_item!(
+                "Camera Position X",
+                "Standalone camera X position in world units.",
+                "agent.liquid_glass.camera_position.0",
+                camera_position,
+                0,
+                [0.0, 0.0]
+            ),
+            liquid_glass_vector_setting_item!(
+                "Camera Position Y",
+                "Standalone camera Y position in world units.",
+                "agent.liquid_glass.camera_position.1",
+                camera_position,
+                1,
+                [0.0, 0.0]
+            ),
+            liquid_glass_setting_item!(
+                "Velocity",
+                "Standalone glass movement speed.",
+                "agent.liquid_glass.velocity",
+                velocity,
+                f32
+            ),
+            liquid_glass_setting_item!(
+                "Camera Velocity",
+                "Standalone camera movement speed.",
+                "agent.liquid_glass.camera_velocity",
+                camera_velocity,
+                f32
+            ),
+            liquid_glass_setting_item!(
+                "Background",
+                "Background index from the recovered Liquid Glass app.",
+                "agent.liquid_glass.current_bg",
+                current_bg,
+                usize
+            ),
+            liquid_glass_setting_item!(
+                "Glass Variant",
+                "Glass material variant index from the recovered Liquid Glass app.",
+                "agent.liquid_glass.glass_variant",
+                glass_variant,
+                usize
+            ),
+        ]
+        .into_boxed_slice()
+    }
+
     fn dx_agents_bridge_section() -> [SettingsPageItem; 8] {
         [
             SettingsPageItem::SectionHeader("DX Agents Bridge"),
@@ -8014,6 +8305,7 @@ fn ai_page(cx: &App) -> SettingsPage {
         items: concat_sections![
             general_section(),
             agent_configuration_section(cx),
+            agent_liquid_glass_section(),
             dx_agents_bridge_section(),
             context_servers_section(),
             edit_prediction_language_settings_section(),

@@ -108,6 +108,119 @@ pub struct DxAgentsSettingsContent {
 
 #[with_fallible_options]
 #[derive(Clone, PartialEq, Serialize, Deserialize, JsonSchema, MergeFrom, Debug, Default)]
+pub struct AgentLiquidGlassSettingsContent {
+    /// Whether the Agent panel composer uses the GPUI Liquid Glass renderer.
+    ///
+    /// Default: true
+    pub enabled: Option<bool>,
+    /// Superellipse shape power used by the glass surface.
+    ///
+    /// Default: 3.0
+    pub power_factor: Option<f32>,
+    /// Glass quad width in world units before pixel scaling.
+    ///
+    /// Default: 3.5
+    pub width: Option<f32>,
+    /// Glass quad height in world units before pixel scaling.
+    ///
+    /// Default: 3.5
+    pub height: Option<f32>,
+    /// Distortion curve parameter a.
+    ///
+    /// Default: 0.7
+    pub a: Option<f32>,
+    /// Distortion curve parameter b.
+    ///
+    /// Default: 2.3
+    pub b: Option<f32>,
+    /// Distortion curve parameter c.
+    ///
+    /// Default: 5.2
+    pub c: Option<f32>,
+    /// Distortion curve parameter d.
+    ///
+    /// Default: 6.9
+    pub d: Option<f32>,
+    /// Distortion curve power.
+    ///
+    /// Default: 1.0
+    pub f_power: Option<f32>,
+    /// Surface noise intensity.
+    ///
+    /// Default: 0.0
+    pub noise: Option<f32>,
+    /// Glow strength.
+    ///
+    /// Default: 0.054
+    pub glow_weight: Option<f32>,
+    /// Glow smoothstep inner edge.
+    ///
+    /// Default: 1.0
+    pub glow_edge0: Option<f32>,
+    /// Glow smoothstep outer edge.
+    ///
+    /// Default: -1.0
+    pub glow_edge1: Option<f32>,
+    /// Glow additive bias.
+    ///
+    /// Default: 0.353
+    pub glow_bias: Option<f32>,
+    /// Chromatic aberration strength.
+    ///
+    /// Default: 0.0
+    pub chromatic_aberration: Option<f32>,
+    /// Chromatic aberration sample count.
+    ///
+    /// Default: 1
+    pub aberration_samples: Option<u32>,
+    /// Blur kernel radius in pixels.
+    ///
+    /// Default: 0.0
+    pub blur_radius: Option<f32>,
+    /// Multi-pass blur iteration count.
+    ///
+    /// Default: 0
+    pub blur_iterations: Option<u32>,
+    /// Blur downscale factor.
+    ///
+    /// Default: 0.1
+    pub blur_downscale: Option<f32>,
+    /// Whether the standalone glass surface follows pointer movement.
+    ///
+    /// Default: false
+    pub mouse_control: Option<bool>,
+    /// Standalone glass center position in pixels, preserved for parity with the recovered Rust app.
+    ///
+    /// Default: [512.0, 384.0]
+    pub position: Option<[f32; 2]>,
+    /// World-to-pixel scale factor.
+    ///
+    /// Default: 100.0
+    pub pixel_scale: Option<f32>,
+    /// Standalone camera position in world units, preserved for parity with the recovered Rust app.
+    ///
+    /// Default: [0.0, 0.0]
+    pub camera_position: Option<[f32; 2]>,
+    /// Standalone glass movement speed.
+    ///
+    /// Default: 2.0
+    pub velocity: Option<f32>,
+    /// Standalone camera movement speed.
+    ///
+    /// Default: 2.0
+    pub camera_velocity: Option<f32>,
+    /// Background index from the recovered Liquid Glass app.
+    ///
+    /// Default: 0
+    pub current_bg: Option<usize>,
+    /// Glass material variant index from the recovered Liquid Glass app.
+    ///
+    /// Default: 0
+    pub glass_variant: Option<usize>,
+}
+
+#[with_fallible_options]
+#[derive(Clone, PartialEq, Serialize, Deserialize, JsonSchema, MergeFrom, Debug, Default)]
 pub struct AgentSettingsContent {
     /// Whether the Agent is enabled.
     ///
@@ -238,6 +351,8 @@ pub struct AgentSettingsContent {
     ///
     /// Default: true
     pub show_merge_conflict_indicator: Option<bool>,
+    /// Liquid Glass settings for the Agent panel composer.
+    pub liquid_glass: Option<AgentLiquidGlassSettingsContent>,
     /// Per-tool permission rules for granular control over which tool actions
     /// require confirmation.
     ///

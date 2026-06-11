@@ -1,3 +1,19 @@
+[2026-06-11] - Agent Composer Liquid Glass Foundation
+
+CHANGED:
+- Agent composer now mounts the shared GPUI Liquid Glass renderer behind the message editor instead of a hand-painted or decorative approximation.
+- `agent.liquid_glass` settings and defaults now preserve the tuned recovered Rust effect values, including the Cubes background and Regular glass variant.
+- AI settings now expose permanent Agent Liquid Glass controls for enablement, shape, shader coefficients, glow, chromatic/blur tuning, input behavior, scale, motion, background, and glass variant.
+
+PASSED:
+- `node --test script\dx-agent-composer-liquid-glass-source.test.ts`
+- `rustfmt --edition 2024 --config skip_children=true --check crates\agent\src\tool_permissions.rs crates\agent_settings\src\agent_settings.rs crates\agent_ui\src\agent_ui.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\liquid_glass\src\lib.rs crates\liquid_glass\src\ui_state.rs crates\settings_content\src\agent.rs crates\settings_ui\src\page_data.rs`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)"` on touched source files
+- `git diff --check` on touched files
+
+NOTES:
+- Cargo/build/native runtime proof remains deferred by instruction.
+
 [2026-06-10] - Authorized J6 Voice and Forge Follow-up
 
 FIXED:

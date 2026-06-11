@@ -599,6 +599,7 @@ mod tests {
             tool_permissions,
             show_turn_stats: false,
             show_merge_conflict_indicator: true,
+            liquid_glass: Default::default(),
             sidebar_side: Default::default(),
             thinking_display: Default::default(),
         }

@@ -39,6 +39,29 @@ pub fn control_surface_liquid_glass_style() -> LiquidGlassStyle {
     }
 }
 
+pub fn liquid_glass_style_from_settings(
+    settings: &agent_settings::AgentLiquidGlassSettings,
+) -> LiquidGlassStyle {
+    LiquidGlassStyle {
+        power_factor: settings.power_factor,
+        a: settings.a,
+        b: settings.b,
+        c: settings.c,
+        d: settings.d,
+        f_power: settings.f_power,
+        noise: settings.noise,
+        glow_weight: settings.glow_weight,
+        glow_edge0: settings.glow_edge0,
+        glow_edge1: settings.glow_edge1,
+        glow_bias: settings.glow_bias,
+        chromatic_aberration: settings.chromatic_aberration,
+        aberration_samples: settings.aberration_samples,
+        blur_radius: settings.blur_radius,
+        blur_iterations: settings.blur_iterations,
+        blur_downscale: settings.blur_downscale,
+    }
+}
+
 fn liquid_glass_style_from_state(state: &ui_state::UiState) -> LiquidGlassStyle {
     LiquidGlassStyle {
         power_factor: state.power_factor,
