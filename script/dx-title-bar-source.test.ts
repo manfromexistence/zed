@@ -66,6 +66,10 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
   const screenDock = functionBodyFrom(titleBarSource, "render_screen_dock");
   const agentScreenButton = functionBodyFrom(titleBarSource, "render_agent_screen_button");
   const agentScreenActive = functionBodyFrom(titleBarSource, "agent_screen_is_active");
+  const collectWorkspaceScreenEntries = functionBodyFrom(
+    titleBarSource,
+    "collect_workspace_screen_entries",
+  );
   const agentButtonIndex = screenDock.indexOf("render_agent_screen_button(agent_screen_is_active, cx)");
   const editorButtonIndex = screenDock.indexOf("WorkspaceScreenKind::Editor", agentButtonIndex);
   const browserButtonIndex = screenDock.indexOf("WorkspaceScreenKind::Browser", editorButtonIndex);
@@ -138,6 +142,15 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
   assert.match(titleBarSource, /fn agent_screen_is_active\(&self, cx: &App\) -> bool/);
   assert.match(agentScreenActive, /self\.active_screen_kind\(cx\) == WorkspaceScreenKind::Agent/);
   assert.match(
+    collectWorkspaceScreenEntries,
+    /let screen_host_pane = workspace\.read\(cx\)\.screen_host_pane\(\);/,
+  );
+  assert.match(
+    collectWorkspaceScreenEntries,
+    /screen_host_pane[\s\S]*?\.active_item\(\)[\s\S]*?\.or_else\(\|\| workspace\.read\(cx\)\.active_item\(cx\)\)/,
+    "screen dock menu and active button should use the same active item source order",
+  );
+  assert.match(
     titleBarSource,
     /fn active_screen_kind\(&self, cx: &App\) -> WorkspaceScreenKind[\s\S]*?workspace\.zoomed_is_agent_panel\(\)[\s\S]*?workspace\.screen_host_pane\(\)[\s\S]*?if zoomed_is_agent_panel \{[\s\S]*?return WorkspaceScreenKind::Agent;[\s\S]*?screen_host_pane[\s\S]*?\.active_item\(\)[\s\S]*?\.or_else\(\|\| workspace\.read\(cx\)\.active_item\(cx\)\)[\s\S]*?\.unwrap_or\(WorkspaceScreenKind::Agent\)/,
     "empty/default workspace chrome should mark the AI screen as active instead of Code",
@@ -152,7 +165,8 @@ test("title bar screen and right-tool buttons use domain-specific icons", () => 
   assert.match(titleBarSource, /WorkspaceScreenKind::Automations => "Automations"/);
   assert.match(titleBarSource, /WorkspaceScreenKind::Connections => "Connections"/);
   assert.match(titleBarSource, /WorkspaceScreenKind::Tools => "Plugins"/);
-  assert.match(titleBarSource, /WorkspaceScreenKind::Agent => IconName::Sparkle/);
+  assert.match(titleBarSource, /WorkspaceScreenKind::Agent => dx_icon\(DxUiIcon::Agent\)/);
+  assert.match(titleBarSource, /WorkspaceScreenKind::Onboarding => dx_icon\(DxUiIcon::Ai\)/);
   assert.match(titleBarSource, /WorkspaceScreenKind::Automations => dx_icon\(DxUiIcon::Automations\)/);
   assert.match(titleBarSource, /WorkspaceScreenKind::Connections => dx_icon\(DxUiIcon::Connections\)/);
   assert.match(titleBarSource, /WorkspaceScreenKind::Tools => dx_icon\(DxUiIcon::Plugins\)/);

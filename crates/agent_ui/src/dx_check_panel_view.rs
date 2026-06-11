@@ -3,7 +3,7 @@ use std::{collections::HashSet, path::PathBuf};
 use gpui::{
     AnyElement, App, AppContext as _, AsyncWindowContext, Context, Entity, EntityId, EventEmitter,
     FocusHandle, Focusable, InteractiveElement, IntoElement, ParentElement, Pixels, Render,
-    ScrollHandle, SharedString, Styled, TaskExt, WeakEntity, Window, div, px,
+    ScrollHandle, SharedString, Styled, TaskExt, WeakEntity, Window, div, point, px,
 };
 use theme::ActiveTheme;
 use ui::{
@@ -186,6 +186,7 @@ impl DxCheckPanel {
     fn set_active_tab(&mut self, tab: DxCheckPanelTab, cx: &mut Context<Self>) {
         if self.active_tab != tab {
             self.active_tab = tab;
+            self.scroll_handle.set_offset(point(px(0.), px(0.)));
             cx.notify();
         }
     }
@@ -345,7 +346,8 @@ impl DxCheckPanel {
                                 .on_click({
                                     let workspace = self.workspace.clone();
                                     move |_, window, cx| {
-                                        if receipt_path.exists() {
+                                        cx.stop_propagation();
+                                        if receipt_path.is_absolute() && receipt_path.exists() {
                                             open_workspace_path(
                                                 workspace.clone(),
                                                 receipt_path.clone(),
@@ -366,6 +368,7 @@ impl DxCheckPanel {
                                     .track_focus(&focus_handle)
                                     .tooltip(Tooltip::text("Refresh Check panel"))
                                     .on_click(move |_, _, cx| {
+                                        cx.stop_propagation();
                                         panel.update(cx, |panel, cx| panel.refresh(cx)).ok();
                                     }),
                             ),
@@ -787,7 +790,7 @@ fn open_workspace_path(
     window: &mut Window,
     cx: &mut App,
 ) {
-    if !path.exists() {
+    if !path.is_absolute() || !path.exists() {
         return;
     }
 

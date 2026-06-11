@@ -6,7 +6,7 @@ use crate::dx_source_sets::invalidate_source_set_snapshot_cache;
 use gpui::{
     Action, App, AppContext, Context, EventEmitter, FocusHandle, Focusable, InteractiveElement,
     IntoElement, MouseButton, MouseDownEvent, Render, ScrollAnchor, ScrollHandle, WeakEntity,
-    Window, px,
+    Window, point, px,
 };
 use ui::prelude::*;
 use ui::{DxUiIcon, IconName, dx_icon};
@@ -134,6 +134,7 @@ impl DxForgePanel {
     pub(super) fn set_active_tab(&mut self, tab: DxForgePanelTab, cx: &mut Context<Self>) {
         if self.active_tab != tab {
             self.active_tab = tab;
+            self.scroll_handle.set_offset(point(px(0.), px(0.)));
             self.clear_active_item();
             cx.notify();
         }

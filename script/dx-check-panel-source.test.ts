@@ -140,6 +140,8 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   const renderSectionShell = functionBody(view, "render_section_shell");
   const sectionCountLabel = functionBody(view, "section_count_label");
   const renderPanel = functionBody(view, "render");
+  const setActiveTab = functionBody(view, "set_active_tab");
+  const openWorkspacePath = functionBody(view, "open_workspace_path");
   const renderSections = functionBody(view, "render_sections");
   const renderActiveTabSections = functionBody(view, "render_active_tab_sections");
   const section = functionBody(rows, "section");
@@ -170,6 +172,10 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   assert.match(renderStatusStrip, /cx\.stop_propagation\(\);/);
   assert.match(
     renderStatusStrip,
+    /receipt_path\.is_absolute\(\) && receipt_path\.exists\(\)/,
+  );
+  assert.match(
+    renderStatusStrip,
     /IconButton::new\(\s*"dx-check-open-receipt",\s*IconName::FileTextOutlined,\s*\)/,
   );
   assert.match(renderStatusStrip, /IconButton::new\("dx-check-refresh", IconName::RotateCw\)/);
@@ -189,6 +195,8 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   assert.match(renderStatusStrip, /\.disabled\(!receipt_enabled\)/);
   assert.match(renderStatusStrip, /Tooltip::text\(tooltip\)/);
   assert.doesNotMatch(renderStatusStrip, /status_label\(/);
+  assert.match(setActiveTab, /self\.scroll_handle\.set_offset\(point\(px\(0\.\), px\(0\.\)\)\);/);
+  assert.match(openWorkspacePath, /if !path\.is_absolute\(\) \|\| !path\.exists\(\) \{/);
   assert.doesNotMatch(view, /fn render_toolbar\(/);
   assert.doesNotMatch(view, /\.id\("dx-check-toolbar"\)|self\.render_toolbar/);
   assert.doesNotMatch(renderPanel, /self\.render_toolbar/);

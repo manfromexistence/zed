@@ -3768,7 +3768,10 @@ impl Sidebar {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        self.activity_bar_expanded = true;
+        if !self.activity_bar_expanded {
+            self.activity_bar_expanded = true;
+            self.serialize(cx);
+        }
         self.selection = None;
         if let SidebarView::Archive(archive) = &self.view {
             archive.update(cx, |view, cx| {

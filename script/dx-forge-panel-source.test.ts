@@ -829,6 +829,7 @@ test("Forge panel uses workflow tabs with Git-style selectable rows", () => {
     setActiveTabBody,
     /if\s+self\.active_tab\s*!=\s*tab\s*\{[\s\S]*self\.active_tab\s*=\s*tab;[\s\S]*self\.clear_active_item\(\);[\s\S]*cx\.notify\(\);/,
   );
+  assert.match(setActiveTabBody, /self\.scroll_handle\.set_offset\(point\(px\(0\.\), px\(0\.\)\)\);/);
   assert.doesNotMatch(setActiveTabBody, checkedItemReset);
   assert.match(panel, /activate_item/);
   assert.match(panel, /row_scroll_anchor/);

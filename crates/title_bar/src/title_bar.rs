@@ -759,13 +759,14 @@ impl TitleBar {
         workspace: &Entity<Workspace>,
         cx: &App,
     ) -> Vec<ActivePaneScreenEntry> {
-        let active_item_id = workspace
+        let screen_host_pane = workspace.read(cx).screen_host_pane();
+        let active_item_id = screen_host_pane
             .read(cx)
-            .active_item(cx)
+            .active_item()
+            .or_else(|| workspace.read(cx).active_item(cx))
             .map(|item| item.item_id());
         let mut entries: Vec<ActivePaneScreenEntry> = Vec::new();
 
-        let screen_host_pane = workspace.read(cx).screen_host_pane();
         for item in screen_host_pane.read(cx).items() {
             let kind = item.screen_kind(cx);
             let selected = Some(item.item_id()) == active_item_id;
@@ -892,14 +893,14 @@ impl TitleBar {
 
     fn screen_kind_icon(kind: WorkspaceScreenKind) -> IconName {
         match kind {
-            WorkspaceScreenKind::Agent => IconName::Sparkle,
+            WorkspaceScreenKind::Agent => dx_icon(DxUiIcon::Agent),
             WorkspaceScreenKind::Automations => dx_icon(DxUiIcon::Automations),
             WorkspaceScreenKind::Connections => dx_icon(DxUiIcon::Connections),
             WorkspaceScreenKind::Tools => dx_icon(DxUiIcon::Plugins),
             WorkspaceScreenKind::Editor => IconName::Code,
             WorkspaceScreenKind::Browser => dx_icon(DxUiIcon::Browser),
             WorkspaceScreenKind::Terminal => IconName::Terminal,
-            WorkspaceScreenKind::Onboarding => IconName::Sparkle,
+            WorkspaceScreenKind::Onboarding => dx_icon(DxUiIcon::Ai),
             WorkspaceScreenKind::Other => IconName::Circle,
         }
     }

@@ -1209,10 +1209,16 @@ test("sidebar chat groups expose persistent sort and icon override controls", ()
   assert.match(sidebar, /SerializedThreadIconOverride/);
   const focusSidebarFilter = functionBody(sidebar, "focus_sidebar_filter");
   const sidebarToggleButton = functionBody(sidebar, "render_sidebar_toggle_button");
+  assert.match(focusSidebarFilter, /if !self\.activity_bar_expanded \{/);
   assert.match(
     focusSidebarFilter,
     /self\.activity_bar_expanded = true;/,
     "focusing search from collapsed mode should expand the sidebar before moving focus",
+  );
+  assert.match(
+    focusSidebarFilter,
+    /self\.serialize\(cx\);/,
+    "search-triggered expansion should persist collapsed sidebar state consistently",
   );
   assert.match(sidebarToggleButton, /match \(on_right, is_activity_bar\)/);
   assert.match(sidebarToggleButton, /ThreadsSidebarLeftClosed/);
@@ -1501,6 +1507,34 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.match(badgeSlot, /\.ml_auto\(\)/);
   assert.doesNotMatch(badgeSlot, /\.pr_1\(\)/);
   assert.match(badgeSlot, /\.justify_end\(\)/);
+});
+
+test("agent queued message rows stay locked to queued data", () => {
+  const clearQueue = functionBody(threadView, "clear_queue");
+  const renderQueueEntries = functionBody(threadView, "render_message_queue_entries");
+  const threadRender = threadView.slice(threadView.indexOf("impl Render for ThreadView"));
+
+  assert.match(clearQueue, /self\.local_queued_messages\.clear\(\);/);
+  assert.match(clearQueue, /self\.queued_message_editors\.clear\(\);/);
+  assert.match(clearQueue, /self\.queued_message_editor_subscriptions\.clear\(\);/);
+  assert.match(clearQueue, /self\.last_synced_queue_length = 0;/);
+  assert.match(clearQueue, /self\.can_fast_track_queue = false;/);
+  assert.match(clearQueue, /self\.sync_queue_flag_to_native_thread\(cx\);/);
+  assert.match(
+    threadRender,
+    /on_action\(cx\.listener\(\|this, _: &ClearMessageQueue[\s\S]*?this\.clear_queue\(cx\);/,
+  );
+  assert.match(
+    renderQueueEntries,
+    /let queued_message_count = self\.local_queued_messages\.len\(\);/,
+  );
+  assert.match(
+    renderQueueEntries,
+    /let visible_queue_len = queued_message_count\.min\(queued_message_editors\.len\(\)\);/,
+  );
+  assert.match(renderQueueEntries, /\.take\(visible_queue_len\)/);
+  assert.match(renderQueueEntries, /index \+ 1 < visible_queue_len/);
+  assert.match(renderQueueEntries, /self\.can_fast_track_queue && visible_queue_len > 0/);
 });
 
 test("agent launch rails use professional operator-facing copy", () => {

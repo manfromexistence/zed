@@ -3397,7 +3397,6 @@ impl ThreadView {
                     )
                     .on_click(cx.listener(|this, _, _, cx| {
                         this.clear_queue(cx);
-                        this.can_fast_track_queue = false;
                         cx.notify();
                     })),
             )
@@ -3406,6 +3405,10 @@ impl ThreadView {
 
     fn clear_queue(&mut self, cx: &mut Context<Self>) {
         self.local_queued_messages.clear();
+        self.queued_message_editors.clear();
+        self.queued_message_editor_subscriptions.clear();
+        self.last_synced_queue_length = 0;
+        self.can_fast_track_queue = false;
         self.sync_queue_flag_to_native_thread(cx);
     }
 
@@ -4981,8 +4984,9 @@ impl ThreadView {
         let focus_handle = message_editor.focus_handle(cx);
 
         let queued_message_editors = &self.queued_message_editors;
-        let queue_len = queued_message_editors.len();
-        let can_fast_track = self.can_fast_track_queue && queue_len > 0;
+        let queued_message_count = self.local_queued_messages.len();
+        let visible_queue_len = queued_message_count.min(queued_message_editors.len());
+        let can_fast_track = self.can_fast_track_queue && visible_queue_len > 0;
 
         v_flex()
             .id("message_queue_list")
@@ -4991,6 +4995,7 @@ impl ThreadView {
             .children(
                 queued_message_editors
                     .iter()
+                    .take(visible_queue_len)
                     .enumerate()
                     .map(|(index, editor)| {
                         let is_next = index == 0;
@@ -5009,7 +5014,7 @@ impl ThreadView {
                             .p_1p5()
                             .gap_1()
                             .bg(cx.theme().colors().editor_background)
-                            .when(index < queue_len - 1, |this| {
+                            .when(index + 1 < visible_queue_len, |this| {
                                 this.border_b_1()
                                     .border_color(cx.theme().colors().border_variant)
                             })
@@ -11424,9 +11429,7 @@ impl Render for ThreadView {
                 this.move_queued_message_to_main_editor(0, None, None, window, cx);
             }))
             .on_action(cx.listener(|this, _: &ClearMessageQueue, _, cx| {
-                this.local_queued_messages.clear();
-                this.sync_queue_flag_to_native_thread(cx);
-                this.can_fast_track_queue = false;
+                this.clear_queue(cx);
                 cx.notify();
             }))
             .on_action(cx.listener(|this, _: &ToggleProfileSelector, window, cx| {
