@@ -71,6 +71,14 @@ PASSED:
 NOTES:
 - Cargo/build/native runtime proof remains deferred by instruction.
 
+[2026-06-10] - DX n8n Workflow Node Plugin Plan
+
+ADDED:
+- Added `docs/superpowers/plans/2026-06-10-dx-n8n-workflow-node-plugins.md` to define the DX-native plan for rendering n8n nodes in the Tools screen, configuring them with DX-owned credential handles, and exposing approved configured plugins to the AI panel through a DX JS bridge.
+
+NOTES:
+- Planning is source-only. No Rust build, Cargo command, local server, or n8n website integration was run for this planning pass.
+
 [2026-06-10] - Authorized J6 Voice and Forge Follow-up
 
 FIXED:
