@@ -152,6 +152,7 @@ test("media panel renders bridge state and filters fetched remote rows by query"
   const render = panelSource.slice(panelSource.indexOf("impl Render for MediaPanel"));
   const matchingRemoteAssets = functionBody(panelSource, "matching_remote_assets");
   const remoteSignature = functionBody(panelSource, "media_remote_signature");
+  const renderKindFilters = functionBody(panelSource, "render_kind_filters");
   const renderRemoteBrowserRow = functionBody(panelSource, "render_remote_browser_row");
   const renderRemoteWarningRow = functionBody(panelSource, "render_remote_warning_row");
   const renderStatusRow = functionBody(panelSource, "render_status_row");
@@ -244,6 +245,17 @@ test("media panel renders bridge state and filters fetched remote rows by query"
   assert.match(renderUrlInsert, /IconButton::new\("media-panel-insert-url", IconName::Plus\)/);
   assert.match(renderUrlInsert, /\.style\(ButtonStyle::Filled\)/);
   assert.match(renderUrlInsert, /\.tooltip\(Tooltip::text\(row_tooltip\)\)/);
+  assert.match(renderRemoteAssetRow, /ListItem::new\(row_id\)/);
+  assert.match(renderRemoteAssetRow, /\.inset\(true\)/);
+  assert.match(renderRemoteAssetRow, /\.spacing\(ListItemSpacing::Sparse\)/);
+  assert.match(renderRemoteAssetRow, /\.start_slot\(thumbnail\)/);
+  assert.match(renderRemoteAssetRow, /\.end_slot\([\s\S]*IconName::Ellipsis/);
+  assert.match(renderRemoteAssetRow, /\.end_slot_on_hover\(actions\)/);
+  assert.doesNotMatch(
+    renderRemoteAssetRow,
+    /\.p_2\(\)|\.border_1\(\)|\.bg\(cx\.theme\(\)\.colors\(\)\.element_background\)/,
+  );
+  assert.match(renderRemoteHealthRow, /IconButton::new\("media-panel-refresh-remote-health", IconName::RotateCw\)[\s\S]*\.style\(ButtonStyle::Subtle\)/);
   for (const assetRow of [renderAssetRow, renderRemoteAssetRow]) {
     assert.match(assetRow, /\.occlude\(\)/);
     assert.match(assetRow, /gpui::MouseButton::Left/);
@@ -304,6 +316,10 @@ test("media panel renders bridge state and filters fetched remote rows by query"
   assert.match(remotePanelRows, /\.spacing\(ListItemSpacing::Sparse\)/);
   assert.match(remotePanelRows, /\.selectable\(false\)/);
   assert.doesNotMatch(remotePanelRows, /\.border_1\(\)|\.rounded\(/);
+  assert.match(renderKindFilters, /IconButton::new\(\s*"media-panel-kind-prev",\s*IconName::ChevronLeft[\s\S]*\.style\(ButtonStyle::Subtle\)/);
+  assert.match(renderKindFilters, /IconButton::new\(\s*"media-panel-kind-next",\s*IconName::ChevronRight[\s\S]*\.style\(ButtonStyle::Subtle\)/);
+  assert.match(render, /IconButton::new\(\s*"media-panel-refresh-remote",\s*IconName::RotateCw[\s\S]*\.style\(ButtonStyle::Subtle\)/);
+  assert.match(render, /IconButton::new\(\s*"media-panel-remove-missing-history",\s*IconName::Trash[\s\S]*\.style\(ButtonStyle::Subtle\)/);
   assert.match(
     matchingRemoteAssets,
     /if !query_terms\.is_empty\(\) && !remote_media_search_matches\(asset, query_terms\)/,

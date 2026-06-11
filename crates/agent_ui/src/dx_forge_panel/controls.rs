@@ -26,6 +26,7 @@ pub(super) fn status_actions(
                 .shape(IconButtonShape::Square)
                 .icon_size(IconSize::Small)
                 .icon_color(Color::Muted)
+                .style(ButtonStyle::Subtle)
                 .tab_index(0_isize)
                 .disabled(!history_enabled)
                 .tooltip(Tooltip::text(if history_enabled {
@@ -47,6 +48,7 @@ pub(super) fn status_actions(
             IconButton::new("dx-forge-refresh", IconName::RotateCw)
                 .shape(IconButtonShape::Square)
                 .icon_size(IconSize::Small)
+                .style(ButtonStyle::Subtle)
                 .tab_index(0_isize)
                 .tooltip(Tooltip::text("Refresh Forge"))
                 .on_click({
@@ -78,6 +80,8 @@ pub(super) fn open_exact_abs_path_button(
         .shape(IconButtonShape::Square)
         .icon_size(IconSize::Small)
         .icon_color(Color::Muted)
+        .style(ButtonStyle::Subtle)
+        .tab_index(0_isize)
         .disabled(!enabled)
         .tooltip(Tooltip::text(tooltip_text))
         .on_click({

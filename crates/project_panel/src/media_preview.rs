@@ -243,6 +243,7 @@ pub(crate) fn render_folder_media_shelf(
     } else {
         visible_slots
     };
+    let visible_media_count = media_card_limit.min(preview.items.len());
     let mut shelf_cards = preview
         .items
         .iter()
@@ -264,8 +265,7 @@ pub(crate) fn render_folder_media_shelf(
             cx,
         ));
     }
-    let shelf_visible_count = shelf_cards.len().min(preview.total_count);
-    let header_count_label = format!("{shelf_visible_count} of {}", preview.total_count);
+    let header_count_label = media_shelf_count_label(visible_media_count, preview);
     let header_controls = h_flex()
         .gap_1()
         .items_center()
@@ -320,6 +320,14 @@ fn media_shelf_visible_slots(preview: &FolderMediaPreview) -> usize {
         3..=4 => 4,
         5..=8 => 8,
         _ => MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS,
+    }
+}
+
+fn media_shelf_count_label(visible_media_count: usize, preview: &FolderMediaPreview) -> String {
+    if preview.scanned_cap_hit {
+        format!("{visible_media_count} of {}+", preview.total_count)
+    } else {
+        format!("{visible_media_count} of {}", preview.total_count)
     }
 }
 

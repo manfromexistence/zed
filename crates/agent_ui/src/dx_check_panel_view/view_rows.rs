@@ -10,6 +10,7 @@ pub(super) fn section(
     id: &'static str,
     title: &'static str,
     icon: IconName,
+    count_label: Option<SharedString>,
     is_open: bool,
     on_toggle: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     _cx: &App,
@@ -19,6 +20,14 @@ pub(super) fn section(
             .inset(true)
             .toggle(Some(is_open))
             .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
+            .when_some(count_label, |this, count_label| {
+                this.end_slot(
+                    Label::new(count_label)
+                        .size(LabelSize::Small)
+                        .color(Color::Muted)
+                        .truncate(),
+                )
+            })
             .on_toggle(on_toggle),
     )
 }

@@ -606,6 +606,7 @@ impl ShadcnUiPanel {
             .child(
                 IconButton::new("ui-panel-filter-prev", IconName::ChevronLeft)
                     .shape(ui::IconButtonShape::Square)
+                    .style(ButtonStyle::Subtle)
                     .icon_size(IconSize::Small)
                     .tooltip(Tooltip::text("Previous UI groups"))
                     .on_click(cx.listener(|panel, _, _, cx| {
@@ -657,6 +658,7 @@ impl ShadcnUiPanel {
             .child(
                 IconButton::new("ui-panel-filter-next", IconName::ChevronRight)
                     .shape(ui::IconButtonShape::Square)
+                    .style(ButtonStyle::Subtle)
                     .icon_size(IconSize::Small)
                     .tooltip(Tooltip::text("Next UI groups"))
                     .on_click(cx.listener(|panel, _, _, cx| {
@@ -1681,6 +1683,7 @@ impl Render for ShadcnUiPanel {
                                             IconName::RotateCw,
                                         )
                                         .shape(ui::IconButtonShape::Square)
+                                        .style(ButtonStyle::Subtle)
                                         .icon_size(IconSize::Small)
                                         .tooltip(Tooltip::text("Refresh UI catalog sources"))
                                         .disabled(self.loading_catalog)
@@ -1697,6 +1700,7 @@ impl Render for ShadcnUiPanel {
                                                 IconName::Trash,
                                             )
                                             .shape(ui::IconButtonShape::Square)
+                                            .style(ButtonStyle::Subtle)
                                             .icon_size(IconSize::Small)
                                             .tooltip(Tooltip::text(REMOVE_MISSING_UI_TOOLTIP))
                                             .on_click(

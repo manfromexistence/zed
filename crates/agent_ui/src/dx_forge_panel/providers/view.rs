@@ -62,6 +62,7 @@ fn provider_target_button(
         .icon_color(Color::Muted)
         .indicator(provider_target_indicator(&state))
         .style(ButtonStyle::Transparent)
+        .tab_index(0_isize)
         .disabled(!enabled)
         .tooltip(move |_, cx| Tooltip::with_meta(title.clone(), None, meta.clone(), cx))
         .on_click({
@@ -111,6 +112,8 @@ fn provider_group_controls(
     .shape(IconButtonShape::Square)
     .icon_size(IconSize::Small)
     .icon_color(Color::Muted)
+    .style(ButtonStyle::Subtle)
+    .tab_index(0_isize)
     .disabled(!enabled)
     .tooltip({
         let title = open_title.clone();

@@ -1184,12 +1184,17 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
     providersView.match(
       /fn provider_buttons_for_group\([\s\S]*?\r?\n}\r?\n\r?\nfn provider_group_actions/,
     )?.[0] ?? "";
+  const providerTargetButtonBody =
+    providersView.match(
+      /fn provider_target_button\([\s\S]*?\r?\n}\r?\n\r?\nfn provider_group_controls/,
+    )?.[0] ?? "";
   const providerGroupActionsBody =
     providersView.match(
       /fn provider_group_actions\([\s\S]*?\r?\n}\r?\n\r?\nfn target_path_for_group/,
     )?.[0] ?? "";
   assert.ok(remoteTargetStripBody, "remote_target_strip body should remain source-guarded");
   assert.ok(providerGroupControlsBody, "provider_group_controls body should remain source-guarded");
+  assert.ok(providerTargetButtonBody, "provider_target_button body should remain source-guarded");
   assert.ok(providerButtonsBody, "provider_buttons_for_group body should remain source-guarded");
   assert.match(remoteTargetStripBody, /v_flex\(\)/);
   assert.doesNotMatch(remoteTargetStripBody, /\bRemote targets\b|\blanes\b|ProviderGroup::ALL\.len\(\)/i);
@@ -1232,6 +1237,8 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
     1,
   );
   assert.match(providerGroupControlsBody, /format!\("Open \{\}", group\.title\(\)\)/);
+  assert.match(providerGroupControlsBody, /IconButton::new\([\s\S]*"dx-forge-open-provider-group-\{\}"[\s\S]*\.style\(ButtonStyle::Subtle\)[\s\S]*\.tab_index\(0_isize\)[\s\S]*\.disabled\(!enabled\)/);
+  assert.match(providerTargetButtonBody, /\.style\(ButtonStyle::Transparent\)[\s\S]*\.tab_index\(0_isize\)[\s\S]*\.disabled\(!enabled\)/);
   assert.match(providerGroupActionsBody, /status_color: Color/);
   assert.match(providerGroupActionsBody, /\.gap_0p5\(\)/);
   assert.match(
@@ -1450,6 +1457,7 @@ test("Forge panel opens exact source-owned paths in multi-root workspaces", () =
   assert.doesNotMatch(controls, /pub\(super\) fn open_workspace_path/);
 
   assert.match(openPathButtonBody, /let tooltip_text = if enabled \{/);
+  assert.match(openPathButtonBody, /\.style\(ButtonStyle::Subtle\)[\s\S]*\.tab_index\(0_isize\)[\s\S]*\.disabled\(!enabled\)/);
   assert.match(openPathButtonBody, /format!\("\{tooltip\} unavailable"\)/);
   assert.match(openPathButtonBody, /Tooltip::text\(tooltip_text\)/);
   assert.doesNotMatch(openPathButtonBody, /"Source unavailable"/);

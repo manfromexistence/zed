@@ -1159,6 +1159,7 @@ test("project panel storage overview and root shortcuts stay cached and professi
   const sortWorktreeEntries = functionBody(source, "sort_worktree_entries");
   const parSortWorktreeEntries = functionBody(source, "par_sort_worktree_entries");
   const renderFolderMediaShelf = functionBody(media, "render_folder_media_shelf");
+  const mediaShelfCountLabel = functionBody(media, "media_shelf_count_label");
 
   assert.match(source, /mod storage;/);
   assert.match(source, /mod storage_roots;/);
@@ -1589,6 +1590,7 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   const selectMediaShelfEntry = functionBody(source, "select_media_shelf_entry");
   const renderFolderMediaGallery = functionBody(media, "render_folder_media_gallery");
   const renderFolderMediaShelf = functionBody(media, "render_folder_media_shelf");
+  const mediaShelfCountLabel = functionBody(media, "media_shelf_count_label");
   const renderMediaShelfOverflowCard = functionBody(media, "render_media_shelf_overflow_card");
 
   assert.match(source, /mod media_preview;/);
@@ -1639,7 +1641,12 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
     /ListHeader::new\("Media"\)[\s\S]*\.start_slot\(Icon::new\(dx_icon\(DxUiIcon::Media\)\)[\s\S]*\.end_slot\(header_controls\)/,
     "top media shelf should use the shared ListHeader component and keep compact header controls in the end slot",
   );
-  assert.match(renderFolderMediaShelf, /let header_count_label = format!\("\{shelf_visible_count\} of \{\}", preview\.total_count\)/);
+  assert.match(renderFolderMediaShelf, /let visible_media_count = media_card_limit\.min\(preview\.items\.len\(\)\);/);
+  assert.match(renderFolderMediaShelf, /let header_count_label = media_shelf_count_label\(visible_media_count, preview\);/);
+  assert.doesNotMatch(renderFolderMediaShelf, /shelf_cards\.len\(\)\.min\(preview\.total_count\)/);
+  assert.match(mediaShelfCountLabel, /preview\.scanned_cap_hit/);
+  assert.match(mediaShelfCountLabel, /format!\("\{visible_media_count\} of \{\}\+"/);
+  assert.match(mediaShelfCountLabel, /format!\("\{visible_media_count\} of \{\}"/);
   assert.match(renderFolderMediaShelf, /\.when_some\(panel_controls, \|this, controls\| this\.child\(controls\)\)/);
   assert.match(
     renderFolderMediaShelf,

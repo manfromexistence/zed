@@ -137,6 +137,8 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
 
   const renderHeader = functionBody(view, "render_header");
   const renderStatusStrip = functionBody(view, "render_status_strip");
+  const renderSectionShell = functionBody(view, "render_section_shell");
+  const sectionCountLabel = functionBody(view, "section_count_label");
   const renderPanel = functionBody(view, "render");
   const renderSections = functionBody(view, "render_sections");
   const renderActiveTabSections = functionBody(view, "render_active_tab_sections");
@@ -188,6 +190,16 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   assert.match(section, /v_flex\(\)\.id\(id\)/);
   assert.match(section, /ListHeader::new\(title\)/);
   assert.match(section, /\.toggle\(Some\(is_open\)\)/);
+  assert.match(rows, /count_label: Option<SharedString>/);
+  assert.match(section, /\.when_some\(count_label, \|this, count_label\|/);
+  assert.match(section, /\.end_slot\([\s\S]*Label::new\(count_label\)[\s\S]*\.size\(LabelSize::Small\)[\s\S]*\.color\(Color::Muted\)[\s\S]*\.truncate\(\)/);
+  assert.match(renderSectionShell, /section_count_label\(section_kind, snapshot\)/);
+  assert.match(sectionCountLabel, /DxCheckPanelSectionKind::Sections => snapshot\.sections\.len\(\)/);
+  assert.match(sectionCountLabel, /DxCheckPanelSectionKind::WebAudit => snapshot\.web_audits\.len\(\)/);
+  assert.match(sectionCountLabel, /DxCheckPanelSectionKind::AdapterPlans => snapshot\.adapter_plans\.len\(\)/);
+  assert.match(sectionCountLabel, /DxCheckPanelSectionKind::Notices => snapshot\.blockers\.len\(\) \+ snapshot\.warnings\.len\(\)/);
+  assert.match(sectionCountLabel, /DxCheckPanelSectionKind::QuickFixes => snapshot\.quick_fixes\.len\(\)/);
+  assert.match(sectionCountLabel, /DxCheckPanelSectionKind::Commands =>[\s\S]*detail_command\.as_ref\(\)\.is_some\(\)/);
   assert.doesNotMatch(section, /Open|Closed|end_slot\(status_/);
   assert.match(renderSections, /for \(index, section\) in snapshot\.sections\.iter\(\)\.take\(MAX_SECTION_ROWS\)\.enumerate\(\)/);
   assert.match(renderSections, /section_row\(index, section\)/);

@@ -169,7 +169,7 @@ test("DX.md exposes the lightweight source guard registry", () => {
   );
   assert.match(
     dx,
-    /script\/dx-project-panel-source\.test\.ts` - project panel .*compact Project header icon\/side-panel controls\/selection toolbar.*file-browser operation toolbar.*cached storage roots.*compact storage-root strip spacing with max-width storage shortcuts.*storage-root capacity\/status label ownership.*folder storage overview.*dense storage drilldown rows.*storage ranking.*compact bounded entry metadata chip spacing/,
+    /script\/dx-project-panel-source\.test\.ts` - project panel .*compact Project header icon\/side-panel controls\/selection toolbar.*file-browser operation toolbar.*cached storage roots.*compact storage-root strip spacing with max-width storage shortcuts.*storage-root capacity\/status label ownership.*folder storage overview.*dense storage drilldown rows.*storage ranking.*compact bounded entry metadata chip spacing.*media shelf visible-card count labels/,
   );
   assert.match(
     dx,
@@ -177,19 +177,19 @@ test("DX.md exposes the lightweight source guard registry", () => {
   );
   assert.match(
     dx,
-    /script\/dx-media-panel-source\.test\.ts` - media panel .*URL insertion `ListItem` row.*tooltip-backed square icon URL\/local\/remote asset actions.*square icon history-management actions.*hover action slots.*recent\/pinned `ListHeader` history-section chrome boundaries/,
+    /script\/dx-media-panel-source\.test\.ts` - media panel .*remote-result `ListItem` rows.*URL insertion `ListItem` row.*tooltip-backed square icon URL\/local\/remote asset actions.*subtle square header\/filter controls.*square icon history-management actions.*hover action slots.*recent\/pinned `ListHeader` history-section chrome boundaries/,
   );
   assert.match(
     dx,
-    /script\/dx-ui-panel-source\.test\.ts` - UI panel status-row.*install-plan sparse `ListItem` guidance.*primary catalog action ownership.*square icon secondary catalog actions.*recent\/pinned `ListHeader` history-section.*square icon history-management actions.*hover action slots/,
+    /script\/dx-ui-panel-source\.test\.ts` - UI panel status-row.*install-plan sparse `ListItem` guidance.*primary catalog action ownership.*subtle square header\/filter controls.*square icon secondary catalog actions.*recent\/pinned `ListHeader` history-section.*square icon history-management actions.*hover action slots/,
   );
   assert.match(
     dx,
-    /script\/dx-forge-panel-source\.test\.ts` - DX Forge .*workflow tab and source-open tooltip wording.*compact status\/action row spacing.*provider-group hover readiness dots.*provider-state compact-dot ownership without dead icon plumbing/,
+    /script\/dx-forge-panel-source\.test\.ts` - DX Forge .*workflow tab and source-open tooltip wording.*compact status\/action row spacing.*tabbable subtle source\/provider open controls.*provider-group hover readiness dots.*provider-state compact-dot ownership without dead icon plumbing/,
   );
   assert.match(
     dx,
-    /script\/dx-check-panel-source\.test\.ts` - DX Check .*status-row receipt\/refresh actions.*compact notice\/quick-fix\/adapter-plan\/web-audit `ListItem` rows.*capped web audit rows.*collapsed Adapter Plans default/,
+    /script\/dx-check-panel-source\.test\.ts` - DX Check .*status-row receipt\/refresh actions.*compact section count labels.*compact notice\/quick-fix\/adapter-plan\/web-audit `ListItem` rows.*capped web audit rows.*collapsed Adapter Plans default/,
   );
 });
 
@@ -223,19 +223,19 @@ test("current handoff names the no-runtime-proof production-readiness boundary",
   const currentVerificationLane =
     dx.match(/## Current Verification Lane[\s\S]*?(?=\n## Lightweight Source Guard Registry)/)?.[0] ?? "";
   const currentPanelLane =
-    currentVerificationLane.match(/- Current DX panel GPUI eighth-pass polish:[^\n]+/)?.[0] ?? "";
+    currentVerificationLane.match(/- Current DX panel GPUI ninth-pass polish:[^\n]+/)?.[0] ?? "";
   const currentTodoState = todo.split(/\r?\n/).slice(0, 18).join("\n");
 
-  assert.ok(currentPanelLane, "expected current eighth-pass DX panel GPUI handoff lane");
+  assert.ok(currentPanelLane, "expected current ninth-pass DX panel GPUI handoff lane");
   assert.match(currentPanelLane, /source guards/);
-  assert.match(currentPanelLane, /Media remote browser and warning rows/);
-  assert.match(currentPanelLane, /UI empty results now use sparse `ListItem` chrome/);
-  assert.match(currentPanelLane, /Forge provider disabled tooltips distinguish stale paths from missing workspaces/);
-  assert.match(currentPanelLane, /Project storage drilldown metrics move into the sort tooltip/);
-  assert.match(currentPanelLane, /Check refresh uses the same subtle square icon action style/);
+  assert.match(currentPanelLane, /Media remote result rows now use sparse `ListItem` chrome/);
+  assert.match(currentPanelLane, /UI header and filter controls now use subtle square icon actions/);
+  assert.match(currentPanelLane, /Forge source\/provider open controls are tabbable subtle square actions/);
+  assert.match(currentPanelLane, /Project media shelf counts visible media cards/);
+  assert.match(currentPanelLane, /Check collapsible section headers now carry compact count labels/);
   assert.match(currentPanelLane, /Cargo, build, `just run`, native launch, local servers, browser automation, and runtime visual proof remain deferred by instruction/);
   assert.doesNotMatch(currentPanelLane, /runtime-green|launch-ready|production-ready/i);
-  assert.match(currentTodoState, /DX panel GPUI eighth-pass polish is source-verified/);
+  assert.match(currentTodoState, /DX panel GPUI ninth-pass polish is source-verified/);
   assert.match(dx, /Current production readiness is source-audited only/i);
   assert.match(
     dx,

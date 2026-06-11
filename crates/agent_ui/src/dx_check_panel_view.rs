@@ -3,7 +3,7 @@ use std::{collections::HashSet, path::PathBuf};
 use gpui::{
     AnyElement, App, AppContext as _, AsyncWindowContext, Context, Entity, EntityId, EventEmitter,
     FocusHandle, Focusable, InteractiveElement, IntoElement, ParentElement, Pixels, Render,
-    ScrollHandle, Styled, TaskExt, WeakEntity, Window, div, px,
+    ScrollHandle, SharedString, Styled, TaskExt, WeakEntity, Window, div, px,
 };
 use theme::ActiveTheme;
 use ui::{
@@ -87,6 +87,25 @@ impl DxCheckPanelSectionKind {
             Self::Commands => IconName::Terminal,
         }
     }
+}
+
+fn section_count_label(
+    section_kind: DxCheckPanelSectionKind,
+    snapshot: &DxCheckPanelSnapshot,
+) -> Option<SharedString> {
+    let count = match section_kind {
+        DxCheckPanelSectionKind::Sections => snapshot.sections.len(),
+        DxCheckPanelSectionKind::WebAudit => snapshot.web_audits.len(),
+        DxCheckPanelSectionKind::AdapterPlans => snapshot.adapter_plans.len(),
+        DxCheckPanelSectionKind::Notices => snapshot.blockers.len() + snapshot.warnings.len(),
+        DxCheckPanelSectionKind::QuickFixes => snapshot.quick_fixes.len(),
+        DxCheckPanelSectionKind::Commands => {
+            2 + usize::from(snapshot.detail_command.as_ref().is_some())
+        }
+        DxCheckPanelSectionKind::Run | DxCheckPanelSectionKind::Receipt => return None,
+    };
+
+    Some(SharedString::from(count.to_string()))
 }
 
 pub struct DxCheckPanel {
@@ -185,6 +204,7 @@ impl DxCheckPanel {
     fn render_section_shell(
         &self,
         section_kind: DxCheckPanelSectionKind,
+        snapshot: &DxCheckPanelSnapshot,
         panel: WeakEntity<DxCheckPanel>,
         cx: &App,
     ) -> gpui::Stateful<gpui::Div> {
@@ -193,6 +213,7 @@ impl DxCheckPanel {
             section_kind.id(),
             section_kind.title(),
             section_kind.icon(),
+            section_count_label(section_kind, snapshot),
             is_open,
             move |_, _, cx| {
                 panel
@@ -347,7 +368,7 @@ impl DxCheckPanel {
         cx: &App,
     ) -> AnyElement {
         let section_kind = DxCheckPanelSectionKind::Run;
-        let mut stack = self.render_section_shell(section_kind, panel, cx);
+        let mut stack = self.render_section_shell(section_kind, snapshot, panel, cx);
         if self.section_is_open(section_kind) {
             stack = stack
                 .child(detail_row("Last run", snapshot.last_run_label.clone()))
@@ -397,7 +418,7 @@ impl DxCheckPanel {
             "missing"
         };
         let section_kind = DxCheckPanelSectionKind::Receipt;
-        let mut stack = self.render_section_shell(section_kind, panel, cx);
+        let mut stack = self.render_section_shell(section_kind, snapshot, panel, cx);
         if self.section_is_open(section_kind) {
             stack = stack
                 .child(detail_row("State", receipt_status))
@@ -428,7 +449,7 @@ impl DxCheckPanel {
         cx: &App,
     ) -> AnyElement {
         let section_kind = DxCheckPanelSectionKind::Sections;
-        let mut stack = self.render_section_shell(section_kind, panel, cx);
+        let mut stack = self.render_section_shell(section_kind, snapshot, panel, cx);
         if self.section_is_open(section_kind) {
             if snapshot.sections.is_empty() {
                 stack = stack.child(empty_row("No section scores in the latest receipt."));
@@ -456,7 +477,7 @@ impl DxCheckPanel {
         cx: &App,
     ) -> AnyElement {
         let section_kind = DxCheckPanelSectionKind::AdapterPlans;
-        let mut stack = self.render_section_shell(section_kind, panel, cx);
+        let mut stack = self.render_section_shell(section_kind, snapshot, panel, cx);
         if self.section_is_open(section_kind) {
             if snapshot.adapter_plans.is_empty() {
                 stack = stack.child(empty_row("No adapter plans in the latest receipt."));
@@ -488,7 +509,7 @@ impl DxCheckPanel {
         cx: &App,
     ) -> AnyElement {
         let section_kind = DxCheckPanelSectionKind::Notices;
-        let mut stack = self.render_section_shell(section_kind, panel, cx);
+        let mut stack = self.render_section_shell(section_kind, snapshot, panel, cx);
         if self.section_is_open(section_kind) {
             if snapshot.blockers.is_empty() && snapshot.warnings.is_empty() {
                 stack = stack.child(empty_row("No blockers or warnings in the latest receipt."));
@@ -536,7 +557,7 @@ impl DxCheckPanel {
         cx: &App,
     ) -> AnyElement {
         let section_kind = DxCheckPanelSectionKind::QuickFixes;
-        let mut stack = self.render_section_shell(section_kind, panel, cx);
+        let mut stack = self.render_section_shell(section_kind, snapshot, panel, cx);
         if self.section_is_open(section_kind) {
             if snapshot.quick_fixes.is_empty() {
                 stack = stack.child(empty_row("No quick fixes in the latest receipt."));
@@ -568,7 +589,7 @@ impl DxCheckPanel {
         cx: &App,
     ) -> AnyElement {
         let section_kind = DxCheckPanelSectionKind::WebAudit;
-        let mut stack = self.render_section_shell(section_kind, panel, cx);
+        let mut stack = self.render_section_shell(section_kind, snapshot, panel, cx);
         if self.section_is_open(section_kind) {
             if snapshot.web_audits.is_empty() {
                 stack = stack.child(empty_row("No web-audit results in the latest receipt."));
@@ -600,7 +621,7 @@ impl DxCheckPanel {
         cx: &App,
     ) -> AnyElement {
         let section_kind = DxCheckPanelSectionKind::Commands;
-        let mut stack = self.render_section_shell(section_kind, panel, cx);
+        let mut stack = self.render_section_shell(section_kind, snapshot, panel, cx);
         if self.section_is_open(section_kind) {
             stack = stack
                 .child(detail_row("Refresh", snapshot.refresh_command.clone()))

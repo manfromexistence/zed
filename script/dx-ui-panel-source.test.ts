@@ -32,6 +32,7 @@ test("UI panel history rows use shared GPUI list primitives", () => {
   const render = functionBody(uiPanel, "render");
   const renderStatusRow = functionBody(uiPanel, "render_status_row");
   const renderEmptyRow = functionBody(uiPanel, "render_empty_row");
+  const renderFilterTabs = functionBody(uiPanel, "render_filter_tabs");
   const renderRecentUiSection = functionBody(uiPanel, "render_recent_ui_section");
   const renderPinnedUiSection = functionBody(uiPanel, "render_pinned_ui_section");
   const renderItemRow = functionBody(uiPanel, "render_item_row");
@@ -54,6 +55,10 @@ test("UI panel history rows use shared GPUI list primitives", () => {
   assert.match(renderStatusRow, /\.spacing\(ListItemSpacing::Sparse\)/);
   assert.match(renderStatusRow, /\.selectable\(false\)/);
   assert.match(renderStatusRow, /Tooltip::text\(status\.clone\(\)\)/);
+  assert.match(renderFilterTabs, /IconButton::new\("ui-panel-filter-prev", IconName::ChevronLeft\)[\s\S]*\.style\(ButtonStyle::Subtle\)/);
+  assert.match(renderFilterTabs, /IconButton::new\("ui-panel-filter-next", IconName::ChevronRight\)[\s\S]*\.style\(ButtonStyle::Subtle\)/);
+  assert.match(render, /IconButton::new\(\s*"shadcn-ui-refresh-catalog",\s*IconName::RotateCw[\s\S]*\.style\(ButtonStyle::Subtle\)/);
+  assert.match(render, /IconButton::new\(\s*"shadcn-ui-remove-missing-history",\s*IconName::Trash[\s\S]*\.style\(ButtonStyle::Subtle\)/);
   assert.match(renderEmptyRow, /ListItem::new\("shadcn-ui-empty-row"\)/);
   assert.match(renderEmptyRow, /\.inset\(true\)/);
   assert.match(renderEmptyRow, /\.spacing\(ListItemSpacing::Sparse\)/);
