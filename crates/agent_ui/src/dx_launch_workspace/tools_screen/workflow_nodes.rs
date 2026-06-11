@@ -1,8 +1,13 @@
 use gpui::{AnyElement, App, ClickEvent, IntoElement, SharedString, Window};
-use ui::{Button, ButtonStyle, ContextMenu, IconName, PopoverMenu, Tooltip, prelude::*};
+use ui::{
+    Button, ButtonStyle, Chip, ContextMenu, IconName, ListItem, PopoverMenu, Tooltip, prelude::*,
+};
 
 use crate::dx_agent_bridge::{DxConfiguredPluginSummary, DxWorkflowNodeSummary};
 use crate::workflow_node_icons::{workflow_node_element_id, workflow_node_icon_asset_for};
+
+const MAX_PLUGIN_CARD_TITLE_CHARS: usize = 48;
+const MAX_PLUGIN_CARD_CATEGORY_CHARS: usize = 28;
 
 pub(super) fn workflow_node_card(
     node: &DxWorkflowNodeSummary,
@@ -17,10 +22,11 @@ pub(super) fn workflow_node_card(
     );
     div()
         .w_full()
-        .pb_2()
+        .mt_4()
         .child(
             v_flex()
                 .w_full()
+                .h(rems_from_px(110.))
                 .p_3()
                 .gap_2()
                 .rounded_md()
@@ -39,73 +45,124 @@ pub(super) fn workflow_node_card(
                 .on_click(on_select)
                 .child(
                     h_flex()
+                        .justify_between()
                         .gap_2()
                         .items_start()
-                        .child(icon.render(IconSize::Small, Color::Muted))
                         .child(
-                            v_flex()
+                            h_flex()
                                 .min_w_0()
                                 .flex_1()
-                                .gap_0p5()
-                                .child(
-                                    h_flex()
-                                        .min_w_0()
-                                        .gap_1()
-                                        .child(
-                                            Label::new(node.display_name.clone())
-                                                .size(LabelSize::Small)
-                                                .color(Color::Default)
-                                                .truncate(),
-                                        )
-                                        .child(
-                                            Label::new(node.category.clone())
-                                                .size(LabelSize::XSmall)
-                                                .color(Color::Muted)
-                                                .truncate(),
-                                        ),
-                                )
-                                .child(
-                                    Label::new(node.description.clone())
-                                        .size(LabelSize::XSmall)
-                                        .color(Color::Muted)
-                                        .truncate(),
-                                ),
+                                .gap_2()
+                                .items_start()
+                                .child(icon.render(IconSize::Medium, Color::Muted))
+                                .child(plugin_title_block(node)),
                         )
-                        .child(render_plugin_config_menu(node.clone())),
+                        .child(plugin_action_stack(node.clone())),
                 )
                 .child(
-                    v_flex()
-                        .gap_0p5()
-                        .child(detail_row(
-                            workflow_node_element_id("dx-workflow-node-runtime", &node.id),
-                            IconName::ToolHammer,
-                            "Runtime",
-                            format!("{} / {}", node.runtime, node.trust_status),
-                        ))
-                        .child(detail_row(
-                            workflow_node_element_id("dx-workflow-node-ports", &node.id),
-                            IconName::ArrowRightLeft,
-                            "Ports",
-                            format!("{} in / {} out", node.input_count, node.output_count),
-                        ))
-                        .child(detail_row(
-                            workflow_node_element_id("dx-workflow-node-options", &node.id),
-                            dx_icon(DxUiIcon::Settings),
-                            "Parameters",
-                            format!(
-                                "{} fields / {} dynamic options",
-                                node.parameter_count, node.dynamic_option_count
-                            ),
-                        ))
-                        .child(detail_row(
-                            workflow_node_element_id("dx-workflow-node-credentials", &node.id),
-                            dx_icon(DxUiIcon::Credentials),
-                            "Credentials",
-                            credential_detail(node),
-                        )),
+                    h_flex()
+                        .min_w_0()
+                        .w_full()
+                        .justify_between()
+                        .gap_3()
+                        .child(
+                            Label::new(node.description.clone())
+                                .size(LabelSize::Small)
+                                .color(Color::Default)
+                                .truncate(),
+                        )
+                        .child(
+                            Label::new(format!(
+                                "{} in / {} out / {} parameters",
+                                node.input_count, node.output_count, node.parameter_count
+                            ))
+                            .size(LabelSize::Small)
+                            .color(Color::Muted)
+                            .truncate(),
+                        ),
+                )
+                .child(
+                    h_flex()
+                        .min_w_0()
+                        .w_full()
+                        .justify_between()
+                        .gap_2()
+                        .child(plugin_source_row(node))
+                        .child(plugin_status_chips(node)),
                 ),
         )
         .into_any_element()
+}
+
+fn plugin_title_block(node: &DxWorkflowNodeSummary) -> AnyElement {
+    h_flex()
+        .min_w_0()
+        .gap_2()
+        .child(
+            Headline::new(bounded_plugin_card_text(
+                &node.display_name,
+                MAX_PLUGIN_CARD_TITLE_CHARS,
+            ))
+            .size(HeadlineSize::Small),
+        )
+        .child(
+            Label::new(bounded_plugin_card_text(
+                &node.category,
+                MAX_PLUGIN_CARD_CATEGORY_CHARS,
+            ))
+            .size(LabelSize::Small)
+            .color(Color::Muted)
+            .truncate(),
+        )
+        .into_any_element()
+}
+
+fn plugin_action_stack(node: DxWorkflowNodeSummary) -> AnyElement {
+    h_flex()
+        .gap_1()
+        .flex_none()
+        .child(render_plugin_config_menu(node))
+        .into_any_element()
+}
+
+fn plugin_source_row(node: &DxWorkflowNodeSummary) -> AnyElement {
+    h_flex()
+        .min_w_0()
+        .gap_1()
+        .child(
+            Icon::new(dx_icon(DxUiIcon::Source))
+                .size(IconSize::XSmall)
+                .color(Color::Muted),
+        )
+        .child(
+            Label::new(format!("{} / {}", node.source_package, node.source_path))
+                .size(LabelSize::Small)
+                .color(Color::Muted)
+                .truncate(),
+        )
+        .into_any_element()
+}
+
+fn plugin_status_chips(node: &DxWorkflowNodeSummary) -> AnyElement {
+    h_flex()
+        .gap_1()
+        .flex_none()
+        .child(Chip::new(plugin_configured_state_label(node)).truncate())
+        .child(Chip::new(node.runtime.clone()).truncate())
+        .child(Chip::new(node.trust_status.clone()).truncate())
+        .child(Chip::new(node.credential_status.clone()).truncate())
+        .child(Chip::new(format!("{} dynamic", node.dynamic_option_count)).truncate())
+        .into_any_element()
+}
+
+fn plugin_configured_state_label(node: &DxWorkflowNodeSummary) -> &'static str {
+    if node.configured {
+        "Configured"
+    } else if node.credential_status == "not_required" {
+        "Ready"
+    } else {
+        "Needs Setup"
+    }
 }
 
 pub(super) fn missing_workflow_node_card(message: &'static str) -> AnyElement {
@@ -215,36 +272,6 @@ pub(super) fn configured_plugin_row(plugin: &DxConfiguredPluginSummary) -> AnyEl
         .into_any_element()
 }
 
-fn detail_row(
-    id: SharedString,
-    icon: IconName,
-    label: &'static str,
-    detail: impl Into<SharedString>,
-) -> AnyElement {
-    ListItem::new(id)
-        .spacing(ui::ListItemSpacing::ExtraDense)
-        .selectable(false)
-        .start_slot(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted))
-        .child(
-            h_flex()
-                .min_w_0()
-                .gap_1()
-                .child(
-                    Label::new(label)
-                        .size(LabelSize::XSmall)
-                        .color(Color::Muted)
-                        .flex_none(),
-                )
-                .child(
-                    Label::new(detail.into())
-                        .size(LabelSize::XSmall)
-                        .color(Color::Default)
-                        .truncate(),
-                ),
-        )
-        .into_any_element()
-}
-
 fn detail_menu_row(icon: IconName, label: &'static str, detail: String) -> AnyElement {
     h_flex()
         .min_w(rems(18.))
@@ -270,14 +297,14 @@ fn detail_menu_row(icon: IconName, label: &'static str, detail: String) -> AnyEl
         .into_any_element()
 }
 
-fn credential_detail(node: &DxWorkflowNodeSummary) -> String {
-    if node.credential_types.is_empty() {
-        node.credential_status.clone()
-    } else {
-        format!(
-            "{}: {}",
-            node.credential_status,
-            node.credential_types.join(", ")
-        )
+fn bounded_plugin_card_text(value: &str, max_chars: usize) -> String {
+    let trimmed = value.trim();
+    if trimmed.chars().count() <= max_chars {
+        return trimmed.to_string();
     }
+
+    let keep = max_chars.saturating_sub(3);
+    let mut bounded = trimmed.chars().take(keep).collect::<String>();
+    bounded.push_str("...");
+    bounded
 }

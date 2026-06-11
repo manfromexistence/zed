@@ -12,17 +12,15 @@ const WORKFLOW_NODE_ICON_ID_PREVIEW_CHARS: usize = 36;
 const WORKFLOW_NODE_ICON_CANDIDATE_LIMIT: usize = 8;
 const WORKFLOW_NODE_SVGL_ICON_NAMES: &[&str] = &[
     "airtable",
-    "anthropic",
+    "anthropic_black",
     "discord",
     "dropbox",
     "figma",
-    "github",
+    "github_dark",
     "gitlab",
     "gmail",
-    "google-analytics",
-    "google-calendar",
-    "google-drive",
-    "google-sheets",
+    "google",
+    "drive",
     "hubspot",
     "jira",
     "linear",
@@ -47,6 +45,7 @@ const WORKFLOW_NODE_SVGL_ICON_NAMES: &[&str] = &[
 ];
 
 static WORKFLOW_NODE_ICON_PREVIEW_CACHE: OnceLock<HashMap<String, SharedString>> = OnceLock::new();
+static WORKFLOW_NODE_SVGL_ICON_PACK: OnceLock<Option<SvglIconPack>> = OnceLock::new();
 
 #[derive(Clone)]
 pub(crate) enum WorkflowNodeIconAsset {
@@ -74,6 +73,9 @@ pub(crate) fn workflow_node_icon_asset_for(
     for candidate in workflow_node_svg_candidates(icon_hint, category_hint, display_name) {
         if let Some(path) = workflow_node_svg_preview_cache().get(candidate.as_str()) {
             return WorkflowNodeIconAsset::ExternalSvg(path.clone());
+        }
+        if let Some(path) = write_workflow_node_icon_preview_for_candidate(&candidate) {
+            return WorkflowNodeIconAsset::ExternalSvg(path.into());
         }
     }
 
@@ -111,29 +113,16 @@ fn workflow_node_svg_candidates(
     let mut candidates = Vec::with_capacity(WORKFLOW_NODE_ICON_CANDIDATE_LIMIT);
 
     push_explicit_source_candidate(icon_hint, &mut candidates);
-    push_named_candidate(&hints, &mut candidates, "google drive", "google-drive");
-    push_named_candidate(&hints, &mut candidates, "google sheets", "google-sheets");
-    push_named_candidate(
-        &hints,
-        &mut candidates,
-        "google calendar",
-        "google-calendar",
-    );
-    push_named_candidate(
-        &hints,
-        &mut candidates,
-        "google analytics",
-        "google-analytics",
-    );
-    push_named_candidate(
-        &hints,
-        &mut candidates,
-        "microsoft teams",
-        "microsoft-teams",
-    );
+    push_named_candidate(&hints, &mut candidates, "google drive", "drive");
+    push_named_candidate(&hints, &mut candidates, "google sheets", "google");
+    push_named_candidate(&hints, &mut candidates, "google calendar", "google");
+    push_named_candidate(&hints, &mut candidates, "google analytics", "google");
+    push_named_candidate(&hints, &mut candidates, "microsoft teams", "microsoft");
     push_named_candidate(&hints, &mut candidates, "postgres", "postgresql");
     push_named_candidate(&hints, &mut candidates, "email", "gmail");
     push_named_candidate(&hints, &mut candidates, "mail", "gmail");
+    push_named_candidate(&hints, &mut candidates, "github", "github_dark");
+    push_named_candidate(&hints, &mut candidates, "anthropic", "anthropic_black");
 
     for name in WORKFLOW_NODE_SVGL_ICON_NAMES {
         push_named_candidate(&hints, &mut candidates, name, name);
@@ -259,7 +248,7 @@ fn workflow_node_svg_preview_cache() -> &'static HashMap<String, SharedString> {
 }
 
 fn load_workflow_node_svg_preview_cache() -> HashMap<String, SharedString> {
-    let Some(pack) = load_svgl_icon_pack() else {
+    let Some(pack) = svgl_icon_pack() else {
         return HashMap::new();
     };
 
@@ -275,10 +264,28 @@ fn load_workflow_node_svg_preview_cache() -> HashMap<String, SharedString> {
     cache
 }
 
+fn svgl_icon_pack() -> Option<&'static SvglIconPack> {
+    WORKFLOW_NODE_SVGL_ICON_PACK
+        .get_or_init(load_svgl_icon_pack)
+        .as_ref()
+}
+
 fn load_svgl_icon_pack() -> Option<SvglIconPack> {
     let path = dx_icon_data_dir().join("svgl.json");
     let text = std::fs::read_to_string(path).ok()?;
     serde_json::from_str::<SvglIconPack>(&text).ok()
+}
+
+fn write_workflow_node_icon_preview_for_candidate(candidate: &str) -> Option<String> {
+    let pack = svgl_icon_pack()?;
+    for alias in svgl_candidate_aliases(candidate) {
+        if let Some(icon) = pack.icons.get(alias.as_str())
+            && let Ok(path) = write_workflow_node_icon_preview(&alias, icon)
+        {
+            return Some(path);
+        }
+    }
+    None
 }
 
 fn write_workflow_node_icon_preview(name: &str, icon: &SvglIconBody) -> std::io::Result<String> {
@@ -335,8 +342,26 @@ fn normalized_icon_slug(value: &str) -> String {
     value
         .trim()
         .trim_matches('"')
-        .replace(['_', ' ', '.'], "-")
+        .replace([' ', '.'], "-")
         .to_ascii_lowercase()
+}
+
+fn svgl_candidate_aliases(candidate: &str) -> Vec<String> {
+    let normalized = normalized_icon_slug(candidate);
+    let mut aliases = Vec::with_capacity(4);
+    push_unique_candidate(&mut aliases, normalized.clone());
+    push_unique_candidate(&mut aliases, normalized.replace('-', "_"));
+    match normalized.as_str() {
+        "github" => push_unique_candidate(&mut aliases, "github_dark".to_string()),
+        "anthropic" => push_unique_candidate(&mut aliases, "anthropic_black".to_string()),
+        "google-drive" => push_unique_candidate(&mut aliases, "drive".to_string()),
+        "google-sheets" | "google-calendar" | "google-analytics" => {
+            push_unique_candidate(&mut aliases, "google".to_string())
+        }
+        "microsoft-teams" => push_unique_candidate(&mut aliases, "microsoft".to_string()),
+        _ => {}
+    }
+    aliases
 }
 
 fn fnv1a64(value: &str) -> u64 {

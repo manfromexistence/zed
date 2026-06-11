@@ -3,14 +3,14 @@ use std::ops::Range;
 
 use editor::{Editor, EditorElement, EditorEvent, EditorStyle, MultiBufferOffset};
 use gpui::{
-    AnyElement, App, Context, Entity, IntoElement, UniformListScrollHandle, Window, point, px,
-    uniform_list,
+    AnyElement, App, Context, Entity, IntoElement, KeyContext, SharedString, TextStyle,
+    UniformListScrollHandle, Window, point, px, uniform_list,
 };
 use theme_settings::ThemeSettings;
 use ui::{
-    Button, ButtonStyle, Color, Headline, HeadlineSize, Icon, IconName, Label, LabelSize,
-    ToggleButtonGroup, ToggleButtonGroupSize, ToggleButtonGroupStyle, ToggleButtonSimple, Tooltip,
-    prelude::*,
+    Button, ButtonStyle, Color, Headline, HeadlineSize, Icon, IconName, Label, LabelSize, ListItem,
+    ListItemSpacing, ScrollableHandle, ToggleButtonGroup, ToggleButtonGroupSize,
+    ToggleButtonGroupStyle, ToggleButtonSimple, Tooltip, WithScrollbar, prelude::*,
 };
 
 use crate::AgentPanel;
@@ -185,15 +185,21 @@ pub(crate) fn render_workflow_node_catalog(
         .min(MAX_DISPLAYED_WORKFLOW_NODE_RESULTS);
 
     v_flex()
-        .gap_3()
-        .child(render_catalog_summary(catalog, cx))
-        .child(render_catalog_controls(state, cx))
+        .gap_0()
+        .child(
+            v_flex()
+                .gap_4()
+                .pb_3()
+                .child(render_catalog_summary(catalog, cx))
+                .child(render_catalog_controls(state, cx)),
+        )
         .child(render_category_filter_row(catalog, state, cx))
         .child(
             h_flex()
                 .w_full()
                 .items_start()
                 .gap_3()
+                .pt_1()
                 .child(
                     v_flex()
                         .flex_1()
@@ -286,30 +292,37 @@ fn render_catalog_summary(
     catalog: &DxWorkflowNodeCatalogSummary,
     cx: &mut Context<AgentPanel>,
 ) -> AnyElement {
-    v_flex()
-        .gap_1()
-        .child(super::metric_row("Catalog", catalog.status.clone()))
-        .child(super::metric_row(
-            "Serializer",
-            catalog.serializer_format.clone(),
-        ))
-        .child(super::metric_row(
-            "Indexed nodes",
-            format!(
-                "{} visible / {} source total / {} configured",
-                catalog.nodes.len(),
-                catalog.node_count,
-                catalog.configured_plugin_count
-            ),
-        ))
-        .child(super::metric_row(
-            "Source",
-            catalog
-                .source_packages
-                .first()
-                .cloned()
-                .unwrap_or_else(|| catalog.catalog_path.display().to_string()),
-        ))
+    h_flex()
+        .w_full()
+        .justify_between()
+        .items_start()
+        .gap_3()
+        .child(
+            v_flex()
+                .min_w_0()
+                .gap_1()
+                .child(Headline::new("Plugins").size(HeadlineSize::Large))
+                .child(
+                    Label::new(catalog_summary_label(catalog))
+                        .size(LabelSize::Small)
+                        .color(Color::Muted)
+                        .truncate(),
+                ),
+        )
+        .child(
+            h_flex()
+                .gap_2()
+                .flex_none()
+                .child(catalog_summary_stat(
+                    "Indexed",
+                    catalog.nodes.len().to_string(),
+                ))
+                .child(catalog_summary_stat(
+                    "Configured",
+                    catalog.configured_plugin_count.to_string(),
+                ))
+                .child(catalog_summary_stat("Source", catalog.status.clone())),
+        )
         .when(!catalog.present, |this| {
             this.child(super::muted_card(catalog.next_action.clone(), cx))
         })
@@ -420,6 +433,10 @@ fn render_category_filter_row(
     h_flex()
         .id("dx-plugin-category-filter-row")
         .gap_2()
+        .py_2p5()
+        .border_t_1()
+        .border_b_1()
+        .border_color(cx.theme().colors().border_variant)
         .overflow_x_scroll()
         .child(
             Button::new("filter-all-categories", "All")
@@ -459,7 +476,7 @@ fn indexed_category_counts(catalog: &DxWorkflowNodeCatalogSummary) -> Vec<(Strin
     for node in &catalog.nodes {
         *counts.entry(node.category.clone()).or_default() += 1;
     }
-    counts.into_iter().take(24).collect()
+    counts.into_iter().collect()
 }
 
 fn render_empty_state(state: &DxPluginsCatalogState, cx: &mut Context<AgentPanel>) -> AnyElement {
@@ -489,6 +506,42 @@ fn render_empty_state(state: &DxPluginsCatalogState, cx: &mut Context<AgentPanel
                     Label::new(message)
                         .size(LabelSize::Small)
                         .color(Color::Muted),
+                ),
+        )
+        .into_any_element()
+}
+
+fn catalog_summary_label(catalog: &DxWorkflowNodeCatalogSummary) -> String {
+    let source = catalog
+        .source_packages
+        .first()
+        .cloned()
+        .unwrap_or_else(|| catalog.catalog_path.display().to_string());
+    format!(
+        "{} visible / {} source total from {}",
+        catalog.nodes.len(),
+        catalog.node_count,
+        source
+    )
+}
+
+fn catalog_summary_stat(label: &'static str, value: impl Into<SharedString>) -> AnyElement {
+    ListItem::new(format!("dx-plugin-summary-{label}"))
+        .spacing(ListItemSpacing::ExtraDense)
+        .selectable(false)
+        .child(
+            v_flex()
+                .gap_0p5()
+                .child(
+                    Label::new(label)
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted),
+                )
+                .child(
+                    Label::new(value.into())
+                        .size(LabelSize::Small)
+                        .color(Color::Default)
+                        .truncate(),
                 ),
         )
         .into_any_element()

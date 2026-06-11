@@ -1,3 +1,24 @@
+[2026-06-11] - DX Plugins Extensions-Style GPUI Parity
+
+CHANGED:
+- The visible Plugins workspace now follows the real Zed Extensions screen structure more closely: large page headline, compact source-backed catalog summary stats, search plus segmented filters, bordered horizontal category filters, and a virtualized plugin-card list.
+- Workflow-node plugin cards now use the same fixed-height elevated card shell as Extension cards while preserving the DX/SVGL icon asset path, config popover, selected state, and serializer-backed plugin metadata with bounded labels and a calmer three-row card rhythm.
+- Plugin cards now surface runtime, trust, inputs, outputs, parameters, credential status, dynamic-option count, source package, and source path through GPUI `Chip`, `Label`, `Headline`, `Button`, and icon components instead of badge-heavy text rows or disabled state buttons.
+- Workflow-node icon resolution now keeps explicit `svgl:` slug underscores, resolves common brand aliases such as GitHub and Google Drive to local SVGL pack keys, and can materialize unlisted explicit SVGL slugs on demand.
+
+HARDENED:
+- Focused source guards now pin the Plugins catalog to the Extensions-style GPUI shape and prevent the workflow-node card from regressing to badge-based chrome.
+- Category filters no longer hide categories after a fixed 24-item cap.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates/agent_ui/src/dx_launch_workspace/tools_screen/catalog.rs crates/agent_ui/src/dx_launch_workspace/tools_screen/workflow_nodes.rs crates/agent_ui/src/workflow_node_icons.rs`
+- `node --test script\dx-agent-workspaces-source.test.ts script\dx-plugin-catalog-source.test.ts`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" DX.md changelog.txt todo.txt crates/agent_ui/src/dx_launch_workspace/tools_screen/catalog.rs crates/agent_ui/src/dx_launch_workspace/tools_screen/workflow_nodes.rs crates/agent_ui/src/workflow_node_icons.rs script/dx-agent-workspaces-source.test.ts` returned no matches.
+- `git diff --check`
+
+NOTES:
+- Cargo, `just run`, local servers, native launch, and visual runtime proof remain deferred by instruction.
+
 [2026-06-11] - DX Plugins Source Integrity and Runtime Aliases
 
 ADDED:

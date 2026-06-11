@@ -271,11 +271,16 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
   assert.match(workflowNodeIcons, /dx_icon_data_dir/);
   assert.match(workflowNodeIcons, /svgl\.json/);
   assert.match(workflowNodeIcons, /WORKFLOW_NODE_ICON_PREVIEW_CACHE/);
+  assert.match(workflowNodeIcons, /WORKFLOW_NODE_SVGL_ICON_PACK/);
+  assert.match(workflowNodeIcons, /write_workflow_node_icon_preview_for_candidate/);
+  assert.match(workflowNodeIcons, /svgl_candidate_aliases/);
+  assert.match(workflowNodeIcons, /"github_dark"/);
+  assert.match(workflowNodeIcons, /"drive"/);
   assert.match(workflowNodeIcons, /dx_icon\(DxUiIcon::Plugins\)/);
   assert.doesNotMatch(pluginScreenSources, forbiddenPluginSource);
   assert.doesNotMatch(pluginScreenSources, rawSecretUiPattern);
   assert.doesNotMatch(pluginScreenSources, /\b(?:node|plugin)\.run_command\b/);
-  assert.doesNotMatch(pluginScreenSources, /\bBadge|Chip|Pill|TagList|badge_/i);
+  assert.doesNotMatch(pluginScreenSources, /\bBadge|Pill|TagList|badge_/i);
   assert.doesNotMatch(pluginScreenSources, /<iframe|iframe|WebView|webview|embed_url|external_workflow_url/i);
   assert.match(screen, /trusted_tool_bridge/);
   assert.match(screen, /trusted_tool_ids/);
@@ -336,4 +341,37 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
   assert.match(workflowNodes, /credential_types/);
   assert.match(workflowNodes, /redact_action_scalar/);
   assert.doesNotMatch(workflowNodes, /<iframe|iframe|WebView|webview|embed_url|external_workflow_url/i);
+});
+
+test("Plugins workspace follows the Extensions-style GPUI catalog pattern", () => {
+  const catalog = read("crates/agent_ui/src/dx_launch_workspace/tools_screen/catalog.rs");
+  const workflowNodes = read("crates/agent_ui/src/dx_launch_workspace/tools_screen/workflow_nodes.rs");
+
+  assert.match(catalog, /Headline::new\("Plugins"\)\.size\(HeadlineSize::Large\)/);
+  assert.match(catalog, /ToggleButtonGroup::single_row\(\s*"dx-plugin-filter-buttons"/);
+  assert.match(catalog, /uniform_list\(\s*"dx-workflow-node-plugins"/);
+  assert.match(catalog, /border_b_1\(\)/);
+  assert.match(catalog, /overflow_x_scroll\(\)/);
+  assert.match(catalog, /KeyContext/);
+  assert.match(catalog, /TextStyle/);
+  assert.match(catalog, /WithScrollbar/);
+  assert.doesNotMatch(catalog, /\.take\(24\)/);
+
+  assert.match(workflowNodes, /\.h\(rems_from_px\(110\.\)\)/);
+  assert.match(workflowNodes, /Chip::new\(node\.runtime\.clone\(\)\)/);
+  assert.match(workflowNodes, /fn plugin_source_row\(node: &DxWorkflowNodeSummary\)/);
+  assert.match(workflowNodes, /dx_icon\(DxUiIcon::Source\)/);
+  assert.match(workflowNodes, /node\.source_package/);
+  assert.match(workflowNodes, /node\.source_path/);
+  assert.match(workflowNodes, /fn plugin_status_chips\(node: &DxWorkflowNodeSummary\)/);
+  assert.match(workflowNodes, /Chip::new\(plugin_configured_state_label\(node\)\)/);
+  assert.match(workflowNodes, /fn plugin_configured_state_label\(node: &DxWorkflowNodeSummary\) -> &'static str/);
+  assert.match(workflowNodes, /node\.credential_status/);
+  assert.match(workflowNodes, /node\.dynamic_option_count/);
+  assert.match(workflowNodes, /bounded_plugin_card_text/);
+  assert.match(workflowNodes, /"Configured"/);
+  assert.match(workflowNodes, /"Ready"/);
+  assert.match(workflowNodes, /"Needs Setup"/);
+  assert.match(workflowNodes, /render_plugin_config_menu\(node\)/);
+  assert.doesNotMatch(workflowNodes, /Badge|badge/);
 });
