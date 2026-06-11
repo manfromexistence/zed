@@ -303,6 +303,9 @@ test("Agent chat input add-context trigger carries DX web tool transparent logos
   const renderMessageEditor = functionBody(threadView, "render_message_editor");
   const addContextButton = functionBody(threadView, "render_add_context_button");
   const logoStrip = functionBody(threadView, "render_dx_web_tool_logo_strip");
+  const logoTable =
+    threadView.match(/const DX_WEB_TOOL_LOGOS: &\[DxWebToolLogo\] = &\[[\s\S]*?\n\];/)?.[0] ??
+    "";
 
   for (const tool of [
     "design",
@@ -310,8 +313,10 @@ test("Agent chat input add-context trigger carries DX web tool transparent logos
     "presentations",
     "spreadsheets",
     "video",
+    "music",
     "whiteboard",
     "shader",
+    "www",
   ]) {
     for (const appearance of ["light", "dark"]) {
       assert.ok(
@@ -329,6 +334,11 @@ test("Agent chat input add-context trigger carries DX web tool transparent logos
 
   assert.match(threadView, /struct DxWebToolLogo/);
   assert.match(threadView, /const DX_WEB_TOOL_LOGOS: &\[DxWebToolLogo\]/);
+  assert.equal(
+    (logoTable.match(/DxWebToolLogo \{/g) ?? []).length,
+    9,
+    "expected the chat input strip to carry nine DX web tool logos",
+  );
   assert.match(logoStrip, /cx\.theme\(\)\.appearance\.is_light\(\)/);
   assert.match(logoStrip, /Icon::from_path\(logo\.path_for_theme\(is_light\)\)/);
   assert.match(logoStrip, /\.id\("dx-web-tool-logo-strip"\)/);

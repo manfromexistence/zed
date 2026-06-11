@@ -739,6 +739,11 @@ const DX_WEB_TOOL_LOGOS: &[DxWebToolLogo] = &[
         dark_path: "icons/dx_web_tools/video-dark-transparent.svg",
     },
     DxWebToolLogo {
+        label: "Music",
+        light_path: "icons/dx_web_tools/music-light-transparent.svg",
+        dark_path: "icons/dx_web_tools/music-dark-transparent.svg",
+    },
+    DxWebToolLogo {
         label: "Whiteboard",
         light_path: "icons/dx_web_tools/whiteboard-light-transparent.svg",
         dark_path: "icons/dx_web_tools/whiteboard-dark-transparent.svg",
@@ -747,6 +752,11 @@ const DX_WEB_TOOL_LOGOS: &[DxWebToolLogo] = &[
         label: "Shader",
         light_path: "icons/dx_web_tools/shader-light-transparent.svg",
         dark_path: "icons/dx_web_tools/shader-dark-transparent.svg",
+    },
+    DxWebToolLogo {
+        label: "DX Web",
+        light_path: "icons/dx_web_tools/www-light-transparent.svg",
+        dark_path: "icons/dx_web_tools/www-dark-transparent.svg",
     },
 ];
 

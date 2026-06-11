@@ -231,7 +231,7 @@ test("current handoff names the no-runtime-proof production-readiness boundary",
   assert.match(currentLogoIconLane, /Agent chat input toolbar now centers/);
   assert.match(
     currentLogoIconLane,
-    /Design, Graphics, Presentations, Spreadsheets, Video, Whiteboard, and Shader/,
+    /Design, Graphics, Presentations, Spreadsheets, Video, Music, Whiteboard, Shader, and DX Web/,
   );
   assert.match(currentLogoIconLane, /theme-aware light\/dark variants/);
   assert.match(currentLogoIconLane, /real Add Context `\+` trigger stays on the left control cluster/);

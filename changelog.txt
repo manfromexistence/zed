@@ -1,3 +1,17 @@
+[2026-06-11] - DX Chat Input Nine Logo Strip
+
+ADDED:
+- Added Music and DX Web light/dark transparent logo pairs to the Agent chat input DX web-tool logo assets.
+
+CHANGED:
+- The centered Agent chat input logo strip now carries nine theme-aware transparent DX web-tool logos: Design, Graphics, Presentations, Spreadsheets, Video, Music, Whiteboard, Shader, and DX Web.
+
+PASSED:
+- `node --test script\dx-agent-composer-liquid-glass-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+
+NOTES:
+- Cargo/build/native visual proof remains deferred by instruction.
+
 [2026-06-11] - DX Chat Input Logo Centering
 
 CHANGED:
