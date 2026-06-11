@@ -1300,9 +1300,9 @@
     //
     // Default: 4
     "message_editor_min_lines": 4,
-    // Liquid Glass settings for the Agent panel composer.
+    // Liquid Glass settings for the Agent chat input.
     "liquid_glass": {
-      // Use the GPUI Liquid Glass renderer on the Agent panel composer.
+      // Use the GPUI Liquid Glass renderer on the Agent chat input.
       //
       // Default: true
       "enabled": true,

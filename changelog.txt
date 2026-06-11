@@ -1,3 +1,18 @@
+[2026-06-11] - Agent Liquid Glass Chat Input Container
+
+CHANGED:
+- Agent chat input Liquid Glass naming now matches its actual product surface instead of the older composer-only wording.
+- The shared Agent `ThreadView` chat input now uses the recovered GPUI Liquid Glass surface for both the side Agent panel and fullscreen AI screen path.
+- The Liquid Glass chat input container now uses the standard focused border color when the message editor has focus, while retaining transparent chrome when glass is enabled.
+- Agent Liquid Glass settings copy now describes the chat input surface rather than the standalone reference app or a panel-only composer.
+
+PASSED:
+- `node --test script\dx-agent-composer-liquid-glass-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --config skip_children=true --check crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\conversation_view\liquid_glass_composer.rs crates\settings_content\src\agent.rs crates\settings_ui\src\page_data.rs`
+
+NOTES:
+- Cargo/build/native runtime proof remains deferred by instruction.
+
 [2026-06-11] - Agent Composer Liquid Glass Correction
 
 FIXED:

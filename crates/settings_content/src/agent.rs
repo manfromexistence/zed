@@ -109,7 +109,7 @@ pub struct DxAgentsSettingsContent {
 #[with_fallible_options]
 #[derive(Clone, PartialEq, Serialize, Deserialize, JsonSchema, MergeFrom, Debug, Default)]
 pub struct AgentLiquidGlassSettingsContent {
-    /// Whether the Agent panel composer uses the GPUI Liquid Glass renderer.
+    /// Whether the Agent chat input uses the GPUI Liquid Glass renderer.
     ///
     /// Default: true
     pub enabled: Option<bool>,
@@ -351,7 +351,7 @@ pub struct AgentSettingsContent {
     ///
     /// Default: true
     pub show_merge_conflict_indicator: Option<bool>,
-    /// Liquid Glass settings for the Agent panel composer.
+    /// Liquid Glass settings for the Agent chat input.
     pub liquid_glass: Option<AgentLiquidGlassSettingsContent>,
     /// Per-tool permission rules for granular control over which tool actions
     /// require confirmation.

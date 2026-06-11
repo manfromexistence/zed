@@ -32,7 +32,7 @@ use workspace::notifications::NotificationId;
 use super::composer_profile_options::{
     ComposerOptionEntry, ComposerOptionSlot, ComposerProfileKind,
 };
-use super::liquid_glass_composer::render_agent_liquid_glass_message_editor_surface;
+use super::liquid_glass_composer::render_agent_liquid_glass_chat_input_surface;
 use super::voice_controls::{
     ComposerVoiceAvailability, ComposerVoicePhase, ComposerVoiceState, render_voice_buttons,
     render_voice_recording_panel,
@@ -3855,8 +3855,13 @@ impl ThreadView {
         let has_messages = self.list_state.item_count() > 0;
         let expands_editor_area = editor_expanded && has_messages;
         let colors = cx.theme().colors();
-        let glass_surface = self.render_liquid_glass_message_editor_surface(cx);
+        let glass_surface = self.render_liquid_glass_chat_input_surface(cx);
         let uses_liquid_glass = glass_surface.is_some();
+        let chat_input_border = if focus_handle.is_focused(window) {
+            colors.border_focused
+        } else {
+            colors.border
+        };
 
         h_flex()
             .px_2()
@@ -3880,13 +3885,14 @@ impl ThreadView {
             })
             .child(
                 v_flex()
+                    .id("agent-liquid-glass-chat-input-container")
                     .when_some(max_content_width, |this, max_w| this.flex_basis(max_w))
                     .when(max_content_width.is_none(), |this| this.w_full())
                     .relative()
                     .overflow_hidden()
                     .rounded_md()
                     .border_1()
-                    .border_color(colors.border)
+                    .border_color(chat_input_border)
                     .bg(if uses_liquid_glass {
                         colors.panel_background.opacity(0.08)
                     } else {
@@ -4022,16 +4028,13 @@ impl ThreadView {
             .into_any()
     }
 
-    fn render_liquid_glass_message_editor_surface(
-        &self,
-        cx: &mut Context<Self>,
-    ) -> Option<AnyElement> {
+    fn render_liquid_glass_chat_input_surface(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
         let settings = AgentSettings::get_global(cx).liquid_glass.clone();
         if !settings.enabled {
             return None;
         }
 
-        Some(render_agent_liquid_glass_message_editor_surface(&settings))
+        Some(render_agent_liquid_glass_chat_input_surface(&settings))
     }
 
     fn render_profile_option_slots(&self, cx: &mut Context<Self>) -> Vec<AnyElement> {

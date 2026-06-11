@@ -7853,7 +7853,7 @@ fn ai_page(cx: &App) -> SettingsPage {
             SettingsPageItem::SectionHeader("Agent Liquid Glass"),
             liquid_glass_setting_item!(
                 "Enabled",
-                "Use the GPUI Liquid Glass renderer on the Agent panel composer.",
+                "Use the GPUI Liquid Glass renderer on the Agent chat input.",
                 "agent.liquid_glass.enabled",
                 enabled,
                 bool

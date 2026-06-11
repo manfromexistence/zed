@@ -5,8 +5,10 @@ import test from "node:test";
 const read = (path: string) => readFileSync(path, "utf8");
 
 const agentCargo = read("crates/agent_ui/Cargo.toml");
+const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
 const threadView = read("crates/agent_ui/src/conversation_view/thread_view.rs");
 const messageEditor = read("crates/agent_ui/src/message_editor.rs");
+const workspace = read("crates/workspace/src/workspace.rs");
 const agentSettings = read("crates/agent_settings/src/agent_settings.rs");
 const settingsContentAgent = read("crates/settings_content/src/agent.rs");
 const settingsPageData = read("crates/settings_ui/src/page_data.rs");
@@ -53,24 +55,38 @@ const functionBody = (source: string, name: string): string => {
   assert.fail(`expected ${name} body to close`);
 };
 
+const functionBodyAfter = (
+  source: string,
+  anchor: string,
+  name: string,
+): string => {
+  const anchorIndex = source.indexOf(anchor);
+  assert.notEqual(anchorIndex, -1, `expected anchor ${anchor}`);
+  return functionBody(source.slice(anchorIndex), name);
+};
+
 test("Agent composer mounts the shared Liquid Glass renderer primitive", () => {
   const renderMessageEditor = functionBody(threadView, "render_message_editor");
   const renderGlassSurface = functionBody(
     threadView,
-    "render_liquid_glass_message_editor_surface",
+    "render_liquid_glass_chat_input_surface",
   );
 
   assert.match(agentCargo, /liquid_glass\.workspace = true/);
   assert.match(composerLiquidGlass, /use liquid_glass::\{/);
-  assert.match(threadView, /render_agent_liquid_glass_message_editor_surface/);
+  assert.match(threadView, /render_agent_liquid_glass_chat_input_surface/);
   assert.match(composerLiquidGlass, /load_liquid_glass_backdrop_carrier/);
   assert.match(composerLiquidGlass, /agent_liquid_glass_geometry_from_settings/);
   assert.match(composerLiquidGlass, /agent_liquid_glass_style_from_settings/);
-  assert.match(renderMessageEditor, /render_liquid_glass_message_editor_surface\(/);
+  assert.match(renderMessageEditor, /render_liquid_glass_chat_input_surface\(/);
   assert.match(renderGlassSurface, /AgentSettings::get_global\(cx\)\.liquid_glass\.clone\(\)/);
   assert.match(renderGlassSurface, /if !settings\.enabled\s*\{\s*return None;\s*\}/);
-  assert.match(renderGlassSurface, /render_agent_liquid_glass_message_editor_surface\(/);
+  assert.match(renderGlassSurface, /render_agent_liquid_glass_chat_input_surface\(/);
   assert.match(renderMessageEditor, /let uses_liquid_glass = glass_surface\.is_some\(\)/);
+  assert.match(renderMessageEditor, /let chat_input_border = if focus_handle\.is_focused\(window\)/);
+  assert.match(renderMessageEditor, /colors\.border_focused/);
+  assert.match(renderMessageEditor, /\.id\("agent-liquid-glass-chat-input-container"\)/);
+  assert.match(renderMessageEditor, /\.border_color\(chat_input_border\)/);
   assert.match(renderMessageEditor, /if uses_liquid_glass\s*\{\s*colors\.panel_background\.opacity\(0\.08\)/);
   assert.match(renderMessageEditor, /self\.message_editor\.clone\(\)/);
   assert.match(renderMessageEditor, /self\.render_add_context_button\(cx\)/);
@@ -106,6 +122,8 @@ test("Agent composer uses recovered Liquid Glass geometry instead of full-rectan
     /style\.paint\(window, bounds, bounds, source_image\.clone\(\)\)/,
   );
 
+  assert.match(composerLiquidGlass, /render_agent_liquid_glass_chat_input_surface/);
+  assert.match(composerLiquidGlass, /\.id\("agent-liquid-glass-chat-input-surface"\)/);
   assert.match(composerLiquidGlass, /agent_liquid_glass_geometry_from_settings/);
   assert.match(composerLiquidGlass, /settings\.width/);
   assert.match(composerLiquidGlass, /settings\.height/);
@@ -116,6 +134,89 @@ test("Agent composer uses recovered Liquid Glass geometry instead of full-rectan
   assert.doesNotMatch(liquidGlassElement, /let _ = window\.paint_liquid_glass/);
   assert.match(liquidGlassBackgrounds, /static BACKDROP_CARRIER: OnceLock<Arc<RenderImage>>/);
   assert.match(liquidGlassBackgrounds, /\.get_or_init\(\|\|/);
+});
+
+test("Agent panel and fullscreen AI screen share the Liquid Glass chat input container", () => {
+  const renderMessageEditor = functionBody(threadView, "render_message_editor");
+  const threadRender = functionBodyAfter(
+    threadView,
+    "impl Render for ThreadView",
+    "render",
+  );
+  const panelRender = functionBodyAfter(
+    agentPanel,
+    "impl Render for AgentPanel",
+    "render",
+  );
+  const renderDxLaunchWorkspace = functionBody(agentPanel, "render_dx_launch_workspace");
+  const fullscreenAgentCenter = functionBody(agentPanel, "render_fullscreen_agent_center");
+  const centerScreen = functionBody(workspace, "render_center_screen");
+
+  assert.match(
+    renderMessageEditor,
+    /\.id\("agent-liquid-glass-chat-input-container"\)[\s\S]*\.when_some\(glass_surface,\s*\|this,\s*surface\|\s*this\.child\(surface\)\)/,
+    "Chat input container must mount the real Liquid Glass surface child",
+  );
+  assert.match(
+    renderMessageEditor,
+    /\.bg\(if uses_liquid_glass\s*\{\s*colors\.panel_background\.opacity\(0\.08\)\s*\}\s*else\s*\{\s*colors\.panel_background\.opacity\(0\.72\)\s*\}\)/,
+    "Liquid Glass chat input must use transparent chrome while the glass surface is mounted",
+  );
+  assert.doesNotMatch(
+    renderMessageEditor,
+    /\.bg\(\s*colors\.panel_background\.opacity\(0\.72\)\s*\)/,
+    "Chat input must not unconditionally fall back to flat panel chrome",
+  );
+  assert.match(
+    threadRender,
+    /\.child\(self\.render_message_editor\(window, cx\)\)/,
+    "ThreadView must own the chat input so every host gets the same Liquid Glass container",
+  );
+  assert.match(
+    panelRender,
+    /AgentPanelHostKind::Sidechat \| AgentPanelHostKind::BuilderWorkspace => \{\}/,
+    "Agent side panel and fullscreen builder host must share the same AgentPanel render branch",
+  );
+  assert.match(
+    panelRender,
+    /VisibleSurface::AgentThread\(conversation_view\) => parent\s*\.child\(self\.render_dx_launch_workspace\(\s*conversation_view\.clone\(\)\.into_any_element\(\),\s*window,\s*cx,\s*\)\)/,
+    "AgentPanel must render the ConversationView/ThreadView path in the side panel",
+  );
+  assert.match(
+    centerScreen,
+    /workspace-agent-screen-center/,
+    "Workspace center must host the fullscreen AI Agent panel surface",
+  );
+  assert.match(
+    centerScreen,
+    /\.child\(zoomed_view\)/,
+    "Fullscreen AI screen must reuse the zoomed AgentPanel rather than a separate flat chat input",
+  );
+  assert.match(
+    renderDxLaunchWorkspace,
+    /if !self\.should_render_dx_launch_chrome\(cx\)\s*\{\s*return center;\s*\}/,
+    "Agent side panel must pass the ThreadView chat input through without a fullscreen wrapper",
+  );
+  assert.match(
+    renderDxLaunchWorkspace,
+    /let center = self\.render_fullscreen_agent_center\(center, cx\);/,
+    "Fullscreen AI screen must wrap the same ConversationView center instead of replacing the chat input",
+  );
+  assert.match(
+    fullscreenAgentCenter,
+    /\.child\(div\(\)\.size_full\(\)\.min_w_0\(\)\.overflow_hidden\(\)\.child\(center\)\)/,
+    "Fullscreen AI center must retain the AgentPanel ConversationView child that contains the Liquid Glass chat input",
+  );
+  assert.doesNotMatch(
+    agentPanel,
+    /agent-liquid-glass-chat-input-container/,
+    "AgentPanel should not carry a duplicate chat input implementation outside ThreadView",
+  );
+  assert.doesNotMatch(
+    workspace,
+    /agent-liquid-glass-chat-input-(?:container|surface)/,
+    "Workspace fullscreen AI host must not define a separate flat chat input; it must mount the zoomed AgentPanel",
+  );
 });
 
 test("Agent Liquid Glass settings preserve the tuned recovered Rust effect values", () => {

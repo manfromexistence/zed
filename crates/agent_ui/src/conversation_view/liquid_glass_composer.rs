@@ -6,11 +6,11 @@ use liquid_glass::{
 };
 use ui::prelude::*;
 
-pub(super) fn render_agent_liquid_glass_message_editor_surface(
+pub(super) fn render_agent_liquid_glass_chat_input_surface(
     settings: &AgentLiquidGlassSettings,
 ) -> AnyElement {
     div()
-        .id("agent-composer-liquid-glass-surface")
+        .id("agent-liquid-glass-chat-input-surface")
         .absolute()
         .inset_0()
         .overflow_hidden()
