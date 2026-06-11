@@ -245,6 +245,17 @@ test("media panel renders bridge state and filters fetched remote rows by query"
   assert.match(renderUrlInsert, /IconButton::new\("media-panel-insert-url", IconName::Plus\)/);
   assert.match(renderUrlInsert, /\.style\(ButtonStyle::Filled\)/);
   assert.match(renderUrlInsert, /\.tooltip\(Tooltip::text\(row_tooltip\)\)/);
+  assert.match(renderAssetRow, /let drag_payload = payload\.clone\(\);/);
+  assert.match(renderAssetRow, /ListItem::new\(row_id\)/);
+  assert.match(renderAssetRow, /\.inset\(true\)/);
+  assert.match(renderAssetRow, /\.spacing\(ListItemSpacing::Sparse\)/);
+  assert.match(renderAssetRow, /\.start_slot\(thumbnail\)/);
+  assert.match(renderAssetRow, /\.end_slot\([\s\S]*IconName::Ellipsis/);
+  assert.match(renderAssetRow, /\.end_slot_on_hover\(actions\)/);
+  assert.doesNotMatch(
+    renderAssetRow,
+    /\.p_2\(\)|\.border_1\(\)|\.bg\(cx\.theme\(\)\.colors\(\)\.element_background\)|\.hover\(\|style\| style\.bg\(cx\.theme\(\)\.colors\(\)\.element_hover\)\)/,
+  );
   assert.match(renderRemoteAssetRow, /ListItem::new\(row_id\)/);
   assert.match(renderRemoteAssetRow, /\.inset\(true\)/);
   assert.match(renderRemoteAssetRow, /\.spacing\(ListItemSpacing::Sparse\)/);
@@ -266,7 +277,7 @@ test("media panel renders bridge state and filters fetched remote rows by query"
     assert.match(assetRow, /IconButton::new\(copy_id, IconName::Copy\)/);
     assert.match(assetRow, /IconButton::new\(pin_id, IconName::Pin\)/);
   }
-  assert.match(renderAssetRow, /\.on_drag\(payload,/);
+  assert.match(renderAssetRow, /\.on_drag\(drag_payload,/);
   assert.match(renderRemoteAssetRow, /IconButton::new\(insert_id, IconName::Plus\)/);
   assert.match(renderRemoteAssetRow, /\.style\(ButtonStyle::Filled\)/);
   assert.doesNotMatch(
@@ -317,7 +328,17 @@ test("media panel renders bridge state and filters fetched remote rows by query"
   assert.match(remotePanelRows, /\.selectable\(false\)/);
   assert.doesNotMatch(remotePanelRows, /\.border_1\(\)|\.rounded\(/);
   assert.match(renderKindFilters, /IconButton::new\(\s*"media-panel-kind-prev",\s*IconName::ChevronLeft[\s\S]*\.style\(ButtonStyle::Subtle\)/);
+  assert.match(renderKindFilters, /let kind_scroll_offset = self\.kind_scroll_handle\.offset\(\)\.x;/);
+  assert.match(renderKindFilters, /let kind_scroll_max = self\.kind_scroll_handle\.max_offset\(\)\.x;/);
+  assert.match(renderKindFilters, /let kind_tabs_scrollable = kind_scroll_max > px\(2\.\);/);
+  assert.match(renderKindFilters, /let can_scroll_kind_tabs_back = kind_tabs_scrollable && kind_scroll_offset < px\(0\.\);/);
+  assert.match(
+    renderKindFilters,
+    /let can_scroll_kind_tabs_forward =\s*kind_tabs_scrollable && kind_scroll_offset > -kind_scroll_max;/,
+  );
+  assert.match(renderKindFilters, /IconButton::new\(\s*"media-panel-kind-prev",\s*IconName::ChevronLeft[\s\S]*\.disabled\(!can_scroll_kind_tabs_back\)/);
   assert.match(renderKindFilters, /IconButton::new\(\s*"media-panel-kind-next",\s*IconName::ChevronRight[\s\S]*\.style\(ButtonStyle::Subtle\)/);
+  assert.match(renderKindFilters, /IconButton::new\(\s*"media-panel-kind-next",\s*IconName::ChevronRight[\s\S]*\.disabled\(!can_scroll_kind_tabs_forward\)/);
   assert.match(render, /IconButton::new\(\s*"media-panel-refresh-remote",\s*IconName::RotateCw[\s\S]*\.style\(ButtonStyle::Subtle\)/);
   assert.match(render, /IconButton::new\(\s*"media-panel-remove-missing-history",\s*IconName::Trash[\s\S]*\.style\(ButtonStyle::Subtle\)/);
   assert.match(

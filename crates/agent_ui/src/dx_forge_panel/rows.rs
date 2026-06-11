@@ -114,6 +114,7 @@ pub(super) fn empty_row(id: &'static str, label: &'static str, _cx: &App) -> Any
                 .color(Color::Muted)
                 .truncate(),
         )
+        .tooltip(Tooltip::text(label))
         .into_any_element()
 }
 

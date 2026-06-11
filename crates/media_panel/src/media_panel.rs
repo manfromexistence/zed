@@ -915,6 +915,13 @@ impl MediaPanel {
         counts: &MediaKindCounts,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
+        let kind_scroll_offset = self.kind_scroll_handle.offset().x;
+        let kind_scroll_max = self.kind_scroll_handle.max_offset().x;
+        let kind_tabs_scrollable = kind_scroll_max > px(2.);
+        let can_scroll_kind_tabs_back = kind_tabs_scrollable && kind_scroll_offset < px(0.);
+        let can_scroll_kind_tabs_forward =
+            kind_tabs_scrollable && kind_scroll_offset > -kind_scroll_max;
+
         h_flex()
             .h(px(42.))
             .gap_1()
@@ -927,6 +934,7 @@ impl MediaPanel {
                     .shape(ui::IconButtonShape::Square)
                     .style(ButtonStyle::Subtle)
                     .icon_size(IconSize::Small)
+                    .disabled(!can_scroll_kind_tabs_back)
                     .tooltip(Tooltip::text("Previous media groups"))
                     .on_click(cx.listener(|panel, _, _, cx| {
                         panel.scroll_kind_tabs(-1.0, cx);
@@ -974,6 +982,7 @@ impl MediaPanel {
                     .shape(ui::IconButtonShape::Square)
                     .style(ButtonStyle::Subtle)
                     .icon_size(IconSize::Small)
+                    .disabled(!can_scroll_kind_tabs_forward)
                     .tooltip(Tooltip::text("Next media groups"))
                     .on_click(cx.listener(|panel, _, _, cx| {
                         panel.scroll_kind_tabs(1.0, cx);
@@ -1429,96 +1438,97 @@ impl MediaPanel {
         let copy_label = label.clone();
         let copy_payload = payload.clone();
         let pin_payload = payload.clone();
+        let drag_payload = payload.clone();
         let row_id = media_element_id("media-panel-row-", relative_display.as_ref());
         let preview_id = media_element_id("media-panel-preview-", relative_display.as_ref());
         let copy_id = media_element_id("media-panel-copy-path-", relative_display.as_ref());
         let pin_id = media_element_id("media-panel-pin-local-", relative_display.as_ref());
+        let actions = h_flex()
+            .flex_none()
+            .gap_0p5()
+            .occlude()
+            .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
+                cx.stop_propagation();
+            })
+            .on_mouse_up(gpui::MouseButton::Left, |_, _, cx| {
+                cx.stop_propagation();
+            })
+            .child(
+                IconButton::new(preview_id, IconName::Eye)
+                    .shape(ui::IconButtonShape::Square)
+                    .style(ButtonStyle::Subtle)
+                    .icon_size(IconSize::Small)
+                    .tooltip(Tooltip::text("Preview media"))
+                    .on_click(cx.listener(move |panel, _, window, cx| {
+                        panel.preview_media_asset(preview_payload.clone(), window, cx);
+                    })),
+            )
+            .child(
+                IconButton::new(copy_id, IconName::Copy)
+                    .shape(ui::IconButtonShape::Square)
+                    .style(ButtonStyle::Subtle)
+                    .icon_size(IconSize::Small)
+                    .tooltip(Tooltip::text("Copy media path"))
+                    .on_click(cx.listener(move |panel, _, _, cx| {
+                        panel.record_recent_local_media(&copy_payload);
+                        let copy_path = copy_path.to_string_lossy().into_owned();
+                        panel.copy_media_source(copy_path, copy_label.clone(), cx);
+                    })),
+            )
+            .child(
+                IconButton::new(pin_id, IconName::Pin)
+                    .shape(ui::IconButtonShape::Square)
+                    .style(ButtonStyle::Subtle)
+                    .icon_size(IconSize::Small)
+                    .tooltip(Tooltip::text("Pin media"))
+                    .on_click(cx.listener(move |panel, _, _, cx| {
+                        panel.pin_local_media(&pin_payload, cx);
+                    })),
+            );
 
-        h_flex()
-            .id(row_id)
-            .gap_2()
-            .items_center()
-            .p_2()
-            .rounded_sm()
-            .border_1()
-            .border_color(cx.theme().colors().border_variant)
-            .bg(cx.theme().colors().element_background)
-            .cursor_pointer()
-            .hover(|style| style.bg(cx.theme().colors().element_hover))
-            .tooltip(Tooltip::text(relative_display.clone()))
-            .on_click(cx.listener({
-                let payload = payload.clone();
-                move |panel, _, window, cx| {
-                    panel.insert_media(payload.clone(), window, cx);
-                }
-            }))
-            .on_drag(payload, |media, position, _, cx| {
+        div()
+            .on_drag(drag_payload, |media, position, _, cx| {
                 cx.new(|_| MediaDragPreview {
                     media: media.clone(),
                     position,
                 })
             })
-            .child(thumbnail)
             .child(
-                v_flex()
-                    .flex_1()
-                    .gap_1()
-                    .child(Label::new(label).size(LabelSize::Small).truncate())
+                ListItem::new(row_id)
+                    .inset(true)
+                    .spacing(ListItemSpacing::Sparse)
+                    .start_slot(thumbnail)
+                    .tooltip(Tooltip::text(relative_display.clone()))
+                    .on_click(cx.listener({
+                        let payload = payload.clone();
+                        move |panel, _, window, cx| {
+                            panel.insert_media(payload.clone(), window, cx);
+                        }
+                    }))
                     .child(
-                        Label::new(relative_display.clone())
+                        v_flex()
+                            .min_w_0()
+                            .flex_1()
+                            .gap_1()
+                            .child(Label::new(label).size(LabelSize::Small).truncate())
+                            .child(
+                                Label::new(relative_display.clone())
+                                    .size(LabelSize::XSmall)
+                                    .color(Color::Muted)
+                                    .truncate(),
+                            ),
+                    )
+                    .child(
+                        Label::new(media_kind_label(kind))
                             .size(LabelSize::XSmall)
-                            .color(Color::Muted)
-                            .truncate(),
-                    ),
-            )
-            .child(
-                Label::new(media_kind_label(kind))
-                    .size(LabelSize::XSmall)
-                    .color(Color::Muted),
-            )
-            .child(
-                h_flex()
-                    .flex_none()
-                    .gap_0p5()
-                    .occlude()
-                    .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
-                        cx.stop_propagation();
-                    })
-                    .on_mouse_up(gpui::MouseButton::Left, |_, _, cx| {
-                        cx.stop_propagation();
-                    })
-                    .child(
-                        IconButton::new(preview_id, IconName::Eye)
-                            .shape(ui::IconButtonShape::Square)
-                            .style(ButtonStyle::Subtle)
-                            .icon_size(IconSize::Small)
-                            .tooltip(Tooltip::text("Preview media"))
-                            .on_click(cx.listener(move |panel, _, window, cx| {
-                                panel.preview_media_asset(preview_payload.clone(), window, cx);
-                            })),
+                            .color(Color::Muted),
                     )
-                    .child(
-                        IconButton::new(copy_id, IconName::Copy)
-                            .shape(ui::IconButtonShape::Square)
-                            .style(ButtonStyle::Subtle)
-                            .icon_size(IconSize::Small)
-                            .tooltip(Tooltip::text("Copy media path"))
-                            .on_click(cx.listener(move |panel, _, _, cx| {
-                                panel.record_recent_local_media(&copy_payload);
-                                let copy_path = copy_path.to_string_lossy().into_owned();
-                                panel.copy_media_source(copy_path, copy_label.clone(), cx);
-                            })),
+                    .end_slot(
+                        Icon::new(IconName::Ellipsis)
+                            .size(IconSize::Small)
+                            .color(Color::Muted),
                     )
-                    .child(
-                        IconButton::new(pin_id, IconName::Pin)
-                            .shape(ui::IconButtonShape::Square)
-                            .style(ButtonStyle::Subtle)
-                            .icon_size(IconSize::Small)
-                            .tooltip(Tooltip::text("Pin media"))
-                            .on_click(cx.listener(move |panel, _, _, cx| {
-                                panel.pin_local_media(&pin_payload, cx);
-                            })),
-                    ),
+                    .end_slot_on_hover(actions),
             )
     }
 

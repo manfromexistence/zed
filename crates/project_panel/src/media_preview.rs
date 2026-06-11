@@ -186,6 +186,7 @@ pub(crate) fn render_folder_media_gallery(
         .items
         .len()
         .min(MAX_PROJECT_PANEL_MEDIA_PREVIEW_ITEMS);
+    let header_count_label = media_preview_count_label(visible_count, preview);
     let gallery_cards = preview
         .items
         .iter()
@@ -206,7 +207,7 @@ pub(crate) fn render_folder_media_gallery(
             ListHeader::new("Media")
                 .start_slot(Icon::new(dx_icon(DxUiIcon::Media)).size(IconSize::Small))
                 .end_slot(
-                    Label::new(format!("{visible_count} of {}", preview.total_count))
+                    Label::new(header_count_label)
                         .size(LabelSize::Small)
                         .color(Color::Muted)
                         .single_line()
@@ -265,7 +266,7 @@ pub(crate) fn render_folder_media_shelf(
             cx,
         ));
     }
-    let header_count_label = media_shelf_count_label(visible_media_count, preview);
+    let header_count_label = media_preview_count_label(visible_media_count, preview);
     let header_controls = h_flex()
         .gap_1()
         .items_center()
@@ -323,7 +324,7 @@ fn media_shelf_visible_slots(preview: &FolderMediaPreview) -> usize {
     }
 }
 
-fn media_shelf_count_label(visible_media_count: usize, preview: &FolderMediaPreview) -> String {
+fn media_preview_count_label(visible_media_count: usize, preview: &FolderMediaPreview) -> String {
     if preview.scanned_cap_hit {
         format!("{visible_media_count} of {}+", preview.total_count)
     } else {

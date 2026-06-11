@@ -1,3 +1,23 @@
+[2026-06-11] - DX Panel GPUI Tenth-Pass Polish
+
+CHANGED:
+- `crates\media_panel\src\media_panel.rs` now renders local media asset rows with sparse `ListItem` chrome and hover action slots while preserving drag payloads and row click-to-insert behavior.
+- `crates\shadcn_ui_panel\src\shadcn_ui_panel.rs` now renders UI catalog result rows with sparse `ListItem` chrome, hover action slots, keyboard-reachable row actions, and disabled no-op filter pager arrows.
+- `crates\agent_ui\src\dx_check_panel_view.rs` now makes Check status-strip receipt and refresh actions keyboard-reachable through the panel focus handle.
+- `crates\agent_ui\src\dx_forge_panel\rows.rs` now preserves truncated Forge empty-state copy in row tooltips.
+- `crates\project_panel\src\media_preview.rs` now gives media gallery and shelf headers shared lower-bound count labels when scans are capped.
+- Focused source guards and the handoff registry now cover the tenth-pass GPUI component contracts for Media, UI, Check, Forge, and Project.
+
+PASSED:
+- `rustfmt --edition 2024` on touched Rust files
+- `rustfmt --edition 2024 --check` on touched Rust files
+- `node --test script\dx-forge-panel-source.test.ts script\dx-media-panel-source.test.ts script\dx-ui-panel-source.test.ts script\dx-check-panel-source.test.ts script\dx-project-panel-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- Anchored conflict-marker scan across touched files returned no matches
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. `just run`, Cargo build/check/test/clippy, native launch, browser automation, local servers, and runtime visual proof were not run.
+
 [2026-06-11] - DX Panel GPUI Ninth-Pass Polish
 
 CHANGED:

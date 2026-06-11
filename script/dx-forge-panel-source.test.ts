@@ -698,6 +698,7 @@ test("Forge panel uses Git-style controls instead of metric cards", () => {
   assert.match(emptyRowBody, /\.inset\(true\)/);
   assert.match(emptyRowBody, /\.spacing\(ListItemSpacing::Sparse\)/);
   assert.match(emptyRowBody, /\.selectable\(false\)/);
+  assert.match(emptyRowBody, /\.tooltip\(Tooltip::text\(label\)\)/);
   assert.doesNotMatch(
     evidenceRowBodies,
     /Stateful<Div>|\bDiv\b|\.border_1\(\)|ghost_element_(?:background|hover|active)/,

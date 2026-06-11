@@ -159,6 +159,7 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   assert.match(renderHeader, /Label::new\("Check"\)/);
   assert.match(renderHeader, /side_panel_header_controls/);
   assert.match(renderStatusStrip, /ListItem::new\("dx-check-status"\)/);
+  assert.match(renderStatusStrip, /let focus_handle = self\.focus_handle\(cx\);/);
   assert.match(renderStatusStrip, /\.spacing\(ListItemSpacing::Sparse\)/);
   assert.match(renderStatusStrip, /\.selectable\(false\)/);
   assert.match(renderStatusStrip, /\.end_slot\(/);
@@ -169,6 +170,14 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   assert.match(renderStatusStrip, /cx\.stop_propagation\(\);/);
   assert.match(renderStatusStrip, /IconButton::new\("dx-check-open-receipt", IconName::FileTextOutlined\)/);
   assert.match(renderStatusStrip, /IconButton::new\("dx-check-refresh", IconName::RotateCw\)/);
+  assert.match(
+    renderStatusStrip,
+    /IconButton::new\("dx-check-open-receipt", IconName::FileTextOutlined\)[\s\S]*\.tab_index\(0_isize\)[\s\S]*\.track_focus\(&focus_handle\)[\s\S]*\.disabled\(!receipt_enabled\)/,
+  );
+  assert.match(
+    renderStatusStrip,
+    /IconButton::new\("dx-check-refresh", IconName::RotateCw\)[\s\S]*\.tab_index\(0_isize\)[\s\S]*\.track_focus\(&focus_handle\)/,
+  );
   assert.match(
     renderStatusStrip,
     /IconButton::new\("dx-check-refresh", IconName::RotateCw\)[\s\S]*\.style\(ButtonStyle::Subtle\)/,

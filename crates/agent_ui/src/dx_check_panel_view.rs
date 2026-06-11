@@ -271,8 +271,9 @@ impl DxCheckPanel {
         &self,
         snapshot: &DxCheckPanelSnapshot,
         panel: WeakEntity<DxCheckPanel>,
-        _cx: &App,
+        cx: &App,
     ) -> AnyElement {
+        let focus_handle = self.focus_handle(cx);
         let color = status_color(snapshot);
         let outcome = outcome_label(
             snapshot.pass_count,
@@ -325,6 +326,8 @@ impl DxCheckPanel {
                             .icon_size(IconSize::Small)
                             .icon_color(Color::Muted)
                             .style(ButtonStyle::Subtle)
+                            .tab_index(0_isize)
+                            .track_focus(&focus_handle)
                             .disabled(!receipt_enabled)
                             .tooltip(Tooltip::text(if receipt_enabled {
                                 "Open latest Check receipt"
@@ -351,6 +354,8 @@ impl DxCheckPanel {
                             .icon_size(IconSize::Small)
                             .icon_color(Color::Muted)
                             .style(ButtonStyle::Subtle)
+                            .tab_index(0_isize)
+                            .track_focus(&focus_handle)
                             .tooltip(Tooltip::text("Refresh Check panel"))
                             .on_click(move |_, _, cx| {
                                 panel.update(cx, |panel, cx| panel.refresh(cx)).ok();

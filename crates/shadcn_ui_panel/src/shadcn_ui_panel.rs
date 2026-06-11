@@ -596,6 +596,13 @@ impl ShadcnUiPanel {
         counts: &CatalogFilterCounts,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
+        let filter_scroll_offset = self.filter_scroll_handle.offset().x;
+        let filter_scroll_max = self.filter_scroll_handle.max_offset().x;
+        let filter_tabs_scrollable = filter_scroll_max > px(2.);
+        let can_scroll_filter_tabs_back = filter_tabs_scrollable && filter_scroll_offset < px(0.);
+        let can_scroll_filter_tabs_forward =
+            filter_tabs_scrollable && filter_scroll_offset > -filter_scroll_max;
+
         h_flex()
             .h(px(42.))
             .gap_1()
@@ -608,6 +615,7 @@ impl ShadcnUiPanel {
                     .shape(ui::IconButtonShape::Square)
                     .style(ButtonStyle::Subtle)
                     .icon_size(IconSize::Small)
+                    .disabled(!can_scroll_filter_tabs_back)
                     .tooltip(Tooltip::text("Previous UI groups"))
                     .on_click(cx.listener(|panel, _, _, cx| {
                         panel.scroll_filter_tabs(-1.0, cx);
@@ -660,6 +668,7 @@ impl ShadcnUiPanel {
                     .shape(ui::IconButtonShape::Square)
                     .style(ButtonStyle::Subtle)
                     .icon_size(IconSize::Small)
+                    .disabled(!can_scroll_filter_tabs_forward)
                     .tooltip(Tooltip::text("Next UI groups"))
                     .on_click(cx.listener(|panel, _, _, cx| {
                         panel.scroll_filter_tabs(1.0, cx);
@@ -930,31 +939,114 @@ impl ShadcnUiPanel {
         let pin_id = shadcn_element_id("shadcn-pin-", item.id.as_ref());
         let install_plan_id = shadcn_element_id("shadcn-install-plan-", item.id.as_ref());
         let install_plan = item.install_only.then(|| shadcn_install_plan_label(&item));
+        let metadata = v_flex()
+            .gap_0p5()
+            .items_end()
+            .child(
+                Label::new(source_label)
+                    .size(LabelSize::XSmall)
+                    .color(if can_insert {
+                        Color::Accent
+                    } else {
+                        Color::Warning
+                    }),
+            )
+            .child(
+                Label::new(category_label)
+                    .size(LabelSize::XSmall)
+                    .color(Color::Muted),
+            );
+        let actions = h_flex()
+            .gap_0p5()
+            .flex_none()
+            .occlude()
+            .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
+                cx.stop_propagation();
+            })
+            .on_mouse_up(gpui::MouseButton::Left, |_, _, cx| {
+                cx.stop_propagation();
+            })
+            .child(
+                Button::new(insert_id, primary_action)
+                    .style(ButtonStyle::Subtle)
+                    .size(ButtonSize::Compact)
+                    .tab_index(0_isize)
+                    .tooltip(Tooltip::text(ui_catalog_primary_tooltip(&item)))
+                    .on_click(cx.listener({
+                        let item = item.clone();
+                        move |panel, _, window, cx| {
+                            if can_insert {
+                                panel.insert_item(item.clone(), window, cx);
+                            } else {
+                                panel.open_item_docs(item.clone(), cx);
+                            }
+                        }
+                    })),
+            )
+            .child(
+                IconButton::new(copy_id, IconName::Copy)
+                    .shape(ui::IconButtonShape::Square)
+                    .style(ButtonStyle::Subtle)
+                    .tab_index(0_isize)
+                    .icon_size(IconSize::Small)
+                    .tooltip(Tooltip::text(ui_catalog_copy_tooltip(&item)))
+                    .on_click(cx.listener({
+                        let item = item.clone();
+                        move |panel, _, _, cx| {
+                            panel.copy_item_code(item.clone(), cx);
+                        }
+                    })),
+            )
+            .child(
+                IconButton::new(preview_id, IconName::Eye)
+                    .shape(ui::IconButtonShape::Square)
+                    .style(ButtonStyle::Subtle)
+                    .tab_index(0_isize)
+                    .icon_size(IconSize::Small)
+                    .tooltip(Tooltip::text("Preview in Web Preview"))
+                    .on_click(cx.listener({
+                        let item = item.clone();
+                        move |panel, _, window, cx| {
+                            panel.preview_item(item.clone(), window, cx);
+                        }
+                    })),
+            )
+            .child(
+                IconButton::new(docs_id, IconName::ArrowUpRight)
+                    .shape(ui::IconButtonShape::Square)
+                    .style(ButtonStyle::Subtle)
+                    .tab_index(0_isize)
+                    .icon_size(IconSize::Small)
+                    .tooltip(Tooltip::text("Open documentation"))
+                    .on_click(cx.listener({
+                        let item = item.clone();
+                        move |panel, _, _, cx| {
+                            panel.open_item_docs(item.clone(), cx);
+                        }
+                    })),
+            )
+            .child(
+                IconButton::new(pin_id, IconName::Pin)
+                    .shape(ui::IconButtonShape::Square)
+                    .style(ButtonStyle::Subtle)
+                    .tab_index(0_isize)
+                    .icon_size(IconSize::Small)
+                    .tooltip(Tooltip::text("Pin UI item"))
+                    .on_click(cx.listener({
+                        let item = item.clone();
+                        move |panel, _, _, cx| {
+                            panel.pin_ui_action(
+                                RecentUiEntry {
+                                    item: item.clone(),
+                                    action: RecentUiAction::Pinned,
+                                },
+                                cx,
+                            );
+                        }
+                    })),
+            );
 
         div()
-            .id(row_id)
-            .v_flex()
-            .gap_2()
-            .p_2()
-            .rounded_sm()
-            .border_1()
-            .border_color(cx.theme().colors().border_variant)
-            .bg(cx.theme().colors().element_background)
-            .hover(|style| style.bg(cx.theme().colors().element_hover))
-            .cursor_pointer()
-            .tooltip(Tooltip::text(item.description.clone()))
-            .on_click(cx.listener({
-                let item = item.clone();
-                move |panel, _, window, cx| {
-                    if item.install_only {
-                        panel.preview_item(item.clone(), window, cx);
-                    } else if can_insert {
-                        panel.insert_item(item.clone(), window, cx);
-                    } else {
-                        panel.open_item_docs(item.clone(), cx);
-                    }
-                }
-            }))
             .when(can_drag, |this| {
                 let payload = self.payload_for_item(&item);
                 this.on_drag(payload, |asset, position, _, cx| {
@@ -965,12 +1057,26 @@ impl ShadcnUiPanel {
                 })
             })
             .child(
-                h_flex()
-                    .gap_2()
-                    .items_center()
-                    .child(shadcn_thumbnail(&item, image_url, cx))
+                ListItem::new(row_id)
+                    .inset(true)
+                    .spacing(ListItemSpacing::Sparse)
+                    .start_slot(shadcn_thumbnail(&item, image_url, cx))
+                    .tooltip(Tooltip::text(item.description.clone()))
+                    .on_click(cx.listener({
+                        let item = item.clone();
+                        move |panel, _, window, cx| {
+                            if item.install_only {
+                                panel.preview_item(item.clone(), window, cx);
+                            } else if can_insert {
+                                panel.insert_item(item.clone(), window, cx);
+                            } else {
+                                panel.open_item_docs(item.clone(), cx);
+                            }
+                        }
+                    }))
                     .child(
                         v_flex()
+                            .min_w_0()
                             .flex_1()
                             .gap_0p5()
                             .child(
@@ -983,131 +1089,32 @@ impl ShadcnUiPanel {
                                     .size(LabelSize::XSmall)
                                     .color(Color::Muted)
                                     .truncate(),
-                            ),
+                            )
+                            .when_some(install_plan, |this, install_plan| {
+                                this.child(
+                                    ListItem::new(install_plan_id)
+                                        .inset(true)
+                                        .spacing(ListItemSpacing::Sparse)
+                                        .selectable(false)
+                                        .start_slot(
+                                            Icon::new(IconName::Info)
+                                                .size(IconSize::Small)
+                                                .color(Color::Accent),
+                                        )
+                                        .child(
+                                            Label::new(install_plan)
+                                                .size(LabelSize::Small)
+                                                .color(Color::Muted)
+                                                .truncate(),
+                                        )
+                                        .tooltip(Tooltip::text(
+                                            "Install the source package before inserting",
+                                        )),
+                                )
+                            }),
                     )
-                    .child(
-                        v_flex()
-                            .gap_0p5()
-                            .items_end()
-                            .child(Label::new(source_label).size(LabelSize::XSmall).color(
-                                if can_insert {
-                                    Color::Accent
-                                } else {
-                                    Color::Warning
-                                },
-                            ))
-                            .child(
-                                Label::new(category_label)
-                                    .size(LabelSize::XSmall)
-                                    .color(Color::Muted),
-                            ),
-                    ),
-            )
-            .when_some(install_plan, |this, install_plan| {
-                this.child(
-                    ListItem::new(install_plan_id)
-                        .inset(true)
-                        .spacing(ListItemSpacing::Sparse)
-                        .selectable(false)
-                        .start_slot(
-                            Icon::new(IconName::Info)
-                                .size(IconSize::Small)
-                                .color(Color::Accent),
-                        )
-                        .child(
-                            Label::new(install_plan)
-                                .size(LabelSize::Small)
-                                .color(Color::Muted)
-                                .truncate(),
-                        )
-                        .tooltip(Tooltip::text("Install the source package before inserting")),
-                )
-            })
-            .child(
-                h_flex()
-                    .gap_0p5()
-                    .flex_none()
-                    .occlude()
-                    .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
-                        cx.stop_propagation();
-                    })
-                    .on_mouse_up(gpui::MouseButton::Left, |_, _, cx| {
-                        cx.stop_propagation();
-                    })
-                    .child(
-                        Button::new(insert_id, primary_action)
-                            .style(ButtonStyle::Subtle)
-                            .size(ButtonSize::Compact)
-                            .tooltip(Tooltip::text(ui_catalog_primary_tooltip(&item)))
-                            .on_click(cx.listener({
-                                let item = item.clone();
-                                move |panel, _, window, cx| {
-                                    if can_insert {
-                                        panel.insert_item(item.clone(), window, cx);
-                                    } else {
-                                        panel.open_item_docs(item.clone(), cx);
-                                    }
-                                }
-                            })),
-                    )
-                    .child(
-                        IconButton::new(copy_id, IconName::Copy)
-                            .shape(ui::IconButtonShape::Square)
-                            .style(ButtonStyle::Subtle)
-                            .icon_size(IconSize::Small)
-                            .tooltip(Tooltip::text(ui_catalog_copy_tooltip(&item)))
-                            .on_click(cx.listener({
-                                let item = item.clone();
-                                move |panel, _, _, cx| {
-                                    panel.copy_item_code(item.clone(), cx);
-                                }
-                            })),
-                    )
-                    .child(
-                        IconButton::new(preview_id, IconName::Eye)
-                            .shape(ui::IconButtonShape::Square)
-                            .style(ButtonStyle::Subtle)
-                            .icon_size(IconSize::Small)
-                            .tooltip(Tooltip::text("Preview in Web Preview"))
-                            .on_click(cx.listener({
-                                let item = item.clone();
-                                move |panel, _, window, cx| {
-                                    panel.preview_item(item.clone(), window, cx);
-                                }
-                            })),
-                    )
-                    .child(
-                        IconButton::new(docs_id, IconName::ArrowUpRight)
-                            .shape(ui::IconButtonShape::Square)
-                            .style(ButtonStyle::Subtle)
-                            .icon_size(IconSize::Small)
-                            .tooltip(Tooltip::text("Open documentation"))
-                            .on_click(cx.listener({
-                                let item = item.clone();
-                                move |panel, _, _, cx| {
-                                    panel.open_item_docs(item.clone(), cx);
-                                }
-                            })),
-                    )
-                    .child(
-                        IconButton::new(pin_id, IconName::Pin)
-                            .shape(ui::IconButtonShape::Square)
-                            .style(ButtonStyle::Subtle)
-                            .icon_size(IconSize::Small)
-                            .tooltip(Tooltip::text("Pin UI item"))
-                            .on_click(cx.listener({
-                                let item = item.clone();
-                                move |panel, _, _, cx| {
-                                    panel.pin_ui_action(
-                                        RecentUiEntry {
-                                            item: item.clone(),
-                                            action: RecentUiAction::Pinned,
-                                        },
-                                        cx,
-                                    );
-                                }
-                            })),
-                    ),
+                    .end_slot(metadata)
+                    .end_slot_on_hover(actions),
             )
     }
 

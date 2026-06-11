@@ -37,12 +37,6 @@ test("UI panel history rows use shared GPUI list primitives", () => {
   const renderPinnedUiSection = functionBody(uiPanel, "render_pinned_ui_section");
   const renderItemRow = functionBody(uiPanel, "render_item_row");
   const renderUiHistoryRow = functionBody(uiPanel, "render_ui_history_row");
-  const installPlanStart = renderItemRow.indexOf(".when_some(install_plan");
-  assert.ok(installPlanStart >= 0, "expected install plan branch");
-  const installPlanRemainder = renderItemRow.slice(installPlanStart);
-  const actionChildMatch = installPlanRemainder.match(/\.child\(\r?\n\s+h_flex\(\)/);
-  assert.ok(actionChildMatch?.index, "expected install plan branch to end before actions");
-  const installPlanChrome = installPlanRemainder.slice(0, actionChildMatch.index);
 
   assert.match(uiPanel, /use ui::\{[\s\S]*ListHeader,[\s\S]*ListItem,[\s\S]*ListItemSpacing/);
   assert.match(render, /let status = self\.status\.clone\(\);/);
@@ -55,8 +49,18 @@ test("UI panel history rows use shared GPUI list primitives", () => {
   assert.match(renderStatusRow, /\.spacing\(ListItemSpacing::Sparse\)/);
   assert.match(renderStatusRow, /\.selectable\(false\)/);
   assert.match(renderStatusRow, /Tooltip::text\(status\.clone\(\)\)/);
+  assert.match(renderFilterTabs, /let filter_scroll_offset = self\.filter_scroll_handle\.offset\(\)\.x;/);
+  assert.match(renderFilterTabs, /let filter_scroll_max = self\.filter_scroll_handle\.max_offset\(\)\.x;/);
+  assert.match(renderFilterTabs, /let filter_tabs_scrollable = filter_scroll_max > px\(2\.\);/);
+  assert.match(renderFilterTabs, /let can_scroll_filter_tabs_back = filter_tabs_scrollable && filter_scroll_offset < px\(0\.\);/);
+  assert.match(
+    renderFilterTabs,
+    /let can_scroll_filter_tabs_forward =\s*filter_tabs_scrollable && filter_scroll_offset > -filter_scroll_max;/,
+  );
   assert.match(renderFilterTabs, /IconButton::new\("ui-panel-filter-prev", IconName::ChevronLeft\)[\s\S]*\.style\(ButtonStyle::Subtle\)/);
+  assert.match(renderFilterTabs, /IconButton::new\("ui-panel-filter-prev", IconName::ChevronLeft\)[\s\S]*\.disabled\(!can_scroll_filter_tabs_back\)/);
   assert.match(renderFilterTabs, /IconButton::new\("ui-panel-filter-next", IconName::ChevronRight\)[\s\S]*\.style\(ButtonStyle::Subtle\)/);
+  assert.match(renderFilterTabs, /IconButton::new\("ui-panel-filter-next", IconName::ChevronRight\)[\s\S]*\.disabled\(!can_scroll_filter_tabs_forward\)/);
   assert.match(render, /IconButton::new\(\s*"shadcn-ui-refresh-catalog",\s*IconName::RotateCw[\s\S]*\.style\(ButtonStyle::Subtle\)/);
   assert.match(render, /IconButton::new\(\s*"shadcn-ui-remove-missing-history",\s*IconName::Trash[\s\S]*\.style\(ButtonStyle::Subtle\)/);
   assert.match(renderEmptyRow, /ListItem::new\("shadcn-ui-empty-row"\)/);
@@ -74,18 +78,25 @@ test("UI panel history rows use shared GPUI list primitives", () => {
   assert.match(renderPinnedUiSection, /ListHeader::new\("Pinned"\)/);
   assert.match(renderPinnedUiSection, /\.start_slot\(Icon::new\(IconName::Star\)\.size\(IconSize::Small\)\)/);
   assert.match(renderItemRow, /let install_plan_id = shadcn_element_id\("shadcn-install-plan-", item\.id\.as_ref\(\)\)/);
-  assert.match(installPlanChrome, /ListItem::new\(install_plan_id\)/);
-  assert.match(installPlanChrome, /\.inset\(true\)/);
-  assert.match(installPlanChrome, /\.spacing\(ListItemSpacing::Sparse\)/);
-  assert.match(installPlanChrome, /\.selectable\(false\)/);
-  assert.match(installPlanChrome, /Icon::new\(IconName::Info\)[\s\S]*\.size\(IconSize::Small\)[\s\S]*\.color\(Color::Accent\)/);
-  assert.match(installPlanChrome, /Label::new\(install_plan\)[\s\S]*\.size\(LabelSize::Small\)[\s\S]*\.color\(Color::Muted\)/);
-  assert.match(installPlanChrome, /Tooltip::text\("Install the source package before inserting"\)/);
+  assert.match(renderItemRow, /let metadata = v_flex\(\)/);
+  assert.match(renderItemRow, /let actions = h_flex\(\)/);
+  assert.match(renderItemRow, /ListItem::new\(row_id\)/);
+  assert.match(renderItemRow, /\.inset\(true\)/);
+  assert.match(renderItemRow, /\.spacing\(ListItemSpacing::Sparse\)/);
+  assert.match(renderItemRow, /\.start_slot\(shadcn_thumbnail\(&item, image_url, cx\)\)/);
+  assert.match(renderItemRow, /\.end_slot\(metadata\)/);
+  assert.match(renderItemRow, /\.end_slot_on_hover\(actions\)/);
+  assert.match(renderItemRow, /\.when\(can_drag,[\s\S]*\.on_drag\(payload,/);
+  assert.match(renderItemRow, /ListItem::new\(install_plan_id\)/);
+  assert.match(renderItemRow, /Icon::new\(IconName::Info\)[\s\S]*\.size\(IconSize::Small\)[\s\S]*\.color\(Color::Accent\)/);
+  assert.match(renderItemRow, /Label::new\(install_plan\)[\s\S]*\.size\(LabelSize::Small\)[\s\S]*\.color\(Color::Muted\)/);
+  assert.match(renderItemRow, /Tooltip::text\(\s*"Install the source package before inserting",\s*\)/);
   assert.doesNotMatch(
-    installPlanChrome,
-    /\.p_1\(\)|\.rounded_sm\(\)|\.border_1\(\)|\.bg\(cx\.theme\(\)\.colors\(\)\.elevated_surface_background\)|IconSize::XSmall|LabelSize::XSmall/,
+    renderItemRow,
+    /\.p_1\(\)|\.p_2\(\)|\.rounded_sm\(\)|\.border_1\(\)|\.bg\(cx\.theme\(\)\.colors\(\)\.(?:elevated_surface_background|element_background)\)/,
   );
   assert.match(renderItemRow, /Button::new\(insert_id, primary_action\)/);
+  assert.match(renderItemRow, /Button::new\(insert_id, primary_action\)[\s\S]*\.tab_index\(0_isize\)/);
   assert.match(renderItemRow, /\.occlude\(\)/);
   assert.match(renderItemRow, /gpui::MouseButton::Left/);
   assert.match(renderItemRow, /cx\.stop_propagation\(\);/);
@@ -93,6 +104,10 @@ test("UI panel history rows use shared GPUI list primitives", () => {
   assert.match(renderItemRow, /IconButton::new\(preview_id, IconName::Eye\)/);
   assert.match(renderItemRow, /IconButton::new\(docs_id, IconName::ArrowUpRight\)/);
   assert.match(renderItemRow, /IconButton::new\(pin_id, IconName::Pin\)/);
+  assert.match(renderItemRow, /IconButton::new\(copy_id, IconName::Copy\)[\s\S]*\.tab_index\(0_isize\)/);
+  assert.match(renderItemRow, /IconButton::new\(preview_id, IconName::Eye\)[\s\S]*\.tab_index\(0_isize\)/);
+  assert.match(renderItemRow, /IconButton::new\(docs_id, IconName::ArrowUpRight\)[\s\S]*\.tab_index\(0_isize\)/);
+  assert.match(renderItemRow, /IconButton::new\(pin_id, IconName::Pin\)[\s\S]*\.tab_index\(0_isize\)/);
   assert.match(renderItemRow, /\.shape\(ui::IconButtonShape::Square\)/);
   assert.match(renderItemRow, /\.icon_size\(IconSize::Small\)/);
   assert.doesNotMatch(
