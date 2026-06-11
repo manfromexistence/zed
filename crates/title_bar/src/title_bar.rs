@@ -910,7 +910,7 @@ impl TitleBar {
         vec![
             self.render_title_right_panel_button(
                 "titlebar-icon-picker",
-                dx_icon(DxUiIcon::Icons),
+                IconName::SquareDot,
                 "Icons",
                 icon_picker::ToggleFocus.boxed_clone(),
                 active_right_panel == Some("Icon Picker"),
@@ -940,7 +940,7 @@ impl TitleBar {
             // workflow graduates from parked implementation to production UI.
             self.render_title_right_panel_button(
                 "titlebar-dx-check-panel",
-                dx_icon(DxUiIcon::Check),
+                IconName::ToolDiagnostics,
                 "Check",
                 zed_actions::dx_check_panel::ToggleFocus.boxed_clone(),
                 active_right_panel == Some("Check"),

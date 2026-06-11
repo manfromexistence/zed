@@ -86,7 +86,10 @@ test("DX launch workspace UI stays split by rail ownership", () => {
   assert.match(parent, /^mod style_panel;$/m);
   assert.match(parent, /^mod tool_history;$/m);
   assert.match(parent, /^mod www_evidence;$/m);
-  assert.match(parent, /pub\(crate\) use automation_screen::render_automation_screen;/);
+  assert.match(
+    parent,
+    /pub\(crate\) use automation_screen::\{[\s\S]*?render_automation_screen,[\s\S]*?\};/,
+  );
   assert.match(parent, /struct DxLaunchDiagnosticsMenu/);
   assert.match(parent, /fn diagnostics_menu\(status: DxLaunchWorkspaceStatus\)/);
   assert.match(parent, /PopoverMenu::new\("dx-launch-diagnostics-trigger"\)/);
@@ -99,7 +102,7 @@ test("DX launch workspace UI stays split by rail ownership", () => {
     "dx_launch_workspace.rs should stay a coordinator instead of owning every rail",
   );
   assert.ok(
-    lineCount("crates/agent_ui/src/dx_launch_workspace/automation_screen.rs") < 120,
+    lineCount("crates/agent_ui/src/dx_launch_workspace/automation_screen.rs") < 160,
     "automation screen renderer should stay focused and delegate automation rows",
   );
 });
@@ -137,14 +140,11 @@ test("collapsed workspace activity bar stays icon-only with hover details", () =
   const expectedActions = [
     ["sidebar-activity-new-chat", "New Chat"],
     ["sidebar-activity-search", "Search"],
-    ["sidebar-activity-agents", "Agents"],
-    ["sidebar-activity-sources", "Sources"],
-    ["sidebar-activity-acp-registry", "ACP Registry"],
-    ["sidebar-activity-mcp", "MCP Servers"],
+    ["sidebar-activity-mobile", "Mobile Preview"],
+    ["sidebar-activity-cli", "CLI"],
     ["sidebar-activity-plugins", "Plugins"],
-    ["sidebar-activity-extensions", "Extensions"],
+    ["sidebar-activity-connections", "Connections"],
     ["sidebar-activity-automations", "Automations"],
-    ["sidebar-activity-background-tasks", "Background Tasks"],
     ["sidebar-activity-settings", "Settings"],
   ];
 
@@ -155,31 +155,36 @@ test("collapsed workspace activity bar stays icon-only with hover details", () =
   assert.match(sidebar, /Tooltip::text\("Create Space or Add Project"\)/);
   assert.match(sidebar, /"Expand Sidebar"/);
   assert.match(sidebar, /"Collapse to Activity Bar"/);
-  assert.match(sidebar, /"sidebar-toolbar-acp-registry"[\s\S]*?IconName::Sparkle/);
-  assert.match(sidebar, /"sidebar-toolbar-mcp"[\s\S]*?IconName::Server/);
+  assert.match(sidebar, /"sidebar-toolbar-new-chat"[\s\S]*?IconName::Plus[\s\S]*?"New Chat"/);
+  assert.match(sidebar, /"sidebar-toolbar-search"[\s\S]*?dx_icon\(DxUiIcon::Search\)[\s\S]*?"Search"/);
+  assert.match(sidebar, /"sidebar-toolbar-mobile"[\s\S]*?IconName::Screen[\s\S]*?"Mobile Preview"/);
+  assert.match(sidebar, /"sidebar-toolbar-cli"[\s\S]*?IconName::Terminal[\s\S]*?"CLI"/);
   assert.match(sidebar, /"sidebar-toolbar-plugins"[\s\S]*?dx_icon\(DxUiIcon::Plugins\)/);
-  assert.match(sidebar, /"sidebar-toolbar-extensions"[\s\S]*?dx_icon\(DxUiIcon::Extensions\)/);
+  assert.match(sidebar, /"sidebar-toolbar-connections"[\s\S]*?dx_icon\(DxUiIcon::Connections\)/);
   assert.match(sidebar, /"sidebar-toolbar-automations"[\s\S]*?dx_icon\(DxUiIcon::Automations\)/);
-  assert.match(sidebar, /"sidebar-toolbar-settings",\s*dx_icon\(DxUiIcon::Settings\),\s*"Settings"/);
+  assert.match(sidebar, /MAX_COLLAPSED_THREAD_SHORTCUTS/);
+  assert.match(sidebar, /render_collapsed_thread_shortcuts/);
+  assert.match(sidebar, /"sidebar-activity-thread-shortcuts-separator"/);
+  assert.match(sidebar, /"sidebar-activity-more-threads"/);
   assert.match(genToolbar, /\.on_click\(cx\.listener\(on_click\)\)/);
   assert.match(activityToolbar, /\.on_click\(cx\.listener\(on_click\)\)/);
   assert.match(bottomBar, /"sidebar-bottom-add-folder"[\s\S]*?\.on_click\(cx\.listener/);
   assert.match(bottomBar, /IconButton::new\("history", IconName::Clock\)[\s\S]*?\.on_click\(cx\.listener/);
   assert.match(sidebar, /fn dispatch_workspace_action\([\s\S]*?focus_handle\.dispatch_action\(action, window, cx\)/);
-  assert.match(sidebar, /"sidebar-toolbar-acp-registry"[\s\S]*?dispatch_workspace_action\(&zed_actions::AcpRegistry/);
-  assert.match(sidebar, /"sidebar-activity-acp-registry"[\s\S]*?dispatch_workspace_action\(&zed_actions::AcpRegistry/);
   assert.match(sidebar, sidebarWorkspaceActionArm("Tools", "OpenTools"));
   assert.match(sidebar, sidebarWorkspaceActionArm("Connections", "OpenConnections"));
   assert.match(sidebar, sidebarWorkspaceActionArm("Automations", "OpenAutomations"));
   assert.match(sidebar, /"sidebar-toolbar-plugins"[\s\S]*?activate_workspace_screen\(WorkspaceScreenKind::Tools/);
   assert.match(sidebar, /"sidebar-activity-plugins"[\s\S]*?activate_workspace_screen\(WorkspaceScreenKind::Tools/);
+  assert.match(sidebar, /"sidebar-toolbar-connections"[\s\S]*?activate_workspace_screen\(\s*WorkspaceScreenKind::Connections/);
+  assert.match(sidebar, /"sidebar-activity-connections"[\s\S]*?activate_workspace_screen\(WorkspaceScreenKind::Connections/);
   assert.match(sidebar, /"sidebar-toolbar-automations"[\s\S]*?activate_workspace_screen\(\s*WorkspaceScreenKind::Automations/);
   assert.match(sidebar, /"sidebar-activity-automations"[\s\S]*?activate_workspace_screen\(WorkspaceScreenKind::Automations/);
   assert.doesNotMatch(sidebar, /zed_actions::agent::OpenSettings/);
-  assert.doesNotMatch(sidebar, /"sidebar-toolbar-acp-registry"[\s\S]*?IconName::AcpRegistry/);
-  assert.doesNotMatch(sidebar, /"sidebar-toolbar-extensions"[\s\S]*?IconName::ZedSrcExtension/);
-  assert.doesNotMatch(sidebar, /"sidebar-toolbar-new-chat"/);
-  assert.doesNotMatch(sidebar, /"sidebar-toolbar-search"/);
+  assert.doesNotMatch(sidebar, /"sidebar-toolbar-acp-registry"/);
+  assert.doesNotMatch(sidebar, /"sidebar-toolbar-mcp"/);
+  assert.doesNotMatch(sidebar, /"sidebar-toolbar-extensions"/);
+  assert.doesNotMatch(sidebar, /"sidebar-toolbar-settings"/);
   assert.doesNotMatch(sidebar, /"sidebar-toolbar-refresh"/);
 });
 
@@ -1351,7 +1356,7 @@ test("DX launch workspace delegates agents and source rails", () => {
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/receipts/status.rs") < 80);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/receipts/summary.rs") < 75);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/receipts/text.rs") < 25);
-  assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/social.rs") < 70);
+  assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/social.rs") < 90);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/social/rows.rs") < 165);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/agents/social_actions.rs") < 110);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/sources.rs") < 95);

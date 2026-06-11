@@ -3972,8 +3972,10 @@ impl ThreadView {
                         if chat_input_full_width {
                             this.w_full().flex_1()
                         } else {
-                            this.when_some(max_content_width, |this, max_w| this.flex_basis(max_w))
-                                .when(max_content_width.is_none(), |this| this.w_full())
+                            this.w_full()
+                                .max_w(rems(56.))
+                                .mx_auto()
+                                .when_some(max_content_width, |this, max_w| this.max_w(max_w))
                         }
                     })
                     .relative()
@@ -5818,7 +5820,7 @@ impl ThreadView {
             .justify_center()
             .children(DX_WEB_TOOL_LOGOS.iter().map(|logo| {
                 div()
-                    .id(("dx-web-tool-logo", logo.label))
+                    .id(format!("dx-web-tool-logo-{}", logo.label))
                     .size_5()
                     .flex_none()
                     .rounded_sm()

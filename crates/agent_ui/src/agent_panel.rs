@@ -7957,7 +7957,10 @@ impl AgentPanel {
             });
 
         if !is_fresh {
-            self.schedule_dx_launch_workspace_status_refresh(cx);
+            self.schedule_dx_launch_workspace_status_refresh(
+                self.dx_launch_workspace_status_cache.is_none(),
+                cx,
+            );
         }
 
         self.dx_launch_workspace_status_cache
@@ -7976,7 +7979,11 @@ impl AgentPanel {
         status
     }
 
-    fn schedule_dx_launch_workspace_status_refresh(&mut self, cx: &mut Context<Self>) {
+    fn schedule_dx_launch_workspace_status_refresh(
+        &mut self,
+        refresh_immediately: bool,
+        cx: &mut Context<Self>,
+    ) {
         if self.dx_launch_workspace_status_refresh_pending {
             return;
         }
@@ -7988,9 +7995,11 @@ impl AgentPanel {
         let generation = self.dx_launch_workspace_status_refresh_generation;
 
         cx.spawn(async move |panel, cx| {
-            cx.background_executor()
-                .timer(DX_LAUNCH_WORKSPACE_STATUS_REFRESH_DELAY)
-                .await;
+            if !refresh_immediately {
+                cx.background_executor()
+                    .timer(DX_LAUNCH_WORKSPACE_STATUS_REFRESH_DELAY)
+                    .await;
+            }
             let Some(input) = panel
                 .update(cx, |panel, cx| {
                     if !panel.should_refresh_dx_launch_workspace_status(generation, cx) {
@@ -8530,8 +8539,7 @@ impl Render for AgentPanel {
                 }
                 VisibleSurface::Uninitialized => parent,
                 VisibleSurface::AgentThread(conversation_view) => {
-                    let chat_input_full_width =
-                        matches!(self.host_kind, AgentPanelHostKind::BuilderWorkspace);
+                    let chat_input_full_width = false;
                     conversation_view.update(cx, |conversation_view, cx| {
                         conversation_view.set_chat_input_full_width(chat_input_full_width, cx);
                     });

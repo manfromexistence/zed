@@ -8,6 +8,7 @@ use gpui::{
 use liquid_glass::{
     LiquidGlassStyle, bounded_liquid_glass_layer, load_liquid_glass_backdrop_carrier,
 };
+use settings::Settings as _;
 use ui::{
     DxRainbowGlow, IconName, ListHeader, ListItem, ListItemSpacing, PopoverMenu, Tooltip,
     prelude::*,
