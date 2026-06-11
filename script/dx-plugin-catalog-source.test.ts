@@ -20,6 +20,7 @@ const pluginMetadataSurfacePaths = [
   "crates/agent_ui/src/dx_agent_bridge/workflow_nodes.rs",
   "crates/agent_ui/src/dx_agent_bridge/workflow_nodes/contract.rs",
   "crates/agent_ui/src/dx_agent_bridge/workflow_nodes/configured.rs",
+  "crates/agent_ui/src/dx_agent_bridge/workflow_nodes/configured_authorization.rs",
   "crates/agent_ui/src/dx_agent_bridge/workflow_nodes/credentials.rs",
   "crates/agent_ui/src/dx_plugin_credentials.rs",
   "crates/agent_ui/src/dx_plugin_credentials/fields.rs",

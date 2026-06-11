@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use serde_json::Value;
 
 use super::super::{array_field, bool_field};
+use super::configured_authorization::configured_plugin_row_is_authorized;
 use super::display_string_field;
 
 const MAX_CONFIGURED_PLUGIN_ROWS: usize = 12;
@@ -43,7 +44,7 @@ pub(super) fn configured_plugin_rows(value: &Value) -> Vec<DxConfiguredPluginSum
 #[derive(Default)]
 pub(super) struct ConfiguredPluginIndex {
     has_configured_plugin_data: bool,
-    node_ids: HashSet<String>,
+    node_keys: HashSet<(String, String, String)>,
 }
 
 impl ConfiguredPluginIndex {
@@ -51,8 +52,19 @@ impl ConfiguredPluginIndex {
         self.has_configured_plugin_data
     }
 
-    pub(super) fn contains_node(&self, node_id: &str) -> bool {
-        self.node_ids.contains(node_id)
+    pub(super) fn contains_node(
+        &self,
+        node_id: &str,
+        source_root_id: &str,
+        source_path: &str,
+    ) -> bool {
+        self.node_keys.iter().any(
+            |(configured_node_id, configured_source_root_id, configured_source_path)| {
+                configured_node_id == node_id
+                    && configured_source_root_id == source_root_id
+                    && configured_source_path == source_path
+            },
+        )
     }
 }
 
@@ -60,18 +72,18 @@ pub(super) fn configured_plugin_index(value: &Value) -> ConfiguredPluginIndex {
     let Some(plugins) = configured_plugin_values(value) else {
         return ConfiguredPluginIndex {
             has_configured_plugin_data: false,
-            node_ids: HashSet::new(),
+            node_keys: HashSet::new(),
         };
     };
-    let node_ids = plugins
+    let node_keys = plugins
         .iter()
         .take(MAX_CONFIGURED_PLUGIN_INDEX_ROWS)
-        .filter_map(configured_plugin_node_id)
+        .filter_map(configured_plugin_key)
         .collect();
 
     ConfiguredPluginIndex {
         has_configured_plugin_data: true,
-        node_ids,
+        node_keys,
     }
 }
 
@@ -79,14 +91,15 @@ fn configured_plugin_values(value: &Value) -> Option<&Vec<Value>> {
     array_field(value, &["configured_plugins"]).or_else(|| array_field(value, &["enabled_plugins"]))
 }
 
-fn configured_plugin_node_id(value: &Value) -> Option<String> {
-    display_string_field(value, &["node_id"]).or_else(|| display_string_field(value, &["id"]))
+fn configured_plugin_key(value: &Value) -> Option<(String, String, String)> {
+    let plugin = configured_plugin_row(value)?;
+    Some((plugin.node_id, plugin.source_root_id, plugin.source_path))
 }
 
 fn configured_plugin_row(value: &Value) -> Option<DxConfiguredPluginSummary> {
     let id = display_string_field(value, &["id"])?;
     let node_id = display_string_field(value, &["node_id"]).unwrap_or_else(|| id.clone());
-    Some(DxConfiguredPluginSummary {
+    let row = DxConfiguredPluginSummary {
         display_name: display_string_field(value, &["name"])
             .or_else(|| display_string_field(value, &["display_name"]))
             .unwrap_or_else(|| id.clone()),
@@ -116,5 +129,7 @@ fn configured_plugin_row(value: &Value) -> Option<DxConfiguredPluginSummary> {
         secrets_exposed: bool_field(value, &["secrets_exposed"]).unwrap_or(true),
         id,
         node_id,
-    })
+    };
+
+    configured_plugin_row_is_authorized(&row).then_some(row)
 }

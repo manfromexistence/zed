@@ -4,6 +4,13 @@ import test from "node:test";
 
 const read = (path: string) => readFileSync(path, "utf8");
 const lineCount = (path: string) => read(path).split(/\r?\n/).length;
+const assertBefore = (body: string, before: string, after: string, message: string) => {
+  const beforeIndex = body.indexOf(before);
+  const afterIndex = body.indexOf(after);
+  assert.notEqual(beforeIndex, -1, `${message}: missing ${before}`);
+  assert.notEqual(afterIndex, -1, `${message}: missing ${after}`);
+  assert.ok(beforeIndex < afterIndex, message);
+};
 
 test("DX Agent bridge stays split by command, runtime, and receipt ownership", () => {
   const parent = read("crates/agent_ui/src/dx_agent_bridge.rs");
@@ -42,6 +49,7 @@ test("DX Agent bridge stays split by command, runtime, and receipt ownership", (
     "crates/agent_ui/src/dx_agent_bridge/workflow_nodes.rs",
     "crates/agent_ui/src/dx_agent_bridge/workflow_nodes/contract.rs",
     "crates/agent_ui/src/dx_agent_bridge/workflow_nodes/configured.rs",
+    "crates/agent_ui/src/dx_agent_bridge/workflow_nodes/configured_authorization.rs",
     "crates/agent_ui/src/dx_agent_bridge/workflow_nodes/credentials.rs",
   ];
 
@@ -116,10 +124,13 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   const workflowNodeConfigured = read(
     "crates/agent_ui/src/dx_agent_bridge/workflow_nodes/configured.rs",
   );
+  const workflowNodeConfiguredAuthorization = read(
+    "crates/agent_ui/src/dx_agent_bridge/workflow_nodes/configured_authorization.rs",
+  );
   const workflowNodeCredentials = read(
     "crates/agent_ui/src/dx_agent_bridge/workflow_nodes/credentials.rs",
   );
-  const workflowNodeSources = `${workflowNodes}\n${workflowNodeContract}\n${workflowNodeConfigured}\n${workflowNodeCredentials}`;
+  const workflowNodeSources = `${workflowNodes}\n${workflowNodeContract}\n${workflowNodeConfigured}\n${workflowNodeConfiguredAuthorization}\n${workflowNodeCredentials}`;
   const runtime = read("crates/agent_ui/src/dx_agent_bridge/runtime.rs");
   const runtimeTests = read("crates/agent_ui/src/dx_agent_bridge/runtime_tests.rs");
   const forbiddenWorkflowNodeSources =
@@ -153,6 +164,7 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.match(parent, /workflow_node_catalog: workflow_node_catalog_summary/);
   assert.match(workflowNodes, /^mod contract;$/m);
   assert.match(workflowNodes, /^mod configured;$/m);
+  assert.match(workflowNodes, /^mod configured_authorization;$/m);
   assert.match(workflowNodes, /^mod credentials;$/m);
   assert.match(workflowNodes, /pub\(crate\) use self::contract::\{/);
   assert.match(workflowNodes, /pub\(crate\) use self::credentials::\{/);
@@ -342,12 +354,51 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
     /configured_plugin_count: nodes\.iter\(\)\.filter\(\|node\| node\.configured\)\.count\(\)/,
   );
   assert.match(workflowNodes, /configured_index\.has_configured_plugin_data\(\)/);
-  assert.match(workflowNodes, /configured_index\.contains_node\(&id\)/);
+  assert.match(workflowNodes, /configured_index\.contains_node\(&id, &source_root_id, &source_path\)/);
   assert.match(workflowNodeConfigured, /struct ConfiguredPluginIndex/);
+  assert.match(workflowNodeConfigured, /node_keys: HashSet<\(String, String, String\)>/);
   assert.match(workflowNodeConfigured, /MAX_CONFIGURED_PLUGIN_INDEX_ROWS/);
+  assert.match(workflowNodeConfiguredAuthorization, /MAX_CONFIGURED_PLUGIN_ID_CHARS/);
+  assert.match(workflowNodeConfiguredAuthorization, /MAX_CONFIGURED_PLUGIN_SOURCE_CHARS/);
+  assert.match(workflowNodeConfiguredAuthorization, /DX_CONFIGURED_PLUGIN_SOURCE_ROOTS/);
+  assert.match(workflowNodeConfiguredAuthorization, /"repo_agent_tools"/);
+  assert.match(workflowNodeConfiguredAuthorization, /"repo_agent_ui_bridge"/);
+  assert.match(workflowNodeConfiguredAuthorization, /"repo_agent_ui_bridge_module"/);
+  assert.match(workflowNodeConfiguredAuthorization, /"repo_web_preview"/);
+  assert.match(workflowNodeConfiguredAuthorization, /"workspace_agent_plugins"/);
+  assert.match(workflowNodeConfiguredAuthorization, /"workspace_playwright_runner"/);
+  assert.match(workflowNodeConfiguredAuthorization, /"dxjs_runtime"/);
+  assert.match(workflowNodeConfiguredAuthorization, /const TRUSTED_TOOL_POLICY: &str = "receipt_authorized_only"/);
   assert.match(workflowNodeConfigured, /fn configured_plugin_values/);
-  assert.match(workflowNodeConfigured, /fn configured_plugin_node_id/);
+  assert.match(workflowNodeConfigured, /fn configured_plugin_key/);
+  assert.match(workflowNodeConfiguredAuthorization, /fn configured_plugin_row_is_authorized/);
+  assert.match(workflowNodeConfiguredAuthorization, /fn configured_plugin_identity_is_safe/);
+  assert.match(workflowNodeConfiguredAuthorization, /fn configured_plugin_source_root_is_allowed/);
+  assert.match(workflowNodeConfiguredAuthorization, /fn configured_plugin_source_path_is_safe/);
+  assert.match(workflowNodeConfiguredAuthorization, /fn configured_plugin_state_is_usable/);
+  assert.match(
+    workflowNodeConfigured,
+    /Some\(\(plugin\.node_id, plugin\.source_root_id, plugin\.source_path\)\)/,
+  );
+  assert.match(
+    workflowNodeConfigured,
+    /configured_plugin_row_is_authorized\(&row\)\.then_some\(row\)/,
+  );
   assert.match(workflowNodeConfigured, /bool_field\(value, &\["writes_receipts"\]\)/);
+  assert.match(workflowNodeConfiguredAuthorization, /configured_plugin_source_root_is_allowed\(&row\.source_root_id\)/);
+  assert.match(workflowNodeConfiguredAuthorization, /configured_plugin_source_path_is_safe\(&row\.source_path\)/);
+  assert.match(workflowNodeConfiguredAuthorization, /row\.trust_policy == TRUSTED_TOOL_POLICY/);
+  assert.match(workflowNodeConfiguredAuthorization, /row\.approved_by_trusted_bridge/);
+  assert.match(workflowNodeConfiguredAuthorization, /row\.writes_receipt/);
+  assert.match(workflowNodeConfiguredAuthorization, /!row\.secrets_exposed/);
+  assert.match(workflowNodeConfiguredAuthorization, /configured_plugin_state_is_usable\(&row\.status\)/);
+  assert.match(workflowNodeConfiguredAuthorization, /configured_plugin_state_is_usable\(&row\.credential_status\)/);
+  assert.match(workflowNodeConfiguredAuthorization, /!value\.contains\('\\0'\)/);
+  assert.ok(workflowNodeConfiguredAuthorization.includes("!value.starts_with('/')"));
+  assert.ok(workflowNodeConfiguredAuthorization.includes("!value.starts_with('\\\\')"));
+  assert.ok(workflowNodeConfiguredAuthorization.includes("!value.contains('\\\\')"));
+  assert.match(workflowNodeConfiguredAuthorization, /!has_windows_drive_prefix\(value\)/);
+  assert.match(workflowNodeConfiguredAuthorization, /matches!\(segment, "" \| "\." \| "\.\."\)/);
   assert.doesNotMatch(workflowNodeSources, forbiddenWorkflowNodeSources);
   assert.doesNotMatch(workflowNodeSources, rawSecretDisplayPattern);
   assert.doesNotMatch(workflowNodes, /(?<!display_)string_field\(value, &\["(?:description|source_package|source_package_version|source_root_id|source_path|credential_status|configure_action)"\]\)/);
@@ -370,12 +421,24 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   for (const field of [
     "source_package",
     "source_package_version",
-    "source_root_id",
-    "source_path",
     "credential_status",
   ]) {
     assert.match(workflowNodes, new RegExp(`${field}:\\s*display_string_field\\(value, &\\["${field}"\\]`));
   }
+  assert.match(
+    workflowNodes,
+    /let source_root_id = display_string_field\(value, &\["source_root_id"\]\)[\s\S]*?missing_source_root_id/,
+  );
+  assert.match(
+    workflowNodes,
+    /let source_path = display_string_field\(value, &\["source_path"\]\)[\s\S]*?missing_source_path/,
+  );
+  assertBefore(
+    workflowNodes,
+    "let source_root_id = display_string_field(value, &[\"source_root_id\"])",
+    "let configured = if configured_index.has_configured_plugin_data()",
+    "source provenance must be parsed before configured-node matching",
+  );
   for (const field of [
     "source_root_id",
     "source_path",
@@ -463,6 +526,7 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_catalog.rs") < 90);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/workflow_nodes/contract.rs") < 280);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/workflow_nodes/configured.rs") < 140);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/workflow_nodes/configured_authorization.rs") < 90);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/workflow_nodes/credentials.rs") < 180);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_connection_tests.rs") < 120);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_catalog_tests.rs") < 130);

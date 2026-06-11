@@ -1,3 +1,21 @@
+[2026-06-12] - Configured Plugin Authorization Hardening
+
+CHANGED:
+- Configured workflow-node plugin rows now fail closed in the DX Agent bridge parser unless ids are bounded and safe, source root is DX-owned, source path is a safe relative path, trust policy is `receipt_authorized_only`, trusted-bridge approval is present, receipt-writing proof is present, secrets are not exposed, and status/credential states are usable.
+- Configured-plugin node indexing now reuses the authorized row parser and matches node id, source root, and source path together so stale configured-plugin receipt entries cannot mark unrelated workflow nodes as configured.
+- Moved configured-plugin authorization policy into focused `configured_authorization.rs` to keep the parser small and reviewable.
+- Narrowed the trusted-tool bridge receipt helper visibility to the parent bridge module.
+- Source guards now cover the configured-plugin authorization module and include it in DX-native/no-secret plugin metadata scans.
+
+PASSED:
+- `node --test script\dx-agent-bridge-source.test.ts script\dx-agent-thread-view-source.test.ts script\dx-plugin-catalog-source.test.ts`
+- `rustfmt --edition 2024 --check crates\agent_ui\src\dx_agent_bridge\workflow_nodes.rs crates\agent_ui\src\dx_agent_bridge\workflow_nodes\configured.rs crates\agent_ui\src\dx_agent_bridge\workflow_nodes\configured_authorization.rs crates\agent_ui\src\dx_agent_bridge\receipts\trusted_tool_bridge.rs`
+- `git diff --check`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" ...` returned no matches across touched source, guard, and handoff files.
+
+NOTES:
+- Cargo/build/native visual proof and `just run` remain deferred by instruction.
+
 [2026-06-12] - Queue, Titlebar, And Panel Source Hardening
 
 CHANGED:

@@ -7,6 +7,7 @@ use super::{
 };
 
 mod configured;
+mod configured_authorization;
 mod contract;
 mod credentials;
 
@@ -155,16 +156,20 @@ fn workflow_node_row(
     let display_name = display_string_field(value, &["name"])
         .or_else(|| display_string_field(value, &["display_name"]))
         .unwrap_or_else(|| id.clone());
-    let configured = if configured_index.has_configured_plugin_data() {
-        configured_index.contains_node(&id)
-    } else {
-        bool_field(value, &["configured"]).unwrap_or(false)
-    };
     let inputs = workflow_node_port_rows(value, &["inputs"]);
     let outputs = workflow_node_port_rows(value, &["outputs"]);
     let credentials = workflow_node_credential_rows(value);
     let credential_types = credential_type_values(value, &credentials);
     let dynamic_options = workflow_node_dynamic_option_rows(value);
+    let source_root_id = display_string_field(value, &["source_root_id"])
+        .unwrap_or_else(|| "missing_source_root_id".to_string());
+    let source_path = display_string_field(value, &["source_path"])
+        .unwrap_or_else(|| "missing_source_path".to_string());
+    let configured = if configured_index.has_configured_plugin_data() {
+        configured_index.contains_node(&id, &source_root_id, &source_path)
+    } else {
+        bool_field(value, &["configured"]).unwrap_or(false)
+    };
 
     Some(DxWorkflowNodeSummary {
         id,
@@ -199,10 +204,8 @@ fn workflow_node_row(
         trust: workflow_node_trust_summary(value),
         source_package_version: display_string_field(value, &["source_package_version"])
             .unwrap_or_else(|| "missing_source_package_version".to_string()),
-        source_root_id: display_string_field(value, &["source_root_id"])
-            .unwrap_or_else(|| "missing_source_root_id".to_string()),
-        source_path: display_string_field(value, &["source_path"])
-            .unwrap_or_else(|| "missing_source_path".to_string()),
+        source_root_id,
+        source_path,
     })
 }
 
