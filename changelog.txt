@@ -1,3 +1,19 @@
+[2026-06-12] - Social Receipt Display Redaction
+
+CHANGED:
+- Social/provider account cards now route visible provider, platform, label, status, auth, QR, credential, receipt-history, and next-action text through the DX Agent bridge display helpers.
+- Social connect/disconnect action summaries now route visible receipt-backed status, platform, label, connect-method, safe-config, and next-action text through the same redacting display helpers.
+- Receipt-history display is bounded before it reaches the UI, and focused tests/source guards now cover secret-like account/action receipt fields.
+
+PASSED:
+- `node --test script\dx-agent-bridge-source.test.ts`
+- `rustfmt --edition 2024 --check crates\agent_ui\src\dx_agent_bridge\runtime.rs crates\agent_ui\src\dx_agent_bridge\runtime_connection_tests.rs`
+- `git diff --check`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" ...` returned no matches across touched source, guard, and handoff files.
+
+NOTES:
+- Cargo/build/native visual proof and `just run` remain deferred by instruction.
+
 [2026-06-12] - Configured Plugin Authorization Hardening
 
 CHANGED:

@@ -630,8 +630,40 @@ test("DX Agent bridge exposes receipt-backed connection cards and trusted tool b
   );
   assert.doesNotMatch(runtime, /credential_health:[\s\S]{0,220}"present"/);
   assert.doesNotMatch(runtimeProviderModels, /credential_health:[\s\S]{0,220}"present"/);
-  assert.match(runtime, /receipt_history: string_array_field\(account, &\["receipt_history"\]\)/);
+  for (const field of [
+    "provider_id",
+    "provider",
+    "platform",
+    "label",
+    "status",
+    "account_state",
+    "auth_method",
+    "connect_method",
+    "qr_capability",
+    "credential_health",
+    "credential_expires_at",
+    "credential_error",
+    "last_error",
+    "next_action",
+  ]) {
+    assert.match(
+      runtime,
+      new RegExp(`display_string_field\\([\\s\\S]{0,96}&\\["${field}"\\]`),
+      `visible social field ${field} should use display_string_field`,
+    );
+  }
+  assert.match(runtime, /receipt_history: display_string_array_field\(account, &\["receipt_history"\], 8\)/);
+  const socialAccountsStart = runtime.indexOf("pub(super) fn social_accounts");
+  const socialAccountsEnd = runtime.indexOf("#[derive(Clone, Copy)]", socialAccountsStart);
+  assert.ok(socialAccountsStart >= 0 && socialAccountsEnd > socialAccountsStart);
+  const socialAccounts = runtime.slice(socialAccountsStart, socialAccountsEnd);
+  assert.doesNotMatch(
+    socialAccounts,
+    /(?:provider_id|platform|label|status|account_state|auth_method|qr_capability|credential_health|credential_expires_at|credential_error|receipt_history|next_action):\s*string_(?:array_)?field\(/,
+  );
   assert.match(runtimeConnectionTests, /social_connection_cards_parse_auth_health_and_receipt_history/);
+  assert.match(runtimeConnectionTests, /social_connection_cards_redact_visible_account_fields/);
+  assert.match(runtimeConnectionTests, /social_action_summary_redacts_visible_receipt_fields/);
   assert.match(runtimeConnectionTests, /trusted_tool_bridge_summary_requires_receipt_authority/);
 });
 

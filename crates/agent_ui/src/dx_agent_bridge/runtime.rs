@@ -1,5 +1,6 @@
 use serde_json::Value;
 
+use self::runtime_display::{display_string_array_field, display_string_field};
 use super::{
     DxAgentRowAction, DxAgentSocialAccount, DxAgentSocialActionSummary, DxConnectedAccountsSummary,
     array_field, bool_field, is_dx_agents_command, is_public_dx_agents_command,
@@ -40,47 +41,53 @@ pub(super) fn social_accounts(value: &Value) -> Vec<DxAgentSocialAccount> {
                 .iter()
                 .take(12)
                 .map(|account| DxAgentSocialAccount {
-                    provider_id: string_field(account, &["provider_id"])
-                        .or_else(|| string_field(account, &["provider"]))
-                        .or_else(|| string_field(account, &["platform"]))
+                    provider_id: display_string_field(account, &["provider_id"])
+                        .or_else(|| display_string_field(account, &["provider"]))
+                        .or_else(|| display_string_field(account, &["platform"]))
                         .unwrap_or_else(|| "unknown-provider".to_string()),
-                    platform: string_field(account, &["platform"])
+                    platform: display_string_field(account, &["platform"])
                         .unwrap_or_else(|| "unknown".to_string()),
-                    label: string_field(account, &["label"])
+                    label: display_string_field(account, &["label"])
                         .unwrap_or_else(|| "Account".to_string()),
-                    status: string_field(account, &["status"])
+                    status: display_string_field(account, &["status"])
                         .unwrap_or_else(|| "unknown".to_string()),
-                    account_state: string_field(account, &["account_state"]).unwrap_or_else(|| {
-                        if bool_field(account, &["connected"]).unwrap_or(false) {
-                            "connected".to_string()
-                        } else if bool_field(account, &["configured"]).unwrap_or(false) {
-                            "configured".to_string()
-                        } else {
-                            "missing_auth".to_string()
-                        }
-                    }),
-                    auth_method: string_field(account, &["auth_method"])
-                        .or_else(|| string_field(account, &["connect_method"]))
+                    account_state: display_string_field(account, &["account_state"])
+                        .unwrap_or_else(|| {
+                            if bool_field(account, &["connected"]).unwrap_or(false) {
+                                "connected".to_string()
+                            } else if bool_field(account, &["configured"]).unwrap_or(false) {
+                                "configured".to_string()
+                            } else {
+                                "missing_auth".to_string()
+                            }
+                        }),
+                    auth_method: display_string_field(account, &["auth_method"])
+                        .or_else(|| display_string_field(account, &["connect_method"]))
                         .unwrap_or_else(|| "unknown".to_string()),
-                    qr_capability: string_field(account, &["qr_capability"]).unwrap_or_else(|| {
-                        if bool_field(account, &["qr_connect_supported"]).unwrap_or(false) {
-                            "available".to_string()
-                        } else {
-                            "unavailable".to_string()
-                        }
-                    }),
-                    credential_health: string_field(account, &["credential_health"])
+                    qr_capability: display_string_field(account, &["qr_capability"])
+                        .unwrap_or_else(|| {
+                            if bool_field(account, &["qr_connect_supported"]).unwrap_or(false) {
+                                "available".to_string()
+                            } else {
+                                "unavailable".to_string()
+                            }
+                        }),
+                    credential_health: display_string_field(account, &["credential_health"])
                         .unwrap_or_else(|| "unknown".to_string()),
-                    credential_expires_at: string_field(account, &["credential_expires_at"]),
-                    credential_error: string_field(account, &["credential_error"])
-                        .or_else(|| string_field(account, &["last_error"])),
-                    receipt_history: string_array_field(account, &["receipt_history"]),
+                    credential_expires_at: display_string_field(
+                        account,
+                        &["credential_expires_at"],
+                    ),
+                    credential_error: display_string_field(account, &["credential_error"])
+                        .or_else(|| display_string_field(account, &["last_error"])),
+                    receipt_history: display_string_array_field(account, &["receipt_history"], 8),
                     configured: bool_field(account, &["configured"]).unwrap_or(false),
                     connected: bool_field(account, &["connected"]).unwrap_or(false),
                     qr_connect_supported: bool_field(account, &["qr_connect_supported"])
                         .unwrap_or(false),
                     actions: social_row_actions(account),
-                    next_action: string_field(account, &["next_action"]).unwrap_or_default(),
+                    next_action: display_string_field(account, &["next_action"])
+                        .unwrap_or_default(),
                 })
                 .collect()
         })
@@ -117,7 +124,7 @@ pub(super) fn social_action_summary(
         action,
         present: value.is_some(),
         status: value
-            .and_then(|value| string_field(value, &["status"]))
+            .and_then(|value| display_string_field(value, &["status"]))
             .unwrap_or_else(|| {
                 if root_exists {
                     waiting_status.to_string()
@@ -126,10 +133,10 @@ pub(super) fn social_action_summary(
                 }
             }),
         platform: account
-            .and_then(|account| string_field(account, &["platform"]))
+            .and_then(|account| display_string_field(account, &["platform"]))
             .unwrap_or_else(|| "unknown".to_string()),
         label: account
-            .and_then(|account| string_field(account, &["label"]))
+            .and_then(|account| display_string_field(account, &["label"]))
             .unwrap_or_else(|| "Social account".to_string()),
         connected: account.and_then(|account| bool_field(account, &["connected"])),
         connect_supported: flow
@@ -145,7 +152,7 @@ pub(super) fn social_action_summary(
             .and_then(|flow| bool_field(flow, &["link_supported"]))
             .unwrap_or(false),
         connect_method: flow
-            .and_then(|flow| string_field(flow, &["connect_method"]))
+            .and_then(|flow| display_string_field(flow, &["connect_method"]))
             .unwrap_or_else(|| "none".to_string()),
         manual_revoke_required: flow
             .and_then(|flow| bool_field(flow, &["manual_revoke_required"]))
@@ -154,10 +161,10 @@ pub(super) fn social_action_summary(
             .and_then(|flow| bool_field(flow, &["explicit_user_action_required"]))
             .unwrap_or(false),
         safe_config_state: flow
-            .and_then(|flow| string_field(flow, &["safe_config_state"]))
+            .and_then(|flow| display_string_field(flow, &["safe_config_state"]))
             .unwrap_or_else(|| "unknown".to_string()),
         next_action: value
-            .and_then(|value| string_field(value, &["next_action"]))
+            .and_then(|value| display_string_field(value, &["next_action"]))
             .unwrap_or_else(|| command.to_string()),
     }
 }

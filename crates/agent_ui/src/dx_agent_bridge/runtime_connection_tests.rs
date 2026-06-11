@@ -1,7 +1,7 @@
 use serde_json::json;
 
 use super::super::trusted_tool_bridge_summary;
-use super::social_accounts;
+use super::{DxAgentSocialActionKind, social_accounts, social_action_summary};
 
 #[test]
 fn social_connection_cards_parse_auth_health_and_receipt_history() {
@@ -17,7 +17,7 @@ fn social_connection_cards_parse_auth_health_and_receipt_history() {
             "qr_capability": "blocked_missing_device_code",
             "credential_health": "expired",
             "credential_expires_at": "2026-06-08T00:00:00Z",
-            "credential_error": "refresh token expired",
+            "credential_error": "reauth required",
             "configured": true,
             "connected": false,
             "qr_connect_supported": true,
@@ -32,20 +32,53 @@ fn social_connection_cards_parse_auth_health_and_receipt_history() {
     let accounts = social_accounts(&receipt);
 
     assert_eq!(accounts.len(), 1);
-    assert_eq!(accounts[0].provider_id, "github");
-    assert_eq!(accounts[0].account_state, "expired");
-    assert_eq!(accounts[0].auth_method, "oauth_device");
-    assert_eq!(accounts[0].qr_capability, "blocked_missing_device_code");
-    assert_eq!(accounts[0].credential_health, "expired");
+    let account = &accounts[0];
+    assert_eq!(account.provider_id, "github");
+    assert_eq!(account.account_state, "expired");
+    assert_eq!(account.auth_method, "oauth_device");
+    assert_eq!(account.qr_capability, "blocked_missing_device_code");
+    assert_eq!(account.credential_health, "expired");
     assert_eq!(
-        accounts[0].credential_expires_at.as_deref(),
+        account.credential_expires_at.as_deref(),
         Some("2026-06-08T00:00:00Z")
     );
-    assert_eq!(
-        accounts[0].credential_error.as_deref(),
-        Some("refresh token expired")
-    );
-    assert_eq!(accounts[0].receipt_history.len(), 2);
+    assert_eq!(account.credential_error.as_deref(), Some("reauth required"));
+    assert_eq!(account.receipt_history.len(), 2);
+}
+
+#[test]
+fn social_connection_cards_redact_visible_account_fields() {
+    let receipt = json!({
+        "accounts": [{
+            "label": "token=ghp_secret_user",
+            "credential_error": "refresh_token=secret",
+            "receipt_history": ["social-list-latest.json", "access_token=secret"],
+            "next_action": "dx agents social connect --api-key secret --json"
+        }]
+    });
+
+    let accounts = social_accounts(&receipt);
+
+    assert_eq!(accounts.len(), 1);
+    assert_eq!(accounts[0].label, "<redacted>");
+    assert_eq!(accounts[0].credential_error.as_deref(), Some("<redacted>"));
+    assert_eq!(accounts[0].receipt_history[1], "<redacted>");
+    assert_eq!(accounts[0].next_action, "<redacted>");
+}
+
+#[test]
+fn social_action_summary_redacts_visible_receipt_fields() {
+    let receipt = json!({
+        "account": {"label": "password=secret"},
+        "flow": {"safe_config_state": "token=secret"},
+        "next_action": "dx agents social connect --client-secret secret --json"
+    });
+
+    let summary = social_action_summary(Some(&receipt), true, DxAgentSocialActionKind::Connect);
+
+    assert_eq!(summary.label, "<redacted>");
+    assert_eq!(summary.safe_config_state, "<redacted>");
+    assert_eq!(summary.next_action, "<redacted>");
 }
 
 #[test]
