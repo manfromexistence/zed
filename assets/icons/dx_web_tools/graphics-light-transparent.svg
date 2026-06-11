@@ -1,0 +1,14 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Graphics light transparent logo dx-ecosystem-logos</title>
+  <desc>light monochrome geometric symbol with transparent background for Graphics.</desc>
+  <metadata><![CDATA[{"kind":"light-transparent","tool":"graphics","label":"Graphics","letter":"G","primary_repo":"G:/Canva","legacy_repo":"","collection":"web-preview","source_project":"Canva","asset_family":"dx-ecosystem-logos","brand":"DX pure symbol logo family: transparent smooth rainbow marks plus monochrome background and transparent light/dark variants"}]]></metadata>
+  <g color="#000000">
+    <g color="currentColor" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M746 328C660 228 464 206 342 308C224 406 226 622 346 724C470 830 672 800 748 668V548H554" stroke-width="104"/>
+      <path d="M528 326H682C708 326 734 352 734 378V532C734 558 708 584 682 584H528C502 584 476 558 476 532V378C476 352 502 326 528 326Z" stroke-width="52"/>
+      <circle cx="558" cy="424" r="42" fill="currentColor" stroke="none"/>
+      <path d="M510 548L594 462L682 548Z" fill="currentColor" stroke="none"/>
+      <path d="M632 604H718C732 604 746 618 746 632V672C746 686 732 700 718 700H632C618 700 604 686 604 672V632C604 618 618 604 632 604Z" stroke-width="44"/>
+    </g>
+  </g>
+</svg>

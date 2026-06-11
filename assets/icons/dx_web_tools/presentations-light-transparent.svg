@@ -1,0 +1,13 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Presentations light transparent logo dx-ecosystem-logos</title>
+  <desc>light monochrome geometric symbol with transparent background for Presentations.</desc>
+  <metadata><![CDATA[{"kind":"light-transparent","tool":"presentations","label":"Presentations","letter":"P","primary_repo":"G:/Powerpoint","legacy_repo":"","collection":"web-preview","source_project":"Powerpoint","asset_family":"dx-ecosystem-logos","brand":"DX pure symbol logo family: transparent smooth rainbow marks plus monochrome background and transparent light/dark variants"}]]></metadata>
+  <g color="#000000">
+    <g color="currentColor" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M318 812V190H584C718 190 798 282 798 414C798 546 718 638 584 638H318" stroke-width="104"/>
+      <path d="M488 292H712C729 292 746 309 746 326V480C746 497 729 514 712 514H488C471 514 454 497 454 480V326C454 309 471 292 488 292Z" stroke-width="52"/>
+      <path d="M588 514V688M478 688H700" stroke-width="52"/>
+      <path d="M538 356L650 410L538 464Z" fill="currentColor" stroke="none"/>
+    </g>
+  </g>
+</svg>

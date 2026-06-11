@@ -696,6 +696,60 @@ const COMPOSER_EMPTY_STATE_MAX_LINES: usize = 8;
 const COMPOSER_COLLAPSED_MAX_HEIGHT_REMS: f32 = 18.;
 const COMPOSER_COLLAPSED_EDITOR_MAX_HEIGHT_REMS: f32 = 9.;
 
+struct DxWebToolLogo {
+    label: &'static str,
+    light_path: &'static str,
+    dark_path: &'static str,
+}
+
+impl DxWebToolLogo {
+    fn path_for_theme(&self, is_light: bool) -> &'static str {
+        if is_light {
+            self.light_path
+        } else {
+            self.dark_path
+        }
+    }
+}
+
+const DX_WEB_TOOL_LOGOS: &[DxWebToolLogo] = &[
+    DxWebToolLogo {
+        label: "Design",
+        light_path: "icons/dx_web_tools/design-light-transparent.svg",
+        dark_path: "icons/dx_web_tools/design-dark-transparent.svg",
+    },
+    DxWebToolLogo {
+        label: "Graphics",
+        light_path: "icons/dx_web_tools/graphics-light-transparent.svg",
+        dark_path: "icons/dx_web_tools/graphics-dark-transparent.svg",
+    },
+    DxWebToolLogo {
+        label: "Presentations",
+        light_path: "icons/dx_web_tools/presentations-light-transparent.svg",
+        dark_path: "icons/dx_web_tools/presentations-dark-transparent.svg",
+    },
+    DxWebToolLogo {
+        label: "Spreadsheets",
+        light_path: "icons/dx_web_tools/spreadsheets-light-transparent.svg",
+        dark_path: "icons/dx_web_tools/spreadsheets-dark-transparent.svg",
+    },
+    DxWebToolLogo {
+        label: "Video",
+        light_path: "icons/dx_web_tools/video-light-transparent.svg",
+        dark_path: "icons/dx_web_tools/video-dark-transparent.svg",
+    },
+    DxWebToolLogo {
+        label: "Music",
+        light_path: "icons/dx_web_tools/music-light-transparent.svg",
+        dark_path: "icons/dx_web_tools/music-dark-transparent.svg",
+    },
+    DxWebToolLogo {
+        label: "Shader",
+        light_path: "icons/dx_web_tools/shader-light-transparent.svg",
+        dark_path: "icons/dx_web_tools/shader-dark-transparent.svg",
+    },
+];
+
 #[derive(Clone, Copy)]
 struct ResponseAnchorScrollRequest {
     entry_ix: usize,
@@ -5734,37 +5788,66 @@ impl ThreadView {
         }
     }
 
+    fn render_dx_web_tool_logo_strip(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let is_light = cx.theme().appearance.is_light();
+
+        h_flex()
+            .id("dx-web-tool-logo-strip")
+            .gap_0p5()
+            .items_center()
+            .children(DX_WEB_TOOL_LOGOS.iter().map(|logo| {
+                div()
+                    .id(("dx-web-tool-logo", logo.label))
+                    .size_5()
+                    .flex_none()
+                    .rounded_sm()
+                    .child(
+                        Icon::from_path(logo.path_for_theme(is_light))
+                            .size(IconSize::Small)
+                            .color(Color::Muted),
+                    )
+                    .tooltip(Tooltip::text(logo.label))
+            }))
+    }
+
     fn render_add_context_button(&mut self, cx: &mut Context<Self>) -> impl IntoElement {
         let focus_handle = self.message_editor.focus_handle(cx);
         let weak_self = cx.weak_entity();
 
-        PopoverMenu::new("add-context-menu")
-            .trigger_with_tooltip(
-                IconButton::new("add-context", IconName::Plus)
-                    .icon_size(IconSize::Small)
-                    .icon_color(Color::Muted),
-                {
-                    move |_window, cx| {
-                        Tooltip::for_action_in(
-                            "Add Context",
-                            &OpenAddContextMenu,
-                            &focus_handle,
-                            cx,
-                        )
-                    }
-                },
+        h_flex()
+            .id("dx-add-context-web-tools")
+            .gap_0p5()
+            .items_center()
+            .child(self.render_dx_web_tool_logo_strip(cx))
+            .child(
+                PopoverMenu::new("add-context-menu")
+                    .trigger_with_tooltip(
+                        IconButton::new("add-context", IconName::Plus)
+                            .icon_size(IconSize::Small)
+                            .icon_color(Color::Muted),
+                        {
+                            move |_window, cx| {
+                                Tooltip::for_action_in(
+                                    "Add Context",
+                                    &OpenAddContextMenu,
+                                    &focus_handle,
+                                    cx,
+                                )
+                            }
+                        },
+                    )
+                    .anchor(gpui::Anchor::BottomLeft)
+                    .with_handle(self.add_context_menu_handle.clone())
+                    .offset(gpui::Point {
+                        x: px(0.0),
+                        y: px(-2.0),
+                    })
+                    .menu(move |window, cx| {
+                        weak_self
+                            .update(cx, |this, cx| this.build_add_context_menu(window, cx))
+                            .ok()
+                    }),
             )
-            .anchor(gpui::Anchor::BottomLeft)
-            .with_handle(self.add_context_menu_handle.clone())
-            .offset(gpui::Point {
-                x: px(0.0),
-                y: px(-2.0),
-            })
-            .menu(move |window, cx| {
-                weak_self
-                    .update(cx, |this, cx| this.build_add_context_menu(window, cx))
-                    .ok()
-            })
     }
 
     fn build_add_context_menu(

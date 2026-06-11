@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const read = (path: string) => readFileSync(path, "utf8");
@@ -297,6 +297,42 @@ test("Agent panel and fullscreen AI screen share the Liquid Glass chat input con
     /render_message_editor|render_liquid_glass_chat_input_surface|render_agent_liquid_glass_chat_input_surface|message_editor\.clone\(\)|agent-liquid-glass-chat-input-(?:container|surface)/,
     "Workspace fullscreen AI host must not define a separate flat chat input; it must mount the zoomed AgentPanel",
   );
+});
+
+test("Agent chat input add-context trigger carries DX web tool transparent logos", () => {
+  const addContextButton = functionBody(threadView, "render_add_context_button");
+  const logoStrip = functionBody(threadView, "render_dx_web_tool_logo_strip");
+
+  for (const tool of [
+    "design",
+    "graphics",
+    "presentations",
+    "spreadsheets",
+    "video",
+    "music",
+    "shader",
+  ]) {
+    for (const appearance of ["light", "dark"]) {
+      assert.ok(
+        existsSync(`assets/icons/dx_web_tools/${tool}-${appearance}-transparent.svg`),
+        `missing ${tool} ${appearance} transparent logo asset`,
+      );
+    }
+
+    assert.match(
+      threadView,
+      new RegExp(`icons/dx_web_tools/${tool}-(?:light|dark)-transparent\\.svg`),
+      `missing ${tool} transparent logo assets`,
+    );
+  }
+
+  assert.match(threadView, /struct DxWebToolLogo/);
+  assert.match(threadView, /const DX_WEB_TOOL_LOGOS: &\[DxWebToolLogo\]/);
+  assert.match(logoStrip, /cx\.theme\(\)\.appearance\.is_light\(\)/);
+  assert.match(logoStrip, /Icon::from_path\(logo\.path_for_theme\(is_light\)\)/);
+  assert.match(logoStrip, /\.id\("dx-web-tool-logo-strip"\)/);
+  assert.match(addContextButton, /self\.render_dx_web_tool_logo_strip\(cx\)/);
+  assert.match(addContextButton, /IconButton::new\("add-context", IconName::Plus\)/);
 });
 
 test("Agent Liquid Glass settings preserve the tuned recovered Rust effect values", () => {

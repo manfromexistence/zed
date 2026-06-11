@@ -1,0 +1,8 @@
+id = "dx-icon"
+name = "DX Icon"
+version = "1.3.1-dx.1"
+schema_version = 1
+authors = ["DX <dx@local>", "Zed Industries <support@zed.dev>"]
+description = "DX-branded Material Design file and folder icons."
+repository = "https://github.com/zed-extensions/material-icon-theme"
+icon_themes = ["icon_themes/dx-icon.json"]

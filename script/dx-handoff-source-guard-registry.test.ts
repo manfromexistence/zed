@@ -73,6 +73,7 @@ const registeredGuardScripts = [
   "script/dx-breadcrumbs-source.test.ts",
   "script/dx-icon-picker-source.test.ts",
   "script/dx-icon-system-source.test.ts",
+  "script/dx-icon-theme-source.test.ts",
   "script/dx-gpui-gradient-source.test.ts",
   "script/dx-language-selector-source.test.ts",
   "script/dx-toolchain-selector-source.test.ts",
@@ -223,26 +224,25 @@ test("current handoff names the no-runtime-proof production-readiness boundary",
   const todo = read("todo.txt");
   const currentVerificationLane =
     dx.match(/## Current Verification Lane[\s\S]*?(?=\n## Lightweight Source Guard Registry)/)?.[0] ?? "";
-  const currentPanelLane =
-    currentVerificationLane.match(/- Current DX panel GPUI tenth-pass polish:[^\n]+/)?.[0] ?? "";
-  const currentTodoState = todo.split(/\r?\n/).slice(0, 18).join("\n");
+  const currentLogoIconLane =
+    currentVerificationLane.match(/- Current DX logo and icon-theme source slice:[^\n]+/)?.[0] ?? "";
 
-  assert.ok(currentPanelLane, "expected current tenth-pass DX panel GPUI handoff lane");
-  assert.match(currentPanelLane, /source guards/);
-  assert.match(currentPanelLane, /Media local asset rows now use sparse `ListItem` chrome/);
-  assert.match(currentPanelLane, /UI catalog result rows now use sparse `ListItem` chrome/);
-  assert.match(currentPanelLane, /Forge empty rows now keep truncated copy readable through tooltips/);
-  assert.match(currentPanelLane, /Project media gallery headers now share lower-bound capped-scan count labels/);
-  assert.match(currentPanelLane, /Check status-strip receipt\/refresh actions are keyboard-reachable/);
-  assert.match(currentPanelLane, /Cargo, build, `just run`, native launch, local servers, browser automation, and runtime visual proof remain deferred by instruction/);
-  assert.doesNotMatch(currentPanelLane, /runtime-green|launch-ready|production-ready/i);
-  assert.match(currentTodoState, /DX panel GPUI tenth-pass polish is source-verified/);
+  assert.ok(currentLogoIconLane, "expected current DX logo and icon-theme source lane");
+  assert.match(currentLogoIconLane, /Agent chat input Add Context `\+` trigger/);
+  assert.match(currentLogoIconLane, /seven official transparent DX web-tool logos/);
+  assert.match(currentLogoIconLane, /theme-aware light\/dark variants/);
+  assert.match(currentLogoIconLane, /Project Panel to the vendored `DX Icon` theme/);
+  assert.match(currentLogoIconLane, /zed-extensions\/material-icon-theme` v1\.3\.1/);
+  assert.match(currentLogoIconLane, /Focused Node source guards/);
+  assert.match(currentLogoIconLane, /null-byte scan/);
+  assert.match(currentLogoIconLane, /Cargo, build, `just run`, native launch, local servers, browser automation, and visual runtime proof remain deferred by instruction/);
+  assert.doesNotMatch(currentLogoIconLane, /runtime-green|launch-ready|production-ready/i);
+  assert.match(todo, /Agent chat input and Project Panel icon theme branding are source-verified/);
   assert.match(dx, /Current production readiness is source-audited only/i);
   assert.match(
     dx,
     /Skipped by direct instruction: Cargo build\/check\/test\/clippy, `just run`, local servers, browser automation, and live editor runtime proof\./,
   );
-  assert.doesNotMatch(currentTodoState, /Production-readiness source audit/);
   assert.match(todo, /Skipped by direct instruction: Cargo build\/check\/test\/clippy, `just run`, local servers, browser automation, and live editor runtime proof\./);
 });
 

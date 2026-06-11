@@ -1,0 +1,12 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Shader dark transparent logo dx-ecosystem-logos</title>
+  <desc>dark monochrome geometric symbol with transparent background for Shader.</desc>
+  <metadata><![CDATA[{"kind":"dark-transparent","tool":"shader","label":"Shader","letter":"S","primary_repo":"G:/Shader","legacy_repo":"","collection":"web-preview","source_project":"Shader","asset_family":"dx-ecosystem-logos","brand":"DX pure symbol logo family: transparent smooth rainbow marks plus monochrome background and transparent light/dark variants"}]]></metadata>
+  <g color="#FFFFFF">
+    <g color="currentColor" fill="currentColor" stroke="none">
+      <path d="M348 198H640L788 346L650 488H428L300 360H560L626 296H430Z"/>
+      <path d="M384 514H636L760 638L628 760H386L252 626H514L580 574H438Z"/>
+      <path d="M386 786H638L766 884L636 948H340L226 834H506L578 786Z"/>
+    </g>
+  </g>
+</svg>

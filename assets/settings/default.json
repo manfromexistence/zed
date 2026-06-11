@@ -11,7 +11,7 @@
     "light": "Dx Light",
     "dark": "Dx Dark",
   },
-  "icon_theme": "Zed (Default)",
+  "icon_theme": "DX Icon",
   // The name of a base set of key bindings to use.
   // This setting can take six values, each named after another
   // text editor:

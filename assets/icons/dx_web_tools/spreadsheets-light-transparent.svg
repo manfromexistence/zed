@@ -1,0 +1,14 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Spreadsheets light transparent logo dx-ecosystem-logos</title>
+  <desc>light monochrome geometric symbol with transparent background for Spreadsheets.</desc>
+  <metadata><![CDATA[{"kind":"light-transparent","tool":"spreadsheets","label":"Spreadsheets","letter":"S","primary_repo":"G:/Excel","legacy_repo":"","collection":"web-preview","source_project":"Excel","asset_family":"dx-ecosystem-logos","brand":"DX pure symbol logo family: transparent smooth rainbow marks plus monochrome background and transparent light/dark variants"}]]></metadata>
+  <g color="#000000">
+    <g color="currentColor" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M724 292H398C320 292 274 338 274 410C274 480 326 518 404 518H628C708 518 758 562 758 634C758 718 694 766 596 766H306" stroke-width="96"/>
+      <path d="M382 372H688M352 518H734M330 664H650" stroke-width="44"/>
+      <path d="M458 310V736M588 310V736" stroke-width="44"/>
+      <circle cx="720" cy="292" r="34" fill="currentColor" stroke="none"/>
+      <circle cx="306" cy="766" r="34" fill="currentColor" stroke="none"/>
+    </g>
+  </g>
+</svg>

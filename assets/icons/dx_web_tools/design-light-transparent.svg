@@ -1,0 +1,17 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Design light transparent logo dx-ecosystem-logos</title>
+  <desc>light monochrome geometric symbol with transparent background for Design.</desc>
+  <metadata><![CDATA[{"kind":"light-transparent","tool":"design","label":"Design","letter":"D","primary_repo":"G:/Figma","legacy_repo":"","collection":"web-preview","source_project":"Figma","asset_family":"dx-ecosystem-logos","brand":"DX pure symbol logo family: transparent smooth rainbow marks plus monochrome background and transparent light/dark variants"}]]></metadata>
+  <g color="#000000">
+    <g color="currentColor" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M318 190V812H506C684 812 796 682 796 512C796 342 684 190 506 190H318" stroke-width="104"/>
+      <path d="M414 694C506 598 598 522 724 462" stroke-width="52"/>
+      <path d="M414 694L498 610M724 462L636 520" stroke-width="44"/>
+      <circle cx="414" cy="694" r="34" fill="currentColor" stroke="none"/>
+      <circle cx="724" cy="462" r="34" fill="currentColor" stroke="none"/>
+      <path d="M604 306L772 474L664 582L496 414Z" stroke-width="52"/>
+      <path d="M496 414L452 642L664 582Z" stroke-width="52"/>
+      <path d="M544 536L626 454" stroke-width="44"/>
+    </g>
+  </g>
+</svg>

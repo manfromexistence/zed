@@ -1,0 +1,13 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Video light transparent logo dx-ecosystem-logos</title>
+  <desc>light monochrome geometric symbol with transparent background for Video.</desc>
+  <metadata><![CDATA[{"kind":"light-transparent","tool":"video","label":"Video","letter":"V","primary_repo":"G:/Kapwing","legacy_repo":"","collection":"web-preview","source_project":"Kapwing","asset_family":"dx-ecosystem-logos","brand":"DX pure symbol logo family: transparent smooth rainbow marks plus monochrome background and transparent light/dark variants"}]]></metadata>
+  <g color="#000000">
+    <g color="currentColor" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M240 202L512 822L784 202" stroke-width="104"/>
+      <path d="M314 332C372 386 406 448 418 512C406 576 372 638 314 692" stroke-width="48"/>
+      <path d="M710 332C652 386 618 448 606 512C618 576 652 638 710 692" stroke-width="48"/>
+      <path d="M452 364L704 512L452 660Z" fill="currentColor" stroke="none"/>
+    </g>
+  </g>
+</svg>

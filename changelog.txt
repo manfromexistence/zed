@@ -1,3 +1,22 @@
+[2026-06-11] - DX Logos And Icon Theme Branding
+
+ADDED:
+- Added seven official DX web-tool transparent light/dark logo pairs under `assets/icons/dx_web_tools` for Design, Graphics, Presentations, Spreadsheets, Video, Music, and Shader.
+- Added `extensions/dx-icon` as a DX-branded, vendored copy of `zed-extensions/material-icon-theme` tag `v1.3.1`, preserving upstream license and attribution.
+- Added `script\dx-icon-theme-source.test.ts` to guard the DX Icon default, vendored extension contract, generator rebrand path, and registry-discoverable source guard entry.
+
+CHANGED:
+- The Agent chat input Add Context `+` trigger now carries a compact DX web-tool logo strip using the real `G:\logo` transparent assets and theme-aware light/dark variants.
+- The default icon theme is now `DX Icon`, with the built-in fallback renamed and the vendored icon extension exposing the matching theme name for Project Panel file/folder icons.
+- The vendored icon generator metadata now writes `dx-icon.json` and preserves `DX Icon` / `DX Icon Light` names instead of regenerating upstream Material theme names.
+
+PASSED:
+- `node --test script\dx-agent-composer-liquid-glass-source.test.ts script\dx-icon-theme-source.test.ts`
+- `rustfmt --edition 2024 --config skip_children=true --check crates\agent_ui\src\conversation_view\thread_view.rs crates\theme\src\icon_theme.rs`
+
+NOTES:
+- Cargo/build/native runtime proof remains deferred by instruction.
+
 [2026-06-11] - Agent Rail Liquid Glass Blur And Chromatic Tuning
 
 CHANGED:

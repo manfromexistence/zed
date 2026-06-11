@@ -1,0 +1,13 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Music light transparent logo dx-ecosystem-logos</title>
+  <desc>light monochrome geometric symbol with transparent background for Music.</desc>
+  <metadata><![CDATA[{"kind":"light-transparent","tool":"music","label":"Music","letter":"M","primary_repo":"G:/Suno","legacy_repo":"","collection":"web-preview","source_project":"Suno","asset_family":"dx-ecosystem-logos","brand":"DX pure symbol logo family: transparent smooth rainbow marks plus monochrome background and transparent light/dark variants"}]]></metadata>
+  <g color="#000000">
+    <g color="currentColor" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M222 820V214L512 604L802 214V820" stroke-width="96"/>
+      <path d="M644 292V642" stroke-width="58"/>
+      <path d="M644 292L792 256V374L644 414Z" fill="currentColor" stroke="none"/>
+      <path d="M526 706C526 660 570 628 626 638C684 648 718 690 696 732C674 774 610 790 562 764C540 752 526 732 526 706Z" fill="currentColor" stroke="none"/>
+    </g>
+  </g>
+</svg>
