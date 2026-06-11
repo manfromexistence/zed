@@ -1,3 +1,23 @@
+[2026-06-11] - DX Plugins Card Catalog Composer Chrome
+
+CHANGED:
+- Workflow-node cards now use tooltip-backed contract chips for inputs, outputs, parameters, runtime/source metadata, and a min-height card shell so labels do not force fixed-card clipping.
+- Configure popovers now render sparse inset `ListItem` rows with bounded detail text and action tooltips instead of dense freeform rows.
+- Configured plugin rows and chat-composer triggers now show icons plus status and credential chips while keeping the surface prompt-only and avoiding runtime-ready wording.
+- The configured plugin composer strip now renders as a one-line toolbar with a count chip, bounded trigger labels, stable trigger height, and an overflow popover instead of wrapping or silently hiding extra configured plugins.
+- The Plugins catalog summary removes the duplicate inner headline, bounds category filter labels, hides the category strip when no nodes are indexed, and uses the receipt next-action message for missing catalogs.
+
+HARDENED:
+- Source guards now pin the prompt-only composer contract, overflow behavior, status-chip rendering, bounded category labels, tooltip-backed empty states, and the absence of old ready/runtime phrasing in this surface.
+- The composer prompt continues to exclude command strings, source paths, source roots, credential field names, and secret-like values.
+
+PASSED:
+- `rustfmt --edition 2024` on the touched Plugins/composer UI files.
+- `node --test script/dx-agent-workspaces-source.test.ts script/dx-agent-thread-view-source.test.ts`
+
+NOTES:
+- Cargo, `just run`, full builds, native Zed launch, visual runtime proof, local servers, and browser automation remain deferred by instruction.
+
 [2026-06-11] - DX Plugins Shared Workspace Chrome
 
 CHANGED:

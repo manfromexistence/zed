@@ -114,17 +114,21 @@ pub(super) fn screen_empty_state(
     label: impl Into<SharedString>,
     _cx: &App,
 ) -> AnyElement {
+    let label = label.into();
+    let tooltip = label.as_ref().to_string();
+
     ListItem::new(id)
         .inset(true)
         .spacing(ListItemSpacing::Sparse)
         .selectable(false)
         .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
         .child(
-            Label::new(label.into())
+            Label::new(label)
                 .size(LabelSize::Small)
                 .color(Color::Muted)
                 .truncate(),
         )
+        .tooltip(Tooltip::text(tooltip))
         .into_any_element()
 }
 

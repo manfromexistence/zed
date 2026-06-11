@@ -186,6 +186,7 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
   const screen = read("crates/agent_ui/src/dx_launch_workspace/tools_screen.rs");
   const catalogScreen = read("crates/agent_ui/src/dx_launch_workspace/tools_screen/catalog.rs");
   const detailScreen = read("crates/agent_ui/src/dx_launch_workspace/tools_screen/details.rs");
+  const screenChrome = read("crates/agent_ui/src/dx_launch_workspace/screen_chrome.rs");
   const workflowNodeScreen = read(
     "crates/agent_ui/src/dx_launch_workspace/tools_screen/workflow_nodes.rs",
   );
@@ -254,7 +255,13 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
   assert.match(catalogScreen, /filtered_node_indices/);
   assert.match(catalogScreen, /render_catalog_search\(/);
   assert.match(catalogScreen, /screen_empty_state\(/);
+  assert.match(catalogScreen, /catalog\.next_action\.clone\(\)/);
+  assert.match(catalogScreen, /bounded_plugin_category_filter_label/);
+  assert.match(catalogScreen, /\.when\(!catalog\.nodes\.is_empty\(\)/);
   assert.match(catalogScreen, /screen_section\(\s*"dx-configured-plugins"/);
+  assert.doesNotMatch(catalogScreen, /Run DX JS workflow-node catalog generation to load plugin metadata/);
+  assert.doesNotMatch(catalogScreen, /Headline::new\("Plugins"\)/);
+  assert.match(screenChrome, /screen_empty_state[\s\S]*Tooltip::text/);
   assert.doesNotMatch(catalogScreen, /EditorElement::new/);
   assert.doesNotMatch(catalogScreen, /KeyContext/);
   assert.doesNotMatch(catalogScreen, /TextStyle/);
@@ -313,6 +320,24 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
   assert.match(workflowNodeScreen, /selected: bool/);
   assert.match(workflowNodeScreen, /on_select: impl Fn/);
   assert.match(workflowNodeScreen, /hover\(\|this\| this\.bg/);
+  assert.match(workflowNodeScreen, /tooltip\(Tooltip::text\(plugin_card_tooltip\(node\)\)\)/);
+  assert.match(workflowNodeScreen, /fn plugin_card_tooltip\(node: &DxWorkflowNodeSummary\) -> String/);
+  assert.match(workflowNodeScreen, /fn plugin_contract_chips\(node: &DxWorkflowNodeSummary\)/);
+  assert.match(workflowNodeScreen, /fn plugin_config_menu_row\(/);
+  assert.match(workflowNodeScreen, /ListItem::new\(id\)/);
+  assert.match(workflowNodeScreen, /fn configured_plugin_status_chips\(plugin: &DxConfiguredPluginSummary\)/);
+  assert.match(workflowNodeScreen, /fn configured_plugin_authorization_label\(plugin: &DxConfiguredPluginSummary\) -> &'static str/);
+  assert.match(workflowNodeScreen, /plugin\.approved_by_trusted_bridge/);
+  assert.match(workflowNodeScreen, /plugin\.writes_receipt/);
+  assert.match(workflowNodeScreen, /plugin\.secrets_exposed/);
+  assert.match(workflowNodeScreen, /plugin\.trust_policy/);
+  assert.match(workflowNodeScreen, /Chip::new\(plugin\.status\.clone\(\)\)/);
+  assert.match(workflowNodeScreen, /\.min_h\(rems_from_px\(110\.\)\)/);
+  assert.match(workflowNodeScreen, /\.inset\(true\)/);
+  assert.doesNotMatch(workflowNodeScreen, /"\{\} in \/ \{\} out \/ \{\} parameters"/);
+  assert.doesNotMatch(workflowNodeScreen, /format!\("\{\} \/ \{\}", plugin\.status, plugin\.credential_status\)/);
+  assert.doesNotMatch(workflowNodeScreen, /\.h\(rems_from_px\(110\.\)\)/);
+  assert.doesNotMatch(workflowNodeScreen, /"Ready"/);
   assert.match(pluginScreenSources, /render_plugin_config_menu/);
   assert.match(detailScreen, /catalog\.serializer_format\.clone\(\)/);
   assert.match(detailScreen, /catalog\.schema_version\.clone\(\)/);
@@ -410,9 +435,14 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
 
 test("Plugins workspace follows the Extensions-style GPUI catalog pattern", () => {
   const catalog = read("crates/agent_ui/src/dx_launch_workspace/tools_screen/catalog.rs");
+  const screenChrome = read("crates/agent_ui/src/dx_launch_workspace/screen_chrome.rs");
   const workflowNodes = read("crates/agent_ui/src/dx_launch_workspace/tools_screen/workflow_nodes.rs");
 
-  assert.match(catalog, /Headline::new\("Plugins"\)\.size\(HeadlineSize::Large\)/);
+  assert.doesNotMatch(catalog, /Headline::new\("Plugins"\)/);
+  assert.match(catalog, /catalog\.next_action\.clone\(\)/);
+  assert.match(catalog, /bounded_plugin_category_filter_label/);
+  assert.match(catalog, /\.when\(!catalog\.nodes\.is_empty\(\)/);
+  assert.match(screenChrome, /screen_empty_state[\s\S]*Tooltip::text/);
   assert.match(catalog, /ToggleButtonGroup::single_row\(\s*"dx-plugin-filter-buttons"/);
   assert.match(catalog, /uniform_list\(\s*"dx-workflow-node-plugins"/);
   assert.match(catalog, /border_b_1\(\)/);
@@ -423,20 +453,32 @@ test("Plugins workspace follows the Extensions-style GPUI catalog pattern", () =
   assert.match(catalog, /WithScrollbar/);
   assert.doesNotMatch(catalog, /\.take\(24\)/);
 
-  assert.match(workflowNodes, /\.h\(rems_from_px\(110\.\)\)/);
+  assert.match(workflowNodes, /\.min_h\(rems_from_px\(110\.\)\)/);
+  assert.doesNotMatch(workflowNodes, /\.h\(rems_from_px\(110\.\)\)/);
   assert.match(workflowNodes, /Chip::new\(node\.runtime\.clone\(\)\)/);
   assert.match(workflowNodes, /fn plugin_source_row\(node: &DxWorkflowNodeSummary\)/);
   assert.match(workflowNodes, /dx_icon\(DxUiIcon::Source\)/);
   assert.match(workflowNodes, /node\.source_package/);
   assert.match(workflowNodes, /node\.source_path/);
   assert.match(workflowNodes, /fn plugin_status_chips\(node: &DxWorkflowNodeSummary\)/);
+  assert.match(workflowNodes, /fn plugin_contract_chips\(node: &DxWorkflowNodeSummary\)/);
+  assert.match(workflowNodes, /fn plugin_card_tooltip\(node: &DxWorkflowNodeSummary\) -> String/);
+  assert.match(workflowNodes, /fn configured_plugin_status_chips\(plugin: &DxConfiguredPluginSummary\)/);
+  assert.match(workflowNodes, /fn configured_plugin_authorization_label\(plugin: &DxConfiguredPluginSummary\) -> &'static str/);
+  assert.match(workflowNodes, /plugin\.approved_by_trusted_bridge/);
+  assert.match(workflowNodes, /plugin\.writes_receipt/);
+  assert.match(workflowNodes, /plugin\.secrets_exposed/);
+  assert.match(workflowNodes, /plugin\.trust_policy/);
   assert.match(workflowNodes, /Chip::new\(plugin_configured_state_label\(node\)\)/);
+  assert.match(workflowNodes, /Chip::new\(plugin\.status\.clone\(\)\)/);
   assert.match(workflowNodes, /fn plugin_configured_state_label\(node: &DxWorkflowNodeSummary\) -> &'static str/);
   assert.match(workflowNodes, /node\.credential_status/);
   assert.match(workflowNodes, /node\.dynamic_option_count/);
+  assert.match(workflowNodes, /Tooltip::text\(plugin_card_tooltip\(node\)\)/);
   assert.match(workflowNodes, /bounded_plugin_card_text/);
   assert.match(workflowNodes, /"Configured"/);
-  assert.match(workflowNodes, /"Ready"/);
+  assert.match(workflowNodes, /"No Credentials"/);
+  assert.doesNotMatch(workflowNodes, /"Ready"/);
   assert.match(workflowNodes, /"Needs Setup"/);
   assert.match(workflowNodes, /render_plugin_config_menu\(node, panel\)/);
   assert.doesNotMatch(workflowNodes, /Badge|badge/);

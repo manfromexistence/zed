@@ -29,7 +29,7 @@ use language_model::{
     LanguageModelRegistry, Speed,
 };
 use settings::update_settings_file;
-use ui::{ButtonLike, SpinnerLabel, SpinnerVariant, SplitButton, SplitButtonStyle, Tab};
+use ui::{ButtonLike, Chip, SpinnerLabel, SpinnerVariant, SplitButton, SplitButtonStyle, Tab};
 use workspace::SERIALIZATION_THROTTLE_TIME;
 use workspace::notifications::NotificationId;
 
@@ -685,6 +685,9 @@ const RESPONSE_ANCHOR_SCROLL_RETRY_FRAMES: usize = 6;
 const FLOATING_MESSAGE_EDITOR_SAFE_PADDING_PX: f32 = 118.0;
 const MAX_VISIBLE_PROFILE_OPTION_SLOTS: usize = 4;
 const MAX_VISIBLE_CONFIGURED_PLUGIN_OPTIONS: usize = 6;
+const MAX_CONFIGURED_PLUGIN_TRIGGER_LABEL_CHARS: usize = 18;
+const MAX_CONFIGURED_PLUGIN_MENU_LABEL_CHARS: usize = 40;
+const MAX_CONFIGURED_PLUGIN_ACTION_LABEL_CHARS: usize = 42;
 const COMPOSER_MIN_LINES: usize = 2;
 const COMPOSER_COLLAPSED_MAX_LINES: usize = 2;
 const COMPOSER_EMPTY_STATE_MAX_LINES: usize = 8;
@@ -4039,24 +4042,46 @@ impl ThreadView {
             return div().into_any_element();
         }
 
+        let overflow_plugins = configured_plugins
+            .iter()
+            .skip(MAX_VISIBLE_CONFIGURED_PLUGIN_OPTIONS)
+            .cloned()
+            .collect::<Vec<_>>();
+
         h_flex()
             .id("agent-configured-plugin-strip")
             .w_full()
             .pb_1()
-            .gap_0p5()
-            .flex_wrap()
-            .children(
-                configured_plugins
-                    .iter()
-                    .take(MAX_VISIBLE_CONFIGURED_PLUGIN_OPTIONS)
-                    .cloned()
-                    .map(|plugin| self.render_configured_plugin_menu(plugin)),
+            .gap_1()
+            .overflow_x_hidden()
+            .child(
+                h_flex()
+                    .flex_none()
+                    .gap_1()
+                    .child(
+                        Label::new("Configured Plugins")
+                            .size(LabelSize::XSmall)
+                            .color(Color::Muted)
+                            .truncate(),
+                    )
+                    .child(Chip::new(format!("{} total", configured_plugins.len())).truncate()),
             )
+            .child(
+                h_flex().min_w_0().gap_0p5().overflow_x_hidden().children(
+                    configured_plugins
+                        .iter()
+                        .take(MAX_VISIBLE_CONFIGURED_PLUGIN_OPTIONS)
+                        .cloned()
+                        .map(|plugin| self.render_configured_plugin_menu(plugin)),
+                ),
+            )
+            .when(!overflow_plugins.is_empty(), |this| {
+                this.child(self.render_configured_plugin_overflow_menu(overflow_plugins))
+            })
             .into_any_element()
     }
 
     fn render_configured_plugin_menu(&self, plugin: DxConfiguredPluginSummary) -> AnyElement {
-        let label = plugin.display_name.clone();
         let icon = configured_plugin_icon(&plugin);
         PopoverMenu::new(workflow_node_element_id(
             "agent-configured-plugin-menu",
@@ -4069,8 +4094,22 @@ impl ThreadView {
             ))
             .style(ButtonStyle::Subtle)
             .size(ButtonSize::Compact)
-            .child(icon.render(IconSize::Small, Color::Muted)),
-            Tooltip::text(label.clone()),
+            .h(rems(1.75))
+            .max_w(rems(10.))
+            .overflow_hidden()
+            .child(
+                h_flex()
+                    .min_w_0()
+                    .gap_1()
+                    .child(icon.render(IconSize::Small, Color::Muted))
+                    .child(
+                        Label::new(configured_plugin_trigger_label(&plugin))
+                            .size(LabelSize::XSmall)
+                            .color(Color::Muted)
+                            .truncate(),
+                    ),
+            ),
+            Tooltip::text(configured_plugin_tooltip(&plugin)),
         )
         .anchor(gpui::Anchor::BottomLeft)
         .offset(gpui::Point {
@@ -4082,28 +4121,105 @@ impl ThreadView {
             move |window, cx| {
                 let plugin = plugin.clone();
                 let message_editor = message_editor.clone();
+                let action_label = configured_plugin_menu_action_label(&plugin);
                 Some(ContextMenu::build(window, cx, move |menu, _window, _cx| {
-                    menu.header(plugin.display_name.clone())
-                        .custom_row({
-                            let plugin = plugin.clone();
-                            move |_window, _cx| configured_plugin_status_row(&plugin)
-                        })
-                        .entry("Use configured plugin", None, {
-                            let plugin = plugin.clone();
-                            let message_editor = message_editor.clone();
-                            move |window, cx| {
-                                Self::insert_configured_plugin_prompt(
-                                    message_editor.clone(),
-                                    plugin.clone(),
-                                    window,
-                                    cx,
-                                );
-                            }
-                        })
+                    menu.header(bounded_configured_plugin_label(
+                        &plugin.display_name,
+                        MAX_CONFIGURED_PLUGIN_MENU_LABEL_CHARS,
+                    ))
+                    .custom_row({
+                        let plugin = plugin.clone();
+                        move |_window, _cx| configured_plugin_status_row(&plugin)
+                    })
+                    .custom_row({
+                        let plugin = plugin.clone();
+                        move |_window, _cx| configured_plugin_prompt_only_row(&plugin)
+                    })
+                    .entry(action_label, None, {
+                        let plugin = plugin.clone();
+                        let message_editor = message_editor.clone();
+                        move |window, cx| {
+                            Self::insert_configured_plugin_prompt(
+                                message_editor.clone(),
+                                plugin.clone(),
+                                window,
+                                cx,
+                            );
+                        }
+                    })
                 }))
             }
         })
         .into_any_element()
+    }
+
+    fn render_configured_plugin_overflow_menu(
+        &self,
+        plugins: Vec<DxConfiguredPluginSummary>,
+    ) -> AnyElement {
+        let overflow_count = plugins.len();
+        PopoverMenu::new("agent-configured-plugin-overflow-menu")
+            .trigger_with_tooltip(
+                ButtonLike::new("agent-configured-plugin-overflow-trigger")
+                    .style(ButtonStyle::Subtle)
+                    .size(ButtonSize::Compact)
+                    .h(rems(1.75))
+                    .child(
+                        h_flex()
+                            .gap_1()
+                            .child(Icon::new(IconName::Ellipsis).size(IconSize::Small))
+                            .child(
+                                Label::new(format!("+{overflow_count}"))
+                                    .size(LabelSize::XSmall)
+                                    .color(Color::Muted),
+                            ),
+                    ),
+                Tooltip::text(format!("{overflow_count} more configured plugins")),
+            )
+            .anchor(gpui::Anchor::BottomLeft)
+            .offset(gpui::Point {
+                x: px(0.0),
+                y: px(-2.0),
+            })
+            .menu({
+                let message_editor = self.message_editor.clone();
+                move |window, cx| {
+                    let plugins = plugins.clone();
+                    let message_editor = message_editor.clone();
+                    Some(ContextMenu::build(
+                        window,
+                        cx,
+                        move |mut menu, _window, _cx| {
+                            menu = menu.header("More configured plugins");
+                            for plugin in plugins.iter().cloned() {
+                                let status_plugin = plugin.clone();
+                                menu = menu.custom_row(move |_window, _cx| {
+                                    configured_plugin_status_row(&status_plugin)
+                                });
+
+                                let prompt_plugin = plugin.clone();
+                                menu = menu.custom_row(move |_window, _cx| {
+                                    configured_plugin_prompt_only_row(&prompt_plugin)
+                                });
+
+                                let action_label = configured_plugin_menu_action_label(&plugin);
+                                let entry_plugin = plugin.clone();
+                                let entry_message_editor = message_editor.clone();
+                                menu = menu.entry(action_label, None, move |window, cx| {
+                                    Self::insert_configured_plugin_prompt(
+                                        entry_message_editor.clone(),
+                                        entry_plugin.clone(),
+                                        window,
+                                        cx,
+                                    );
+                                });
+                            }
+                            menu
+                        },
+                    ))
+                }
+            })
+            .into_any_element()
     }
 
     fn insert_configured_plugin_prompt(
@@ -4113,7 +4229,7 @@ impl ThreadView {
         cx: &mut App,
     ) {
         let prompt = format!(
-            "Use configured plugin `{}` for this task.\n- plugin_id: {}\n- node_id: {}\n- action_id: {}\n- receipt_id: {}\n- credential_status: {}\n",
+            "Request DX Agent to use configured plugin metadata for this task.\n- prompt_only: true\n- plugin_name: {}\n- plugin_id: {}\n- node_id: {}\n- action_id: {}\n- receipt_id: {}\n- credential_status: {}\n",
             plugin.display_name,
             plugin.id,
             plugin.node_id,
@@ -11299,18 +11415,89 @@ fn configured_plugin_status_row(plugin: &DxConfiguredPluginSummary) -> AnyElemen
                 .min_w_0()
                 .gap_0p5()
                 .child(
-                    Label::new(plugin.status.clone())
-                        .size(LabelSize::XSmall)
-                        .color(Color::Default),
+                    Label::new(bounded_configured_plugin_label(
+                        &plugin.display_name,
+                        MAX_CONFIGURED_PLUGIN_MENU_LABEL_CHARS,
+                    ))
+                    .size(LabelSize::Small)
+                    .color(Color::Default)
+                    .truncate(),
                 )
-                .child(
-                    Label::new(format!("{} / {}", plugin.node_id, plugin.credential_status))
-                        .size(LabelSize::XSmall)
-                        .color(Color::Muted)
-                        .line_height_style(LineHeightStyle::UiLabel),
-                ),
+                .child(configured_plugin_status_chips(plugin)),
         )
         .into_any_element()
+}
+
+fn configured_plugin_tooltip(plugin: &DxConfiguredPluginSummary) -> String {
+    format!(
+        "{}: prompt-only request for node {}, status {}, credentials {}, action {}, receipt {}. It does not execute the plugin.",
+        plugin.display_name,
+        plugin.node_id,
+        plugin.status,
+        plugin.credential_status,
+        plugin.action_id,
+        plugin.receipt_id
+    )
+}
+
+fn configured_plugin_prompt_only_row(plugin: &DxConfiguredPluginSummary) -> AnyElement {
+    h_flex()
+        .id(workflow_node_element_id(
+            "agent-configured-plugin-prompt-only",
+            &plugin.id,
+        ))
+        .min_w(rems(16.))
+        .max_w(rems(28.))
+        .gap_2()
+        .child(
+            Icon::new(IconName::Info)
+                .size(IconSize::Small)
+                .color(Color::Muted),
+        )
+        .child(
+            Label::new("Prompt-only. Inserts a request into the chat input; it does not execute this plugin.")
+                .size(LabelSize::XSmall)
+                .color(Color::Muted)
+                .line_height_style(LineHeightStyle::UiLabel),
+        )
+        .into_any_element()
+}
+
+fn configured_plugin_menu_action_label(plugin: &DxConfiguredPluginSummary) -> String {
+    let action_label = plugin.action_label.trim();
+    if action_label.is_empty() || action_label.eq_ignore_ascii_case("use plugin") {
+        return "Insert plugin request".to_string();
+    }
+
+    bounded_configured_plugin_label(action_label, MAX_CONFIGURED_PLUGIN_ACTION_LABEL_CHARS)
+}
+
+fn configured_plugin_trigger_label(plugin: &DxConfiguredPluginSummary) -> String {
+    bounded_configured_plugin_label(
+        &plugin.display_name,
+        MAX_CONFIGURED_PLUGIN_TRIGGER_LABEL_CHARS,
+    )
+}
+
+fn configured_plugin_status_chips(plugin: &DxConfiguredPluginSummary) -> AnyElement {
+    h_flex()
+        .gap_1()
+        .flex_wrap()
+        .child(Chip::new(plugin.status.clone()).truncate())
+        .child(Chip::new(plugin.credential_status.clone()).truncate())
+        .into_any_element()
+}
+
+fn bounded_configured_plugin_label(value: &str, max_chars: usize) -> String {
+    let trimmed = value.trim();
+    if trimmed.chars().count() <= max_chars {
+        return trimmed.to_string();
+    }
+
+    let keep = max_chars.saturating_sub(3);
+    let mut bounded = trimmed.chars().take(keep).collect::<String>();
+    bounded.push_str("...");
+    bounded
 }
 
 fn configured_plugin_icon(plugin: &DxConfiguredPluginSummary) -> WorkflowNodeIconAsset {

@@ -9,6 +9,7 @@ use crate::workflow_node_icons::{workflow_node_element_id, workflow_node_icon_as
 
 const MAX_PLUGIN_CARD_TITLE_CHARS: usize = 48;
 const MAX_PLUGIN_CARD_CATEGORY_CHARS: usize = 28;
+const MAX_PLUGIN_MENU_DETAIL_CHARS: usize = 80;
 
 pub(super) fn workflow_node_card(
     node: &DxWorkflowNodeSummary,
@@ -28,7 +29,7 @@ pub(super) fn workflow_node_card(
         .child(
             v_flex()
                 .w_full()
-                .h(rems_from_px(110.))
+                .min_h(rems_from_px(110.))
                 .p_3()
                 .gap_2()
                 .rounded_md()
@@ -45,6 +46,7 @@ pub(super) fn workflow_node_card(
                 })
                 .hover(|this| this.bg(cx.theme().colors().element_hover))
                 .on_click(on_select)
+                .tooltip(Tooltip::text(plugin_card_tooltip(node)))
                 .child(
                     h_flex()
                         .justify_between()
@@ -73,15 +75,7 @@ pub(super) fn workflow_node_card(
                                 .color(Color::Default)
                                 .truncate(),
                         )
-                        .child(
-                            Label::new(format!(
-                                "{} in / {} out / {} parameters",
-                                node.input_count, node.output_count, node.parameter_count
-                            ))
-                            .size(LabelSize::Small)
-                            .color(Color::Muted)
-                            .truncate(),
-                        ),
+                        .child(plugin_contract_chips(node)),
                 )
                 .child(
                     h_flex()
@@ -128,6 +122,7 @@ fn plugin_action_stack(node: DxWorkflowNodeSummary, panel: WeakEntity<AgentPanel
 }
 
 fn plugin_source_row(node: &DxWorkflowNodeSummary) -> AnyElement {
+    let tooltip = format!("{} / {}", node.source_package, node.source_path);
     h_flex()
         .min_w_0()
         .gap_1()
@@ -140,6 +135,29 @@ fn plugin_source_row(node: &DxWorkflowNodeSummary) -> AnyElement {
             Label::new(format!("{} / {}", node.source_package, node.source_path))
                 .size(LabelSize::Small)
                 .color(Color::Muted)
+                .truncate(),
+        )
+        .tooltip(Tooltip::text(tooltip))
+        .into_any_element()
+}
+
+fn plugin_contract_chips(node: &DxWorkflowNodeSummary) -> AnyElement {
+    h_flex()
+        .gap_1()
+        .flex_none()
+        .child(
+            Chip::new(format!("{} in", node.input_count))
+                .icon(IconName::ArrowRightLeft)
+                .truncate(),
+        )
+        .child(
+            Chip::new(format!("{} out", node.output_count))
+                .icon(IconName::ArrowRightLeft)
+                .truncate(),
+        )
+        .child(
+            Chip::new(format!("{} params", node.parameter_count))
+                .icon(dx_icon(DxUiIcon::Settings))
                 .truncate(),
         )
         .into_any_element()
@@ -161,10 +179,27 @@ fn plugin_configured_state_label(node: &DxWorkflowNodeSummary) -> &'static str {
     if node.configured {
         "Configured"
     } else if node.credential_status == "not_required" {
-        "Ready"
+        "No Credentials"
     } else {
         "Needs Setup"
     }
+}
+
+fn plugin_card_tooltip(node: &DxWorkflowNodeSummary) -> String {
+    format!(
+        "{} - {}. Runtime {}, trust {}, credentials {}, {} inputs, {} outputs, {} parameters, {} dynamic options. Source: {} / {}",
+        node.display_name,
+        node.description,
+        node.runtime,
+        node.trust_status,
+        node.credential_status,
+        node.input_count,
+        node.output_count,
+        node.parameter_count,
+        node.dynamic_option_count,
+        node.source_package,
+        node.source_path
+    )
 }
 
 pub(super) fn missing_workflow_node_card(message: &'static str) -> AnyElement {
@@ -194,11 +229,11 @@ fn render_plugin_config_menu(
         &node.id,
     ))
     .trigger_with_tooltip(
-        Button::new(trigger_id, "Configure")
+        Button::new(trigger_id, plugin_config_menu_action_label(&node))
             .style(ButtonStyle::Subtle)
             .label_size(LabelSize::Small)
             .start_icon(Icon::new(dx_icon(DxUiIcon::Credentials)).size(IconSize::Small)),
-        Tooltip::text("Configure plugin credentials"),
+        Tooltip::text(plugin_config_tooltip(&node)),
     )
     .anchor(gpui::Anchor::BottomRight)
     .menu(move |window, cx| {
@@ -260,8 +295,16 @@ fn plugin_config_menu_action_label(node: &DxWorkflowNodeSummary) -> &'static str
     }
 }
 
+fn plugin_config_tooltip(node: &DxWorkflowNodeSummary) -> String {
+    format!(
+        "{}: credentials {}, action {}, receipt-backed metadata only",
+        node.display_name, node.credential_status, node.configure_action
+    )
+}
+
 fn plugin_config_status_row(node: &DxWorkflowNodeSummary) -> AnyElement {
-    detail_menu_row(
+    plugin_config_menu_row(
+        workflow_node_element_id("dx-workflow-node-config-menu-row-status", &node.id),
         dx_icon(DxUiIcon::Credentials),
         "Credential status",
         node.credential_status.clone(),
@@ -269,7 +312,8 @@ fn plugin_config_status_row(node: &DxWorkflowNodeSummary) -> AnyElement {
 }
 
 fn plugin_config_requirements_row(node: &DxWorkflowNodeSummary) -> AnyElement {
-    detail_menu_row(
+    plugin_config_menu_row(
+        workflow_node_element_id("dx-workflow-node-config-menu-row-requirements", &node.id),
         IconName::FileTextOutlined,
         "Required types",
         if node.credential_types.is_empty() {
@@ -281,7 +325,8 @@ fn plugin_config_requirements_row(node: &DxWorkflowNodeSummary) -> AnyElement {
 }
 
 fn plugin_config_next_action_row(node: &DxWorkflowNodeSummary) -> AnyElement {
-    detail_menu_row(
+    plugin_config_menu_row(
+        workflow_node_element_id("dx-workflow-node-config-menu-row-action", &node.id),
         IconName::PlayOutlined,
         "Action",
         node.configure_action.clone(),
@@ -301,29 +346,72 @@ pub(super) fn configured_plugin_row(plugin: &DxConfiguredPluginSummary) -> AnyEl
         .child(
             h_flex()
                 .min_w_0()
-                .gap_1()
+                .justify_between()
+                .gap_2()
                 .child(
                     Label::new(plugin.display_name.clone())
                         .size(LabelSize::Small)
                         .color(Color::Default)
                         .truncate(),
                 )
-                .child(
-                    Label::new(format!("{} / {}", plugin.status, plugin.credential_status))
-                        .size(LabelSize::XSmall)
-                        .color(Color::Muted)
-                        .truncate(),
-                ),
+                .child(configured_plugin_status_chips(plugin)),
         )
+        .tooltip(Tooltip::text(configured_plugin_tooltip(plugin)))
         .into_any_element()
 }
 
-fn detail_menu_row(icon: IconName, label: &'static str, detail: String) -> AnyElement {
+fn configured_plugin_status_chips(plugin: &DxConfiguredPluginSummary) -> AnyElement {
     h_flex()
-        .min_w(rems(18.))
-        .max_w(rems(34.))
-        .gap_2()
-        .child(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
+        .gap_1()
+        .flex_none()
+        .child(Chip::new(plugin.status.clone()).truncate())
+        .child(Chip::new(plugin.credential_status.clone()).truncate())
+        .child(Chip::new(configured_plugin_authorization_label(plugin)).truncate())
+        .into_any_element()
+}
+
+fn configured_plugin_authorization_label(plugin: &DxConfiguredPluginSummary) -> &'static str {
+    if plugin.secrets_exposed {
+        "Secrets Blocked"
+    } else if !plugin.approved_by_trusted_bridge {
+        "Needs Approval"
+    } else if !plugin.writes_receipt {
+        "Receipt Missing"
+    } else if plugin.trust_policy != "receipt_authorized_only" {
+        "Policy Blocked"
+    } else {
+        "Bridge Approved"
+    }
+}
+
+fn configured_plugin_tooltip(plugin: &DxConfiguredPluginSummary) -> String {
+    format!(
+        "{}: node {}, status {}, credentials {}, action {}, receipt {}, trust policy {}, bridge approved {}, writes receipt {}, secrets exposed {}",
+        plugin.display_name,
+        plugin.node_id,
+        plugin.status,
+        plugin.credential_status,
+        plugin.action_id,
+        plugin.receipt_id,
+        plugin.trust_policy,
+        yes_no(plugin.approved_by_trusted_bridge),
+        yes_no(plugin.writes_receipt),
+        yes_no(plugin.secrets_exposed)
+    )
+}
+
+fn plugin_config_menu_row(
+    id: SharedString,
+    icon: IconName,
+    label: &'static str,
+    detail: String,
+) -> AnyElement {
+    let tooltip = format!("{label}: {detail}");
+    ListItem::new(id)
+        .inset(true)
+        .spacing(ui::ListItemSpacing::Sparse)
+        .selectable(false)
+        .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
         .child(
             v_flex()
                 .min_w_0()
@@ -334,13 +422,18 @@ fn detail_menu_row(icon: IconName, label: &'static str, detail: String) -> AnyEl
                         .color(Color::Muted),
                 )
                 .child(
-                    Label::new(detail)
+                    Label::new(bounded_plugin_menu_detail(&detail))
                         .size(LabelSize::XSmall)
                         .color(Color::Default)
                         .line_height_style(LineHeightStyle::UiLabel),
                 ),
         )
+        .tooltip(Tooltip::text(tooltip))
         .into_any_element()
+}
+
+fn bounded_plugin_menu_detail(value: &str) -> String {
+    bounded_plugin_card_text(value, MAX_PLUGIN_MENU_DETAIL_CHARS)
 }
 
 fn bounded_plugin_card_text(value: &str, max_chars: usize) -> String {
@@ -353,4 +446,8 @@ fn bounded_plugin_card_text(value: &str, max_chars: usize) -> String {
     let mut bounded = trimmed.chars().take(keep).collect::<String>();
     bounded.push_str("...");
     bounded
+}
+
+fn yes_no(value: bool) -> &'static str {
+    if value { "yes" } else { "no" }
 }

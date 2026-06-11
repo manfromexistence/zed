@@ -25,6 +25,7 @@ use super::workflow_nodes;
 const MAX_PLUGIN_CATALOG_SEARCH_QUERY_CHARS: usize = 256;
 const MAX_FILTERED_WORKFLOW_NODE_RESULTS: usize = 1_000;
 const MAX_DISPLAYED_WORKFLOW_NODE_RESULTS: usize = MAX_FILTERED_WORKFLOW_NODE_RESULTS;
+const MAX_PLUGIN_CATEGORY_FILTER_CHARS: usize = 26;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum PluginCatalogFilter {
@@ -194,7 +195,9 @@ pub(crate) fn render_workflow_node_catalog(
                 .child(render_catalog_summary(catalog, cx))
                 .child(render_catalog_controls(state, cx)),
         )
-        .child(render_category_filter_row(catalog, state, cx))
+        .when(!catalog.nodes.is_empty(), |this| {
+            this.child(render_category_filter_row(catalog, state, cx))
+        })
         .child(
             h_flex()
                 .w_full()
@@ -213,13 +216,15 @@ pub(crate) fn render_workflow_node_catalog(
                                     .child(screen_empty_state(
                                         "dx-workflow-node-catalog-missing",
                                         dx_icon(DxUiIcon::Plugins),
-                                        "Run DX JS workflow-node catalog generation to load plugin metadata.",
+                                        catalog_empty_message(catalog),
                                         cx,
                                     ))
                                     .into_any_element();
                             }
                             if count == 0 {
-                                return this.child(render_empty_state(state, cx)).into_any_element();
+                                return this
+                                    .child(render_empty_state(state, cx))
+                                    .into_any_element();
                             }
 
                             this.child(
@@ -317,16 +322,10 @@ fn render_catalog_summary(
         .items_start()
         .gap_3()
         .child(
-            v_flex()
-                .min_w_0()
-                .gap_1()
-                .child(Headline::new("Plugins").size(HeadlineSize::Large))
-                .child(
-                    Label::new(catalog_summary_label(catalog))
-                        .size(LabelSize::Small)
-                        .color(Color::Muted)
-                        .truncate(),
-                ),
+            Label::new(catalog_summary_label(catalog))
+                .size(LabelSize::Small)
+                .color(Color::Muted)
+                .truncate(),
         )
         .child(
             h_flex()
@@ -368,6 +367,7 @@ fn render_catalog_controls(
 ) -> AnyElement {
     h_flex()
         .w_full()
+        .min_w_0()
         .flex_wrap()
         .gap_2()
         .child(render_catalog_search(
@@ -445,27 +445,30 @@ fn render_category_filter_row(
         .children(category_counts.into_iter().map(|(category, count)| {
             let active = state.category_filter.as_deref() == Some(category.as_str());
             let button_id = workflow_node_element_id("filter-category", &category);
-            Button::new(button_id, format!("{} ({})", category, count))
-                .style(if active {
-                    ButtonStyle::Filled
-                } else {
-                    ButtonStyle::Subtle
-                })
-                .toggle_state(active)
-                .tooltip({
-                    let category = category.clone();
-                    move |_, cx| {
-                        Tooltip::with_meta(
-                            "Indexed category",
-                            None,
-                            format!("{category}: {count} plugins"),
-                            cx,
-                        )
-                    }
-                })
-                .on_click(cx.listener(move |this, _event, _window, cx| {
-                    this.set_plugin_catalog_category_filter(Some(category.clone()), cx);
-                }))
+            Button::new(
+                button_id,
+                bounded_plugin_category_filter_label(&category, count),
+            )
+            .style(if active {
+                ButtonStyle::Filled
+            } else {
+                ButtonStyle::Subtle
+            })
+            .toggle_state(active)
+            .tooltip({
+                let category = category.clone();
+                move |_, cx| {
+                    Tooltip::with_meta(
+                        "Indexed category",
+                        None,
+                        format!("{category}: {count} plugins"),
+                        cx,
+                    )
+                }
+            })
+            .on_click(cx.listener(move |this, _event, _window, cx| {
+                this.set_plugin_catalog_category_filter(Some(category.clone()), cx);
+            }))
         }))
         .into_any_element()
 }
@@ -513,6 +516,36 @@ fn catalog_summary_label(catalog: &DxWorkflowNodeCatalogSummary) -> String {
         catalog.node_count,
         source
     )
+}
+
+fn catalog_empty_message(catalog: &DxWorkflowNodeCatalogSummary) -> String {
+    if catalog.present {
+        "No workflow-node plugins are indexed.".to_string()
+    } else {
+        catalog.next_action.clone()
+    }
+}
+
+fn bounded_plugin_category_filter_label(category: &str, count: usize) -> String {
+    let suffix = format!(" ({count})");
+    let max_category_chars = MAX_PLUGIN_CATEGORY_FILTER_CHARS.saturating_sub(suffix.len());
+    format!(
+        "{}{}",
+        bounded_plugin_category_text(category, max_category_chars),
+        suffix
+    )
+}
+
+fn bounded_plugin_category_text(value: &str, max_chars: usize) -> String {
+    let trimmed = value.trim();
+    if trimmed.chars().count() <= max_chars {
+        return trimmed.to_string();
+    }
+
+    let keep = max_chars.saturating_sub(3);
+    let mut bounded = trimmed.chars().take(keep).collect::<String>();
+    bounded.push_str("...");
+    bounded
 }
 
 fn workflow_node_matches_search(
