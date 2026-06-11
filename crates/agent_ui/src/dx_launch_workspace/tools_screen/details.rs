@@ -123,10 +123,8 @@ fn render_workflow_node_configuration(
                             dx_icon(DxUiIcon::Credentials),
                             "Credential",
                             format!(
-                                "{} status {}, receipt {}",
-                                credential.credential_type,
-                                credential.status,
-                                credential.receipt_id
+                                "{} status {}",
+                                credential.credential_type, credential.status
                             ),
                         )
                     }),
@@ -134,8 +132,8 @@ fn render_workflow_node_configuration(
             .chain(std::iter::once(screen_detail_row(
                 workflow_node_element_id("dx-workflow-node-detail-configure-action", &node.id),
                 IconName::PlayOutlined,
-                "Action",
-                node.configure_action.clone(),
+                "Bridge action",
+                "Resolved privately from trusted DX receipts".to_string(),
             )))
             .collect(),
         ),
@@ -313,10 +311,7 @@ fn render_workflow_node_dynamic_options(
                     ),
                     dx_icon(DxUiIcon::Settings),
                     "Option",
-                    format!(
-                        "{} status {}, action {}, receipt {}",
-                        option.label, option.status, option.action_id, option.receipt_id
-                    ),
+                    format!("{} status {}", option.label, option.status),
                 )
             },
         )),
@@ -376,11 +371,10 @@ fn render_workflow_node_actions(
                     IconName::PlayOutlined,
                     "Action",
                     format!(
-                        "{} risk {}, approval required {}, receipt {}",
+                        "{} risk {}, approval required {}",
                         action.label,
                         action.risk,
-                        yes_no(action.requires_approval),
-                        action.receipt_id
+                        yes_no(action.requires_approval)
                     ),
                 )
             },

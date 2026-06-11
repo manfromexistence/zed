@@ -689,7 +689,6 @@ const MAX_VISIBLE_PROFILE_OPTION_SLOTS: usize = 4;
 const MAX_VISIBLE_CONFIGURED_PLUGIN_OPTIONS: usize = 6;
 const MAX_CONFIGURED_PLUGIN_TRIGGER_LABEL_CHARS: usize = 18;
 const MAX_CONFIGURED_PLUGIN_MENU_LABEL_CHARS: usize = 40;
-const MAX_CONFIGURED_PLUGIN_ACTION_LABEL_CHARS: usize = 42;
 const COMPOSER_MIN_LINES: usize = 2;
 const COMPOSER_COLLAPSED_MAX_LINES: usize = 2;
 const COMPOSER_EMPTY_STATE_MAX_LINES: usize = 8;
@@ -4358,13 +4357,8 @@ impl ThreadView {
         cx: &mut App,
     ) {
         let prompt = format!(
-            "Request DX Agent to use configured plugin metadata for this task.\n- prompt_only: true\n- plugin_name: {}\n- plugin_id: {}\n- node_id: {}\n- action_id: {}\n- receipt_id: {}\n- credential_status: {}\n",
-            plugin.display_name,
-            plugin.id,
-            plugin.node_id,
-            plugin.action_id,
-            plugin.receipt_id,
-            plugin.credential_status
+            "Request DX Agent to review the configured plugin \"{}\" for this task.\n- prompt_only: true\n- credential_status: {}\n- bridge: resolve the plugin action from trusted DX receipts before acting\n- safety: keep secrets and raw action metadata out of the response\n",
+            plugin.display_name, plugin.credential_status
         );
         message_editor.focus_handle(cx).focus(window, cx);
         message_editor.update(cx, |editor, cx| {
@@ -11581,13 +11575,8 @@ fn configured_plugin_status_row(plugin: &DxConfiguredPluginSummary) -> AnyElemen
 
 fn configured_plugin_tooltip(plugin: &DxConfiguredPluginSummary) -> String {
     format!(
-        "{}: prompt-only request for node {}, status {}, credentials {}, action {}, receipt {}. It does not execute the plugin.",
-        plugin.display_name,
-        plugin.node_id,
-        plugin.status,
-        plugin.credential_status,
-        plugin.action_id,
-        plugin.receipt_id
+        "{}: prompt-only request, status {}, credentials {}. DX Agent resolves action details from trusted receipts; it does not execute the plugin.",
+        plugin.display_name, plugin.status, plugin.credential_status
     )
 }
 
@@ -11614,13 +11603,8 @@ fn configured_plugin_prompt_only_row(plugin: &DxConfiguredPluginSummary) -> AnyE
         .into_any_element()
 }
 
-fn configured_plugin_menu_action_label(plugin: &DxConfiguredPluginSummary) -> String {
-    let action_label = plugin.action_label.trim();
-    if action_label.is_empty() || action_label.eq_ignore_ascii_case("use plugin") {
-        return "Insert plugin request".to_string();
-    }
-
-    bounded_configured_plugin_label(action_label, MAX_CONFIGURED_PLUGIN_ACTION_LABEL_CHARS)
+fn configured_plugin_menu_action_label(_plugin: &DxConfiguredPluginSummary) -> String {
+    "Insert plugin request".to_string()
 }
 
 fn configured_plugin_trigger_label(plugin: &DxConfiguredPluginSummary) -> String {

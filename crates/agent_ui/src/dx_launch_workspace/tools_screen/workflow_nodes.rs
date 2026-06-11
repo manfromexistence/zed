@@ -304,8 +304,8 @@ fn plugin_config_menu_action_label(node: &DxWorkflowNodeSummary) -> &'static str
 
 fn plugin_config_tooltip(node: &DxWorkflowNodeSummary) -> String {
     format!(
-        "{}: credentials {}, action {}, receipt-backed metadata only",
-        node.display_name, node.credential_status, node.configure_action
+        "{}: credentials {}, receipt-backed configuration metadata only",
+        node.display_name, node.credential_status
     )
 }
 
@@ -335,8 +335,8 @@ fn plugin_config_next_action_row(node: &DxWorkflowNodeSummary) -> AnyElement {
     plugin_config_menu_row(
         workflow_node_element_id("dx-workflow-node-config-menu-row-action", &node.id),
         IconName::PlayOutlined,
-        "Action",
-        node.configure_action.clone(),
+        "Bridge action",
+        "Resolved privately from trusted DX receipts".to_string(),
     )
 }
 
@@ -393,13 +393,10 @@ fn configured_plugin_authorization_label(plugin: &DxConfiguredPluginSummary) -> 
 
 fn configured_plugin_tooltip(plugin: &DxConfiguredPluginSummary) -> String {
     format!(
-        "{}: node {}, status {}, credentials {}, action {}, receipt {}, trust policy {}, bridge approved {}, writes receipt {}, secrets exposed {}",
+        "{}: status {}, credentials {}, trust policy {}, bridge approved {}, writes receipt {}, secrets exposed {}",
         plugin.display_name,
-        plugin.node_id,
         plugin.status,
         plugin.credential_status,
-        plugin.action_id,
-        plugin.receipt_id,
         plugin.trust_policy,
         yes_no(plugin.approved_by_trusted_bridge),
         yes_no(plugin.writes_receipt),

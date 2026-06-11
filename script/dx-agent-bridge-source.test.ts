@@ -130,6 +130,7 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   const workflowNodeCredentials = read(
     "crates/agent_ui/src/dx_agent_bridge/workflow_nodes/credentials.rs",
   );
+  const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
   const workflowNodeSources = `${workflowNodes}\n${workflowNodeContract}\n${workflowNodeConfigured}\n${workflowNodeConfiguredAuthorization}\n${workflowNodeCredentials}`;
   const runtime = read("crates/agent_ui/src/dx_agent_bridge/runtime.rs");
   const runtimeTests = read("crates/agent_ui/src/dx_agent_bridge/runtime_tests.rs");
@@ -387,6 +388,15 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.match(workflowNodeConfigured, /bool_field\(value, &\["writes_receipts"\]\)/);
   assert.match(workflowNodeConfiguredAuthorization, /configured_plugin_source_root_is_allowed\(&row\.source_root_id\)/);
   assert.match(workflowNodeConfiguredAuthorization, /configured_plugin_source_path_is_safe\(&row\.source_path\)/);
+  assert.match(agentPanel, /fn valid_configured_plugin_source_root\(value: &str\) -> bool/);
+  assert.match(agentPanel, /fn valid_configured_plugin_source_path\(value: &str\) -> bool/);
+  assert.match(agentPanel, /valid_configured_plugin_source_root\(&plugin\.source_root_id\)/);
+  assert.match(agentPanel, /valid_configured_plugin_source_path\(&plugin\.source_path\)/);
+  assert.match(agentPanel, /let configured_node_keys = snapshot[\s\S]*?workflow_node_catalog[\s\S]*?nodes/);
+  assert.match(agentPanel, /configured_node_keys\.contains\(&\(/);
+  assert.match(agentPanel, /plugin\.node_id\.clone\(\)/);
+  assert.match(agentPanel, /plugin\.source_root_id\.clone\(\)/);
+  assert.match(agentPanel, /plugin\.source_path\.clone\(\)/);
   assert.match(workflowNodeConfiguredAuthorization, /row\.trust_policy == TRUSTED_TOOL_POLICY/);
   assert.match(workflowNodeConfiguredAuthorization, /row\.approved_by_trusted_bridge/);
   assert.match(workflowNodeConfiguredAuthorization, /row\.writes_receipt/);

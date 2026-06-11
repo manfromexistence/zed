@@ -218,11 +218,11 @@ fn trusted_tool_state(
             screen_detail_row(
                 format!("{id}-ids").into(),
                 IconName::ToolWeb,
-                "Approved ids",
+                "Approved tools",
                 if matching_ids.is_empty() {
                     missing_state.to_string()
                 } else {
-                    matching_ids.join(", ")
+                    approved_tool_count_label(matching_ids.len())
                 },
             ),
             screen_detail_row(
@@ -233,6 +233,14 @@ fn trusted_tool_state(
             ),
         ]))
         .into_any_element()
+}
+
+fn approved_tool_count_label(count: usize) -> String {
+    match count {
+        0 => "No approved tools".to_string(),
+        1 => "1 approved tool".to_string(),
+        count => format!("{count} approved tools"),
+    }
 }
 
 fn mcp_state(snapshot: &DxAgentBridgeSnapshot) -> AnyElement {

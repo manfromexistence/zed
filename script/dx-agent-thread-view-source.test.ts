@@ -60,7 +60,7 @@ test("configured workflow-node plugins render above the chat input from bridge r
     "\n    fn render_profile_option_slots(",
   );
   const configuredPluginPromptLeakPattern =
-    /\b(?:run_command|source_path|source_root_id|source_package_version|credential_types|api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|password|private[_-]?key|authorization|bearer)\b/i;
+    /\b(?:run_command|configure_action|action_id|receipt_id|source_path|source_root_id|source_package_version|credential_types|api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|password|private[_-]?key|authorization|bearer)\b/i;
 
   assert.match(renderMessageEditor, /self\.render_configured_plugin_strip\(cx\)/);
   assertBefore(
@@ -118,10 +118,9 @@ test("configured workflow-node plugins render above the chat input from bridge r
   assert.match(source, /fn configured_plugin_tooltip\(plugin: &DxConfiguredPluginSummary\) -> String/);
   assert.match(source, /fn configured_plugin_trigger_label\(plugin: &DxConfiguredPluginSummary\) -> String/);
   assert.match(source, /fn configured_plugin_status_chips\(plugin: &DxConfiguredPluginSummary\)/);
-  assert.match(source, /fn configured_plugin_menu_action_label\(plugin: &DxConfiguredPluginSummary\) -> String/);
-  assert.match(source, /plugin\.action_label\.trim\(\)/);
+  assert.match(source, /fn configured_plugin_menu_action_label\(_plugin: &DxConfiguredPluginSummary\) -> String/);
   assert.match(source, /Prompt-only\. Inserts a request into the chat input; it does not execute this plugin\./);
-  assert.match(source, /It does not execute the plugin\./);
+  assert.match(source, /it does not execute the plugin\./);
   assert.match(source, /Chip::new\(plugin\.status\.clone\(\)\)/);
   assert.doesNotMatch(pluginStrip, /format!\("\{\} \/ \{\}", plugin\.node_id, plugin\.credential_status\)/);
   assert.doesNotMatch(pluginStrip, /Use configured plugin/);
@@ -131,10 +130,12 @@ test("configured workflow-node plugins render above the chat input from bridge r
   assert.match(workflowNodeIconSource, /dx_icon_data_dir/);
   assert.match(workflowNodeIconSource, /dx_icon\(DxUiIcon::Plugins\)/);
   assert.match(promptInsert, /message_editor\.update\(cx, \|editor, cx\|/);
-  assert.match(promptInsert, /Request DX Agent to use configured plugin metadata/);
+  assert.match(promptInsert, /Request DX Agent to review the configured plugin/);
   assert.match(promptInsert, /prompt_only: true/);
-  assert.match(promptInsert, /action_id/);
-  assert.match(promptInsert, /receipt_id/);
+  assert.match(promptInsert, /trusted DX receipts/);
+  assert.match(promptInsert, /raw action metadata/);
+  assert.doesNotMatch(promptInsert, /action_id/);
+  assert.doesNotMatch(promptInsert, /receipt_id/);
   assert.doesNotMatch(promptInsert, /Use configured plugin/);
   assert.doesNotMatch(promptInsert, /run_command/);
   assert.doesNotMatch(pluginStrip, /list_agent_plugins|inspect_agent_plugin_runtime_status|prepare_agent_plugin_runtime/);

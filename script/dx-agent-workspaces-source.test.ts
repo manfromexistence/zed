@@ -72,10 +72,10 @@ test("DX agent workspace taxonomy has first-class Zed screens", () => {
   assert.match(titleBar, /WorkspaceScreenKind::Tools => "Plugins"/);
   assert.match(titleBar, /WorkspaceScreenKind::Connections => dx_icon\(DxUiIcon::Connections\)/);
   assert.match(titleBar, /WorkspaceScreenKind::Tools => dx_icon\(DxUiIcon::Plugins\)/);
-  assert.match(titleBar, /WorkspaceScreenKind::Agent => IconName::Sparkle/);
+  assert.match(titleBar, /WorkspaceScreenKind::Agent => dx_icon\(DxUiIcon::Agent\)/);
   assert.match(carousel, /WorkspaceScreenKind::Connections => "Connections"/);
   assert.match(carousel, /WorkspaceScreenKind::Tools => "Plugins"/);
-  assert.match(carousel, /WorkspaceScreenKind::Agent => IconName::Sparkle/);
+  assert.match(carousel, /WorkspaceScreenKind::Agent[\s\S]*?=> None/);
   assert.match(agentScreen, /Icon::new\(dx_icon\(DxUiIcon::Agent\)\)/);
   assert.match(dxWorkspace, /"dx-agent-overview-section"[\s\S]*?dx_icon\(DxUiIcon::Agent\)/);
   assert.match(dxWorkspace, /"dx-agent-subagents-section"[\s\S]*?dx_icon\(DxUiIcon::Agent\)/);
@@ -473,11 +473,17 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
   assert.doesNotMatch(pluginScreenSources, forbiddenPluginSource);
   assert.doesNotMatch(pluginScreenSources, rawSecretUiPattern);
   assert.doesNotMatch(pluginScreenSources, /\b(?:node|plugin)\.run_command\b/);
+  assert.doesNotMatch(
+    pluginScreenSources,
+    /\b(?:node|credential|option|action|plugin)\.(?:configure_action|action_id|receipt_id)\b/,
+  );
   assert.doesNotMatch(workflowNodeScreen, /run_dx_agent_public_command|run_command/);
   assert.doesNotMatch(pluginScreenSources, /\bBadge|Pill|TagList|badge_/i);
   assert.doesNotMatch(pluginScreenSources, /<iframe|iframe|WebView|webview|embed_url|external_workflow_url/i);
   assert.match(screen, /trusted_tool_bridge/);
   assert.match(screen, /trusted_tool_ids/);
+  assert.match(screen, /approved_tool_count_label\(matching_ids\.len\(\)\)/);
+  assert.doesNotMatch(screen, /matching_ids\.join/);
   assert.match(pluginScreenSources, /workflow_node_catalog/);
   assert.match(pluginScreenSources, /configured_plugins/);
   assert.match(pluginScreenSources, /approved_plugin_tool_count/);

@@ -1,3 +1,20 @@
+[2026-06-12] - Catalog Action Prompt Boundary Hardening
+
+CHANGED:
+- Configured plugin composer options now re-check source-root allowlists, safe relative source paths, trusted bridge approval, usable states, and a live catalog `(node_id, source_root_id, source_path)` match before syncing into ThreadView.
+- Configured plugin chat prompt insertion now keeps only prompt-only intent, display name, credential status, and trusted-receipt instructions instead of raw plugin ids, node ids, action ids, or receipt ids.
+- Plugins workspace configuration menus and detail panes now render neutral bridge/count labels instead of raw configure actions, action ids, receipt ids, or trusted tool id lists.
+- Source guards now pin the no-raw-action/receipt prompt boundary, the composer source provenance re-check, and the trusted-tool count display contract.
+
+PASSED:
+- `node --test script\dx-agent-thread-view-source.test.ts script\dx-agent-workspaces-source.test.ts script\dx-agent-bridge-source.test.ts`
+- `rustfmt --edition 2024 --check crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\dx_launch_workspace\tools_screen.rs crates\agent_ui\src\dx_launch_workspace\tools_screen\workflow_nodes.rs crates\agent_ui\src\dx_launch_workspace\tools_screen\details.rs`
+- `git diff --check`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" ...` returned no matches across touched source, guard, and handoff files.
+
+NOTES:
+- Cargo/build/native visual proof and `just run` remain deferred by instruction.
+
 [2026-06-12] - Social Receipt Display Redaction
 
 CHANGED:

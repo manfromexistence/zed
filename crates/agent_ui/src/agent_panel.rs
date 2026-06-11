@@ -161,7 +161,17 @@ const DX_CONFIGURED_PLUGIN_OPTIONS_CACHE_TTL: Duration = Duration::from_secs(30)
 const DX_CONFIGURED_PLUGIN_OPTIONS_REFRESH_DELAY: Duration = Duration::from_millis(160);
 const DX_CONFIGURED_PLUGIN_OPTIONS_LIMIT: usize = 12;
 const DX_CONFIGURED_PLUGIN_ID_LIMIT: usize = 96;
+const DX_CONFIGURED_PLUGIN_SOURCE_LIMIT: usize = 240;
 const DX_TRUSTED_TOOL_POLICY: &str = "receipt_authorized_only";
+const DX_CONFIGURED_PLUGIN_SOURCE_ROOTS: &[&str] = &[
+    "repo_agent_tools",
+    "repo_agent_ui_bridge",
+    "repo_agent_ui_bridge_module",
+    "repo_web_preview",
+    "workspace_agent_plugins",
+    "workspace_playwright_runner",
+    "dxjs_runtime",
+];
 const MAX_LAST_CREATED_ENTRY_KIND_JSON_BYTES: usize = 4 * 1024;
 const MAX_SERIALIZED_AGENT_PANEL_JSON_BYTES: usize = 256 * 1024;
 const MAX_THREAD_CLIPBOARD_DECODED_BYTES: usize = 16 * 1024 * 1024;
@@ -1279,6 +1289,32 @@ fn valid_configured_plugin_identity(value: &str) -> bool {
             .all(|byte| matches!(byte, b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'.' | b'_' | b'-' | b':' | b'/' | b'@'))
         && !value.starts_with("missing_")
         && !matches!(value, "unknown" | "unavailable" | "disabled")
+}
+
+fn valid_configured_plugin_source_root(value: &str) -> bool {
+    let value = value.trim();
+    valid_configured_plugin_identity(value) && DX_CONFIGURED_PLUGIN_SOURCE_ROOTS.contains(&value)
+}
+
+fn valid_configured_plugin_source_path(value: &str) -> bool {
+    let value = value.trim();
+    !value.is_empty()
+        && value.len() <= DX_CONFIGURED_PLUGIN_SOURCE_LIMIT
+        && !value.starts_with("missing_")
+        && !value.contains('\0')
+        && !value.starts_with('/')
+        && !value.starts_with('\\')
+        && !value.contains('\\')
+        && !has_windows_drive_prefix(value)
+        && value
+            .split('/')
+            .all(|segment| !matches!(segment, "" | "." | ".."))
+        && !matches!(value, "unknown" | "unavailable" | "disabled")
+}
+
+fn has_windows_drive_prefix(value: &str) -> bool {
+    let bytes = value.as_bytes();
+    bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':'
 }
 
 fn usable_configured_plugin_state(value: &str) -> bool {
@@ -7864,12 +7900,30 @@ impl AgentPanel {
                         return Vec::new();
                     }
 
+                    let configured_node_keys = snapshot
+                        .workflow_node_catalog
+                        .nodes
+                        .iter()
+                        .map(|node| {
+                            (
+                                node.id.clone(),
+                                node.source_root_id.clone(),
+                                node.source_path.clone(),
+                            )
+                        })
+                        .collect::<HashSet<_>>();
+
                     snapshot
                         .workflow_node_catalog
                         .configured_plugins
                         .into_iter()
                         .filter(|plugin| {
                             Self::configured_plugin_option_is_authorized(plugin, &trusted_tool_ids)
+                                && configured_node_keys.contains(&(
+                                    plugin.node_id.clone(),
+                                    plugin.source_root_id.clone(),
+                                    plugin.source_path.clone(),
+                                ))
                         })
                         .take(DX_CONFIGURED_PLUGIN_OPTIONS_LIMIT)
                         .collect::<Vec<_>>()
@@ -7930,6 +7984,8 @@ impl AgentPanel {
             && valid_configured_plugin_identity(&plugin.node_id)
             && valid_configured_plugin_identity(&plugin.action_id)
             && valid_configured_plugin_identity(&plugin.receipt_id)
+            && valid_configured_plugin_source_root(&plugin.source_root_id)
+            && valid_configured_plugin_source_path(&plugin.source_path)
             && plugin.trust_policy == DX_TRUSTED_TOOL_POLICY
             && plugin.approved_by_trusted_bridge
             && plugin.writes_receipt
