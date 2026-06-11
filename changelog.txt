@@ -1,3 +1,23 @@
+[2026-06-11] - DX Panel GPUI Third-Pass Polish
+
+CHANGED:
+- `crates\media_panel\src\media_panel.rs` and `crates\shadcn_ui_panel\src\shadcn_ui_panel.rs` now render recent/pinned history sections through shared `ListHeader` chrome with icon start slots and existing action end slots.
+- `crates\shadcn_ui_panel\src\shadcn_ui_panel.rs` now surfaces panel status as a sparse non-selectable `ListItem` with an info icon and tooltip.
+- `crates\agent_ui\src\dx_check_panel_view.rs` and `view_rows.rs` now use compact icon-only receipt chrome, non-selectable informational rows, stable indexed section-score ids, and Findings ordering that shows notices and quick fixes before longer audit/planning rows.
+- `crates\project_panel\src\project_panel.rs` now keeps storage-drilldown largest-file details in row tooltips instead of visible end-slot text.
+- `crates\agent_ui\src\dx_forge_panel\tabs.rs` and `controls.rs` now use clearer tab row-count tooltips and contextual disabled source-open tooltips.
+- Focused source guards and the handoff registry now cover the third-pass GPUI component contracts for Media, UI, Check, Project, and Forge.
+
+PASSED:
+- `rustfmt --edition 2024` on touched Rust files
+- `rustfmt --edition 2024 --check` on touched Rust files
+- `node --test script\dx-forge-panel-source.test.ts script\dx-check-panel-source.test.ts script\dx-project-panel-source.test.ts script\dx-media-panel-source.test.ts script\dx-ui-panel-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- Conflict-marker scan across touched files returned no matches
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. `just run`, Cargo build/check/test/clippy, native launch, browser automation, and runtime visual proof were not run.
+
 [2026-06-11] - DX Panel GPUI Follow-Up Polish
 
 ADDED:

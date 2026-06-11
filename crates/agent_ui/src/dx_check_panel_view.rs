@@ -297,20 +297,16 @@ impl DxCheckPanel {
             .w_full()
             .min_w_0()
             .px_1()
-            .gap_2()
-            .justify_between()
+            .gap_1()
+            .justify_end()
             .border_b_1()
             .border_color(cx.theme().colors().border)
             .child(
-                Button::new("dx-check-open-receipt", "Receipt")
-                    .label_size(LabelSize::Small)
-                    .color(Color::Muted)
+                IconButton::new("dx-check-open-receipt", IconName::FileTextOutlined)
+                    .shape(IconButtonShape::Square)
+                    .icon_size(IconSize::Small)
+                    .icon_color(Color::Muted)
                     .style(ButtonStyle::Subtle)
-                    .start_icon(
-                        Icon::new(IconName::FileTextOutlined)
-                            .size(IconSize::Small)
-                            .color(Color::Muted),
-                    )
                     .disabled(!receipt_enabled)
                     .tooltip(Tooltip::text(if receipt_enabled {
                         "Open latest Check receipt"
@@ -437,8 +433,9 @@ impl DxCheckPanel {
             if snapshot.sections.is_empty() {
                 stack = stack.child(empty_row("No section scores in the latest receipt."));
             } else {
-                for section in snapshot.sections.iter().take(MAX_SECTION_ROWS) {
-                    stack = stack.child(section_row(section));
+                for (index, section) in snapshot.sections.iter().take(MAX_SECTION_ROWS).enumerate()
+                {
+                    stack = stack.child(section_row(index, section));
                 }
                 if snapshot.sections.len() > MAX_SECTION_ROWS {
                     stack = stack.child(overflow_row(
@@ -733,10 +730,10 @@ impl DxCheckPanel {
                 self.render_sections(snapshot, panel, cx),
             ],
             DxCheckPanelTab::Findings => vec![
-                self.render_web_audits(snapshot, panel.clone(), cx),
-                self.render_adapter_plans(snapshot, panel.clone(), cx),
                 self.render_notices(snapshot, panel.clone(), cx),
-                self.render_quick_fixes(snapshot, panel, cx),
+                self.render_quick_fixes(snapshot, panel.clone(), cx),
+                self.render_web_audits(snapshot, panel.clone(), cx),
+                self.render_adapter_plans(snapshot, panel, cx),
             ],
             DxCheckPanelTab::Receipt => vec![
                 self.render_receipt(snapshot, panel.clone(), cx),

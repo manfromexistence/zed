@@ -20,7 +20,7 @@ use std::{
     sync::{Arc, OnceLock},
     time::Duration,
 };
-use ui::{ListItem, ListItemSpacing, TintColor, Tooltip, prelude::*};
+use ui::{ListHeader, ListItem, ListItemSpacing, TintColor, Tooltip, prelude::*};
 use url::Url;
 use workspace::{
     DraggedMediaAsset, DraggedMediaKind, Workspace,
@@ -1776,27 +1776,19 @@ impl MediaPanel {
                 .id("media-panel-recent-media-section")
                 .gap_1()
                 .child(
-                    h_flex()
-                        .items_center()
-                        .justify_between()
-                        .child(
+                    ListHeader::new("Recent")
+                        .inset(true)
+                        .start_slot(Icon::new(IconName::Clock).size(IconSize::Small))
+                        .end_slot(
                             h_flex()
+                                .min_w_0()
                                 .gap_1()
-                                .items_center()
-                                .child(
-                                    Label::new("Recent")
-                                        .size(LabelSize::XSmall)
-                                        .color(Color::Muted),
-                                )
                                 .child(
                                     Label::new(availability_label)
-                                        .size(LabelSize::XSmall)
-                                        .color(health_color),
-                                ),
-                        )
-                        .child(
-                            h_flex()
-                                .gap_1()
+                                        .size(LabelSize::Small)
+                                        .color(health_color)
+                                        .truncate(),
+                                )
                                 .when(missing_count > 0, |this| {
                                     this.child(
                                         Button::new("media-panel-remove-missing-recent", "Remove")
@@ -1857,28 +1849,19 @@ impl MediaPanel {
                 .id("media-panel-pinned-media-section")
                 .gap_1()
                 .child(
-                    h_flex()
-                        .items_center()
-                        .justify_between()
-                        .child(
+                    ListHeader::new("Pinned")
+                        .inset(true)
+                        .start_slot(Icon::new(IconName::Star).size(IconSize::Small))
+                        .end_slot(
                             h_flex()
+                                .min_w_0()
                                 .gap_1()
-                                .items_center()
-                                .child(Icon::new(IconName::Star).size(IconSize::XSmall))
-                                .child(
-                                    Label::new("Pinned")
-                                        .size(LabelSize::XSmall)
-                                        .color(Color::Muted),
-                                )
                                 .child(
                                     Label::new(availability_label)
-                                        .size(LabelSize::XSmall)
-                                        .color(health_color),
-                                ),
-                        )
-                        .child(
-                            h_flex()
-                                .gap_1()
+                                        .size(LabelSize::Small)
+                                        .color(health_color)
+                                        .truncate(),
+                                )
                                 .when(missing_count > 0, |this| {
                                     this.child(
                                         Button::new("media-panel-remove-missing-pinned", "Remove")

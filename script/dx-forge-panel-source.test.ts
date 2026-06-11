@@ -740,7 +740,8 @@ test("Forge panel uses workflow tabs with Git-style selectable rows", () => {
   assert.match(forgeTabBody, /\.toggle_state\(selected\)/);
   assert.match(forgeTabBody, /\.selected_bottom_border\(true\)/);
   assert.match(forgeTabBody, /\.start_slot\(\s*Icon::new\(tab_icon\(tab\)\)/);
-  assert.match(forgeTabBody, /let title = format!\("\{label\} \(\{count\}\)"\)/);
+  assert.match(forgeTabBody, /let row_noun = if count == 1 \{ "row" \} else \{ "rows" \};/);
+  assert.match(forgeTabBody, /let title = format!\("\{label\}: \{count\} \{row_noun\}"\)/);
   assert.doesNotMatch(forgeTabBody, /\.end_slot\(count_/);
   assert.doesNotMatch(forgeTabBody, /focus_panel\(window, cx\)/);
   assert.match(forgeTabBody, /panel\.set_active_tab\(tab, cx\)/);
@@ -1380,8 +1381,10 @@ test("Forge panel copy stays concise and honors the DX cog icon contract", () =>
 });
 
 test("Forge panel opens exact source-owned paths in multi-root workspaces", () => {
-  const openPathButtonBody =
-    controls.match(/pub\(super\) fn open_exact_abs_path_button\([\s\S]*?\n}\n\npub\(super\) fn exact_abs_path/)?.[0] ?? "";
+  const openPathButtonBody = extractRustFunction(
+    controls,
+    "open_exact_abs_path_button",
+  );
 
   assert.match(snapshot, /pub\(super\) open_path: String/);
   assert.match(sourceSets, /pub open_path: String/);
@@ -1408,6 +1411,10 @@ test("Forge panel opens exact source-owned paths in multi-root workspaces", () =
   assert.match(controls, /pub\(super\) fn open_exact_abs_path/);
   assert.doesNotMatch(controls, /pub\(super\) fn open_workspace_path/);
 
+  assert.match(openPathButtonBody, /let tooltip_text = if enabled \{/);
+  assert.match(openPathButtonBody, /format!\("\{tooltip\} unavailable"\)/);
+  assert.match(openPathButtonBody, /Tooltip::text\(tooltip_text\)/);
+  assert.doesNotMatch(openPathButtonBody, /"Source unavailable"/);
   assert.doesNotMatch(openPathButtonBody, /\bworkspace_roots\b|workspace_path\(/);
   assert.doesNotMatch(
     controls,

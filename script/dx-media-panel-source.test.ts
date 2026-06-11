@@ -157,6 +157,8 @@ test("media panel renders bridge state and filters fetched remote rows by query"
   const renderStatusRow = functionBody(panelSource, "render_status_row");
   const renderRemoteHealthRow = functionBody(panelSource, "render_remote_health_row");
   const renderRemoteLoadingRow = functionBody(panelSource, "render_remote_loading_row");
+  const renderRecentMediaSection = functionBody(panelSource, "render_recent_media_section");
+  const renderPinnedMediaSection = functionBody(panelSource, "render_pinned_media_section");
   const renderMediaHistoryRow = functionBody(panelSource, "render_media_history_row");
   const remotePanelRows = [
     renderRemoteBrowserRow,
@@ -166,10 +168,16 @@ test("media panel renders bridge state and filters fetched remote rows by query"
     renderRemoteLoadingRow,
   ].join("\n");
 
-  assert.match(panelSource, /use ui::\{[\s\S]*ListItem,[\s\S]*ListItemSpacing/);
+  assert.match(panelSource, /use ui::\{[\s\S]*ListHeader,[\s\S]*ListItem,[\s\S]*ListItemSpacing/);
   assert.match(panelSource, /fn render_status_row\(/);
   assert.match(render, /let status = self\.status\.clone\(\);/);
   assert.match(render, /render_status_row\(status, cx\)/);
+  assert.match(renderRecentMediaSection, /ListHeader::new\("Recent"\)/);
+  assert.match(renderRecentMediaSection, /\.start_slot\(Icon::new\(IconName::Clock\)\.size\(IconSize::Small\)\)/);
+  assert.match(renderPinnedMediaSection, /ListHeader::new\("Pinned"\)/);
+  assert.match(renderPinnedMediaSection, /\.start_slot\(Icon::new\(IconName::Star\)\.size\(IconSize::Small\)\)/);
+  assert.match(`${renderRecentMediaSection}\n${renderPinnedMediaSection}`, /\.end_slot\([\s\S]*Label::new\(availability_label\)/);
+  assert.doesNotMatch(`${renderRecentMediaSection}\n${renderPinnedMediaSection}`, /LabelSize::XSmall|IconSize::XSmall|\.justify_between\(\)/);
   assert.match(renderRemoteBrowserRow, /ListItem::new\("media-panel-remote-browser-row"\)/);
   assert.match(renderRemoteWarningRow, /ListItem::new\("media-panel-remote-warning-row"\)/);
   assert.match(renderStatusRow, /ListItem::new\("media-panel-status-row"\)/);

@@ -1271,6 +1271,7 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.doesNotMatch(renderStorageDrilldownRow, /Label::new\(heat_label\)/);
   assert.match(renderStorageDrilldownRow, /\.child\([\s\S]*Label::new\(item\.label\)[\s\S]*\.truncate\(\)/);
   assert.match(renderStorageDrilldownRow, /\.end_slot::<AnyElement>\([\s\S]*Label::new\(format!\("\{file_count\} \/ \{storage_label\}"\)\)/);
+  assert.doesNotMatch(renderStorageDrilldownRow, /Label::new\(largest_files\.join/);
   assert.doesNotMatch(
     renderStorageDrilldownRow,
     /ButtonLike::new|\.selected_style\(ButtonStyle::Tinted\(TintColor::Accent\)\)|\.size\(ButtonSize::None\)|\.full_width\(\)|cursor_pointer\(\)|\.hover\(/,

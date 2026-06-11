@@ -4521,14 +4521,6 @@ impl ProjectPanel {
                             .truncate(),
                     )
                 })
-                .when(!largest_files.is_empty(), |this| {
-                    this.child(
-                        Label::new(largest_files.join(" / "))
-                            .size(LabelSize::Small)
-                            .color(Color::Muted)
-                            .truncate(),
-                    )
-                })
                 .child(
                     Label::new(format!("{file_count} / {storage_label}"))
                         .size(LabelSize::Small)

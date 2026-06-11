@@ -20,7 +20,7 @@ use std::{
     path::{Component, Path, PathBuf},
     sync::{Mutex, OnceLock},
 };
-use ui::{ListItem, ListItemSpacing, TintColor, Tooltip, prelude::*};
+use ui::{ListHeader, ListItem, ListItemSpacing, TintColor, Tooltip, prelude::*};
 use url::Url;
 use workspace::{
     DraggedShadcnAsset, DraggedShadcnKind, Workspace,
@@ -1136,28 +1136,19 @@ impl ShadcnUiPanel {
                 .id("shadcn-ui-recent-actions-section")
                 .gap_1()
                 .child(
-                    h_flex()
-                        .items_center()
-                        .justify_between()
-                        .child(
+                    ListHeader::new("Recent")
+                        .inset(true)
+                        .start_slot(Icon::new(IconName::Clock).size(IconSize::Small))
+                        .end_slot(
                             h_flex()
+                                .min_w_0()
                                 .gap_1()
-                                .items_center()
-                                .child(Icon::new(IconName::Clock).size(IconSize::XSmall))
-                                .child(
-                                    Label::new("Recent")
-                                        .size(LabelSize::XSmall)
-                                        .color(Color::Muted),
-                                )
                                 .child(
                                     Label::new(availability_label)
-                                        .size(LabelSize::XSmall)
-                                        .color(health_color),
-                                ),
-                        )
-                        .child(
-                            h_flex()
-                                .gap_1()
+                                        .size(LabelSize::Small)
+                                        .color(health_color)
+                                        .truncate(),
+                                )
                                 .when(missing_count > 0, |this| {
                                     this.child(
                                         Button::new("shadcn-ui-remove-missing-recent", "Remove")
@@ -1218,28 +1209,19 @@ impl ShadcnUiPanel {
                 .id("shadcn-ui-pinned-actions-section")
                 .gap_1()
                 .child(
-                    h_flex()
-                        .items_center()
-                        .justify_between()
-                        .child(
+                    ListHeader::new("Pinned")
+                        .inset(true)
+                        .start_slot(Icon::new(IconName::Star).size(IconSize::Small))
+                        .end_slot(
                             h_flex()
+                                .min_w_0()
                                 .gap_1()
-                                .items_center()
-                                .child(Icon::new(IconName::Star).size(IconSize::XSmall))
-                                .child(
-                                    Label::new("Pinned")
-                                        .size(LabelSize::XSmall)
-                                        .color(Color::Muted),
-                                )
                                 .child(
                                     Label::new(availability_label)
-                                        .size(LabelSize::XSmall)
-                                        .color(health_color),
-                                ),
-                        )
-                        .child(
-                            h_flex()
-                                .gap_1()
+                                        .size(LabelSize::Small)
+                                        .color(health_color)
+                                        .truncate(),
+                                )
                                 .when(missing_count > 0, |this| {
                                     this.child(
                                         Button::new("shadcn-ui-remove-missing-pinned", "Remove")
@@ -1481,6 +1463,25 @@ impl ShadcnUiPanel {
         let payload = self.payload_for_item(item);
         !item_source_available(item, &payload)
     }
+
+    fn render_status_row(&self, status: SharedString, _cx: &mut Context<Self>) -> impl IntoElement {
+        ListItem::new("shadcn-ui-status-row")
+            .inset(true)
+            .spacing(ListItemSpacing::Sparse)
+            .selectable(false)
+            .tooltip(Tooltip::text(status.clone()))
+            .start_slot(
+                Icon::new(IconName::Info)
+                    .size(IconSize::Small)
+                    .color(Color::Muted),
+            )
+            .child(
+                Label::new(status)
+                    .size(LabelSize::Small)
+                    .color(Color::Muted)
+                    .truncate(),
+            )
+    }
 }
 
 impl Panel for ShadcnUiPanel {
@@ -1549,6 +1550,7 @@ impl Render for ShadcnUiPanel {
         let mut preview_images = cached_shadcn_preview_image_urls(&items);
         self.ensure_visible_preview_images_warmed(&items, &preview_images, cx);
         let filter_counts = self.filter_counts;
+        let status = self.status.clone();
         let mut item_rows = Vec::with_capacity(items.len());
         item_rows.extend(items.into_iter().map(|item| {
             let image_url = preview_images.remove(item.id.as_ref()).flatten();
@@ -1566,9 +1568,13 @@ impl Render for ShadcnUiPanel {
         };
         let mut content_rows = Vec::with_capacity(
             item_rows.len()
+                + usize::from(status.is_some())
                 + usize::from(pinned_ui_section.is_some())
                 + usize::from(recent_ui_section.is_some()),
         );
+        if let Some(status) = status {
+            content_rows.push(self.render_status_row(status, cx).into_any_element());
+        }
         if let Some(pinned_ui_section) = pinned_ui_section {
             content_rows.push(pinned_ui_section);
         }

@@ -4,6 +4,25 @@ import test from "node:test";
 
 const read = (path: string) => readFileSync(path, "utf8");
 const lineCount = (path: string) => read(path).split(/\r?\n/).length;
+const assertBefore = ({
+  body,
+  before,
+  after,
+  message,
+}: {
+  body: string;
+  before: string | RegExp;
+  after: string | RegExp;
+  message: string;
+}) => {
+  const beforeIndex =
+    typeof before === "string" ? body.indexOf(before) : body.search(before);
+  const afterIndex =
+    typeof after === "string" ? body.indexOf(after) : body.search(after);
+  assert.ok(beforeIndex >= 0, `${message}: missing before marker`);
+  assert.ok(afterIndex >= 0, `${message}: missing after marker`);
+  assert.ok(beforeIndex < afterIndex, message);
+};
 
 test("DX Check panel stays split by reader and parser ownership", () => {
   const parent = read("crates/agent_ui/src/dx_check_panel.rs");
@@ -119,8 +138,13 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   const renderHeader = functionBody(view, "render_header");
   const renderStatusStrip = functionBody(view, "render_status_strip");
   const renderToolbar = functionBody(view, "render_toolbar");
+  const renderSections = functionBody(view, "render_sections");
+  const renderActiveTabSections = functionBody(view, "render_active_tab_sections");
   const section = functionBody(rows, "section");
+  const sectionRow = functionBody(rows, "section_row");
   const noticeRow = functionBody(rows, "notice_row");
+  const quickFixRow = functionBody(rows, "quick_fix_row");
+  const adapterPlanRow = functionBody(rows, "adapter_plan_row");
   const webAuditRow = functionBody(rows, "web_audit_row");
   const overflowRow = functionBody(rows, "overflow_row");
   const outcomeLabel = functionBody(rows, "outcome_label");
@@ -137,10 +161,12 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   assert.match(renderStatusStrip, /\.selectable\(false\)/);
   assert.match(renderStatusStrip, /Tooltip::text\(tooltip\)/);
   assert.doesNotMatch(renderStatusStrip, /status_label\(/);
-  assert.match(renderToolbar, /Button::new\("dx-check-open-receipt", "Receipt"\)/);
-  assert.match(renderToolbar, /\.start_icon\([\s\S]*Icon::new\(IconName::FileTextOutlined\)/);
-  assert.match(renderToolbar, /\.style\(ButtonStyle::Subtle\)/);
+  assert.match(renderToolbar, /\.justify_end\(\)/);
+  assert.match(renderToolbar, /IconButton::new\("dx-check-open-receipt", IconName::FileTextOutlined\)/);
   assert.match(renderToolbar, /IconButton::new\("dx-check-refresh", IconName::RotateCw\)/);
+  assert.match(renderToolbar, /\.style\(ButtonStyle::Subtle\)/);
+  assert.doesNotMatch(renderToolbar, /(^|[^A-Za-z0-9_])Button::new\("dx-check-open-receipt"/);
+  assert.doesNotMatch(renderToolbar, /\.start_icon\(/);
   assert.match(tabs, /TabBar::new\("dx-check-tab-bar"\)/);
   assert.match(tabs, /snapshot\.adapter_plans\.len\(\)/);
   assert.match(checkTab, /Tab::new\(id\)/);
@@ -150,6 +176,22 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   assert.match(section, /ListHeader::new\(title\)/);
   assert.match(section, /\.toggle\(Some\(is_open\)\)/);
   assert.doesNotMatch(section, /Open|Closed|end_slot\(status_/);
+  assert.match(renderSections, /for \(index, section\) in snapshot\.sections\.iter\(\)\.take\(MAX_SECTION_ROWS\)\.enumerate\(\)/);
+  assert.match(renderSections, /section_row\(index, section\)/);
+  assert.match(rows, /fn section_row\(index: usize, section: &DxCheckPanelSection\)/);
+  assert.match(sectionRow, /"dx-check-section-score-\{index\}-\{\}"/);
+  assertBefore({
+    body: renderActiveTabSections,
+    before: "self.render_notices(snapshot, panel.clone(), cx)",
+    after: "self.render_web_audits(snapshot, panel.clone(), cx)",
+    message: "Findings should show blocker/warning notices before web audits",
+  });
+  assertBefore({
+    body: renderActiveTabSections,
+    before: "self.render_quick_fixes(snapshot, panel.clone(), cx)",
+    after: "self.render_adapter_plans(snapshot, panel, cx)",
+    message: "Findings should keep quick fixes ahead of adapter plans",
+  });
   const statusColor = functionBody(rows, "status_color");
   assert.match(statusColor, /let status = snapshot\.status\.to_ascii_lowercase\(\);/);
   assert.match(statusColor, /check_status_is_failure\(&status\)/);
@@ -166,6 +208,9 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   assert.match(view, /overflow_row\(\s*"dx-check-section-overflow"/);
   assert.match(view, /overflow_row\(\s*"dx-check-web-audit-overflow"/);
   assert.match(noticeRow, /Tooltip::text\(tooltip\)/);
+  for (const infoRow of [noticeRow, quickFixRow, adapterPlanRow, webAuditRow]) {
+    assert.match(infoRow, /\.selectable\(false\)/);
+  }
   assert.match(webAuditRow, /let normalized_status = audit\.status\.to_ascii_lowercase\(\);/);
   assert.match(webAuditRow, /match normalized_status\.as_str\(\)/);
   assert.match(webAuditRow, /Label::new\(audit\.status\.clone\(\)\)/);

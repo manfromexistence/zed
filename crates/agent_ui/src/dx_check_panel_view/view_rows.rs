@@ -51,12 +51,12 @@ pub(super) fn detail_row(
         .into_any_element()
 }
 
-pub(super) fn section_row(section: &DxCheckPanelSection) -> AnyElement {
+pub(super) fn section_row(index: usize, section: &DxCheckPanelSection) -> AnyElement {
     let score = section_score_label(section);
     let tooltip = format!("{}: {score}", section.title);
 
     ListItem::new(format!(
-        "dx-check-section-score-{}",
+        "dx-check-section-score-{index}-{}",
         stable_id(&section.title)
     ))
     .inset(true)
@@ -108,6 +108,7 @@ pub(super) fn notice_row(
     ListItem::new(id)
         .inset(true)
         .spacing(ListItemSpacing::Sparse)
+        .selectable(false)
         .start_slot(Icon::new(icon).size(IconSize::Small).color(color))
         .child(content)
         .tooltip(Tooltip::text(tooltip))
@@ -162,6 +163,7 @@ pub(super) fn quick_fix_row(index: usize, fix: &DxCheckPanelQuickFix) -> AnyElem
     ListItem::new(SharedString::from(format!("dx-check-quick-fix-{index}")))
         .inset(true)
         .spacing(ListItemSpacing::Sparse)
+        .selectable(false)
         .start_slot(
             Icon::new(IconName::ListTodo)
                 .size(IconSize::Small)
@@ -223,6 +225,7 @@ pub(super) fn adapter_plan_row(index: usize, plan: &DxCheckPanelAdapterPlan) -> 
     ListItem::new(SharedString::from(format!("dx-check-adapter-plan-{index}")))
         .inset(true)
         .spacing(ListItemSpacing::Sparse)
+        .selectable(false)
         .start_slot(
             Icon::new(IconName::Terminal)
                 .size(IconSize::Small)
@@ -268,6 +271,7 @@ pub(super) fn web_audit_row(index: usize, audit: &DxCheckPanelWebAudit, _cx: &Ap
     ListItem::new(SharedString::from(format!("dx-check-web-audit-{index}")))
         .inset(true)
         .spacing(ListItemSpacing::Sparse)
+        .selectable(false)
         .start_slot(Icon::new(icon).size(IconSize::Small).color(color))
         .child(
             v_flex()

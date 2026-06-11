@@ -66,17 +66,18 @@ pub(super) fn open_exact_abs_path_button(
 ) -> AnyElement {
     let path = exact_abs_path(path);
     let enabled = path.as_ref().is_some_and(|path| path.exists());
+    let tooltip_text = if enabled {
+        tooltip.to_string()
+    } else {
+        format!("{tooltip} unavailable")
+    };
 
     IconButton::new(id, IconName::ArrowUpRight)
         .shape(IconButtonShape::Square)
         .icon_size(IconSize::Small)
         .icon_color(Color::Muted)
         .disabled(!enabled)
-        .tooltip(Tooltip::text(if enabled {
-            tooltip
-        } else {
-            "Source unavailable"
-        }))
+        .tooltip(Tooltip::text(tooltip_text))
         .on_click({
             let workspace = workspace.clone();
             move |_, window, cx| {
