@@ -205,6 +205,26 @@ test("media panel renders bridge state and filters fetched remote rows by query"
   assert.doesNotMatch(historySectionChrome, /LabelSize::XSmall|IconSize::XSmall|\.justify_between\(\)/);
   assert.match(renderRemoteBrowserRow, /ListItem::new\("media-panel-remote-browser-row"\)/);
   assert.match(renderRemoteWarningRow, /ListItem::new\("media-panel-remote-warning-row"\)/);
+  assert.match(
+    renderRemoteBrowserRow,
+    /IconButton::new\("media-panel-browse-remote-row", IconName::ArrowUpRight\)/,
+  );
+  assert.match(renderRemoteBrowserRow, /\.shape\(ui::IconButtonShape::Square\)/);
+  assert.match(renderRemoteBrowserRow, /\.style\(ButtonStyle::Subtle\)/);
+  assert.match(renderRemoteBrowserRow, /\.icon_size\(IconSize::Small\)/);
+  assert.match(renderRemoteBrowserRow, /Tooltip::text\("Open remote provider browser"\)/);
+  assert.match(
+    renderRemoteWarningRow,
+    /IconButton::new\("media-panel-retry-remote-warning", IconName::RotateCw\)/,
+  );
+  assert.match(renderRemoteWarningRow, /\.shape\(ui::IconButtonShape::Square\)/);
+  assert.match(renderRemoteWarningRow, /\.style\(ButtonStyle::Subtle\)/);
+  assert.match(renderRemoteWarningRow, /\.icon_size\(IconSize::Small\)/);
+  assert.match(renderRemoteWarningRow, /Tooltip::text\("Retry remote media search"\)/);
+  assert.doesNotMatch(
+    `${renderRemoteBrowserRow}\n${renderRemoteWarningRow}`,
+    /Button::new\("media-panel-(?:browse-remote-row|retry-remote-warning)", "(?:Open|Retry)"\)/,
+  );
   assert.match(renderStatusRow, /ListItem::new\("media-panel-status-row"\)/);
   assert.match(renderRemoteHealthRow, /ListItem::new\("media-panel-remote-health-row"\)/);
   assert.match(renderRemoteLoadingRow, /ListItem::new\("media-panel-remote-loading-row"\)/);

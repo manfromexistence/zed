@@ -167,6 +167,10 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   assert.match(renderStatusStrip, /cx\.stop_propagation\(\);/);
   assert.match(renderStatusStrip, /IconButton::new\("dx-check-open-receipt", IconName::FileTextOutlined\)/);
   assert.match(renderStatusStrip, /IconButton::new\("dx-check-refresh", IconName::RotateCw\)/);
+  assert.match(
+    renderStatusStrip,
+    /IconButton::new\("dx-check-refresh", IconName::RotateCw\)[\s\S]*\.style\(ButtonStyle::Subtle\)/,
+  );
   assert.match(renderStatusStrip, /\.style\(ButtonStyle::Subtle\)/);
   assert.match(renderStatusStrip, /\.disabled\(!receipt_enabled\)/);
   assert.match(renderStatusStrip, /Tooltip::text\(tooltip\)/);

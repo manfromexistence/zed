@@ -329,6 +329,7 @@ impl DxCheckPanel {
                             .shape(IconButtonShape::Square)
                             .icon_size(IconSize::Small)
                             .icon_color(Color::Muted)
+                            .style(ButtonStyle::Subtle)
                             .tooltip(Tooltip::text("Refresh Check panel"))
                             .on_click(move |_, _, cx| {
                                 panel.update(cx, |panel, cx| panel.refresh(cx)).ok();

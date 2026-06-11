@@ -31,6 +31,7 @@ function functionBody(sourceText: string, name: string): string {
 test("UI panel history rows use shared GPUI list primitives", () => {
   const render = functionBody(uiPanel, "render");
   const renderStatusRow = functionBody(uiPanel, "render_status_row");
+  const renderEmptyRow = functionBody(uiPanel, "render_empty_row");
   const renderRecentUiSection = functionBody(uiPanel, "render_recent_ui_section");
   const renderPinnedUiSection = functionBody(uiPanel, "render_pinned_ui_section");
   const renderItemRow = functionBody(uiPanel, "render_item_row");
@@ -46,11 +47,23 @@ test("UI panel history rows use shared GPUI list primitives", () => {
   assert.match(render, /let status = self\.status\.clone\(\);/);
   assert.match(render, /usize::from\(status\.is_some\(\)\)/);
   assert.match(render, /self\.render_status_row\(status, cx\)\.into_any_element\(\)/);
+  assert.match(render, /self\.render_empty_row\(\)/);
+  assert.doesNotMatch(render, /h_full\(\)\.flex\(\)\.items_center\(\)\.justify_center\(\)/);
   assert.match(renderStatusRow, /ListItem::new\("shadcn-ui-status-row"\)/);
   assert.match(renderStatusRow, /\.inset\(true\)/);
   assert.match(renderStatusRow, /\.spacing\(ListItemSpacing::Sparse\)/);
   assert.match(renderStatusRow, /\.selectable\(false\)/);
   assert.match(renderStatusRow, /Tooltip::text\(status\.clone\(\)\)/);
+  assert.match(renderEmptyRow, /ListItem::new\("shadcn-ui-empty-row"\)/);
+  assert.match(renderEmptyRow, /\.inset\(true\)/);
+  assert.match(renderEmptyRow, /\.spacing\(ListItemSpacing::Sparse\)/);
+  assert.match(renderEmptyRow, /\.selectable\(false\)/);
+  assert.match(renderEmptyRow, /Icon::new\(IconName::Info\)/);
+  assert.match(renderEmptyRow, /\.size\(IconSize::Small\)/);
+  assert.match(renderEmptyRow, /Label::new\("No matching components"\)/);
+  assert.match(renderEmptyRow, /\.size\(LabelSize::Small\)/);
+  assert.match(renderEmptyRow, /\.color\(Color::Muted\)/);
+  assert.match(renderEmptyRow, /Tooltip::text\("No matching components"\)/);
   assert.match(renderRecentUiSection, /ListHeader::new\("Recent"\)/);
   assert.match(renderRecentUiSection, /\.start_slot\(Icon::new\(IconName::Clock\)\.size\(IconSize::Small\)\)/);
   assert.match(renderPinnedUiSection, /ListHeader::new\("Pinned"\)/);

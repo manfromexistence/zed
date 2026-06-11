@@ -4327,29 +4327,32 @@ impl ProjectPanel {
             SharedString::from(format!("dx-explorer-storage-sort-button-{panel_id:?}"));
         let mut metrics = Vec::new();
         if overview.visible_file_count > 0 {
-            metrics.push(Self::render_dx_explorer_metric(
-                Self::dx_explorer_count_label(overview.visible_file_count, "file", "files"),
+            metrics.push(Self::dx_explorer_count_label(
+                overview.visible_file_count,
+                "file",
+                "files",
             ));
-            metrics.push(Self::render_dx_explorer_metric(storage::format_file_size(
-                overview.visible_file_bytes,
-            )));
+            metrics.push(storage::format_file_size(overview.visible_file_bytes));
         }
         if overview.cached_direct_file_count > 0 {
-            metrics.push(Self::render_dx_explorer_metric(
-                Self::dx_explorer_count_label(
-                    overview.cached_direct_file_count,
-                    "indexed file",
-                    "indexed files",
-                ),
+            metrics.push(Self::dx_explorer_count_label(
+                overview.cached_direct_file_count,
+                "indexed file",
+                "indexed files",
             ));
-            metrics.push(Self::render_dx_explorer_metric(format!(
+            metrics.push(format!(
                 "{} indexed",
                 storage::format_file_size(overview.cached_direct_file_bytes)
-            )));
+            ));
         }
         if let Some(modified_label) = storage::format_modified_label(overview.latest_modified_at) {
-            metrics.push(Self::render_dx_explorer_metric(modified_label));
+            metrics.push(modified_label);
         }
+        let storage_sort_tooltip = if metrics.is_empty() {
+            format!("Sort by {}", sort_mode.label())
+        } else {
+            format!("Sort by {}\n{}", sort_mode.label(), metrics.join("\n"))
+        };
 
         Some(
             v_flex()
@@ -4374,7 +4377,6 @@ impl ProjectPanel {
                                 .items_center()
                                 .gap_1()
                                 .child(Self::render_dx_explorer_metric(sort_mode.status_label()))
-                                .children(metrics)
                                 .child(
                                     div().flex_none().child(
                                         PopoverMenu::new(storage_sort_menu_id)
@@ -4389,10 +4391,7 @@ impl ProjectPanel {
                                             .icon_color(Color::Muted)
                                             .tab_index(0_isize)
                                             .track_focus(&self.focus_handle(cx)),
-                                            Tooltip::text(format!(
-                                                "Sort by {}",
-                                                sort_mode.label()
-                                            )),
+                                            Tooltip::text(storage_sort_tooltip),
                                         )
                                         .anchor(gpui::Anchor::TopRight)
                                         .menu(move |window, cx| {

@@ -1047,7 +1047,17 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   );
   assert.match(
     renderStorageDrilldown,
-    /ListHeader::new\("Folder Storage"\)[\s\S]*\.end_slot(?:::<[^>]+>)?\([\s\S]*sort_mode\.status_label\(\)[\s\S]*\.children\(metrics\)[\s\S]*PopoverMenu::new\(storage_sort_menu_id\)/,
+    /ListHeader::new\("Folder Storage"\)[\s\S]*\.end_slot(?:::<[^>]+>)?\([\s\S]*sort_mode\.status_label\(\)[\s\S]*PopoverMenu::new\(storage_sort_menu_id\)/,
+  );
+  assert.match(
+    renderStorageDrilldown,
+    /let storage_sort_tooltip = if metrics\.is_empty\(\) \{[\s\S]*format!\("Sort by \{\}", sort_mode\.label\(\)\)[\s\S]*metrics\.join\("\\n"\)/,
+  );
+  assert.match(renderStorageDrilldown, /Tooltip::text\(storage_sort_tooltip\)/);
+  assert.doesNotMatch(
+    renderStorageDrilldown,
+    /\.children\(metrics\)/,
+    "storage drilldown header should keep volatile metrics in tooltip metadata, not visible end-slot labels",
   );
   assert.match(
     renderStorageDrilldown,

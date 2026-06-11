@@ -586,6 +586,18 @@ test("Forge panel reads Forge remote registry and makes provider targets concret
   assert.match(providersView, /remote\.registry_open_path\.as_str\(\)/);
   assert.match(providers, /Configured remote:/);
   assert.match(providers, /Registry:/);
+  assert.match(providersTooltips, /Registry path is unavailable/);
+  assert.match(providersTooltips, /Open a workspace with remotes\.json/);
+  assert.match(providersTooltips, /Path unavailable/);
+  assert.match(providersTooltips, /No path found/);
+  assert.match(
+    providersTooltips,
+    /if target_path\.is_some\(\) \{[\s\S]*Registry path is unavailable[\s\S]*\} else \{[\s\S]*Open a workspace with remotes\.json/,
+  );
+  assert.match(
+    providersTooltips,
+    /if target_path\.is_some\(\) \{[\s\S]*Path unavailable[\s\S]*\} else \{[\s\S]*No path found/,
+  );
   assert.match(remoteRegistrySources, /catalog_provider_info/);
   assert.match(remoteRegistrySources, /remote kind\(s\) not in provider icon catalog/);
   for (const unsupportedButton of ["forge", "r2", "mega", "pinterest", "sketchfab"]) {

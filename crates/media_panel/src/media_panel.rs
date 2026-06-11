@@ -1684,9 +1684,11 @@ impl MediaPanel {
                     ),
             )
             .end_slot(
-                Button::new("media-panel-browse-remote-row", "Open")
+                IconButton::new("media-panel-browse-remote-row", IconName::ArrowUpRight)
                     .style(ButtonStyle::Subtle)
-                    .size(ButtonSize::Compact)
+                    .shape(ui::IconButtonShape::Square)
+                    .icon_size(IconSize::Small)
+                    .tooltip(Tooltip::text("Open remote provider browser"))
                     .on_click(cx.listener(|panel, _, window, cx| {
                         panel.browse_remote_media(window, cx);
                     })),
@@ -1715,9 +1717,11 @@ impl MediaPanel {
                     .truncate(),
             )
             .end_slot(
-                Button::new("media-panel-retry-remote-warning", "Retry")
+                IconButton::new("media-panel-retry-remote-warning", IconName::RotateCw)
                     .style(ButtonStyle::Subtle)
-                    .size(ButtonSize::Compact)
+                    .shape(ui::IconButtonShape::Square)
+                    .icon_size(IconSize::Small)
+                    .tooltip(Tooltip::text("Retry remote media search"))
                     .on_click(cx.listener(|panel, _, _, cx| {
                         panel.refresh_remote_media(cx);
                     })),

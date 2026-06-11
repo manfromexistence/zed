@@ -1520,6 +1520,25 @@ impl ShadcnUiPanel {
                     .truncate(),
             )
     }
+
+    fn render_empty_row(&self) -> impl IntoElement {
+        ListItem::new("shadcn-ui-empty-row")
+            .inset(true)
+            .spacing(ListItemSpacing::Sparse)
+            .selectable(false)
+            .tooltip(Tooltip::text("No matching components"))
+            .start_slot(
+                Icon::new(IconName::Info)
+                    .size(IconSize::Small)
+                    .color(Color::Muted),
+            )
+            .child(
+                Label::new("No matching components")
+                    .size(LabelSize::Small)
+                    .color(Color::Muted)
+                    .truncate(),
+            )
+    }
 }
 
 impl Panel for ShadcnUiPanel {
@@ -1704,15 +1723,7 @@ impl Render for ShadcnUiPanel {
                     .flex_1()
                     .overflow_y_scroll()
                     .p_2()
-                    .when(is_empty, |this| {
-                        this.child(
-                            div().h_full().flex().items_center().justify_center().child(
-                                Label::new("No matching components")
-                                    .size(LabelSize::Small)
-                                    .color(Color::Muted),
-                            ),
-                        )
-                    })
+                    .when(is_empty, |this| this.child(self.render_empty_row()))
                     .when(!content_rows.is_empty(), |this| {
                         this.child(v_flex().gap_2().children(content_rows))
                     }),
