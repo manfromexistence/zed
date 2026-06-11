@@ -8,6 +8,9 @@ use crate::dx_agent_bridge::DxAgentBridgeSnapshot;
 
 use super::{DxLaunchWorkspaceStatus, agents, muted_card};
 
+mod catalog;
+use catalog::{PluginCatalogEntry, first_party_plugin_catalog};
+
 pub(crate) fn render_tools_screen(
     status: Option<&DxLaunchWorkspaceStatus>,
     cx: &mut App,
@@ -15,60 +18,30 @@ pub(crate) fn render_tools_screen(
     let body = if let Some(status) = status {
         let snapshot = &status.agent_bridge;
         v_flex()
-            .gap_2()
+            .gap_3()
+            .child(plugin_catalog_summary(snapshot))
+            .child(plugin_catalog_cards(snapshot, cx))
             .child(tools_section(
-                "dx-tools-browser-section",
-                "Browser",
-                dx_icon(DxUiIcon::Browser),
+                "dx-plugins-bridge-section",
+                "Bridge Status",
+                dx_icon(DxUiIcon::Permissions),
             ))
-            .child(trusted_tool_state(
-                snapshot,
-                "dx-tools-browser",
-                dx_icon(DxUiIcon::Browser),
-                "Browser tools",
-                &["browser", "web", "chrome"],
-                "No approved Browser tool receipt is available yet.",
-            ))
+            .child(permission_state(snapshot))
             .child(tools_section(
-                "dx-tools-computer-section",
-                "Computer",
-                dx_icon(DxUiIcon::Computer),
-            ))
-            .child(trusted_tool_state(
-                snapshot,
-                "dx-tools-computer",
-                dx_icon(DxUiIcon::Computer),
-                "Computer tools",
-                &["computer", "desktop", "screen"],
-                "No approved Computer tool receipt is available yet.",
-            ))
-            .child(tools_section(
-                "dx-tools-mcp-section",
+                "dx-plugins-mcp-section",
                 "MCP",
                 dx_icon(DxUiIcon::Mcp),
             ))
             .child(mcp_state(snapshot))
             .child(tools_section(
-                "dx-tools-plugins-section",
-                "DX Plugins",
-                dx_icon(DxUiIcon::Plugins),
-            ))
-            .child(plugin_state(snapshot))
-            .child(tools_section(
-                "dx-tools-receipts-section",
+                "dx-plugins-receipts-section",
                 "Receipts",
                 IconName::FileTextOutlined,
             ))
             .child(agents::dx_agent_receipt_state(snapshot, cx))
-            .child(tools_section(
-                "dx-tools-permissions-section",
-                "Permissions",
-                dx_icon(DxUiIcon::Permissions),
-            ))
-            .child(permission_state(snapshot))
             .into_any_element()
     } else {
-        muted_card("Loading trusted tool bridge receipts", cx)
+        muted_card("Loading DX plugin catalog and bridge receipts", cx)
     };
 
     div()
@@ -83,68 +56,77 @@ pub(crate) fn render_tools_screen(
                 .p_4()
                 .child(screen_header(
                     dx_icon(DxUiIcon::Plugins),
-                    "Tools",
-                    "Browser, computer, MCP, plugins, receipts, and permission bridge state.",
+                    "Plugins",
+                    "First-party DX plugins, credentials, receipts, and agent bridge readiness.",
                 ))
                 .child(body),
         )
         .into_any_element()
 }
 
-fn trusted_tool_state(
-    snapshot: &DxAgentBridgeSnapshot,
-    id: &'static str,
-    icon: IconName,
-    label: &'static str,
-    search_terms: &[&'static str],
-    missing_state: &'static str,
-) -> AnyElement {
-    let matching_ids = trusted_tool_ids(snapshot, search_terms);
-    let status = if !snapshot.trusted_tool_bridge.present {
-        AiSettingItemStatus::Stopped
-    } else if !matching_ids.is_empty() {
-        AiSettingItemStatus::Running
-    } else {
-        AiSettingItemStatus::Starting
-    };
+fn plugin_catalog_summary(snapshot: &DxAgentBridgeSnapshot) -> AnyElement {
+    let entries = first_party_plugin_catalog();
 
-    AiSettingItem::new(id, label, status, AiSettingItemSource::Custom)
-        .icon(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
-        .detail_label(match status {
-            AiSettingItemStatus::Running => "Approved",
-            AiSettingItemStatus::Starting => "Pending approval",
-            _ => "Unavailable",
-        })
-        .details(tool_detail_stack(vec![
-            tool_detail_row(
-                format!("{id}-bridge").into(),
-                IconName::FileTextOutlined,
-                "Trusted bridge",
-                snapshot.trusted_tool_bridge.status.clone(),
-            ),
-            tool_detail_row(
-                format!("{id}-policy").into(),
-                dx_icon(DxUiIcon::Permissions),
-                "Policy",
-                snapshot.trusted_tool_bridge.trust_policy.clone(),
-            ),
-            tool_detail_row(
-                format!("{id}-ids").into(),
-                IconName::ToolWeb,
-                "Approved ids",
-                if matching_ids.is_empty() {
-                    missing_state.to_string()
-                } else {
-                    matching_ids.join(", ")
-                },
-            ),
-            tool_detail_row(
-                format!("{id}-action").into(),
-                IconName::FileTextOutlined,
-                "Next action",
-                snapshot.trusted_tool_bridge.next_action.clone(),
-            ),
-        ]))
+    ListItem::new("dx-plugins-catalog-summary")
+        .inset(true)
+        .spacing(ListItemSpacing::Sparse)
+        .selectable(false)
+        .start_slot(
+            Icon::new(dx_icon(DxUiIcon::Plugins))
+                .size(IconSize::Small)
+                .color(Color::Muted),
+        )
+        .child(
+            h_flex()
+                .min_w_0()
+                .gap_2()
+                .child(
+                    v_flex()
+                        .min_w_0()
+                        .gap_0p5()
+                        .child(
+                            Label::new("DX first-party plugin catalog")
+                                .size(LabelSize::Small)
+                                .color(Color::Default),
+                        )
+                        .child(
+                            Label::new("Browser, Computer, and Driven are loaded from DX-owned manifest entries.")
+                                .size(LabelSize::Small)
+                                .color(Color::Muted)
+                                .truncate(),
+                        ),
+                )
+                .child(
+                    Label::new(format!("{} plugins", entries.len()))
+                        .size(LabelSize::Small)
+                        .color(Color::Muted)
+                        .flex_none(),
+                ),
+        )
+        .end_slot(
+            Label::new(if snapshot.trusted_tool_bridge.present {
+                "Bridge receipts loaded"
+            } else {
+                "Bridge receipt pending"
+            })
+            .size(LabelSize::Small)
+            .color(if snapshot.trusted_tool_bridge.present {
+                Color::Success
+            } else {
+                Color::Muted
+            }),
+        )
+        .into_any_element()
+}
+
+fn plugin_catalog_cards(snapshot: &DxAgentBridgeSnapshot, cx: &App) -> AnyElement {
+    v_flex()
+        .gap_2()
+        .children(
+            first_party_plugin_catalog()
+                .iter()
+                .map(|entry| plugin_catalog_card(entry, snapshot, cx)),
+        )
         .into_any_element()
 }
 
@@ -188,58 +170,177 @@ fn mcp_state(snapshot: &DxAgentBridgeSnapshot) -> AnyElement {
     .into_any_element()
 }
 
-fn plugin_state(snapshot: &DxAgentBridgeSnapshot) -> AnyElement {
-    let status = if snapshot.trusted_tool_bridge.approved_plugin_tool_count > 0 {
-        AiSettingItemStatus::Running
-    } else if snapshot.trusted_tool_bridge.present {
-        AiSettingItemStatus::Starting
+fn plugin_catalog_card(
+    entry: &PluginCatalogEntry,
+    snapshot: &DxAgentBridgeSnapshot,
+    cx: &App,
+) -> AnyElement {
+    let approved_tool_ids = trusted_tool_ids(snapshot, plugin_trust_terms(entry));
+    let bridge_present = snapshot.trusted_tool_bridge.present;
+    let status = if !approved_tool_ids.is_empty() {
+        ("Enabled for Agents", Color::Success)
+    } else if bridge_present {
+        ("Approval pending", Color::Muted)
     } else {
-        AiSettingItemStatus::Stopped
+        ("Bridge receipt pending", Color::Muted)
+    };
+    let credential_label = if entry.credentials.is_empty() {
+        "No credentials required".to_string()
+    } else {
+        format!("Credentials: {}", entry.credentials.join(", "))
+    };
+    let approved_label = if approved_tool_ids.is_empty() {
+        "No approved tool ids yet".to_string()
+    } else {
+        approved_tool_ids.join(", ")
     };
 
-    AiSettingItem::new(
-        "dx-tools-dx-plugins",
-        "DX Plugins",
-        status,
-        AiSettingItemSource::Custom,
-    )
-    .icon(
-        Icon::new(dx_icon(DxUiIcon::Plugins))
-            .size(IconSize::Small)
-            .color(Color::Muted),
-    )
-    .detail_label(match status {
-        AiSettingItemStatus::Running => "Approved",
-        AiSettingItemStatus::Starting => "Pending approval",
-        _ => "Receipt required",
-    })
-    .details(tool_detail_stack(vec![
-        tool_detail_row(
-            "dx-tools-dx-plugins-approved".into(),
-            IconName::ToolWeb,
-            "Approved plugin tools",
-            snapshot
-                .trusted_tool_bridge
-                .approved_plugin_tool_count
-                .to_string(),
-        ),
-        tool_detail_row(
-            "dx-tools-dx-plugins-automation".into(),
-            dx_icon(DxUiIcon::Automations),
-            "Automation tools",
-            snapshot
-                .trusted_tool_bridge
-                .approved_automation_tool_count
-                .to_string(),
-        ),
-        tool_detail_row(
-            "dx-tools-dx-plugins-contract".into(),
-            IconName::FileTextOutlined,
-            "Contract",
-            snapshot.trusted_tool_bridge.bridge_contract_id.clone(),
-        ),
-    ]))
-    .into_any_element()
+    div()
+        .id(SharedString::from(format!("dx-plugin-card-{}", entry.id)))
+        .w_full()
+        .child(
+            v_flex()
+                .w_full()
+                .p_3()
+                .gap_2()
+                .rounded_md()
+                .border_1()
+                .border_color(cx.theme().colors().border_variant)
+                .bg(cx.theme().colors().elevated_surface_background.opacity(0.5))
+                .child(
+                    h_flex()
+                        .items_start()
+                        .gap_2()
+                        .child(
+                            Icon::new(entry.icon)
+                                .size(IconSize::Medium)
+                                .color(Color::Default),
+                        )
+                        .child(
+                            v_flex()
+                                .min_w_0()
+                                .flex_1()
+                                .gap_0p5()
+                                .child(
+                                    h_flex()
+                                        .min_w_0()
+                                        .gap_2()
+                                        .child(
+                                            Label::new(entry.name)
+                                                .size(LabelSize::Default)
+                                                .color(Color::Default)
+                                                .truncate(),
+                                        )
+                                        .child(
+                                            Label::new(entry.id)
+                                                .size(LabelSize::Small)
+                                                .color(Color::Muted)
+                                                .truncate(),
+                                        ),
+                                )
+                                .child(
+                                    Label::new(entry.description)
+                                        .size(LabelSize::Small)
+                                        .color(Color::Muted)
+                                        .truncate(),
+                                ),
+                        )
+                        .child(
+                            Label::new(status.0)
+                                .size(LabelSize::Small)
+                                .color(status.1)
+                                .flex_none(),
+                        ),
+                )
+                .child(
+                    h_flex()
+                        .min_w_0()
+                        .gap_1()
+                        .flex_wrap()
+                        .child(plugin_meta_pill(entry.category, cx))
+                        .child(plugin_meta_pill(entry.runtime, cx))
+                        .child(plugin_meta_pill(entry.engine, cx))
+                        .child(plugin_meta_pill(entry.trust, cx)),
+                )
+                .child(
+                    v_flex()
+                        .gap_1()
+                        .child(plugin_card_row(
+                            format!("{}-permissions", entry.id).into(),
+                            dx_icon(DxUiIcon::Permissions),
+                            "Permissions",
+                            entry.permissions.join(", "),
+                        ))
+                        .child(plugin_card_row(
+                            format!("{}-io", entry.id).into(),
+                            IconName::ArrowRightLeft,
+                            "Inputs / outputs",
+                            format!(
+                                "{} -> {}",
+                                entry.inputs.join(", "),
+                                entry.outputs.join(", ")
+                            ),
+                        ))
+                        .child(plugin_card_row(
+                            format!("{}-credentials", entry.id).into(),
+                            dx_icon(DxUiIcon::Credentials),
+                            "Credentials",
+                            credential_label,
+                        ))
+                        .child(plugin_card_row(
+                            format!("{}-receipts", entry.id).into(),
+                            dx_icon(DxUiIcon::Receipts),
+                            "Receipts",
+                            entry.receipts.join(", "),
+                        ))
+                        .child(plugin_card_row(
+                            format!("{}-approved", entry.id).into(),
+                            IconName::Check,
+                            "Approved tools",
+                            approved_label,
+                        ))
+                        .child(plugin_card_row(
+                            format!("{}-source", entry.id).into(),
+                            dx_icon(DxUiIcon::Source),
+                            "Source",
+                            entry.source_root,
+                        )),
+                ),
+        )
+        .into_any_element()
+}
+
+fn plugin_meta_pill(label: impl Into<SharedString>, cx: &App) -> AnyElement {
+    div()
+        .px_1p5()
+        .py_0p5()
+        .rounded_sm()
+        .border_1()
+        .border_color(cx.theme().colors().border_variant)
+        .child(
+            Label::new(label.into())
+                .size(LabelSize::Small)
+                .color(Color::Muted),
+        )
+        .into_any_element()
+}
+
+fn plugin_card_row(
+    id: SharedString,
+    icon: IconName,
+    label: impl Into<SharedString>,
+    detail: impl Into<SharedString>,
+) -> AnyElement {
+    tool_detail_row(id, icon, label, detail)
+}
+
+fn plugin_trust_terms(entry: &PluginCatalogEntry) -> &'static [&'static str] {
+    match entry.id {
+        "dx.browser" => &["dx.browser", "browser", "web_preview"],
+        "dx.computer" => &["dx.computer", "computer", "managed_browser", "chrome"],
+        "dx.driven" => &["dx.driven", "driven", "workflow", "source_guard"],
+        _ => &[],
+    }
 }
 
 fn permission_state(snapshot: &DxAgentBridgeSnapshot) -> AnyElement {
@@ -264,6 +365,24 @@ fn permission_state(snapshot: &DxAgentBridgeSnapshot) -> AnyElement {
             IconName::FileTextOutlined,
             "Receipt count",
             snapshot.trusted_tool_bridge.receipt_count.to_string(),
+        ))
+        .child(tool_detail_row(
+            "dx-tools-permissions-approved-plugins".into(),
+            dx_icon(DxUiIcon::Plugins),
+            "Approved plugins",
+            snapshot
+                .trusted_tool_bridge
+                .approved_plugin_tool_count
+                .to_string(),
+        ))
+        .child(tool_detail_row(
+            "dx-tools-permissions-approved-automations".into(),
+            dx_icon(DxUiIcon::Automations),
+            "Automation tools",
+            snapshot
+                .trusted_tool_bridge
+                .approved_automation_tool_count
+                .to_string(),
         ))
         .child(
             AiSettingItem::new(

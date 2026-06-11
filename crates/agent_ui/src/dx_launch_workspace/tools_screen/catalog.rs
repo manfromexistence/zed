@@ -1,0 +1,111 @@
+use ui::{DxUiIcon, IconName, dx_icon};
+
+#[derive(Clone, Copy)]
+pub(super) struct PluginCatalogEntry {
+    pub id: &'static str,
+    pub name: &'static str,
+    pub category: &'static str,
+    pub description: &'static str,
+    pub runtime: &'static str,
+    pub engine: &'static str,
+    pub source_root: &'static str,
+    pub trust: &'static str,
+    pub permissions: &'static [&'static str],
+    pub inputs: &'static [&'static str],
+    pub outputs: &'static [&'static str],
+    pub credentials: &'static [&'static str],
+    pub receipts: &'static [&'static str],
+    pub icon: IconName,
+}
+
+pub(super) fn first_party_plugin_catalog() -> &'static [PluginCatalogEntry] {
+    &[
+        PluginCatalogEntry {
+            id: "dx.browser",
+            name: "Browser",
+            category: "Browser automation",
+            description: "Controls the in-app Web Preview browser through DX-owned navigation, inspection, screenshots, and receipt handoffs.",
+            runtime: "web_preview_native",
+            engine: "zed_web_preview",
+            source_root: "crates/web_preview/src",
+            trust: "first_party_trusted",
+            permissions: &[
+                "web_preview.read",
+                "web_preview.inspect_dom",
+                "web_preview.navigate",
+                "web_preview.input",
+            ],
+            inputs: &["url", "selector", "text_payload", "viewport"],
+            outputs: &[
+                "page_state_summary",
+                "dom_snapshot",
+                "screenshot_artifact",
+                "browser_action_receipt",
+            ],
+            credentials: &[],
+            receipts: &["browser_payload_import", "browser_final_validation"],
+            icon: dx_icon(DxUiIcon::Browser),
+        },
+        PluginCatalogEntry {
+            id: "dx.computer",
+            name: "Computer",
+            category: "Computer control",
+            description: "Controls managed Chrome and future desktop-browser paths with action recording receipts, thumbnails, and video handoffs.",
+            runtime: "dxjs_managed_browser",
+            engine: "managed_chrome_playwright_adapter",
+            source_root: "G:\\Dx\\js",
+            trust: "first_party_trusted",
+            permissions: &[
+                "managed_browser.read",
+                "managed_browser.launch",
+                "managed_browser.input",
+                "computer.action_recording",
+            ],
+            inputs: &[
+                "url",
+                "selector",
+                "target_snapshot_id",
+                "action_recording_request",
+            ],
+            outputs: &[
+                "managed_chrome_receipt",
+                "agent_screen_recording_thumbnail",
+                "web_preview_video_player_handoff",
+                "credential_status",
+            ],
+            credentials: &["dx_chrome_extension"],
+            receipts: &[
+                "managed_chrome_runner",
+                "managed_chrome_execution",
+                "computer_action_recording",
+            ],
+            icon: dx_icon(DxUiIcon::Computer),
+        },
+        PluginCatalogEntry {
+            id: "dx.driven",
+            name: "Driven",
+            category: "Workflow nodes",
+            description: "Runs DX-native workflow nodes for lanes, worker prompts, goals, checkpoints, source guards, verification policy, and receipts.",
+            runtime: "dx_workflow_nodes",
+            engine: "dx_agents_bridge",
+            source_root: "crates/agent_ui/src/dx_agent_bridge",
+            trust: "first_party_trusted",
+            permissions: &[
+                "dx_lanes.read",
+                "worker_prompts.prepare",
+                "source_guards.run",
+                "checkpoint_receipts.write",
+            ],
+            inputs: &["lane", "goal", "worker_prompts", "verification_policy"],
+            outputs: &[
+                "dx_lanes",
+                "worker_prompt_packet",
+                "source_guard_report",
+                "checkpoint_receipts",
+            ],
+            credentials: &[],
+            receipts: &["driven_checkpoint", "driven_source_guard"],
+            icon: dx_icon(DxUiIcon::Plugins),
+        },
+    ]
+}

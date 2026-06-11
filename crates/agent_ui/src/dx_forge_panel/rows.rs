@@ -46,7 +46,7 @@ pub(super) fn status_strip(
     detail: String,
     workspace_scope: String,
     actions: AnyElement,
-    _cx: &App,
+    cx: &App,
 ) -> AnyElement {
     let (icon, color, label) = state_presentation(state);
     let tooltip_title = SharedString::from(label);
@@ -56,6 +56,8 @@ pub(super) fn status_strip(
         .inset(true)
         .selectable(false)
         .height(rems(1.75))
+        .border_t_1()
+        .border_color(cx.theme().colors().border)
         .spacing(ListItemSpacing::Sparse)
         .start_slot(Icon::new(icon).size(IconSize::Small).color(color))
         .child(

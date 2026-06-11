@@ -823,12 +823,12 @@ fn signal_row(
 }
 
 fn section_title(label: &'static str, icon: IconName) -> AnyElement {
-    h_flex()
-        .gap_1()
-        .items_center()
-        .pt_1()
-        .child(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
-        .child(Label::new(label).size(LabelSize::Small).color(Color::Muted))
+    div()
+        .child(
+            ListHeader::new(label)
+                .inset(true)
+                .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted)),
+        )
         .into_any_element()
 }
 

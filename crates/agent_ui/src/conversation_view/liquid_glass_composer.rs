@@ -1,8 +1,7 @@
 use agent_settings::AgentLiquidGlassSettings;
 use gpui::{AnyElement, IntoElement, div};
 use liquid_glass::{
-    LiquidGlassGeometry, LiquidGlassStyle, liquid_glass_layer_with_geometry,
-    load_liquid_glass_backdrop_carrier,
+    LiquidGlassStyle, bounded_liquid_glass_layer, load_liquid_glass_backdrop_carrier,
 };
 use ui::prelude::*;
 
@@ -14,24 +13,11 @@ pub(super) fn render_agent_liquid_glass_chat_input_surface(
         .absolute()
         .inset_0()
         .overflow_hidden()
-        .child(liquid_glass_layer_with_geometry(
+        .child(bounded_liquid_glass_layer(
             load_liquid_glass_backdrop_carrier(),
-            agent_liquid_glass_geometry_from_settings(settings),
             agent_liquid_glass_style_from_settings(settings),
         ))
         .into_any_element()
-}
-
-pub(super) fn agent_liquid_glass_geometry_from_settings(
-    settings: &AgentLiquidGlassSettings,
-) -> LiquidGlassGeometry {
-    LiquidGlassGeometry::new(
-        settings.width,
-        settings.height,
-        settings.pixel_scale,
-        settings.position,
-        settings.mouse_control,
-    )
 }
 
 pub(super) fn agent_liquid_glass_style_from_settings(

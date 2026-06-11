@@ -868,7 +868,7 @@ impl TitleBar {
             WorkspaceScreenKind::Agent => "AI",
             WorkspaceScreenKind::Automations => "Automations",
             WorkspaceScreenKind::Connections => "Connections",
-            WorkspaceScreenKind::Tools => "Tools",
+            WorkspaceScreenKind::Tools => "Plugins",
             WorkspaceScreenKind::Editor => "Code",
             WorkspaceScreenKind::Browser => "Browser",
             WorkspaceScreenKind::Terminal => "Terminal",
@@ -882,7 +882,7 @@ impl TitleBar {
             WorkspaceScreenKind::Agent => "Open AI Screen",
             WorkspaceScreenKind::Automations => "Open Automations",
             WorkspaceScreenKind::Connections => "Open Connections",
-            WorkspaceScreenKind::Tools => "Open Tools",
+            WorkspaceScreenKind::Tools => "Open Plugins",
             WorkspaceScreenKind::Editor => "New Untitled File",
             WorkspaceScreenKind::Browser => "New Browser Tab",
             WorkspaceScreenKind::Terminal => "New Terminal",
@@ -1004,7 +1004,7 @@ impl TitleBar {
                 IconButton::new("titlebar-hidden-feature-trigger", IconName::Ellipsis)
                     .icon_size(IconSize::Small)
                     .style(ButtonStyle::Subtle),
-                Tooltip::text("More Tools"),
+                Tooltip::text("More"),
             )
             .menu(move |window, cx| {
                 Some(ContextMenu::build(window, cx, move |menu, _, _| {

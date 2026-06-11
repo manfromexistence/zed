@@ -1,9 +1,8 @@
 IN PROGRESS:
-- None. Latest Agent Liquid Glass renderer hardening and chat-input container polish are committed and source-verified; DX-native n8n workflow-node plugin planning remains source-verified local context. Governed runtime proof remains pending where explicitly noted.
-- DX panel GPUI tenth-pass polish is source-verified and ready for the later governed runtime proof window.
+- None. Agent Liquid Glass full-width chat-input correction and the real Plugins/Connections/Automations/Forge/Check GPUI panel foundation are source-verified. Governed runtime proof remains pending where explicitly noted.
 
 PENDING:
-- Implement the catalog-only checkpoint from `docs/superpowers/plans/2026-06-10-dx-n8n-workflow-node-plugins.md`: DX JS sidecar reads n8n nodes, DX CLI writes `catalog-latest.json`, and DX Code renders searchable Workflow Node cards.
+- Implement the catalog-only checkpoint from `docs/superpowers/plans/2026-06-10-dx-n8n-workflow-node-plugins.md`: DX JS sidecar reads n8n nodes, DX CLI writes `catalog-latest.json`, and DX Code renders searchable Workflow Node cards. Current Plugins work fixed the landing surface and first-party DX catalog cards; it does not yet ingest n8n nodes.
 - Add a persistent Flow STT host/daemon integration so transcription can avoid per-clip process/model startup and match the cached Kokoro TTS path.
 - Run governed runtime proof for the response copy icon, animated voice loader, warmed TTS path, sidebar Plugins/Connections/Automations routing, and Forge Packages tab when `just run` is explicitly authorized.
 - Run governed runtime proof for the DX Agent prompt identity and Copy Agent Response action after the next authorized launch.
@@ -15,6 +14,7 @@ PENDING:
 - Continue the DX/Zed ecosystem integration with bounded source-only slices for remaining receipt scans, semantic icon hotspots, and governed runtime proof when explicitly authorized.
 
 COMPLETED:
+- Agent Liquid Glass fullscreen input and Plugins panel foundation are source-verified: the fullscreen AI BuilderWorkspace chat input now expands across the actual input lane with the real GPUI Liquid Glass layer, product blur defaults are restored, the visible Tools route now presents as Plugins, Browser/Computer/Driven first-party DX plugin cards render from a focused catalog adapter, and Connections/Automations/Forge/Check surfaces use more compact Zed `ListHeader`/`ListItem` chrome. Heavy Cargo/native runtime proof remains deferred by instruction.
 - Agent Liquid Glass renderer hardening is source-verified: the shared Liquid Glass paint path now skips zero-size and non-finite source/glass bounds before issuing GPU paint, shared geometry sanitizes width/height before scaling, and Metal/WGPU skip missing-backdrop Liquid Glass batches instead of reporting false scene-size overflow. Heavy Cargo/native runtime proof remains deferred by instruction.
 - Agent Liquid Glass chat-input container polish is source-verified: the shared ThreadView chat input now owns the real GPUI Liquid Glass surface behind the message editor, uses focus-aware Zed border chrome, keeps transparent panel chrome while glass is mounted, and is guarded as the single path used by both the side Agent panel and fullscreen AI screen. Heavy Cargo/native runtime proof remains deferred by instruction.
 - Agent composer Liquid Glass correction is source-verified: the Agent message editor now uses the recovered geometry-sized GPUI Liquid Glass layer with transparent composer chrome, sanitized persistent `agent.liquid_glass` settings, preserved reverse-edge glow shader behavior, cached backdrop carrier, and macOS fragment viewport binding. Heavy Cargo/native runtime proof remains deferred by instruction.

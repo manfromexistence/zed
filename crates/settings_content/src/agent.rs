@@ -175,15 +175,15 @@ pub struct AgentLiquidGlassSettingsContent {
     pub aberration_samples: Option<u32>,
     /// Blur kernel radius in pixels.
     ///
-    /// Default: 0.0
+    /// Default: 2.0
     pub blur_radius: Option<f32>,
     /// Multi-pass blur iteration count.
     ///
-    /// Default: 0
+    /// Default: 1
     pub blur_iterations: Option<u32>,
     /// Blur downscale factor.
     ///
-    /// Default: 0.1
+    /// Default: 0.5
     pub blur_downscale: Option<f32>,
     /// Whether the standalone glass surface follows pointer movement.
     ///

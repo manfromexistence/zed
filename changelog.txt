@@ -1,3 +1,23 @@
+[2026-06-11] - Liquid Glass Full-Width and Plugins Panel Foundation
+
+ADDED:
+- `crates/agent_ui/src/dx_launch_workspace/tools_screen/catalog.rs` now defines first-party DX plugin card metadata for Browser, Computer, and Driven using DX-owned source roots.
+
+CHANGED:
+- Fullscreen AI BuilderWorkspace now propagates a full-width chat-input mode into `ConversationView` and `ThreadView`, so the real Liquid Glass input container fills the fullscreen input lane while the side Agent panel keeps its bounded width.
+- Agent Liquid Glass product defaults now use practical blur values while preserving the recovered standalone reference defaults in the reference app.
+- The visible Tools workspace now presents as Plugins in tabs, title-bar/screen-carousel copy, telemetry, and body copy.
+- The Plugins screen now renders DX first-party catalog cards with icon, source root, runtime, inputs, outputs, credentials, permissions, receipts, trust, and bridge approval status instead of the previous static Browser/Computer badge rows.
+- Connections, Automations, shared launch workspace sections, Forge status, and Check status use more consistent Zed `ListHeader`/sparse `ListItem` GPUI chrome.
+
+PASSED:
+- `node --test script\dx-agent-composer-liquid-glass-source.test.ts script\dx-agent-workspaces-source.test.ts script\dx-title-bar-source.test.ts script\dx-automations-source.test.ts script\dx-check-panel-source.test.ts script\dx-forge-panel-source.test.ts script\dx-agent-connections-ui-source.test.ts`
+- `rustfmt --edition 2024 --config skip_children=true --check` on touched Rust source files.
+
+NOTES:
+- This fixes the real Plugins landing surface for future n8n/DXJS node catalog ingestion, but it does not yet ingest n8n node metadata.
+- Cargo/build/native runtime proof remains deferred by instruction.
+
 [2026-06-11] - Liquid Glass Renderer Bounds Hardening
 
 FIXED:

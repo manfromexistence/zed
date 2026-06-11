@@ -8087,13 +8087,20 @@ impl Render for AgentPanel {
                     parent.child(self.render_dx_launch_workspace(no_project_state, window, cx))
                 }
                 VisibleSurface::Uninitialized => parent,
-                VisibleSurface::AgentThread(conversation_view) => parent
-                    .child(self.render_dx_launch_workspace(
-                        conversation_view.clone().into_any_element(),
-                        window,
-                        cx,
-                    ))
-                    .child(self.render_drag_target(cx)),
+                VisibleSurface::AgentThread(conversation_view) => {
+                    let chat_input_full_width =
+                        matches!(self.host_kind, AgentPanelHostKind::BuilderWorkspace);
+                    conversation_view.update(cx, |conversation_view, cx| {
+                        conversation_view.set_chat_input_full_width(chat_input_full_width, cx);
+                    });
+                    parent
+                        .child(self.render_dx_launch_workspace(
+                            conversation_view.clone().into_any_element(),
+                            window,
+                            cx,
+                        ))
+                        .child(self.render_drag_target(cx))
+                }
                 VisibleSurface::Terminal(terminal_view) => parent
                     .child(terminal_view.clone())
                     .child(self.render_drag_target(cx)),

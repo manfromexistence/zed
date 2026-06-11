@@ -126,11 +126,12 @@ pub(super) fn history_row(
     entry: &DxAgentAutomationHistoryEntry,
 ) -> AnyElement {
     ListItem::new(id)
-        .spacing(ListItemSpacing::ExtraDense)
+        .inset(true)
+        .spacing(ListItemSpacing::Sparse)
         .selectable(false)
         .start_slot(
             Icon::new(IconName::HistoryRerun)
-                .size(IconSize::XSmall)
+                .size(IconSize::Small)
                 .color(Color::Muted),
         )
         .child(
@@ -139,7 +140,7 @@ pub(super) fn history_row(
                 .gap_1()
                 .child(
                     Label::new(automation.name.clone())
-                        .size(LabelSize::XSmall)
+                        .size(LabelSize::Small)
                         .color(Color::Muted)
                         .flex_none(),
                 )
@@ -148,7 +149,7 @@ pub(super) fn history_row(
                         "{} {} {}",
                         entry.run_id, entry.status, entry.finished_at
                     ))
-                    .size(LabelSize::XSmall)
+                    .size(LabelSize::Small)
                     .color(Color::Default)
                     .truncate(),
                 ),
@@ -157,7 +158,7 @@ pub(super) fn history_row(
 }
 
 pub(super) fn detail_stack(rows: Vec<AnyElement>) -> AnyElement {
-    v_flex().gap_0p5().pl_4().children(rows).into_any_element()
+    v_flex().gap_1().children(rows).into_any_element()
 }
 
 pub(super) fn detail_row(
@@ -167,22 +168,23 @@ pub(super) fn detail_row(
     detail: impl Into<SharedString>,
 ) -> AnyElement {
     ListItem::new(id)
-        .spacing(ListItemSpacing::ExtraDense)
+        .inset(true)
+        .spacing(ListItemSpacing::Sparse)
         .selectable(false)
-        .start_slot(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted))
+        .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
         .child(
             h_flex()
                 .min_w_0()
                 .gap_1()
                 .child(
                     Label::new(label.into())
-                        .size(LabelSize::XSmall)
+                        .size(LabelSize::Small)
                         .color(Color::Muted)
                         .flex_none(),
                 )
                 .child(
                     Label::new(detail.into())
-                        .size(LabelSize::XSmall)
+                        .size(LabelSize::Small)
                         .color(Color::Default)
                         .truncate(),
                 ),

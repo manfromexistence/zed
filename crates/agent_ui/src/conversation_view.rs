@@ -544,6 +544,7 @@ pub struct ConversationView {
     /// Cache + worktree snapshot for resolving paths in markdown code spans.
     /// Shared with the child [`ThreadView`] when one is constructed.
     pub(crate) code_span_resolver: AgentCodeSpanResolver,
+    chat_input_full_width: bool,
     _subscriptions: Vec<Subscription>,
 }
 
@@ -813,9 +814,30 @@ impl ConversationView {
             last_theme_id: Some(cx.theme().id.clone()),
             draft_prompt_persist_task: None,
             code_span_resolver,
+            chat_input_full_width: false,
             _subscriptions: subscriptions,
             focus_handle: cx.focus_handle(),
         }
+    }
+
+    pub(crate) fn set_chat_input_full_width(&mut self, full_width: bool, cx: &mut Context<Self>) {
+        if self.chat_input_full_width == full_width {
+            return;
+        }
+
+        self.chat_input_full_width = full_width;
+        let thread_views = self
+            .as_connected()
+            .map(|connected| connected.threads.values().cloned().collect::<Vec<_>>())
+            .unwrap_or_default();
+
+        for thread_view in thread_views {
+            thread_view.update(cx, |thread_view, cx| {
+                thread_view.set_chat_input_full_width(full_width, cx);
+            });
+        }
+
+        cx.notify();
     }
 
     fn set_server_state(&mut self, state: ServerState, cx: &mut Context<Self>) {
@@ -1246,7 +1268,7 @@ impl ConversationView {
             });
 
         let weak = cx.weak_entity();
-        cx.new(|cx| {
+        let thread_view = cx.new(|cx| {
             ThreadView::new(
                 self.thread_id,
                 thread,
@@ -1273,7 +1295,15 @@ impl ConversationView {
                 window,
                 cx,
             )
-        })
+        });
+
+        if self.chat_input_full_width {
+            thread_view.update(cx, |thread_view, cx| {
+                thread_view.set_chat_input_full_width(true, cx);
+            });
+        }
+
+        thread_view
     }
 
     fn handle_auth_required(

@@ -66,7 +66,7 @@ impl Item for ToolsScreen {
     type Event = ItemEvent;
 
     fn tab_content_text(&self, _detail: usize, _cx: &App) -> SharedString {
-        "Tools".into()
+        "Plugins".into()
     }
 
     fn tab_icon(&self, _window: &Window, _cx: &App) -> Option<Icon> {
@@ -74,7 +74,7 @@ impl Item for ToolsScreen {
     }
 
     fn telemetry_event_text(&self) -> Option<&'static str> {
-        Some("Tools Screen Opened")
+        Some("Plugins Screen Opened")
     }
 
     fn screen_kind(&self) -> WorkspaceScreenKind {

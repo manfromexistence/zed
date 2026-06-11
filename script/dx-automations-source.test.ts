@@ -126,11 +126,13 @@ test("DX Automations remain receipt-backed and do not fake scheduled execution",
   assert.match(rail, /dx_agent_automation_composer_contract/);
   assert.match(rail, /"dx agents automate list --json"/);
   assert.match(rail, /muted_card\("Run automation list receipt"/);
-  assert.match(agentPanel, /"dx-launch-automations"/);
-  assert.match(agentPanel, /zed_actions::assistant::OpenAutomations\.boxed_clone\(\)/);
+  assert.match(agentPanel, /render_automation_workspace_screen/);
+  assert.match(agentPanel, /render_automation_screen\(status\.as_ref\(\), cx\)/);
+  assert.match(agentPanel, /register_action\(\|workspace, _:\s*&OpenAutomations, window, cx\|/);
+  assert.match(agentPanel, /AutomationScreen::open_or_focus\(workspace, window, cx\)/);
   assert.doesNotMatch(
     agentPanel,
-    /"dx-launch-automations"[\s\S]*?OpenProjectDebugTasks/,
+    /render_automation_workspace_screen[\s\S]*?OpenProjectDebugTasks/,
     "Automations launch rail action must not route to debugger tasks",
   );
   assert.match(launchWorkspace, /pub\(crate\) use automation_screen::render_automation_screen;/);

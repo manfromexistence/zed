@@ -657,6 +657,7 @@ pub struct ThreadView {
     pub show_codex_windows_warning: bool,
     pub multi_root_callout_dismissed: bool,
     pub generating_indicator_in_list: bool,
+    chat_input_full_width: bool,
     pub skill_loading_errors: Vec<SkillLoadingError>,
     response_anchor_scroll_request: Option<ResponseAnchorScrollRequest>,
     active_response_anchor_entry_ix: Option<usize>,
@@ -1011,6 +1012,7 @@ impl ThreadView {
             show_codex_windows_warning,
             multi_root_callout_dismissed: false,
             generating_indicator_in_list: false,
+            chat_input_full_width: false,
             skill_loading_errors: Vec::new(),
             response_anchor_scroll_request: None,
             active_response_anchor_entry_ix: None,
@@ -3853,6 +3855,7 @@ impl ThreadView {
 
         let max_content_width = AgentSettings::get_global(cx).max_content_width;
         let has_messages = self.list_state.item_count() > 0;
+        let chat_input_full_width = self.chat_input_full_width;
         let expands_editor_area = editor_expanded && has_messages;
         let (border_focused, border, panel_background) = {
             let colors = cx.theme().colors();
@@ -3891,8 +3894,14 @@ impl ThreadView {
             .child(
                 v_flex()
                     .id("agent-liquid-glass-chat-input-container")
-                    .when_some(max_content_width, |this, max_w| this.flex_basis(max_w))
-                    .when(max_content_width.is_none(), |this| this.w_full())
+                    .map(|this| {
+                        if chat_input_full_width {
+                            this.w_full().flex_1()
+                        } else {
+                            this.when_some(max_content_width, |this, max_w| this.flex_basis(max_w))
+                                .when(max_content_width.is_none(), |this| this.w_full())
+                        }
+                    })
                     .relative()
                     .overflow_hidden()
                     .rounded_md()
@@ -3906,7 +3915,8 @@ impl ThreadView {
                     .p_1p5()
                     .shadow_sm()
                     .flex_shrink_1()
-                    .flex_grow_0()
+                    .when(chat_input_full_width, |this| this.flex_grow_1())
+                    .when(!chat_input_full_width, |this| this.flex_grow_0())
                     .when(has_messages && !expands_editor_area, |this| {
                         this.max_h(rems(COMPOSER_COLLAPSED_MAX_HEIGHT_REMS))
                     })
@@ -4040,6 +4050,15 @@ impl ThreadView {
         }
 
         Some(render_agent_liquid_glass_chat_input_surface(&settings))
+    }
+
+    pub(crate) fn set_chat_input_full_width(&mut self, full_width: bool, cx: &mut Context<Self>) {
+        if self.chat_input_full_width == full_width {
+            return;
+        }
+
+        self.chat_input_full_width = full_width;
+        cx.notify();
     }
 
     fn render_profile_option_slots(&self, cx: &mut Context<Self>) -> Vec<AnyElement> {

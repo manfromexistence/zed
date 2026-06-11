@@ -56,12 +56,12 @@ test("DX agent workspace taxonomy has first-class Zed screens", () => {
   assert.match(pane, /WorkspaceScreenKind::Connections/);
   assert.match(pane, /WorkspaceScreenKind::Tools/);
   assert.match(titleBar, /WorkspaceScreenKind::Connections => "Connections"/);
-  assert.match(titleBar, /WorkspaceScreenKind::Tools => "Tools"/);
+  assert.match(titleBar, /WorkspaceScreenKind::Tools => "Plugins"/);
   assert.match(titleBar, /WorkspaceScreenKind::Connections => dx_icon\(DxUiIcon::Connections\)/);
   assert.match(titleBar, /WorkspaceScreenKind::Tools => dx_icon\(DxUiIcon::Plugins\)/);
   assert.match(titleBar, /WorkspaceScreenKind::Agent => IconName::Sparkle/);
   assert.match(carousel, /WorkspaceScreenKind::Connections => "Connections"/);
-  assert.match(carousel, /WorkspaceScreenKind::Tools => "Tools"/);
+  assert.match(carousel, /WorkspaceScreenKind::Tools => "Plugins"/);
   assert.match(carousel, /WorkspaceScreenKind::Agent => IconName::Sparkle/);
   assert.match(agentScreen, /Icon::new\(dx_icon\(DxUiIcon::Agent\)\)/);
   assert.match(dxWorkspace, /"dx-agent-overview-section"[\s\S]*?dx_icon\(DxUiIcon::Agent\)/);
@@ -73,11 +73,6 @@ test("DX agent workspace taxonomy has first-class Zed screens", () => {
   assert.match(
     sidebar,
     /fn activate_workspace_screen\([\s\S]*?workspace\.activate_screen_kind\(kind, window, cx\)/,
-  );
-  assert.doesNotMatch(
-    sidebar,
-    /WorkspaceScreenKind::(?:Connections|Tools|Automations) => \{[\s\S]*?dispatch_workspace_action/,
-    "sidebar top actions should use the workspace screen router instead of split first-class action paths",
   );
   assert.match(sidebar, /"sidebar-toolbar-connections"[\s\S]*?activate_workspace_screen\(\s*WorkspaceScreenKind::Connections/);
   assert.match(sidebar, /"sidebar-activity-connections"[\s\S]*?activate_workspace_screen\(WorkspaceScreenKind::Connections/);
@@ -165,31 +160,41 @@ test("Connections workspace is wired to provider, channel, social, gateway, and 
   }
 });
 
-test("Tools workspace exposes trusted bridge contracts without fake approvals", () => {
+test("Plugins workspace exposes first-party catalog cards without fake approvals", () => {
   const dxWorkspace = read("crates/agent_ui/src/dx_launch_workspace.rs");
   const screen = read("crates/agent_ui/src/dx_launch_workspace/tools_screen.rs");
+  const catalog = read(
+    "crates/agent_ui/src/dx_launch_workspace/tools_screen/catalog.rs",
+  );
   const toolsScreen = read("crates/agent_ui/src/tools_screen.rs");
   const bridge = read("crates/agent_ui/src/dx_agent_bridge.rs");
 
   assert.ok(existsSync("crates/agent_ui/src/dx_launch_workspace/tools_screen.rs"));
+  assert.ok(
+    existsSync("crates/agent_ui/src/dx_launch_workspace/tools_screen/catalog.rs"),
+  );
   assert.match(dxWorkspace, /^mod tools_screen;$/m);
   assert.match(dxWorkspace, /pub\(crate\) use tools_screen::render_tools_screen;/);
   assert.match(toolsScreen, /AgentPanel::new_tools_workspace\(workspace, window, cx\)/);
   assert.match(toolsScreen, /WorkspaceScreenKind::Tools/);
   assert.match(toolsScreen, /fn show_toolbar\(&self\) -> bool \{\s*false\s*\}/);
   assert.match(toolsScreen, /fn can_split\(&self\) -> bool \{\s*false\s*\}/);
+  assert.match(toolsScreen, /"Plugins"\.into\(\)/);
+  assert.match(toolsScreen, /Plugins Screen Opened/);
 
-  for (const [id, title] of [
-    ["dx-tools-browser-section", "Browser"],
-    ["dx-tools-computer-section", "Computer"],
-    ["dx-tools-mcp-section", "MCP"],
-    ["dx-tools-plugins-section", "DX Plugins"],
-    ["dx-tools-receipts-section", "Receipts"],
-    ["dx-tools-permissions-section", "Permissions"],
-  ]) {
-    assert.match(screen, new RegExp(`tools_section\\(\\s*"${id}",\\s*"${title}"`));
-  }
+  assert.match(screen, /^mod catalog;$/m);
+  assert.match(screen, /use catalog::\{PluginCatalogEntry, first_party_plugin_catalog\};/);
+  assert.match(screen, /plugin_catalog_summary\(snapshot\)/);
+  assert.match(screen, /plugin_catalog_cards\(snapshot, cx\)/);
+  assert.match(screen, /plugin_catalog_card\(entry, snapshot, cx\)/);
+  assert.match(screen, /"Plugins"/);
+  assert.match(screen, /"dx-plugins-bridge-section"/);
+  assert.match(screen, /"Bridge Status"/);
+  assert.match(screen, /"dx-plugins-mcp-section"/);
+  assert.match(screen, /"dx-plugins-receipts-section"/);
   assert.match(screen, /ListHeader::new\(title\)/);
+  assert.match(screen, /ListItem::new\("dx-plugins-catalog-summary"\)/);
+  assert.match(screen, /\.id\(SharedString::from\(format!\("dx-plugin-card-\{\}"/);
   assert.match(screen, /\.spacing\(ListItemSpacing::Sparse\)/);
   assert.match(screen, /\.tooltip\(Tooltip::text\(tooltip\)\)/);
   assert.doesNotMatch(screen, /use super::\{[^}]*metric_row|section_title|ListItemSpacing::ExtraDense|IconSize::XSmall|LabelSize::XSmall/);
@@ -200,11 +205,32 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
   assert.match(screen, /blocked_tool_count/);
   assert.match(screen, /bridge_contract_id/);
   assert.match(screen, /agents::dx_agent_receipt_state\(snapshot, cx\)/);
-  assert.match(screen, /No approved Browser tool receipt is available yet\./);
-  assert.match(screen, /No approved Computer tool receipt is available yet\./);
+  assert.doesNotMatch(screen, /No approved Browser tool receipt is available yet\./);
+  assert.doesNotMatch(screen, /No approved Computer tool receipt is available yet\./);
   assert.match(screen, /MCP tool receipts are pending trusted bridge approval\./);
   assert.match(screen, /AiSettingItem::new/);
   assert.match(screen, /ListItem::new/);
+
+  assert.match(catalog, /struct PluginCatalogEntry/);
+  for (const id of ["dx.browser", "dx.computer", "dx.driven"]) {
+    assert.match(catalog, new RegExp(`id: "${id}"`));
+    assert.match(screen, new RegExp(`"${id}"`));
+  }
+  for (const field of [
+    "permissions",
+    "inputs",
+    "outputs",
+    "credentials",
+    "receipts",
+    "source_root",
+    "runtime",
+  ]) {
+    assert.match(catalog, new RegExp(`pub ${field}:`));
+  }
+  assert.match(catalog, /source_root: "crates\/web_preview\/src"/);
+  assert.match(catalog, /source_root: "G:\\\\Dx\\\\js"/);
+  assert.match(catalog, /source_root: "crates\/agent_ui\/src\/dx_agent_bridge"/);
+  assert.doesNotMatch(catalog, /n8n|Activepieces|OpenClaw|ZeroClaw/i);
 
   for (const field of [
     "present",

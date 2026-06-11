@@ -1723,7 +1723,7 @@ test("panel headers keep titles flexible and side actions fixed", () => {
 });
 
 test("recent tool panels use professional visible copy", () => {
-  assert.match(titleBar, /Tooltip::text\("More Tools"\)/);
+  assert.match(titleBar, /Tooltip::text\("More"\)/);
   assert.doesNotMatch(titleBar, /More Hidden Features/);
 
   assert.match(stylePanel, /Label::new\("Style"\)/);

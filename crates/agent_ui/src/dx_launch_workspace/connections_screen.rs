@@ -233,7 +233,7 @@ fn screen_header(icon: IconName, title: &'static str, detail: &'static str) -> A
                 )
                 .child(
                     Label::new(detail)
-                        .size(LabelSize::XSmall)
+                        .size(LabelSize::Small)
                         .color(Color::Muted),
                 ),
         )
@@ -241,7 +241,7 @@ fn screen_header(icon: IconName, title: &'static str, detail: &'static str) -> A
 }
 
 fn connection_detail_stack(rows: Vec<AnyElement>) -> AnyElement {
-    v_flex().gap_0p5().pl_4().children(rows).into_any_element()
+    v_flex().gap_1().children(rows).into_any_element()
 }
 
 fn connection_detail_row(
@@ -251,22 +251,23 @@ fn connection_detail_row(
     detail: impl Into<SharedString>,
 ) -> AnyElement {
     ListItem::new(id)
-        .spacing(ListItemSpacing::ExtraDense)
+        .inset(true)
+        .spacing(ListItemSpacing::Sparse)
         .selectable(false)
-        .start_slot(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted))
+        .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
         .child(
             h_flex()
                 .min_w_0()
                 .gap_1()
                 .child(
                     Label::new(label.into())
-                        .size(LabelSize::XSmall)
+                        .size(LabelSize::Small)
                         .color(Color::Muted)
                         .flex_none(),
                 )
                 .child(
                     Label::new(detail.into())
-                        .size(LabelSize::XSmall)
+                        .size(LabelSize::Small)
                         .color(Color::Default)
                         .truncate(),
                 ),

@@ -288,7 +288,7 @@ impl Workspace {
             WorkspaceScreenKind::Agent => "AI",
             WorkspaceScreenKind::Automations => "Automations",
             WorkspaceScreenKind::Connections => "Connections",
-            WorkspaceScreenKind::Tools => "Tools",
+            WorkspaceScreenKind::Tools => "Plugins",
             WorkspaceScreenKind::Editor => "Code",
             WorkspaceScreenKind::Browser => "Browser",
             WorkspaceScreenKind::Terminal => "Terminal",

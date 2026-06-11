@@ -289,6 +289,8 @@ impl DxCheckPanel {
             .inset(true)
             .spacing(ListItemSpacing::Sparse)
             .selectable(false)
+            .border_b_1()
+            .border_color(cx.theme().colors().border)
             .start_slot(Indicator::dot().color(color))
             .child(
                 h_flex()

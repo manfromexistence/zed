@@ -58,7 +58,7 @@ pub(crate) fn render_automation_screen(
                                     Label::new(
                                         "Composer receipt state, schedule contracts, history, and handoff evidence.",
                                     )
-                                    .size(LabelSize::XSmall)
+                                    .size(LabelSize::Small)
                                     .color(Color::Muted),
                                 ),
                         ),
