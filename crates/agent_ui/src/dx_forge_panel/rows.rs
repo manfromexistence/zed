@@ -1,4 +1,4 @@
-use gpui::{AnyElement, App, EntityId, IntoElement, WeakEntity};
+use gpui::{AnyElement, App, EntityId, IntoElement, WeakEntity, rems};
 use ui::{IconName, ListHeader, ListItem, ListItemSpacing, Tab, Tooltip, prelude::*};
 use workspace::{Workspace, dock::side_panel_header_controls};
 
@@ -49,10 +49,13 @@ pub(super) fn status_strip(
     _cx: &App,
 ) -> AnyElement {
     let (icon, color, label) = state_presentation(state);
-    let tooltip = format!("{detail}\n{workspace_scope}");
+    let tooltip_title = SharedString::from(label);
+    let tooltip_meta = format!("{detail}\n{workspace_scope}");
 
     ListItem::new("dx-forge-status")
+        .inset(true)
         .selectable(false)
+        .height(rems(1.75))
         .spacing(ListItemSpacing::Sparse)
         .start_slot(Icon::new(icon).size(IconSize::Small).color(color))
         .child(
@@ -63,8 +66,10 @@ pub(super) fn status_strip(
                     .truncate(),
             ),
         )
-        .end_slot(h_flex().flex_none().gap_1().child(actions))
-        .tooltip(Tooltip::text(tooltip))
+        .end_slot(h_flex().flex_none().gap_0p5().child(actions))
+        .tooltip(move |_, cx| {
+            Tooltip::with_meta(tooltip_title.clone(), None, tooltip_meta.clone(), cx)
+        })
         .into_any_element()
 }
 
@@ -82,7 +87,13 @@ pub(super) fn section_header(
         .child(
             ListHeader::new(title)
                 .inset(true)
-                .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted)),
+                .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
+                .end_slot(
+                    Label::new(count.to_string())
+                        .size(LabelSize::Small)
+                        .color(Color::Muted)
+                        .truncate(),
+                ),
         )
         .into_any_element()
 }
@@ -103,6 +114,7 @@ pub(super) fn empty_row(id: &'static str, label: &'static str, _cx: &App) -> Any
                 .color(Color::Muted)
                 .truncate(),
         )
+        .tooltip(Tooltip::text(label))
         .into_any_element()
 }
 

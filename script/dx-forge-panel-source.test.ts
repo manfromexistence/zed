@@ -571,6 +571,11 @@ test("Forge panel reads Forge remote registry and makes provider targets concret
   assert.match(providersState, /configured_provider_count_for_group\(group\.key\(\)\)/);
   assert.match(providersState, /"Not configured"/);
   assert.match(providersState, /"Configured"/);
+  assert.match(
+    providersState,
+    /fn target_state\(label: &'static str, detail: impl Into<String>, color: Color\)/,
+  );
+  assert.doesNotMatch(providersState, /IconName::|_icon: IconName/);
   assert.doesNotMatch(
     providersState,
     /health unchecked[\s\S]{0,260}Color::Success|Color::Success[\s\S]{0,260}health unchecked/,
@@ -581,6 +586,18 @@ test("Forge panel reads Forge remote registry and makes provider targets concret
   assert.match(providersView, /remote\.registry_open_path\.as_str\(\)/);
   assert.match(providers, /Configured remote:/);
   assert.match(providers, /Registry:/);
+  assert.match(providersTooltips, /Registry path is unavailable/);
+  assert.match(providersTooltips, /Open a workspace with remotes\.json/);
+  assert.match(providersTooltips, /Path unavailable/);
+  assert.match(providersTooltips, /No path found/);
+  assert.match(
+    providersTooltips,
+    /if target_path\.is_some\(\) \{[\s\S]*Registry path is unavailable[\s\S]*\} else \{[\s\S]*Open a workspace with remotes\.json/,
+  );
+  assert.match(
+    providersTooltips,
+    /if target_path\.is_some\(\) \{[\s\S]*Path unavailable[\s\S]*\} else \{[\s\S]*No path found/,
+  );
   assert.match(remoteRegistrySources, /catalog_provider_info/);
   assert.match(remoteRegistrySources, /remote kind\(s\) not in provider icon catalog/);
   for (const unsupportedButton of ["forge", "r2", "mega", "pinterest", "sketchfab"]) {
@@ -634,17 +651,21 @@ test("Forge panel uses Git-style controls instead of metric cards", () => {
   assert.match(panelView, /section_header\(/);
   assert.match(rows, /pub\(super\) fn section_header/);
   assert.match(statusStripBody, /ListItem::new\("dx-forge-status"\)/);
+  assert.match(statusStripBody, /\.inset\(true\)/);
   assert.match(statusStripBody, /\.selectable\(false\)/);
+  assert.match(statusStripBody, /\.height\(rems\(1\.75\)\)/);
   assert.match(statusStripBody, /\.spacing\(ListItemSpacing::Sparse\)/);
   assert.match(statusStripBody, /\.start_slot\(/);
   assert.match(statusStripBody, /\.end_slot\(/);
+  assert.match(statusStripBody, /Tooltip::with_meta/);
   assert.match(rows, /ListHeader/);
   assert.match(sectionHeaderBody, /ListHeader::new\(title\)/);
   assert.match(sectionHeaderBody, /div\(\)[\s\S]*\.id\(id\)/);
   assert.match(sectionHeaderBody, /\.inset\(true\)/);
   assert.match(sectionHeaderBody, /\.start_slot\(/);
   assert.match(sectionHeaderBody, /Tooltip::text\(count_tooltip\)/);
-  assert.doesNotMatch(sectionHeaderBody, /\.end_slot\(/);
+  assert.match(sectionHeaderBody, /\.end_slot\([\s\S]*Label::new\(count\.to_string\(\)\)/);
+  assert.match(sectionHeaderBody, /\.color\(Color::Muted\)/);
   assert.doesNotMatch(
     `${statusStripBody}\n${sectionHeaderBody}`,
     /\.h\(px\((?:28|32)\.0\)\)|\.border_1\(\)|\.border_y_1\(\)|\.border_r_2\(\)|ghost_element_hover/,
@@ -669,6 +690,7 @@ test("Forge panel uses Git-style controls instead of metric cards", () => {
   assert.doesNotMatch(selectableRowBody, /\.start_slot\(selection_checkbox\)/);
   assert.match(workflowRows, /fn selectable_row_actions/);
   assert.match(selectableRowActionsBody, /\.on_mouse_down\(MouseButton::Left/);
+  assert.match(selectableRowActionsBody, /\.gap_0p5\(\)/);
   assert.match(selectableRowActionsBody, /cx\.stop_propagation\(\);/);
   assert.match(selectableRowActionsBody, /actions = actions\.child\(open_button\)/);
   assert.match(selectableRowActionsBody, /actions\.child\(selection_checkbox\)\.into_any_element\(\)/);
@@ -676,12 +698,29 @@ test("Forge panel uses Git-style controls instead of metric cards", () => {
   assert.match(emptyRowBody, /\.inset\(true\)/);
   assert.match(emptyRowBody, /\.spacing\(ListItemSpacing::Sparse\)/);
   assert.match(emptyRowBody, /\.selectable\(false\)/);
+  assert.match(emptyRowBody, /\.tooltip\(Tooltip::text\(label\)\)/);
   assert.doesNotMatch(
     evidenceRowBodies,
     /Stateful<Div>|\bDiv\b|\.border_1\(\)|ghost_element_(?:background|hover|active)/,
   );
   assert.match(controls, /IconButton::new\("dx-forge-open-history", IconName::FolderOpen\)/);
   assert.match(controls, /IconButton::new\("dx-forge-refresh", IconName::RotateCw\)/);
+  assert.match(
+    controls,
+    /IconButton::new\("dx-forge-open-history", IconName::FolderOpen\)[\s\S]*\.tab_index\(0_isize\)/,
+  );
+  assert.match(
+    controls,
+    /IconButton::new\("dx-forge-open-history", IconName::FolderOpen\)[\s\S]*move \|_, window, cx\| \{[\s\S]*cx\.stop_propagation\(\);[\s\S]*open_exact_abs_path/,
+  );
+  assert.match(
+    controls,
+    /IconButton::new\("dx-forge-refresh", IconName::RotateCw\)[\s\S]*\.tab_index\(0_isize\)/,
+  );
+  assert.match(
+    controls,
+    /IconButton::new\("dx-forge-refresh", IconName::RotateCw\)[\s\S]*move \|_, _, cx\| \{[\s\S]*cx\.stop_propagation\(\);[\s\S]*panel\.update/,
+  );
   assert.match(controls, /IconButton::new\(id, IconName::ArrowUpRight\)/);
   assert.match(
     controls,
@@ -729,7 +768,8 @@ test("Forge panel uses workflow tabs with Git-style selectable rows", () => {
   assert.match(forgeTabBody, /\.toggle_state\(selected\)/);
   assert.match(forgeTabBody, /\.selected_bottom_border\(true\)/);
   assert.match(forgeTabBody, /\.start_slot\(\s*Icon::new\(tab_icon\(tab\)\)/);
-  assert.match(forgeTabBody, /let title = format!\("\{label\} \(\{count\}\)"\)/);
+  assert.match(forgeTabBody, /let row_noun = if count == 1 \{ "row" \} else \{ "rows" \};/);
+  assert.match(forgeTabBody, /let title = format!\("\{label\}: \{count\} \{row_noun\}"\)/);
   assert.doesNotMatch(forgeTabBody, /\.end_slot\(count_/);
   assert.doesNotMatch(forgeTabBody, /focus_panel\(window, cx\)/);
   assert.doesNotMatch(forgeTabBody, /\.on_mouse_down\(MouseButton::Left/);
@@ -1148,12 +1188,17 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
     providersView.match(
       /fn provider_buttons_for_group\([\s\S]*?\r?\n}\r?\n\r?\nfn provider_group_actions/,
     )?.[0] ?? "";
+  const providerTargetButtonBody =
+    providersView.match(
+      /fn provider_target_button\([\s\S]*?\r?\n}\r?\n\r?\nfn provider_group_controls/,
+    )?.[0] ?? "";
   const providerGroupActionsBody =
     providersView.match(
       /fn provider_group_actions\([\s\S]*?\r?\n}\r?\n\r?\nfn target_path_for_group/,
     )?.[0] ?? "";
   assert.ok(remoteTargetStripBody, "remote_target_strip body should remain source-guarded");
   assert.ok(providerGroupControlsBody, "provider_group_controls body should remain source-guarded");
+  assert.ok(providerTargetButtonBody, "provider_target_button body should remain source-guarded");
   assert.ok(providerButtonsBody, "provider_buttons_for_group body should remain source-guarded");
   assert.match(remoteTargetStripBody, /v_flex\(\)/);
   assert.doesNotMatch(remoteTargetStripBody, /\bRemote targets\b|\blanes\b|ProviderGroup::ALL\.len\(\)/i);
@@ -1165,7 +1210,7 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.match(providerGroupControlsBody, /\.child\(checkbox\)/);
   assert.match(
     providerGroupControlsBody,
-    /\.end_slot_on_hover\(provider_group_actions\([\s\S]*open_button\.into_any_element\(\),[\s\S]*hover_checkbox,[\s\S]*\)\)/,
+    /\.end_slot_on_hover\(provider_group_actions\([\s\S]*open_button\.into_any_element\(\),[\s\S]*hover_checkbox,[\s\S]*state\.color,[\s\S]*\)\)/,
   );
   assert.match(providerGroupControlsBody, /let checked = panel[\s\S]*item_checked\(&item_key\)/);
   assert.match(providerGroupControlsBody, /let active = panel[\s\S]*item_active\(&item_key\)/);
@@ -1191,7 +1236,15 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.doesNotMatch(providerGroupControlsBody, /Label::new\(state\.detail\.clone\(\)\)/);
   assert.match(providerGroupControlsBody, /remote_target_tooltip\(group, &state, target_path\.as_deref\(\), enabled\)/);
   assert.match(providerGroupControlsBody, /Indicator::dot\(\)\.color\(state\.color\)/);
+  assert.equal(
+    (providerGroupControlsBody.match(/Indicator::dot\(\)\.color\(state\.color\)/g) ?? []).length,
+    1,
+  );
   assert.match(providerGroupControlsBody, /format!\("Open \{\}", group\.title\(\)\)/);
+  assert.match(providerGroupControlsBody, /IconButton::new\([\s\S]*"dx-forge-open-provider-group-\{\}"[\s\S]*\.style\(ButtonStyle::Subtle\)[\s\S]*\.tab_index\(0_isize\)[\s\S]*\.disabled\(!enabled\)/);
+  assert.match(providerTargetButtonBody, /\.style\(ButtonStyle::Transparent\)[\s\S]*\.tab_index\(0_isize\)[\s\S]*\.disabled\(!enabled\)/);
+  assert.match(providerGroupActionsBody, /status_color: Color/);
+  assert.match(providerGroupActionsBody, /\.gap_0p5\(\)/);
   assert.match(
     providerButtonsBody,
     /providers_for\(group\)[\s\S]*provider_target_button\(provider, snapshot, workspace, cx\)/,
@@ -1201,6 +1254,11 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.match(providerButtonsBody, /cx\.stop_propagation\(\);/);
   assert.match(providerGroupActionsBody, /\.on_mouse_down\(MouseButton::Left/);
   assert.match(providerGroupActionsBody, /\.on_mouse_up\(MouseButton::Left/);
+  assert.match(providerGroupActionsBody, /Indicator::dot\(\)\.color\(status_color\)/);
+  assert.equal(
+    (providerGroupActionsBody.match(/Indicator::dot\(\)\.color\(status_color\)/g) ?? []).length,
+    1,
+  );
   assert.match(providerGroupActionsBody, /\.child\(open_button\)/);
   assert.match(providerGroupActionsBody, /cx\.stop_propagation\(\);/);
   assert.match(providersView, /IconButtonShape::Square/);
@@ -1372,8 +1430,10 @@ test("Forge panel copy stays concise and honors the DX cog icon contract", () =>
 });
 
 test("Forge panel opens exact source-owned paths in multi-root workspaces", () => {
-  const openPathButtonBody =
-    controls.match(/pub\(super\) fn open_exact_abs_path_button\([\s\S]*?\n}\n\npub\(super\) fn exact_abs_path/)?.[0] ?? "";
+  const openPathButtonBody = extractRustFunction(
+    controls,
+    "open_exact_abs_path_button",
+  );
 
   assert.match(snapshot, /pub\(super\) open_path: String/);
   assert.match(sourceSets, /pub open_path: String/);
@@ -1400,6 +1460,11 @@ test("Forge panel opens exact source-owned paths in multi-root workspaces", () =
   assert.match(controls, /pub\(super\) fn open_exact_abs_path/);
   assert.doesNotMatch(controls, /pub\(super\) fn open_workspace_path/);
 
+  assert.match(openPathButtonBody, /let tooltip_text = if enabled \{/);
+  assert.match(openPathButtonBody, /\.style\(ButtonStyle::Subtle\)[\s\S]*\.tab_index\(0_isize\)[\s\S]*\.disabled\(!enabled\)/);
+  assert.match(openPathButtonBody, /format!\("\{tooltip\} unavailable"\)/);
+  assert.match(openPathButtonBody, /Tooltip::text\(tooltip_text\)/);
+  assert.doesNotMatch(openPathButtonBody, /"Source unavailable"/);
   assert.doesNotMatch(openPathButtonBody, /\bworkspace_roots\b|workspace_path\(/);
   assert.doesNotMatch(
     controls,

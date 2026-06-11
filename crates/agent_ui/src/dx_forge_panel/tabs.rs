@@ -61,7 +61,8 @@ fn forge_tab(
 ) -> impl IntoElement {
     let selected = active_tab == tab;
     let panel = panel.clone();
-    let title = format!("{label} ({count})");
+    let row_noun = if count == 1 { "row" } else { "rows" };
+    let title = format!("{label}: {count} {row_noun}");
 
     Tab::new(id)
         .fill_available_width()

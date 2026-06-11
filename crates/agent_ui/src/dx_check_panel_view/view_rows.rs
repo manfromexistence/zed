@@ -10,6 +10,7 @@ pub(super) fn section(
     id: &'static str,
     title: &'static str,
     icon: IconName,
+    count_label: Option<SharedString>,
     is_open: bool,
     on_toggle: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     _cx: &App,
@@ -19,6 +20,14 @@ pub(super) fn section(
             .inset(true)
             .toggle(Some(is_open))
             .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
+            .when_some(count_label, |this, count_label| {
+                this.end_slot(
+                    Label::new(count_label)
+                        .size(LabelSize::Small)
+                        .color(Color::Muted)
+                        .truncate(),
+                )
+            })
             .on_toggle(on_toggle),
     )
 }
@@ -51,12 +60,12 @@ pub(super) fn detail_row(
         .into_any_element()
 }
 
-pub(super) fn section_row(section: &DxCheckPanelSection) -> AnyElement {
+pub(super) fn section_row(index: usize, section: &DxCheckPanelSection) -> AnyElement {
     let score = section_score_label(section);
     let tooltip = format!("{}: {score}", section.title);
 
     ListItem::new(format!(
-        "dx-check-section-score-{}",
+        "dx-check-section-score-{index}-{}",
         stable_id(&section.title)
     ))
     .inset(true)
@@ -87,30 +96,29 @@ pub(super) fn notice_row(
     next_action: Option<&str>,
 ) -> AnyElement {
     let id = id.into();
-    let tooltip = match next_action {
-        Some(next_action) => format!("{message}\n{next_action}"),
-        None => message.to_string(),
-    };
-    let mut content = v_flex().flex_1().w_full().min_w_0().gap_0p5().child(
-        Label::new(message.to_string())
-            .size(LabelSize::Small)
-            .truncate(),
-    );
-
-    if let Some(next_action) = next_action {
-        content = content.child(
-            Label::new(next_action.to_string())
-                .size(LabelSize::Small)
-                .color(Color::Muted)
-                .truncate(),
-        );
-    }
+    let tooltip = next_action
+        .map(|next_action| format!("{message}\n{next_action}"))
+        .unwrap_or_else(|| message.to_string());
+    let next_action = next_action.map(String::from);
 
     ListItem::new(id)
         .inset(true)
         .spacing(ListItemSpacing::Sparse)
+        .selectable(false)
         .start_slot(Icon::new(icon).size(IconSize::Small).color(color))
-        .child(content)
+        .child(
+            Label::new(message.to_string())
+                .size(LabelSize::Small)
+                .truncate(),
+        )
+        .when_some(next_action, |this, next_action| {
+            this.end_slot(
+                Label::new(next_action)
+                    .size(LabelSize::Small)
+                    .color(Color::Muted)
+                    .truncate(),
+            )
+        })
         .tooltip(Tooltip::text(tooltip))
         .into_any_element()
 }
@@ -136,41 +144,45 @@ pub(super) fn quick_fix_row(index: usize, fix: &DxCheckPanelQuickFix) -> AnyElem
         fix.next_action,
         fix.command.as_deref().unwrap_or("No command")
     );
-    let mut content = v_flex()
-        .flex_1()
-        .w_full()
-        .min_w_0()
-        .gap_0p5()
-        .child(
-            Label::new(fix.label.clone())
-                .size(LabelSize::Small)
-                .truncate(),
-        )
-        .child(
-            Label::new(fix.next_action.clone())
-                .size(LabelSize::Small)
-                .color(Color::Muted)
-                .truncate(),
-        );
-
-    if let Some(command) = fix.command.as_ref() {
-        content = content.child(
-            Label::new(command.clone())
-                .size(LabelSize::Small)
-                .color(Color::Accent)
-                .truncate(),
-        );
-    }
+    let command = fix.command.clone();
 
     ListItem::new(SharedString::from(format!("dx-check-quick-fix-{index}")))
         .inset(true)
         .spacing(ListItemSpacing::Sparse)
+        .selectable(false)
         .start_slot(
             Icon::new(IconName::ListTodo)
                 .size(IconSize::Small)
                 .color(Color::Muted),
         )
-        .child(content)
+        .child(
+            Label::new(fix.label.clone())
+                .size(LabelSize::Small)
+                .truncate(),
+        )
+        .end_slot(
+            h_flex()
+                .min_w_0()
+                .gap_1()
+                .child(
+                    div().max_w(rems(16.)).overflow_hidden().child(
+                        Label::new(fix.next_action.clone())
+                            .size(LabelSize::Small)
+                            .color(Color::Muted)
+                            .truncate_start(),
+                    ),
+                )
+                .when_some(command, |this, command| {
+                    this.child(
+                        div().max_w(rems(16.)).overflow_hidden().child(
+                            Label::new(command)
+                                .size(LabelSize::Small)
+                                .color(Color::Accent)
+                                .truncate_start(),
+                        ),
+                    )
+                }),
+        )
         .tooltip(Tooltip::text(tooltip))
         .into_any_element()
 }
@@ -193,47 +205,53 @@ pub(super) fn adapter_plan_row(index: usize, plan: &DxCheckPanelAdapterPlan) -> 
             .as_deref()
             .unwrap_or("No run command configured")
     );
-    let mut content = v_flex()
-        .flex_1()
-        .w_full()
-        .min_w_0()
-        .gap_0p5()
-        .child(
-            Label::new(plan.label.clone())
-                .size(LabelSize::Small)
-                .truncate(),
-        )
-        .child(
-            Label::new(plan.target.clone())
-                .size(LabelSize::Small)
-                .color(Color::Muted)
-                .truncate(),
-        )
-        .child(
-            Label::new(plan.command.clone())
-                .size(LabelSize::Small)
-                .color(Color::Accent)
-                .truncate_start(),
-        );
-
-    if let Some(run_command) = plan.run_command.as_ref() {
-        content = content.child(
-            Label::new(run_command.clone())
-                .size(LabelSize::Small)
-                .color(Color::Muted)
-                .truncate_start(),
-        );
-    }
+    let run_command = plan.run_command.clone();
 
     ListItem::new(SharedString::from(format!("dx-check-adapter-plan-{index}")))
         .inset(true)
         .spacing(ListItemSpacing::Sparse)
+        .selectable(false)
         .start_slot(
             Icon::new(IconName::Terminal)
                 .size(IconSize::Small)
                 .color(Color::Muted),
         )
-        .child(content)
+        .child(
+            Label::new(plan.label.clone())
+                .size(LabelSize::Small)
+                .truncate(),
+        )
+        .end_slot(
+            h_flex()
+                .min_w_0()
+                .gap_1()
+                .child(
+                    div().max_w(rems(12.)).overflow_hidden().child(
+                        Label::new(plan.target.clone())
+                            .size(LabelSize::Small)
+                            .color(Color::Muted)
+                            .truncate(),
+                    ),
+                )
+                .child(
+                    div().max_w(rems(18.)).overflow_hidden().child(
+                        Label::new(plan.command.clone())
+                            .size(LabelSize::Small)
+                            .color(Color::Accent)
+                            .truncate_start(),
+                    ),
+                )
+                .when_some(run_command, |this, run_command| {
+                    this.child(
+                        div().max_w(rems(16.)).overflow_hidden().child(
+                            Label::new(run_command)
+                                .size(LabelSize::Small)
+                                .color(Color::Muted)
+                                .truncate_start(),
+                        ),
+                    )
+                }),
+        )
         .tooltip(Tooltip::text(tooltip))
         .into_any_element()
 }
@@ -254,11 +272,13 @@ pub(super) fn empty_row(message: &'static str) -> AnyElement {
                 .color(Color::Muted)
                 .truncate(),
         )
+        .tooltip(Tooltip::text(message))
         .into_any_element()
 }
 
 pub(super) fn web_audit_row(index: usize, audit: &DxCheckPanelWebAudit, _cx: &App) -> AnyElement {
-    let (icon, color) = match audit.status.as_str() {
+    let normalized_status = audit.status.to_ascii_lowercase();
+    let (icon, color) = match normalized_status.as_str() {
         "ready" => (IconName::Check, Color::Success),
         "blocked" => (IconName::Warning, Color::Error),
         "warning" => (IconName::Warning, Color::Warning),
@@ -271,32 +291,61 @@ pub(super) fn web_audit_row(index: usize, audit: &DxCheckPanelWebAudit, _cx: &Ap
     ListItem::new(SharedString::from(format!("dx-check-web-audit-{index}")))
         .inset(true)
         .spacing(ListItemSpacing::Sparse)
+        .selectable(false)
         .start_slot(Icon::new(icon).size(IconSize::Small).color(color))
         .child(
-            v_flex()
-                .flex_1()
-                .w_full()
+            Label::new(audit.label.clone())
+                .size(LabelSize::Small)
+                .truncate(),
+        )
+        .end_slot(
+            h_flex()
                 .min_w_0()
-                .gap_0p5()
+                .gap_1()
                 .child(
-                    Label::new(audit.label.clone())
+                    Label::new(audit.status.clone())
                         .size(LabelSize::Small)
+                        .color(color)
                         .truncate(),
                 )
                 .child(
-                    Label::new(audit.detail.clone())
-                        .size(LabelSize::Small)
-                        .color(Color::Muted)
-                        .truncate(),
-                )
-                .child(
-                    Label::new(source.to_string())
-                        .size(LabelSize::Small)
-                        .color(Color::Muted)
-                        .truncate_start(),
+                    div().max_w(rems(18.)).overflow_hidden().child(
+                        Label::new(source.to_string())
+                            .size(LabelSize::Small)
+                            .color(Color::Muted)
+                            .truncate_start(),
+                    ),
                 ),
         )
-        .end_slot(Icon::new(icon).size(IconSize::Small).color(color))
+        .tooltip(Tooltip::text(tooltip))
+        .into_any_element()
+}
+
+pub(super) fn overflow_row(
+    id: impl Into<SharedString>,
+    hidden_count: usize,
+    label: &'static str,
+) -> AnyElement {
+    let message = format!("{hidden_count} more {label} not shown");
+    let tooltip = format!(
+        "{message}. This panel shows a capped preview; open the Receipt tab or run the detail command for the full list."
+    );
+
+    ListItem::new(id.into())
+        .inset(true)
+        .spacing(ListItemSpacing::Sparse)
+        .selectable(false)
+        .start_slot(
+            Icon::new(IconName::Ellipsis)
+                .size(IconSize::Small)
+                .color(Color::Muted),
+        )
+        .child(
+            Label::new(message.clone())
+                .size(LabelSize::Small)
+                .color(Color::Muted)
+                .truncate(),
+        )
         .tooltip(Tooltip::text(tooltip))
         .into_any_element()
 }
@@ -328,13 +377,26 @@ pub(super) fn outcome_label(
     warn_count: Option<u32>,
     skipped_count: Option<u32>,
 ) -> String {
+    if [pass_count, fail_count, warn_count, skipped_count]
+        .iter()
+        .all(Option::is_none)
+    {
+        return "Counts unavailable".to_string();
+    }
+
     format!(
         "{} pass / {} fail / {} warn / {} skipped",
-        pass_count.unwrap_or(0),
-        fail_count.unwrap_or(0),
-        warn_count.unwrap_or(0),
-        skipped_count.unwrap_or(0)
+        check_count_label(pass_count),
+        check_count_label(fail_count),
+        check_count_label(warn_count),
+        check_count_label(skipped_count)
     )
+}
+
+fn check_count_label(count: Option<u32>) -> String {
+    count
+        .map(|count| count.to_string())
+        .unwrap_or_else(|| "--".to_string())
 }
 
 pub(super) fn duration_label(duration_ms: Option<u64>) -> String {
@@ -380,7 +442,9 @@ fn section_score_label(section: &DxCheckPanelSection) -> String {
 }
 
 fn section_status_color(status: &str) -> Color {
-    match status {
+    let status = status.to_ascii_lowercase();
+
+    match status.as_str() {
         "pass" | "passed" | "ready" | "ok" => Color::Success,
         "fail" | "failed" | "blocked" | "error" => Color::Error,
         "warn" | "warning" | "review" => Color::Warning,

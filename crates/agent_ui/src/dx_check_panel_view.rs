@@ -3,7 +3,7 @@ use std::{collections::HashSet, path::PathBuf};
 use gpui::{
     AnyElement, App, AppContext as _, AsyncWindowContext, Context, Entity, EntityId, EventEmitter,
     FocusHandle, Focusable, InteractiveElement, IntoElement, ParentElement, Pixels, Render,
-    ScrollHandle, Styled, TaskExt, WeakEntity, Window, div, px,
+    ScrollHandle, SharedString, Styled, TaskExt, WeakEntity, Window, div, px,
 };
 use theme::ActiveTheme;
 use ui::{
@@ -20,7 +20,8 @@ use crate::dx_check_panel::{
 };
 use crate::dx_check_panel_view::view_rows::{
     adapter_plan_row, config_label, count_label, detail_row, duration_label, empty_row, notice_row,
-    notice_title, outcome_label, quick_fix_row, section, section_row, status_color, web_audit_row,
+    notice_title, outcome_label, overflow_row, quick_fix_row, section, section_row, status_color,
+    web_audit_row,
 };
 
 mod tabs;
@@ -33,6 +34,7 @@ const MAX_SECTION_ROWS: usize = 8;
 const MAX_NOTICE_ROWS: usize = 4;
 const MAX_QUICK_FIX_ROWS: usize = 4;
 const MAX_ADAPTER_PLAN_ROWS: usize = 4;
+const MAX_WEB_AUDIT_ROWS: usize = 4;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 enum DxCheckPanelSectionKind {
@@ -87,6 +89,25 @@ impl DxCheckPanelSectionKind {
     }
 }
 
+fn section_count_label(
+    section_kind: DxCheckPanelSectionKind,
+    snapshot: &DxCheckPanelSnapshot,
+) -> Option<SharedString> {
+    let count = match section_kind {
+        DxCheckPanelSectionKind::Sections => snapshot.sections.len(),
+        DxCheckPanelSectionKind::WebAudit => snapshot.web_audits.len(),
+        DxCheckPanelSectionKind::AdapterPlans => snapshot.adapter_plans.len(),
+        DxCheckPanelSectionKind::Notices => snapshot.blockers.len() + snapshot.warnings.len(),
+        DxCheckPanelSectionKind::QuickFixes => snapshot.quick_fixes.len(),
+        DxCheckPanelSectionKind::Commands => {
+            2 + usize::from(snapshot.detail_command.as_ref().is_some())
+        }
+        DxCheckPanelSectionKind::Run | DxCheckPanelSectionKind::Receipt => return None,
+    };
+
+    Some(SharedString::from(count.to_string()))
+}
+
 pub struct DxCheckPanel {
     workspace: WeakEntity<Workspace>,
     focus_handle: FocusHandle,
@@ -132,6 +153,7 @@ impl DxCheckPanel {
             collapsed_sections: [
                 DxCheckPanelSectionKind::Receipt,
                 DxCheckPanelSectionKind::Commands,
+                DxCheckPanelSectionKind::AdapterPlans,
             ]
             .into_iter()
             .collect(),
@@ -182,6 +204,7 @@ impl DxCheckPanel {
     fn render_section_shell(
         &self,
         section_kind: DxCheckPanelSectionKind,
+        snapshot: &DxCheckPanelSnapshot,
         panel: WeakEntity<DxCheckPanel>,
         cx: &App,
     ) -> gpui::Stateful<gpui::Div> {
@@ -190,6 +213,7 @@ impl DxCheckPanel {
             section_kind.id(),
             section_kind.title(),
             section_kind.icon(),
+            section_count_label(section_kind, snapshot),
             is_open,
             move |_, _, cx| {
                 panel
@@ -243,7 +267,13 @@ impl DxCheckPanel {
             .into_any_element()
     }
 
-    fn render_status_strip(&self, snapshot: &DxCheckPanelSnapshot, _cx: &App) -> AnyElement {
+    fn render_status_strip(
+        &self,
+        snapshot: &DxCheckPanelSnapshot,
+        panel: WeakEntity<DxCheckPanel>,
+        cx: &App,
+    ) -> AnyElement {
+        let focus_handle = self.focus_handle(cx);
         let color = status_color(snapshot);
         let outcome = outcome_label(
             snapshot.pass_count,
@@ -252,6 +282,8 @@ impl DxCheckPanel {
             snapshot.skipped_count,
         );
         let tooltip = format!("{}\n{outcome}", snapshot.status);
+        let receipt_path = snapshot.receipt_path.clone();
+        let receipt_enabled = snapshot.receipt_present && receipt_path.exists();
 
         ListItem::new("dx-check-status")
             .inset(true)
@@ -276,69 +308,61 @@ impl DxCheckPanel {
                             .truncate(),
                     ),
             )
-            .tooltip(Tooltip::text(tooltip))
-            .into_any_element()
-    }
-
-    fn render_toolbar(
-        &self,
-        snapshot: &DxCheckPanelSnapshot,
-        panel: WeakEntity<DxCheckPanel>,
-        cx: &App,
-    ) -> AnyElement {
-        let receipt_path = snapshot.receipt_path.clone();
-        let receipt_enabled = snapshot.receipt_present && receipt_path.exists();
-
-        h_flex()
-            .id("dx-check-toolbar")
-            .h(Tab::container_height(cx))
-            .w_full()
-            .min_w_0()
-            .px_1()
-            .gap_2()
-            .justify_between()
-            .border_b_1()
-            .border_color(cx.theme().colors().border)
-            .child(
-                Button::new("dx-check-open-receipt", "Receipt")
-                    .label_size(LabelSize::Small)
-                    .color(Color::Muted)
-                    .style(ButtonStyle::Subtle)
-                    .start_icon(
-                        Icon::new(IconName::FileTextOutlined)
-                            .size(IconSize::Small)
-                            .color(Color::Muted),
+            .end_slot(
+                h_flex()
+                    .id("dx-check-status-actions")
+                    .flex_none()
+                    .gap_0p5()
+                    .occlude()
+                    .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
+                        cx.stop_propagation();
+                    })
+                    .on_mouse_up(gpui::MouseButton::Left, |_, _, cx| {
+                        cx.stop_propagation();
+                    })
+                    .child(
+                        IconButton::new("dx-check-open-receipt", IconName::FileTextOutlined)
+                            .shape(IconButtonShape::Square)
+                            .icon_size(IconSize::Small)
+                            .icon_color(Color::Muted)
+                            .style(ButtonStyle::Subtle)
+                            .tab_index(0_isize)
+                            .track_focus(&focus_handle)
+                            .disabled(!receipt_enabled)
+                            .tooltip(Tooltip::text(if receipt_enabled {
+                                "Open latest Check receipt"
+                            } else {
+                                "Latest Check receipt is not available"
+                            }))
+                            .on_click({
+                                let workspace = self.workspace.clone();
+                                move |_, window, cx| {
+                                    if receipt_path.exists() {
+                                        open_workspace_path(
+                                            workspace.clone(),
+                                            receipt_path.clone(),
+                                            window,
+                                            cx,
+                                        );
+                                    }
+                                }
+                            }),
                     )
-                    .disabled(!receipt_enabled)
-                    .tooltip(Tooltip::text(if receipt_enabled {
-                        "Open latest Check receipt"
-                    } else {
-                        "Latest Check receipt is not available"
-                    }))
-                    .on_click({
-                        let workspace = self.workspace.clone();
-                        move |_, window, cx| {
-                            if receipt_path.exists() {
-                                open_workspace_path(
-                                    workspace.clone(),
-                                    receipt_path.clone(),
-                                    window,
-                                    cx,
-                                );
-                            }
-                        }
-                    }),
+                    .child(
+                        IconButton::new("dx-check-refresh", IconName::RotateCw)
+                            .shape(IconButtonShape::Square)
+                            .icon_size(IconSize::Small)
+                            .icon_color(Color::Muted)
+                            .style(ButtonStyle::Subtle)
+                            .tab_index(0_isize)
+                            .track_focus(&focus_handle)
+                            .tooltip(Tooltip::text("Refresh Check panel"))
+                            .on_click(move |_, _, cx| {
+                                panel.update(cx, |panel, cx| panel.refresh(cx)).ok();
+                            }),
+                    ),
             )
-            .child(
-                IconButton::new("dx-check-refresh", IconName::RotateCw)
-                    .shape(IconButtonShape::Square)
-                    .icon_size(IconSize::Small)
-                    .icon_color(Color::Muted)
-                    .tooltip(Tooltip::text("Refresh Check panel"))
-                    .on_click(move |_, _, cx| {
-                        panel.update(cx, |panel, cx| panel.refresh(cx)).ok();
-                    }),
-            )
+            .tooltip(Tooltip::text(tooltip))
             .into_any_element()
     }
 
@@ -349,7 +373,7 @@ impl DxCheckPanel {
         cx: &App,
     ) -> AnyElement {
         let section_kind = DxCheckPanelSectionKind::Run;
-        let mut stack = self.render_section_shell(section_kind, panel, cx);
+        let mut stack = self.render_section_shell(section_kind, snapshot, panel, cx);
         if self.section_is_open(section_kind) {
             stack = stack
                 .child(detail_row("Last run", snapshot.last_run_label.clone()))
@@ -399,7 +423,7 @@ impl DxCheckPanel {
             "missing"
         };
         let section_kind = DxCheckPanelSectionKind::Receipt;
-        let mut stack = self.render_section_shell(section_kind, panel, cx);
+        let mut stack = self.render_section_shell(section_kind, snapshot, panel, cx);
         if self.section_is_open(section_kind) {
             stack = stack
                 .child(detail_row("State", receipt_status))
@@ -430,13 +454,21 @@ impl DxCheckPanel {
         cx: &App,
     ) -> AnyElement {
         let section_kind = DxCheckPanelSectionKind::Sections;
-        let mut stack = self.render_section_shell(section_kind, panel, cx);
+        let mut stack = self.render_section_shell(section_kind, snapshot, panel, cx);
         if self.section_is_open(section_kind) {
             if snapshot.sections.is_empty() {
                 stack = stack.child(empty_row("No section scores in the latest receipt."));
             } else {
-                for section in snapshot.sections.iter().take(MAX_SECTION_ROWS) {
-                    stack = stack.child(section_row(section));
+                for (index, section) in snapshot.sections.iter().take(MAX_SECTION_ROWS).enumerate()
+                {
+                    stack = stack.child(section_row(index, section));
+                }
+                if snapshot.sections.len() > MAX_SECTION_ROWS {
+                    stack = stack.child(overflow_row(
+                        "dx-check-section-overflow",
+                        snapshot.sections.len() - MAX_SECTION_ROWS,
+                        "section scores",
+                    ));
                 }
             }
         }
@@ -450,7 +482,7 @@ impl DxCheckPanel {
         cx: &App,
     ) -> AnyElement {
         let section_kind = DxCheckPanelSectionKind::AdapterPlans;
-        let mut stack = self.render_section_shell(section_kind, panel, cx);
+        let mut stack = self.render_section_shell(section_kind, snapshot, panel, cx);
         if self.section_is_open(section_kind) {
             if snapshot.adapter_plans.is_empty() {
                 stack = stack.child(empty_row("No adapter plans in the latest receipt."));
@@ -462,6 +494,13 @@ impl DxCheckPanel {
                     .enumerate()
                 {
                     stack = stack.child(adapter_plan_row(index, plan));
+                }
+                if snapshot.adapter_plans.len() > MAX_ADAPTER_PLAN_ROWS {
+                    stack = stack.child(overflow_row(
+                        "dx-check-adapter-plan-overflow",
+                        snapshot.adapter_plans.len() - MAX_ADAPTER_PLAN_ROWS,
+                        "adapter plans",
+                    ));
                 }
             }
         }
@@ -475,7 +514,7 @@ impl DxCheckPanel {
         cx: &App,
     ) -> AnyElement {
         let section_kind = DxCheckPanelSectionKind::Notices;
-        let mut stack = self.render_section_shell(section_kind, panel, cx);
+        let mut stack = self.render_section_shell(section_kind, snapshot, panel, cx);
         if self.section_is_open(section_kind) {
             if snapshot.blockers.is_empty() && snapshot.warnings.is_empty() {
                 stack = stack.child(empty_row("No blockers or warnings in the latest receipt."));
@@ -489,6 +528,13 @@ impl DxCheckPanel {
                     blocker.next_action.as_deref(),
                 ));
             }
+            if snapshot.blockers.len() > MAX_NOTICE_ROWS {
+                stack = stack.child(overflow_row(
+                    "dx-check-blocker-overflow",
+                    snapshot.blockers.len() - MAX_NOTICE_ROWS,
+                    "blockers",
+                ));
+            }
             for (index, warning) in snapshot.warnings.iter().take(MAX_NOTICE_ROWS).enumerate() {
                 stack = stack.child(notice_row(
                     format!("dx-check-warning-{index}"),
@@ -496,6 +542,13 @@ impl DxCheckPanel {
                     Color::Warning,
                     &notice_title(warning),
                     warning.next_action.as_deref(),
+                ));
+            }
+            if snapshot.warnings.len() > MAX_NOTICE_ROWS {
+                stack = stack.child(overflow_row(
+                    "dx-check-warning-overflow",
+                    snapshot.warnings.len() - MAX_NOTICE_ROWS,
+                    "warnings",
                 ));
             }
         }
@@ -509,7 +562,7 @@ impl DxCheckPanel {
         cx: &App,
     ) -> AnyElement {
         let section_kind = DxCheckPanelSectionKind::QuickFixes;
-        let mut stack = self.render_section_shell(section_kind, panel, cx);
+        let mut stack = self.render_section_shell(section_kind, snapshot, panel, cx);
         if self.section_is_open(section_kind) {
             if snapshot.quick_fixes.is_empty() {
                 stack = stack.child(empty_row("No quick fixes in the latest receipt."));
@@ -521,6 +574,13 @@ impl DxCheckPanel {
                     .enumerate()
                 {
                     stack = stack.child(quick_fix_row(index, fix));
+                }
+                if snapshot.quick_fixes.len() > MAX_QUICK_FIX_ROWS {
+                    stack = stack.child(overflow_row(
+                        "dx-check-quick-fix-overflow",
+                        snapshot.quick_fixes.len() - MAX_QUICK_FIX_ROWS,
+                        "quick fixes",
+                    ));
                 }
             }
         }
@@ -534,13 +594,25 @@ impl DxCheckPanel {
         cx: &App,
     ) -> AnyElement {
         let section_kind = DxCheckPanelSectionKind::WebAudit;
-        let mut stack = self.render_section_shell(section_kind, panel, cx);
+        let mut stack = self.render_section_shell(section_kind, snapshot, panel, cx);
         if self.section_is_open(section_kind) {
             if snapshot.web_audits.is_empty() {
                 stack = stack.child(empty_row("No web-audit results in the latest receipt."));
             } else {
-                for (index, audit) in snapshot.web_audits.iter().enumerate() {
+                for (index, audit) in snapshot
+                    .web_audits
+                    .iter()
+                    .take(MAX_WEB_AUDIT_ROWS)
+                    .enumerate()
+                {
                     stack = stack.child(web_audit_row(index, audit, cx));
+                }
+                if snapshot.web_audits.len() > MAX_WEB_AUDIT_ROWS {
+                    stack = stack.child(overflow_row(
+                        "dx-check-web-audit-overflow",
+                        snapshot.web_audits.len() - MAX_WEB_AUDIT_ROWS,
+                        "web-audit rows",
+                    ));
                 }
             }
         }
@@ -554,7 +626,7 @@ impl DxCheckPanel {
         cx: &App,
     ) -> AnyElement {
         let section_kind = DxCheckPanelSectionKind::Commands;
-        let mut stack = self.render_section_shell(section_kind, panel, cx);
+        let mut stack = self.render_section_shell(section_kind, snapshot, panel, cx);
         if self.section_is_open(section_kind) {
             stack = stack
                 .child(detail_row("Refresh", snapshot.refresh_command.clone()))
@@ -641,8 +713,7 @@ impl Render for DxCheckPanel {
             .overflow_hidden()
             .bg(cx.theme().colors().panel_background)
             .child(self.render_header(&snapshot, panel_id, cx))
-            .child(self.render_status_strip(&snapshot, cx))
-            .child(self.render_toolbar(&snapshot, panel.clone(), cx))
+            .child(self.render_status_strip(&snapshot, panel.clone(), cx))
             .child(render_tab_bar(
                 &snapshot,
                 self.active_tab,
@@ -687,10 +758,10 @@ impl DxCheckPanel {
                 self.render_sections(snapshot, panel, cx),
             ],
             DxCheckPanelTab::Findings => vec![
-                self.render_web_audits(snapshot, panel.clone(), cx),
-                self.render_adapter_plans(snapshot, panel.clone(), cx),
                 self.render_notices(snapshot, panel.clone(), cx),
-                self.render_quick_fixes(snapshot, panel, cx),
+                self.render_quick_fixes(snapshot, panel.clone(), cx),
+                self.render_web_audits(snapshot, panel.clone(), cx),
+                self.render_adapter_plans(snapshot, panel, cx),
             ],
             DxCheckPanelTab::Receipt => vec![
                 self.render_receipt(snapshot, panel.clone(), cx),

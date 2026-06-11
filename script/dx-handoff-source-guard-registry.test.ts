@@ -86,6 +86,7 @@ const registeredGuardScripts = [
   "script/dx-feedback-source.test.ts",
   "script/dx-font-panel-source.test.ts",
   "script/dx-media-panel-source.test.ts",
+  "script/dx-ui-panel-source.test.ts",
   "script/dx-agent-config-options-source.test.ts",
   "script/dx-agent-tool-picker-source.test.ts",
   "script/dx-debugger-attach-modal-source.test.ts",
@@ -168,7 +169,27 @@ test("DX.md exposes the lightweight source guard registry", () => {
   );
   assert.match(
     dx,
-    /script\/dx-project-panel-source\.test\.ts` - project panel .*file-browser operation toolbar.*cached storage roots.*storage-root capacity\/status label ownership.*folder storage overview.*storage ranking/,
+    /script\/dx-project-panel-source\.test\.ts` - project panel .*compact Project header icon\/side-panel controls\/selection toolbar.*file-browser operation toolbar.*cached storage roots.*compact storage-root strip spacing with max-width storage shortcuts.*storage-root capacity\/status label ownership.*folder storage overview.*dense storage drilldown rows.*storage ranking.*compact bounded entry metadata chip spacing.*media shelf\/gallery lower-bound count labels/,
+  );
+  assert.match(
+    dx,
+    /script\/dx-project-panel-source\.test\.ts` - project panel .*tooltip-only largest-file drilldown detail.*entry info badge tooltips/,
+  );
+  assert.match(
+    dx,
+    /script\/dx-media-panel-source\.test\.ts` - media panel .*local\/remote-result `ListItem` rows.*URL insertion `ListItem` row.*tooltip-backed square icon URL\/local\/remote asset actions.*disabled no-op filter pager arrows.*subtle square header\/filter controls.*square icon history-management actions.*hover action slots.*recent\/pinned `ListHeader` history-section chrome boundaries/,
+  );
+  assert.match(
+    dx,
+    /script\/dx-ui-panel-source\.test\.ts` - UI panel status-row.*catalog-result `ListItem` rows.*install-plan sparse `ListItem` guidance.*primary catalog action ownership.*disabled no-op filter pager arrows.*subtle square header\/filter controls.*square icon secondary catalog actions.*recent\/pinned `ListHeader` history-section.*square icon history-management actions.*hover action slots/,
+  );
+  assert.match(
+    dx,
+    /script\/dx-forge-panel-source\.test\.ts` - DX Forge .*workflow tab and source-open tooltip wording.*compact status\/action row spacing.*tabbable subtle source\/provider open controls.*empty-row tooltip preservation.*provider-group hover readiness dots.*provider-state compact-dot ownership without dead icon plumbing/,
+  );
+  assert.match(
+    dx,
+    /script\/dx-check-panel-source\.test\.ts` - DX Check .*keyboard-reachable status-row receipt\/refresh actions.*compact section count labels.*compact notice\/quick-fix\/adapter-plan\/web-audit `ListItem` rows.*capped web audit rows.*collapsed Adapter Plans default/,
   );
 });
 
@@ -199,13 +220,28 @@ test("handoff docs keep source-only proof separate from runtime readiness", () =
 test("current handoff names the no-runtime-proof production-readiness boundary", () => {
   const dx = read("DX.md");
   const todo = read("todo.txt");
+  const currentVerificationLane =
+    dx.match(/## Current Verification Lane[\s\S]*?(?=\n## Lightweight Source Guard Registry)/)?.[0] ?? "";
+  const currentPanelLane =
+    currentVerificationLane.match(/- Current DX panel GPUI tenth-pass polish:[^\n]+/)?.[0] ?? "";
+  const currentTodoState = todo.split(/\r?\n/).slice(0, 18).join("\n");
 
+  assert.ok(currentPanelLane, "expected current tenth-pass DX panel GPUI handoff lane");
+  assert.match(currentPanelLane, /source guards/);
+  assert.match(currentPanelLane, /Media local asset rows now use sparse `ListItem` chrome/);
+  assert.match(currentPanelLane, /UI catalog result rows now use sparse `ListItem` chrome/);
+  assert.match(currentPanelLane, /Forge empty rows now keep truncated copy readable through tooltips/);
+  assert.match(currentPanelLane, /Project media gallery headers now share lower-bound capped-scan count labels/);
+  assert.match(currentPanelLane, /Check status-strip receipt\/refresh actions are keyboard-reachable/);
+  assert.match(currentPanelLane, /Cargo, build, `just run`, native launch, local servers, browser automation, and runtime visual proof remain deferred by instruction/);
+  assert.doesNotMatch(currentPanelLane, /runtime-green|launch-ready|production-ready/i);
+  assert.match(currentTodoState, /DX panel GPUI tenth-pass polish is source-verified/);
   assert.match(dx, /Current production readiness is source-audited only/i);
   assert.match(
     dx,
     /Skipped by direct instruction: Cargo build\/check\/test\/clippy, `just run`, local servers, browser automation, and live editor runtime proof\./,
   );
-  assert.match(todo, /Production-readiness source audit/);
+  assert.doesNotMatch(currentTodoState, /Production-readiness source audit/);
   assert.match(todo, /Skipped by direct instruction: Cargo build\/check\/test\/clippy, `just run`, local servers, browser automation, and live editor runtime proof\./);
 });
 

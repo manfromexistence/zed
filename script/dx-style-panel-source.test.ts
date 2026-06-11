@@ -2076,7 +2076,7 @@ test("Web Preview owns the DX Style generator surface action", () => {
   assert.match(webPreviewView, /editor\.set_text\(display_url, window, cx\)/);
   assert.match(
     webPreviewView,
-    /display_url_for_loaded_url\(url\.as_str\(\), source_apply_session_active\)/,
+    /display_url_for_loaded_url\([^,\n]+,\s*source_apply_session_active\)/,
   );
   assert.match(webPreviewView, /\.pointer\("\/source_apply_session\/kind"\)/);
   assert.match(webPreviewView, /\.pointer\("\/request\/source_apply_session\/kind"\)/);
@@ -4486,6 +4486,7 @@ test("Zed Style rail surfaces source-only DX Style readiness", () => {
     "crates/agent_ui/src/dx_style_panel/readiness/expected_files.rs",
   );
   const rail = read("crates/agent_ui/src/dx_launch_workspace/style_panel.rs");
+  const railRows = read("crates/agent_ui/src/dx_launch_workspace/style_panel/rows.rs");
   const panelCards = read("crates/agent_ui/src/dx_style_panel/panel_cards.rs");
   const panelView = read("crates/agent_ui/src/dx_style_panel/panel_view.rs");
 
@@ -4536,7 +4537,22 @@ test("Zed Style rail surfaces source-only DX Style readiness", () => {
   assert.doesNotMatch(readiness, /std::process|Command::new|spawn|powershell|cmd \/c/);
   assert.doesNotMatch(readinessExpectedFiles, /std::process|Command::new|spawn|powershell|cmd \/c/);
 
-  assert.match(rail, /metric_row\("Readiness", snapshot\.readiness\.status\.clone\(\)\)/);
+  assert.match(rail, /mod rows;/);
+  assert.match(rail, /style_section\(\s*"dx-style-overview-section"/);
+  assert.match(rail, /style_detail_row\(\s*"dx-style-readiness"/);
+  assert.match(rail, /style_detail_row\(\s*"dx-style-readiness-files"/);
+  assert.match(rail, /style_note_row\(\s*"dx-style-source-rows-overflow"/);
+  assert.match(rail, /style_note_row\(\s*"dx-style-receipts-empty"/);
+  assert.match(rail, /"Bridge ready"/);
+  assert.match(rail, /Tooltip::text\(if snapshot\.web_preview_bridge_ready/);
+  assert.match(railRows, /pub\(super\) fn style_section/);
+  assert.match(railRows, /ListHeader::new\(title\)/);
+  assert.match(railRows, /pub\(super\) fn style_detail_row/);
+  assert.match(railRows, /ListItem::new\(id\.into\(\)\)/);
+  assert.match(railRows, /pub\(super\) fn style_path_row/);
+  assert.match(railRows, /path\.file_name\(\)/);
+  assert.match(railRows, /Tooltip::text\(tooltip\)/);
+  assert.doesNotMatch(rail, /metric_row|muted_card|signal_row/);
   assert.match(rail, /No DX Style build\/check receipt has been read by Zed/);
   assert.match(rail, /bounded_items\(\s*&snapshot\.readiness\.missing_rows/s);
   assert.match(
@@ -4549,5 +4565,6 @@ test("Zed Style rail surfaces source-only DX Style readiness", () => {
   assert.ok(
     lineCount("crates/agent_ui/src/dx_style_panel/readiness/expected_files.rs") < 280,
   );
-  assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/style_panel.rs") < 230);
+  assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/style_panel.rs") < 320);
+  assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/style_panel/rows.rs") < 160);
 });

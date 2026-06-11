@@ -4,6 +4,25 @@ import test from "node:test";
 
 const read = (path: string) => readFileSync(path, "utf8");
 const lineCount = (path: string) => read(path).split(/\r?\n/).length;
+const assertBefore = ({
+  body,
+  before,
+  after,
+  message,
+}: {
+  body: string;
+  before: string | RegExp;
+  after: string | RegExp;
+  message: string;
+}) => {
+  const beforeIndex =
+    typeof before === "string" ? body.indexOf(before) : body.search(before);
+  const afterIndex =
+    typeof after === "string" ? body.indexOf(after) : body.search(after);
+  assert.ok(beforeIndex >= 0, `${message}: missing before marker`);
+  assert.ok(afterIndex >= 0, `${message}: missing after marker`);
+  assert.ok(beforeIndex < afterIndex, message);
+};
 
 test("DX Check panel stays split by reader and parser ownership", () => {
   const parent = read("crates/agent_ui/src/dx_check_panel.rs");
@@ -118,11 +137,20 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
 
   const renderHeader = functionBody(view, "render_header");
   const renderStatusStrip = functionBody(view, "render_status_strip");
-  const renderToolbar = functionBody(view, "render_toolbar");
+  const renderSectionShell = functionBody(view, "render_section_shell");
+  const sectionCountLabel = functionBody(view, "section_count_label");
+  const renderPanel = functionBody(view, "render");
+  const renderSections = functionBody(view, "render_sections");
+  const renderActiveTabSections = functionBody(view, "render_active_tab_sections");
   const section = functionBody(rows, "section");
+  const sectionRow = functionBody(rows, "section_row");
   const noticeRow = functionBody(rows, "notice_row");
   const quickFixRow = functionBody(rows, "quick_fix_row");
   const adapterPlanRow = functionBody(rows, "adapter_plan_row");
+  const webAuditRow = functionBody(rows, "web_audit_row");
+  const overflowRow = functionBody(rows, "overflow_row");
+  const outcomeLabel = functionBody(rows, "outcome_label");
+  const sectionStatusColor = functionBody(rows, "section_status_color");
   const checkTab = functionBody(tabs, "check_tab");
 
   assert.match(renderHeader, /h_flex\(\)/);
@@ -131,15 +159,40 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   assert.match(renderHeader, /Label::new\("Check"\)/);
   assert.match(renderHeader, /side_panel_header_controls/);
   assert.match(renderStatusStrip, /ListItem::new\("dx-check-status"\)/);
+  assert.match(renderStatusStrip, /let focus_handle = self\.focus_handle\(cx\);/);
   assert.match(renderStatusStrip, /\.spacing\(ListItemSpacing::Sparse\)/);
   assert.match(renderStatusStrip, /\.selectable\(false\)/);
+  assert.match(renderStatusStrip, /\.end_slot\(/);
+  assert.match(renderStatusStrip, /\.id\("dx-check-status-actions"\)/);
+  assert.match(renderStatusStrip, /\.gap_0p5\(\)/);
+  assert.match(renderStatusStrip, /\.occlude\(\)/);
+  assert.match(renderStatusStrip, /gpui::MouseButton::Left/);
+  assert.match(renderStatusStrip, /cx\.stop_propagation\(\);/);
+  assert.match(renderStatusStrip, /IconButton::new\("dx-check-open-receipt", IconName::FileTextOutlined\)/);
+  assert.match(renderStatusStrip, /IconButton::new\("dx-check-refresh", IconName::RotateCw\)/);
+  assert.match(
+    renderStatusStrip,
+    /IconButton::new\("dx-check-open-receipt", IconName::FileTextOutlined\)[\s\S]*\.tab_index\(0_isize\)[\s\S]*\.track_focus\(&focus_handle\)[\s\S]*\.disabled\(!receipt_enabled\)/,
+  );
+  assert.match(
+    renderStatusStrip,
+    /IconButton::new\("dx-check-refresh", IconName::RotateCw\)[\s\S]*\.tab_index\(0_isize\)[\s\S]*\.track_focus\(&focus_handle\)/,
+  );
+  assert.match(
+    renderStatusStrip,
+    /IconButton::new\("dx-check-refresh", IconName::RotateCw\)[\s\S]*\.style\(ButtonStyle::Subtle\)/,
+  );
+  assert.match(renderStatusStrip, /\.style\(ButtonStyle::Subtle\)/);
+  assert.match(renderStatusStrip, /\.disabled\(!receipt_enabled\)/);
   assert.match(renderStatusStrip, /Tooltip::text\(tooltip\)/);
   assert.doesNotMatch(renderStatusStrip, /status_label\(/);
-  assert.match(renderToolbar, /Button::new\("dx-check-open-receipt", "Receipt"\)/);
-  assert.match(renderToolbar, /\.start_icon\([\s\S]*Icon::new\(IconName::FileTextOutlined\)/);
-  assert.match(renderToolbar, /\.style\(ButtonStyle::Subtle\)/);
-  assert.match(renderToolbar, /IconButton::new\("dx-check-refresh", IconName::RotateCw\)/);
+  assert.doesNotMatch(view, /fn render_toolbar\(/);
+  assert.doesNotMatch(view, /\.id\("dx-check-toolbar"\)|self\.render_toolbar/);
+  assert.doesNotMatch(renderPanel, /self\.render_toolbar/);
+  assert.doesNotMatch(renderStatusStrip, /(^|[^A-Za-z0-9_])Button::new\("dx-check-open-receipt"/);
+  assert.doesNotMatch(renderStatusStrip, /\.start_icon\(/);
   assert.match(tabs, /TabBar::new\("dx-check-tab-bar"\)/);
+  assert.match(tabs, /snapshot\.adapter_plans\.len\(\)/);
   assert.match(checkTab, /Tab::new\(id\)/);
   assert.match(checkTab, /\.fill_available_width\(\)/);
   assert.match(checkTab, /\.position\(tab_position\(tab, active_tab\)\)/);
@@ -147,13 +200,36 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   assert.match(view, /\.id\("dx-check-panel-scroll-host"\)/);
   assert.match(view, /\.vertical_scrollbar_for\(&self\.scroll_handle, window, cx\)/);
   assert.match(view, /\.track_scroll\(&self\.scroll_handle\)/);
-  assert.match(noticeRow, /v_flex\(\)\s*\.flex_1\(\)\s*\.w_full\(\)\s*\.min_w_0\(\)/s);
-  assert.match(quickFixRow, /v_flex\(\)\s*\.flex_1\(\)\s*\.w_full\(\)\s*\.min_w_0\(\)/s);
-  assert.match(adapterPlanRow, /v_flex\(\)\s*\.flex_1\(\)\s*\.w_full\(\)\s*\.min_w_0\(\)/s);
   assert.match(section, /v_flex\(\)\.id\(id\)/);
   assert.match(section, /ListHeader::new\(title\)/);
   assert.match(section, /\.toggle\(Some\(is_open\)\)/);
+  assert.match(rows, /count_label: Option<SharedString>/);
+  assert.match(section, /\.when_some\(count_label, \|this, count_label\|/);
+  assert.match(section, /\.end_slot\([\s\S]*Label::new\(count_label\)[\s\S]*\.size\(LabelSize::Small\)[\s\S]*\.color\(Color::Muted\)[\s\S]*\.truncate\(\)/);
+  assert.match(renderSectionShell, /section_count_label\(section_kind, snapshot\)/);
+  assert.match(sectionCountLabel, /DxCheckPanelSectionKind::Sections => snapshot\.sections\.len\(\)/);
+  assert.match(sectionCountLabel, /DxCheckPanelSectionKind::WebAudit => snapshot\.web_audits\.len\(\)/);
+  assert.match(sectionCountLabel, /DxCheckPanelSectionKind::AdapterPlans => snapshot\.adapter_plans\.len\(\)/);
+  assert.match(sectionCountLabel, /DxCheckPanelSectionKind::Notices => snapshot\.blockers\.len\(\) \+ snapshot\.warnings\.len\(\)/);
+  assert.match(sectionCountLabel, /DxCheckPanelSectionKind::QuickFixes => snapshot\.quick_fixes\.len\(\)/);
+  assert.match(sectionCountLabel, /DxCheckPanelSectionKind::Commands =>[\s\S]*detail_command\.as_ref\(\)\.is_some\(\)/);
   assert.doesNotMatch(section, /Open|Closed|end_slot\(status_/);
+  assert.match(renderSections, /for \(index, section\) in snapshot\.sections\.iter\(\)\.take\(MAX_SECTION_ROWS\)\.enumerate\(\)/);
+  assert.match(renderSections, /section_row\(index, section\)/);
+  assert.match(rows, /fn section_row\(index: usize, section: &DxCheckPanelSection\)/);
+  assert.match(sectionRow, /"dx-check-section-score-\{index\}-\{\}"/);
+  assertBefore({
+    body: renderActiveTabSections,
+    before: "self.render_notices(snapshot, panel.clone(), cx)",
+    after: "self.render_web_audits(snapshot, panel.clone(), cx)",
+    message: "Findings should show blocker/warning notices before web audits",
+  });
+  assertBefore({
+    body: renderActiveTabSections,
+    before: "self.render_quick_fixes(snapshot, panel.clone(), cx)",
+    after: "self.render_adapter_plans(snapshot, panel, cx)",
+    message: "Findings should keep quick fixes ahead of adapter plans",
+  });
   const statusColor = functionBody(rows, "status_color");
   assert.match(statusColor, /let status = snapshot\.status\.to_ascii_lowercase\(\);/);
   assert.match(statusColor, /check_status_is_failure\(&status\)/);
@@ -166,6 +242,38 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   assert.match(rows, /fn check_snapshot_has_result_signal\(snapshot: &DxCheckPanelSnapshot\) -> bool/);
   assert.match(rows, /snapshot\.score_value\.is_some\(\)/);
   assert.match(rows, /!\s*snapshot\.sections\.is_empty\(\)/);
+  assert.match(view, /const MAX_WEB_AUDIT_ROWS: usize = 4;/);
+  assert.match(
+    view,
+    /collapsed_sections:\s*\[[\s\S]*DxCheckPanelSectionKind::AdapterPlans/,
+    "Adapter Plans should default collapsed so the Check surface opens on the actionable rows",
+  );
+  assert.match(view, /overflow_row\(\s*"dx-check-section-overflow"/);
+  assert.match(view, /overflow_row\(\s*"dx-check-web-audit-overflow"/);
+  assert.match(noticeRow, /Tooltip::text\(tooltip\)/);
+  for (const infoRow of [noticeRow, quickFixRow, adapterPlanRow, webAuditRow]) {
+    assert.match(infoRow, /\.selectable\(false\)/);
+    assert.match(infoRow, /\.spacing\(ListItemSpacing::Sparse\)/);
+    assert.match(infoRow, /Tooltip::text\(tooltip\)/);
+    assert.doesNotMatch(infoRow, /let mut content = v_flex|\.child\(\s*v_flex\(\)/);
+  }
+  assert.match(quickFixRow, /ListItem::new\(SharedString::from\(format!\("dx-check-quick-fix-\{index\}"\)\)\)/);
+  assert.match(quickFixRow, /\.end_slot\([\s\S]*fix\.next_action[\s\S]*\.truncate_start\(\)/);
+  assert.match(adapterPlanRow, /ListItem::new\(SharedString::from\(format!\("dx-check-adapter-plan-\{index\}"\)\)\)/);
+  assert.match(adapterPlanRow, /\.end_slot\([\s\S]*plan\.target[\s\S]*plan\.command[\s\S]*\.truncate_start\(\)/);
+  assert.match(webAuditRow, /let normalized_status = audit\.status\.to_ascii_lowercase\(\);/);
+  assert.match(webAuditRow, /match normalized_status\.as_str\(\)/);
+  assert.match(webAuditRow, /Label::new\(audit\.status\.clone\(\)\)/);
+  assert.match(webAuditRow, /\.end_slot\([\s\S]*Label::new\(audit\.status\.clone\(\)\)[\s\S]*Label::new\(source\.to_string\(\)\)/);
+  assert.doesNotMatch(webAuditRow, /\.end_slot\(\s*Icon::new\(icon\)/);
+  assert.match(overflowRow, /ListItem::new\(id\.into\(\)\)/);
+  assert.match(overflowRow, /IconName::Ellipsis/);
+  assert.match(overflowRow, /Receipt tab or run the detail command for the full list/);
+  assert.match(sectionStatusColor, /let status = status\.to_ascii_lowercase\(\);/);
+  assert.match(sectionStatusColor, /match status\.as_str\(\)/);
+  assert.match(outcomeLabel, /Counts unavailable/);
+  assert.match(outcomeLabel, /check_count_label\(pass_count\)/);
+  assert.doesNotMatch(outcomeLabel, /unwrap_or\(0\)/);
   assert.doesNotMatch(tabs, /count_chip|Divider::vertical|border_b_1|ghost_element|editor_background/);
   assert.doesNotMatch(
     `${view}\n${rows}\n${tabs}`,

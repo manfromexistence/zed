@@ -4333,37 +4333,40 @@ impl ProjectPanel {
             SharedString::from(format!("dx-explorer-storage-sort-button-{panel_id:?}"));
         let mut metrics = Vec::new();
         if overview.visible_file_count > 0 {
-            metrics.push(Self::render_dx_explorer_metric(
-                Self::dx_explorer_count_label(overview.visible_file_count, "file", "files"),
+            metrics.push(Self::dx_explorer_count_label(
+                overview.visible_file_count,
+                "file",
+                "files",
             ));
-            metrics.push(Self::render_dx_explorer_metric(storage::format_file_size(
-                overview.visible_file_bytes,
-            )));
+            metrics.push(storage::format_file_size(overview.visible_file_bytes));
         }
         if overview.cached_direct_file_count > 0 {
-            metrics.push(Self::render_dx_explorer_metric(
-                Self::dx_explorer_count_label(
-                    overview.cached_direct_file_count,
-                    "indexed file",
-                    "indexed files",
-                ),
+            metrics.push(Self::dx_explorer_count_label(
+                overview.cached_direct_file_count,
+                "indexed file",
+                "indexed files",
             ));
-            metrics.push(Self::render_dx_explorer_metric(format!(
+            metrics.push(format!(
                 "{} indexed",
                 storage::format_file_size(overview.cached_direct_file_bytes)
-            )));
+            ));
         }
         if let Some(modified_label) = storage::format_modified_label(overview.latest_modified_at) {
-            metrics.push(Self::render_dx_explorer_metric(modified_label));
+            metrics.push(modified_label);
         }
+        let storage_sort_tooltip = if metrics.is_empty() {
+            format!("Sort by {}", sort_mode.label())
+        } else {
+            format!("Sort by {}\n{}", sort_mode.label(), metrics.join("\n"))
+        };
 
         Some(
             v_flex()
                 .id("dx-explorer-storage-drilldown")
                 .w_full()
-                .gap_1()
-                .px_2()
-                .py_1()
+                .gap_0p5()
+                .px_1()
+                .py_0p5()
                 .border_b_1()
                 .border_color(cx.theme().colors().border.opacity(0.6))
                 .bg(cx.theme().colors().panel_background)
@@ -4380,7 +4383,6 @@ impl ProjectPanel {
                                 .items_center()
                                 .gap_1()
                                 .child(Self::render_dx_explorer_metric(sort_mode.status_label()))
-                                .children(metrics)
                                 .child(
                                     div().flex_none().child(
                                         PopoverMenu::new(storage_sort_menu_id)
@@ -4395,10 +4397,7 @@ impl ProjectPanel {
                                             .icon_color(Color::Muted)
                                             .tab_index(0_isize)
                                             .track_focus(&self.focus_handle(cx)),
-                                            Tooltip::text(format!(
-                                                "Sort by {}",
-                                                sort_mode.label()
-                                            )),
+                                            Tooltip::text(storage_sort_tooltip),
                                         )
                                         .anchor(gpui::Anchor::TopRight)
                                         .menu(move |window, cx| {
@@ -4485,12 +4484,28 @@ impl ProjectPanel {
             item.worktree_id.to_usize(),
             item.entry_id.to_usize()
         )))
-        .spacing(ListItemSpacing::Sparse)
+        .spacing(ListItemSpacing::Dense)
         .toggle_state(is_selected)
         .tab_index(0_isize)
         .track_focus(&self.focus_handle(cx))
         .tooltip(move |_window, cx| Tooltip::with_meta("Folder", None, tooltip.clone(), cx))
         .on_click(cx.listener(move |this, _, window, cx| {
+            let target_is_current_dir = {
+                let project = this.project.read(cx);
+                project
+                    .worktree_for_id(target.worktree_id, cx)
+                    .and_then(|worktree| {
+                        worktree
+                            .read(cx)
+                            .entry_for_id(target.entry_id)
+                            .map(|entry| entry.is_dir())
+                    })
+                    .unwrap_or(false)
+            };
+            if !target_is_current_dir {
+                return;
+            }
+
             this.focus_handle(cx).focus(window, cx);
             this.expand_entry(target.worktree_id, target.entry_id, cx);
             this.update_visible_entries(
@@ -4522,14 +4537,6 @@ impl ProjectPanel {
                 .when_some(modified_label, |this, modified_label| {
                     this.child(
                         Label::new(modified_label)
-                            .size(LabelSize::Small)
-                            .color(Color::Muted)
-                            .truncate(),
-                    )
-                })
-                .when(!largest_files.is_empty(), |this| {
-                    this.child(
-                        Label::new(largest_files.join(" / "))
                             .size(LabelSize::Small)
                             .color(Color::Muted)
                             .truncate(),
@@ -4854,7 +4861,6 @@ impl ProjectPanel {
                     .menu(move |window, cx| {
                         let panel = panel_for_project_options.clone();
                         let panel_for_storage_details = panel.clone();
-                        let panel_for_collapse_folders = panel.clone();
                         Some(ContextMenu::build(window, cx, move |menu, _window, _cx| {
                             menu.header("Project View")
                                 .action_checked_with_disabled(
@@ -4894,35 +4900,15 @@ impl ProjectPanel {
                                         }
                                     },
                                 )
-                                .entry(
+                                .action_disabled_when(
+                                    !has_worktree,
                                     "Project symbols",
-                                    Some(ToggleProjectSymbols.boxed_clone()),
-                                    move |window, cx| {
-                                        if has_worktree {
-                                            window.dispatch_action(
-                                                ToggleProjectSymbols.boxed_clone(),
-                                                cx,
-                                            );
-                                        }
-                                    },
+                                    ToggleProjectSymbols.boxed_clone(),
                                 )
-                                .entry(
+                                .action_disabled_when(
+                                    !has_worktree,
                                     "Collapse folders",
-                                    Some(CollapseAllEntries.boxed_clone()),
-                                    move |_window, cx| {
-                                        if has_worktree {
-                                            panel_for_collapse_folders
-                                                .update_in(cx, |this, window, cx| {
-                                                    this.focus_handle(cx).focus(window, cx);
-                                                    this.collapse_all_entries(
-                                                        &CollapseAllEntries,
-                                                        window,
-                                                        cx,
-                                                    );
-                                                })
-                                                .log_err();
-                                        }
-                                    },
+                                    CollapseAllEntries.boxed_clone(),
                                 )
                         }))
                     }),
@@ -4983,7 +4969,7 @@ impl ProjectPanel {
                             .child(
                                 Icon::new(dx_icon(DxUiIcon::Project))
                                     .size(IconSize::Small)
-                                    .color(Color::Accent),
+                                    .color(Color::Muted),
                             )
                             .child(
                                 Label::new("Project")
@@ -5002,7 +4988,7 @@ impl ProjectPanel {
         id_prefix: &'static str,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
-        div().pr_1().child(side_panel_header_controls(
+        div().pr_0p5().child(side_panel_header_controls(
             id_prefix,
             self.workspace.clone(),
             cx.entity().entity_id(),
@@ -5042,9 +5028,9 @@ impl ProjectPanel {
             .w_full()
             .items_center()
             .justify_between()
-            .gap_2()
-            .px_2()
-            .py_1()
+            .gap_1()
+            .px_1()
+            .py_0p5()
             .border_b_1()
             .border_color(cx.theme().colors().border.opacity(0.6))
             .bg(cx.theme().colors().panel_background)
@@ -7388,10 +7374,13 @@ impl ProjectPanel {
         } else {
             SharedString::from(storage::format_file_size(size))
         };
+        let tooltip = label.clone();
         div()
             .visible_on_hover("list_item")
             .flex_none()
-            .ml_1()
+            .max_w(rems(9.))
+            .overflow_hidden()
+            .tooltip(Tooltip::text(tooltip))
             .child(Chip::new(label).label_color(Color::Muted).truncate())
             .into_any_element()
     }
@@ -7933,10 +7922,10 @@ impl ProjectPanel {
                     .selectable(false)
                     .end_slot::<AnyElement>(
                         h_flex()
-                            .gap_1()
+                            .gap_0p5()
                             .flex_none()
                             .ml_auto()
-                            .pr_1()
+                            .pr_0p5()
                             .justify_end()
                             .when_some(diagnostic_count, |this, count| {
                                 this.when(count.error_count > 0, |this| {

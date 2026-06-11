@@ -1,4 +1,4 @@
-use ui::{Color, IconName};
+use ui::Color;
 
 use super::{
     super::snapshot::{DxForgePanelSnapshot, DxForgeRemoteProvider},
@@ -20,7 +20,6 @@ pub(super) fn remote_target_state(
             "No workspace",
             "Open a workspace to inspect remotes",
             Color::Muted,
-            IconName::Info,
         );
     }
 
@@ -42,7 +41,6 @@ pub(super) fn provider_target_state(
             "No workspace",
             "Open a workspace to inspect remotes",
             Color::Muted,
-            IconName::Info,
         );
     }
 
@@ -51,7 +49,6 @@ pub(super) fn provider_target_state(
             "Not configured",
             format!("No {} remote found", provider.label),
             Color::Muted,
-            IconName::Circle,
         );
     };
 
@@ -78,7 +75,6 @@ fn group_target_state(
                 plural(registry_count, "remote", "remotes"),
             ),
             Color::Warning,
-            IconName::Warning,
         );
     }
 
@@ -91,7 +87,6 @@ fn group_target_state(
             plural(registry_count, "remote", "remotes"),
         ),
         Color::Muted,
-        IconName::Circle,
     )
 }
 
@@ -104,7 +99,6 @@ fn provider_state_from_remote(remote: &DxForgeRemoteProvider) -> RemoteTargetSta
                 remote.label, remote.remote_name
             ),
             Color::Warning,
-            IconName::Warning,
         );
     }
 
@@ -116,27 +110,16 @@ fn provider_state_from_remote(remote: &DxForgeRemoteProvider) -> RemoteTargetSta
             remote.label, remote.remote_name, primary
         ),
         Color::Muted,
-        IconName::Circle,
     )
 }
 
 fn code_target_state(snapshot: &DxForgePanelSnapshot) -> RemoteTargetState {
     if !snapshot.history_root_exists {
-        return target_state(
-            "Waiting",
-            "Receipt history is unavailable",
-            Color::Muted,
-            IconName::Info,
-        );
+        return target_state("Waiting", "Receipt history is unavailable", Color::Muted);
     }
 
     if snapshot.receipt_count > 0 && snapshot.summarized_receipt_count == 0 {
-        return target_state(
-            "Review",
-            "Receipt summaries unavailable",
-            Color::Warning,
-            IconName::Warning,
-        );
+        return target_state("Review", "Receipt summaries unavailable", Color::Warning);
     }
 
     if snapshot.visible_blocker_count > 0 {
@@ -148,7 +131,6 @@ fn code_target_state(snapshot: &DxForgePanelSnapshot) -> RemoteTargetState {
                 plural(snapshot.visible_blocker_count, "blocker", "blockers"),
             ),
             Color::Warning,
-            IconName::Warning,
         );
     }
 
@@ -161,7 +143,6 @@ fn code_target_state(snapshot: &DxForgePanelSnapshot) -> RemoteTargetState {
                 plural(snapshot.receipt_count, "receipt", "receipts"),
             ),
             Color::Success,
-            IconName::Check,
         );
     }
 
@@ -169,7 +150,6 @@ fn code_target_state(snapshot: &DxForgePanelSnapshot) -> RemoteTargetState {
         "Waiting",
         "History configured; no receipts yet",
         Color::Muted,
-        IconName::Circle,
     )
 }
 
@@ -177,12 +157,7 @@ fn storage_target_state(snapshot: &DxForgePanelSnapshot) -> RemoteTargetState {
     let restore_preview_count = snapshot.restore_previews.len();
 
     if !snapshot.history_root_exists {
-        return target_state(
-            "Waiting",
-            "Waiting for restore previews",
-            Color::Muted,
-            IconName::Info,
-        );
+        return target_state("Waiting", "Waiting for restore previews", Color::Muted);
     }
 
     if snapshot.visible_restore_warning_count > 0 {
@@ -198,7 +173,6 @@ fn storage_target_state(snapshot: &DxForgePanelSnapshot) -> RemoteTargetState {
                 ),
             ),
             Color::Warning,
-            IconName::Warning,
         );
     }
 
@@ -211,16 +185,10 @@ fn storage_target_state(snapshot: &DxForgePanelSnapshot) -> RemoteTargetState {
                 plural(restore_preview_count, "preview", "previews"),
             ),
             Color::Success,
-            IconName::Check,
         );
     }
 
-    target_state(
-        "Waiting",
-        "No restore previews found",
-        Color::Muted,
-        IconName::Circle,
-    )
+    target_state("Waiting", "No restore previews found", Color::Muted)
 }
 
 fn media_target_state(snapshot: &DxForgePanelSnapshot) -> RemoteTargetState {
@@ -240,7 +208,6 @@ fn media_target_state(snapshot: &DxForgePanelSnapshot) -> RemoteTargetState {
                 plural(warning_count, "warning", "warnings"),
             ),
             Color::Warning,
-            IconName::Warning,
         );
     }
 
@@ -253,24 +220,13 @@ fn media_target_state(snapshot: &DxForgePanelSnapshot) -> RemoteTargetState {
                 plural(media_output_count, "output", "outputs"),
             ),
             Color::Success,
-            IconName::Check,
         );
     }
 
-    target_state(
-        "Waiting",
-        "No media outputs found",
-        Color::Muted,
-        IconName::Circle,
-    )
+    target_state("Waiting", "No media outputs found", Color::Muted)
 }
 
-fn target_state(
-    label: &'static str,
-    detail: impl Into<String>,
-    color: Color,
-    _icon: IconName,
-) -> RemoteTargetState {
+fn target_state(label: &'static str, detail: impl Into<String>, color: Color) -> RemoteTargetState {
     RemoteTargetState {
         label,
         detail: detail.into(),

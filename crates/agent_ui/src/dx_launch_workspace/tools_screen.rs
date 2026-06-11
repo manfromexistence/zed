@@ -1,12 +1,12 @@
 use gpui::{AnyElement, App, IntoElement, SharedString};
 use ui::{
-    AiSettingItem, AiSettingItemSource, AiSettingItemStatus, IconName, ListItem, ListItemSpacing,
-    prelude::*,
+    AiSettingItem, AiSettingItemSource, AiSettingItemStatus, IconName, ListHeader, ListItem,
+    ListItemSpacing, Tooltip, prelude::*,
 };
 
 use crate::dx_agent_bridge::DxAgentBridgeSnapshot;
 
-use super::{DxLaunchWorkspaceStatus, agents, metric_row, muted_card, section_title};
+use super::{DxLaunchWorkspaceStatus, agents, muted_card};
 
 pub(crate) fn render_tools_screen(
     status: Option<&DxLaunchWorkspaceStatus>,
@@ -16,7 +16,11 @@ pub(crate) fn render_tools_screen(
         let snapshot = &status.agent_bridge;
         v_flex()
             .gap_2()
-            .child(section_title("Browser", dx_icon(DxUiIcon::Browser)))
+            .child(tools_section(
+                "dx-tools-browser-section",
+                "Browser",
+                dx_icon(DxUiIcon::Browser),
+            ))
             .child(trusted_tool_state(
                 snapshot,
                 "dx-tools-browser",
@@ -25,7 +29,11 @@ pub(crate) fn render_tools_screen(
                 &["browser", "web", "chrome"],
                 "No approved Browser tool receipt is available yet.",
             ))
-            .child(section_title("Computer", dx_icon(DxUiIcon::Computer)))
+            .child(tools_section(
+                "dx-tools-computer-section",
+                "Computer",
+                dx_icon(DxUiIcon::Computer),
+            ))
             .child(trusted_tool_state(
                 snapshot,
                 "dx-tools-computer",
@@ -34,13 +42,29 @@ pub(crate) fn render_tools_screen(
                 &["computer", "desktop", "screen"],
                 "No approved Computer tool receipt is available yet.",
             ))
-            .child(section_title("MCP", dx_icon(DxUiIcon::Mcp)))
+            .child(tools_section(
+                "dx-tools-mcp-section",
+                "MCP",
+                dx_icon(DxUiIcon::Mcp),
+            ))
             .child(mcp_state(snapshot))
-            .child(section_title("DX Plugins", dx_icon(DxUiIcon::Plugins)))
+            .child(tools_section(
+                "dx-tools-plugins-section",
+                "DX Plugins",
+                dx_icon(DxUiIcon::Plugins),
+            ))
             .child(plugin_state(snapshot))
-            .child(section_title("Receipts", IconName::FileTextOutlined))
+            .child(tools_section(
+                "dx-tools-receipts-section",
+                "Receipts",
+                IconName::FileTextOutlined,
+            ))
             .child(agents::dx_agent_receipt_state(snapshot, cx))
-            .child(section_title("Permissions", dx_icon(DxUiIcon::Permissions)))
+            .child(tools_section(
+                "dx-tools-permissions-section",
+                "Permissions",
+                dx_icon(DxUiIcon::Permissions),
+            ))
             .child(permission_state(snapshot))
             .into_any_element()
     } else {
@@ -229,11 +253,15 @@ fn permission_state(snapshot: &DxAgentBridgeSnapshot) -> AnyElement {
 
     v_flex()
         .gap_1()
-        .child(metric_row(
+        .child(tool_detail_row(
+            "dx-tools-permissions-contract".into(),
+            IconName::FileTextOutlined,
             "Bridge contract",
             snapshot.trusted_tool_bridge.bridge_contract_id.clone(),
         ))
-        .child(metric_row(
+        .child(tool_detail_row(
+            "dx-tools-permissions-receipts".into(),
+            IconName::FileTextOutlined,
             "Receipt count",
             snapshot.trusted_tool_bridge.receipt_count.to_string(),
         ))
@@ -309,15 +337,26 @@ fn screen_header(icon: IconName, title: &'static str, detail: &'static str) -> A
                 )
                 .child(
                     Label::new(detail)
-                        .size(LabelSize::XSmall)
+                        .size(LabelSize::Small)
                         .color(Color::Muted),
                 ),
         )
         .into_any_element()
 }
 
+fn tools_section(id: &'static str, title: &'static str, icon: IconName) -> AnyElement {
+    div()
+        .id(id)
+        .child(
+            ListHeader::new(title)
+                .inset(true)
+                .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted)),
+        )
+        .into_any_element()
+}
+
 fn tool_detail_stack(rows: Vec<AnyElement>) -> AnyElement {
-    v_flex().gap_0p5().pl_4().children(rows).into_any_element()
+    v_flex().gap_1().children(rows).into_any_element()
 }
 
 fn tool_detail_row(
@@ -326,26 +365,32 @@ fn tool_detail_row(
     label: impl Into<SharedString>,
     detail: impl Into<SharedString>,
 ) -> AnyElement {
+    let label = label.into();
+    let detail = detail.into();
+    let tooltip = format!("{}: {}", label.as_ref(), detail.as_ref());
+
     ListItem::new(id)
-        .spacing(ListItemSpacing::ExtraDense)
+        .inset(true)
+        .spacing(ListItemSpacing::Sparse)
         .selectable(false)
-        .start_slot(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted))
+        .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
         .child(
             h_flex()
                 .min_w_0()
                 .gap_1()
                 .child(
-                    Label::new(label.into())
-                        .size(LabelSize::XSmall)
+                    Label::new(label)
+                        .size(LabelSize::Small)
                         .color(Color::Muted)
                         .flex_none(),
                 )
                 .child(
-                    Label::new(detail.into())
-                        .size(LabelSize::XSmall)
+                    Label::new(detail)
+                        .size(LabelSize::Small)
                         .color(Color::Default)
                         .truncate(),
                 ),
         )
+        .tooltip(Tooltip::text(tooltip))
         .into_any_element()
 }

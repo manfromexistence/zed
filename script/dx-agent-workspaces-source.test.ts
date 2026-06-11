@@ -179,9 +179,20 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
   assert.match(toolsScreen, /fn show_toolbar\(&self\) -> bool \{\s*false\s*\}/);
   assert.match(toolsScreen, /fn can_split\(&self\) -> bool \{\s*false\s*\}/);
 
-  for (const title of ["Browser", "Computer", "MCP", "DX Plugins", "Receipts", "Permissions"]) {
-    assert.match(screen, new RegExp(`section_title\\("${title}"`));
+  for (const [id, title] of [
+    ["dx-tools-browser-section", "Browser"],
+    ["dx-tools-computer-section", "Computer"],
+    ["dx-tools-mcp-section", "MCP"],
+    ["dx-tools-plugins-section", "DX Plugins"],
+    ["dx-tools-receipts-section", "Receipts"],
+    ["dx-tools-permissions-section", "Permissions"],
+  ]) {
+    assert.match(screen, new RegExp(`tools_section\\(\\s*"${id}",\\s*"${title}"`));
   }
+  assert.match(screen, /ListHeader::new\(title\)/);
+  assert.match(screen, /\.spacing\(ListItemSpacing::Sparse\)/);
+  assert.match(screen, /\.tooltip\(Tooltip::text\(tooltip\)\)/);
+  assert.doesNotMatch(screen, /use super::\{[^}]*metric_row|section_title|ListItemSpacing::ExtraDense|IconSize::XSmall|LabelSize::XSmall/);
   assert.match(screen, /trusted_tool_bridge/);
   assert.match(screen, /trusted_tool_ids/);
   assert.match(screen, /approved_plugin_tool_count/);
