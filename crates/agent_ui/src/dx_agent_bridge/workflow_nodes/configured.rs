@@ -1,9 +1,12 @@
+use std::collections::HashSet;
+
 use serde_json::Value;
 
 use super::super::{array_field, bool_field};
 use super::display_string_field;
 
 const MAX_CONFIGURED_PLUGIN_ROWS: usize = 12;
+const MAX_CONFIGURED_PLUGIN_INDEX_ROWS: usize = 2048;
 
 #[derive(Clone, PartialEq, Eq)]
 pub(crate) struct DxConfiguredPluginSummary {
@@ -26,8 +29,7 @@ pub(crate) struct DxConfiguredPluginSummary {
 }
 
 pub(super) fn configured_plugin_rows(value: &Value) -> Vec<DxConfiguredPluginSummary> {
-    array_field(value, &["configured_plugins"])
-        .or_else(|| array_field(value, &["enabled_plugins"]))
+    configured_plugin_values(value)
         .map(|plugins| {
             plugins
                 .iter()
@@ -36,6 +38,49 @@ pub(super) fn configured_plugin_rows(value: &Value) -> Vec<DxConfiguredPluginSum
                 .collect()
         })
         .unwrap_or_default()
+}
+
+#[derive(Default)]
+pub(super) struct ConfiguredPluginIndex {
+    has_configured_plugin_data: bool,
+    node_ids: HashSet<String>,
+}
+
+impl ConfiguredPluginIndex {
+    pub(super) fn has_configured_plugin_data(&self) -> bool {
+        self.has_configured_plugin_data
+    }
+
+    pub(super) fn contains_node(&self, node_id: &str) -> bool {
+        self.node_ids.contains(node_id)
+    }
+}
+
+pub(super) fn configured_plugin_index(value: &Value) -> ConfiguredPluginIndex {
+    let Some(plugins) = configured_plugin_values(value) else {
+        return ConfiguredPluginIndex {
+            has_configured_plugin_data: false,
+            node_ids: HashSet::new(),
+        };
+    };
+    let node_ids = plugins
+        .iter()
+        .take(MAX_CONFIGURED_PLUGIN_INDEX_ROWS)
+        .filter_map(configured_plugin_node_id)
+        .collect();
+
+    ConfiguredPluginIndex {
+        has_configured_plugin_data: true,
+        node_ids,
+    }
+}
+
+fn configured_plugin_values(value: &Value) -> Option<&Vec<Value>> {
+    array_field(value, &["configured_plugins"]).or_else(|| array_field(value, &["enabled_plugins"]))
+}
+
+fn configured_plugin_node_id(value: &Value) -> Option<String> {
+    display_string_field(value, &["node_id"]).or_else(|| display_string_field(value, &["id"]))
 }
 
 fn configured_plugin_row(value: &Value) -> Option<DxConfiguredPluginSummary> {
@@ -65,7 +110,9 @@ fn configured_plugin_row(value: &Value) -> Option<DxConfiguredPluginSummary> {
             .unwrap_or_else(|| "missing_trust_policy".to_string()),
         approved_by_trusted_bridge: bool_field(value, &["approved_by_trusted_bridge"])
             .unwrap_or(false),
-        writes_receipt: bool_field(value, &["writes_receipt"]).unwrap_or(false),
+        writes_receipt: bool_field(value, &["writes_receipt"])
+            .or_else(|| bool_field(value, &["writes_receipts"]))
+            .unwrap_or(false),
         secrets_exposed: bool_field(value, &["secrets_exposed"]).unwrap_or(true),
         id,
         node_id,

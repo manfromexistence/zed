@@ -143,6 +143,8 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.match(parent, /^mod catalog_active_provider_label;$/m);
   assert.match(parent, /^mod catalog_labels;$/m);
   assert.match(parent, /^mod workflow_nodes;$/m);
+  assert.match(parent, /read_first_json_with_default_path/);
+  assert.match(parent, /"plugins\/workflow-node-catalog-latest\.json"/);
   assert.match(parent, /pub\(crate\) use self::workflow_nodes::\{/);
   assert.match(parent, /workflow_node_catalog: workflow_node_catalog_summary/);
   assert.match(workflowNodes, /^mod contract;$/m);
@@ -150,7 +152,10 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.match(workflowNodes, /pub\(crate\) use self::contract::\{/);
   assert.match(workflowNodes, /pub\(crate\) use self::configured::DxConfiguredPluginSummary/);
   assert.match(workflowNodes, /use self::contract::\{/);
-  assert.match(workflowNodes, /use self::configured::configured_plugin_rows/);
+  assert.match(workflowNodes, /use self::configured::\{/);
+  assert.match(workflowNodes, /ConfiguredPluginIndex/);
+  assert.match(workflowNodes, /configured_plugin_index/);
+  assert.match(workflowNodes, /configured_plugin_rows/);
   assert.match(
     parent,
     /pub\(crate\) use self::catalog_active_provider_label::\{\s*catalog_active_provider_label, catalog_active_provider_value_label,\s*\};/s,
@@ -192,6 +197,8 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.match(commands, /AutomationRun \{ automation_id: String \}/);
   assert.match(localFiles, /pub\(super\) fn read_json/);
   assert.match(localFiles, /pub\(super\) fn read_first_json/);
+  assert.match(localFiles, /pub\(super\) fn read_first_json_with_path/);
+  assert.match(localFiles, /pub\(super\) fn read_first_json_with_default_path/);
   assert.match(localFiles, /pub\(super\) fn latest_receipts/);
   assert.match(localFiles, /pub\(super\) fn dx_home_from_receipt_root/);
   assert.match(localFiles, /receipt_file_label/);
@@ -321,6 +328,19 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.match(workflowNodes, /redact_action_scalar/);
   assert.match(workflowNodes, /credential_status/);
   assert.match(workflowNodes, /credential_types/);
+  assert.match(workflowNodes, /missing_schema_version/);
+  assert.match(workflowNodes, /missing_serializer_format/);
+  assert.match(
+    workflowNodes,
+    /configured_plugin_count: nodes\.iter\(\)\.filter\(\|node\| node\.configured\)\.count\(\)/,
+  );
+  assert.match(workflowNodes, /configured_index\.has_configured_plugin_data\(\)/);
+  assert.match(workflowNodes, /configured_index\.contains_node\(&id\)/);
+  assert.match(workflowNodeConfigured, /struct ConfiguredPluginIndex/);
+  assert.match(workflowNodeConfigured, /MAX_CONFIGURED_PLUGIN_INDEX_ROWS/);
+  assert.match(workflowNodeConfigured, /fn configured_plugin_values/);
+  assert.match(workflowNodeConfigured, /fn configured_plugin_node_id/);
+  assert.match(workflowNodeConfigured, /bool_field\(value, &\["writes_receipts"\]\)/);
   assert.doesNotMatch(workflowNodeSources, forbiddenWorkflowNodeSources);
   assert.doesNotMatch(workflowNodeSources, rawSecretDisplayPattern);
   assert.doesNotMatch(workflowNodes, /(?<!display_)string_field\(value, &\["(?:description|source_package|source_package_version|source_root_id|source_path|credential_status|configure_action)"\]\)/);
@@ -432,7 +452,7 @@ test("DX Agent bridge delegates bridge commands and receipt parsing", () => {
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/receipts/trusted_tool_bridge.rs") < 95);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_catalog.rs") < 90);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/workflow_nodes/contract.rs") < 280);
-  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/workflow_nodes/configured.rs") < 95);
+  assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/workflow_nodes/configured.rs") < 140);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_connection_tests.rs") < 120);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_catalog_tests.rs") < 130);
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge/runtime_catalog_fields.rs") < 125);

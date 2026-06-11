@@ -1,3 +1,26 @@
+[2026-06-11] - DX Plugins Configure Bridge And Catalog Provenance
+
+CHANGED:
+- Workflow-node catalog discovery now records the actual receipt path that was loaded, including alternate plugin catalog filenames and the nested `plugins/workflow-node-catalog-latest.json` receipt.
+- Plugin configured state now reconciles visible node chips from `configured_plugins`/`enabled_plugins` receipt data before falling back to per-node metadata, so stale node booleans do not create fake configured UI.
+- The Plugins Configure menu now drafts a DX Agent setup/review request through the active Agent panel instead of executing plugin commands, writing credential state, or marking credentials configured locally.
+
+HARDENED:
+- Missing workflow-node schema and serializer metadata now render as explicit missing fields instead of defaulting to a claimed serializer contract.
+- Configured-plugin receipt parsing accepts both `writes_receipt` and `writes_receipts` while continuing to fail closed for unapproved or secret-exposed plugin options.
+- Focused source guards now cover path-aware catalog reads, configured-state reconciliation, no direct receipt IO in the Plugins panel, no upstream plugin source references, and no raw command execution from the Configure action.
+
+PASSED:
+- `node --test script/dx-agent-bridge-source.test.ts script/dx-agent-workspaces-source.test.ts script/dx-agent-thread-view-source.test.ts script/dx-plugin-catalog-source.test.ts`
+- `rustfmt --edition 2024 --check` on the touched Rust files.
+- Focused production-source scan for forbidden upstream plugin source references returned no matches.
+- Focused Plugins UI scan for raw secret-key display terms returned no matches.
+- Focused conflict-marker scan over touched docs, source, and guard files returned no matches.
+- `git diff --check`
+
+NOTES:
+- Cargo, `just run`, local servers, native launch, and visual runtime proof remain deferred by instruction.
+
 [2026-06-11] - DX Plugins Extensions-Style GPUI Parity
 
 CHANGED:

@@ -210,7 +210,7 @@ pub(crate) fn render_workflow_node_catalog(
                             if catalog.nodes.is_empty() {
                                 return this
                                     .child(super::muted_card(
-                                        "Run DX JS workflow-node catalog generation to load dx.serializer.machine node metadata.",
+                                        "Run DX JS workflow-node catalog generation to load plugin metadata.",
                                         cx,
                                     ))
                                     .into_any_element();
@@ -271,6 +271,7 @@ pub(crate) fn render_workflow_node_rows(
             workflow_nodes::workflow_node_card(
                 node,
                 selected_node_id.as_deref() == Some(node.id.as_str()),
+                cx.weak_entity(),
                 cx.listener(move |this, _event, _window, cx| {
                     this.set_plugin_catalog_selected_node(node_id.clone(), cx);
                 }),
@@ -285,7 +286,11 @@ fn render_selected_workflow_node_detail(
     state: &DxPluginsCatalogState,
     cx: &mut Context<AgentPanel>,
 ) -> AnyElement {
-    super::details::render_selected_workflow_node_detail(state.selected_node(catalog, cx), cx)
+    super::details::render_selected_workflow_node_detail(
+        catalog,
+        state.selected_node(catalog, cx),
+        cx,
+    )
 }
 
 fn render_catalog_summary(

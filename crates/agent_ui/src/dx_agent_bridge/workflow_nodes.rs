@@ -10,7 +10,7 @@ mod configured;
 mod contract;
 
 pub(crate) use self::configured::DxConfiguredPluginSummary;
-use self::configured::configured_plugin_rows;
+use self::configured::{ConfiguredPluginIndex, configured_plugin_index, configured_plugin_rows};
 pub(crate) use self::contract::{
     DxWorkflowNodeActionSummary, DxWorkflowNodeCredentialSummary,
     DxWorkflowNodeDynamicOptionSummary, DxWorkflowNodePermissionSummary, DxWorkflowNodePortSummary,
@@ -26,7 +26,6 @@ const MAX_WORKFLOW_NODE_ROWS: usize = 768;
 const MAX_WORKFLOW_NODE_CANDIDATES: usize = 2048;
 const MAX_DETAIL_ITEMS: usize = 8;
 const MAX_DISPLAY_CHARS: usize = 180;
-const SERIALIZER_MACHINE_FORMAT: &str = "dx.serializer.machine";
 
 #[derive(Clone)]
 pub(crate) struct DxWorkflowNodeCatalogSummary {
@@ -80,7 +79,10 @@ pub(super) fn workflow_node_catalog_summary(
     catalog_path: PathBuf,
     root_exists: bool,
 ) -> DxWorkflowNodeCatalogSummary {
-    let nodes = value.map(workflow_node_rows).unwrap_or_default();
+    let configured_index = value.map(configured_plugin_index).unwrap_or_default();
+    let nodes = value
+        .map(|value| workflow_node_rows(value, &configured_index))
+        .unwrap_or_default();
     let configured_plugins = value.map(configured_plugin_rows).unwrap_or_default();
 
     DxWorkflowNodeCatalogSummary {
@@ -96,13 +98,13 @@ pub(super) fn workflow_node_catalog_summary(
             }),
         schema_version: value
             .and_then(|value| display_string_field(value, &["schema_version"]))
-            .unwrap_or_else(|| "dx.workflow_nodes.catalog.v1".to_string()),
+            .unwrap_or_else(|| "missing_schema_version".to_string()),
         serializer_format: value
             .and_then(|value| {
                 display_string_field(value, &["serializer_format"])
                     .or_else(|| display_string_field(value, &["machine_format"]))
             })
-            .unwrap_or_else(|| SERIALIZER_MACHINE_FORMAT.to_string()),
+            .unwrap_or_else(|| "missing_serializer_format".to_string()),
         catalog_path,
         node_count: value
             .and_then(|value| usize_field(value, &["node_count"]))
@@ -112,14 +114,7 @@ pub(super) fn workflow_node_catalog_summary(
                     .map(Vec::len)
             })
             .unwrap_or_default(),
-        configured_plugin_count: value
-            .and_then(|value| usize_field(value, &["configured_plugin_count"]))
-            .or_else(|| {
-                value
-                    .and_then(|value| array_field(value, &["configured_plugins"]))
-                    .map(Vec::len)
-            })
-            .unwrap_or(configured_plugins.len()),
+        configured_plugin_count: nodes.iter().filter(|node| node.configured).count(),
         generated_at: value.and_then(|value| display_string_field(value, &["generated_at"])),
         source_packages: value
             .map(|value| display_string_array_field(value, &["source_packages"], MAX_DETAIL_ITEMS))
@@ -132,25 +127,35 @@ pub(super) fn workflow_node_catalog_summary(
     }
 }
 
-fn workflow_node_rows(value: &Value) -> Vec<DxWorkflowNodeSummary> {
+fn workflow_node_rows(
+    value: &Value,
+    configured_index: &ConfiguredPluginIndex,
+) -> Vec<DxWorkflowNodeSummary> {
     array_field(value, &["nodes"])
         .map(|nodes| {
             nodes
                 .iter()
                 .take(MAX_WORKFLOW_NODE_CANDIDATES)
-                .filter_map(workflow_node_row)
+                .filter_map(|value| workflow_node_row(value, configured_index))
                 .take(MAX_WORKFLOW_NODE_ROWS)
                 .collect()
         })
         .unwrap_or_default()
 }
 
-fn workflow_node_row(value: &Value) -> Option<DxWorkflowNodeSummary> {
+fn workflow_node_row(
+    value: &Value,
+    configured_index: &ConfiguredPluginIndex,
+) -> Option<DxWorkflowNodeSummary> {
     let id = display_string_field(value, &["id"])?;
     let display_name = display_string_field(value, &["name"])
         .or_else(|| display_string_field(value, &["display_name"]))
         .unwrap_or_else(|| id.clone());
-    let configured = bool_field(value, &["configured"]).unwrap_or(false);
+    let configured = if configured_index.has_configured_plugin_data() {
+        configured_index.contains_node(&id)
+    } else {
+        bool_field(value, &["configured"]).unwrap_or(false)
+    };
     let inputs = workflow_node_port_rows(value, &["inputs"]);
     let outputs = workflow_node_port_rows(value, &["outputs"]);
     let dynamic_options = workflow_node_dynamic_option_rows(value);

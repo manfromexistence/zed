@@ -1,8 +1,9 @@
-use gpui::{AnyElement, App, ClickEvent, IntoElement, SharedString, Window};
+use gpui::{AnyElement, App, ClickEvent, IntoElement, SharedString, WeakEntity, Window};
 use ui::{
     Button, ButtonStyle, Chip, ContextMenu, IconName, ListItem, PopoverMenu, Tooltip, prelude::*,
 };
 
+use crate::AgentPanel;
 use crate::dx_agent_bridge::{DxConfiguredPluginSummary, DxWorkflowNodeSummary};
 use crate::workflow_node_icons::{workflow_node_element_id, workflow_node_icon_asset_for};
 
@@ -12,6 +13,7 @@ const MAX_PLUGIN_CARD_CATEGORY_CHARS: usize = 28;
 pub(super) fn workflow_node_card(
     node: &DxWorkflowNodeSummary,
     selected: bool,
+    panel: WeakEntity<AgentPanel>,
     on_select: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     cx: &App,
 ) -> AnyElement {
@@ -57,7 +59,7 @@ pub(super) fn workflow_node_card(
                                 .child(icon.render(IconSize::Medium, Color::Muted))
                                 .child(plugin_title_block(node)),
                         )
-                        .child(plugin_action_stack(node.clone())),
+                        .child(plugin_action_stack(node.clone(), panel)),
                 )
                 .child(
                     h_flex()
@@ -117,11 +119,11 @@ fn plugin_title_block(node: &DxWorkflowNodeSummary) -> AnyElement {
         .into_any_element()
 }
 
-fn plugin_action_stack(node: DxWorkflowNodeSummary) -> AnyElement {
+fn plugin_action_stack(node: DxWorkflowNodeSummary, panel: WeakEntity<AgentPanel>) -> AnyElement {
     h_flex()
         .gap_1()
         .flex_none()
-        .child(render_plugin_config_menu(node))
+        .child(render_plugin_config_menu(node, panel))
         .into_any_element()
 }
 
@@ -182,7 +184,10 @@ pub(super) fn missing_workflow_node_card(message: &'static str) -> AnyElement {
         .into_any_element()
 }
 
-fn render_plugin_config_menu(node: DxWorkflowNodeSummary) -> AnyElement {
+fn render_plugin_config_menu(
+    node: DxWorkflowNodeSummary,
+    panel: WeakEntity<AgentPanel>,
+) -> AnyElement {
     let trigger_id = workflow_node_element_id("dx-workflow-node-configure", &node.id);
     PopoverMenu::new(workflow_node_element_id(
         "dx-workflow-node-config-menu",
@@ -198,7 +203,9 @@ fn render_plugin_config_menu(node: DxWorkflowNodeSummary) -> AnyElement {
     .anchor(gpui::Anchor::BottomRight)
     .menu(move |window, cx| {
         let node = node.clone();
+        let panel = panel.clone();
         Some(ContextMenu::build(window, cx, move |menu, _window, _cx| {
+            let action_label = plugin_config_menu_action_label(&node);
             menu.header(node.display_name.clone())
                 .custom_row({
                     let node = node.clone();
@@ -208,10 +215,38 @@ fn render_plugin_config_menu(node: DxWorkflowNodeSummary) -> AnyElement {
                     let node = node.clone();
                     move |_window, _cx| plugin_config_requirements_row(&node)
                 })
-                .custom_row(move |_window, _cx| plugin_config_next_action_row(&node))
+                .custom_row({
+                    let node = node.clone();
+                    move |_window, _cx| plugin_config_next_action_row(&node)
+                })
+                .entry(action_label, None, {
+                    let node = node.clone();
+                    let panel = panel.clone();
+                    move |window, cx| {
+                        if let Some(panel) = panel.upgrade() {
+                            panel.update(cx, |this, cx| {
+                                this.draft_dx_workflow_node_configuration_prompt(
+                                    node.clone(),
+                                    window,
+                                    cx,
+                                );
+                            });
+                        }
+                    }
+                })
         }))
     })
     .into_any_element()
+}
+
+fn plugin_config_menu_action_label(node: &DxWorkflowNodeSummary) -> &'static str {
+    if node.configured {
+        "Review configuration"
+    } else if node.credential_status == "not_required" {
+        "Review plugin contract"
+    } else {
+        "Draft setup request"
+    }
 }
 
 fn plugin_config_status_row(node: &DxWorkflowNodeSummary) -> AnyElement {

@@ -2,10 +2,11 @@ use gpui::{AnyElement, Context, IntoElement, SharedString};
 use ui::{Color, Headline, HeadlineSize, Icon, IconName, Label, LabelSize, prelude::*};
 
 use crate::AgentPanel;
-use crate::dx_agent_bridge::DxWorkflowNodeSummary;
+use crate::dx_agent_bridge::{DxWorkflowNodeCatalogSummary, DxWorkflowNodeSummary};
 use crate::workflow_node_icons::{workflow_node_element_id, workflow_node_icon_asset_for};
 
 pub(super) fn render_selected_workflow_node_detail(
+    catalog: &DxWorkflowNodeCatalogSummary,
     node: Option<&DxWorkflowNodeSummary>,
     cx: &mut Context<AgentPanel>,
 ) -> AnyElement {
@@ -14,7 +15,7 @@ pub(super) fn render_selected_workflow_node_detail(
             .w(rems_from_px(340.))
             .flex_none()
             .child(super::muted_card(
-                "Select a plugin to inspect dx.serializer.machine metadata.",
+                "Select a plugin to inspect serializer metadata.",
                 cx,
             ))
             .into_any_element();
@@ -59,7 +60,7 @@ pub(super) fn render_selected_workflow_node_detail(
                 ),
         )
         .child(render_workflow_node_configuration(node))
-        .child(render_workflow_node_contract(node))
+        .child(render_workflow_node_contract(catalog, node))
         .child(render_workflow_node_permissions(node))
         .child(render_workflow_node_ports(node))
         .child(render_workflow_node_dynamic_options(node))
@@ -113,7 +114,10 @@ fn render_workflow_node_configuration(node: &DxWorkflowNodeSummary) -> AnyElemen
         .into_any_element()
 }
 
-fn render_workflow_node_contract(node: &DxWorkflowNodeSummary) -> AnyElement {
+fn render_workflow_node_contract(
+    catalog: &DxWorkflowNodeCatalogSummary,
+    node: &DxWorkflowNodeSummary,
+) -> AnyElement {
     v_flex()
         .gap_1()
         .child(Headline::new("Plugin Contract").size(HeadlineSize::XSmall))
@@ -121,7 +125,13 @@ fn render_workflow_node_contract(node: &DxWorkflowNodeSummary) -> AnyElement {
             workflow_node_element_id("dx-workflow-node-detail-serializer", &node.id),
             IconName::FileTextOutlined,
             "Serializer",
-            "dx.serializer.machine",
+            catalog.serializer_format.clone(),
+        ))
+        .child(detail_row(
+            workflow_node_element_id("dx-workflow-node-detail-schema", &node.id),
+            IconName::FileTextOutlined,
+            "Schema",
+            catalog.schema_version.clone(),
         ))
         .child(detail_row(
             workflow_node_element_id("dx-workflow-node-detail-runtime", &node.id),

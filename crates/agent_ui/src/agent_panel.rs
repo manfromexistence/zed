@@ -43,8 +43,8 @@ use crate::ManageProfiles;
 use crate::agent_connection_store::AgentConnectionStore;
 use crate::completion_provider::AgentContextSource;
 use crate::dx_agent_bridge::{
-    DxAgentSettingsSnapshot, DxConfiguredPluginSummary, dx_agent_bridge_settings_snapshot,
-    dx_agent_bridge_snapshot_from_settings_for_roots,
+    DxAgentSettingsSnapshot, DxConfiguredPluginSummary, DxWorkflowNodeSummary,
+    dx_agent_bridge_settings_snapshot, dx_agent_bridge_snapshot_from_settings_for_roots,
 };
 use crate::dx_check_score::{DxCheckScoreInput, check_score_snapshot};
 use crate::dx_deploy_prompts::deploy_readiness_prompt;
@@ -7497,6 +7497,60 @@ impl AgentPanel {
             window,
             cx,
         );
+    }
+
+    pub(crate) fn draft_dx_workflow_node_configuration_prompt(
+        &mut self,
+        node: DxWorkflowNodeSummary,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if !self.has_open_project(cx) {
+            Self::show_deferred_toast(&self.workspace, "Open a project to configure a plugin", cx);
+            return;
+        }
+
+        self.insert_dx_launch_prompt(Self::workflow_node_configuration_prompt(&node), window, cx);
+    }
+
+    fn workflow_node_configuration_prompt(node: &DxWorkflowNodeSummary) -> String {
+        let credential_types = if node.credential_types.is_empty() {
+            "none declared".to_string()
+        } else {
+            node.credential_types.join(", ")
+        };
+        let configure_action = if node.configure_action.is_empty() {
+            "missing_configure_action".to_string()
+        } else {
+            node.configure_action.clone()
+        };
+
+        format!(
+            "Configure DX plugin `{display_name}` for agent use.\n\
+             - plugin_node_id: {id}\n\
+             - category: {category}\n\
+             - runtime: {runtime}\n\
+             - credential_status: {credential_status}\n\
+             - credential_types: {credential_types}\n\
+             - configure_action: {configure_action}\n\
+             - source_package: {source_package}\n\
+             - source_package_version: {source_package_version}\n\
+             - source_root_id: {source_root_id}\n\
+             - source_path: {source_path}\n\
+             Use the DX Agents credential bridge and receipt contracts only. Do not store, echo, \
+             or persist credential material in prompts, settings, logs, or plugin catalog receipts.",
+            display_name = node.display_name.as_str(),
+            id = node.id.as_str(),
+            category = node.category.as_str(),
+            runtime = node.runtime.as_str(),
+            credential_status = node.credential_status.as_str(),
+            credential_types = credential_types.as_str(),
+            configure_action = configure_action.as_str(),
+            source_package = node.source_package.as_str(),
+            source_package_version = node.source_package_version.as_str(),
+            source_root_id = node.source_root_id.as_str(),
+            source_path = node.source_path.as_str(),
+        )
     }
 
     pub fn draft_dx_source_action_from_sidebar(

@@ -262,7 +262,18 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
   assert.match(workflowNodeScreen, /on_select: impl Fn/);
   assert.match(workflowNodeScreen, /hover\(\|this\| this\.bg/);
   assert.match(pluginScreenSources, /render_plugin_config_menu/);
-  assert.match(pluginScreenSources, /dx\.serializer\.machine/);
+  assert.match(detailScreen, /catalog\.serializer_format\.clone\(\)/);
+  assert.match(detailScreen, /catalog\.schema_version\.clone\(\)/);
+  assert.doesNotMatch(pluginScreenSources, /"dx\.serializer\.machine"/);
+  assert.match(workflowNodeScreen, /WeakEntity<AgentPanel>/);
+  assert.match(workflowNodeScreen, /Draft setup request/);
+  assert.match(workflowNodeScreen, /Review configuration/);
+  assert.match(workflowNodeScreen, /Review plugin contract/);
+  assert.match(workflowNodeScreen, /draft_dx_workflow_node_configuration_prompt/);
+  assert.match(agentPanel, /pub\(crate\) fn draft_dx_workflow_node_configuration_prompt/);
+  assert.match(agentPanel, /fn workflow_node_configuration_prompt/);
+  assert.match(agentPanel, /insert_dx_launch_prompt/);
+  assert.match(agentPanel, /credential bridge and receipt contracts only/);
   assert.match(agentUi, /^mod workflow_node_icons;$/m);
   assert.match(pluginScreenSources, /workflow_node_icon_asset_for/);
   assert.match(workflowNodeIcons, /pub\(crate\) enum WorkflowNodeIconAsset/);
@@ -280,6 +291,7 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
   assert.doesNotMatch(pluginScreenSources, forbiddenPluginSource);
   assert.doesNotMatch(pluginScreenSources, rawSecretUiPattern);
   assert.doesNotMatch(pluginScreenSources, /\b(?:node|plugin)\.run_command\b/);
+  assert.doesNotMatch(workflowNodeScreen, /run_dx_agent_public_command|run_command/);
   assert.doesNotMatch(pluginScreenSources, /\bBadge|Pill|TagList|badge_/i);
   assert.doesNotMatch(pluginScreenSources, /<iframe|iframe|WebView|webview|embed_url|external_workflow_url/i);
   assert.match(screen, /trusted_tool_bridge/);
@@ -336,7 +348,8 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
   assert.match(workflowNodeBridgeSources, /DxConfiguredPluginSummary/);
   assert.match(workflowNodes, /MAX_WORKFLOW_NODE_ROWS/);
   assert.match(workflowNodeBridgeSources, /MAX_CONFIGURED_PLUGIN_ROWS/);
-  assert.match(workflowNodes, /dx\.serializer\.machine/);
+  assert.match(workflowNodes, /missing_serializer_format/);
+  assert.doesNotMatch(workflowNodes, /"dx\.serializer\.machine"/);
   assert.match(workflowNodes, /credential_status/);
   assert.match(workflowNodes, /credential_types/);
   assert.match(workflowNodes, /redact_action_scalar/);
@@ -372,6 +385,6 @@ test("Plugins workspace follows the Extensions-style GPUI catalog pattern", () =
   assert.match(workflowNodes, /"Configured"/);
   assert.match(workflowNodes, /"Ready"/);
   assert.match(workflowNodes, /"Needs Setup"/);
-  assert.match(workflowNodes, /render_plugin_config_menu\(node\)/);
+  assert.match(workflowNodes, /render_plugin_config_menu\(node, panel\)/);
   assert.doesNotMatch(workflowNodes, /Badge|badge/);
 });

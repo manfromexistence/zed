@@ -32,7 +32,10 @@ use self::command_safety::{
     is_safe_automation_id_arg, is_safe_platform_arg, is_secret_like_arg,
     public_command_for_runtime, redact_action_scalar,
 };
-use self::local_files::{dx_home_from_receipt_root, latest_receipts, read_first_json, read_json};
+use self::local_files::{
+    dx_home_from_receipt_root, latest_receipts, read_first_json, read_first_json_with_default_path,
+    read_json,
+};
 use self::paths::{
     active_agent_receipt_root, active_provider_catalog_path, default_agent_receipt_root,
     default_provider_catalog_path,
@@ -565,25 +568,17 @@ fn read_bridge_snapshot(settings: DxAgentSettingsSnapshot) -> DxAgentBridgeSnaps
     let automation_value = read_json(&settings.receipt_root.join("automate-list-latest.json"));
     let provider_value = read_json(&settings.receipt_root.join("providers-list-latest.json"));
     let model_value = read_json(&settings.receipt_root.join("models-list-latest.json"));
-    let workflow_node_catalog_path = settings
-        .receipt_root
-        .join("workflow-node-catalog-latest.json");
-    let workflow_node_catalog_value = read_first_json(
-        &settings.receipt_root,
-        &[
+    let (workflow_node_catalog_path, workflow_node_catalog_value) =
+        read_first_json_with_default_path(
+            &settings.receipt_root,
+            &[
+                "workflow-node-catalog-latest.json",
+                "plugins-workflow-node-catalog-latest.json",
+                "plugin-workflow-node-catalog-latest.json",
+                "plugins/workflow-node-catalog-latest.json",
+            ],
             "workflow-node-catalog-latest.json",
-            "plugins-workflow-node-catalog-latest.json",
-            "plugin-workflow-node-catalog-latest.json",
-        ],
-    )
-    .or_else(|| {
-        read_json(
-            &settings
-                .receipt_root
-                .join("plugins")
-                .join("workflow-node-catalog-latest.json"),
-        )
-    });
+        );
     let receipts_value = read_json(&settings.receipt_root.join("receipts-list-latest.json"));
     let contract_value = read_first_json(&settings.receipt_root, &["contract-latest.json"]);
     let import_summary_value = read_first_json(

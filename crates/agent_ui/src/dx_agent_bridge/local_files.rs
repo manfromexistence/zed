@@ -29,6 +29,23 @@ pub(super) fn read_first_json(root: &Path, names: &[&str]) -> Option<Value> {
     names.iter().find_map(|name| read_json(&root.join(name)))
 }
 
+pub(super) fn read_first_json_with_path(root: &Path, names: &[&str]) -> Option<(PathBuf, Value)> {
+    names.iter().find_map(|name| {
+        let path = root.join(name);
+        read_json(&path).map(|value| (path, value))
+    })
+}
+
+pub(super) fn read_first_json_with_default_path(
+    root: &Path,
+    names: &[&str],
+    default_name: &str,
+) -> (PathBuf, Option<Value>) {
+    read_first_json_with_path(root, names)
+        .map(|(path, value)| (path, Some(value)))
+        .unwrap_or_else(|| (root.join(default_name), None))
+}
+
 pub(super) fn latest_receipts(root: &Path, root_exists: bool) -> Vec<String> {
     if !root_exists {
         return Vec::new();
