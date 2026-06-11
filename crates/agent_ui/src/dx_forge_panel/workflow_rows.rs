@@ -189,7 +189,7 @@ fn selectable_row_actions(
 ) -> AnyElement {
     let mut actions = h_flex()
         .flex_none()
-        .gap_1()
+        .gap_0p5()
         .occlude()
         .on_mouse_down(MouseButton::Left, |_, _, cx| {
             cx.stop_propagation();

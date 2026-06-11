@@ -172,6 +172,11 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   assert.doesNotMatch(renderDxExplorerHeader, /\.id\("dx-explorer-summary-row"\)/);
   assert.match(renderDxExplorerHeader, /ProjectPanelSettings::get_global\(cx\)/);
   assert.match(renderDxExplorerHeader, /dx_icon\(DxUiIcon::Project\)/);
+  assert.match(
+    renderDxExplorerHeader,
+    /Icon::new\(dx_icon\(DxUiIcon::Project\)\)[\s\S]*\.color\(Color::Muted\)/,
+    "Project header icon should stay quiet and native to the panel chrome",
+  );
   assert.match(renderDxExplorerHeader, /let source_label = summary\.source_kind\.label\(\);/);
   assert.doesNotMatch(renderDxExplorerHeader, /source_label = if is_read_only/);
   assert.match(source, /Self::LocalWorkspace => "Local"/);
@@ -241,6 +246,7 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
     /side_panel_header_controls\(\s*id_prefix,[\s\S]*self\.workspace\.clone\(\),[\s\S]*cx\.entity\(\)\.entity_id\(\),[\s\S]*cx,/,
     "Project Panel side-panel chrome must stay routed through Zed's shared Dock controls",
   );
+  assert.match(renderSidePanelHeaderControls, /div\(\)\.pr_0p5\(\)\.child\(side_panel_header_controls/);
   assert.match(
     renderDxExplorerHeader,
     /self\.render_side_panel_header_controls\("dx-explorer", cx\)/,
@@ -251,8 +257,8 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   );
   assert.equal(
     source.match(/\bself\.render_side_panel_header_controls\(/g)?.length,
-    4,
-    "Project Panel should reuse the side-panel chrome helper for header, selection, sticky, and media controls",
+    2,
+    "Project Panel should reuse the side-panel chrome helper only for the Project header and selection controls",
   );
   assert.equal(
     source.match(/\bside_panel_header_controls\(/g)?.length,
@@ -296,13 +302,13 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   );
   assert.match(
     renderDxExplorerHeader,
-    /"Project symbols"[\s\S]*Some\(ToggleProjectSymbols\.boxed_clone\(\)\)[\s\S]*if has_worktree[\s\S]*window\.dispatch_action\([\s\S]*ToggleProjectSymbols\.boxed_clone\(\),[\s\S]*cx/,
-    "Project Symbols should stay action-backed inside the Project options menu",
+    /action_disabled_when\([\s\S]*!has_worktree,[\s\S]*"Project symbols",[\s\S]*ToggleProjectSymbols\.boxed_clone\(\)/,
+    "Project Symbols should stay visibly disabled when no worktree is open",
   );
   assert.match(
     renderDxExplorerHeader,
-    /"Collapse folders"[\s\S]*Some\(CollapseAllEntries\.boxed_clone\(\)\)[\s\S]*if has_worktree[\s\S]*this\.collapse_all_entries\([\s\S]*&CollapseAllEntries,[\s\S]*window,[\s\S]*cx/,
-    "Collapse All should stay action-backed inside the Project options menu",
+    /action_disabled_when\([\s\S]*!has_worktree,[\s\S]*"Collapse folders",[\s\S]*CollapseAllEntries\.boxed_clone\(\)/,
+    "Collapse All should stay visibly disabled when no worktree is open",
   );
   assert.match(
     renderDxExplorerHeader,
@@ -343,7 +349,7 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   assert.match(renderDxExplorerHeader, /this\.new_directory\(&NewDirectory, window, cx\)/);
   assert.match(
     renderDxExplorerHeader,
-    /this\.collapse_all_entries\([\s\S]*&CollapseAllEntries,[\s\S]*window,[\s\S]*cx[\s\S]*\)/,
+    /action_disabled_when\([\s\S]*"Collapse folders"[\s\S]*CollapseAllEntries\.boxed_clone\(\)/,
   );
   assert.match(renderDxExplorerHeader, /\.disabled\(is_read_only \|\| !has_worktree\)/);
   assert.match(renderDxExplorerHeader, /\.min_w_0\(\)[\s\S]*\.overflow_hidden\(\)/);
@@ -367,7 +373,7 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   assertBefore({
     body: source,
     before: ".child(self.render_dx_explorer_header(",
-    after: ".map(|this| {\n                            if let Some(toolbar) = selected_entries_toolbar",
+    after: /\.map\(\|this\| \{\s*if let Some\(toolbar\) = selected_entries_toolbar/,
     message: "DX Explorer header should render before the selected-entry toolbar and tree",
   });
 });
@@ -634,6 +640,11 @@ test("project panel selection toolbar exposes file-browser operation state", () 
   assert.match(renderSelectedEntriesToolbar, /\.id\("project-panel-clipboard-operation-status"\)/);
   assert.match(
     renderSelectedEntriesToolbar,
+    /\.id\("project-panel-selection-toolbar"\)[\s\S]*\.gap_1\(\)[\s\S]*\.px_1\(\)[\s\S]*\.py_0p5\(\)/,
+    "selection toolbar should keep compact Zed panel spacing",
+  );
+  assert.match(
+    renderSelectedEntriesToolbar,
     /Chip::new\(operation\.status_label\(\)\)[\s\S]*\.icon\(icon\)[\s\S]*\.icon_color\(Color::Muted\)[\s\S]*\.label_color\(Color::Muted\)[\s\S]*\.truncate\(\)/,
   );
   assert.doesNotMatch(
@@ -817,10 +828,10 @@ test("project panel display strings, sticky rows, and undo batches are bounded",
   assert.match(source, /const MAX_PROJECT_PANEL_STICKY_PARENTS: usize = 128;/);
   assert.match(undo, /const MAX_PROJECT_PANEL_UNDO_BATCH_CHANGES: usize = 4_096;/);
   assert.match(detailsForEntry, /utils::bounded_project_panel_label\(filename\)/);
-  assert.match(renderEntry, /is_sticky && sticky_index == Some\(0\)/);
-  assert.match(
+  assert.doesNotMatch(
     renderEntry,
-    /self\.render_side_panel_header_controls\(\s*"project-panel-sticky",[\s\S]*cx,\s*\)/,
+    /render_side_panel_header_controls\(\s*"project-panel-sticky"/,
+    "sticky tree rows must not inject side-panel close controls into the file tree",
   );
   assertBefore({
     body: renderStickyEntries,
@@ -840,10 +851,12 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   const source = read("crates/project_panel/src/project_panel.rs");
   const storage = read("crates/project_panel/src/storage.rs");
   const detailsForEntry = functionBody(source, "details_for_entry");
+  const renderEntry = functionBody(source, "render_entry");
   const renderEntryInfoBadge = functionBody(source, "render_entry_info_badge");
   const storageOverview = functionBody(storage, "storage_overview");
   const storageDrilldownItems = functionBody(storage, "storage_folder_items");
   const renderStorageDrilldown = functionBody(source, "render_dx_explorer_storage_drilldown");
+  const renderDxExplorerHeader = functionBody(source, "render_dx_explorer_header");
   const renderProjectPanel = functionBody(source, "render");
   const renderStorageDrilldownRow = functionBody(
     source,
@@ -873,6 +886,26 @@ test("project panel folder storage summaries are cache-only on the visible-row p
     /const MAX_PROJECT_PANEL_FOLDER_STORAGE_CHILD_FILES: usize = 512;/,
     "direct-child folder storage warming must be capped per folder",
   );
+  assert.match(
+    source,
+    /storage_details_visible:\s*bool/,
+    "Project Panel storage intelligence must have explicit visible state",
+  );
+  assert.match(
+    source,
+    /storage_details_visible:\s*false/,
+    "largest folder storage intelligence must be opt-in by default",
+  );
+  assert.match(
+    renderDxExplorerHeader,
+    /IconButton::new\(storage_details_button_id,\s*dx_icon\(DxUiIcon::Storage\)\)[\s\S]*\.tooltip\(Tooltip::text\(if storage_details_visible[\s\S]*Show storage details[\s\S]*this\.toggle_storage_details_visible\(window, cx\)/,
+    "Project Panel header must expose a real storage-details toggle without rendering largest folders by default",
+  );
+  assert.match(
+    renderStorageDrilldown,
+    /if !self\.storage_details_visible[\s\S]*return None;/,
+    "Folder Storage drilldown must render only after the user asks for storage details",
+  );
   assert.match(storage, /pub\(crate\) struct FolderStorageSummary/);
   assert.match(storage, /pub\(crate\) struct StorageFolderItem/);
   assert.match(storage, /pub path_label: String/);
@@ -887,9 +920,19 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   assert.match(source, /fn render_dx_explorer_storage_drilldown\(/);
   assert.match(source, /fn render_dx_explorer_storage_drilldown_row\(/);
   assert.doesNotMatch(source, /fn dx_explorer_storage_heat_level\(/);
+  assert.match(renderEntryInfoBadge, /\.visible_on_hover\("list_item"\)/);
+  assert.match(renderEntryInfoBadge, /Chip::new\(label\)\.label_color\(Color::Muted\)\.truncate\(\)/);
+  assert.doesNotMatch(renderEntryInfoBadge, /\.ml_1\(\)/);
+  assert.match(renderEntry, /\.end_slot::<AnyElement>\([\s\S]*h_flex\(\)[\s\S]*\.gap_0p5\(\)[\s\S]*\.pr_0p5\(\)[\s\S]*\.child\(hover_badge\)/);
+  assert.doesNotMatch(
+    renderEntry,
+    /\.end_slot::<AnyElement>\([\s\S]*h_flex\(\)[\s\S]*\.gap_1\(\)[\s\S]*\.pr_1\(\)[\s\S]*\.child\(hover_badge\)/,
+  );
   assert.match(source, /fn render_dx_explorer_storage_heat_indicator\(/);
   assert.match(source, /fn dx_explorer_storage_heat_indicator_width\(/);
   assert.match(source, /fn dx_explorer_storage_heat_color\(/);
+  assert.match(renderEntryInfoBadge, /\.max_w\(rems\(9\.\)\)/);
+  assert.match(renderEntryInfoBadge, /\.overflow_hidden\(\)/);
   assert.match(
     cachedFolderStorageSummary,
     /folder_storage_summaries[\s\S]*get\(&cache_key\)[\s\S]*cloned\(\)/,
@@ -897,8 +940,8 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   );
   assert.match(
     detailsForEntry,
-    /let folder_storage_summary = entry[\s\S]*kind[\s\S]*is_dir\(\)[\s\S]*then\(\|\| self\.cached_folder_storage_summary\(worktree_id, entry\.id\)\)[\s\S]*flatten\(\);/,
-    "details_for_entry must not warm folder storage cache misses on the visible-row path",
+    /let folder_storage_summary = if self\.storage_details_visible && entry\.kind\.is_dir\(\)[\s\S]*self\.cached_folder_storage_summary\(worktree_id, entry\.id\)[\s\S]*\} else \{[\s\S]*None[\s\S]*\};/,
+    "details_for_entry must keep folder-size chips opt-in and cache-only on the visible-row path",
   );
   assert.doesNotMatch(
     detailsForEntry,
@@ -919,6 +962,8 @@ test("project panel folder storage summaries are cache-only on the visible-row p
     renderEntryInfoBadge,
     /Chip::new\(label\)[\s\S]*\.label_color\(Color::Muted\)[\s\S]*\.truncate\(\)/,
   );
+  assert.match(renderEntryInfoBadge, /let tooltip = label\.clone\(\);/);
+  assert.match(renderEntryInfoBadge, /\.tooltip\(Tooltip::text\(tooltip\)\)/);
   assert.doesNotMatch(
     renderEntryInfoBadge,
     /(?:cx:\s*&App|Label::new\(label\)|\.size\(LabelSize::XSmall\)|\.border_1\(\)|border_variant|element_background|\.rounded_sm\(\)|\.px_1\(\)|\.py_0p5\(\)|cx\.theme\(\))/,
@@ -931,8 +976,8 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   );
   assert.match(
     updateVisibleEntries,
-    /let visible_folder_storage_summary_keys =[\s\S]*Self::visible_folder_storage_summary_keys\(&self\.state\);[\s\S]*let cached_folder_storage_summaries =[\s\S]*self\.cached_folder_storage_summaries_for_keys\(&visible_folder_storage_summary_keys\);/,
-    "visible-entry refresh must snapshot only cache entries relevant to currently visible folder rows",
+    /let visible_folder_storage_summary_keys = if storage_details_visible[\s\S]*Self::visible_folder_storage_summary_keys\(&self\.state\)[\s\S]*HashSet::default\(\)[\s\S]*let cached_folder_storage_summaries =[\s\S]*self\.cached_folder_storage_summaries_for_keys\(&visible_folder_storage_summary_keys\);/,
+    "visible-entry refresh must snapshot cache entries only when storage details are visible",
   );
   assert.match(
     source,
@@ -953,6 +998,26 @@ test("project panel folder storage summaries are cache-only on the visible-row p
     updateVisibleEntries,
     /folder_storage_summaries\.entry\(cache_key\)\.or_insert\(summary\)/,
     "background folder storage results must populate cache misses without overwriting fresher summaries",
+  );
+  assert.match(
+    updateVisibleEntries,
+    /let storage_details_visible = self\.storage_details_visible;/,
+    "visible-entry refresh must snapshot the storage-details toggle before background work",
+  );
+  assert.match(
+    updateVisibleEntries,
+    /let visible_folder_storage_summary_keys = if storage_details_visible[\s\S]*Self::visible_folder_storage_summary_keys\(&self\.state\)[\s\S]*HashSet::default\(\)/,
+    "folder storage cache keys must stay empty while storage details are hidden",
+  );
+  assert.match(
+    updateVisibleEntries,
+    /if storage_details_visible\s*&&\s*entry_is_visible\s*&&\s*entry\.kind\.is_dir\(\)/,
+    "background folder storage warming must be disabled while storage details are hidden",
+  );
+  assert.match(
+    detailsForEntry,
+    /if self\.storage_details_visible && entry\.kind\.is_dir\(\)[\s\S]*self\.cached_folder_storage_summary\(worktree_id, entry\.id\)[\s\S]*None/,
+    "tree rows must not show folder-size chips until storage details are enabled",
   );
   assert.match(
     updateVisibleEntries,
@@ -1010,6 +1075,11 @@ test("project panel folder storage summaries are cache-only on the visible-row p
     message: "storage drilldown must be ranked in the background job before state is installed",
   });
   assert.match(renderStorageDrilldown, /\.id\("dx-explorer-storage-drilldown"\)/);
+  assert.match(
+    renderStorageDrilldown,
+    /\.id\("dx-explorer-storage-drilldown"\)[\s\S]*\.gap_0p5\(\)[\s\S]*\.px_1\(\)[\s\S]*\.py_0p5\(\)/,
+    "storage drilldown shell should stay compact in stacked side panels",
+  );
   assert.match(renderStorageDrilldown, /dx_icon\(DxUiIcon::Storage\)/);
   assert.match(renderStorageDrilldown, /ListHeader::new\("Folder Storage"\)/);
   assert.match(
@@ -1018,7 +1088,17 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   );
   assert.match(
     renderStorageDrilldown,
-    /ListHeader::new\("Folder Storage"\)[\s\S]*\.end_slot(?:::<[^>]+>)?\([\s\S]*sort_mode\.status_label\(\)[\s\S]*\.children\(metrics\)[\s\S]*PopoverMenu::new\(storage_sort_menu_id\)/,
+    /ListHeader::new\("Folder Storage"\)[\s\S]*\.end_slot(?:::<[^>]+>)?\([\s\S]*sort_mode\.status_label\(\)[\s\S]*PopoverMenu::new\(storage_sort_menu_id\)/,
+  );
+  assert.match(
+    renderStorageDrilldown,
+    /let storage_sort_tooltip = if metrics\.is_empty\(\) \{[\s\S]*format!\("Sort by \{\}", sort_mode\.label\(\)\)[\s\S]*metrics\.join\("\\n"\)/,
+  );
+  assert.match(renderStorageDrilldown, /Tooltip::text\(storage_sort_tooltip\)/);
+  assert.doesNotMatch(
+    renderStorageDrilldown,
+    /\.children\(metrics\)/,
+    "storage drilldown header should keep volatile metrics in tooltip metadata, not visible end-slot labels",
   );
   assert.match(
     renderStorageDrilldown,
@@ -1120,6 +1200,7 @@ test("project panel storage overview and root shortcuts stay cached and professi
   const sortWorktreeEntries = functionBody(source, "sort_worktree_entries");
   const parSortWorktreeEntries = functionBody(source, "par_sort_worktree_entries");
   const renderFolderMediaShelf = functionBody(media, "render_folder_media_shelf");
+  const mediaPreviewCountLabel = functionBody(media, "media_preview_count_label");
 
   assert.match(source, /mod storage;/);
   assert.match(source, /mod storage_roots;/);
@@ -1256,12 +1337,17 @@ test("project panel storage overview and root shortcuts stay cached and professi
     /ListItem::new\(SharedString::from\(format!\([\s\S]*"dx-explorer-storage-drilldown-\{\}-\{\}"[\s\S]*item\.worktree_id\.to_usize\(\),[\s\S]*item\.entry_id\.to_usize\(\)[\s\S]*\)\)\)/,
     "storage drilldown rows must use stable real-entry ListItem ids",
   );
-  assert.match(renderStorageDrilldownRow, /\.spacing\(ListItemSpacing::Sparse\)/);
+  assert.match(renderStorageDrilldownRow, /\.spacing\(ListItemSpacing::Dense\)/);
   assert.match(renderStorageDrilldownRow, /\.toggle_state\(is_selected\)/);
   assert.match(renderStorageDrilldownRow, /\.tab_index\(0(?:_isize)?\)/);
   assert.match(renderStorageDrilldownRow, /\.track_focus\(&self\.focus_handle\(cx\)\)/);
   assert.match(renderStorageDrilldownRow, /\.start_slot::<AnyElement>\(/);
   assert.match(renderStorageDrilldownRow, /\.end_slot::<AnyElement>\(/);
+  assert.match(
+    renderStorageDrilldownRow,
+    /let target_is_current_dir = \{[\s\S]*worktree_for_id\(target\.worktree_id, cx\)[\s\S]*entry_for_id\(target\.entry_id\)[\s\S]*entry\.is_dir\(\)[\s\S]*unwrap_or\(false\)[\s\S]*if !target_is_current_dir \{[\s\S]*return;/,
+    "storage drilldown row clicks must fail closed when cached folder targets go stale",
+  );
   assert.match(
     renderStorageDrilldownRow,
     /\.on_click\(cx\.listener\(move \|this, _, window, cx\|[\s\S]*this\.focus_handle\(cx\)\.focus\(window, cx\)[\s\S]*this\.expand_entry\(target\.worktree_id, target\.entry_id, cx\)[\s\S]*this\.update_visible_entries\([\s\S]*Some\(\(target\.worktree_id, target\.entry_id\)\)[\s\S]*true,[\s\S]*window,[\s\S]*cx/,
@@ -1271,6 +1357,7 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.doesNotMatch(renderStorageDrilldownRow, /Label::new\(heat_label\)/);
   assert.match(renderStorageDrilldownRow, /\.child\([\s\S]*Label::new\(item\.label\)[\s\S]*\.truncate\(\)/);
   assert.match(renderStorageDrilldownRow, /\.end_slot::<AnyElement>\([\s\S]*Label::new\(format!\("\{file_count\} \/ \{storage_label\}"\)\)/);
+  assert.doesNotMatch(renderStorageDrilldownRow, /Label::new\(largest_files\.join/);
   assert.doesNotMatch(
     renderStorageDrilldownRow,
     /ButtonLike::new|\.selected_style\(ButtonStyle::Tinted\(TintColor::Accent\)\)|\.size\(ButtonSize::None\)|\.full_width\(\)|cursor_pointer\(\)|\.hover\(/,
@@ -1300,13 +1387,24 @@ test("project panel storage overview and root shortcuts stay cached and professi
     /if !self\.storage_root_shortcuts_allowed\(cx\) \{[\s\S]*return None;[\s\S]*\}/,
     "local storage-root shortcuts must not render for read-only or remote-only project contexts",
   );
-  assert.match(source, /fn storage_root_shortcuts_allowed\(&self, cx: &mut Context<Self>\) -> bool \{[\s\S]*!project\.is_read_only\(cx\)[\s\S]*project\.is_local\(\) \|\| project\.is_via_wsl_with_host_interop\(cx\)/);
+  assert.match(source, /fn storage_root_shortcuts_allowed\(&self, cx: &mut Context<Self>\) -> bool \{[\s\S]*if !self\.storage_details_visible \{[\s\S]*return false;[\s\S]*\}[\s\S]*!project\.is_read_only\(cx\)[\s\S]*project\.is_local\(\) \|\| project\.is_via_wsl_with_host_interop\(cx\)/);
+  assert.match(source, /fn toggle_storage_details_visible\(&mut self, window: &mut Window, cx: &mut Context<Self>\) \{[\s\S]*self\.storage_details_visible = !self\.storage_details_visible;[\s\S]*if self\.storage_details_visible \{[\s\S]*self\.refresh_dx_explorer_storage_roots\(cx\);[\s\S]*\} else \{[\s\S]*self\.storage_root_shortcuts\.clear\(\);[\s\S]*\}[\s\S]*self\.update_visible_entries\(None, false, false, window, cx\);[\s\S]*cx\.notify\(\);[\s\S]*\}/);
   assert.match(source, /if this\.storage_root_shortcuts_allowed\(cx\) \{[\s\S]*this\.refresh_dx_explorer_storage_roots\(cx\);[\s\S]*\}/);
   assert.match(source, /fn refresh_dx_explorer_storage_roots\(&mut self, cx: &mut Context<Self>\)[\s\S]*if !self\.storage_root_shortcuts_allowed\(cx\) \{[\s\S]*self\.storage_root_shortcuts\.clear\(\);[\s\S]*return;[\s\S]*\}/);
   assert.match(source, /if !this\.storage_root_shortcuts_allowed\(cx\) \{[\s\S]*this\.storage_root_shortcuts\.clear\(\);[\s\S]*cx\.notify\(\);[\s\S]*return;[\s\S]*\}/);
   assert.match(source, /fn open_dx_explorer_storage_root\([\s\S]*if !self\.storage_root_shortcuts_allowed\(cx\) \{[\s\S]*return;[\s\S]*\}/);
   assert.doesNotMatch(source, /render_dx_explorer_storage_root_strip\(is_local_or_wsl, is_read_only, cx\)/);
   assert.match(renderRootStrip, /ListHeader::new\("Storage"\)/);
+  assert.match(
+    renderRootStrip,
+    /\.id\("dx-explorer-storage-root-strip"\)[\s\S]*\.gap_0p5\(\)[\s\S]*\.px_1\(\)[\s\S]*\.py_0p5\(\)/,
+    "storage root strip should stay compact and aligned with the storage drilldown chrome",
+  );
+  assert.match(
+    renderRootStrip,
+    /\.id\("dx-explorer-storage-root-strip-scroll"\)[\s\S]*h_flex\(\)\.gap_0p5\(\)\.children\(rows\)/,
+    "storage root shortcut row spacing should be owned by the shared strip chrome",
+  );
   assert.match(
     renderRootStrip,
     /ListHeader::new\("Storage"\)[\s\S]*\.start_slot\(Icon::new\(dx_icon\(DxUiIcon::Storage\)\)\.size\(IconSize::Small\)\)/,
@@ -1324,7 +1422,8 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(renderRootStripRow, /ButtonLike::new\(/);
   assert.match(renderRootStripRow, /\.style\(ButtonStyle::Subtle\)/);
   assert.match(renderRootStripRow, /\.size\(ButtonSize::Compact\)/);
-  assert.match(renderRootStripRow, /\.(?:width|max_w)\(rems\(18\.\)\)/);
+  assert.match(renderRootStripRow, /\.max_w\(rems\(18\.\)\)/);
+  assert.doesNotMatch(renderRootStripRow, /\.width\(rems\(18\.\)\)/);
   assert.match(
     renderRootStripRow,
     /\.when\(available,[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&row_focus_handle\)/,
@@ -1533,6 +1632,7 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   const selectMediaShelfEntry = functionBody(source, "select_media_shelf_entry");
   const renderFolderMediaGallery = functionBody(media, "render_folder_media_gallery");
   const renderFolderMediaShelf = functionBody(media, "render_folder_media_shelf");
+  const mediaPreviewCountLabel = functionBody(media, "media_preview_count_label");
   const renderMediaShelfOverflowCard = functionBody(media, "render_media_shelf_overflow_card");
 
   assert.match(source, /mod media_preview;/);
@@ -1575,14 +1675,21 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   assert.match(media, /use ui::\{[\s\S]*ListHeader/);
   assert.match(
     renderFolderMediaGallery,
-    /ListHeader::new\("Media"\)[\s\S]*\.start_slot\(Icon::new\(dx_icon\(DxUiIcon::Media\)\)[\s\S]*\.end_slot(?:::<AnyElement>)?\([\s\S]*visible_count[\s\S]*preview\.total_count/,
+    /let header_count_label = media_preview_count_label\(visible_count, preview\);[\s\S]*ListHeader::new\("Media"\)[\s\S]*\.start_slot\(Icon::new\(dx_icon\(DxUiIcon::Media\)\)[\s\S]*\.end_slot(?:::<AnyElement>)?\([\s\S]*Label::new\(header_count_label\)/,
     "media gallery popover should use the shared ListHeader component with DX media icon and summary slot",
   );
   assert.match(
     renderFolderMediaShelf,
-    /ListHeader::new\("Media"\)[\s\S]*\.start_slot\(Icon::new\(dx_icon\(DxUiIcon::Media\)\)[\s\S]*\.end_slot(?:::<AnyElement>)?\(panel_controls\)/,
-    "top media shelf should use the shared ListHeader component and keep real panel controls in the end slot",
+    /ListHeader::new\("Media"\)[\s\S]*\.start_slot\(Icon::new\(dx_icon\(DxUiIcon::Media\)\)[\s\S]*\.end_slot\(header_controls\)/,
+    "top media shelf should use the shared ListHeader component and keep compact header controls in the end slot",
   );
+  assert.match(renderFolderMediaShelf, /let visible_media_count = media_card_limit\.min\(preview\.items\.len\(\)\);/);
+  assert.match(renderFolderMediaShelf, /let header_count_label = media_preview_count_label\(visible_media_count, preview\);/);
+  assert.doesNotMatch(renderFolderMediaShelf, /shelf_cards\.len\(\)\.min\(preview\.total_count\)/);
+  assert.match(mediaPreviewCountLabel, /preview\.scanned_cap_hit/);
+  assert.match(mediaPreviewCountLabel, /format!\("\{visible_media_count\} of \{\}\+"/);
+  assert.match(mediaPreviewCountLabel, /format!\("\{visible_media_count\} of \{\}"/);
+  assert.match(renderFolderMediaShelf, /\.when_some\(panel_controls, \|this, controls\| this\.child\(controls\)\)/);
   assert.match(
     renderFolderMediaShelf,
     /render_media_shelf_overflow_card\([\s\S]*preview,[\s\S]*focus_handle\.clone\(\),[\s\S]*cx/,
@@ -1631,7 +1738,7 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
     message: "media previews must be read only after confirming an expanded directory",
   });
   const mediaPreviewBranch = detailsForEntry.match(
-    /let media_preview = if entry\.kind\.is_dir\(\) && is_expanded \{[\s\S]*?\n        \} else \{\n            None\n        \};/,
+    /let media_preview = if entry\.kind\.is_dir\(\) && is_expanded \{\s*self\.cached_folder_media_preview\(worktree_id, entry\.id\)\s*\} else \{\s*None\s*\};/,
   );
   assert.ok(
     mediaPreviewBranch,
@@ -2287,8 +2394,8 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     renderFolderMediaShelf,
-    /ListHeader::new\("Media"\)[\s\S]*\.end_slot(?:::<AnyElement>)?\(panel_controls\)/,
-    "folder media shelf header must use shared GPUI chrome and keep only real panel controls in the end slot",
+    /ListHeader::new\("Media"\)[\s\S]*\.end_slot\(header_controls\)/,
+    "folder media shelf header must use shared GPUI chrome and keep compact header controls in the end slot",
   );
   assert.doesNotMatch(
     renderFolderMediaShelf,

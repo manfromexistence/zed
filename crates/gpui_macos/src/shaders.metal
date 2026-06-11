@@ -745,7 +745,11 @@ fragment float4 polychrome_sprite_fragment(
   };
 
   float liquid_smoothstep(float edge0, float edge1, float x) {
-    float t = saturate((x - edge0) / max(edge1 - edge0, 0.00001));
+    float denominator = edge1 - edge0;
+    if (abs(denominator) < 0.00001) {
+      denominator = denominator < 0.0 ? -0.00001 : 0.00001;
+    }
+    float t = saturate((x - edge0) / denominator);
     return t * t * (3.0 - 2.0 * t);
   }
 
@@ -949,10 +953,6 @@ fragment float4 polychrome_sprite_fragment(
 
     float noise_val = (liquid_rand(input.position.xy * 0.001) - 0.5) * sprite.noise;
     color.rgb += float3(noise_val);
-
-    float3 glass_tint = float3(0.93, 0.95, 0.99);
-    color.rgb = mix(color.rgb, glass_tint, 0.28);
-    color.a = mix(color.a, 0.18, 0.82);
 
     float glow_val = liquid_glow(input.panel_uv);
     float glow_mask = liquid_smoothstep(sprite.glow_edge0, sprite.glow_edge1, dist);

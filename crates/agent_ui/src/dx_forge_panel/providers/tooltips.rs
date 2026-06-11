@@ -24,7 +24,11 @@ pub(super) fn provider_tooltip_meta(
     }
 
     if !enabled {
-        lines.push("Open a workspace with remotes.json".to_string());
+        if target_path.is_some() {
+            lines.push("Registry path is unavailable".to_string());
+        } else {
+            lines.push("Open a workspace with remotes.json".to_string());
+        }
     }
 
     lines.join("\n")
@@ -47,7 +51,11 @@ pub(super) fn remote_target_tooltip(
     }
 
     if !enabled {
-        lines.push("No path found".to_string());
+        if target_path.is_some() {
+            lines.push("Path unavailable".to_string());
+        } else {
+            lines.push("No path found".to_string());
+        }
     }
 
     lines.join("\n")

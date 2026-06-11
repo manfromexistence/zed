@@ -25,15 +25,24 @@
     window.__zedWebPreview.restoreDxStudioSelection = window[BRIDGE_KEY].restoreLastSelection;
   };
 
+  const collectBaseBridgeReadiness = (reason) => {
+    try {
+      window.__zedWebPreview?.collectDxWwwTurboBridge?.(reason);
+    } catch (_error) {}
+  };
+
   attachBaseAliases();
+  collectBaseBridgeReadiness("dx-studio-api-attached");
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => {
       attachBaseAliases();
+      collectBaseBridgeReadiness("dx-studio-dom-ready");
       window.setTimeout(restoreLastSelection, 120);
     }, { once: true });
   } else {
     window.setTimeout(() => {
       attachBaseAliases();
+      collectBaseBridgeReadiness("dx-studio-ready");
       restoreLastSelection();
     }, 120);
   }

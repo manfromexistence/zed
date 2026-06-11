@@ -520,7 +520,7 @@ impl Agent {
 
     pub fn label(&self) -> SharedString {
         match self {
-            Self::NativeAgent => "Zed Agent".into(),
+            Self::NativeAgent => "Dx Agent".into(),
             Self::Custom { id, .. } => id.0.clone(),
             #[cfg(any(test, feature = "test-support"))]
             Self::Stub => "Stub Agent".into(),
@@ -529,7 +529,7 @@ impl Agent {
 
     pub fn icon(&self) -> Option<IconName> {
         match self {
-            Self::NativeAgent => None,
+            Self::NativeAgent => Some(IconName::Sparkle),
             Self::Custom { .. } => Some(IconName::Sparkle),
             #[cfg(any(test, feature = "test-support"))]
             Self::Stub => None,
@@ -978,6 +978,7 @@ mod tests {
             tool_permissions: Default::default(),
             show_turn_stats: false,
             show_merge_conflict_indicator: true,
+            liquid_glass: Default::default(),
             sidebar_side: Default::default(),
             thinking_display: Default::default(),
         };

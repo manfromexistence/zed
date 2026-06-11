@@ -34,7 +34,8 @@ pub(super) fn render_tab_bar(
             snapshot.blockers.len()
                 + snapshot.warnings.len()
                 + snapshot.quick_fixes.len()
-                + snapshot.web_audits.len(),
+                + snapshot.web_audits.len()
+                + snapshot.adapter_plans.len(),
             DxCheckPanelTab::Findings,
             active_tab,
             panel.clone(),

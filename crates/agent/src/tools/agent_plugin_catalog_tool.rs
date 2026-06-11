@@ -49,7 +49,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-/// Lists the built-in DX/Zed agent plugin catalog and DX-native first-party plugin manifests.
+/// Lists the built-in Dx Agent plugin catalog and DX-native first-party plugin manifests.
 ///
 /// Use this before trying to control the in-app WebPreview browser, managed Chrome through
 /// Playwright and the DX Chrome extension, permissioned computer-control paths, or Driven

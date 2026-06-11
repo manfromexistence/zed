@@ -986,6 +986,9 @@ impl TitleBar {
                             workspace.close_side_panel_by_id(panel_id, window, cx);
                         });
                     }
+                } else if let Some(workspace) = workspace.upgrade() {
+                    let focus_handle = workspace.read(cx).focus_handle(cx);
+                    focus_handle.dispatch_action(action.as_ref(), window, cx);
                 } else {
                     window.dispatch_action(action.boxed_clone(), cx);
                 }
@@ -1845,7 +1848,6 @@ impl TitleBar {
 
                         this.separator()
                     })
-                    .action("Settings", zed_actions::OpenSettings.boxed_clone())
                     .action("Keymap", Box::new(zed_actions::OpenKeymap))
                     .action(
                         "Themes…",

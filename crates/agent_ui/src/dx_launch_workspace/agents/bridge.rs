@@ -21,7 +21,7 @@ pub(in super::super) fn dx_agent_bridge_state(
         .children(dx_agent_bridge_summary_rows(snapshot));
 
     if !snapshot.enabled {
-        stack = stack.child(muted_card("Disabled in Zed settings", cx));
+        stack = stack.child(muted_card("Disabled in Dx settings", cx));
     } else if snapshot.action_error.present {
         let error = snapshot
             .action_error

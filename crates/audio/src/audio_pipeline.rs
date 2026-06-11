@@ -154,12 +154,12 @@ impl<S> Drop for TrackedAudioSource<S> {
 
 impl Audio {
     fn ensure_output_exists(&mut self, output_audio_device: Option<DeviceId>) -> Result<&Mixer> {
-        #[cfg(debug_assertions)]
-        log::warn!(
-            "Audio does not sound correct without optimizations. Use a release build to debug audio issues"
-        );
-
         if self.output.is_none() {
+            #[cfg(debug_assertions)]
+            log::debug!(
+                "Audio does not sound correct without optimizations. Use a release build to debug audio issues"
+            );
+
             let (output_handle, output_mixer) =
                 open_output_stream(output_audio_device, self.echo_canceller.clone())?;
             self.output = Some((output_handle, output_mixer));

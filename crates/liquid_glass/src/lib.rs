@@ -8,7 +8,8 @@ pub use backgrounds::{
     BackgroundAsset, load_backgrounds, load_glass_surface, load_liquid_glass_backdrop_carrier,
 };
 pub use element::{
-    LiquidGlassStyle, bounded_liquid_glass_layer, liquid_glass_layer, paint_liquid_glass_layer,
+    LiquidGlassGeometry, LiquidGlassStyle, bounded_liquid_glass_layer, liquid_glass_layer,
+    liquid_glass_layer_with_geometry, paint_liquid_glass_layer,
 };
 pub use ui_state::{GLASS_VARIANTS, UiState};
 

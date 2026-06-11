@@ -1300,6 +1300,117 @@
     //
     // Default: 4
     "message_editor_min_lines": 4,
+    // Liquid Glass settings for the Agent chat input.
+    "liquid_glass": {
+      // Use the GPUI Liquid Glass renderer on the Agent chat input.
+      //
+      // Default: true
+      "enabled": true,
+      // Superellipse shape power used by the glass surface.
+      //
+      // Default: 3.0
+      "power_factor": 3.0,
+      // Glass quad width in world units before pixel scaling.
+      //
+      // Default: 3.5
+      "width": 3.5,
+      // Glass quad height in world units before pixel scaling.
+      //
+      // Default: 3.5
+      "height": 3.5,
+      // Distortion curve parameter a.
+      //
+      // Default: 0.7
+      "a": 0.7,
+      // Distortion curve parameter b.
+      //
+      // Default: 2.3
+      "b": 2.3,
+      // Distortion curve parameter c.
+      //
+      // Default: 5.2
+      "c": 5.2,
+      // Distortion curve parameter d.
+      //
+      // Default: 6.9
+      "d": 6.9,
+      // Distortion curve power.
+      //
+      // Default: 1.0
+      "f_power": 1.0,
+      // Surface noise intensity.
+      //
+      // Default: 0.0
+      "noise": 0.0,
+      // Glow strength.
+      //
+      // Default: 0.054
+      "glow_weight": 0.054,
+      // Glow smoothstep inner edge.
+      //
+      // Default: 1.0
+      "glow_edge0": 1.0,
+      // Glow smoothstep outer edge.
+      //
+      // Default: -1.0
+      "glow_edge1": -1.0,
+      // Glow additive bias.
+      //
+      // Default: 0.353
+      "glow_bias": 0.353,
+      // Chromatic aberration strength.
+      //
+      // Default: 0.0
+      "chromatic_aberration": 0.0,
+      // Chromatic aberration sample count.
+      //
+      // Default: 1
+      "aberration_samples": 1,
+      // Blur kernel radius in pixels.
+      //
+      // Default: 0.0
+      "blur_radius": 0.0,
+      // Multi-pass blur iteration count.
+      //
+      // Default: 0
+      "blur_iterations": 0,
+      // Blur downscale factor.
+      //
+      // Default: 0.1
+      "blur_downscale": 0.1,
+      // Preserve whether the standalone glass surface follows pointer movement.
+      //
+      // Default: false
+      "mouse_control": false,
+      // Standalone glass center position in pixels, preserved for parity with the recovered Rust app.
+      //
+      // Default: [512.0, 384.0]
+      "position": [512.0, 384.0],
+      // World-to-pixel scale factor.
+      //
+      // Default: 100.0
+      "pixel_scale": 100.0,
+      // Standalone camera position in world units, preserved for parity with the recovered Rust app.
+      //
+      // Default: [0.0, 0.0]
+      "camera_position": [0.0, 0.0],
+      // Standalone glass movement speed.
+      //
+      // Default: 2.0
+      "velocity": 2.0,
+      // Standalone camera movement speed.
+      //
+      // Default: 2.0
+      "camera_velocity": 2.0,
+      // Background index from the recovered Liquid Glass app.
+      //
+      // Default: 0
+      "current_bg": 0,
+      // Glass material variant index from the recovered Liquid Glass app.
+      //
+      // Default: 0
+      "glass_variant": 0
+    },
     // Whether to show turn statistics (elapsed time during generation, final turn duration).
     //
     // Default: false

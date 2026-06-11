@@ -32,6 +32,7 @@ use workspace::notifications::NotificationId;
 use super::composer_profile_options::{
     ComposerOptionEntry, ComposerOptionSlot, ComposerProfileKind,
 };
+use super::liquid_glass_composer::render_agent_liquid_glass_chat_input_surface;
 use super::voice_controls::{
     ComposerVoiceAvailability, ComposerVoicePhase, ComposerVoiceState, render_voice_buttons,
     render_voice_recording_panel,
@@ -1089,6 +1090,14 @@ impl ThreadView {
                 .background_executor()
                 .spawn(async move { FlowSpeechRuntime::detect() })
                 .await;
+            let warm_runtime = runtime.clone();
+            cx.background_executor()
+                .spawn(async move {
+                    if let Err(error) = warm_runtime.warm_tts_server() {
+                        log::debug!("Flow Kokoro TTS prewarm skipped: {error:#}");
+                    }
+                })
+                .detach();
             this.update(cx, |this, cx| {
                 this.refresh_flow_voice_runtime_availability(&runtime);
                 cx.notify();
@@ -1761,8 +1770,7 @@ impl ThreadView {
                 ThreadError::PaymentRequired => (
                     "payment_required",
                     None,
-                    "You reached your free usage limit. Upgrade to Zed Pro for more prompts."
-                        .into(),
+                    "You reached your free usage limit. Upgrade to Dx Pro for more prompts.".into(),
                 ),
                 ThreadError::Refusal => {
                     let model_or_agent_name = self.current_model_name(cx);
@@ -3847,6 +3855,13 @@ impl ThreadView {
         let has_messages = self.list_state.item_count() > 0;
         let expands_editor_area = editor_expanded && has_messages;
         let colors = cx.theme().colors();
+        let glass_surface = self.render_liquid_glass_chat_input_surface(cx);
+        let uses_liquid_glass = glass_surface.is_some();
+        let chat_input_border = if focus_handle.is_focused(window) {
+            colors.border_focused
+        } else {
+            colors.border
+        };
 
         h_flex()
             .px_2()
@@ -3870,14 +3885,19 @@ impl ThreadView {
             })
             .child(
                 v_flex()
+                    .id("agent-liquid-glass-chat-input-container")
                     .when_some(max_content_width, |this, max_w| this.flex_basis(max_w))
                     .when(max_content_width.is_none(), |this| this.w_full())
                     .relative()
                     .overflow_hidden()
                     .rounded_md()
                     .border_1()
-                    .border_color(colors.border)
-                    .bg(colors.panel_background)
+                    .border_color(chat_input_border)
+                    .bg(if uses_liquid_glass {
+                        colors.panel_background.opacity(0.08)
+                    } else {
+                        colors.panel_background.opacity(0.72)
+                    })
                     .p_1p5()
                     .shadow_sm()
                     .flex_shrink_1()
@@ -3888,6 +3908,7 @@ impl ThreadView {
                     .when(expands_editor_area, |this| this.h_full())
                     .justify_between()
                     .gap_1()
+                    .when_some(glass_surface, |this, surface| this.child(surface))
                     .child(
                         v_flex()
                             .relative()
@@ -4005,6 +4026,15 @@ impl ThreadView {
                     ),
             )
             .into_any()
+    }
+
+    fn render_liquid_glass_chat_input_surface(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let settings = AgentSettings::get_global(cx).liquid_glass.clone();
+        if !settings.enabled {
+            return None;
+        }
+
+        Some(render_agent_liquid_glass_chat_input_surface(&settings))
     }
 
     fn render_profile_option_slots(&self, cx: &mut Context<Self>) -> Vec<AnyElement> {
@@ -4546,9 +4576,9 @@ impl ThreadView {
                         {
                             let _ = std::fs::remove_file(&audio_path);
                             this.composer_voice_state
-                                .set_error("Zed audio playback is not available in this build");
+                                .set_error("Dx audio playback is not available in this build");
                             this.show_flow_voice_toast(
-                                "Zed audio playback is not available in this build",
+                                "Dx audio playback is not available in this build",
                                 cx,
                             );
                         }
@@ -6470,6 +6500,23 @@ impl ThreadView {
         let agent_response_text =
             Self::latest_agent_response_content(thread.read(cx).entries(), cx);
         if let Some(agent_response_text) = agent_response_text {
+            container = container.child(
+                IconButton::new("copy-agent-response", IconName::Copy)
+                    .shape(ui::IconButtonShape::Square)
+                    .icon_size(IconSize::Small)
+                    .icon_color(Color::Ignored)
+                    .tooltip(Tooltip::text("Copy Agent Response"))
+                    .on_click({
+                        let agent_response_text = agent_response_text.clone();
+                        move |_, _window, cx| {
+                            cx.stop_propagation();
+                            cx.write_to_clipboard(ClipboardItem::new_string(
+                                agent_response_text.clone(),
+                            ));
+                        }
+                    }),
+            );
+
             let voice_phase = self.composer_voice_state.phase();
             let read_aloud_disabled = matches!(
                 voice_phase,
@@ -6534,7 +6581,7 @@ impl ThreadView {
 
             let tooltip_meta = || {
                 SharedString::new(
-                    "Rating the thread sends all of your current conversation to the Zed team.",
+                    "Rating the thread sends all of your current conversation to the Dx team.",
                 )
             };
 
@@ -10159,7 +10206,7 @@ impl ThreadView {
             ThreadError::RateLimitExceeded { provider } => self.render_error_callout(
                 "Rate Limit Reached",
                 format!(
-                    "{provider}'s rate limit was reached. Zed will retry automatically. \
+                    "{provider}'s rate limit was reached. Dx will retry automatically. \
                     You can also wait a moment and try again."
                 )
                 .into(),
@@ -10170,7 +10217,7 @@ impl ThreadView {
             ThreadError::ServerOverloaded { provider } => self.render_error_callout(
                 "Provider Unavailable",
                 format!(
-                    "{provider}'s servers are temporarily unavailable. Zed will retry \
+                    "{provider}'s servers are temporarily unavailable. Dx will retry \
                     automatically. If the problem persists, check the provider's status page."
                 )
                 .into(),
@@ -10193,7 +10240,7 @@ impl ThreadView {
             ThreadError::StreamError { provider } => self.render_error_callout(
                 "Connection Interrupted",
                 format!(
-                    "The connection to {provider}'s API was interrupted. Zed will retry \
+                    "The connection to {provider}'s API was interrupted. Dx will retry \
                     automatically. If the problem persists, check your network connection."
                 )
                 .into(),
@@ -10303,7 +10350,7 @@ impl ThreadView {
 
     fn render_payment_required_error(&self, cx: &mut Context<Self>) -> Callout {
         const ERROR_MESSAGE: &str =
-            "You reached your free usage limit. Upgrade to Zed Pro for more prompts.";
+            "You reached your free usage limit. Upgrade to Dx Pro for more prompts.";
 
         Callout::new()
             .severity(Severity::Error)
@@ -10428,7 +10475,7 @@ impl ThreadView {
     }
 
     fn current_model_name(&self, cx: &App) -> SharedString {
-        // For native agent (Zed Agent), use the specific model name (e.g., "Claude 3.5 Sonnet")
+        // For native agent (Dx Agent), use the specific model name (e.g., "Claude 3.5 Sonnet")
         // For ACP agents, use the agent name (e.g., "Claude Agent", "Gemini CLI")
         // This provides better clarity about what refused the request
         if self.as_native_connection(cx).is_some() {

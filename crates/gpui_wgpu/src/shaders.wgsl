@@ -1360,7 +1360,13 @@ fn liquid_backdrop_uv(panel_uv: vec2<f32>, instance: LiquidGlass) -> vec2<f32> {
 }
 
 fn liquid_smoothstep(edge0: f32, edge1: f32, x: f32) -> f32 {
-    let t = clamp((x - edge0) / max(edge1 - edge0, 0.00001), 0.0, 1.0);
+    let denominator = edge1 - edge0;
+    let safe_denominator = select(
+        denominator,
+        select(-0.00001, 0.00001, denominator >= 0.0),
+        abs(denominator) < 0.00001,
+    );
+    let t = clamp((x - edge0) / safe_denominator, 0.0, 1.0);
     return t * t * (3.0 - 2.0 * t);
 }
 
@@ -1490,12 +1496,6 @@ fn fs_liquid_glass(input: LiquidGlassVarying) -> @location(0) vec4<f32> {
 
     let noise_val = (liquid_rand(input.position.xy * 0.001) - 0.5) * instance.noise;
     color = vec4<f32>(color.rgb + vec3<f32>(noise_val), color.a);
-
-    let glass_tint = vec3<f32>(0.93, 0.95, 0.99);
-    color = vec4<f32>(
-        mix(color.rgb, glass_tint, 0.28),
-        mix(color.a, 0.18, 0.82),
-    );
 
     let glow_val = liquid_glow(input.panel_uv);
     let glow_mask = liquid_smoothstep(instance.glow_edge0, instance.glow_edge1, dist);

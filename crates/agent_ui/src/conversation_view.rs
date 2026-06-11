@@ -107,6 +107,7 @@ const TOKEN_THRESHOLD: u64 = 250;
 pub(crate) const DRAFT_PROMPT_PERSIST_DEBOUNCE: Duration = Duration::from_millis(250);
 
 mod composer_profile_options;
+mod liquid_glass_composer;
 mod thread_view;
 mod voice_controls;
 pub use thread_view::*;
@@ -1611,7 +1612,7 @@ impl ConversationView {
                         } else {
                             "New message"
                         },
-                        IconName::ZedAssistant,
+                        IconName::Sparkle,
                         window,
                         cx,
                     );
@@ -2317,7 +2318,7 @@ impl ConversationView {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let (heading_label, description_label) = (
-            format!("Upgrade {} to work with Zed", self.agent.agent_id()),
+            format!("Upgrade {} to work with Dx", self.agent.agent_id()),
             if version.is_empty() {
                 format!(
                     "Currently using {}, which does not report a valid --version",
@@ -2954,7 +2955,7 @@ impl ConversationView {
     }
 
     fn current_model_name(&self, cx: &App) -> SharedString {
-        // For native agent (Zed Agent), use the specific model name (e.g., "Claude 3.5 Sonnet")
+        // For native agent (Dx Agent), use the specific model name (e.g., "Claude 3.5 Sonnet")
         // For ACP agents, use the agent name (e.g., "Claude Agent", "Gemini CLI")
         // This provides better clarity about what refused the request
         if self.as_native_connection(cx).is_some() {
@@ -3064,7 +3065,7 @@ fn placeholder_text(agent_name: &str, has_commands: bool) -> String {
     if agent_name == agent::ZED_AGENT_ID.as_ref() {
         format!(
             "Message the {}, @ to include context, / for commands",
-            agent_name
+            "Dx Agent"
         )
     } else if has_commands {
         format!(
@@ -5080,7 +5081,7 @@ pub(crate) mod tests {
         C: 'static + AgentConnection + Send + Clone,
     {
         fn logo(&self) -> ui::IconName {
-            ui::IconName::ZedAgent
+            ui::IconName::Sparkle
         }
 
         fn agent_id(&self) -> AgentId {
@@ -5156,7 +5157,7 @@ pub(crate) mod tests {
 
     impl AgentServer for FlakyAgentServer {
         fn logo(&self) -> ui::IconName {
-            ui::IconName::ZedAgent
+            ui::IconName::Sparkle
         }
 
         fn agent_id(&self) -> AgentId {

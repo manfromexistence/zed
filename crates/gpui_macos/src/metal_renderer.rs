@@ -1471,7 +1471,7 @@ impl MetalRenderer {
 
         let texture = self.sprite_atlas.metal_texture(texture_id);
         let Some(backdrop_texture) = self.liquid_glass_backdrop_texture.as_ref() else {
-            return false;
+            return true;
         };
         let texture_size = size(
             DevicePixels(texture.width() as i32),
@@ -1502,6 +1502,11 @@ impl MetalRenderer {
             SpriteInputIndex::Sprites as u64,
             Some(&instance_buffer.metal_buffer),
             *instance_offset as u64,
+        );
+        command_encoder.set_fragment_bytes(
+            SpriteInputIndex::ViewportSize as u64,
+            mem::size_of_val(&viewport_size) as u64,
+            &viewport_size as *const Size<DevicePixels> as *const _,
         );
         command_encoder.set_fragment_bytes(
             SpriteInputIndex::AtlasTextureSize as u64,
@@ -1548,7 +1553,7 @@ impl MetalRenderer {
         viewport_size: Size<DevicePixels>,
     ) -> bool {
         let Some(backdrop_texture) = self.liquid_glass_backdrop_texture.as_ref() else {
-            return false;
+            return true;
         };
         let blit = command_buffer.new_blit_command_encoder();
         blit.copy_from_texture(

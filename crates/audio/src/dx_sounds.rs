@@ -58,7 +58,7 @@ impl DxSoundEvent {
     }
 
     pub(crate) fn gain(self) -> f32 {
-        0.10
+        0.05
     }
 
     pub(crate) fn cooldown(self) -> Duration {

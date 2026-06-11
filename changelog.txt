@@ -1,3 +1,220 @@
+[2026-06-11] - Liquid Glass Renderer Bounds Hardening
+
+FIXED:
+- Shared Liquid Glass painting now returns before GPU paint when the source bounds or glass bounds have zero, infinite, or non-finite dimensions.
+- Shared Liquid Glass geometry now sanitizes width and height before scaling, keeping public callers from creating NaN glass bounds.
+- Metal and WGPU Liquid Glass rendering now skip a batch when the platform backdrop texture is unavailable instead of treating the missing backdrop as instance-buffer overflow.
+- The Agent Liquid Glass source guard now pins the drawable-area preflight so the chat-input surface cannot regress to passing invalid dimensions into platform shader math.
+- Agent Liquid Glass settings copy now consistently names the Agent chat input, and the source guard pins persisted defaults against runtime defaults and the recovered reference state.
+
+PASSED:
+- `node --test script\dx-agent-composer-liquid-glass-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --config skip_children=true --check crates\liquid_glass\src\element.rs crates\settings_ui\src\page_data.rs crates\gpui_macos\src\metal_renderer.rs crates\gpui_wgpu\src\wgpu_renderer.rs`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)"` on touched source and ledger files returned no matches.
+- `git diff --check`
+
+NOTES:
+- Cargo/build/native runtime proof remains deferred by instruction.
+
+[2026-06-11] - Agent Liquid Glass Chat Input Container
+
+CHANGED:
+- Agent chat input Liquid Glass naming now matches its actual product surface instead of the older composer-only wording.
+- The shared Agent `ThreadView` chat input now uses the recovered GPUI Liquid Glass surface for both the side Agent panel and fullscreen AI screen path.
+- The Liquid Glass chat input container now uses the standard focused border color when the message editor has focus, while retaining transparent chrome when glass is enabled.
+- Agent Liquid Glass settings copy now describes the chat input surface rather than the standalone reference app or a panel-only composer.
+
+PASSED:
+- `node --test script\dx-agent-composer-liquid-glass-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --config skip_children=true --check crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\conversation_view\liquid_glass_composer.rs crates\settings_content\src\agent.rs crates\settings_ui\src\page_data.rs`
+
+NOTES:
+- Cargo/build/native runtime proof remains deferred by instruction.
+
+[2026-06-11] - Agent Composer Liquid Glass Correction
+
+FIXED:
+- Agent composer Liquid Glass now uses geometry-sized glass bounds from the recovered reference values instead of stretching glass over the full composer rectangle.
+- The composer shell now keeps a near-transparent background while Liquid Glass is enabled, so the GPUI renderer can preserve live backdrop refraction instead of reading a flattened panel fill.
+- Liquid Glass shaders now preserve reversed smoothstep edges for the recovered glow settings and no longer force the old milky tint/alpha override.
+- macOS Liquid Glass rendering now binds viewport size to the fragment stage, matching the shader contract.
+- The transparent backdrop carrier image is cached and Liquid Glass paint errors are logged at debug level instead of being silently discarded.
+
+CHANGED:
+- The shared `liquid_glass` crate now exposes settings-neutral geometry/style primitives, while Agent-owned settings mapping lives in `agent_ui`.
+- Agent Liquid Glass runtime settings are sanitized before use, including variant-driven fallback sizing and bounded numeric/vector fields.
+- Agent Liquid Glass settings copy now describes the composer behavior and permanent material state without referring to the standalone reference app.
+
+PASSED:
+- `node --test script\dx-agent-composer-liquid-glass-source.test.ts`
+- `node --test script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --config skip_children=true --check crates\agent_settings\src\agent_settings.rs crates\agent_ui\src\conversation_view.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\conversation_view\liquid_glass_composer.rs crates\gpui_macos\src\metal_renderer.rs crates\liquid_glass\src\backgrounds.rs crates\liquid_glass\src\element.rs crates\liquid_glass\src\lib.rs crates\settings_ui\src\page_data.rs`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)"` on touched source files returned no matches
+- `git diff --check`
+
+NOTES:
+- Cargo/build/native runtime proof remains deferred by instruction.
+
+[2026-06-11] - Agent Composer Liquid Glass Foundation
+
+CHANGED:
+- Agent composer now mounts the shared GPUI Liquid Glass renderer behind the message editor instead of a hand-painted or decorative approximation.
+- `agent.liquid_glass` settings and defaults now preserve the tuned recovered Rust effect values, including the Cubes background and Regular glass variant.
+- AI settings now expose permanent Agent Liquid Glass controls for enablement, shape, shader coefficients, glow, chromatic/blur tuning, input behavior, scale, motion, background, and glass variant.
+
+PASSED:
+- `node --test script\dx-agent-composer-liquid-glass-source.test.ts`
+- `rustfmt --edition 2024 --config skip_children=true --check crates\agent\src\tool_permissions.rs crates\agent_settings\src\agent_settings.rs crates\agent_ui\src\agent_ui.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\liquid_glass\src\lib.rs crates\liquid_glass\src\ui_state.rs crates\settings_content\src\agent.rs crates\settings_ui\src\page_data.rs`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)"` on touched source files
+- `git diff --check` on touched files
+
+NOTES:
+- Cargo/build/native runtime proof remains deferred by instruction.
+
+[2026-06-10] - DX n8n Workflow Node Plugin Plan
+
+ADDED:
+- Added `docs/superpowers/plans/2026-06-10-dx-n8n-workflow-node-plugins.md` to define the DX-native plan for rendering n8n nodes in the Tools screen, configuring them with DX-owned credential handles, and exposing approved configured plugins to the AI panel through a DX JS bridge.
+
+NOTES:
+- Planning is source-only. No Rust build, Cargo command, local server, or n8n website integration was run for this planning pass.
+
+[2026-06-10] - Authorized J6 Voice and Forge Follow-up
+
+FIXED:
+- Forge tab-bar rendering now keeps the panel id available for the stable tab-bar identity while using simple per-tab ids for selectable tab triggers.
+- Windows IME completion now ignores the zero-error false return from `ImmNotifyIME`, removing the misleading `The operation completed successfully` runtime error while preserving logging for real IME failures.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\agent_ui\src\dx_forge_panel\tabs.rs crates\gpui_windows\src\events.rs`
+- `node --test script\dx-forge-panel-source.test.ts`
+- `git diff --check`
+- `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run`
+
+NOTES:
+- The authorized J6 run built the editor and launched the main window successfully after repairing the Forge tab compile error.
+
+[2026-06-10] - Agent Voice and Workspace Action Stability
+
+FIXED:
+- Agent response copy now uses the same muted icon treatment as the rest of the response action row while still writing the latest response to the clipboard.
+- Agent composer voice busy states now use the animated DX loading glyph for transcription, synthesis, and playback instead of a static icon.
+- Flow Kokoro TTS now prewarms its cached server after voice readiness detection so read-aloud avoids the first-click model startup when the editor has had time to idle.
+- Sidebar Plugins, Connections, and Automations now dispatch real workspace actions instead of silently doing nothing.
+- Forge workflow tabs now use stable GPUI tab ids and click-only routing so the Packages tab no longer travels through the fragile pointer-event path.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\conversation_view\voice_controls.rs crates\agent_ui\src\flow_speech_runtime.rs crates\agent_ui\src\dx_forge_panel\tabs.rs crates\sidebar\src\sidebar.rs`
+- `node --test script\dx-agent-voice-controls-source.test.ts script\dx-agent-connections-ui-source.test.ts script\dx-forge-panel-source.test.ts`
+- `git diff --check`
+
+NOTES:
+- STT still uses the current Flow dictation command path per recorded clip. A real low-latency STT jump needs a persistent Flow STT host/daemon follow-up instead of fake UI state.
+
+[2026-06-10] - Voice Status and Forge Tab Stability
+
+CHANGED:
+- Agent composer voice busy states now show readable pulsed phase labels with the real Flow/Kokoro status detail instead of collapsing to ellipsis-only text.
+- Friday Kokoro read-aloud now tries a cached JSON-lines TTS server first so repeated playback can reuse the loaded model, while preserving the old one-shot process path as fallback.
+- Windows Flow speech process-tree ownership now remains compatible with GPUI background tasks while preserving the cached Kokoro TTS server.
+- Forge workflow tabs now use typed GPUI ids and stop pointer-event propagation before switching tabs, preventing tab clicks from also triggering the panel root focus/window path.
+- Focused source guards now cover the cached Kokoro server path, updated Dx audio fallback copy, and safer Forge tab id/event behavior.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\agent_ui\src\flow_speech_runtime.rs`
+- `node --test script\dx-agent-voice-controls-source.test.ts script\dx-forge-panel-source.test.ts`
+- `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run`
+
+NOTES:
+- Authorized J6 validation built and launched the editor after repairing the cached Kokoro TTS server's Windows `Send` boundary.
+
+[2026-06-10] - DX Agent Prompt and Response Copy Polish
+
+CHANGED:
+- Native Agent identity now presents as DX Agent in the ACP/native agent surface while keeping source compatibility symbols intact.
+- Native Agent system prompts now introduce the assistant as the DX coding agent running inside the DX editor.
+- Agent response action rows now include a real Copy Agent Response button beside the existing read-aloud, feedback, share, markdown, and scroll controls.
+- Unsigned-in ChatGPT Subscription startup auth probes no longer log as app errors, matching the existing quiet handling for other optional providers.
+- Optional Windows GPU driver-version probing now falls back to `Unknown Driver` without logging a renderer error when AMD AGS is not installed.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates\agent\src\agent.rs crates\agent\src\templates.rs crates\agent_ui\src\conversation_view\thread_view.rs`
+
+NOTES:
+- This pass targets visible/prompt-facing agent branding and response-copy UX. Wider Zed service names in documentation and compatibility code are left intact unless they are part of visible DX app chrome.
+
+[2026-06-10] - Dx Sidebar Action and Agent Branding Polish
+
+CHANGED:
+- Visible native-agent icon surfaces now use Sparkles instead of the old Zed Agent/Zed AI mark across Agent UI, sidebar threads, setup/configuration, thread items, model selectors, and DX UI icon mapping.
+- Sidebar thread actions now use the Filter icon for filtering, selected thread rows use theme selected/border tokens, and inactive timestamp/detail text uses a readable theme-muted color instead of a custom low-opacity text color.
+- Project Panel media and sticky tree rows no longer render stray side-panel close controls inside accordion/content headers.
+- Sidebar screen shortcuts now route Plugins/Tools, Connections, Automations, and other top actions through the workspace screen system, while Settings has an active-workspace fallback.
+- Font/Media/UI titlebar buttons now dispatch through the active workspace focus path when opening a panel, and the sign-in dropdown no longer duplicates Settings.
+
+PASSED:
+- `node --test script\dx-title-bar-source.test.ts script\dx-agent-workspaces-source.test.ts script\dx-project-panel-source.test.ts script\dx-icon-system-source.test.ts`
+- `rustfmt --edition 2024 --check --config skip_children=true ...` across the touched Rust source files.
+- `git diff --check`
+- Changed-file conflict-marker scan returned no matches.
+
+NOTES:
+- This pass keeps compatibility identifiers such as `ZED_AGENT_ID` and internal schema names intact. It does not run Cargo or `just run` unless explicitly authorized.
+
+[2026-06-10] - Dx Branding, Storage, and Sound Polish
+
+CHANGED:
+- `crates\project_panel\src\project_panel.rs` now hides largest-folder/storage-intelligence rows by default while keeping the media shelf and normal file tree visible.
+- Project header chrome and the Project options menu now expose a real storage-details toggle for users who want the largest folder/file storage view.
+- Folder-size hover chips and background folder-storage warming are gated behind the same storage-details toggle so the hidden view does not keep doing unnecessary tree work.
+- DX interaction sounds now play at five percent gain.
+- Visible product strings now use Dx/Dx Agent branding while keeping compatibility identifiers and source-level names intact.
+- Packaged app PNG/ICO icons and the shared logo SVG now use the DX rainbow mark from the WWW examples.
+
+PASSED:
+- `node --test script\dx-project-panel-source.test.ts`
+- `node --test script\dx-sound-source.test.ts`
+- `rustfmt --edition 2024 --check crates\project_panel\src\project_panel.rs`
+- `git diff --check`
+- `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run`
+
+NOTES:
+- The authorized j6 run built the app and launched the main window successfully after moving the rebuildable Cargo target cache behind `G:\Dx\code\target` to an F: junction and refreshing a corrupt `livekit-rust-sdks` Cargo git checkout.
+
+[2026-06-10] - Authorized J6 Sound Validation
+
+FIXED:
+- `Cargo.lock` now includes the `audio` dependency in the `editor` package stanza, so `cargo build --locked -p zed --bin zed` no longer tries to rewrite the lockfile before launch.
+- `crates\audio\src\audio_pipeline.rs` now emits the debug-build audio optimization warning only when opening an output stream instead of on every DX micro-sound playback.
+
+PASSED:
+- `node --test script\dx-sound-source.test.ts`
+- `git diff --check`
+- `CARGO_BUILD_JOBS=6 CARGO_INCREMENTAL=1 just run`
+
+NOTES:
+- The authorized j6 run built and launched Zed successfully. Fresh runtime log entries after launch still include environment/provider issues for missing AMD AGS GPU-driver metadata and ChatGPT subscription authentication; those are not compile warnings and were not changed in this pass.
+
+[2026-06-10] - DX WWW Turbo Web Preview Bridge
+
+ADDED:
+- `crates\web_preview\src\web_preview_view.rs` now exposes a loopback-only DX WWW turbo bridge collector that reads `/_dx/hot-reload/version?resource=...` and `/_dx/devtools/session` through the existing Web Preview IPC channel.
+- `script\dx-www-turbo-web-preview-source.test.ts` guards the source-owned bridge contract, loopback scope, cache/no-polling behavior, token redaction, and native session snapshot wiring.
+- `docs\superpowers\plans\2026-06-10-dx-www-turbo-web-preview.md` records the lane plan and verification boundary.
+- `DX.md` records the new Web Preview DX-WWW receipt/status consumer surface without claiming Turbo task execution.
+
+CHANGED:
+- Web Preview session snapshots now include a compact `dx_www_turbo_bridge` summary and clear it on navigation start to avoid stale runtime state.
+- The DX Studio bridge now asks the base Web Preview bridge to refresh DX WWW readiness when its public API aliases attach.
+
+PASSED:
+- `node --test script\dx-www-turbo-web-preview-source.test.ts`
+- `rustfmt --edition 2024 --check crates\web_preview\src\web_preview_view.rs`
+- `git diff --check`
+
+NOTES:
+- Source-only pass. No dev server is started, no source mutation is performed, no raw hot-reload token is exposed, and Cargo/build/runtime WebView proof plus `just run` remain deferred by instruction.
+
 [2026-06-10] - DX Interaction Sound Wiring
 
 CHANGED:
@@ -47,6 +264,211 @@ PASSED:
 NOTES:
 - Typing and hover sounds are represented as explicit opt-in semantic events but are not wired to hot-path editor input yet; that needs a user-facing preference first to avoid hurting editor latency.
 - Source-only pass. Cargo, build, runtime native proof, and `just run` remain deferred by instruction.
+
+[2026-06-11] - DX Panel GPUI Tenth-Pass Polish
+
+CHANGED:
+- `crates\media_panel\src\media_panel.rs` now renders local media asset rows with sparse `ListItem` chrome and hover action slots while preserving drag payloads and row click-to-insert behavior.
+- `crates\shadcn_ui_panel\src\shadcn_ui_panel.rs` now renders UI catalog result rows with sparse `ListItem` chrome, hover action slots, keyboard-reachable row actions, and disabled no-op filter pager arrows.
+- `crates\agent_ui\src\dx_check_panel_view.rs` now makes Check status-strip receipt and refresh actions keyboard-reachable through the panel focus handle.
+- `crates\agent_ui\src\dx_forge_panel\rows.rs` now preserves truncated Forge empty-state copy in row tooltips.
+- `crates\project_panel\src\media_preview.rs` now gives media gallery and shelf headers shared lower-bound count labels when scans are capped.
+- Focused source guards and the handoff registry now cover the tenth-pass GPUI component contracts for Media, UI, Check, Forge, and Project.
+
+PASSED:
+- `rustfmt --edition 2024` on touched Rust files
+- `rustfmt --edition 2024 --check` on touched Rust files
+- `node --test script\dx-forge-panel-source.test.ts script\dx-media-panel-source.test.ts script\dx-ui-panel-source.test.ts script\dx-check-panel-source.test.ts script\dx-project-panel-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- Anchored conflict-marker scan across touched files returned no matches
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. `just run`, Cargo build/check/test/clippy, native launch, browser automation, local servers, and runtime visual proof were not run.
+
+[2026-06-11] - DX Panel GPUI Ninth-Pass Polish
+
+CHANGED:
+- `crates\media_panel\src\media_panel.rs` now renders remote media result rows with sparse `ListItem` chrome and hover action slots while preserving local drag rows.
+- `crates\shadcn_ui_panel\src\shadcn_ui_panel.rs` now applies subtle square icon styling to UI header and filter controls.
+- `crates\agent_ui\src\dx_check_panel_view.rs` and `crates\agent_ui\src\dx_check_panel_view\view_rows.rs` now render compact section count labels in Check `ListHeader` end slots.
+- `crates\agent_ui\src\dx_forge_panel\controls.rs` and `crates\agent_ui\src\dx_forge_panel\providers\view.rs` now make source/provider open controls tabbable subtle square actions while preserving transparent provider brand buttons.
+- `crates\project_panel\src\media_preview.rs` now counts visible media shelf cards without counting the overflow trigger and marks capped scans with a lower-bound count.
+- Focused source guards and the handoff registry now cover the ninth-pass GPUI component contracts for Media, UI, Check, Forge, and Project.
+
+PASSED:
+- `rustfmt --edition 2024` on touched Rust files
+- `rustfmt --edition 2024 --check` on touched Rust files
+- `node --test script\dx-forge-panel-source.test.ts script\dx-media-panel-source.test.ts script\dx-ui-panel-source.test.ts script\dx-check-panel-source.test.ts script\dx-project-panel-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- Anchored conflict-marker scan across touched files returned no matches
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. `just run`, Cargo build/check/test/clippy, native launch, browser automation, local servers, and runtime visual proof were not run.
+
+[2026-06-11] - DX Panel GPUI Eighth-Pass Polish
+
+CHANGED:
+- `crates\media_panel\src\media_panel.rs` now renders remote browser and remote warning row actions as tooltip-backed square `IconButton` controls instead of compact text buttons.
+- `crates\shadcn_ui_panel\src\shadcn_ui_panel.rs` now renders empty UI search results with sparse `ListItem` chrome.
+- `crates\agent_ui\src\dx_check_panel_view.rs` now gives the Check refresh action the same subtle square icon style as the receipt action.
+- `crates\agent_ui\src\dx_forge_panel\providers\tooltips.rs` now distinguishes stale configured paths from missing workspaces in provider disabled tooltips.
+- `crates\project_panel\src\project_panel.rs` now keeps volatile storage drilldown metrics in the sort tooltip instead of visible header labels.
+- Focused source guards and the handoff registry now cover the eighth-pass GPUI component contracts for Media, UI, Check, Forge, and Project.
+
+PASSED:
+- `rustfmt --edition 2024` on touched Rust files
+- `rustfmt --edition 2024 --check` on touched Rust files
+- `node --test script\dx-forge-panel-source.test.ts script\dx-media-panel-source.test.ts script\dx-ui-panel-source.test.ts script\dx-check-panel-source.test.ts script\dx-project-panel-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- Anchored conflict-marker scan across touched files returned no matches
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. `just run`, Cargo build/check/test/clippy, native launch, browser automation, local servers, and runtime visual proof were not run.
+
+[2026-06-11] - DX Panel GPUI Seventh-Pass Polish
+
+CHANGED:
+- `crates\media_panel\src\media_panel.rs` now preserves history-row preview, copy, insert, pin, unpin, and remove behavior behind compact tooltip-backed square icon rails with click-propagation guards.
+- `crates\shadcn_ui_panel\src\shadcn_ui_panel.rs` now keeps the history-row primary Install/Insert/Open action readable while moving secondary Copy, Preview, Docs, Pin, and Remove actions to square icon controls.
+- `crates\agent_ui\src\dx_forge_panel\controls.rs` now stops row-event propagation from Forge status action buttons.
+- `crates\project_panel\src\project_panel.rs` now fails closed when cached storage-drilldown folder targets go stale before expand/scroll.
+- Focused source guards and the handoff registry now cover the seventh-pass GPUI component contracts for Media, UI, Forge, Project, and Check preservation.
+
+PASSED:
+- `rustfmt --edition 2024` on touched Rust files
+- `rustfmt --edition 2024 --check` on touched Rust files
+- `node --test script\dx-forge-panel-source.test.ts script\dx-media-panel-source.test.ts script\dx-ui-panel-source.test.ts script\dx-check-panel-source.test.ts script\dx-project-panel-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- Anchored conflict-marker scan across touched files returned no matches
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. `just run`, Cargo build/check/test/clippy, native launch, browser automation, local servers, and runtime visual proof were not run.
+
+[2026-06-11] - DX Panel GPUI Sixth-Pass Polish
+
+CHANGED:
+- `crates\agent_ui\src\dx_check_panel_view\view_rows.rs` now renders Check notice, quick-fix, adapter-plan, and web-audit rows as compact sparse `ListItem` rows with bounded end-slot detail instead of stacked visible text blocks.
+- `crates\media_panel\src\media_panel.rs` now keeps local/remote media row behavior intact while moving row actions to tooltip-backed square icon controls with click-propagation guards.
+- `crates\shadcn_ui_panel\src\shadcn_ui_panel.rs` now keeps the catalog primary action readable and moves secondary Copy, Preview, Docs, and Pin actions to compact square icon controls.
+- `crates\project_panel\src\storage_roots_view.rs` and `crates\project_panel\src\project_panel.rs` now cap storage shortcuts and hover metadata chips so compact Project rows do not crowd file labels.
+- `crates\agent_ui\src\dx_forge_panel\providers\state.rs` now removes unused provider-state icon plumbing, with Forge guards preserving compact readiness-dot continuity.
+- Focused source guards and the handoff registry now cover the sixth-pass GPUI component contracts for Media, UI, Check, Project, and Forge.
+
+PASSED:
+- `rustfmt --edition 2024` on touched Rust files
+- `rustfmt --edition 2024 --check` on touched Rust files
+- `node --test script\dx-forge-panel-source.test.ts script\dx-media-panel-source.test.ts script\dx-ui-panel-source.test.ts script\dx-check-panel-source.test.ts script\dx-project-panel-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- Anchored conflict-marker scan across touched files returned no matches
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. `just run`, Cargo build/check/test/clippy, native launch, browser automation, local servers, and runtime visual proof were not run.
+
+[2026-06-11] - DX Panel GPUI Fifth-Pass Polish
+
+CHANGED:
+- `crates\media_panel\src\media_panel.rs` now renders pasted URL insertion as a sparse `ListItem` row with tooltip-backed square icon actions instead of a bordered text-button card.
+- `crates\shadcn_ui_panel\src\shadcn_ui_panel.rs` now renders install-only package guidance as sparse list-row chrome instead of a custom bordered callout.
+- `crates\agent_ui\src\dx_check_panel_view.rs` now folds receipt and refresh controls into the Check status row, removing the extra toolbar band.
+- `crates\agent_ui\src\dx_forge_panel\rows.rs`, `crates\agent_ui\src\dx_forge_panel\workflow_rows.rs`, and `crates\agent_ui\src\dx_forge_panel\providers\view.rs` now align Forge status/action chrome to the same compact row height and gaps as the existing workflow rows.
+- `crates\project_panel\src\storage_roots_view.rs` and `crates\project_panel\src\project_panel.rs` now tighten storage-root strip spacing and Project row metadata spacing while preserving all file-tree behavior.
+- Focused source guards and the handoff registry now cover the fifth-pass GPUI component contracts for Media, UI, Check, Project, and Forge.
+
+PASSED:
+- `rustfmt --edition 2024` on touched Rust files
+- `rustfmt --edition 2024 --check` on touched Rust files
+- `node --test script\dx-forge-panel-source.test.ts script\dx-media-panel-source.test.ts script\dx-ui-panel-source.test.ts script\dx-check-panel-source.test.ts script\dx-project-panel-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- Conflict-marker scan across touched files returned no matches
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. `just run`, Cargo build/check/test/clippy, native launch, browser automation, local servers, and runtime visual proof were not run.
+
+[2026-06-11] - DX Panel GPUI Fourth-Pass Polish
+
+CHANGED:
+- `crates\media_panel\src\media_panel.rs` and `crates\shadcn_ui_panel\src\shadcn_ui_panel.rs` now use square icon buttons for recent/pinned history management and keep per-row actions in hover slots behind an ellipsis resting state.
+- `crates\agent_ui\src\dx_forge_panel\providers\view.rs` now preserves provider-group readiness dots inside hover action clusters.
+- `crates\agent_ui\src\dx_check_panel_view.rs` now caps visible web audit rows at four and starts Adapter Plans collapsed for a quieter Findings-first surface.
+- `crates\project_panel\src\project_panel.rs` now tightens Project header, selected-toolbar, side-panel-control, storage-drilldown, and entry-badge chrome while preserving full details in tooltips.
+- Focused source guards and the handoff registry now cover the fourth-pass GPUI component contracts for Media, UI, Check, Project, Forge, and workspace history copy.
+
+PASSED:
+- `rustfmt --edition 2024` on touched Rust files
+- `rustfmt --edition 2024 --check` on touched Rust files
+- `node --test script\dx-forge-panel-source.test.ts script\dx-media-panel-source.test.ts script\dx-ui-panel-source.test.ts script\dx-check-panel-source.test.ts script\dx-project-panel-source.test.ts script\dx-workspace-ui-state-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- Stale third-pass source-pattern scan returned no matches
+- Conflict-marker scan across touched files returned no matches
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. `just run`, Cargo build/check/test/clippy, native launch, browser automation, and runtime visual proof were not run.
+
+[2026-06-11] - DX Panel GPUI Third-Pass Polish
+
+CHANGED:
+- `crates\media_panel\src\media_panel.rs` and `crates\shadcn_ui_panel\src\shadcn_ui_panel.rs` now render recent/pinned history sections through shared `ListHeader` chrome with icon start slots and existing action end slots.
+- `crates\shadcn_ui_panel\src\shadcn_ui_panel.rs` now surfaces panel status as a sparse non-selectable `ListItem` with an info icon and tooltip.
+- `crates\agent_ui\src\dx_check_panel_view.rs` and `view_rows.rs` now use compact icon-only receipt chrome, non-selectable informational rows, stable indexed section-score ids, and Findings ordering that shows notices and quick fixes before longer audit/planning rows.
+- `crates\project_panel\src\project_panel.rs` now keeps storage-drilldown largest-file details in row tooltips instead of visible end-slot text.
+- `crates\agent_ui\src\dx_forge_panel\tabs.rs` and `controls.rs` now use clearer tab row-count tooltips and contextual disabled source-open tooltips.
+- Focused source guards and the handoff registry now cover the third-pass GPUI component contracts for Media, UI, Check, Project, and Forge.
+
+PASSED:
+- `rustfmt --edition 2024` on touched Rust files
+- `rustfmt --edition 2024 --check` on touched Rust files
+- `node --test script\dx-forge-panel-source.test.ts script\dx-check-panel-source.test.ts script\dx-project-panel-source.test.ts script\dx-media-panel-source.test.ts script\dx-ui-panel-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- Conflict-marker scan across touched files returned no matches
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. `just run`, Cargo build/check/test/clippy, native launch, browser automation, and runtime visual proof were not run.
+
+[2026-06-11] - DX Panel GPUI Follow-Up Polish
+
+ADDED:
+- `script\dx-ui-panel-source.test.ts` to pin UI panel recent/pinned history rows to shared sparse `ListItem` chrome.
+
+CHANGED:
+- `crates\agent_ui\src\dx_launch_workspace\tools_screen.rs` now renders Tools sections through `ListHeader`, moves permission contract/receipt details into sparse list rows, and removes the old metric/detail-row chrome from that screen.
+- `crates\media_panel\src\media_panel.rs` and `crates\shadcn_ui_panel\src\shadcn_ui_panel.rs` now render recent/pinned history rows as sparse GPUI `ListItem` rows with action end slots instead of bordered mini cards.
+- `crates\agent_ui\src\dx_check_panel_view\tabs.rs` and `view_rows.rs` now include adapter plans in Findings counts, normalize section/web-audit status colors case-insensitively, and give overflow rows an actionable full-list tooltip.
+- `crates\project_panel\src\project_panel.rs` now renders Project Symbols and Collapse Folders as disabled action-backed menu entries when no worktree exists instead of enabled no-op rows.
+- `crates\agent_ui\src\dx_forge_panel\rows.rs` now aligns the Forge status footer with inset list-row grammar.
+- Focused source guards now cover the Tools, Media, UI, Check, Forge, and lightweight guard-registry contracts for this polish slice.
+
+PASSED:
+- `rustfmt --edition 2024` on touched Rust files
+- `rustfmt --edition 2024 --check` on touched Rust files
+- `node --test script\dx-forge-panel-source.test.ts script\dx-check-panel-source.test.ts script\dx-project-panel-source.test.ts script\dx-media-panel-source.test.ts script\dx-ui-panel-source.test.ts script\dx-agent-workspaces-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- Conflict-marker scan across touched files returned no matches
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. `just run`, Cargo build/check/test/clippy, native launch, browser automation, and runtime visual proof were not run.
+
+[2026-06-11] - DX Panel GPUI Compact Polish
+
+ADDED:
+- `crates\agent_ui\src\dx_launch_workspace\style_panel\rows.rs` with shared Style readiness row helpers backed by `ListHeader`, sparse `ListItem`, icon slots, and tooltips.
+
+CHANGED:
+- `crates\agent_ui\src\dx_launch_workspace\style_panel.rs` now renders the DX Style rail as compact section headers and sparse detail rows, keeps readiness file counts bounded, and explains disabled Style controls through tooltip text.
+- `crates\agent_ui\src\dx_forge_panel\rows.rs` and `controls.rs` now keep Forge status and section chrome on shared list/header primitives, move status details into metadata tooltips, and make visible status actions keyboard reachable.
+- `crates\agent_ui\src\dx_check_panel_view.rs` and `dx_check_panel_view\view_rows.rs` now show bounded overflow rows, tooltip-backed notices, honest unavailable result counts, and web-audit status text instead of duplicate status icons.
+- `crates\media_panel\src\media_panel.rs` now renders remote/provider/status rows through sparse `ListItem` chrome rather than framed mini cards.
+- `crates\project_panel\src\media_preview.rs` now keeps the top media shelf header on shared `ListHeader` chrome with compact visible-count and panel-control slots.
+- Focused source guards now pin the GPUI component contracts across Forge, Check, Project media, Media, and Style panel surfaces.
+
+PASSED:
+- `rustfmt --edition 2024` on touched Rust files
+- `rustfmt --edition 2024 --check` on touched Rust files
+- `node --test script\dx-forge-panel-source.test.ts script\dx-check-panel-source.test.ts script\dx-project-panel-source.test.ts script\dx-media-panel-source.test.ts script\dx-style-panel-source.test.ts`
+- Conflict-marker scan across touched files returned no matches
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. `just run`, Cargo build/check/test/clippy, native launch, and runtime visual proof were not run.
 
 [2026-06-10] - DX Sound Asset Pack Foundation
 
@@ -16332,6 +16754,15 @@ NOTES:
 - The disabled WebPreview onboarding code remains in place for a future dedicated repair pass, but it is not reachable from first-open, titlebar, welcome, restore registration, or completion paths.
 
 [2026-06-03] - Core Panel Split Controls Polish
+
+CHANGED:
+- Project Panel storage-root shortcuts now render and refresh only while storage details are explicitly visible, keeping the top panel focused on media and the normal file tree by default.
+- DX sound event playback now uses five percent gain.
+- Visible Zed/Zed Agent product copy across app menus, onboarding, agent setup, update status, package metadata, and selected panel messages now presents as Dx/Dx Agent while preserving internal compatibility identifiers.
+- Packaged app PNG/ICO resources and the shared logo vector now use the DX rainbow D mark from the WWW example assets.
+
+PENDING VERIFICATION:
+- Focused source guards, `git diff --check`, and `just run` with six Cargo jobs.
 
 CHANGED:
 - `crates\workspace\src\dock.rs` now exposes shared side-panel split and close controls with real panel-id-aware enabled state instead of assuming the active side panel.

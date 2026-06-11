@@ -48,8 +48,7 @@ pub enum DxUiIcon {
 
 pub fn dx_icon(icon: DxUiIcon) -> IconName {
     match icon {
-        DxUiIcon::Agent => IconName::ZedAgent,
-        DxUiIcon::Ai => IconName::ZedAssistant,
+        DxUiIcon::Agent | DxUiIcon::Ai => IconName::Sparkle,
         DxUiIcon::Automations => IconName::ListTodo,
         DxUiIcon::Browser | DxUiIcon::WebPreview => IconName::ToolWeb,
         DxUiIcon::Channels => IconName::QueueMessage,
@@ -77,7 +76,8 @@ pub fn dx_icon(icon: DxUiIcon) -> IconName {
         DxUiIcon::OpenProject => IconName::OpenFolder,
         DxUiIcon::PasteInto => IconName::ReplyArrowRight,
         DxUiIcon::Permissions => IconName::UserCheck,
-        DxUiIcon::Plugins | DxUiIcon::Ui => IconName::Blocks,
+        DxUiIcon::Plugins => IconName::Blocks,
+        DxUiIcon::Ui => IconName::Sliders,
         DxUiIcon::Project => IconName::FileTree,
         DxUiIcon::Receipts => IconName::FileTextOutlined,
         DxUiIcon::Search => IconName::MagnifyingGlass,

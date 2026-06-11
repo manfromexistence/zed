@@ -20,7 +20,7 @@ use std::{
     sync::{Arc, OnceLock},
     time::Duration,
 };
-use ui::{TintColor, Tooltip, prelude::*};
+use ui::{ListHeader, ListItem, ListItemSpacing, TintColor, Tooltip, prelude::*};
 use url::Url;
 use workspace::{
     DraggedMediaAsset, DraggedMediaKind, Workspace,
@@ -915,6 +915,13 @@ impl MediaPanel {
         counts: &MediaKindCounts,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
+        let kind_scroll_offset = self.kind_scroll_handle.offset().x;
+        let kind_scroll_max = self.kind_scroll_handle.max_offset().x;
+        let kind_tabs_scrollable = kind_scroll_max > px(2.);
+        let can_scroll_kind_tabs_back = kind_tabs_scrollable && kind_scroll_offset < px(0.);
+        let can_scroll_kind_tabs_forward =
+            kind_tabs_scrollable && kind_scroll_offset > -kind_scroll_max;
+
         h_flex()
             .h(px(42.))
             .gap_1()
@@ -925,7 +932,9 @@ impl MediaPanel {
             .child(
                 IconButton::new("media-panel-kind-prev", IconName::ChevronLeft)
                     .shape(ui::IconButtonShape::Square)
+                    .style(ButtonStyle::Subtle)
                     .icon_size(IconSize::Small)
+                    .disabled(!can_scroll_kind_tabs_back)
                     .tooltip(Tooltip::text("Previous media groups"))
                     .on_click(cx.listener(|panel, _, _, cx| {
                         panel.scroll_kind_tabs(-1.0, cx);
@@ -971,7 +980,9 @@ impl MediaPanel {
             .child(
                 IconButton::new("media-panel-kind-next", IconName::ChevronRight)
                     .shape(ui::IconButtonShape::Square)
+                    .style(ButtonStyle::Subtle)
                     .icon_size(IconSize::Small)
+                    .disabled(!can_scroll_kind_tabs_forward)
                     .tooltip(Tooltip::text("Next media groups"))
                     .on_click(cx.listener(|panel, _, _, cx| {
                         panel.scroll_kind_tabs(1.0, cx);
@@ -1301,19 +1312,23 @@ impl MediaPanel {
         let kind = candidate.kind;
         let url = candidate.url;
         let label = candidate.label;
+        let row_tooltip = format!("{label}\n{url}");
+        let preview_url = url.clone();
+        let preview_label = label.clone();
+        let copy_url = url.clone();
+        let copy_label = label.clone();
+        let pin_url = url.clone();
+        let pin_label = label.clone();
 
         Some(
-            h_flex()
-                .gap_2()
-                .items_center()
-                .p_2()
-                .rounded_sm()
-                .border_1()
-                .border_color(cx.theme().colors().border_variant)
-                .bg(cx.theme().colors().element_background)
-                .child(Icon::new(media_kind_icon(kind)).size(IconSize::Small))
+            ListItem::new("media-panel-url-insert-row")
+                .inset(true)
+                .spacing(ListItemSpacing::Sparse)
+                .selectable(false)
+                .start_slot(Icon::new(media_kind_icon(kind)).size(IconSize::Small))
                 .child(
                     v_flex()
+                        .min_w_0()
                         .flex_1()
                         .gap_0p5()
                         .child(Label::new(label.clone()).size(LabelSize::Small).truncate())
@@ -1324,21 +1339,34 @@ impl MediaPanel {
                                 .truncate(),
                         ),
                 )
-                .child(
+                .end_slot(
+                    Icon::new(IconName::Ellipsis)
+                        .size(IconSize::Small)
+                        .color(Color::Muted),
+                )
+                .end_slot_on_hover(
                     h_flex()
+                        .flex_none()
                         .gap_1()
+                        .occlude()
+                        .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
+                            cx.stop_propagation();
+                        })
+                        .on_mouse_up(gpui::MouseButton::Left, |_, _, cx| {
+                            cx.stop_propagation();
+                        })
                         .child(
-                            Button::new("media-panel-preview-url", "Preview")
+                            IconButton::new("media-panel-preview-url", IconName::Eye)
+                                .shape(ui::IconButtonShape::Square)
                                 .style(ButtonStyle::Subtle)
-                                .size(ButtonSize::Compact)
+                                .icon_size(IconSize::Small)
+                                .tooltip(Tooltip::text("Preview URL media"))
                                 .on_click(cx.listener({
-                                    let url = url.clone();
-                                    let label = label.clone();
                                     move |panel, _, window, cx| {
                                         panel.preview_media_url(
-                                            url.clone(),
+                                            preview_url.clone(),
                                             kind,
-                                            label.clone(),
+                                            preview_label.clone(),
                                             window,
                                             cx,
                                         );
@@ -1346,34 +1374,44 @@ impl MediaPanel {
                                 })),
                         )
                         .child(
-                            Button::new("media-panel-copy-url", "Copy")
+                            IconButton::new("media-panel-copy-url", IconName::Copy)
+                                .shape(ui::IconButtonShape::Square)
                                 .style(ButtonStyle::Subtle)
-                                .size(ButtonSize::Compact)
+                                .icon_size(IconSize::Small)
+                                .tooltip(Tooltip::text("Copy URL"))
                                 .on_click(cx.listener({
-                                    let url = url.clone();
-                                    let label = label.clone();
                                     move |panel, _, _, cx| {
-                                        panel.record_recent_remote_media(&url, kind, &label);
-                                        panel.copy_media_source(url.clone(), label.clone(), cx);
+                                        panel.record_recent_remote_media(
+                                            &copy_url,
+                                            kind,
+                                            &copy_label,
+                                        );
+                                        panel.copy_media_source(
+                                            copy_url.clone(),
+                                            copy_label.clone(),
+                                            cx,
+                                        );
                                     }
                                 })),
                         )
                         .child(
-                            Button::new("media-panel-pin-url", "Pin")
+                            IconButton::new("media-panel-pin-url", IconName::Pin)
+                                .shape(ui::IconButtonShape::Square)
                                 .style(ButtonStyle::Subtle)
-                                .size(ButtonSize::Compact)
+                                .icon_size(IconSize::Small)
+                                .tooltip(Tooltip::text("Pin URL media"))
                                 .on_click(cx.listener({
-                                    let url = url.clone();
-                                    let label = label.clone();
                                     move |panel, _, _, cx| {
-                                        panel.pin_remote_media(&url, kind, &label, cx);
+                                        panel.pin_remote_media(&pin_url, kind, &pin_label, cx);
                                     }
                                 })),
                         )
                         .child(
-                            Button::new("media-panel-insert-url", "Insert URL")
+                            IconButton::new("media-panel-insert-url", IconName::Plus)
+                                .shape(ui::IconButtonShape::Square)
                                 .style(ButtonStyle::Filled)
-                                .size(ButtonSize::Compact)
+                                .icon_size(IconSize::Small)
+                                .tooltip(Tooltip::text("Insert URL into the active editor"))
                                 .on_click(cx.listener(move |panel, _, window, cx| {
                                     panel.insert_media_url(
                                         url.clone(),
@@ -1384,7 +1422,8 @@ impl MediaPanel {
                                     );
                                 })),
                         ),
-                ),
+                )
+                .tooltip(Tooltip::text(row_tooltip)),
         )
     }
 
@@ -1399,65 +1438,37 @@ impl MediaPanel {
         let copy_label = label.clone();
         let copy_payload = payload.clone();
         let pin_payload = payload.clone();
+        let drag_payload = payload.clone();
         let row_id = media_element_id("media-panel-row-", relative_display.as_ref());
         let preview_id = media_element_id("media-panel-preview-", relative_display.as_ref());
         let copy_id = media_element_id("media-panel-copy-path-", relative_display.as_ref());
         let pin_id = media_element_id("media-panel-pin-local-", relative_display.as_ref());
-
-        h_flex()
-            .id(row_id)
-            .gap_2()
-            .items_center()
-            .p_2()
-            .rounded_sm()
-            .border_1()
-            .border_color(cx.theme().colors().border_variant)
-            .bg(cx.theme().colors().element_background)
-            .cursor_pointer()
-            .hover(|style| style.bg(cx.theme().colors().element_hover))
-            .tooltip(Tooltip::text(relative_display.clone()))
-            .on_click(cx.listener({
-                let payload = payload.clone();
-                move |panel, _, window, cx| {
-                    panel.insert_media(payload.clone(), window, cx);
-                }
-            }))
-            .on_drag(payload, |media, position, _, cx| {
-                cx.new(|_| MediaDragPreview {
-                    media: media.clone(),
-                    position,
-                })
+        let actions = h_flex()
+            .flex_none()
+            .gap_0p5()
+            .occlude()
+            .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
+                cx.stop_propagation();
             })
-            .child(thumbnail)
+            .on_mouse_up(gpui::MouseButton::Left, |_, _, cx| {
+                cx.stop_propagation();
+            })
             .child(
-                v_flex()
-                    .flex_1()
-                    .gap_1()
-                    .child(Label::new(label).size(LabelSize::Small).truncate())
-                    .child(
-                        Label::new(relative_display.clone())
-                            .size(LabelSize::XSmall)
-                            .color(Color::Muted)
-                            .truncate(),
-                    ),
-            )
-            .child(
-                Label::new(media_kind_label(kind))
-                    .size(LabelSize::XSmall)
-                    .color(Color::Muted),
-            )
-            .child(
-                Button::new(preview_id, "Preview")
+                IconButton::new(preview_id, IconName::Eye)
+                    .shape(ui::IconButtonShape::Square)
                     .style(ButtonStyle::Subtle)
-                    .size(ButtonSize::Compact)
+                    .icon_size(IconSize::Small)
+                    .tooltip(Tooltip::text("Preview media"))
                     .on_click(cx.listener(move |panel, _, window, cx| {
                         panel.preview_media_asset(preview_payload.clone(), window, cx);
                     })),
             )
             .child(
-                Button::new(copy_id, "Copy")
+                IconButton::new(copy_id, IconName::Copy)
+                    .shape(ui::IconButtonShape::Square)
                     .style(ButtonStyle::Subtle)
-                    .size(ButtonSize::Compact)
+                    .icon_size(IconSize::Small)
+                    .tooltip(Tooltip::text("Copy media path"))
                     .on_click(cx.listener(move |panel, _, _, cx| {
                         panel.record_recent_local_media(&copy_payload);
                         let copy_path = copy_path.to_string_lossy().into_owned();
@@ -1465,12 +1476,59 @@ impl MediaPanel {
                     })),
             )
             .child(
-                Button::new(pin_id, "Pin")
+                IconButton::new(pin_id, IconName::Pin)
+                    .shape(ui::IconButtonShape::Square)
                     .style(ButtonStyle::Subtle)
-                    .size(ButtonSize::Compact)
+                    .icon_size(IconSize::Small)
+                    .tooltip(Tooltip::text("Pin media"))
                     .on_click(cx.listener(move |panel, _, _, cx| {
                         panel.pin_local_media(&pin_payload, cx);
                     })),
+            );
+
+        div()
+            .on_drag(drag_payload, |media, position, _, cx| {
+                cx.new(|_| MediaDragPreview {
+                    media: media.clone(),
+                    position,
+                })
+            })
+            .child(
+                ListItem::new(row_id)
+                    .inset(true)
+                    .spacing(ListItemSpacing::Sparse)
+                    .start_slot(thumbnail)
+                    .tooltip(Tooltip::text(relative_display.clone()))
+                    .on_click(cx.listener({
+                        let payload = payload.clone();
+                        move |panel, _, window, cx| {
+                            panel.insert_media(payload.clone(), window, cx);
+                        }
+                    }))
+                    .child(
+                        v_flex()
+                            .min_w_0()
+                            .flex_1()
+                            .gap_1()
+                            .child(Label::new(label).size(LabelSize::Small).truncate())
+                            .child(
+                                Label::new(relative_display.clone())
+                                    .size(LabelSize::XSmall)
+                                    .color(Color::Muted)
+                                    .truncate(),
+                            ),
+                    )
+                    .child(
+                        Label::new(media_kind_label(kind))
+                            .size(LabelSize::XSmall)
+                            .color(Color::Muted),
+                    )
+                    .end_slot(
+                        Icon::new(IconName::Ellipsis)
+                            .size(IconSize::Small)
+                            .color(Color::Muted),
+                    )
+                    .end_slot_on_hover(actions),
             )
     }
 
@@ -1492,17 +1550,83 @@ impl MediaPanel {
         let insert_id = media_element_id("media-panel-insert-remote-", id.as_str());
         let pin_id = media_element_id("media-panel-pin-remote-", id.as_str());
         let attribution = media_attribution_label(provider.as_str(), license.as_str());
+        let insert_url = url.clone();
+        let insert_label = label.clone();
 
-        h_flex()
-            .id(row_id)
-            .gap_2()
-            .items_center()
-            .p_2()
-            .rounded_sm()
-            .border_1()
-            .border_color(cx.theme().colors().border_variant)
-            .bg(cx.theme().colors().element_background)
-            .hover(|style| style.bg(cx.theme().colors().element_hover))
+        let actions = h_flex()
+            .flex_none()
+            .gap_0p5()
+            .occlude()
+            .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
+                cx.stop_propagation();
+            })
+            .on_mouse_up(gpui::MouseButton::Left, |_, _, cx| {
+                cx.stop_propagation();
+            })
+            .child(
+                IconButton::new(preview_id, IconName::Eye)
+                    .shape(ui::IconButtonShape::Square)
+                    .style(ButtonStyle::Subtle)
+                    .icon_size(IconSize::Small)
+                    .tooltip(Tooltip::text("Preview remote media"))
+                    .on_click(cx.listener({
+                        let url = url.clone();
+                        let label = label.clone();
+                        move |panel, _, window, cx| {
+                            panel.preview_media_url(url.clone(), kind, label.clone(), window, cx);
+                        }
+                    })),
+            )
+            .child(
+                IconButton::new(copy_id, IconName::Copy)
+                    .shape(ui::IconButtonShape::Square)
+                    .style(ButtonStyle::Subtle)
+                    .icon_size(IconSize::Small)
+                    .tooltip(Tooltip::text("Copy remote media URL"))
+                    .on_click(cx.listener({
+                        let url = url.clone();
+                        let label = label.clone();
+                        move |panel, _, _, cx| {
+                            panel.record_recent_remote_media(&url, kind, &label);
+                            panel.copy_media_source(url.clone(), label.clone(), cx);
+                        }
+                    })),
+            )
+            .child(
+                IconButton::new(pin_id, IconName::Pin)
+                    .shape(ui::IconButtonShape::Square)
+                    .style(ButtonStyle::Subtle)
+                    .icon_size(IconSize::Small)
+                    .tooltip(Tooltip::text("Pin remote media"))
+                    .on_click(cx.listener({
+                        let url = url.clone();
+                        let label = label.clone();
+                        move |panel, _, _, cx| {
+                            panel.pin_remote_media(&url, kind, &label, cx);
+                        }
+                    })),
+            )
+            .child(
+                IconButton::new(insert_id, IconName::Plus)
+                    .shape(ui::IconButtonShape::Square)
+                    .style(ButtonStyle::Filled)
+                    .icon_size(IconSize::Small)
+                    .tooltip(Tooltip::text("Insert remote media URL"))
+                    .on_click(cx.listener(move |panel, _, window, cx| {
+                        panel.insert_media_url(
+                            insert_url.clone(),
+                            kind,
+                            insert_label.clone(),
+                            window,
+                            cx,
+                        );
+                    })),
+            );
+
+        ListItem::new(row_id)
+            .inset(true)
+            .spacing(ListItemSpacing::Sparse)
+            .start_slot(thumbnail)
             .tooltip(Tooltip::text(url.clone()))
             .on_click(cx.listener({
                 let url = url.clone();
@@ -1511,7 +1635,6 @@ impl MediaPanel {
                     panel.preview_media_url(url.clone(), kind, label.clone(), window, cx);
                 }
             }))
-            .child(thumbnail)
             .child(
                 v_flex()
                     .flex_1()
@@ -1529,51 +1652,12 @@ impl MediaPanel {
                     .size(LabelSize::XSmall)
                     .color(Color::Accent),
             )
-            .child(
-                Button::new(preview_id, "Preview")
-                    .style(ButtonStyle::Subtle)
-                    .size(ButtonSize::Compact)
-                    .on_click(cx.listener({
-                        let url = url.clone();
-                        let label = label.clone();
-                        move |panel, _, window, cx| {
-                            panel.preview_media_url(url.clone(), kind, label.clone(), window, cx);
-                        }
-                    })),
+            .end_slot(
+                Icon::new(IconName::Ellipsis)
+                    .size(IconSize::Small)
+                    .color(Color::Muted),
             )
-            .child(
-                Button::new(copy_id, "Copy")
-                    .style(ButtonStyle::Subtle)
-                    .size(ButtonSize::Compact)
-                    .on_click(cx.listener({
-                        let url = url.clone();
-                        let label = label.clone();
-                        move |panel, _, _, cx| {
-                            panel.record_recent_remote_media(&url, kind, &label);
-                            panel.copy_media_source(url.clone(), label.clone(), cx);
-                        }
-                    })),
-            )
-            .child(
-                Button::new(pin_id, "Pin")
-                    .style(ButtonStyle::Subtle)
-                    .size(ButtonSize::Compact)
-                    .on_click(cx.listener({
-                        let url = url.clone();
-                        let label = label.clone();
-                        move |panel, _, _, cx| {
-                            panel.pin_remote_media(&url, kind, &label, cx);
-                        }
-                    })),
-            )
-            .child(
-                Button::new(insert_id, "Insert URL")
-                    .style(ButtonStyle::Subtle)
-                    .size(ButtonSize::Compact)
-                    .on_click(cx.listener(move |panel, _, window, cx| {
-                        panel.insert_media_url(url.clone(), kind, label.clone(), window, cx);
-                    })),
-            )
+            .end_slot_on_hover(actions)
     }
 
     fn render_remote_browser_row(
@@ -1583,45 +1667,34 @@ impl MediaPanel {
     ) -> impl IntoElement {
         let description = remote_browser_description(provider_count, self.kind_filter);
         let tooltip = remote_browser_tooltip(provider_count, self.kind_filter);
-        h_flex()
-            .id("media-panel-remote-browser-row")
-            .gap_2()
-            .items_center()
-            .p_2()
-            .rounded_sm()
-            .border_1()
-            .border_color(cx.theme().colors().border_variant)
-            .bg(cx.theme().colors().element_background)
+        ListItem::new("media-panel-remote-browser-row")
+            .inset(true)
+            .spacing(ListItemSpacing::Sparse)
+            .selectable(false)
+            .start_slot(
+                Icon::new(IconName::Public)
+                    .size(IconSize::Small)
+                    .color(Color::Muted),
+            )
             .tooltip(Tooltip::text(tooltip))
             .child(
-                div()
-                    .w(px(64.))
-                    .h(px(48.))
-                    .rounded_sm()
-                    .border_1()
-                    .border_color(cx.theme().colors().border_variant)
-                    .bg(cx.theme().colors().elevated_surface_background)
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .child(Icon::new(IconName::Public).size(IconSize::Medium)),
-            )
-            .child(
                 v_flex()
-                    .flex_1()
-                    .gap_1()
+                    .min_w_0()
+                    .gap_0p5()
                     .child(Label::new("Browse remote providers").size(LabelSize::Small))
                     .child(
                         Label::new(description)
-                            .size(LabelSize::XSmall)
+                            .size(LabelSize::Small)
                             .color(Color::Muted)
                             .truncate(),
                     ),
             )
-            .child(
-                Button::new("media-panel-browse-remote-row", "Open")
+            .end_slot(
+                IconButton::new("media-panel-browse-remote-row", IconName::ArrowUpRight)
                     .style(ButtonStyle::Subtle)
-                    .size(ButtonSize::Compact)
+                    .shape(ui::IconButtonShape::Square)
+                    .icon_size(IconSize::Small)
+                    .tooltip(Tooltip::text("Open remote provider browser"))
                     .on_click(cx.listener(|panel, _, window, cx| {
                         panel.browse_remote_media(window, cx);
                     })),
@@ -1633,62 +1706,50 @@ impl MediaPanel {
         warning: SharedString,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
-        h_flex()
-            .id("media-panel-remote-warning-row")
-            .gap_2()
-            .items_center()
-            .p_2()
-            .rounded_sm()
-            .border_1()
-            .border_color(cx.theme().colors().border_variant)
-            .bg(cx.theme().colors().element_background)
+        ListItem::new("media-panel-remote-warning-row")
+            .inset(true)
+            .spacing(ListItemSpacing::Sparse)
+            .selectable(false)
             .tooltip(Tooltip::text(warning.clone()))
-            .child(
+            .start_slot(
                 Icon::new(IconName::Warning)
                     .size(IconSize::Small)
                     .color(Color::Warning),
             )
             .child(
-                div().flex_1().child(
-                    Label::new(warning)
-                        .size(LabelSize::XSmall)
-                        .color(Color::Warning)
-                        .truncate(),
-                ),
+                Label::new(warning)
+                    .size(LabelSize::Small)
+                    .color(Color::Warning)
+                    .truncate(),
             )
-            .child(
-                Button::new("media-panel-retry-remote-warning", "Retry")
+            .end_slot(
+                IconButton::new("media-panel-retry-remote-warning", IconName::RotateCw)
                     .style(ButtonStyle::Subtle)
-                    .size(ButtonSize::Compact)
+                    .shape(ui::IconButtonShape::Square)
+                    .icon_size(IconSize::Small)
+                    .tooltip(Tooltip::text("Retry remote media search"))
                     .on_click(cx.listener(|panel, _, _, cx| {
                         panel.refresh_remote_media(cx);
                     })),
             )
     }
 
-    fn render_status_row(&self, status: SharedString, cx: &mut Context<Self>) -> impl IntoElement {
-        h_flex()
-            .id("media-panel-status-row")
-            .gap_2()
-            .items_center()
-            .p_2()
-            .rounded_sm()
-            .border_1()
-            .border_color(cx.theme().colors().border_variant)
-            .bg(cx.theme().colors().element_background)
+    fn render_status_row(&self, status: SharedString, _cx: &mut Context<Self>) -> impl IntoElement {
+        ListItem::new("media-panel-status-row")
+            .inset(true)
+            .spacing(ListItemSpacing::Sparse)
+            .selectable(false)
             .tooltip(Tooltip::text(status.clone()))
-            .child(
+            .start_slot(
                 Icon::new(IconName::Info)
                     .size(IconSize::Small)
                     .color(Color::Muted),
             )
             .child(
-                div().flex_1().child(
-                    Label::new(status)
-                        .size(LabelSize::XSmall)
-                        .color(Color::Muted)
-                        .truncate(),
-                ),
+                Label::new(status)
+                    .size(LabelSize::Small)
+                    .color(Color::Muted)
+                    .truncate(),
             )
     }
 
@@ -1703,17 +1764,12 @@ impl MediaPanel {
         } else {
             Color::Warning
         };
-        h_flex()
-            .id("media-panel-remote-health-row")
-            .gap_2()
-            .items_center()
-            .p_2()
-            .rounded_sm()
-            .border_1()
-            .border_color(cx.theme().colors().border_variant)
-            .bg(cx.theme().colors().element_background)
+        ListItem::new("media-panel-remote-health-row")
+            .inset(true)
+            .spacing(ListItemSpacing::Sparse)
+            .selectable(false)
             .tooltip(Tooltip::text(description.clone()))
-            .child(
+            .start_slot(
                 Icon::new(IconName::Public)
                     .size(IconSize::Small)
                     .color(color),
@@ -1724,19 +1780,20 @@ impl MediaPanel {
                     .gap_0p5()
                     .child(
                         Label::new("Remote provider health")
-                            .size(LabelSize::XSmall)
+                            .size(LabelSize::Small)
                             .color(Color::Muted),
                     )
                     .child(
                         Label::new(description)
-                            .size(LabelSize::XSmall)
+                            .size(LabelSize::Small)
                             .color(color)
                             .truncate(),
                     ),
             )
-            .child(
+            .end_slot(
                 IconButton::new("media-panel-refresh-remote-health", IconName::RotateCw)
                     .shape(ui::IconButtonShape::Square)
+                    .style(ButtonStyle::Subtle)
                     .icon_size(IconSize::Small)
                     .tooltip(Tooltip::text("Refresh this remote media search"))
                     .on_click(cx.listener(|panel, _, _, cx| {
@@ -1745,18 +1802,14 @@ impl MediaPanel {
             )
     }
 
-    fn render_remote_loading_row(&self, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render_remote_loading_row(&self, _cx: &mut Context<Self>) -> impl IntoElement {
         let description = remote_loading_description(self.kind_filter);
-        h_flex()
-            .id("media-panel-remote-loading-row")
-            .gap_2()
-            .items_center()
-            .p_2()
-            .rounded_sm()
-            .border_1()
-            .border_color(cx.theme().colors().border_variant)
-            .bg(cx.theme().colors().element_background)
-            .child(
+        ListItem::new("media-panel-remote-loading-row")
+            .inset(true)
+            .spacing(ListItemSpacing::Sparse)
+            .selectable(false)
+            .tooltip(Tooltip::text(description.clone()))
+            .start_slot(
                 Icon::new(IconName::RotateCw)
                     .size(IconSize::Small)
                     .color(Color::Muted),
@@ -1767,12 +1820,12 @@ impl MediaPanel {
                     .gap_0p5()
                     .child(
                         Label::new("Fetching remote media")
-                            .size(LabelSize::XSmall)
+                            .size(LabelSize::Small)
                             .color(Color::Muted),
                     )
                     .child(
                         Label::new(description)
-                            .size(LabelSize::XSmall)
+                            .size(LabelSize::Small)
                             .color(Color::Muted)
                             .truncate(),
                     ),
@@ -1812,42 +1865,41 @@ impl MediaPanel {
                 .id("media-panel-recent-media-section")
                 .gap_1()
                 .child(
-                    h_flex()
-                        .items_center()
-                        .justify_between()
-                        .child(
+                    ListHeader::new("Recent")
+                        .inset(true)
+                        .start_slot(Icon::new(IconName::Clock).size(IconSize::Small))
+                        .end_slot(
                             h_flex()
+                                .min_w_0()
                                 .gap_1()
-                                .items_center()
-                                .child(
-                                    Label::new("Recent")
-                                        .size(LabelSize::XSmall)
-                                        .color(Color::Muted),
-                                )
                                 .child(
                                     Label::new(availability_label)
-                                        .size(LabelSize::XSmall)
-                                        .color(health_color),
-                                ),
-                        )
-                        .child(
-                            h_flex()
-                                .gap_1()
+                                        .size(LabelSize::Small)
+                                        .color(health_color)
+                                        .truncate(),
+                                )
                                 .when(missing_count > 0, |this| {
                                     this.child(
-                                        Button::new("media-panel-remove-missing-recent", "Remove")
-                                            .style(ButtonStyle::Subtle)
-                                            .size(ButtonSize::Compact)
-                                            .tooltip(Tooltip::text(REMOVE_MISSING_MEDIA_TOOLTIP))
-                                            .on_click(cx.listener(|panel, _, _, cx| {
+                                        IconButton::new(
+                                            "media-panel-remove-missing-recent",
+                                            IconName::ListX,
+                                        )
+                                        .shape(ui::IconButtonShape::Square)
+                                        .style(ButtonStyle::Subtle)
+                                        .icon_size(IconSize::Small)
+                                        .tooltip(Tooltip::text(REMOVE_MISSING_MEDIA_TOOLTIP))
+                                        .on_click(
+                                            cx.listener(|panel, _, _, cx| {
                                                 panel.remove_missing_recent_media(cx);
-                                            })),
+                                            }),
+                                        ),
                                     )
                                 })
                                 .child(
-                                    Button::new("media-panel-clear-recent", "Clear")
+                                    IconButton::new("media-panel-clear-recent", IconName::Trash)
+                                        .shape(ui::IconButtonShape::Square)
                                         .style(ButtonStyle::Subtle)
-                                        .size(ButtonSize::Compact)
+                                        .icon_size(IconSize::Small)
                                         .tooltip(Tooltip::text(CLEAR_RECENT_MEDIA_TOOLTIP))
                                         .on_click(cx.listener(|panel, _, _, cx| {
                                             panel.clear_recent_media(cx);
@@ -1893,43 +1945,41 @@ impl MediaPanel {
                 .id("media-panel-pinned-media-section")
                 .gap_1()
                 .child(
-                    h_flex()
-                        .items_center()
-                        .justify_between()
-                        .child(
+                    ListHeader::new("Pinned")
+                        .inset(true)
+                        .start_slot(Icon::new(IconName::Star).size(IconSize::Small))
+                        .end_slot(
                             h_flex()
+                                .min_w_0()
                                 .gap_1()
-                                .items_center()
-                                .child(Icon::new(IconName::Star).size(IconSize::XSmall))
-                                .child(
-                                    Label::new("Pinned")
-                                        .size(LabelSize::XSmall)
-                                        .color(Color::Muted),
-                                )
                                 .child(
                                     Label::new(availability_label)
-                                        .size(LabelSize::XSmall)
-                                        .color(health_color),
-                                ),
-                        )
-                        .child(
-                            h_flex()
-                                .gap_1()
+                                        .size(LabelSize::Small)
+                                        .color(health_color)
+                                        .truncate(),
+                                )
                                 .when(missing_count > 0, |this| {
                                     this.child(
-                                        Button::new("media-panel-remove-missing-pinned", "Remove")
-                                            .style(ButtonStyle::Subtle)
-                                            .size(ButtonSize::Compact)
-                                            .tooltip(Tooltip::text(REMOVE_MISSING_MEDIA_TOOLTIP))
-                                            .on_click(cx.listener(|panel, _, _, cx| {
+                                        IconButton::new(
+                                            "media-panel-remove-missing-pinned",
+                                            IconName::ListX,
+                                        )
+                                        .shape(ui::IconButtonShape::Square)
+                                        .style(ButtonStyle::Subtle)
+                                        .icon_size(IconSize::Small)
+                                        .tooltip(Tooltip::text(REMOVE_MISSING_MEDIA_TOOLTIP))
+                                        .on_click(
+                                            cx.listener(|panel, _, _, cx| {
                                                 panel.remove_missing_pinned_media(cx);
-                                            })),
+                                            }),
+                                        ),
                                     )
                                 })
                                 .child(
-                                    Button::new("media-panel-clear-pinned", "Clear")
+                                    IconButton::new("media-panel-clear-pinned", IconName::Trash)
+                                        .shape(ui::IconButtonShape::Square)
                                         .style(ButtonStyle::Subtle)
-                                        .size(ButtonSize::Compact)
+                                        .icon_size(IconSize::Small)
                                         .tooltip(Tooltip::text(CLEAR_PINNED_MEDIA_TOOLTIP))
                                         .on_click(cx.listener(|panel, _, _, cx| {
                                             panel.clear_pinned_media(cx);
@@ -1967,10 +2017,11 @@ impl MediaPanel {
         let source_kind = recent_media_source_kind(&entry.source);
         let source_health = recent_media_source_health(&entry.source);
         let source_available = !media_history_entry_missing(&entry);
-        let pin_label = if pinned {
-            if source_available { "Unpin" } else { "Remove" }
+        let row_tooltip = format!("{}\n{}", entry.label.as_ref(), source_label.as_ref());
+        let pin_icon = if pinned && !source_available {
+            IconName::Trash
         } else {
-            "Pin"
+            IconName::Pin
         };
         let actions = match entry.source.clone() {
             RecentMediaSource::Local {
@@ -1987,11 +2038,13 @@ impl MediaPanel {
                 let copy_asset = asset.clone();
                 let insert_asset = asset;
                 h_flex()
-                    .gap_1()
+                    .flex_none()
+                    .gap_0p5()
                     .child(
-                        Button::new(preview_id, "Preview")
+                        IconButton::new(preview_id, IconName::Eye)
+                            .shape(ui::IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
-                            .size(ButtonSize::Compact)
+                            .icon_size(IconSize::Small)
                             .tooltip(Tooltip::text(media_history_preview_tooltip(
                                 source_available,
                             )))
@@ -2001,9 +2054,11 @@ impl MediaPanel {
                             })),
                     )
                     .child(
-                        Button::new(copy_id, "Copy")
+                        IconButton::new(copy_id, IconName::Copy)
+                            .shape(ui::IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
-                            .size(ButtonSize::Compact)
+                            .icon_size(IconSize::Small)
+                            .tooltip(Tooltip::text("Copy media path"))
                             .on_click(cx.listener(move |panel, _, _, cx| {
                                 panel.record_recent_local_media(&copy_asset);
                                 let source = copy_asset.path.to_string_lossy().into_owned();
@@ -2011,9 +2066,10 @@ impl MediaPanel {
                             })),
                     )
                     .child(
-                        Button::new(insert_id, "Insert")
-                            .style(ButtonStyle::Subtle)
-                            .size(ButtonSize::Compact)
+                        IconButton::new(insert_id, IconName::Plus)
+                            .shape(ui::IconButtonShape::Square)
+                            .style(ButtonStyle::Filled)
+                            .icon_size(IconSize::Small)
                             .tooltip(Tooltip::text(media_history_insert_tooltip(
                                 source_available,
                             )))
@@ -2029,11 +2085,14 @@ impl MediaPanel {
                 let label = entry.label.to_string();
                 let kind = entry.kind;
                 h_flex()
-                    .gap_1()
+                    .flex_none()
+                    .gap_0p5()
                     .child(
-                        Button::new(preview_id, "Preview")
+                        IconButton::new(preview_id, IconName::Eye)
+                            .shape(ui::IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
-                            .size(ButtonSize::Compact)
+                            .icon_size(IconSize::Small)
+                            .tooltip(Tooltip::text("Preview remote media"))
                             .on_click(cx.listener({
                                 let url = url.clone();
                                 let label = label.clone();
@@ -2049,9 +2108,11 @@ impl MediaPanel {
                             })),
                     )
                     .child(
-                        Button::new(copy_id, "Copy")
+                        IconButton::new(copy_id, IconName::Copy)
+                            .shape(ui::IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
-                            .size(ButtonSize::Compact)
+                            .icon_size(IconSize::Small)
+                            .tooltip(Tooltip::text("Copy remote media URL"))
                             .on_click(cx.listener({
                                 let url = url.clone();
                                 let label = label.clone();
@@ -2062,9 +2123,11 @@ impl MediaPanel {
                             })),
                     )
                     .child(
-                        Button::new(insert_id, "Insert URL")
-                            .style(ButtonStyle::Subtle)
-                            .size(ButtonSize::Compact)
+                        IconButton::new(insert_id, IconName::Plus)
+                            .shape(ui::IconButtonShape::Square)
+                            .style(ButtonStyle::Filled)
+                            .icon_size(IconSize::Small)
+                            .tooltip(Tooltip::text("Insert remote media URL"))
                             .on_click(cx.listener(move |panel, _, window, cx| {
                                 panel.insert_media_url(
                                     url.clone(),
@@ -2079,18 +2142,14 @@ impl MediaPanel {
             }
         };
 
-        h_flex()
-            .id(row_id)
-            .gap_2()
-            .items_center()
-            .p_2()
-            .rounded_sm()
-            .border_1()
-            .border_color(cx.theme().colors().border_variant)
-            .bg(cx.theme().colors().element_background)
-            .child(Icon::new(media_kind_icon(entry.kind)).size(IconSize::Small))
+        ListItem::new(row_id)
+            .inset(true)
+            .spacing(ListItemSpacing::Sparse)
+            .selectable(false)
+            .start_slot(Icon::new(media_kind_icon(entry.kind)).size(IconSize::Small))
             .child(
                 v_flex()
+                    .min_w_0()
                     .flex_1()
                     .gap_0p5()
                     .child(
@@ -2117,39 +2176,67 @@ impl MediaPanel {
                             .truncate(),
                     ),
             )
-            .child(actions)
-            .when(!source_available && !pinned, |this| {
-                this.child(
-                    Button::new(remove_id, "Remove")
-                        .style(ButtonStyle::Subtle)
-                        .size(ButtonSize::Compact)
-                        .tooltip(Tooltip::text("Remove this missing media entry"))
-                        .on_click(cx.listener(move |panel, _, _, cx| {
-                            panel.remove_media_history_entry(remove_entry.clone(), pinned, cx);
-                        })),
-                )
-            })
-            .child(
-                Button::new(pin_id, pin_label)
-                    .style(ButtonStyle::Subtle)
-                    .size(ButtonSize::Compact)
-                    .tooltip(Tooltip::text(media_history_pin_tooltip(
-                        pinned,
-                        source_available,
-                    )))
-                    .disabled(!pinned && !source_available)
-                    .on_click(cx.listener(move |panel, _, _, cx| {
-                        if pinned {
-                            if source_available {
-                                panel.unpin_media(pin_entry.clone(), cx);
-                            } else {
-                                panel.remove_media_history_entry(pin_entry.clone(), pinned, cx);
-                            }
-                        } else {
-                            panel.pin_media(pin_entry.clone(), cx);
-                        }
-                    })),
+            .end_slot(
+                Icon::new(IconName::Ellipsis)
+                    .size(IconSize::Small)
+                    .color(Color::Muted),
             )
+            .end_slot_on_hover(
+                h_flex()
+                    .flex_none()
+                    .gap_0p5()
+                    .occlude()
+                    .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
+                        cx.stop_propagation();
+                    })
+                    .on_mouse_up(gpui::MouseButton::Left, |_, _, cx| {
+                        cx.stop_propagation();
+                    })
+                    .child(actions)
+                    .when(!source_available && !pinned, |this| {
+                        this.child(
+                            IconButton::new(remove_id, IconName::Trash)
+                                .shape(ui::IconButtonShape::Square)
+                                .style(ButtonStyle::Subtle)
+                                .icon_size(IconSize::Small)
+                                .tooltip(Tooltip::text("Remove this missing media entry"))
+                                .on_click(cx.listener(move |panel, _, _, cx| {
+                                    panel.remove_media_history_entry(
+                                        remove_entry.clone(),
+                                        pinned,
+                                        cx,
+                                    );
+                                })),
+                        )
+                    })
+                    .child(
+                        IconButton::new(pin_id, pin_icon)
+                            .shape(ui::IconButtonShape::Square)
+                            .style(ButtonStyle::Subtle)
+                            .icon_size(IconSize::Small)
+                            .tooltip(Tooltip::text(media_history_pin_tooltip(
+                                pinned,
+                                source_available,
+                            )))
+                            .disabled(!pinned && !source_available)
+                            .on_click(cx.listener(move |panel, _, _, cx| {
+                                if pinned {
+                                    if source_available {
+                                        panel.unpin_media(pin_entry.clone(), cx);
+                                    } else {
+                                        panel.remove_media_history_entry(
+                                            pin_entry.clone(),
+                                            pinned,
+                                            cx,
+                                        );
+                                    }
+                                } else {
+                                    panel.pin_media(pin_entry.clone(), cx);
+                                }
+                            })),
+                    ),
+            )
+            .tooltip(Tooltip::text(row_tooltip))
             .into_any_element()
     }
 }
@@ -2356,6 +2443,7 @@ impl Render for MediaPanel {
                                             IconName::RotateCw,
                                         )
                                         .shape(ui::IconButtonShape::Square)
+                                        .style(ButtonStyle::Subtle)
                                         .icon_size(IconSize::Small)
                                         .tooltip(Tooltip::text("Refresh remote media"))
                                         .on_click(
@@ -2371,6 +2459,7 @@ impl Render for MediaPanel {
                                                 IconName::Trash,
                                             )
                                             .shape(ui::IconButtonShape::Square)
+                                            .style(ButtonStyle::Subtle)
                                             .icon_size(IconSize::Small)
                                             .tooltip(Tooltip::text(REMOVE_MISSING_MEDIA_TOOLTIP))
                                             .on_click(

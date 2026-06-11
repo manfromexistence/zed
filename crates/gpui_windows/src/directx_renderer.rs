@@ -869,8 +869,10 @@ impl DirectXRenderer {
             _ => dxgi::get_driver_version(&devices.adapter),
         }
         .context("Failed to get gpu driver info")
-        .log_err()
-        .unwrap_or("Unknown Driver".to_string());
+        .unwrap_or_else(|error| {
+            log::debug!("{error:#}");
+            "Unknown Driver".to_string()
+        });
         Ok(GpuSpecs {
             is_software_emulated,
             device_name,

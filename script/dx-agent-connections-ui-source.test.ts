@@ -37,7 +37,8 @@ test("DX connection UI uses semantic icons and real Zed sidebar routes", () => {
   assert.match(sidebar, /"sidebar-toolbar-connections"[\s\S]*?dx_icon\(DxUiIcon::Connections\)[\s\S]*?"Connections"[\s\S]*?activate_workspace_screen\(\s*WorkspaceScreenKind::Connections/);
   assert.match(sidebar, /"sidebar-activity-connections"[\s\S]*?dx_icon\(DxUiIcon::Connections\)[\s\S]*?"Connections"[\s\S]*?activate_workspace_screen\(WorkspaceScreenKind::Connections/);
   assert.match(sidebar, sidebarWorkspaceActionArm("Connections", "OpenConnections"));
-  assert.match(agentPanel, /"dx-launch-connections"[\s\S]*?dx_icon\(DxUiIcon::Connections\)[\s\S]*?"Connections"[\s\S]*?zed_actions::assistant::OpenConnections/);
+  assert.match(agentPanel, /OpenConnections/);
+  assert.match(agentPanel, /ConnectionsScreen::open_or_focus\(workspace, window, cx\)/);
 });
 
 test("DX connection entities render with Zed AI/list components, not ad hoc badges", () => {

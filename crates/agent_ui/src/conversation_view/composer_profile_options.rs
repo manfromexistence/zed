@@ -136,7 +136,7 @@ static ASK_MODEL_OPTIONS: [ComposerOptionEntry; 3] = [
     ),
     option(
         "ask-models-single",
-        composer_icon(IconName::ZedAssistant),
+        composer_icon(IconName::Sparkle),
         "Single answer",
         "Use the selected model for one focused answer.",
     ),
@@ -526,7 +526,7 @@ static ASK_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
 static AGENTS_COMPOSER_SLOTS: [ComposerOptionSlot; 3] = [
     slot(
         "agents-work",
-        composer_icon(IconName::ZedAgent),
+        composer_icon(IconName::Sparkle),
         "Work",
         "View workspace-work guidance for Agents",
         AGENTS_CONTRACT,

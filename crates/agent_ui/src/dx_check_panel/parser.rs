@@ -24,12 +24,12 @@ pub(super) fn panel_from_receipt_value(path: PathBuf, receipt: &Value) -> DxChec
                 None
             } else {
                 Some(view_model_fallback_warning(
-                    "Zed-specific dx-check panel schema is missing or unsupported.",
+                    "Dx-specific dx-check panel schema is missing or unsupported.",
                 ))
             }
         }
         None => Some(view_model_fallback_warning(
-            "Zed-specific dx-check panel payload is missing.",
+            "Dx-specific dx-check panel payload is missing.",
         )),
     };
 

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use gpui::{App, RenderImage, SharedString};
 use image::{Frame, Rgba, RgbaImage};
@@ -51,8 +51,14 @@ pub fn load_backgrounds(cx: &App) -> Arc<[BackgroundAsset]> {
 pub fn load_liquid_glass_backdrop_carrier() -> Arc<RenderImage> {
     // The live backdrop is sampled by the renderer when LiquidGlassStyle uses
     // `use_backdrop`; this image is only the atlas carrier required by GPUI.
-    let image = RgbaImage::from_pixel(2, 2, Rgba([0, 0, 0, 0]));
-    Arc::new(RenderImage::new(to_bgra_frames(image)))
+    static BACKDROP_CARRIER: OnceLock<Arc<RenderImage>> = OnceLock::new();
+
+    BACKDROP_CARRIER
+        .get_or_init(|| {
+            let image = RgbaImage::from_pixel(2, 2, Rgba([0, 0, 0, 0]));
+            Arc::new(RenderImage::new(to_bgra_frames(image)))
+        })
+        .clone()
 }
 
 pub fn load_glass_surface() -> Arc<RenderImage> {

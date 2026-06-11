@@ -68,7 +68,7 @@ impl ThreadItem {
     pub fn new(id: impl Into<ElementId>, title: impl Into<SharedString>) -> Self {
         Self {
             id: id.into(),
-            icon: IconName::ZedAgent,
+            icon: IconName::Sparkle,
             icon_color: None,
             icon_visible: true,
             custom_icon_from_external_svg: None,
@@ -249,7 +249,7 @@ impl RenderOnce for ThreadItem {
         let apparent_bg = color.background.blend(raw_bg);
 
         let base_bg = if self.selected {
-            apparent_bg.blend(color.element_active)
+            apparent_bg.blend(color.element_selected)
         } else {
             apparent_bg
         };
@@ -375,7 +375,7 @@ impl RenderOnce for ThreadItem {
         let timestamp_color = if self.selected || self.hovered {
             Color::Default
         } else {
-            Color::Custom(color.text.opacity(0.68))
+            Color::Muted
         };
 
         let show_tooltip = matches!(
@@ -404,7 +404,10 @@ impl RenderOnce for ThreadItem {
             .w_full()
             .py_1()
             .px_1p5()
-            .when(self.selected, |s| s.bg(color.element_active))
+            .when(self.selected, |s| {
+                s.bg(color.element_selected)
+                    .border_color(color.border_selected)
+            })
             .border_1()
             .border_color(gpui::transparent_black())
             .when(self.focused, |s| s.border_color(color.border_focused))
@@ -756,7 +759,7 @@ impl Component for ThreadItem {
                 container()
                     .child(
                         ThreadItem::new("ti-5e", "Main worktree branch with diff stats")
-                            .icon(IconName::ZedAgent)
+                            .icon(IconName::Sparkle)
                             .worktrees(vec![ThreadItemWorktreeInfo {
                                 worktree_name: Some("zed".into()),
                                 full_path: "/projects/zed".into(),
@@ -837,7 +840,7 @@ impl Component for ThreadItem {
                 container()
                     .child(
                         ThreadItem::new("ti-5i", "Multi-root with per-worktree branches")
-                            .icon(IconName::ZedAgent)
+                            .icon(IconName::Sparkle)
                             .worktrees(vec![
                                 ThreadItemWorktreeInfo {
                                     worktree_name: Some("jade-glen".into()),
@@ -902,7 +905,7 @@ impl Component for ThreadItem {
                 container()
                     .child(
                         ThreadItem::new("ti-5l", "Thread with every metadata field populated")
-                            .icon(IconName::ZedAgent)
+                            .icon(IconName::Sparkle)
                             .project_name("remote-dev")
                             .worktrees(vec![ThreadItemWorktreeInfo {
                                 worktree_name: Some("my-worktree".into()),

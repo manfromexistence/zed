@@ -534,6 +534,8 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(runtime, /DX_FLOW_DATA_ROOT/);
   assert.match(runtime, /FLOW_DATA_DIR/);
   assert.match(runtime, /KokoroTtsRuntime|kokoro_82m/);
+  assert.match(runtime, /server: Arc<Mutex<Option<KokoroTtsServer>>>/);
+  assert.match(runtime, /struct KokoroTtsServer/);
   assert.match(speakText, /cancellation: &FlowSpeechCancellation/);
   assert.match(speakText, /let tts_runtime = self\.tts_runtime\(\)\?/);
   assert.match(ensureSttReady, /Flow STT runtime is not built/);
@@ -552,10 +554,17 @@ test("voice runtime uses Flow speech code instead of dummy text", () => {
   assert.match(synthesize, /DEFAULT_KOKORO_VOICE/);
   assert.match(synthesize, /arg\("--device"\)/);
   assert.match(synthesize, /arg\("cpu"\)/);
+  assert.match(synthesize, /synthesize_with_cached_server/);
+  assert.match(synthesize, /clear_cached_server/);
+  assert.match(synthesize, /synthesize_once/);
+  assert.match(synthesize, /arg\("--server"\)/);
+  assert.match(synthesize, /serde_json::json!/);
+  assert.match(synthesize, /read_response\(TTS_COMMAND_TIMEOUT/);
+  assert.match(synthesize, /recv_timeout/);
   assert.match(synthesize, /apply_tts_process_env/);
   assert.match(synthesize, /TTS_COMMAND_TIMEOUT/);
   assert.match(synthesize, /Friday Kokoro TTS/);
-  assert.match(synthesize, /fs::metadata\(&output_path\)/);
+  assert.match(synthesize, /fs::metadata\(output_path\)/);
   assert.match(synthesize, /fs::remove_file\(&output_path\)/);
   assert.match(runtime, /STT_COMMAND_TIMEOUT/);
   assert.match(runtime, /TTS_COMMAND_TIMEOUT/);
@@ -934,7 +943,7 @@ test("voice playback keeps audio feature wiring and fallback states", () => {
   assert.match(threadView, /#\[cfg\(feature = "audio"\)\]/);
   assert.match(threadView, /#\[cfg\(not\(feature = "audio"\)\)\]/);
   assert.match(threadView, /Kokoro playback failed/);
-  assert.match(threadView, /Zed audio playback is not available in this build/);
+  assert.match(threadView, /Dx audio playback is not available in this build/);
   assert.match(audioModule, /pub use audio_pipeline::\{Audio, AudioPlaybackHandle\}/);
   assert.match(audioPipeline, /pub struct AudioPlaybackHandle/);
   assert.match(audioPipeline, /struct TrackedAudioSource/);
