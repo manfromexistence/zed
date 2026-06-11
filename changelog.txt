@@ -1,3 +1,17 @@
+[2026-06-11] - Agent Rail Liquid Glass Blur And Chromatic Tuning
+
+CHANGED:
+- Fullscreen AI Sources and Agents rails now use rail-only Liquid Glass overrides for the three blur controls: radius, iterations, and downscale.
+- The same rail-only style adds a subtle chromatic aberration with bounded samples for the Liquid Glass background layer.
+- The shared Agent chat-input Liquid Glass settings mapper remains unchanged, so the extra blur/chromatic tuning applies only to the two fullscreen rails.
+
+PASSED:
+- `node --test script\dx-agent-workspaces-source.test.ts script\dx-agent-composer-liquid-glass-source.test.ts`
+- `rustfmt --edition 2024 --config skip_children=true crates\agent_ui\src\dx_launch_workspace.rs`
+
+NOTES:
+- Cargo/build/native runtime proof remains deferred by instruction.
+
 [2026-06-11] - Agent Fullscreen Rail Liquid Glass
 
 CHANGED:

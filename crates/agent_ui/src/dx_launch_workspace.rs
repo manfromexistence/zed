@@ -61,6 +61,12 @@ mod www_evidence;
 
 use self::list_labels::{bounded_items, yes_no};
 
+const DX_RAIL_LIQUID_GLASS_BLUR_RADIUS: f32 = 1.25;
+const DX_RAIL_LIQUID_GLASS_BLUR_ITERATIONS: u32 = 3;
+const DX_RAIL_LIQUID_GLASS_BLUR_DOWNSCALE: f32 = 0.50;
+const DX_RAIL_LIQUID_GLASS_CHROMATIC_ABERRATION: f32 = 0.0015;
+const DX_RAIL_LIQUID_GLASS_ABERRATION_SAMPLES: u32 = 3;
+
 pub(crate) use automation_screen::{
     AutomationCatalogFilter, DxAutomationCatalogState, render_automation_catalog_rows,
     render_automation_screen,
@@ -630,11 +636,11 @@ fn rail_liquid_glass_style(settings: &AgentLiquidGlassSettings) -> LiquidGlassSt
         glow_edge0: settings.glow_edge0,
         glow_edge1: settings.glow_edge1,
         glow_bias: settings.glow_bias,
-        chromatic_aberration: settings.chromatic_aberration,
-        aberration_samples: settings.aberration_samples,
-        blur_radius: settings.blur_radius,
-        blur_iterations: settings.blur_iterations,
-        blur_downscale: settings.blur_downscale,
+        chromatic_aberration: DX_RAIL_LIQUID_GLASS_CHROMATIC_ABERRATION,
+        aberration_samples: DX_RAIL_LIQUID_GLASS_ABERRATION_SAMPLES,
+        blur_radius: DX_RAIL_LIQUID_GLASS_BLUR_RADIUS,
+        blur_iterations: DX_RAIL_LIQUID_GLASS_BLUR_ITERATIONS,
+        blur_downscale: DX_RAIL_LIQUID_GLASS_BLUR_DOWNSCALE,
     }
 }
 
