@@ -49,7 +49,8 @@ pub(super) fn status_strip(
     _cx: &App,
 ) -> AnyElement {
     let (icon, color, label) = state_presentation(state);
-    let tooltip = format!("{detail}\n{workspace_scope}");
+    let tooltip_title = SharedString::from(label);
+    let tooltip_meta = format!("{detail}\n{workspace_scope}");
 
     ListItem::new("dx-forge-status")
         .selectable(false)
@@ -64,7 +65,9 @@ pub(super) fn status_strip(
             ),
         )
         .end_slot(h_flex().flex_none().gap_1().child(actions))
-        .tooltip(Tooltip::text(tooltip))
+        .tooltip(move |_, cx| {
+            Tooltip::with_meta(tooltip_title.clone(), None, tooltip_meta.clone(), cx)
+        })
         .into_any_element()
 }
 
@@ -82,7 +85,13 @@ pub(super) fn section_header(
         .child(
             ListHeader::new(title)
                 .inset(true)
-                .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted)),
+                .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
+                .end_slot(
+                    Label::new(count.to_string())
+                        .size(LabelSize::Small)
+                        .color(Color::Muted)
+                        .truncate(),
+                ),
         )
         .into_any_element()
 }

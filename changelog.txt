@@ -1,3 +1,26 @@
+[2026-06-11] - DX Panel GPUI Compact Polish
+
+ADDED:
+- `crates\agent_ui\src\dx_launch_workspace\style_panel\rows.rs` with shared Style readiness row helpers backed by `ListHeader`, sparse `ListItem`, icon slots, and tooltips.
+
+CHANGED:
+- `crates\agent_ui\src\dx_launch_workspace\style_panel.rs` now renders the DX Style rail as compact section headers and sparse detail rows, keeps readiness file counts bounded, and explains disabled Style controls through tooltip text.
+- `crates\agent_ui\src\dx_forge_panel\rows.rs` and `controls.rs` now keep Forge status and section chrome on shared list/header primitives, move status details into metadata tooltips, and make visible status actions keyboard reachable.
+- `crates\agent_ui\src\dx_check_panel_view.rs` and `dx_check_panel_view\view_rows.rs` now show bounded overflow rows, tooltip-backed notices, honest unavailable result counts, and web-audit status text instead of duplicate status icons.
+- `crates\media_panel\src\media_panel.rs` now renders remote/provider/status rows through sparse `ListItem` chrome rather than framed mini cards.
+- `crates\project_panel\src\media_preview.rs` now keeps the top media shelf header on shared `ListHeader` chrome with compact visible-count and panel-control slots.
+- Focused source guards now pin the GPUI component contracts across Forge, Check, Project media, Media, and Style panel surfaces.
+
+PASSED:
+- `rustfmt --edition 2024` on touched Rust files
+- `rustfmt --edition 2024 --check` on touched Rust files
+- `node --test script\dx-forge-panel-source.test.ts script\dx-check-panel-source.test.ts script\dx-project-panel-source.test.ts script\dx-media-panel-source.test.ts script\dx-style-panel-source.test.ts`
+- Conflict-marker scan across touched files returned no matches
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. `just run`, Cargo build/check/test/clippy, native launch, and runtime visual proof were not run.
+
 [2026-06-10] - DX Sound Asset Pack Foundation
 
 ADDED:

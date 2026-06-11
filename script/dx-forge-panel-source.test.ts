@@ -638,13 +638,15 @@ test("Forge panel uses Git-style controls instead of metric cards", () => {
   assert.match(statusStripBody, /\.spacing\(ListItemSpacing::Sparse\)/);
   assert.match(statusStripBody, /\.start_slot\(/);
   assert.match(statusStripBody, /\.end_slot\(/);
+  assert.match(statusStripBody, /Tooltip::with_meta/);
   assert.match(rows, /ListHeader/);
   assert.match(sectionHeaderBody, /ListHeader::new\(title\)/);
   assert.match(sectionHeaderBody, /div\(\)[\s\S]*\.id\(id\)/);
   assert.match(sectionHeaderBody, /\.inset\(true\)/);
   assert.match(sectionHeaderBody, /\.start_slot\(/);
   assert.match(sectionHeaderBody, /Tooltip::text\(count_tooltip\)/);
-  assert.doesNotMatch(sectionHeaderBody, /\.end_slot\(/);
+  assert.match(sectionHeaderBody, /\.end_slot\([\s\S]*Label::new\(count\.to_string\(\)\)/);
+  assert.match(sectionHeaderBody, /\.color\(Color::Muted\)/);
   assert.doesNotMatch(
     `${statusStripBody}\n${sectionHeaderBody}`,
     /\.h\(px\((?:28|32)\.0\)\)|\.border_1\(\)|\.border_y_1\(\)|\.border_r_2\(\)|ghost_element_hover/,
@@ -682,6 +684,14 @@ test("Forge panel uses Git-style controls instead of metric cards", () => {
   );
   assert.match(controls, /IconButton::new\("dx-forge-open-history", IconName::FolderOpen\)/);
   assert.match(controls, /IconButton::new\("dx-forge-refresh", IconName::RotateCw\)/);
+  assert.match(
+    controls,
+    /IconButton::new\("dx-forge-open-history", IconName::FolderOpen\)[\s\S]*\.tab_index\(0_isize\)/,
+  );
+  assert.match(
+    controls,
+    /IconButton::new\("dx-forge-refresh", IconName::RotateCw\)[\s\S]*\.tab_index\(0_isize\)/,
+  );
   assert.match(controls, /IconButton::new\(id, IconName::ArrowUpRight\)/);
   assert.match(
     controls,

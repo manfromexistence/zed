@@ -264,6 +264,19 @@ pub(crate) fn render_folder_media_shelf(
             cx,
         ));
     }
+    let shelf_visible_count = shelf_cards.len().min(preview.total_count);
+    let header_count_label = format!("{shelf_visible_count} of {}", preview.total_count);
+    let header_controls = h_flex()
+        .gap_1()
+        .items_center()
+        .child(
+            Label::new(header_count_label)
+                .size(LabelSize::Small)
+                .color(Color::Muted)
+                .single_line()
+                .truncate(),
+        )
+        .when_some(panel_controls, |this, controls| this.child(controls));
 
     v_flex()
         .id(SharedString::from(format!(
@@ -284,7 +297,7 @@ pub(crate) fn render_folder_media_shelf(
         .child(
             ListHeader::new("Media")
                 .start_slot(Icon::new(dx_icon(DxUiIcon::Media)).size(IconSize::Small))
-                .end_slot::<AnyElement>(panel_controls),
+                .end_slot(header_controls),
         )
         .child(
             div()

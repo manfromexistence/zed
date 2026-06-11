@@ -20,7 +20,7 @@ use std::{
     sync::{Arc, OnceLock},
     time::Duration,
 };
-use ui::{TintColor, Tooltip, prelude::*};
+use ui::{ListItem, ListItemSpacing, TintColor, Tooltip, prelude::*};
 use url::Url;
 use workspace::{
     DraggedMediaAsset, DraggedMediaKind, Workspace,
@@ -1583,42 +1583,29 @@ impl MediaPanel {
     ) -> impl IntoElement {
         let description = remote_browser_description(provider_count, self.kind_filter);
         let tooltip = remote_browser_tooltip(provider_count, self.kind_filter);
-        h_flex()
-            .id("media-panel-remote-browser-row")
-            .gap_2()
-            .items_center()
-            .p_2()
-            .rounded_sm()
-            .border_1()
-            .border_color(cx.theme().colors().border_variant)
-            .bg(cx.theme().colors().element_background)
+        ListItem::new("media-panel-remote-browser-row")
+            .inset(true)
+            .spacing(ListItemSpacing::Sparse)
+            .selectable(false)
+            .start_slot(
+                Icon::new(IconName::Public)
+                    .size(IconSize::Small)
+                    .color(Color::Muted),
+            )
             .tooltip(Tooltip::text(tooltip))
             .child(
-                div()
-                    .w(px(64.))
-                    .h(px(48.))
-                    .rounded_sm()
-                    .border_1()
-                    .border_color(cx.theme().colors().border_variant)
-                    .bg(cx.theme().colors().elevated_surface_background)
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .child(Icon::new(IconName::Public).size(IconSize::Medium)),
-            )
-            .child(
                 v_flex()
-                    .flex_1()
-                    .gap_1()
+                    .min_w_0()
+                    .gap_0p5()
                     .child(Label::new("Browse remote providers").size(LabelSize::Small))
                     .child(
                         Label::new(description)
-                            .size(LabelSize::XSmall)
+                            .size(LabelSize::Small)
                             .color(Color::Muted)
                             .truncate(),
                     ),
             )
-            .child(
+            .end_slot(
                 Button::new("media-panel-browse-remote-row", "Open")
                     .style(ButtonStyle::Subtle)
                     .size(ButtonSize::Compact)
@@ -1633,30 +1620,23 @@ impl MediaPanel {
         warning: SharedString,
         cx: &mut Context<Self>,
     ) -> impl IntoElement {
-        h_flex()
-            .id("media-panel-remote-warning-row")
-            .gap_2()
-            .items_center()
-            .p_2()
-            .rounded_sm()
-            .border_1()
-            .border_color(cx.theme().colors().border_variant)
-            .bg(cx.theme().colors().element_background)
+        ListItem::new("media-panel-remote-warning-row")
+            .inset(true)
+            .spacing(ListItemSpacing::Sparse)
+            .selectable(false)
             .tooltip(Tooltip::text(warning.clone()))
-            .child(
+            .start_slot(
                 Icon::new(IconName::Warning)
                     .size(IconSize::Small)
                     .color(Color::Warning),
             )
             .child(
-                div().flex_1().child(
-                    Label::new(warning)
-                        .size(LabelSize::XSmall)
-                        .color(Color::Warning)
-                        .truncate(),
-                ),
+                Label::new(warning)
+                    .size(LabelSize::Small)
+                    .color(Color::Warning)
+                    .truncate(),
             )
-            .child(
+            .end_slot(
                 Button::new("media-panel-retry-remote-warning", "Retry")
                     .style(ButtonStyle::Subtle)
                     .size(ButtonSize::Compact)
@@ -1666,29 +1646,22 @@ impl MediaPanel {
             )
     }
 
-    fn render_status_row(&self, status: SharedString, cx: &mut Context<Self>) -> impl IntoElement {
-        h_flex()
-            .id("media-panel-status-row")
-            .gap_2()
-            .items_center()
-            .p_2()
-            .rounded_sm()
-            .border_1()
-            .border_color(cx.theme().colors().border_variant)
-            .bg(cx.theme().colors().element_background)
+    fn render_status_row(&self, status: SharedString, _cx: &mut Context<Self>) -> impl IntoElement {
+        ListItem::new("media-panel-status-row")
+            .inset(true)
+            .spacing(ListItemSpacing::Sparse)
+            .selectable(false)
             .tooltip(Tooltip::text(status.clone()))
-            .child(
+            .start_slot(
                 Icon::new(IconName::Info)
                     .size(IconSize::Small)
                     .color(Color::Muted),
             )
             .child(
-                div().flex_1().child(
-                    Label::new(status)
-                        .size(LabelSize::XSmall)
-                        .color(Color::Muted)
-                        .truncate(),
-                ),
+                Label::new(status)
+                    .size(LabelSize::Small)
+                    .color(Color::Muted)
+                    .truncate(),
             )
     }
 
@@ -1703,17 +1676,12 @@ impl MediaPanel {
         } else {
             Color::Warning
         };
-        h_flex()
-            .id("media-panel-remote-health-row")
-            .gap_2()
-            .items_center()
-            .p_2()
-            .rounded_sm()
-            .border_1()
-            .border_color(cx.theme().colors().border_variant)
-            .bg(cx.theme().colors().element_background)
+        ListItem::new("media-panel-remote-health-row")
+            .inset(true)
+            .spacing(ListItemSpacing::Sparse)
+            .selectable(false)
             .tooltip(Tooltip::text(description.clone()))
-            .child(
+            .start_slot(
                 Icon::new(IconName::Public)
                     .size(IconSize::Small)
                     .color(color),
@@ -1724,17 +1692,17 @@ impl MediaPanel {
                     .gap_0p5()
                     .child(
                         Label::new("Remote provider health")
-                            .size(LabelSize::XSmall)
+                            .size(LabelSize::Small)
                             .color(Color::Muted),
                     )
                     .child(
                         Label::new(description)
-                            .size(LabelSize::XSmall)
+                            .size(LabelSize::Small)
                             .color(color)
                             .truncate(),
                     ),
             )
-            .child(
+            .end_slot(
                 IconButton::new("media-panel-refresh-remote-health", IconName::RotateCw)
                     .shape(ui::IconButtonShape::Square)
                     .icon_size(IconSize::Small)
@@ -1745,18 +1713,14 @@ impl MediaPanel {
             )
     }
 
-    fn render_remote_loading_row(&self, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render_remote_loading_row(&self, _cx: &mut Context<Self>) -> impl IntoElement {
         let description = remote_loading_description(self.kind_filter);
-        h_flex()
-            .id("media-panel-remote-loading-row")
-            .gap_2()
-            .items_center()
-            .p_2()
-            .rounded_sm()
-            .border_1()
-            .border_color(cx.theme().colors().border_variant)
-            .bg(cx.theme().colors().element_background)
-            .child(
+        ListItem::new("media-panel-remote-loading-row")
+            .inset(true)
+            .spacing(ListItemSpacing::Sparse)
+            .selectable(false)
+            .tooltip(Tooltip::text(description.clone()))
+            .start_slot(
                 Icon::new(IconName::RotateCw)
                     .size(IconSize::Small)
                     .color(Color::Muted),
@@ -1767,12 +1731,12 @@ impl MediaPanel {
                     .gap_0p5()
                     .child(
                         Label::new("Fetching remote media")
-                            .size(LabelSize::XSmall)
+                            .size(LabelSize::Small)
                             .color(Color::Muted),
                     )
                     .child(
                         Label::new(description)
-                            .size(LabelSize::XSmall)
+                            .size(LabelSize::Small)
                             .color(Color::Muted)
                             .truncate(),
                     ),

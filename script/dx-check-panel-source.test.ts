@@ -120,6 +120,10 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   const renderStatusStrip = functionBody(view, "render_status_strip");
   const renderToolbar = functionBody(view, "render_toolbar");
   const section = functionBody(rows, "section");
+  const noticeRow = functionBody(rows, "notice_row");
+  const webAuditRow = functionBody(rows, "web_audit_row");
+  const overflowRow = functionBody(rows, "overflow_row");
+  const outcomeLabel = functionBody(rows, "outcome_label");
   const checkTab = functionBody(tabs, "check_tab");
 
   assert.match(renderHeader, /h_flex\(\)/);
@@ -156,6 +160,17 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   assert.match(rows, /fn check_snapshot_has_result_signal\(snapshot: &DxCheckPanelSnapshot\) -> bool/);
   assert.match(rows, /snapshot\.score_value\.is_some\(\)/);
   assert.match(rows, /!\s*snapshot\.sections\.is_empty\(\)/);
+  assert.match(view, /const MAX_WEB_AUDIT_ROWS: usize = 8;/);
+  assert.match(view, /overflow_row\(\s*"dx-check-section-overflow"/);
+  assert.match(view, /overflow_row\(\s*"dx-check-web-audit-overflow"/);
+  assert.match(noticeRow, /Tooltip::text\(tooltip\)/);
+  assert.match(webAuditRow, /Label::new\(audit\.status\.clone\(\)\)/);
+  assert.doesNotMatch(webAuditRow, /\.end_slot\(\s*Icon::new\(icon\)/);
+  assert.match(overflowRow, /ListItem::new\(id\.into\(\)\)/);
+  assert.match(overflowRow, /IconName::Ellipsis/);
+  assert.match(outcomeLabel, /Counts unavailable/);
+  assert.match(outcomeLabel, /check_count_label\(pass_count\)/);
+  assert.doesNotMatch(outcomeLabel, /unwrap_or\(0\)/);
   assert.doesNotMatch(tabs, /count_chip|Divider::vertical|border_b_1|ghost_element|editor_background/);
   assert.doesNotMatch(
     `${view}\n${rows}\n${tabs}`,

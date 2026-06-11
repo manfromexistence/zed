@@ -26,6 +26,7 @@ pub(super) fn status_actions(
                 .shape(IconButtonShape::Square)
                 .icon_size(IconSize::Small)
                 .icon_color(Color::Muted)
+                .tab_index(0_isize)
                 .disabled(!history_enabled)
                 .tooltip(Tooltip::text(if history_enabled {
                     "Open Forge history"
@@ -45,6 +46,7 @@ pub(super) fn status_actions(
             IconButton::new("dx-forge-refresh", IconName::RotateCw)
                 .shape(IconButtonShape::Square)
                 .icon_size(IconSize::Small)
+                .tab_index(0_isize)
                 .tooltip(Tooltip::text("Refresh Forge"))
                 .on_click({
                     let panel = panel.clone();

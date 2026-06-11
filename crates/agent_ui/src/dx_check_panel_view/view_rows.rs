@@ -87,6 +87,9 @@ pub(super) fn notice_row(
     next_action: Option<&str>,
 ) -> AnyElement {
     let id = id.into();
+    let tooltip = next_action
+        .map(|next_action| format!("{message}\n{next_action}"))
+        .unwrap_or_else(|| message.to_string());
     let mut content = v_flex().min_w_0().gap_0p5().child(
         Label::new(message.to_string())
             .size(LabelSize::Small)
@@ -107,6 +110,7 @@ pub(super) fn notice_row(
         .spacing(ListItemSpacing::Sparse)
         .start_slot(Icon::new(icon).size(IconSize::Small).color(color))
         .child(content)
+        .tooltip(Tooltip::text(tooltip))
         .into_any_element()
 }
 
@@ -245,6 +249,7 @@ pub(super) fn empty_row(message: &'static str) -> AnyElement {
                 .color(Color::Muted)
                 .truncate(),
         )
+        .tooltip(Tooltip::text(message))
         .into_any_element()
 }
 
@@ -286,8 +291,39 @@ pub(super) fn web_audit_row(index: usize, audit: &DxCheckPanelWebAudit, _cx: &Ap
                         .truncate_start(),
                 ),
         )
-        .end_slot(Icon::new(icon).size(IconSize::Small).color(color))
+        .end_slot(
+            Label::new(audit.status.clone())
+                .size(LabelSize::Small)
+                .color(color)
+                .truncate(),
+        )
         .tooltip(Tooltip::text(tooltip))
+        .into_any_element()
+}
+
+pub(super) fn overflow_row(
+    id: impl Into<SharedString>,
+    hidden_count: usize,
+    label: &'static str,
+) -> AnyElement {
+    let message = format!("{hidden_count} more {label} not shown");
+
+    ListItem::new(id.into())
+        .inset(true)
+        .spacing(ListItemSpacing::Sparse)
+        .selectable(false)
+        .start_slot(
+            Icon::new(IconName::Ellipsis)
+                .size(IconSize::Small)
+                .color(Color::Muted),
+        )
+        .child(
+            Label::new(message.clone())
+                .size(LabelSize::Small)
+                .color(Color::Muted)
+                .truncate(),
+        )
+        .tooltip(Tooltip::text(message))
         .into_any_element()
 }
 
@@ -318,13 +354,26 @@ pub(super) fn outcome_label(
     warn_count: Option<u32>,
     skipped_count: Option<u32>,
 ) -> String {
+    if [pass_count, fail_count, warn_count, skipped_count]
+        .iter()
+        .all(Option::is_none)
+    {
+        return "Counts unavailable".to_string();
+    }
+
     format!(
         "{} pass / {} fail / {} warn / {} skipped",
-        pass_count.unwrap_or(0),
-        fail_count.unwrap_or(0),
-        warn_count.unwrap_or(0),
-        skipped_count.unwrap_or(0)
+        check_count_label(pass_count),
+        check_count_label(fail_count),
+        check_count_label(warn_count),
+        check_count_label(skipped_count)
     )
+}
+
+fn check_count_label(count: Option<u32>) -> String {
+    count
+        .map(|count| count.to_string())
+        .unwrap_or_else(|| "--".to_string())
 }
 
 pub(super) fn duration_label(duration_ms: Option<u64>) -> String {

@@ -20,7 +20,8 @@ use crate::dx_check_panel::{
 };
 use crate::dx_check_panel_view::view_rows::{
     adapter_plan_row, config_label, count_label, detail_row, duration_label, empty_row, notice_row,
-    notice_title, outcome_label, quick_fix_row, section, section_row, status_color, web_audit_row,
+    notice_title, outcome_label, overflow_row, quick_fix_row, section, section_row, status_color,
+    web_audit_row,
 };
 
 mod tabs;
@@ -33,6 +34,7 @@ const MAX_SECTION_ROWS: usize = 8;
 const MAX_NOTICE_ROWS: usize = 4;
 const MAX_QUICK_FIX_ROWS: usize = 4;
 const MAX_ADAPTER_PLAN_ROWS: usize = 4;
+const MAX_WEB_AUDIT_ROWS: usize = 8;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 enum DxCheckPanelSectionKind {
@@ -438,6 +440,13 @@ impl DxCheckPanel {
                 for section in snapshot.sections.iter().take(MAX_SECTION_ROWS) {
                     stack = stack.child(section_row(section));
                 }
+                if snapshot.sections.len() > MAX_SECTION_ROWS {
+                    stack = stack.child(overflow_row(
+                        "dx-check-section-overflow",
+                        snapshot.sections.len() - MAX_SECTION_ROWS,
+                        "section scores",
+                    ));
+                }
             }
         }
         stack.into_any_element()
@@ -462,6 +471,13 @@ impl DxCheckPanel {
                     .enumerate()
                 {
                     stack = stack.child(adapter_plan_row(index, plan));
+                }
+                if snapshot.adapter_plans.len() > MAX_ADAPTER_PLAN_ROWS {
+                    stack = stack.child(overflow_row(
+                        "dx-check-adapter-plan-overflow",
+                        snapshot.adapter_plans.len() - MAX_ADAPTER_PLAN_ROWS,
+                        "adapter plans",
+                    ));
                 }
             }
         }
@@ -489,6 +505,13 @@ impl DxCheckPanel {
                     blocker.next_action.as_deref(),
                 ));
             }
+            if snapshot.blockers.len() > MAX_NOTICE_ROWS {
+                stack = stack.child(overflow_row(
+                    "dx-check-blocker-overflow",
+                    snapshot.blockers.len() - MAX_NOTICE_ROWS,
+                    "blockers",
+                ));
+            }
             for (index, warning) in snapshot.warnings.iter().take(MAX_NOTICE_ROWS).enumerate() {
                 stack = stack.child(notice_row(
                     format!("dx-check-warning-{index}"),
@@ -496,6 +519,13 @@ impl DxCheckPanel {
                     Color::Warning,
                     &notice_title(warning),
                     warning.next_action.as_deref(),
+                ));
+            }
+            if snapshot.warnings.len() > MAX_NOTICE_ROWS {
+                stack = stack.child(overflow_row(
+                    "dx-check-warning-overflow",
+                    snapshot.warnings.len() - MAX_NOTICE_ROWS,
+                    "warnings",
                 ));
             }
         }
@@ -522,6 +552,13 @@ impl DxCheckPanel {
                 {
                     stack = stack.child(quick_fix_row(index, fix));
                 }
+                if snapshot.quick_fixes.len() > MAX_QUICK_FIX_ROWS {
+                    stack = stack.child(overflow_row(
+                        "dx-check-quick-fix-overflow",
+                        snapshot.quick_fixes.len() - MAX_QUICK_FIX_ROWS,
+                        "quick fixes",
+                    ));
+                }
             }
         }
         stack.into_any_element()
@@ -539,8 +576,20 @@ impl DxCheckPanel {
             if snapshot.web_audits.is_empty() {
                 stack = stack.child(empty_row("No web-audit results in the latest receipt."));
             } else {
-                for (index, audit) in snapshot.web_audits.iter().enumerate() {
+                for (index, audit) in snapshot
+                    .web_audits
+                    .iter()
+                    .take(MAX_WEB_AUDIT_ROWS)
+                    .enumerate()
+                {
                     stack = stack.child(web_audit_row(index, audit, cx));
+                }
+                if snapshot.web_audits.len() > MAX_WEB_AUDIT_ROWS {
+                    stack = stack.child(overflow_row(
+                        "dx-check-web-audit-overflow",
+                        snapshot.web_audits.len() - MAX_WEB_AUDIT_ROWS,
+                        "web-audit rows",
+                    ));
                 }
             }
         }

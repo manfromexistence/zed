@@ -367,7 +367,7 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   assertBefore({
     body: source,
     before: ".child(self.render_dx_explorer_header(",
-    after: ".map(|this| {\n                            if let Some(toolbar) = selected_entries_toolbar",
+    after: /\.map\(\|this\| \{\s*if let Some\(toolbar\) = selected_entries_toolbar/,
     message: "DX Explorer header should render before the selected-entry toolbar and tree",
   });
 });
@@ -1580,9 +1580,11 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
   );
   assert.match(
     renderFolderMediaShelf,
-    /ListHeader::new\("Media"\)[\s\S]*\.start_slot\(Icon::new\(dx_icon\(DxUiIcon::Media\)\)[\s\S]*\.end_slot(?:::<AnyElement>)?\(panel_controls\)/,
-    "top media shelf should use the shared ListHeader component and keep real panel controls in the end slot",
+    /ListHeader::new\("Media"\)[\s\S]*\.start_slot\(Icon::new\(dx_icon\(DxUiIcon::Media\)\)[\s\S]*\.end_slot\(header_controls\)/,
+    "top media shelf should use the shared ListHeader component and keep compact header controls in the end slot",
   );
+  assert.match(renderFolderMediaShelf, /let header_count_label = format!\("\{shelf_visible_count\} of \{\}", preview\.total_count\)/);
+  assert.match(renderFolderMediaShelf, /\.when_some\(panel_controls, \|this, controls\| this\.child\(controls\)\)/);
   assert.match(
     renderFolderMediaShelf,
     /render_media_shelf_overflow_card\([\s\S]*preview,[\s\S]*focus_handle\.clone\(\),[\s\S]*cx/,
@@ -1631,7 +1633,7 @@ test("project panel media preview is lazy, bounded, and preserves normal tree ro
     message: "media previews must be read only after confirming an expanded directory",
   });
   const mediaPreviewBranch = detailsForEntry.match(
-    /let media_preview = if entry\.kind\.is_dir\(\) && is_expanded \{[\s\S]*?\n        \} else \{\n            None\n        \};/,
+    /let media_preview = if entry\.kind\.is_dir\(\) && is_expanded \{\s*self\.cached_folder_media_preview\(worktree_id, entry\.id\)\s*\} else \{\s*None\s*\};/,
   );
   assert.ok(
     mediaPreviewBranch,
@@ -2287,8 +2289,8 @@ test("project panel media preview renders direct image previews and video frames
   );
   assert.match(
     renderFolderMediaShelf,
-    /ListHeader::new\("Media"\)[\s\S]*\.end_slot(?:::<AnyElement>)?\(panel_controls\)/,
-    "folder media shelf header must use shared GPUI chrome and keep only real panel controls in the end slot",
+    /ListHeader::new\("Media"\)[\s\S]*\.end_slot\(header_controls\)/,
+    "folder media shelf header must use shared GPUI chrome and keep compact header controls in the end slot",
   );
   assert.doesNotMatch(
     renderFolderMediaShelf,

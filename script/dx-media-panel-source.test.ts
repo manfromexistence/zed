@@ -152,10 +152,31 @@ test("media panel renders bridge state and filters fetched remote rows by query"
   const render = panelSource.slice(panelSource.indexOf("impl Render for MediaPanel"));
   const matchingRemoteAssets = functionBody(panelSource, "matching_remote_assets");
   const remoteSignature = functionBody(panelSource, "media_remote_signature");
+  const renderRemoteBrowserRow = functionBody(panelSource, "render_remote_browser_row");
+  const renderRemoteWarningRow = functionBody(panelSource, "render_remote_warning_row");
+  const renderStatusRow = functionBody(panelSource, "render_status_row");
+  const renderRemoteHealthRow = functionBody(panelSource, "render_remote_health_row");
+  const renderRemoteLoadingRow = functionBody(panelSource, "render_remote_loading_row");
+  const remotePanelRows = [
+    renderRemoteBrowserRow,
+    renderRemoteWarningRow,
+    renderStatusRow,
+    renderRemoteHealthRow,
+    renderRemoteLoadingRow,
+  ].join("\n");
 
+  assert.match(panelSource, /use ui::\{[\s\S]*ListItem,[\s\S]*ListItemSpacing/);
   assert.match(panelSource, /fn render_status_row\(/);
   assert.match(render, /let status = self\.status\.clone\(\);/);
   assert.match(render, /render_status_row\(status, cx\)/);
+  assert.match(renderRemoteBrowserRow, /ListItem::new\("media-panel-remote-browser-row"\)/);
+  assert.match(renderRemoteWarningRow, /ListItem::new\("media-panel-remote-warning-row"\)/);
+  assert.match(renderStatusRow, /ListItem::new\("media-panel-status-row"\)/);
+  assert.match(renderRemoteHealthRow, /ListItem::new\("media-panel-remote-health-row"\)/);
+  assert.match(renderRemoteLoadingRow, /ListItem::new\("media-panel-remote-loading-row"\)/);
+  assert.match(remotePanelRows, /\.spacing\(ListItemSpacing::Sparse\)/);
+  assert.match(remotePanelRows, /\.selectable\(false\)/);
+  assert.doesNotMatch(remotePanelRows, /\.border_1\(\)|\.rounded\(/);
   assert.match(
     matchingRemoteAssets,
     /if !query_terms\.is_empty\(\) && !remote_media_search_matches\(asset, query_terms\)/,
