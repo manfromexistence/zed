@@ -7986,14 +7986,14 @@ fn ai_page(cx: &App) -> SettingsPage {
             ),
             liquid_glass_setting_item!(
                 "Mouse Control",
-                "Preserve whether the standalone glass surface follows pointer movement.",
+                "Move the glass center with the pointer while it is over the Agent composer.",
                 "agent.liquid_glass.mouse_control",
                 mouse_control,
                 bool
             ),
             liquid_glass_vector_setting_item!(
                 "Position X",
-                "Standalone glass center X position in pixels.",
+                "Glass center X position in the Liquid Glass reference frame.",
                 "agent.liquid_glass.position.0",
                 position,
                 0,
@@ -8001,7 +8001,7 @@ fn ai_page(cx: &App) -> SettingsPage {
             ),
             liquid_glass_vector_setting_item!(
                 "Position Y",
-                "Standalone glass center Y position in pixels.",
+                "Glass center Y position in the Liquid Glass reference frame.",
                 "agent.liquid_glass.position.1",
                 position,
                 1,
@@ -8016,7 +8016,7 @@ fn ai_page(cx: &App) -> SettingsPage {
             ),
             liquid_glass_vector_setting_item!(
                 "Camera Position X",
-                "Standalone camera X position in world units.",
+                "Reference camera X offset kept with Liquid Glass presets.",
                 "agent.liquid_glass.camera_position.0",
                 camera_position,
                 0,
@@ -8024,7 +8024,7 @@ fn ai_page(cx: &App) -> SettingsPage {
             ),
             liquid_glass_vector_setting_item!(
                 "Camera Position Y",
-                "Standalone camera Y position in world units.",
+                "Reference camera Y offset kept with Liquid Glass presets.",
                 "agent.liquid_glass.camera_position.1",
                 camera_position,
                 1,
@@ -8032,28 +8032,28 @@ fn ai_page(cx: &App) -> SettingsPage {
             ),
             liquid_glass_setting_item!(
                 "Velocity",
-                "Standalone glass movement speed.",
+                "Reference glass movement speed for Liquid Glass presets.",
                 "agent.liquid_glass.velocity",
                 velocity,
                 f32
             ),
             liquid_glass_setting_item!(
                 "Camera Velocity",
-                "Standalone camera movement speed.",
+                "Reference camera movement speed for Liquid Glass presets.",
                 "agent.liquid_glass.camera_velocity",
                 camera_velocity,
                 f32
             ),
             liquid_glass_setting_item!(
                 "Background",
-                "Background index from the recovered Liquid Glass app.",
+                "Background preset index retained with the Liquid Glass material state.",
                 "agent.liquid_glass.current_bg",
                 current_bg,
                 usize
             ),
             liquid_glass_setting_item!(
                 "Glass Variant",
-                "Glass material variant index from the recovered Liquid Glass app.",
+                "Material geometry variant; it supplies the composer glass size when width or height is not overridden.",
                 "agent.liquid_glass.glass_variant",
                 glass_variant,
                 usize

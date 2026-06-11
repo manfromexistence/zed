@@ -1504,6 +1504,11 @@ impl MetalRenderer {
             *instance_offset as u64,
         );
         command_encoder.set_fragment_bytes(
+            SpriteInputIndex::ViewportSize as u64,
+            mem::size_of_val(&viewport_size) as u64,
+            &viewport_size as *const Size<DevicePixels> as *const _,
+        );
+        command_encoder.set_fragment_bytes(
             SpriteInputIndex::AtlasTextureSize as u64,
             mem::size_of_val(&texture_size) as u64,
             &texture_size as *const Size<DevicePixels> as *const _,

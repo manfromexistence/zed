@@ -10,8 +10,17 @@ const messageEditor = read("crates/agent_ui/src/message_editor.rs");
 const agentSettings = read("crates/agent_settings/src/agent_settings.rs");
 const settingsContentAgent = read("crates/settings_content/src/agent.rs");
 const settingsPageData = read("crates/settings_ui/src/page_data.rs");
+const liquidGlassElement = read("crates/liquid_glass/src/element.rs");
+const liquidGlassBackgrounds = read("crates/liquid_glass/src/backgrounds.rs");
 const liquidGlassLib = read("crates/liquid_glass/src/lib.rs");
 const liquidGlassState = read("crates/liquid_glass/src/ui_state.rs");
+const composerLiquidGlass = read(
+  "crates/agent_ui/src/conversation_view/liquid_glass_composer.rs",
+);
+const macosRenderer = read("crates/gpui_macos/src/metal_renderer.rs");
+const macosShader = read("crates/gpui_macos/src/shaders.metal");
+const wgpuShader = read("crates/gpui_wgpu/src/shaders.wgsl");
+const windowsShader = read("crates/gpui_windows/src/shaders.hlsl");
 const registry = read("script/dx-handoff-source-guard-registry.test.ts");
 
 const escapeRegExp = (text: string) =>
@@ -19,7 +28,7 @@ const escapeRegExp = (text: string) =>
 
 const functionBody = (source: string, name: string): string => {
   const signature = new RegExp(
-    `\\n    (?:pub\\(crate\\)\\s+|pub\\s+)?fn ${name}\\(`,
+    `\\n\\s*(?:pub\\(crate\\)\\s+|pub\\(super\\)\\s+|pub\\s+)?fn ${name}\\(`,
   );
   const match = signature.exec(source);
   assert.ok(match?.index !== undefined, `expected function ${name}`);
@@ -52,17 +61,17 @@ test("Agent composer mounts the shared Liquid Glass renderer primitive", () => {
   );
 
   assert.match(agentCargo, /liquid_glass\.workspace = true/);
-  assert.match(threadView, /use liquid_glass::\{/);
-  assert.match(threadView, /bounded_liquid_glass_layer/);
-  assert.match(threadView, /load_liquid_glass_backdrop_carrier/);
-  assert.match(threadView, /liquid_glass_style_from_settings/);
+  assert.match(composerLiquidGlass, /use liquid_glass::\{/);
+  assert.match(threadView, /render_agent_liquid_glass_message_editor_surface/);
+  assert.match(composerLiquidGlass, /load_liquid_glass_backdrop_carrier/);
+  assert.match(composerLiquidGlass, /agent_liquid_glass_geometry_from_settings/);
+  assert.match(composerLiquidGlass, /agent_liquid_glass_style_from_settings/);
   assert.match(renderMessageEditor, /render_liquid_glass_message_editor_surface\(/);
   assert.match(renderGlassSurface, /AgentSettings::get_global\(cx\)\.liquid_glass\.clone\(\)/);
-  assert.match(renderGlassSurface, /load_liquid_glass_backdrop_carrier\(\)/);
-  assert.match(renderGlassSurface, /bounded_liquid_glass_layer\(/);
-  assert.match(renderGlassSurface, /liquid_glass_style_from_settings\(&settings\)/);
-  assert.match(renderGlassSurface, /\.absolute\(\)\s*\.inset_0\(\)/);
-  assert.match(renderGlassSurface, /\.child\(glass_layer\)/);
+  assert.match(renderGlassSurface, /if !settings\.enabled\s*\{\s*return None;\s*\}/);
+  assert.match(renderGlassSurface, /render_agent_liquid_glass_message_editor_surface\(/);
+  assert.match(renderMessageEditor, /let uses_liquid_glass = glass_surface\.is_some\(\)/);
+  assert.match(renderMessageEditor, /if uses_liquid_glass\s*\{\s*colors\.panel_background\.opacity\(0\.08\)/);
   assert.match(renderMessageEditor, /self\.message_editor\.clone\(\)/);
   assert.match(renderMessageEditor, /self\.render_add_context_button\(cx\)/);
   assert.match(renderMessageEditor, /self\.render_profile_option_slots\(cx\)/);
@@ -73,6 +82,40 @@ test("Agent composer mounts the shared Liquid Glass renderer primitive", () => {
     /background: cx\.theme\(\)\.system\(\)\.transparent/,
   );
   assert.doesNotMatch(threadView, /composer_liquid_glass|paint_liquid_glass\(/);
+});
+
+test("Agent composer uses recovered Liquid Glass geometry instead of full-rectangle glass", () => {
+  const geometryLayer = functionBody(
+    liquidGlassElement,
+    "liquid_glass_layer_with_geometry",
+  );
+
+  assert.match(liquidGlassElement, /pub struct LiquidGlassGeometry/);
+  assert.match(liquidGlassElement, /pub fn glass_bounds\(/);
+  assert.match(liquidGlassElement, /width \* pixel_scale/);
+  assert.match(liquidGlassElement, /height \* pixel_scale/);
+  assert.match(liquidGlassElement, /Bounds::centered_at/);
+  assert.match(liquidGlassElement, /window\.mouse_position\(\)/);
+  assert.match(liquidGlassElement, /source_bounds\.contains\(&mouse_position\)/);
+  assert.match(
+    geometryLayer,
+    /style\.paint\(\s*window,\s*bounds,\s*geometry\.glass_bounds/,
+  );
+  assert.doesNotMatch(
+    geometryLayer,
+    /style\.paint\(window, bounds, bounds, source_image\.clone\(\)\)/,
+  );
+
+  assert.match(composerLiquidGlass, /agent_liquid_glass_geometry_from_settings/);
+  assert.match(composerLiquidGlass, /settings\.width/);
+  assert.match(composerLiquidGlass, /settings\.height/);
+  assert.match(composerLiquidGlass, /settings\.pixel_scale/);
+  assert.match(composerLiquidGlass, /settings\.position/);
+  assert.match(composerLiquidGlass, /settings\.mouse_control/);
+  assert.match(liquidGlassElement, /log::debug!\("failed to paint Liquid Glass layer: \{error\}"\)/);
+  assert.doesNotMatch(liquidGlassElement, /let _ = window\.paint_liquid_glass/);
+  assert.match(liquidGlassBackgrounds, /static BACKDROP_CARRIER: OnceLock<Arc<RenderImage>>/);
+  assert.match(liquidGlassBackgrounds, /\.get_or_init\(\|\|/);
 });
 
 test("Agent Liquid Glass settings preserve the tuned recovered Rust effect values", () => {
@@ -90,7 +133,22 @@ test("Agent Liquid Glass settings preserve the tuned recovered Rust effect value
     agentSettings,
     /impl From<settings::AgentLiquidGlassSettingsContent> for AgentLiquidGlassSettings/,
   );
-  assert.match(liquidGlassLib, /pub fn liquid_glass_style_from_settings/);
+  assert.doesNotMatch(
+    liquidGlassLib,
+    /agent_settings::AgentLiquidGlassSettings/,
+    "shared Liquid Glass crate must not depend on Agent settings types",
+  );
+  assert.doesNotMatch(
+    read("crates/liquid_glass/Cargo.toml"),
+    /agent_settings/,
+    "shared Liquid Glass crate must stay settings-neutral",
+  );
+  assert.match(composerLiquidGlass, /pub\(super\) fn agent_liquid_glass_style_from_settings/);
+  assert.match(agentSettings, /const LIQUID_GLASS_BACKGROUND_COUNT: usize = 11/);
+  assert.match(agentSettings, /const LIQUID_GLASS_VARIANT_SIZES: &\[\(f32, f32\)\]/);
+  assert.match(agentSettings, /sanitize_f32\(content\.width, variant_width, 0\.01, 10\.0\)/);
+  assert.match(agentSettings, /sanitize_f32\(content\.height, variant_height, 0\.01, 10\.0\)/);
+  assert.match(agentSettings, /sanitize_pair\(/);
 
   for (const [field, value] of [
     ["power_factor", "3.0"],
@@ -126,6 +184,39 @@ test("Agent Liquid Glass settings preserve the tuned recovered Rust effect value
       `expected tuned default ${field} = ${value}`,
     );
   }
+});
+
+test("platform Liquid Glass shaders preserve recovered glow and backdrop behavior", () => {
+  for (const [name, source] of [
+    ["wgpu", wgpuShader],
+    ["windows", windowsShader],
+    ["macos", macosShader],
+  ] as const) {
+    assert.doesNotMatch(
+      source,
+      /max\(edge1 - edge0, 0\.00001\)/,
+      `${name} shader must preserve reversed glow smoothstep edges`,
+    );
+    assert.match(
+      source,
+      /denominator = edge1 - edge0/,
+      `${name} shader must keep the signed smoothstep denominator`,
+    );
+    assert.doesNotMatch(
+      source,
+      /(?:vec3<f32>|float3)\(0\.93,\s*0\.95,\s*0\.99\)/,
+      `${name} shader must not force a milky tint over the recovered effect`,
+    );
+    assert.doesNotMatch(
+      source,
+      /(?:mix|lerp)\(color\.a,\s*0\.18,\s*0\.82\)/,
+      `${name} shader must not override recovered alpha behavior`,
+    );
+  }
+
+  const drawLiquidGlass = functionBody(macosRenderer, "draw_liquid_glass");
+  assert.match(drawLiquidGlass, /set_vertex_bytes\(\s*SpriteInputIndex::ViewportSize/);
+  assert.match(drawLiquidGlass, /set_fragment_bytes\(\s*SpriteInputIndex::ViewportSize/);
 });
 
 test("Settings UI exposes permanent Agent Liquid Glass controls", () => {

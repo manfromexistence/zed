@@ -24,10 +24,6 @@ use language_model::{
     FastModeConfirmation, LanguageModelEffortLevel, LanguageModelId, LanguageModelProviderId,
     LanguageModelRegistry, Speed,
 };
-use liquid_glass::{
-    bounded_liquid_glass_layer, liquid_glass_style_from_settings,
-    load_liquid_glass_backdrop_carrier,
-};
 use settings::update_settings_file;
 use ui::{ButtonLike, SpinnerLabel, SpinnerVariant, SplitButton, SplitButtonStyle, Tab};
 use workspace::SERIALIZATION_THROTTLE_TIME;
@@ -36,6 +32,7 @@ use workspace::notifications::NotificationId;
 use super::composer_profile_options::{
     ComposerOptionEntry, ComposerOptionSlot, ComposerProfileKind,
 };
+use super::liquid_glass_composer::render_agent_liquid_glass_message_editor_surface;
 use super::voice_controls::{
     ComposerVoiceAvailability, ComposerVoicePhase, ComposerVoiceState, render_voice_buttons,
     render_voice_recording_panel,
@@ -3859,6 +3856,7 @@ impl ThreadView {
         let expands_editor_area = editor_expanded && has_messages;
         let colors = cx.theme().colors();
         let glass_surface = self.render_liquid_glass_message_editor_surface(cx);
+        let uses_liquid_glass = glass_surface.is_some();
 
         h_flex()
             .px_2()
@@ -3889,7 +3887,11 @@ impl ThreadView {
                     .rounded_md()
                     .border_1()
                     .border_color(colors.border)
-                    .bg(colors.panel_background.opacity(0.72))
+                    .bg(if uses_liquid_glass {
+                        colors.panel_background.opacity(0.08)
+                    } else {
+                        colors.panel_background.opacity(0.72)
+                    })
                     .p_1p5()
                     .shadow_sm()
                     .flex_shrink_1()
@@ -4029,20 +4031,7 @@ impl ThreadView {
             return None;
         }
 
-        let glass_layer = bounded_liquid_glass_layer(
-            load_liquid_glass_backdrop_carrier(),
-            liquid_glass_style_from_settings(&settings),
-        );
-
-        Some(
-            div()
-                .id("agent-composer-liquid-glass-surface")
-                .absolute()
-                .inset_0()
-                .overflow_hidden()
-                .child(glass_layer)
-                .into_any_element(),
-        )
+        Some(render_agent_liquid_glass_message_editor_surface(&settings))
     }
 
     fn render_profile_option_slots(&self, cx: &mut Context<Self>) -> Vec<AnyElement> {

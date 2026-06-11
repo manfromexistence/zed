@@ -166,6 +166,34 @@ pub struct AgentLiquidGlassSettings {
     pub glass_variant: usize,
 }
 
+const LIQUID_GLASS_BACKGROUND_COUNT: usize = 11;
+const LIQUID_GLASS_VARIANT_SIZES: &[(f32, f32)] = &[
+    (3.5, 3.5),
+    (3.5, 3.5),
+    (8.0, 0.8),
+    (1.2, 1.2),
+    (4.0, 4.0),
+    (6.0, 1.0),
+    (6.0, 4.0),
+    (5.0, 5.0),
+    (3.0, 6.0),
+    (3.0, 7.0),
+    (1.5, 1.5),
+    (2.0, 2.0),
+    (2.5, 2.5),
+    (4.0, 4.0),
+    (3.0, 1.5),
+    (8.0, 3.0),
+    (2.5, 8.0),
+    (2.5, 8.0),
+    (3.0, 5.0),
+    (2.0, 2.0),
+    (2.0, 2.0),
+    (5.0, 0.5),
+    (4.0, 3.0),
+    (3.0, 2.0),
+];
+
 impl Default for AgentLiquidGlassSettings {
     fn default() -> Self {
         Self {
@@ -203,41 +231,101 @@ impl Default for AgentLiquidGlassSettings {
 impl From<settings::AgentLiquidGlassSettingsContent> for AgentLiquidGlassSettings {
     fn from(content: settings::AgentLiquidGlassSettingsContent) -> Self {
         let defaults = Self::default();
+        let glass_variant = sanitize_usize(
+            content.glass_variant,
+            defaults.glass_variant,
+            LIQUID_GLASS_VARIANT_SIZES.len().saturating_sub(1),
+        );
+        let (variant_width, variant_height) = LIQUID_GLASS_VARIANT_SIZES[glass_variant];
 
         Self {
             enabled: content.enabled.unwrap_or(defaults.enabled),
-            power_factor: content.power_factor.unwrap_or(defaults.power_factor),
-            width: content.width.unwrap_or(defaults.width),
-            height: content.height.unwrap_or(defaults.height),
-            a: content.a.unwrap_or(defaults.a),
-            b: content.b.unwrap_or(defaults.b),
-            c: content.c.unwrap_or(defaults.c),
-            d: content.d.unwrap_or(defaults.d),
-            f_power: content.f_power.unwrap_or(defaults.f_power),
-            noise: content.noise.unwrap_or(defaults.noise),
-            glow_weight: content.glow_weight.unwrap_or(defaults.glow_weight),
-            glow_edge0: content.glow_edge0.unwrap_or(defaults.glow_edge0),
-            glow_edge1: content.glow_edge1.unwrap_or(defaults.glow_edge1),
-            glow_bias: content.glow_bias.unwrap_or(defaults.glow_bias),
-            chromatic_aberration: content
-                .chromatic_aberration
-                .unwrap_or(defaults.chromatic_aberration),
-            aberration_samples: content
-                .aberration_samples
-                .unwrap_or(defaults.aberration_samples),
-            blur_radius: content.blur_radius.unwrap_or(defaults.blur_radius),
-            blur_iterations: content.blur_iterations.unwrap_or(defaults.blur_iterations),
-            blur_downscale: content.blur_downscale.unwrap_or(defaults.blur_downscale),
+            power_factor: sanitize_f32(content.power_factor, defaults.power_factor, 1.001, 6.0),
+            width: sanitize_f32(content.width, variant_width, 0.01, 10.0),
+            height: sanitize_f32(content.height, variant_height, 0.01, 10.0),
+            a: sanitize_f32(content.a, defaults.a, 0.0, 5.0),
+            b: sanitize_f32(content.b, defaults.b, 0.0, 6.0),
+            c: sanitize_f32(content.c, defaults.c, 0.0, 6.0),
+            d: sanitize_f32(content.d, defaults.d, 0.0, 10.0),
+            f_power: sanitize_f32(content.f_power, defaults.f_power, -1.5, 6.0),
+            noise: sanitize_f32(content.noise, defaults.noise, 0.0, 0.3),
+            glow_weight: sanitize_f32(content.glow_weight, defaults.glow_weight, -1.0, 1.0),
+            glow_edge0: sanitize_f32(content.glow_edge0, defaults.glow_edge0, -1.0, 1.0),
+            glow_edge1: sanitize_f32(content.glow_edge1, defaults.glow_edge1, -1.0, 1.0),
+            glow_bias: sanitize_f32(content.glow_bias, defaults.glow_bias, -1.0, 1.0),
+            chromatic_aberration: sanitize_f32(
+                content.chromatic_aberration,
+                defaults.chromatic_aberration,
+                0.0,
+                0.02,
+            ),
+            aberration_samples: sanitize_u32(
+                content.aberration_samples,
+                defaults.aberration_samples,
+                1,
+                8,
+            ),
+            blur_radius: sanitize_f32(content.blur_radius, defaults.blur_radius, 0.0, 10.0),
+            blur_iterations: sanitize_u32(content.blur_iterations, defaults.blur_iterations, 0, 10),
+            blur_downscale: sanitize_f32(content.blur_downscale, defaults.blur_downscale, 0.1, 1.0),
             mouse_control: content.mouse_control.unwrap_or(defaults.mouse_control),
-            position: content.position.unwrap_or(defaults.position),
-            pixel_scale: content.pixel_scale.unwrap_or(defaults.pixel_scale),
-            camera_position: content.camera_position.unwrap_or(defaults.camera_position),
-            velocity: content.velocity.unwrap_or(defaults.velocity),
-            camera_velocity: content.camera_velocity.unwrap_or(defaults.camera_velocity),
-            current_bg: content.current_bg.unwrap_or(defaults.current_bg),
-            glass_variant: content.glass_variant.unwrap_or(defaults.glass_variant),
+            position: sanitize_pair(
+                content.position,
+                defaults.position,
+                [0.0, 0.0],
+                [1024.0, 768.0],
+            ),
+            pixel_scale: sanitize_f32(content.pixel_scale, defaults.pixel_scale, 1.0, 512.0),
+            camera_position: sanitize_pair(
+                content.camera_position,
+                defaults.camera_position,
+                [-1024.0, -1024.0],
+                [1024.0, 1024.0],
+            ),
+            velocity: sanitize_f32(content.velocity, defaults.velocity, 0.0, 20.0),
+            camera_velocity: sanitize_f32(
+                content.camera_velocity,
+                defaults.camera_velocity,
+                0.0,
+                20.0,
+            ),
+            current_bg: sanitize_usize(
+                content.current_bg,
+                defaults.current_bg,
+                LIQUID_GLASS_BACKGROUND_COUNT.saturating_sub(1),
+            ),
+            glass_variant,
         }
     }
+}
+
+fn sanitize_f32(value: Option<f32>, fallback: f32, min: f32, max: f32) -> f32 {
+    value
+        .filter(|value| value.is_finite())
+        .unwrap_or(fallback)
+        .clamp(min, max)
+}
+
+fn sanitize_u32(value: Option<u32>, fallback: u32, min: u32, max: u32) -> u32 {
+    value.unwrap_or(fallback).clamp(min, max)
+}
+
+fn sanitize_usize(value: Option<usize>, fallback: usize, max: usize) -> usize {
+    value.unwrap_or(fallback).min(max)
+}
+
+fn sanitize_pair(
+    value: Option<[f32; 2]>,
+    fallback: [f32; 2],
+    min: [f32; 2],
+    max: [f32; 2],
+) -> [f32; 2] {
+    let value = value.unwrap_or(fallback);
+
+    [
+        sanitize_f32(Some(value[0]), fallback[0], min[0], max[0]),
+        sanitize_f32(Some(value[1]), fallback[1], min[1], max[1]),
+    ]
 }
 
 #[derive(Clone, Debug, RegisterSetting)]

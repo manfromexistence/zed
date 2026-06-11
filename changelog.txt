@@ -1,3 +1,27 @@
+[2026-06-11] - Agent Composer Liquid Glass Correction
+
+FIXED:
+- Agent composer Liquid Glass now uses geometry-sized glass bounds from the recovered reference values instead of stretching glass over the full composer rectangle.
+- The composer shell now keeps a near-transparent background while Liquid Glass is enabled, so the GPUI renderer can preserve live backdrop refraction instead of reading a flattened panel fill.
+- Liquid Glass shaders now preserve reversed smoothstep edges for the recovered glow settings and no longer force the old milky tint/alpha override.
+- macOS Liquid Glass rendering now binds viewport size to the fragment stage, matching the shader contract.
+- The transparent backdrop carrier image is cached and Liquid Glass paint errors are logged at debug level instead of being silently discarded.
+
+CHANGED:
+- The shared `liquid_glass` crate now exposes settings-neutral geometry/style primitives, while Agent-owned settings mapping lives in `agent_ui`.
+- Agent Liquid Glass runtime settings are sanitized before use, including variant-driven fallback sizing and bounded numeric/vector fields.
+- Agent Liquid Glass settings copy now describes the composer behavior and permanent material state without referring to the standalone reference app.
+
+PASSED:
+- `node --test script\dx-agent-composer-liquid-glass-source.test.ts`
+- `node --test script\dx-handoff-source-guard-registry.test.ts`
+- `rustfmt --edition 2024 --config skip_children=true --check crates\agent_settings\src\agent_settings.rs crates\agent_ui\src\conversation_view.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\conversation_view\liquid_glass_composer.rs crates\gpui_macos\src\metal_renderer.rs crates\liquid_glass\src\backgrounds.rs crates\liquid_glass\src\element.rs crates\liquid_glass\src\lib.rs crates\settings_ui\src\page_data.rs`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)"` on touched source files returned no matches
+- `git diff --check`
+
+NOTES:
+- Cargo/build/native runtime proof remains deferred by instruction.
+
 [2026-06-11] - Agent Composer Liquid Glass Foundation
 
 CHANGED:
