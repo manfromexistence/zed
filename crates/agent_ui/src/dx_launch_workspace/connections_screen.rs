@@ -1,34 +1,114 @@
 use gpui::{AnyElement, App, IntoElement, SharedString};
-use ui::{
-    AiSettingItem, AiSettingItemSource, AiSettingItemStatus, IconName, ListItem, ListItemSpacing,
-    prelude::*,
-};
+use ui::{AiSettingItem, AiSettingItemSource, AiSettingItemStatus, IconName, prelude::*};
 
 use crate::dx_agent_bridge::DxAgentBridgeSnapshot;
 
-use super::{DxLaunchWorkspaceStatus, agents, metric_row, muted_card, section_title};
+use super::screen_chrome::{
+    screen_detail_row, screen_detail_stack, screen_empty_state, screen_section,
+    workspace_page_header, workspace_stat,
+};
+use super::{DxLaunchWorkspaceStatus, agents};
 
 pub(crate) fn render_connections_screen(
     status: Option<&DxLaunchWorkspaceStatus>,
     cx: &mut App,
 ) -> AnyElement {
-    let body = if let Some(status) = status {
+    let (header_stats, body) = if let Some(status) = status {
         let snapshot = &status.agent_bridge;
-        v_flex()
-            .gap_2()
-            .child(section_title("Providers", dx_icon(DxUiIcon::Gateway)))
-            .child(agents::dx_agent_provider_state(snapshot, cx))
-            .child(section_title("Channels", dx_icon(DxUiIcon::Channels)))
-            .child(channel_state(snapshot, cx))
-            .child(section_title("Social", dx_icon(DxUiIcon::Connections)))
-            .child(agents::dx_agent_social_state(snapshot, cx))
-            .child(section_title("Gateway", dx_icon(DxUiIcon::Gateway)))
-            .child(gateway_state(snapshot))
-            .child(section_title("Credentials", dx_icon(DxUiIcon::Credentials)))
-            .child(credential_state(snapshot))
-            .into_any_element()
+        (
+            vec![
+                workspace_stat(
+                    "dx-connections-stat-supported",
+                    "Supported",
+                    snapshot.connected_accounts_summary.supported.to_string(),
+                    cx,
+                ),
+                workspace_stat(
+                    "dx-connections-stat-configured",
+                    "Configured",
+                    snapshot.connected_accounts_summary.configured.to_string(),
+                    cx,
+                ),
+                workspace_stat(
+                    "dx-connections-stat-connected",
+                    "Connected",
+                    snapshot.connected_accounts_summary.connected.to_string(),
+                    cx,
+                ),
+                workspace_stat(
+                    "dx-connections-stat-auth",
+                    "Needs auth",
+                    snapshot.connected_accounts_summary.needs_auth.to_string(),
+                    cx,
+                ),
+            ],
+            v_flex()
+                .gap_3()
+                .child(screen_section(
+                    "dx-connections-providers",
+                    "Providers",
+                    dx_icon(DxUiIcon::Gateway),
+                    format!(
+                        "{} providers / {} models",
+                        snapshot.providers.len(),
+                        snapshot.models.len()
+                    ),
+                    agents::dx_agent_provider_state(snapshot, cx),
+                    cx,
+                ))
+                .child(screen_section(
+                    "dx-connections-channels",
+                    "Channels",
+                    dx_icon(DxUiIcon::Channels),
+                    format!(
+                        "{} supported / {} needs auth",
+                        snapshot.connected_accounts_summary.supported,
+                        snapshot.connected_accounts_summary.needs_auth
+                    ),
+                    channel_state(snapshot, cx),
+                    cx,
+                ))
+                .child(screen_section(
+                    "dx-connections-social",
+                    "Social",
+                    dx_icon(DxUiIcon::Connections),
+                    format!("{} account rows", snapshot.social_accounts.len()),
+                    agents::dx_agent_social_state(snapshot, cx),
+                    cx,
+                ))
+                .child(screen_section(
+                    "dx-connections-gateway",
+                    "Gateway",
+                    dx_icon(DxUiIcon::Gateway),
+                    snapshot.status.clone(),
+                    gateway_state(snapshot),
+                    cx,
+                ))
+                .child(screen_section(
+                    "dx-connections-credentials",
+                    "Credentials",
+                    dx_icon(DxUiIcon::Credentials),
+                    credential_summary(snapshot),
+                    credential_state(snapshot),
+                    cx,
+                ))
+                .into_any_element(),
+        )
     } else {
-        muted_card("Loading provider, social, and credential receipts", cx)
+        (
+            vec![workspace_stat(
+                "dx-connections-stat-loading",
+                "State",
+                "Loading",
+                cx,
+            )],
+            screen_empty_state(
+                "dx-connections-loading",
+                dx_icon(DxUiIcon::Receipts),
+                "Loading provider, social, and credential receipts",
+                cx,
+            ),
+        )
     };
 
     div()
@@ -41,10 +121,12 @@ pub(crate) fn render_connections_screen(
             v_flex()
                 .gap_3()
                 .p_4()
-                .child(screen_header(
+                .child(workspace_page_header(
                     dx_icon(DxUiIcon::Connections),
                     "Connections",
                     "Providers, channels, social accounts, gateway readiness, and credential health.",
+                    header_stats,
+                    cx,
                 ))
                 .child(body),
         )
@@ -54,19 +136,27 @@ pub(crate) fn render_connections_screen(
 fn channel_state(snapshot: &DxAgentBridgeSnapshot, cx: &App) -> AnyElement {
     v_flex()
         .gap_1()
-        .child(metric_row(
+        .child(screen_detail_row(
+            "dx-connections-channels-supported".into(),
+            dx_icon(DxUiIcon::Channels),
             "Supported",
             snapshot.connected_accounts_summary.supported.to_string(),
         ))
-        .child(metric_row(
+        .child(screen_detail_row(
+            "dx-connections-channels-configured".into(),
+            dx_icon(DxUiIcon::Credentials),
             "Configured",
             snapshot.connected_accounts_summary.configured.to_string(),
         ))
-        .child(metric_row(
+        .child(screen_detail_row(
+            "dx-connections-channels-connected".into(),
+            dx_icon(DxUiIcon::Connections),
             "Connected",
             snapshot.connected_accounts_summary.connected.to_string(),
         ))
-        .child(metric_row(
+        .child(screen_detail_row(
+            "dx-connections-channels-needs-auth".into(),
+            IconName::Warning,
             "Needs auth",
             snapshot.connected_accounts_summary.needs_auth.to_string(),
         ))
@@ -79,7 +169,12 @@ fn channel_state(snapshot: &DxAgentBridgeSnapshot, cx: &App) -> AnyElement {
             "Run social list receipts until the channel contract lands.",
         ))
         .when(snapshot.social_accounts.is_empty(), |stack| {
-            stack.child(muted_card("Run social list receipt", cx))
+            stack.child(screen_empty_state(
+                "dx-connections-channels-empty",
+                dx_icon(DxUiIcon::Receipts),
+                "Run social list receipt",
+                cx,
+            ))
         })
         .into_any_element()
 }
@@ -87,12 +182,21 @@ fn channel_state(snapshot: &DxAgentBridgeSnapshot, cx: &App) -> AnyElement {
 fn gateway_state(snapshot: &DxAgentBridgeSnapshot) -> AnyElement {
     v_flex()
         .gap_1()
-        .child(metric_row("Bridge", snapshot.status.clone()))
-        .child(metric_row(
+        .child(screen_detail_row(
+            "dx-connections-gateway-bridge".into(),
+            dx_icon(DxUiIcon::Gateway),
+            "Bridge",
+            snapshot.status.clone(),
+        ))
+        .child(screen_detail_row(
+            "dx-connections-gateway-provider-catalog".into(),
+            IconName::FileTextOutlined,
             "Provider catalog",
             snapshot.contract_summary.provider_catalog_source.clone(),
         ))
-        .child(metric_row(
+        .child(screen_detail_row(
+            "dx-connections-gateway-receipts".into(),
+            dx_icon(DxUiIcon::Receipts),
             "Catalog receipts",
             snapshot
                 .contract_summary
@@ -108,6 +212,31 @@ fn gateway_state(snapshot: &DxAgentBridgeSnapshot) -> AnyElement {
             snapshot.contract_summary.next_action.clone(),
         ))
         .into_any_element()
+}
+
+fn credential_summary(snapshot: &DxAgentBridgeSnapshot) -> String {
+    let errors = snapshot
+        .providers
+        .iter()
+        .filter(|provider| provider.credential_error.is_some())
+        .count()
+        + snapshot
+            .social_accounts
+            .iter()
+            .filter(|account| account.credential_error.is_some())
+            .count();
+    let expirations = snapshot
+        .providers
+        .iter()
+        .filter(|provider| provider.credential_expires_at.is_some())
+        .count()
+        + snapshot
+            .social_accounts
+            .iter()
+            .filter(|account| account.credential_expires_at.is_some())
+            .count();
+
+    format!("{errors} issues / {expirations} expiry rows")
 }
 
 fn credential_state(snapshot: &DxAgentBridgeSnapshot) -> AnyElement {
@@ -156,26 +285,26 @@ fn credential_state(snapshot: &DxAgentBridgeSnapshot) -> AnyElement {
         AiSettingItemStatus::Error => "Needs attention",
         _ => "Receipt required",
     })
-    .details(connection_detail_stack(vec![
-        connection_detail_row(
+    .details(screen_detail_stack(vec![
+        screen_detail_row(
             "dx-connections-credential-provider-errors".into(),
             IconName::Warning,
             "Provider errors",
             provider_error_count.to_string(),
         ),
-        connection_detail_row(
+        screen_detail_row(
             "dx-connections-credential-social-errors".into(),
             IconName::Warning,
             "Social errors",
             social_error_count.to_string(),
         ),
-        connection_detail_row(
+        screen_detail_row(
             "dx-connections-credential-expiry".into(),
             IconName::Clock,
             "Expiry rows",
             expiry_count.to_string(),
         ),
-        connection_detail_row(
+        screen_detail_row(
             "dx-connections-credential-action".into(),
             IconName::FileTextOutlined,
             "Next action",
@@ -201,14 +330,14 @@ fn unavailable_row(
     )
     .icon(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
     .detail_label(detail_label)
-    .details(connection_detail_stack(vec![
-        connection_detail_row(
+    .details(screen_detail_stack(vec![
+        screen_detail_row(
             format!("{id}-state").into(),
             IconName::Warning,
             "State",
             state,
         ),
-        connection_detail_row(
+        screen_detail_row(
             format!("{id}-action").into(),
             IconName::FileTextOutlined,
             "Next action",
@@ -216,60 +345,4 @@ fn unavailable_row(
         ),
     ]))
     .into_any_element()
-}
-
-fn screen_header(icon: IconName, title: &'static str, detail: &'static str) -> AnyElement {
-    h_flex()
-        .items_start()
-        .gap_2()
-        .child(Icon::new(icon).size(IconSize::Medium).color(Color::Muted))
-        .child(
-            v_flex()
-                .gap_0p5()
-                .child(
-                    Label::new(title)
-                        .size(LabelSize::Default)
-                        .color(Color::Default),
-                )
-                .child(
-                    Label::new(detail)
-                        .size(LabelSize::XSmall)
-                        .color(Color::Muted),
-                ),
-        )
-        .into_any_element()
-}
-
-fn connection_detail_stack(rows: Vec<AnyElement>) -> AnyElement {
-    v_flex().gap_0p5().pl_4().children(rows).into_any_element()
-}
-
-fn connection_detail_row(
-    id: SharedString,
-    icon: IconName,
-    label: impl Into<SharedString>,
-    detail: impl Into<SharedString>,
-) -> AnyElement {
-    ListItem::new(id)
-        .spacing(ListItemSpacing::ExtraDense)
-        .selectable(false)
-        .start_slot(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted))
-        .child(
-            h_flex()
-                .min_w_0()
-                .gap_1()
-                .child(
-                    Label::new(label.into())
-                        .size(LabelSize::XSmall)
-                        .color(Color::Muted)
-                        .flex_none(),
-                )
-                .child(
-                    Label::new(detail.into())
-                        .size(LabelSize::XSmall)
-                        .color(Color::Default)
-                        .truncate(),
-                ),
-        )
-        .into_any_element()
 }

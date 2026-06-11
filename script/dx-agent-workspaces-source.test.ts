@@ -134,10 +134,13 @@ test("DX agent workspace taxonomy has first-class Zed screens", () => {
 test("Connections workspace is wired to provider, channel, social, gateway, and credential state", () => {
   const dxWorkspace = read("crates/agent_ui/src/dx_launch_workspace.rs");
   const screen = read("crates/agent_ui/src/dx_launch_workspace/connections_screen.rs");
+  const chrome = read("crates/agent_ui/src/dx_launch_workspace/screen_chrome.rs");
   const bridge = read("crates/agent_ui/src/dx_agent_bridge.rs");
   const connectionsScreen = read("crates/agent_ui/src/connections_screen.rs");
 
   assert.ok(existsSync("crates/agent_ui/src/dx_launch_workspace/connections_screen.rs"));
+  assert.ok(existsSync("crates/agent_ui/src/dx_launch_workspace/screen_chrome.rs"));
+  assert.match(dxWorkspace, /^mod screen_chrome;$/m);
   assert.match(dxWorkspace, /^mod connections_screen;$/m);
   assert.match(dxWorkspace, /pub\(crate\) use connections_screen::render_connections_screen;/);
   assert.match(connectionsScreen, /AgentPanel::new_connections_workspace\(workspace, window, cx\)/);
@@ -146,8 +149,10 @@ test("Connections workspace is wired to provider, channel, social, gateway, and 
   assert.match(connectionsScreen, /fn can_split\(&self\) -> bool \{\s*false\s*\}/);
 
   for (const title of ["Providers", "Channels", "Social", "Gateway", "Credentials"]) {
-    assert.match(screen, new RegExp(`section_title\\("${title}"`));
+    assert.match(screen, new RegExp(`screen_section\\(\\s*"dx-connections-${title.toLowerCase()}"`));
   }
+  assert.match(screen, /workspace_page_header\(/);
+  assert.match(screen, /workspace_stat\(/);
   assert.match(screen, /agents::dx_agent_provider_state\(snapshot, cx\)/);
   assert.match(screen, /agents::dx_agent_social_state\(snapshot, cx\)/);
   assert.match(screen, /connected_accounts_summary/);
@@ -156,7 +161,8 @@ test("Connections workspace is wired to provider, channel, social, gateway, and 
   assert.match(screen, /No DX Agents channel receipt\/schema is available yet\./);
   assert.match(screen, /No first-class provider gateway health receipt is available yet\./);
   assert.match(screen, /AiSettingItem::new/);
-  assert.match(screen, /ListItem::new/);
+  assert.match(screen, /screen_detail_row\(/);
+  assert.match(chrome, /ListItem::new/);
 
   for (const field of [
     "provider_id",

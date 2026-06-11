@@ -43,6 +43,8 @@ test("DX connection UI uses semantic icons and real Zed sidebar routes", () => {
 
 test("DX connection entities render with Zed AI/list components, not ad hoc badges", () => {
   const agents = read("crates/agent_ui/src/dx_launch_workspace/agents.rs");
+  const social = read("crates/agent_ui/src/dx_launch_workspace/agents/social.rs");
+  const providers = read("crates/agent_ui/src/dx_launch_workspace/agents/providers.rs");
   const connectionRows = read(
     "crates/agent_ui/src/dx_launch_workspace/agents/connection_rows.rs",
   );
@@ -77,6 +79,10 @@ test("DX connection entities render with Zed AI/list components, not ad hoc badg
   assert.match(socialRows, /credential_error/);
   assert.match(providerRows, /provider_status/);
   assert.match(automationRows, /automation_status/);
+  assert.match(social, /screen_detail_row\(/);
+  assert.match(providers, /screen_detail_row\(/);
+  assert.doesNotMatch(`${social}\n${providers}`, /\bmetric_row\(/);
+  assert.doesNotMatch(`${social}\n${providers}`, /\bmuted_card\(/);
 });
 
 test("DX connection UI keeps missing channels and gateways explicit", () => {
@@ -100,8 +106,31 @@ test("DX connection UI keeps missing channels and gateways explicit", () => {
 
   assert.match(launchWorkspace, /section_title\(\s*"Agent Connections",\s*dx_icon\(DxUiIcon::Connections\),\s*\)/);
   assert.match(launchWorkspace, /section_title\("Agent Providers", dx_icon\(DxUiIcon::Gateway\)\)/);
-  assert.match(connectionsScreen, /section_title\("Channels", dx_icon\(DxUiIcon::Channels\)\)/);
-  assert.match(connectionsScreen, /section_title\("Gateway", dx_icon\(DxUiIcon::Gateway\)\)/);
+  assert.match(connectionsScreen, /workspace_page_header\(\s*dx_icon\(DxUiIcon::Connections\)/);
+  assert.match(connectionsScreen, /screen_section\(\s*"dx-connections-channels"/);
+  assert.match(connectionsScreen, /screen_section\(\s*"dx-connections-gateway"/);
   assert.match(connectionsScreen, /No DX Agents channel receipt\/schema is available yet\./);
   assert.match(connectionsScreen, /No first-class provider gateway health receipt is available yet\./);
+});
+
+test("DX Connections workspace follows the Extensions-style GPUI page pattern", () => {
+  const launchWorkspace = read("crates/agent_ui/src/dx_launch_workspace.rs");
+  const chrome = read("crates/agent_ui/src/dx_launch_workspace/screen_chrome.rs");
+  const connectionsScreen = read(
+    "crates/agent_ui/src/dx_launch_workspace/connections_screen.rs",
+  );
+
+  assert.match(launchWorkspace, /^mod screen_chrome;$/m);
+  assert.match(chrome, /Headline::new\(title\)\.size\(HeadlineSize::Large\)/);
+  assert.match(chrome, /ListHeader::new\(title\)/);
+  assert.match(chrome, /elevated_surface_background\.opacity\(0\.5\)/);
+  assert.match(chrome, /border_color\(cx\.theme\(\)\.colors\(\)\.border_variant\)/);
+
+  assert.match(connectionsScreen, /use super::screen_chrome::\{/);
+  assert.match(connectionsScreen, /workspace_page_header\(/);
+  assert.match(connectionsScreen, /screen_section\(/);
+  assert.match(connectionsScreen, /workspace_stat\(/);
+  assert.match(connectionsScreen, /screen_detail_row\(/);
+  assert.doesNotMatch(connectionsScreen, /section_title\(/);
+  assert.doesNotMatch(connectionsScreen, /ListItemSpacing::ExtraDense/);
 });

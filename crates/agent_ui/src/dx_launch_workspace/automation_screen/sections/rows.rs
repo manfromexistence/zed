@@ -6,6 +6,8 @@ use ui::{
 
 use crate::dx_agent_bridge::{DxAgentAutomation, DxAgentAutomationHistoryEntry};
 
+use super::super::super::screen_chrome::{screen_detail_row, screen_detail_stack};
+
 pub(super) fn automation_schedule_row(
     id: SharedString,
     automation: &DxAgentAutomation,
@@ -22,20 +24,20 @@ pub(super) fn automation_schedule_row(
             .color(Color::Muted),
     )
     .detail_label(automation.status.state.clone())
-    .details(detail_stack(vec![
-        detail_row(
+    .details(screen_detail_stack(vec![
+        screen_detail_row(
             format!("{id}-schedule").into(),
             IconName::Clock,
             "Schedule",
             schedule_label(automation),
         ),
-        detail_row(
+        screen_detail_row(
             format!("{id}-destination").into(),
             dx_icon(DxUiIcon::Channels),
             "Destination",
             destination_label(automation),
         ),
-        detail_row(
+        screen_detail_row(
             format!("{id}-source").into(),
             IconName::FileTextOutlined,
             "Source",
@@ -64,20 +66,20 @@ pub(super) fn automation_run_row(id: SharedString, automation: &DxAgentAutomatio
     } else {
         "Proof pending"
     })
-    .details(detail_stack(vec![
-        detail_row(
+    .details(screen_detail_stack(vec![
+        screen_detail_row(
             format!("{id}-last").into(),
             IconName::HistoryRerun,
             "Last run",
             automation.last_run.clone(),
         ),
-        detail_row(
+        screen_detail_row(
             format!("{id}-next").into(),
             IconName::Clock,
             "Next run",
             automation.next_run.clone(),
         ),
-        detail_row(
+        screen_detail_row(
             format!("{id}-receipt").into(),
             dx_icon(DxUiIcon::Receipts),
             "Receipts",
@@ -103,14 +105,14 @@ pub(super) fn automation_failure_row(
             .color(Color::Warning),
     )
     .detail_label("Execution proof failed")
-    .details(detail_stack(vec![
-        detail_row(
+    .details(screen_detail_stack(vec![
+        screen_detail_row(
             format!("{id}-state").into(),
             IconName::Warning,
             "State",
             automation.status.state.clone(),
         ),
-        detail_row(
+        screen_detail_row(
             format!("{id}-next").into(),
             IconName::FileTextOutlined,
             "Next action",
@@ -126,11 +128,12 @@ pub(super) fn history_row(
     entry: &DxAgentAutomationHistoryEntry,
 ) -> AnyElement {
     ListItem::new(id)
-        .spacing(ListItemSpacing::ExtraDense)
+        .inset(true)
+        .spacing(ListItemSpacing::Sparse)
         .selectable(false)
         .start_slot(
             Icon::new(IconName::HistoryRerun)
-                .size(IconSize::XSmall)
+                .size(IconSize::Small)
                 .color(Color::Muted),
         )
         .child(
@@ -139,7 +142,7 @@ pub(super) fn history_row(
                 .gap_1()
                 .child(
                     Label::new(automation.name.clone())
-                        .size(LabelSize::XSmall)
+                        .size(LabelSize::Small)
                         .color(Color::Muted)
                         .flex_none(),
                 )
@@ -148,43 +151,9 @@ pub(super) fn history_row(
                         "{} {} {}",
                         entry.run_id, entry.status, entry.finished_at
                     ))
-                    .size(LabelSize::XSmall)
+                    .size(LabelSize::Small)
                     .color(Color::Default)
                     .truncate(),
-                ),
-        )
-        .into_any_element()
-}
-
-pub(super) fn detail_stack(rows: Vec<AnyElement>) -> AnyElement {
-    v_flex().gap_0p5().pl_4().children(rows).into_any_element()
-}
-
-pub(super) fn detail_row(
-    id: SharedString,
-    icon: IconName,
-    label: impl Into<SharedString>,
-    detail: impl Into<SharedString>,
-) -> AnyElement {
-    ListItem::new(id)
-        .spacing(ListItemSpacing::ExtraDense)
-        .selectable(false)
-        .start_slot(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted))
-        .child(
-            h_flex()
-                .min_w_0()
-                .gap_1()
-                .child(
-                    Label::new(label.into())
-                        .size(LabelSize::XSmall)
-                        .color(Color::Muted)
-                        .flex_none(),
-                )
-                .child(
-                    Label::new(detail.into())
-                        .size(LabelSize::XSmall)
-                        .color(Color::Default)
-                        .truncate(),
                 ),
         )
         .into_any_element()

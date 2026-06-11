@@ -46,6 +46,7 @@ mod list_labels;
 mod proof;
 mod proof_labels;
 mod readiness;
+mod screen_chrome;
 mod source_audit;
 mod sources;
 mod style_panel;

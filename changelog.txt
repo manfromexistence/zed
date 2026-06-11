@@ -1,3 +1,24 @@
+[2026-06-11] - DX Connections And Automations GPUI Polish
+
+ADDED:
+- `crates/agent_ui/src/dx_launch_workspace/screen_chrome.rs` now provides shared DX workspace page chrome: large GPUI `Headline` headers, source-backed stat cards, bordered `ListHeader` section cards, readable sparse detail rows, and honest empty rows.
+- `crates/agent_ui/src/dx_launch_workspace/automation_screen/sections/drafts.rs` keeps automation composer rendering focused after the screen-card refactor.
+
+CHANGED:
+- Connections now renders Providers, Channels, Social, Gateway, and Credentials inside Extension-style GPUI section cards with summary stats and sparse detail rows instead of small section-title text stacks.
+- Automations now renders Drafts, Schedules, Runs, History, and Failures with the same shared page chrome while preserving receipt-backed disabled/unavailable states and execution-proof honesty.
+- Provider and social subsections now use shared GPUI detail/empty rows instead of raw metric/muted-card text rows.
+
+HARDENED:
+- Focused source guards now prevent Connections and Automations from regressing to `section_title`, `metric_row`, `muted_card`, or `ExtraDense` list chrome in the DX-owned workspace surfaces.
+
+PASSED:
+- `rustfmt --edition 2024` on the touched Rust files.
+- `node --test script/dx-agent-connections-ui-source.test.ts script/dx-automations-source.test.ts`
+
+NOTES:
+- Cargo, `just run`, native launch, visual runtime proof, local servers, and browser automation remain deferred by instruction.
+
 [2026-06-11] - DX Plugins Secure Credential Modal
 
 ADDED:
