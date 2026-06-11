@@ -221,8 +221,27 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
   );
 
   for (const title of ["Workflow Nodes", "Browser", "Computer", "MCP", "Receipts", "Permissions"]) {
-    assert.match(screen, new RegExp(`section_title\\("${title}"`));
+    const id = title.toLowerCase().replaceAll(" ", "-");
+    assert.match(screen, new RegExp(`screen_section\\(\\s*"dx-tools-${id}"`));
   }
+  assert.match(screen, /use super::screen_chrome::\{/);
+  for (const helper of [
+    "workspace_page_header",
+    "workspace_stat",
+    "screen_section",
+    "screen_detail_row",
+    "screen_detail_stack",
+    "screen_empty_state",
+  ]) {
+    assert.match(screen, new RegExp(`\\b${helper}\\b`));
+  }
+  assert.doesNotMatch(screen, /section_title\(/);
+  assert.doesNotMatch(screen, /muted_card\(/);
+  assert.doesNotMatch(screen, /metric_row\(/);
+  assert.doesNotMatch(screen, /fn screen_header\(/);
+  assert.doesNotMatch(screen, /fn tool_detail_row\(/);
+  assert.doesNotMatch(screen, /fn tool_detail_stack\(/);
+  assert.doesNotMatch(screen, /ListItemSpacing::ExtraDense/);
   assert.match(screen, /catalog::render_workflow_node_catalog\(/);
   assert.match(catalogScreen, /pub\(crate\) struct DxPluginsCatalogState/);
   assert.match(catalogScreen, /UniformListScrollHandle/);
@@ -233,8 +252,14 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
   assert.match(catalogScreen, /set_selected_node/);
   assert.match(catalogScreen, /selected_node\(/);
   assert.match(catalogScreen, /filtered_node_indices/);
-  assert.match(catalogScreen, /EditorElement::new/);
-  assert.match(catalogScreen, /BufferSearchBar/);
+  assert.match(catalogScreen, /render_catalog_search\(/);
+  assert.match(catalogScreen, /screen_empty_state\(/);
+  assert.match(catalogScreen, /screen_section\(\s*"dx-configured-plugins"/);
+  assert.doesNotMatch(catalogScreen, /EditorElement::new/);
+  assert.doesNotMatch(catalogScreen, /KeyContext/);
+  assert.doesNotMatch(catalogScreen, /TextStyle/);
+  assert.doesNotMatch(catalogScreen, /fn render_search\(/);
+  assert.doesNotMatch(catalogScreen, /fn render_text_input\(/);
   assert.match(catalogScreen, /ToggleButtonGroup::single_row/);
   assert.match(catalogScreen, /ToggleButtonGroupStyle::Outlined/);
   assert.match(catalogScreen, /filter-all-categories/);
@@ -243,6 +268,24 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
   assert.match(catalogScreen, /vertical_scrollbar_for\(&state\.list, window, cx\)/);
   assert.match(catalogScreen, /MAX_FILTERED_WORKFLOW_NODE_RESULTS/);
   assert.match(catalogScreen, /render_selected_workflow_node_detail/);
+  assert.match(detailScreen, /use super::super::screen_chrome::\{[\s\S]*screen_detail_row[\s\S]*screen_detail_stack[\s\S]*screen_empty_state[\s\S]*screen_section/);
+  assert.match(detailScreen, /screen_section\(\s*"dx-workflow-node-detail-summary"/);
+  assert.match(detailScreen, /screen_section\(\s*"dx-workflow-node-detail-configuration"/);
+  assert.match(detailScreen, /screen_section\(\s*"dx-workflow-node-detail-contract"/);
+  assert.match(detailScreen, /screen_section\(\s*"dx-workflow-node-detail-permissions"/);
+  assert.match(detailScreen, /screen_section\(\s*"dx-workflow-node-detail-ports"/);
+  assert.match(detailScreen, /screen_section\(\s*"dx-workflow-node-detail-dynamic-options"/);
+  assert.match(detailScreen, /screen_section\(\s*"dx-workflow-node-detail-receipts"/);
+  assert.match(detailScreen, /screen_section\(\s*"dx-workflow-node-detail-actions"/);
+  assert.match(detailScreen, /screen_section\(\s*"dx-workflow-node-detail-trust"/);
+  assert.match(detailScreen, /screen_detail_row\(/);
+  assert.match(detailScreen, /screen_empty_state\(/);
+  assert.doesNotMatch(detailScreen, /ListItemSpacing::ExtraDense/);
+  assert.doesNotMatch(detailScreen, /fn detail_row\(/);
+  assert.doesNotMatch(detailScreen, /receipt_required=\{\}/);
+  assert.doesNotMatch(detailScreen, /owned=\{\}/);
+  assert.doesNotMatch(detailScreen, /first_party=\{\}/);
+  assert.doesNotMatch(detailScreen, /approval=\{\}/);
   assert.match(detailScreen, /render_workflow_node_configuration/);
   assert.match(detailScreen, /render_workflow_node_contract/);
   assert.match(detailScreen, /render_workflow_node_permissions/);
@@ -374,8 +417,9 @@ test("Plugins workspace follows the Extensions-style GPUI catalog pattern", () =
   assert.match(catalog, /uniform_list\(\s*"dx-workflow-node-plugins"/);
   assert.match(catalog, /border_b_1\(\)/);
   assert.match(catalog, /overflow_x_scroll\(\)/);
-  assert.match(catalog, /KeyContext/);
-  assert.match(catalog, /TextStyle/);
+  assert.match(catalog, /render_catalog_search\(/);
+  assert.doesNotMatch(catalog, /KeyContext/);
+  assert.doesNotMatch(catalog, /TextStyle/);
   assert.match(catalog, /WithScrollbar/);
   assert.doesNotMatch(catalog, /\.take\(24\)/);
 

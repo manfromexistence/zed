@@ -1,16 +1,15 @@
 use std::collections::BTreeMap;
 use std::ops::Range;
 
-use editor::{Editor, EditorElement, EditorEvent, EditorStyle, MultiBufferOffset};
+use editor::{Editor, EditorEvent, MultiBufferOffset};
 use gpui::{
-    AnyElement, App, Context, Entity, IntoElement, KeyContext, SharedString, TextStyle,
-    UniformListScrollHandle, Window, point, px, uniform_list,
+    AnyElement, App, Context, Entity, IntoElement, UniformListScrollHandle, Window, point, px,
+    uniform_list,
 };
-use theme_settings::ThemeSettings;
 use ui::{
-    Button, ButtonStyle, Color, Headline, HeadlineSize, Icon, IconName, Label, LabelSize, ListItem,
-    ListItemSpacing, ScrollableHandle, ToggleButtonGroup, ToggleButtonGroupSize,
-    ToggleButtonGroupStyle, ToggleButtonSimple, Tooltip, WithScrollbar, prelude::*,
+    Button, ButtonStyle, Color, Headline, HeadlineSize, Label, LabelSize, ScrollableHandle,
+    ToggleButtonGroup, ToggleButtonGroupSize, ToggleButtonGroupStyle, ToggleButtonSimple, Tooltip,
+    WithScrollbar, prelude::*,
 };
 
 use crate::AgentPanel;
@@ -19,6 +18,8 @@ use crate::dx_agent_bridge::{
 };
 use crate::workflow_node_icons::workflow_node_element_id;
 
+use super::super::catalog_chrome::render_catalog_search;
+use super::super::screen_chrome::{screen_empty_state, screen_section, workspace_stat};
 use super::workflow_nodes;
 
 const MAX_PLUGIN_CATALOG_SEARCH_QUERY_CHARS: usize = 256;
@@ -209,7 +210,9 @@ pub(crate) fn render_workflow_node_catalog(
                         .map(|this| {
                             if catalog.nodes.is_empty() {
                                 return this
-                                    .child(super::muted_card(
+                                    .child(screen_empty_state(
+                                        "dx-workflow-node-catalog-missing",
+                                        dx_icon(DxUiIcon::Plugins),
                                         "Run DX JS workflow-node catalog generation to load plugin metadata.",
                                         cx,
                                     ))
@@ -236,11 +239,22 @@ pub(crate) fn render_workflow_node_catalog(
                 .child(render_selected_workflow_node_detail(catalog, state, cx)),
         )
         .when(!catalog.configured_plugins.is_empty(), |this| {
-            this.child(super::section_title(
+            this.child(screen_section(
+                "dx-configured-plugins",
                 "Configured Plugins",
                 dx_icon(DxUiIcon::Plugins),
+                format!("{} configured", catalog.configured_plugins.len()),
+                v_flex()
+                    .gap_1()
+                    .children(
+                        catalog
+                            .configured_plugins
+                            .iter()
+                            .map(workflow_nodes::configured_plugin_row),
+                    )
+                    .into_any_element(),
+                cx,
             ))
-            .children(catalog.configured_plugins.iter().map(workflow_nodes::configured_plugin_row))
         })
         .into_any_element()
 }
@@ -318,18 +332,32 @@ fn render_catalog_summary(
             h_flex()
                 .gap_2()
                 .flex_none()
-                .child(catalog_summary_stat(
+                .child(workspace_stat(
+                    "dx-plugin-summary-indexed",
                     "Indexed",
                     catalog.nodes.len().to_string(),
+                    cx,
                 ))
-                .child(catalog_summary_stat(
+                .child(workspace_stat(
+                    "dx-plugin-summary-configured",
                     "Configured",
                     catalog.configured_plugin_count.to_string(),
+                    cx,
                 ))
-                .child(catalog_summary_stat("Source", catalog.status.clone())),
+                .child(workspace_stat(
+                    "dx-plugin-summary-source",
+                    "Source",
+                    catalog.status.clone(),
+                    cx,
+                )),
         )
         .when(!catalog.present, |this| {
-            this.child(super::muted_card(catalog.next_action.clone(), cx))
+            this.child(screen_empty_state(
+                "dx-workflow-node-catalog-source-missing",
+                dx_icon(DxUiIcon::Receipts),
+                catalog.next_action.clone(),
+                cx,
+            ))
         })
         .into_any_element()
 }
@@ -342,7 +370,11 @@ fn render_catalog_controls(
         .w_full()
         .flex_wrap()
         .gap_2()
-        .child(render_search(state, cx))
+        .child(render_catalog_search(
+            "dx-plugin-catalog-search",
+            &state.query_editor,
+            cx,
+        ))
         .child(
             ToggleButtonGroup::single_row(
                 "dx-plugin-filter-buttons",
@@ -380,60 +412,14 @@ fn render_catalog_controls(
         .into_any_element()
 }
 
-fn render_search(state: &DxPluginsCatalogState, cx: &mut Context<AgentPanel>) -> AnyElement {
-    let mut key_context = KeyContext::new_with_defaults();
-    key_context.add("BufferSearchBar");
-
-    h_flex()
-        .key_context(key_context)
-        .h_8()
-        .min_w(rems_from_px(384.))
-        .flex_1()
-        .pl_1p5()
-        .pr_2()
-        .gap_2()
-        .border_1()
-        .border_color(cx.theme().colors().border)
-        .rounded_md()
-        .child(Icon::new(IconName::MagnifyingGlass).color(Color::Muted))
-        .child(render_text_input(&state.query_editor, cx))
-        .into_any_element()
-}
-
-fn render_text_input(editor: &Entity<Editor>, cx: &mut Context<AgentPanel>) -> impl IntoElement {
-    let settings = ThemeSettings::get_global(cx);
-    let text_style = TextStyle {
-        color: if editor.read(cx).read_only(cx) {
-            cx.theme().colors().text_disabled
-        } else {
-            cx.theme().colors().text
-        },
-        font_family: settings.ui_font.family.clone(),
-        font_features: settings.ui_font.features.clone(),
-        font_fallbacks: settings.ui_font.fallbacks.clone(),
-        font_size: rems(0.875).into(),
-        font_weight: settings.ui_font.weight,
-        line_height: relative(1.3),
-        ..Default::default()
-    };
-
-    EditorElement::new(
-        editor,
-        EditorStyle {
-            background: cx.theme().colors().editor_background,
-            local_player: cx.theme().players().local(),
-            text: text_style,
-            ..Default::default()
-        },
-    )
-}
-
 fn render_category_filter_row(
     catalog: &DxWorkflowNodeCatalogSummary,
     state: &DxPluginsCatalogState,
     cx: &mut Context<AgentPanel>,
 ) -> AnyElement {
     let category_counts = indexed_category_counts(catalog);
+
+    let all_tooltip = format!("All indexed categories: {} plugins", catalog.nodes.len());
 
     h_flex()
         .id("dx-plugin-category-filter-row")
@@ -451,6 +437,7 @@ fn render_category_filter_row(
                     ButtonStyle::Subtle
                 })
                 .toggle_state(state.category_filter.is_none())
+                .tooltip(Tooltip::text(all_tooltip))
                 .on_click(cx.listener(|this, _event, _window, cx| {
                     this.set_plugin_catalog_category_filter(None, cx);
                 })),
@@ -467,7 +454,14 @@ fn render_category_filter_row(
                 .toggle_state(active)
                 .tooltip({
                     let category = category.clone();
-                    move |_, cx| Tooltip::with_meta("Indexed category", None, category.clone(), cx)
+                    move |_, cx| {
+                        Tooltip::with_meta(
+                            "Indexed category",
+                            None,
+                            format!("{category}: {count} plugins"),
+                            cx,
+                        )
+                    }
                 })
                 .on_click(cx.listener(move |this, _event, _window, cx| {
                     this.set_plugin_catalog_category_filter(Some(category.clone()), cx);
@@ -495,24 +489,15 @@ fn render_empty_state(state: &DxPluginsCatalogState, cx: &mut Context<AgentPanel
         }
     };
 
-    h_flex()
-        .py_4()
-        .gap_2()
-        .child(
-            Icon::new(dx_icon(DxUiIcon::Plugins))
-                .size(IconSize::Small)
-                .color(Color::Muted),
-        )
-        .child(
-            v_flex()
-                .gap_0p5()
-                .child(Headline::new("No Plugins").size(HeadlineSize::Small))
-                .child(
-                    Label::new(message)
-                        .size(LabelSize::Small)
-                        .color(Color::Muted),
-                ),
-        )
+    v_flex()
+        .gap_1()
+        .child(Headline::new("No Plugins").size(HeadlineSize::Small))
+        .child(screen_empty_state(
+            "dx-workflow-node-catalog-empty",
+            dx_icon(DxUiIcon::Plugins),
+            message,
+            cx,
+        ))
         .into_any_element()
 }
 
@@ -528,28 +513,6 @@ fn catalog_summary_label(catalog: &DxWorkflowNodeCatalogSummary) -> String {
         catalog.node_count,
         source
     )
-}
-
-fn catalog_summary_stat(label: &'static str, value: impl Into<SharedString>) -> AnyElement {
-    ListItem::new(format!("dx-plugin-summary-{label}"))
-        .spacing(ListItemSpacing::ExtraDense)
-        .selectable(false)
-        .child(
-            v_flex()
-                .gap_0p5()
-                .child(
-                    Label::new(label)
-                        .size(LabelSize::XSmall)
-                        .color(Color::Muted),
-                )
-                .child(
-                    Label::new(value.into())
-                        .size(LabelSize::Small)
-                        .color(Color::Default)
-                        .truncate(),
-                ),
-        )
-        .into_any_element()
 }
 
 fn workflow_node_matches_search(

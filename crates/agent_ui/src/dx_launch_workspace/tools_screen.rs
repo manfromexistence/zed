@@ -1,15 +1,16 @@
 use std::ops::Range;
 
-use gpui::{AnyElement, Context, IntoElement, SharedString, Window};
-use ui::{
-    AiSettingItem, AiSettingItemSource, AiSettingItemStatus, IconName, ListItem, ListItemSpacing,
-    prelude::*,
-};
+use gpui::{AnyElement, Context, IntoElement, Window};
+use ui::{AiSettingItem, AiSettingItemSource, AiSettingItemStatus, IconName, prelude::*};
 
 use crate::AgentPanel;
 use crate::dx_agent_bridge::DxAgentBridgeSnapshot;
 
-use super::{DxLaunchWorkspaceStatus, agents, metric_row, muted_card, section_title};
+use super::screen_chrome::{
+    screen_detail_row, screen_detail_stack, screen_empty_state, screen_section,
+    workspace_page_header, workspace_stat,
+};
+use super::{DxLaunchWorkspaceStatus, agents};
 
 mod catalog;
 mod details;
@@ -23,41 +24,127 @@ pub(crate) fn render_tools_screen(
     window: &mut Window,
     cx: &mut Context<AgentPanel>,
 ) -> AnyElement {
-    let body = if let Some(status) = status {
+    let (header_stats, body) = if let Some(status) = status {
         let snapshot = &status.agent_bridge;
-        v_flex()
-            .gap_2()
-            .child(section_title("Workflow Nodes", dx_icon(DxUiIcon::Plugins)))
-            .child(catalog::render_workflow_node_catalog(
-                snapshot, state, window, cx,
-            ))
-            .child(section_title("Browser", dx_icon(DxUiIcon::Browser)))
-            .child(trusted_tool_state(
-                snapshot,
-                "dx-tools-browser",
-                dx_icon(DxUiIcon::Browser),
-                "Browser tools",
-                &["browser", "web", "chrome"],
-                "No approved Browser tool receipt is available yet.",
-            ))
-            .child(section_title("Computer", dx_icon(DxUiIcon::Computer)))
-            .child(trusted_tool_state(
-                snapshot,
-                "dx-tools-computer",
-                dx_icon(DxUiIcon::Computer),
-                "Computer tools",
-                &["computer", "desktop", "screen"],
-                "No approved Computer tool receipt is available yet.",
-            ))
-            .child(section_title("MCP", dx_icon(DxUiIcon::Mcp)))
-            .child(mcp_state(snapshot))
-            .child(section_title("Receipts", IconName::FileTextOutlined))
-            .child(agents::dx_agent_receipt_state(snapshot, cx))
-            .child(section_title("Permissions", dx_icon(DxUiIcon::Permissions)))
-            .child(permission_state(snapshot))
-            .into_any_element()
+        (
+            vec![
+                workspace_stat(
+                    "dx-tools-stat-indexed",
+                    "Indexed",
+                    snapshot.workflow_node_catalog.nodes.len().to_string(),
+                    cx,
+                ),
+                workspace_stat(
+                    "dx-tools-stat-configured",
+                    "Configured",
+                    snapshot
+                        .workflow_node_catalog
+                        .configured_plugin_count
+                        .to_string(),
+                    cx,
+                ),
+                workspace_stat(
+                    "dx-tools-stat-trusted",
+                    "Trusted tools",
+                    snapshot
+                        .trusted_tool_bridge
+                        .trusted_tool_ids
+                        .len()
+                        .to_string(),
+                    cx,
+                ),
+                workspace_stat(
+                    "dx-tools-stat-blocked",
+                    "Blocked",
+                    snapshot.trusted_tool_bridge.blocked_tool_count.to_string(),
+                    cx,
+                ),
+            ],
+            v_flex()
+                .gap_3()
+                .child(screen_section(
+                    "dx-tools-workflow-nodes",
+                    "Workflow Nodes",
+                    dx_icon(DxUiIcon::Plugins),
+                    workflow_node_catalog_summary(snapshot),
+                    catalog::render_workflow_node_catalog(snapshot, state, window, cx),
+                    cx,
+                ))
+                .child(screen_section(
+                    "dx-tools-browser",
+                    "Browser",
+                    dx_icon(DxUiIcon::Browser),
+                    trusted_tool_summary(snapshot, &["browser", "web", "chrome"]),
+                    trusted_tool_state(
+                        snapshot,
+                        "dx-tools-browser-state",
+                        dx_icon(DxUiIcon::Browser),
+                        "Browser tools",
+                        &["browser", "web", "chrome"],
+                        "No approved Browser tool receipt is available yet.",
+                    ),
+                    cx,
+                ))
+                .child(screen_section(
+                    "dx-tools-computer",
+                    "Computer",
+                    dx_icon(DxUiIcon::Computer),
+                    trusted_tool_summary(snapshot, &["computer", "desktop", "screen"]),
+                    trusted_tool_state(
+                        snapshot,
+                        "dx-tools-computer-state",
+                        dx_icon(DxUiIcon::Computer),
+                        "Computer tools",
+                        &["computer", "desktop", "screen"],
+                        "No approved Computer tool receipt is available yet.",
+                    ),
+                    cx,
+                ))
+                .child(screen_section(
+                    "dx-tools-mcp",
+                    "MCP",
+                    dx_icon(DxUiIcon::Mcp),
+                    "Context Servers",
+                    mcp_state(snapshot),
+                    cx,
+                ))
+                .child(screen_section(
+                    "dx-tools-receipts",
+                    "Receipts",
+                    IconName::FileTextOutlined,
+                    format!(
+                        "{} bridge receipts / {} catalog receipts",
+                        snapshot.trusted_tool_bridge.receipt_count,
+                        workflow_node_receipt_count(snapshot)
+                    ),
+                    agents::dx_agent_receipt_state(snapshot, cx),
+                    cx,
+                ))
+                .child(screen_section(
+                    "dx-tools-permissions",
+                    "Permissions",
+                    dx_icon(DxUiIcon::Permissions),
+                    permission_summary(snapshot),
+                    permission_state(snapshot),
+                    cx,
+                ))
+                .into_any_element(),
+        )
     } else {
-        muted_card("Loading trusted tool bridge receipts", cx)
+        (
+            vec![workspace_stat(
+                "dx-tools-stat-loading",
+                "State",
+                "Loading",
+                cx,
+            )],
+            screen_empty_state(
+                "dx-tools-loading",
+                dx_icon(DxUiIcon::Receipts),
+                "Loading trusted tool bridge receipts",
+                cx,
+            ),
+        )
     };
 
     div()
@@ -70,10 +157,12 @@ pub(crate) fn render_tools_screen(
             v_flex()
                 .gap_3()
                 .p_4()
-                .child(screen_header(
+                .child(workspace_page_header(
                     dx_icon(DxUiIcon::Plugins),
                     "Plugins",
                     "Workflow nodes, browser, computer, MCP, receipts, and permission bridge state.",
+                    header_stats,
+                    cx,
                 ))
                 .child(body),
         )
@@ -113,20 +202,20 @@ fn trusted_tool_state(
             AiSettingItemStatus::Starting => "Pending approval",
             _ => "Unavailable",
         })
-        .details(tool_detail_stack(vec![
-            tool_detail_row(
+        .details(screen_detail_stack(vec![
+            screen_detail_row(
                 format!("{id}-bridge").into(),
                 IconName::FileTextOutlined,
                 "Trusted bridge",
                 snapshot.trusted_tool_bridge.status.clone(),
             ),
-            tool_detail_row(
+            screen_detail_row(
                 format!("{id}-policy").into(),
                 dx_icon(DxUiIcon::Permissions),
                 "Policy",
                 snapshot.trusted_tool_bridge.trust_policy.clone(),
             ),
-            tool_detail_row(
+            screen_detail_row(
                 format!("{id}-ids").into(),
                 IconName::ToolWeb,
                 "Approved ids",
@@ -136,7 +225,7 @@ fn trusted_tool_state(
                     matching_ids.join(", ")
                 },
             ),
-            tool_detail_row(
+            screen_detail_row(
                 format!("{id}-action").into(),
                 IconName::FileTextOutlined,
                 "Next action",
@@ -163,20 +252,20 @@ fn mcp_state(snapshot: &DxAgentBridgeSnapshot) -> AnyElement {
             .color(Color::Muted),
     )
     .detail_label("Context Servers")
-    .details(tool_detail_stack(vec![
-        tool_detail_row(
+    .details(screen_detail_stack(vec![
+        screen_detail_row(
             "dx-tools-mcp-zed-route".into(),
             IconName::Server,
             "Dx route",
             "MCP Servers opens the Context Servers extension registry.",
         ),
-        tool_detail_row(
+        screen_detail_row(
             "dx-tools-mcp-contract".into(),
             IconName::FileTextOutlined,
             "DX Agents",
             "MCP tool receipts are pending trusted bridge approval.",
         ),
-        tool_detail_row(
+        screen_detail_row(
             "dx-tools-mcp-action".into(),
             IconName::FileTextOutlined,
             "Next action",
@@ -197,11 +286,15 @@ fn permission_state(snapshot: &DxAgentBridgeSnapshot) -> AnyElement {
 
     v_flex()
         .gap_1()
-        .child(metric_row(
+        .child(screen_detail_row(
+            "dx-tools-permissions-bridge-contract".into(),
+            IconName::FileTextOutlined,
             "Bridge contract",
             snapshot.trusted_tool_bridge.bridge_contract_id.clone(),
         ))
-        .child(metric_row(
+        .child(screen_detail_row(
+            "dx-tools-permissions-receipt-count".into(),
+            dx_icon(DxUiIcon::Receipts),
             "Receipt count",
             snapshot.trusted_tool_bridge.receipt_count.to_string(),
         ))
@@ -222,14 +315,14 @@ fn permission_state(snapshot: &DxAgentBridgeSnapshot) -> AnyElement {
                 AiSettingItemStatus::Running => "Policy loaded",
                 _ => "Receipt required",
             })
-            .details(tool_detail_stack(vec![
-                tool_detail_row(
+            .details(screen_detail_stack(vec![
+                screen_detail_row(
                     "dx-tools-permissions-policy".into(),
                     dx_icon(DxUiIcon::Permissions),
                     "Policy",
                     snapshot.trusted_tool_bridge.trust_policy.clone(),
                 ),
-                tool_detail_row(
+                screen_detail_row(
                     "dx-tools-permissions-approved-plugin".into(),
                     IconName::ToolWeb,
                     "Approved plugin tools",
@@ -238,7 +331,7 @@ fn permission_state(snapshot: &DxAgentBridgeSnapshot) -> AnyElement {
                         .approved_plugin_tool_count
                         .to_string(),
                 ),
-                tool_detail_row(
+                screen_detail_row(
                     "dx-tools-permissions-approved-automation".into(),
                     dx_icon(DxUiIcon::Automations),
                     "Automation tools",
@@ -247,13 +340,13 @@ fn permission_state(snapshot: &DxAgentBridgeSnapshot) -> AnyElement {
                         .approved_automation_tool_count
                         .to_string(),
                 ),
-                tool_detail_row(
+                screen_detail_row(
                     "dx-tools-permissions-blocked".into(),
                     IconName::Warning,
                     "Blocked tools",
                     snapshot.trusted_tool_bridge.blocked_tool_count.to_string(),
                 ),
-                tool_detail_row(
+                screen_detail_row(
                     "dx-tools-permissions-next".into(),
                     IconName::FileTextOutlined,
                     "Next action",
@@ -280,58 +373,37 @@ fn trusted_tool_ids(
         .collect()
 }
 
-fn screen_header(icon: IconName, title: &'static str, detail: &'static str) -> AnyElement {
-    h_flex()
-        .items_start()
-        .gap_2()
-        .child(Icon::new(icon).size(IconSize::Medium).color(Color::Muted))
-        .child(
-            v_flex()
-                .gap_0p5()
-                .child(
-                    Label::new(title)
-                        .size(LabelSize::Default)
-                        .color(Color::Default),
-                )
-                .child(
-                    Label::new(detail)
-                        .size(LabelSize::XSmall)
-                        .color(Color::Muted),
-                ),
-        )
-        .into_any_element()
+fn workflow_node_catalog_summary(snapshot: &DxAgentBridgeSnapshot) -> String {
+    format!(
+        "{} indexed / {} configured",
+        snapshot.workflow_node_catalog.nodes.len(),
+        snapshot.workflow_node_catalog.configured_plugin_count
+    )
 }
 
-fn tool_detail_stack(rows: Vec<AnyElement>) -> AnyElement {
-    v_flex().gap_0p5().pl_4().children(rows).into_any_element()
+fn workflow_node_receipt_count(snapshot: &DxAgentBridgeSnapshot) -> usize {
+    snapshot
+        .workflow_node_catalog
+        .nodes
+        .iter()
+        .map(|node| node.receipts.len())
+        .sum()
 }
 
-fn tool_detail_row(
-    id: SharedString,
-    icon: IconName,
-    label: impl Into<SharedString>,
-    detail: impl Into<SharedString>,
-) -> AnyElement {
-    ListItem::new(id)
-        .spacing(ListItemSpacing::ExtraDense)
-        .selectable(false)
-        .start_slot(Icon::new(icon).size(IconSize::XSmall).color(Color::Muted))
-        .child(
-            h_flex()
-                .min_w_0()
-                .gap_1()
-                .child(
-                    Label::new(label.into())
-                        .size(LabelSize::XSmall)
-                        .color(Color::Muted)
-                        .flex_none(),
-                )
-                .child(
-                    Label::new(detail.into())
-                        .size(LabelSize::XSmall)
-                        .color(Color::Default)
-                        .truncate(),
-                ),
-        )
-        .into_any_element()
+fn trusted_tool_summary(snapshot: &DxAgentBridgeSnapshot, search_terms: &[&'static str]) -> String {
+    let approved = trusted_tool_ids(snapshot, search_terms).len();
+    if approved == 0 {
+        snapshot.trusted_tool_bridge.status.clone()
+    } else {
+        format!("{approved} approved ids")
+    }
+}
+
+fn permission_summary(snapshot: &DxAgentBridgeSnapshot) -> String {
+    format!(
+        "{} approved / {} blocked",
+        snapshot.trusted_tool_bridge.approved_plugin_tool_count
+            + snapshot.trusted_tool_bridge.approved_automation_tool_count,
+        snapshot.trusted_tool_bridge.blocked_tool_count
+    )
 }

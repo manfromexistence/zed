@@ -1,3 +1,23 @@
+[2026-06-11] - DX Plugins Shared Workspace Chrome
+
+CHANGED:
+- Plugins now uses the shared DX workspace page header, summary stat cards, `screen_section` cards, sparse detail rows, and honest empty states used by the professional Connections and Automations surfaces.
+- The workflow-node catalog now reuses `catalog_chrome::render_catalog_search`, frames configured plugins inside a bordered GPUI section, and keeps the source-backed virtualized catalog, category filters, and selected plugin detail pane intact.
+- The selected plugin inspector now renders summary, credential setup, plugin contract, permissions, ports, dynamic options, receipts, actions, and trust as shared GPUI sections instead of local extra-dense/debug-style rows.
+
+HARDENED:
+- Focused source guards now prevent the Plugins workspace from regressing to local `section_title`, `muted_card`, `metric_row`, local detail row helpers, local search editor rendering, or debug-formatted trust/receipt strings.
+- Credential detail text stays sanitized and still shows only metadata, receipt ids, statuses, and DX Agents credential-bridge state, never raw secret values or keychain handles.
+
+PASSED:
+- `rustfmt --edition 2024` on the touched Plugins UI files.
+- `rustfmt --edition 2024 --check` on the touched Plugins UI files.
+- `node --test script/dx-agent-workspaces-source.test.ts`
+- `node --test script/dx-agent-workspaces-source.test.ts script/dx-plugin-catalog-source.test.ts script/dx-agent-bridge-source.test.ts script/dx-plugin-credentials-source.test.ts`
+
+NOTES:
+- Cargo, `just run`, full builds, native launch, visual runtime proof, local servers, and browser automation remain deferred by instruction.
+
 [2026-06-11] - DX Connections And Automations Catalog Row Chrome
 
 ADDED:

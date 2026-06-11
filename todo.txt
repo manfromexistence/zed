@@ -1,5 +1,5 @@
 IN PROGRESS:
-- None. Latest DX Connections and Automations catalog row-chrome pass is source-verified.
+- None. Latest DX Plugins shared workspace-chrome pass is source-verified.
 
 PENDING:
 - Run governed runtime/visual proof for the Connections and Automations workspace tabs after an authorized Zed launch, covering page header stats, catalog search/filter behavior, selected detail panes, section-card scrolling, provider/social rows, automation draft/schedule/run/history/failure rows, and narrow or stacked panel behavior.
@@ -17,6 +17,7 @@ PENDING:
 - Continue the DX/Zed ecosystem integration with bounded source-only slices for remaining receipt scans, semantic icon hotspots, and governed runtime proof when explicitly authorized.
 
 COMPLETED:
+- DX Plugins shared workspace-chrome pass is source-verified: the Plugins workspace shell now uses the same shared `workspace_page_header`, stat cards, `screen_section` cards, sparse detail rows, and empty states as Connections/Automations; the workflow-node catalog reuses shared catalog search chrome and frames configured plugins in a proper section; the selected plugin inspector renders summary, credential setup, contract, permissions, ports, dynamic options, receipts, actions, and trust through shared GPUI sections instead of local debug-style rows while keeping credentials sanitized and receipt/trust signals visible.
 - DX Connections and Automations catalog row-chrome pass is source-verified: both searchable workspace catalogs now render selectable rows as direct Zed `ListItem` surfaces with semantic start icons, shared two-line labels, tooltip-backed metadata, and GPUI status `Chip` end slots inside bordered `ListHeader` section cards. The old nested `AiSettingItem` catalog rows and compact-detail-only helpers were removed from those catalog paths while preserving receipt-backed inspector panes, search/filter state, virtualized row processors, and honest unavailable states.
 - DX Connections and Automations catalog-state pass is source-verified: both DX-owned workspace tabs now own persistent Extensions-style search editors, segmented filters, virtualized catalog rows, selectable `AiSettingItem` entries, and receipt-backed inspector panes through `AgentPanel` state. Connections surfaces receipt authority and trusted-tool bridge details without unsafe command buttons; Automations surfaces composer contract, runtime evidence, and execution proof details while keeping scheduler/runtime claims honest.
 - DX Connections and Automations GPUI polish pass is source-verified: both DX-owned workspace tabs now use shared Extension-style GPUI page chrome with large `Headline` headers, source-backed summary stat cards, bordered `ListHeader` section cards, readable `ListItemSpacing::Sparse` detail rows, honest empty states, and subsection cleanup for provider/social metrics without touching Zed's MCP, Extensions, or ACP surfaces.
