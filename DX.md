@@ -281,6 +281,7 @@ Current handoff and production-readiness guards:
 - `node --test script/dx-feedback-source.test.ts` - feedback installed-extension clipboard and prompt materialization boundaries.
 - `node --test script/dx-font-panel-source.test.ts` - font panel custom web-font, element-id, and preview-file materialization boundaries.
 - `node --test script/dx-media-panel-source.test.ts` - media panel dx-media bridge, fallback, status, and remote-result filtering boundaries.
+- `node --test script/dx-ui-panel-source.test.ts` - UI panel recent and pinned history row GPUI ListItem chrome boundaries.
 - `node --test script/dx-agent-config-options-source.test.ts` - agent config option row, current overflow option, fuzzy, stale-selection, and stale next-index boundaries.
 - `node --test script/dx-agent-tool-picker-source.test.ts` - agent tool picker row cap, context-server header, and stale-selection boundaries.
 - `node --test script/dx-debugger-attach-modal-source.test.ts` - debugger attach process candidate, command text, fuzzy row, and stale-selection boundaries.

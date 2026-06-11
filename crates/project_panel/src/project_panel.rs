@@ -4653,7 +4653,6 @@ impl ProjectPanel {
         let new_folder_focus_handle = header_focus_handle.clone();
         let new_folder_tooltip_focus_handle = new_folder_focus_handle.clone();
         let project_options_focus_handle = header_focus_handle.clone();
-        let panel_for_project_options = cx.entity().downgrade();
         let panel_id = cx.entity().entity_id();
         let project_options_menu_id =
             SharedString::from(format!("dx-explorer-project-options-menu-{panel_id:?}"));
@@ -4825,7 +4824,6 @@ impl ProjectPanel {
                     )
                     .anchor(gpui::Anchor::TopRight)
                     .menu(move |window, cx| {
-                        let panel = panel_for_project_options.clone();
                         Some(ContextMenu::build(window, cx, move |menu, _window, _cx| {
                             menu.header("Project View")
                                 .action_checked_with_disabled(
@@ -4848,35 +4846,15 @@ impl ProjectPanel {
                                     show_hidden_entries,
                                     !has_worktree,
                                 )
-                                .entry(
+                                .action_disabled_when(
+                                    !has_worktree,
                                     "Project symbols",
-                                    Some(ToggleProjectSymbols.boxed_clone()),
-                                    move |window, cx| {
-                                        if has_worktree {
-                                            window.dispatch_action(
-                                                ToggleProjectSymbols.boxed_clone(),
-                                                cx,
-                                            );
-                                        }
-                                    },
+                                    ToggleProjectSymbols.boxed_clone(),
                                 )
-                                .entry(
+                                .action_disabled_when(
+                                    !has_worktree,
                                     "Collapse folders",
-                                    Some(CollapseAllEntries.boxed_clone()),
-                                    move |_window, cx| {
-                                        if has_worktree {
-                                            panel
-                                                .update_in(cx, |this, window, cx| {
-                                                    this.focus_handle(cx).focus(window, cx);
-                                                    this.collapse_all_entries(
-                                                        &CollapseAllEntries,
-                                                        window,
-                                                        cx,
-                                                    );
-                                                })
-                                                .log_err();
-                                        }
-                                    },
+                                    CollapseAllEntries.boxed_clone(),
                                 )
                         }))
                     }),

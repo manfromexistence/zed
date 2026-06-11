@@ -1,3 +1,26 @@
+[2026-06-11] - DX Panel GPUI Follow-Up Polish
+
+ADDED:
+- `script\dx-ui-panel-source.test.ts` to pin UI panel recent/pinned history rows to shared sparse `ListItem` chrome.
+
+CHANGED:
+- `crates\agent_ui\src\dx_launch_workspace\tools_screen.rs` now renders Tools sections through `ListHeader`, moves permission contract/receipt details into sparse list rows, and removes the old metric/detail-row chrome from that screen.
+- `crates\media_panel\src\media_panel.rs` and `crates\shadcn_ui_panel\src\shadcn_ui_panel.rs` now render recent/pinned history rows as sparse GPUI `ListItem` rows with action end slots instead of bordered mini cards.
+- `crates\agent_ui\src\dx_check_panel_view\tabs.rs` and `view_rows.rs` now include adapter plans in Findings counts, normalize section/web-audit status colors case-insensitively, and give overflow rows an actionable full-list tooltip.
+- `crates\project_panel\src\project_panel.rs` now renders Project Symbols and Collapse Folders as disabled action-backed menu entries when no worktree exists instead of enabled no-op rows.
+- `crates\agent_ui\src\dx_forge_panel\rows.rs` now aligns the Forge status footer with inset list-row grammar.
+- Focused source guards now cover the Tools, Media, UI, Check, Forge, and lightweight guard-registry contracts for this polish slice.
+
+PASSED:
+- `rustfmt --edition 2024` on touched Rust files
+- `rustfmt --edition 2024 --check` on touched Rust files
+- `node --test script\dx-forge-panel-source.test.ts script\dx-check-panel-source.test.ts script\dx-project-panel-source.test.ts script\dx-media-panel-source.test.ts script\dx-ui-panel-source.test.ts script\dx-agent-workspaces-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- Conflict-marker scan across touched files returned no matches
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. `just run`, Cargo build/check/test/clippy, native launch, browser automation, and runtime visual proof were not run.
+
 [2026-06-11] - DX Panel GPUI Compact Polish
 
 ADDED:

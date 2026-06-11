@@ -53,6 +53,7 @@ pub(super) fn status_strip(
     let tooltip_meta = format!("{detail}\n{workspace_scope}");
 
     ListItem::new("dx-forge-status")
+        .inset(true)
         .selectable(false)
         .spacing(ListItemSpacing::Sparse)
         .start_slot(Icon::new(icon).size(IconSize::Small).color(color))

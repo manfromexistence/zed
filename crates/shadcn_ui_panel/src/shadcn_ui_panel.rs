@@ -20,7 +20,7 @@ use std::{
     path::{Component, Path, PathBuf},
     sync::{Mutex, OnceLock},
 };
-use ui::{TintColor, Tooltip, prelude::*};
+use ui::{ListItem, ListItemSpacing, TintColor, Tooltip, prelude::*};
 use url::Url;
 use workspace::{
     DraggedShadcnAsset, DraggedShadcnKind, Workspace,
@@ -1317,23 +1317,25 @@ impl ShadcnUiPanel {
         } else {
             item.category.clone()
         };
+        let row_tooltip = format!(
+            "{}\n{}\n{}",
+            item.title.as_ref(),
+            source_label.as_ref(),
+            category_label.as_ref()
+        );
 
-        h_flex()
-            .id(row_id)
-            .gap_2()
-            .items_center()
-            .p_2()
-            .rounded_sm()
-            .border_1()
-            .border_color(cx.theme().colors().border_variant)
-            .bg(cx.theme().colors().element_background)
-            .child(
+        ListItem::new(row_id)
+            .inset(true)
+            .spacing(ListItemSpacing::Sparse)
+            .selectable(false)
+            .start_slot(
                 Icon::new(icon_for_item(&item))
                     .size(IconSize::Small)
                     .color(Color::Muted),
             )
             .child(
                 v_flex()
+                    .min_w_0()
                     .flex_1()
                     .gap_0p5()
                     .child(
@@ -1373,8 +1375,9 @@ impl ShadcnUiPanel {
                             }),
                     ),
             )
-            .child(
+            .end_slot(
                 h_flex()
+                    .flex_none()
                     .gap_1()
                     .flex_wrap()
                     .child(
@@ -1443,29 +1446,30 @@ impl ShadcnUiPanel {
                             .on_click(cx.listener(move |panel, _, _, cx| {
                                 panel.open_item_docs(item.clone(), cx);
                             })),
+                    )
+                    .child(
+                        Button::new(pin_id, pin_label)
+                            .style(ButtonStyle::Subtle)
+                            .size(ButtonSize::Compact)
+                            .tooltip(Tooltip::text(ui_history_pin_tooltip(
+                                pinned,
+                                source_available,
+                            )))
+                            .disabled(!pinned && !source_available)
+                            .on_click(cx.listener(move |panel, _, _, cx| {
+                                if pinned {
+                                    if source_available {
+                                        panel.unpin_ui_action(pin_item.clone(), cx);
+                                    } else {
+                                        panel.remove_ui_history_entry(pin_item.clone(), pinned, cx);
+                                    }
+                                } else {
+                                    panel.pin_ui_action(pin_entry.clone(), cx);
+                                }
+                            })),
                     ),
             )
-            .child(
-                Button::new(pin_id, pin_label)
-                    .style(ButtonStyle::Subtle)
-                    .size(ButtonSize::Compact)
-                    .tooltip(Tooltip::text(ui_history_pin_tooltip(
-                        pinned,
-                        source_available,
-                    )))
-                    .disabled(!pinned && !source_available)
-                    .on_click(cx.listener(move |panel, _, _, cx| {
-                        if pinned {
-                            if source_available {
-                                panel.unpin_ui_action(pin_item.clone(), cx);
-                            } else {
-                                panel.remove_ui_history_entry(pin_item.clone(), pinned, cx);
-                            }
-                        } else {
-                            panel.pin_ui_action(pin_entry.clone(), cx);
-                        }
-                    })),
-            )
+            .tooltip(Tooltip::text(row_tooltip))
             .into_any_element()
     }
 

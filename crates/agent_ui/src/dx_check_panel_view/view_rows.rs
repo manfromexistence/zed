@@ -254,7 +254,8 @@ pub(super) fn empty_row(message: &'static str) -> AnyElement {
 }
 
 pub(super) fn web_audit_row(index: usize, audit: &DxCheckPanelWebAudit, _cx: &App) -> AnyElement {
-    let (icon, color) = match audit.status.as_str() {
+    let normalized_status = audit.status.to_ascii_lowercase();
+    let (icon, color) = match normalized_status.as_str() {
         "ready" => (IconName::Check, Color::Success),
         "blocked" => (IconName::Warning, Color::Error),
         "warning" => (IconName::Warning, Color::Warning),
@@ -307,6 +308,9 @@ pub(super) fn overflow_row(
     label: &'static str,
 ) -> AnyElement {
     let message = format!("{hidden_count} more {label} not shown");
+    let tooltip = format!(
+        "{message}. This panel shows a capped preview; open the Receipt tab or run the detail command for the full list."
+    );
 
     ListItem::new(id.into())
         .inset(true)
@@ -323,7 +327,7 @@ pub(super) fn overflow_row(
                 .color(Color::Muted)
                 .truncate(),
         )
-        .tooltip(Tooltip::text(message))
+        .tooltip(Tooltip::text(tooltip))
         .into_any_element()
 }
 
@@ -419,7 +423,9 @@ fn section_score_label(section: &DxCheckPanelSection) -> String {
 }
 
 fn section_status_color(status: &str) -> Color {
-    match status {
+    let status = status.to_ascii_lowercase();
+
+    match status.as_str() {
         "pass" | "passed" | "ready" | "ok" => Color::Success,
         "fail" | "failed" | "blocked" | "error" => Color::Error,
         "warn" | "warning" | "review" => Color::Warning,

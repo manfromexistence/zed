@@ -157,6 +157,7 @@ test("media panel renders bridge state and filters fetched remote rows by query"
   const renderStatusRow = functionBody(panelSource, "render_status_row");
   const renderRemoteHealthRow = functionBody(panelSource, "render_remote_health_row");
   const renderRemoteLoadingRow = functionBody(panelSource, "render_remote_loading_row");
+  const renderMediaHistoryRow = functionBody(panelSource, "render_media_history_row");
   const remotePanelRows = [
     renderRemoteBrowserRow,
     renderRemoteWarningRow,
@@ -174,6 +175,12 @@ test("media panel renders bridge state and filters fetched remote rows by query"
   assert.match(renderStatusRow, /ListItem::new\("media-panel-status-row"\)/);
   assert.match(renderRemoteHealthRow, /ListItem::new\("media-panel-remote-health-row"\)/);
   assert.match(renderRemoteLoadingRow, /ListItem::new\("media-panel-remote-loading-row"\)/);
+  assert.match(renderMediaHistoryRow, /ListItem::new\(row_id\)/);
+  assert.match(renderMediaHistoryRow, /\.inset\(true\)/);
+  assert.match(renderMediaHistoryRow, /\.spacing\(ListItemSpacing::Sparse\)/);
+  assert.match(renderMediaHistoryRow, /\.end_slot\(/);
+  assert.match(renderMediaHistoryRow, /\.tooltip\(Tooltip::text\(row_tooltip\)\)/);
+  assert.doesNotMatch(renderMediaHistoryRow, /\.border_1\(\)|\.rounded_sm\(\)|\.bg\(cx\.theme\(\)\.colors\(\)\.element_background\)/);
   assert.match(remotePanelRows, /\.spacing\(ListItemSpacing::Sparse\)/);
   assert.match(remotePanelRows, /\.selectable\(false\)/);
   assert.doesNotMatch(remotePanelRows, /\.border_1\(\)|\.rounded\(/);

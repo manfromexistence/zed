@@ -296,13 +296,13 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   );
   assert.match(
     renderDxExplorerHeader,
-    /"Project symbols"[\s\S]*Some\(ToggleProjectSymbols\.boxed_clone\(\)\)[\s\S]*if has_worktree[\s\S]*window\.dispatch_action\([\s\S]*ToggleProjectSymbols\.boxed_clone\(\),[\s\S]*cx/,
-    "Project Symbols should stay action-backed inside the Project options menu",
+    /action_disabled_when\([\s\S]*!has_worktree,[\s\S]*"Project symbols",[\s\S]*ToggleProjectSymbols\.boxed_clone\(\)/,
+    "Project Symbols should stay visibly disabled when no worktree is open",
   );
   assert.match(
     renderDxExplorerHeader,
-    /"Collapse folders"[\s\S]*Some\(CollapseAllEntries\.boxed_clone\(\)\)[\s\S]*if has_worktree[\s\S]*this\.collapse_all_entries\([\s\S]*&CollapseAllEntries,[\s\S]*window,[\s\S]*cx/,
-    "Collapse All should stay action-backed inside the Project options menu",
+    /action_disabled_when\([\s\S]*!has_worktree,[\s\S]*"Collapse folders",[\s\S]*CollapseAllEntries\.boxed_clone\(\)/,
+    "Collapse All should stay visibly disabled when no worktree is open",
   );
   assert.match(
     renderDxExplorerHeader,
@@ -343,7 +343,7 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
   assert.match(renderDxExplorerHeader, /this\.new_directory\(&NewDirectory, window, cx\)/);
   assert.match(
     renderDxExplorerHeader,
-    /this\.collapse_all_entries\([\s\S]*&CollapseAllEntries,[\s\S]*window,[\s\S]*cx[\s\S]*\)/,
+    /action_disabled_when\([\s\S]*"Collapse folders"[\s\S]*CollapseAllEntries\.boxed_clone\(\)/,
   );
   assert.match(renderDxExplorerHeader, /\.disabled\(is_read_only \|\| !has_worktree\)/);
   assert.match(renderDxExplorerHeader, /\.min_w_0\(\)[\s\S]*\.overflow_hidden\(\)/);

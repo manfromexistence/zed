@@ -86,6 +86,7 @@ const registeredGuardScripts = [
   "script/dx-feedback-source.test.ts",
   "script/dx-font-panel-source.test.ts",
   "script/dx-media-panel-source.test.ts",
+  "script/dx-ui-panel-source.test.ts",
   "script/dx-agent-config-options-source.test.ts",
   "script/dx-agent-tool-picker-source.test.ts",
   "script/dx-debugger-attach-modal-source.test.ts",

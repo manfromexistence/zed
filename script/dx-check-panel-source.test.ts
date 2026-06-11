@@ -124,6 +124,7 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   const webAuditRow = functionBody(rows, "web_audit_row");
   const overflowRow = functionBody(rows, "overflow_row");
   const outcomeLabel = functionBody(rows, "outcome_label");
+  const sectionStatusColor = functionBody(rows, "section_status_color");
   const checkTab = functionBody(tabs, "check_tab");
 
   assert.match(renderHeader, /h_flex\(\)/);
@@ -141,6 +142,7 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   assert.match(renderToolbar, /\.style\(ButtonStyle::Subtle\)/);
   assert.match(renderToolbar, /IconButton::new\("dx-check-refresh", IconName::RotateCw\)/);
   assert.match(tabs, /TabBar::new\("dx-check-tab-bar"\)/);
+  assert.match(tabs, /snapshot\.adapter_plans\.len\(\)/);
   assert.match(checkTab, /Tab::new\(id\)/);
   assert.match(checkTab, /\.position\(tab_position\(tab, active_tab\)\)/);
   assert.match(checkTab, /\.selected_bottom_border\(true\)/);
@@ -164,10 +166,15 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   assert.match(view, /overflow_row\(\s*"dx-check-section-overflow"/);
   assert.match(view, /overflow_row\(\s*"dx-check-web-audit-overflow"/);
   assert.match(noticeRow, /Tooltip::text\(tooltip\)/);
+  assert.match(webAuditRow, /let normalized_status = audit\.status\.to_ascii_lowercase\(\);/);
+  assert.match(webAuditRow, /match normalized_status\.as_str\(\)/);
   assert.match(webAuditRow, /Label::new\(audit\.status\.clone\(\)\)/);
   assert.doesNotMatch(webAuditRow, /\.end_slot\(\s*Icon::new\(icon\)/);
   assert.match(overflowRow, /ListItem::new\(id\.into\(\)\)/);
   assert.match(overflowRow, /IconName::Ellipsis/);
+  assert.match(overflowRow, /Receipt tab or run the detail command for the full list/);
+  assert.match(sectionStatusColor, /let status = status\.to_ascii_lowercase\(\);/);
+  assert.match(sectionStatusColor, /match status\.as_str\(\)/);
   assert.match(outcomeLabel, /Counts unavailable/);
   assert.match(outcomeLabel, /check_count_label\(pass_count\)/);
   assert.doesNotMatch(outcomeLabel, /unwrap_or\(0\)/);

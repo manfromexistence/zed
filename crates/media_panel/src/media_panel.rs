@@ -1931,6 +1931,7 @@ impl MediaPanel {
         let source_kind = recent_media_source_kind(&entry.source);
         let source_health = recent_media_source_health(&entry.source);
         let source_available = !media_history_entry_missing(&entry);
+        let row_tooltip = format!("{}\n{}", entry.label.as_ref(), source_label.as_ref());
         let pin_label = if pinned {
             if source_available { "Unpin" } else { "Remove" }
         } else {
@@ -2043,18 +2044,14 @@ impl MediaPanel {
             }
         };
 
-        h_flex()
-            .id(row_id)
-            .gap_2()
-            .items_center()
-            .p_2()
-            .rounded_sm()
-            .border_1()
-            .border_color(cx.theme().colors().border_variant)
-            .bg(cx.theme().colors().element_background)
-            .child(Icon::new(media_kind_icon(entry.kind)).size(IconSize::Small))
+        ListItem::new(row_id)
+            .inset(true)
+            .spacing(ListItemSpacing::Sparse)
+            .selectable(false)
+            .start_slot(Icon::new(media_kind_icon(entry.kind)).size(IconSize::Small))
             .child(
                 v_flex()
+                    .min_w_0()
                     .flex_1()
                     .gap_0p5()
                     .child(
@@ -2081,39 +2078,54 @@ impl MediaPanel {
                             .truncate(),
                     ),
             )
-            .child(actions)
-            .when(!source_available && !pinned, |this| {
-                this.child(
-                    Button::new(remove_id, "Remove")
-                        .style(ButtonStyle::Subtle)
-                        .size(ButtonSize::Compact)
-                        .tooltip(Tooltip::text("Remove this missing media entry"))
-                        .on_click(cx.listener(move |panel, _, _, cx| {
-                            panel.remove_media_history_entry(remove_entry.clone(), pinned, cx);
-                        })),
-                )
-            })
-            .child(
-                Button::new(pin_id, pin_label)
-                    .style(ButtonStyle::Subtle)
-                    .size(ButtonSize::Compact)
-                    .tooltip(Tooltip::text(media_history_pin_tooltip(
-                        pinned,
-                        source_available,
-                    )))
-                    .disabled(!pinned && !source_available)
-                    .on_click(cx.listener(move |panel, _, _, cx| {
-                        if pinned {
-                            if source_available {
-                                panel.unpin_media(pin_entry.clone(), cx);
-                            } else {
-                                panel.remove_media_history_entry(pin_entry.clone(), pinned, cx);
-                            }
-                        } else {
-                            panel.pin_media(pin_entry.clone(), cx);
-                        }
-                    })),
+            .end_slot(
+                h_flex()
+                    .flex_none()
+                    .gap_1()
+                    .flex_wrap()
+                    .child(actions)
+                    .when(!source_available && !pinned, |this| {
+                        this.child(
+                            Button::new(remove_id, "Remove")
+                                .style(ButtonStyle::Subtle)
+                                .size(ButtonSize::Compact)
+                                .tooltip(Tooltip::text("Remove this missing media entry"))
+                                .on_click(cx.listener(move |panel, _, _, cx| {
+                                    panel.remove_media_history_entry(
+                                        remove_entry.clone(),
+                                        pinned,
+                                        cx,
+                                    );
+                                })),
+                        )
+                    })
+                    .child(
+                        Button::new(pin_id, pin_label)
+                            .style(ButtonStyle::Subtle)
+                            .size(ButtonSize::Compact)
+                            .tooltip(Tooltip::text(media_history_pin_tooltip(
+                                pinned,
+                                source_available,
+                            )))
+                            .disabled(!pinned && !source_available)
+                            .on_click(cx.listener(move |panel, _, _, cx| {
+                                if pinned {
+                                    if source_available {
+                                        panel.unpin_media(pin_entry.clone(), cx);
+                                    } else {
+                                        panel.remove_media_history_entry(
+                                            pin_entry.clone(),
+                                            pinned,
+                                            cx,
+                                        );
+                                    }
+                                } else {
+                                    panel.pin_media(pin_entry.clone(), cx);
+                                }
+                            })),
+                    ),
             )
+            .tooltip(Tooltip::text(row_tooltip))
             .into_any_element()
     }
 }
