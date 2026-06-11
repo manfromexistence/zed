@@ -1,3 +1,20 @@
+[2026-06-12] - Plugin Catalog Source Label Hardening
+
+CHANGED:
+- Workflow-node plugin cards and tooltips now use normalized DX source labels instead of rendering raw source paths.
+- Plugin status chips/tooltips now hide blank or `missing_*` receipt states behind user-facing fallback labels, and configured-plugin tooltips summarize bridge status without raw trust booleans.
+- Plugin catalog summaries now use the shared receipt-status label helper and reject path-like source-package fallbacks before visible UI rendering.
+- Source guards now pin the no-raw-source-path Plugins UI boundary and catalog source-label sanitizer.
+
+PASSED:
+- `node --test script\dx-agent-workspaces-source.test.ts`
+- `rustfmt --edition 2024 --check crates\agent_ui\src\dx_launch_workspace\tools_screen\workflow_nodes.rs crates\agent_ui\src\dx_launch_workspace\tools_screen\catalog.rs`
+- `git diff --check`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" ...` returned no matches across touched source, guard, and handoff files.
+
+NOTES:
+- Cargo/build/native visual proof and `just run` remain deferred by instruction.
+
 [2026-06-12] - Catalog Action Prompt Boundary Hardening
 
 CHANGED:

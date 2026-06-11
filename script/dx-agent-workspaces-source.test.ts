@@ -436,7 +436,10 @@ test("Tools workspace exposes trusted bridge contracts without fake approvals", 
   assert.match(workflowNodeScreen, /plugin\.writes_receipt/);
   assert.match(workflowNodeScreen, /plugin\.secrets_exposed/);
   assert.match(workflowNodeScreen, /plugin\.trust_policy/);
-  assert.match(workflowNodeScreen, /Chip::new\(plugin\.status\.clone\(\)\)/);
+  assert.match(workflowNodeScreen, /fn plugin_state_label\(value: &str, fallback: &'static str\) -> String/);
+  assert.match(workflowNodeScreen, /trimmed\.starts_with\("missing_"\)/);
+  assert.doesNotMatch(workflowNodeScreen, /Chip::new\(node\.(?:runtime|trust_status|credential_status)\.clone\(\)\)/);
+  assert.doesNotMatch(workflowNodeScreen, /Chip::new\(plugin\.(?:status|credential_status)\.clone\(\)\)/);
   assert.match(workflowNodeScreen, /\.min_h\(rems_from_px\(110\.\)\)/);
   assert.match(workflowNodeScreen, /\.inset\(true\)/);
   assert.doesNotMatch(workflowNodeScreen, /"\{\} in \/ \{\} out \/ \{\} parameters"/);
@@ -551,6 +554,13 @@ test("Plugins workspace follows the Extensions-style GPUI catalog pattern", () =
 
   assert.doesNotMatch(catalog, /Headline::new\("Plugins"\)/);
   assert.match(catalog, /catalog\.next_action\.clone\(\)/);
+  assert.match(catalog, /DX serializer catalog receipt/);
+  assert.match(catalog, /catalog_receipt_status_label\(&catalog\.status\)/);
+  assert.match(catalog, /fn catalog_source_label\(catalog: &DxWorkflowNodeCatalogSummary\) -> String/);
+  assert.match(catalog, /fn sanitized_catalog_source_package\(value: &str\) -> Option<String>/);
+  assert.match(catalog, /trimmed\.contains\('\\\\'\)/);
+  assert.match(catalog, /trimmed\.contains\("crates\/"\)/);
+  assert.doesNotMatch(catalog, /catalog\.catalog_path\.display\(\)/);
   assert.match(catalog, /bounded_plugin_category_filter_label/);
   assert.match(catalog, /\.when\(!catalog\.nodes\.is_empty\(\)/);
   assert.match(screenChrome, /screen_empty_state[\s\S]*Tooltip::text/);
@@ -566,11 +576,16 @@ test("Plugins workspace follows the Extensions-style GPUI catalog pattern", () =
 
   assert.match(workflowNodes, /\.min_h\(rems_from_px\(110\.\)\)/);
   assert.doesNotMatch(workflowNodes, /\.h\(rems_from_px\(110\.\)\)/);
-  assert.match(workflowNodes, /Chip::new\(node\.runtime\.clone\(\)\)/);
+  assert.match(workflowNodes, /fn plugin_state_label\(value: &str, fallback: &'static str\) -> String/);
+  assert.match(workflowNodes, /trimmed\.starts_with\("missing_"\)/);
+  assert.doesNotMatch(workflowNodes, /Chip::new\(node\.(?:runtime|trust_status|credential_status)\.clone\(\)\)/);
   assert.match(workflowNodes, /fn plugin_source_row\(node: &DxWorkflowNodeSummary\)/);
   assert.match(workflowNodes, /dx_icon\(DxUiIcon::Source\)/);
   assert.match(workflowNodes, /node\.source_package/);
-  assert.match(workflowNodes, /node\.source_path/);
+  assert.match(workflowNodes, /fn plugin_source_label\(node: &DxWorkflowNodeSummary\) -> String/);
+  assert.match(workflowNodes, /fn plugin_source_tooltip\(node: &DxWorkflowNodeSummary\) -> String/);
+  assert.match(workflowNodes, /Trusted DX plugin source/);
+  assert.doesNotMatch(workflowNodes, /node\.source_path/);
   assert.match(workflowNodes, /fn plugin_status_chips\(node: &DxWorkflowNodeSummary\)/);
   assert.match(workflowNodes, /fn plugin_contract_chips\(node: &DxWorkflowNodeSummary\)/);
   assert.match(workflowNodes, /fn plugin_card_tooltip\(node: &DxWorkflowNodeSummary\) -> String/);
@@ -581,7 +596,7 @@ test("Plugins workspace follows the Extensions-style GPUI catalog pattern", () =
   assert.match(workflowNodes, /plugin\.secrets_exposed/);
   assert.match(workflowNodes, /plugin\.trust_policy/);
   assert.match(workflowNodes, /Chip::new\(plugin_configured_state_label\(node\)\)/);
-  assert.match(workflowNodes, /Chip::new\(plugin\.status\.clone\(\)\)/);
+  assert.doesNotMatch(workflowNodes, /Chip::new\(plugin\.(?:status|credential_status)\.clone\(\)\)/);
   assert.match(workflowNodes, /fn plugin_configured_state_label\(node: &DxWorkflowNodeSummary\) -> &'static str/);
   assert.match(workflowNodes, /node\.credential_status/);
   assert.match(workflowNodes, /node\.dynamic_option_count/);

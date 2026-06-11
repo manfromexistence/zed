@@ -15,6 +15,7 @@ use ui::{
 use crate::AgentPanel;
 use crate::dx_agent_bridge::{
     DxAgentBridgeSnapshot, DxWorkflowNodeCatalogSummary, DxWorkflowNodeSummary,
+    catalog_receipt_status_label,
 };
 use crate::workflow_node_icons::workflow_node_element_id;
 
@@ -26,6 +27,7 @@ const MAX_PLUGIN_CATALOG_SEARCH_QUERY_CHARS: usize = 256;
 const MAX_FILTERED_WORKFLOW_NODE_RESULTS: usize = 1_000;
 const MAX_DISPLAYED_WORKFLOW_NODE_RESULTS: usize = MAX_FILTERED_WORKFLOW_NODE_RESULTS;
 const MAX_PLUGIN_CATEGORY_FILTER_CHARS: usize = 26;
+const MAX_PLUGIN_CATALOG_SOURCE_CHARS: usize = 42;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum PluginCatalogFilter {
@@ -345,8 +347,8 @@ fn render_catalog_summary(
                 ))
                 .child(workspace_stat(
                     "dx-plugin-summary-source",
-                    "Source",
-                    catalog.status.clone(),
+                    "Catalog",
+                    catalog_receipt_status_label(&catalog.status),
                     cx,
                 )),
         )
@@ -505,17 +507,45 @@ fn render_empty_state(state: &DxPluginsCatalogState, cx: &mut Context<AgentPanel
 }
 
 fn catalog_summary_label(catalog: &DxWorkflowNodeCatalogSummary) -> String {
-    let source = catalog
-        .source_packages
-        .first()
-        .cloned()
-        .unwrap_or_else(|| catalog.catalog_path.display().to_string());
     format!(
         "{} visible / {} source total from {}",
         catalog.nodes.len(),
         catalog.node_count,
-        source
+        catalog_source_label(catalog)
     )
+}
+
+fn catalog_source_label(catalog: &DxWorkflowNodeCatalogSummary) -> String {
+    catalog
+        .source_packages
+        .iter()
+        .find_map(|source| sanitized_catalog_source_package(source))
+        .unwrap_or_else(|| "DX serializer catalog receipt".to_string())
+}
+
+fn sanitized_catalog_source_package(value: &str) -> Option<String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty()
+        || trimmed.starts_with("missing_")
+        || trimmed.starts_with("unknown_")
+        || trimmed.starts_with('.')
+        || trimmed.starts_with('/')
+        || trimmed.contains('\\')
+        || trimmed.contains(":\\")
+        || trimmed.contains(":/")
+        || trimmed.contains(".dx/")
+        || trimmed.contains("crates/")
+        || trimmed.contains("receipts/")
+        || trimmed.contains("tools/")
+        || (trimmed.contains('/') && !trimmed.starts_with('@'))
+    {
+        return None;
+    }
+
+    Some(bounded_plugin_category_text(
+        trimmed,
+        MAX_PLUGIN_CATALOG_SOURCE_CHARS,
+    ))
 }
 
 fn catalog_empty_message(catalog: &DxWorkflowNodeCatalogSummary) -> String {

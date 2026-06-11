@@ -11,6 +11,7 @@ use crate::workflow_node_icons::{workflow_node_element_id, workflow_node_icon_as
 
 const MAX_PLUGIN_CARD_TITLE_CHARS: usize = 48;
 const MAX_PLUGIN_CARD_CATEGORY_CHARS: usize = 28;
+const MAX_PLUGIN_CARD_SOURCE_CHARS: usize = 40;
 const MAX_PLUGIN_MENU_DETAIL_CHARS: usize = 80;
 
 pub(super) fn workflow_node_card(
@@ -125,7 +126,6 @@ fn plugin_action_stack(node: DxWorkflowNodeSummary, panel: WeakEntity<AgentPanel
 }
 
 fn plugin_source_row(node: &DxWorkflowNodeSummary) -> AnyElement {
-    let tooltip = format!("{} / {}", node.source_package, node.source_path);
     h_flex()
         .id(workflow_node_element_id(
             "dx-workflow-node-source",
@@ -139,13 +139,37 @@ fn plugin_source_row(node: &DxWorkflowNodeSummary) -> AnyElement {
                 .color(Color::Muted),
         )
         .child(
-            Label::new(format!("{} / {}", node.source_package, node.source_path))
+            Label::new(plugin_source_label(node))
                 .size(LabelSize::Small)
                 .color(Color::Muted)
                 .truncate(),
         )
-        .tooltip(Tooltip::text(tooltip))
+        .tooltip(Tooltip::text(plugin_source_tooltip(node)))
         .into_any_element()
+}
+
+fn plugin_source_label(node: &DxWorkflowNodeSummary) -> String {
+    bounded_plugin_card_text(
+        normalized_plugin_source_package(&node.source_package),
+        MAX_PLUGIN_CARD_SOURCE_CHARS,
+    )
+}
+
+fn plugin_source_tooltip(node: &DxWorkflowNodeSummary) -> String {
+    format!(
+        "{} uses receipt-backed DX workflow-node metadata from {}.",
+        bounded_plugin_card_text(&node.display_name, MAX_PLUGIN_CARD_TITLE_CHARS),
+        normalized_plugin_source_package(&node.source_package)
+    )
+}
+
+fn normalized_plugin_source_package(value: &str) -> &str {
+    let trimmed = value.trim();
+    if trimmed.is_empty() || trimmed.starts_with("missing_") {
+        "Trusted DX plugin source"
+    } else {
+        trimmed
+    }
 }
 
 fn plugin_contract_chips(node: &DxWorkflowNodeSummary) -> AnyElement {
@@ -175,9 +199,15 @@ fn plugin_status_chips(node: &DxWorkflowNodeSummary) -> AnyElement {
         .gap_1()
         .flex_none()
         .child(Chip::new(plugin_configured_state_label(node)).truncate())
-        .child(Chip::new(node.runtime.clone()).truncate())
-        .child(Chip::new(node.trust_status.clone()).truncate())
-        .child(Chip::new(node.credential_status.clone()).truncate())
+        .child(Chip::new(plugin_state_label(&node.runtime, "Runtime pending")).truncate())
+        .child(Chip::new(plugin_state_label(&node.trust_status, "Trust pending")).truncate())
+        .child(
+            Chip::new(plugin_state_label(
+                &node.credential_status,
+                "Credential review",
+            ))
+            .truncate(),
+        )
         .child(Chip::new(format!("{} dynamic", node.dynamic_option_count)).truncate())
         .into_any_element()
 }
@@ -194,18 +224,17 @@ fn plugin_configured_state_label(node: &DxWorkflowNodeSummary) -> &'static str {
 
 fn plugin_card_tooltip(node: &DxWorkflowNodeSummary) -> String {
     format!(
-        "{} - {}. Runtime {}, trust {}, credentials {}, {} inputs, {} outputs, {} parameters, {} dynamic options. Source: {} / {}",
+        "{} - {}. Runtime {}, trust {}, credentials {}, {} inputs, {} outputs, {} parameters, {} dynamic options. Source: {}",
         node.display_name,
         node.description,
-        node.runtime,
-        node.trust_status,
-        node.credential_status,
+        plugin_state_label(&node.runtime, "Runtime pending"),
+        plugin_state_label(&node.trust_status, "Trust pending"),
+        plugin_state_label(&node.credential_status, "Credential review"),
         node.input_count,
         node.output_count,
         node.parameter_count,
         node.dynamic_option_count,
-        node.source_package,
-        node.source_path
+        plugin_source_label(node)
     )
 }
 
@@ -371,8 +400,14 @@ fn configured_plugin_status_chips(plugin: &DxConfiguredPluginSummary) -> AnyElem
     h_flex()
         .gap_1()
         .flex_none()
-        .child(Chip::new(plugin.status.clone()).truncate())
-        .child(Chip::new(plugin.credential_status.clone()).truncate())
+        .child(Chip::new(plugin_state_label(&plugin.status, "Status pending")).truncate())
+        .child(
+            Chip::new(plugin_state_label(
+                &plugin.credential_status,
+                "Credential review",
+            ))
+            .truncate(),
+        )
         .child(Chip::new(configured_plugin_authorization_label(plugin)).truncate())
         .into_any_element()
 }
@@ -393,14 +428,11 @@ fn configured_plugin_authorization_label(plugin: &DxConfiguredPluginSummary) -> 
 
 fn configured_plugin_tooltip(plugin: &DxConfiguredPluginSummary) -> String {
     format!(
-        "{}: status {}, credentials {}, trust policy {}, bridge approved {}, writes receipt {}, secrets exposed {}",
+        "{}: status {}, credentials {}, bridge status {}",
         plugin.display_name,
-        plugin.status,
-        plugin.credential_status,
-        plugin.trust_policy,
-        yes_no(plugin.approved_by_trusted_bridge),
-        yes_no(plugin.writes_receipt),
-        yes_no(plugin.secrets_exposed)
+        plugin_state_label(&plugin.status, "Status pending"),
+        plugin_state_label(&plugin.credential_status, "Credential review"),
+        configured_plugin_authorization_label(plugin)
     )
 }
 
@@ -438,6 +470,18 @@ fn plugin_config_menu_row(
 
 fn bounded_plugin_menu_detail(value: &str) -> String {
     bounded_plugin_card_text(value, MAX_PLUGIN_MENU_DETAIL_CHARS)
+}
+
+fn plugin_state_label(value: &str, fallback: &'static str) -> String {
+    let trimmed = value.trim();
+    if trimmed.is_empty() || trimmed.starts_with("missing_") {
+        return fallback.to_string();
+    }
+
+    bounded_plugin_card_text(
+        &trimmed.replace(['_', '-'], " "),
+        MAX_PLUGIN_MENU_DETAIL_CHARS,
+    )
 }
 
 fn bounded_plugin_card_text(value: &str, max_chars: usize) -> String {
