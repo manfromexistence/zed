@@ -90,6 +90,7 @@ mod dx_launch_source_audit;
 mod dx_launch_status;
 #[allow(dead_code)]
 mod dx_launch_workspace;
+mod dx_plugin_credentials;
 pub mod dx_project_context;
 mod dx_proof_freshness;
 mod dx_receipt_history;
@@ -120,6 +121,7 @@ mod thread_import;
 pub mod thread_metadata_store;
 pub mod thread_worktree_archive;
 mod tools_screen;
+mod workflow_node_icons;
 
 pub mod threads_archive_view;
 mod ui;

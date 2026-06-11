@@ -34,6 +34,7 @@ mod audit;
 mod automation_screen;
 mod binary_cache;
 mod binary_cache_labels;
+mod catalog_chrome;
 mod check;
 mod check_labels;
 mod connections_screen;
@@ -46,6 +47,7 @@ mod list_labels;
 mod proof;
 mod proof_labels;
 mod readiness;
+mod screen_chrome;
 mod source_audit;
 mod sources;
 mod style_panel;
@@ -55,9 +57,18 @@ mod www_evidence;
 
 use self::list_labels::{bounded_items, yes_no};
 
-pub(crate) use automation_screen::render_automation_screen;
-pub(crate) use connections_screen::render_connections_screen;
-pub(crate) use tools_screen::render_tools_screen;
+pub(crate) use automation_screen::{
+    AutomationCatalogFilter, DxAutomationCatalogState, render_automation_catalog_rows,
+    render_automation_screen,
+};
+pub(crate) use connections_screen::{
+    ConnectionCatalogFilter, DxConnectionsCatalogState, render_connections_catalog_rows,
+    render_connections_screen,
+};
+pub(crate) use tools_screen::{
+    DxPluginsCatalogState, PluginCatalogFilter, render_tools_screen,
+    render_workflow_node_catalog_rows,
+};
 
 #[derive(Clone)]
 pub(crate) struct DxLaunchWorkspaceStatus {

@@ -5,7 +5,7 @@ use crate::dx_agent_bridge::DxAgentBridgeSnapshot;
 
 use self::rows::{dx_agent_model_row, dx_agent_provider_row};
 use self::summary::dx_agent_provider_summary_rows;
-use super::super::{metric_row, muted_card};
+use super::super::screen_chrome::{screen_detail_row, screen_empty_state};
 
 mod rows;
 mod summary;
@@ -23,19 +23,36 @@ pub(in super::super) fn dx_agent_provider_state(
 
     if !snapshot.show_managed_providers {
         return stack
-            .child(muted_card("Managed provider rows hidden by settings", cx))
+            .child(screen_empty_state(
+                "dx-agent-providers-hidden",
+                dx_icon(DxUiIcon::Gateway),
+                "Managed provider rows hidden by settings",
+                cx,
+            ))
             .into_any_element();
     }
 
     if let Some(source_hash) = snapshot.catalog.source_hash.as_ref() {
-        stack = stack.child(metric_row("Source hash", source_hash.clone()));
+        stack = stack.child(screen_detail_row(
+            "dx-agent-provider-source-hash".into(),
+            dx_icon(DxUiIcon::Receipts),
+            "Source hash",
+            source_hash.clone(),
+        ));
     }
     if let Some(error) = snapshot.catalog.error.as_ref() {
-        stack = stack.child(metric_row("Catalog error", error.clone()));
+        stack = stack.child(screen_detail_row(
+            "dx-agent-provider-catalog-error".into(),
+            IconName::Warning,
+            "Catalog error",
+            error.clone(),
+        ));
     }
 
     if snapshot.providers.is_empty() {
-        stack = stack.child(muted_card(
+        stack = stack.child(screen_empty_state(
+            "dx-agent-providers-empty",
+            dx_icon(DxUiIcon::Gateway),
             format!("Run {}", snapshot.catalog.safe_regeneration_command),
             cx,
         ));

@@ -1,3 +1,20 @@
+[2026-06-11] - DX Plugins Workflow Catalog Merge
+
+CHANGED:
+- Merged the restored `codex/dx-plugins-n8n-catalog` workflow-node Plugins work into the current `dev` line.
+- Preserved the current Agent Liquid Glass fullscreen chat-input correction while restoring the serializer-backed Plugins catalog, configured-plugin composer strip, secure credential modal, workflow-node bridge contracts, and shared Extensions-style Connections/Automations workspace chrome.
+
+NOTES:
+- Verification for this merge remains source-only until the governed native runtime/build window is explicitly authorized.
+- Live n8n package ingestion still depends on the DXJS/serializer sidecar writing the bounded workflow-node catalog receipt that the restored Zed bridge now consumes.
+
+PASSED:
+- `node --test script\dx-agent-composer-liquid-glass-source.test.ts script\dx-agent-workspaces-source.test.ts script\dx-agent-thread-view-source.test.ts script\dx-agent-bridge-source.test.ts script\dx-plugin-catalog-source.test.ts script\dx-plugin-credentials-source.test.ts script\dx-agent-plugin-runtime-status-source.test.ts script\dx-agent-connections-ui-source.test.ts script\dx-automations-source.test.ts script\dx-title-bar-source.test.ts script\dx-check-panel-source.test.ts script\dx-forge-panel-source.test.ts`
+- `rustfmt --edition 2024 --config skip_children=true --check` on touched Rust files.
+- Conflict-marker scan over changed files returned no matches.
+- Production forbidden-upstream plugin source scan over touched Plugins/bridge/runtime source returned no matches.
+- `git diff --check`
+
 [2026-06-11] - Liquid Glass Full-Width and Plugins Panel Foundation
 
 ADDED:
@@ -98,6 +115,271 @@ ADDED:
 
 NOTES:
 - Planning is source-only. No Rust build, Cargo command, local server, or n8n website integration was run for this planning pass.
+
+[2026-06-11] - DX Plugins Card Catalog Composer Chrome
+
+CHANGED:
+- Workflow-node cards now use tooltip-backed contract chips for inputs, outputs, parameters, runtime/source metadata, and a min-height card shell so labels do not force fixed-card clipping.
+- Configure popovers now render sparse inset `ListItem` rows with bounded detail text and action tooltips instead of dense freeform rows.
+- Configured plugin rows and chat-composer triggers now show icons plus status and credential chips while keeping the surface prompt-only and avoiding runtime-ready wording.
+- The configured plugin composer strip now renders as a one-line toolbar with a count chip, bounded trigger labels, stable trigger height, and an overflow popover instead of wrapping or silently hiding extra configured plugins.
+- The Plugins catalog summary removes the duplicate inner headline, bounds category filter labels, hides the category strip when no nodes are indexed, and uses the receipt next-action message for missing catalogs.
+
+HARDENED:
+- Source guards now pin the prompt-only composer contract, overflow behavior, status-chip rendering, bounded category labels, tooltip-backed empty states, and the absence of old ready/runtime phrasing in this surface.
+- The composer prompt continues to exclude command strings, source paths, source roots, credential field names, and secret-like values.
+
+PASSED:
+- `rustfmt --edition 2024` on the touched Plugins/composer UI files.
+- `node --test script/dx-agent-workspaces-source.test.ts script/dx-agent-thread-view-source.test.ts`
+
+NOTES:
+- Cargo, `just run`, full builds, native Zed launch, visual runtime proof, local servers, and browser automation remain deferred by instruction.
+
+[2026-06-11] - DX Plugins Shared Workspace Chrome
+
+CHANGED:
+- Plugins now uses the shared DX workspace page header, summary stat cards, `screen_section` cards, sparse detail rows, and honest empty states used by the professional Connections and Automations surfaces.
+- The workflow-node catalog now reuses `catalog_chrome::render_catalog_search`, frames configured plugins inside a bordered GPUI section, and keeps the source-backed virtualized catalog, category filters, and selected plugin detail pane intact.
+- The selected plugin inspector now renders summary, credential setup, plugin contract, permissions, ports, dynamic options, receipts, actions, and trust as shared GPUI sections instead of local extra-dense/debug-style rows.
+
+HARDENED:
+- Focused source guards now prevent the Plugins workspace from regressing to local `section_title`, `muted_card`, `metric_row`, local detail row helpers, local search editor rendering, or debug-formatted trust/receipt strings.
+- Credential detail text stays sanitized and still shows only metadata, receipt ids, statuses, and DX Agents credential-bridge state, never raw secret values or keychain handles.
+
+PASSED:
+- `rustfmt --edition 2024` on the touched Plugins UI files.
+- `rustfmt --edition 2024 --check` on the touched Plugins UI files.
+- `node --test script/dx-agent-workspaces-source.test.ts`
+- `node --test script/dx-agent-workspaces-source.test.ts script/dx-plugin-catalog-source.test.ts script/dx-agent-bridge-source.test.ts script/dx-plugin-credentials-source.test.ts`
+
+NOTES:
+- Cargo, `just run`, full builds, native launch, visual runtime proof, local servers, and browser automation remain deferred by instruction.
+
+[2026-06-11] - DX Connections And Automations Catalog Row Chrome
+
+ADDED:
+- Shared catalog row helpers now render two-line labels and GPUI status chips for DX-owned catalog rows.
+- Focused source guards now require Connections and Automations catalog rows to use direct `ListItem` icon/label/status-chip slots, tooltips, and bordered catalog sections instead of nested settings rows.
+
+CHANGED:
+- Connections and Automations searchable catalogs now frame their virtualized lists inside `screen_section`/`ListHeader` cards with live entry counts.
+- Connections and Automations catalog rows now use semantic start icons, shared label blocks, status `Chip` end slots, and metadata tooltips while preserving selected-row state and receipt-backed right-side inspectors.
+- Removed compact-detail-only helpers that existed solely for the previous nested `AiSettingItem` catalog row implementation.
+
+HARDENED:
+- The catalog source guards keep these inspect-only row surfaces free of fake command buttons, public command dispatch, generic run commands, and upstream plugin-source references already covered by the broader DX source guards.
+
+PASSED:
+- `rustfmt --edition 2024 --check` on the touched Rust files.
+- `node --test script/dx-agent-connections-ui-source.test.ts script/dx-automations-source.test.ts`
+
+NOTES:
+- Cargo, `just run`, full builds, native launch, visual runtime proof, local servers, and browser automation remain deferred by instruction.
+
+[2026-06-11] - DX Connections And Automations Catalog State
+
+ADDED:
+- Connections and Automations now have persistent Extensions-style catalog state owned by `AgentPanel`: single-line search editors, segmented filters, selected row state, virtualized catalog rows, and right-side inspector panes.
+- Connections catalog rows expose receipt authority, trusted-tool bridge, channels, gateway, credential health, providers, and social accounts as selectable `AiSettingItem` rows backed by the existing DX Agents bridge snapshot.
+- Automations catalog rows expose the composer contract, runtime evidence, automation rows, and failure evidence with execution-proof details tied to parsed receipts/history instead of scheduler assumptions.
+
+CHANGED:
+- Connections and Automations workspace screens render the catalog/inspector first while preserving the existing receipt-backed section breakdowns below it.
+- Shared catalog search chrome now lives in `catalog_chrome.rs` so the new pages use the same Zed editor styling without duplicating input rendering.
+
+HARDENED:
+- Source guards now require the stateful catalog wiring, virtualized row processors, selected detail panes, no fake runtime command buttons, and small focused catalog files.
+
+PASSED:
+- `rustfmt --edition 2024 --check` on the touched Rust files.
+- `node --test script/dx-agent-workspaces-source.test.ts script/dx-plugin-catalog-source.test.ts script/dx-agent-bridge-source.test.ts script/dx-plugin-credentials-source.test.ts script/dx-agent-connections-ui-source.test.ts script/dx-automations-source.test.ts`
+
+NOTES:
+- Cargo, `just run`, full builds, native launch, visual runtime proof, local servers, and browser automation remain deferred by instruction.
+
+[2026-06-11] - DX Connections And Automations GPUI Polish
+
+ADDED:
+- `crates/agent_ui/src/dx_launch_workspace/screen_chrome.rs` now provides shared DX workspace page chrome: large GPUI `Headline` headers, source-backed stat cards, bordered `ListHeader` section cards, readable sparse detail rows, and honest empty rows.
+- `crates/agent_ui/src/dx_launch_workspace/automation_screen/sections/drafts.rs` keeps automation composer rendering focused after the screen-card refactor.
+
+CHANGED:
+- Connections now renders Providers, Channels, Social, Gateway, and Credentials inside Extension-style GPUI section cards with summary stats and sparse detail rows instead of small section-title text stacks.
+- Automations now renders Drafts, Schedules, Runs, History, and Failures with the same shared page chrome while preserving receipt-backed disabled/unavailable states and execution-proof honesty.
+- Provider and social subsections now use shared GPUI detail/empty rows instead of raw metric/muted-card text rows.
+
+HARDENED:
+- Focused source guards now prevent Connections and Automations from regressing to `section_title`, `metric_row`, `muted_card`, or `ExtraDense` list chrome in the DX-owned workspace surfaces.
+
+PASSED:
+- `rustfmt --edition 2024` on the touched Rust files.
+- `node --test script/dx-agent-connections-ui-source.test.ts script/dx-automations-source.test.ts`
+
+NOTES:
+- Cargo, `just run`, native launch, visual runtime proof, local servers, and browser automation remain deferred by instruction.
+
+[2026-06-11] - DX Plugins Secure Credential Modal
+
+ADDED:
+- Workflow-node credential metadata now includes bounded input summaries parsed from serializer `inputs` or `fields`, with a required secret fallback when a credential declares no explicit fields.
+- Credential-backed Plugins Configure actions now open a GPUI credential modal that renders masked input fields for the declared credential inputs.
+- Saved credentials are written through internal platform-keychain item names and the Agent draft receives only a non-secret local save summary plus bounded plugin/source metadata.
+
+HARDENED:
+- The modal rejects untrusted, non-first-party, or incomplete-source plugin metadata before storing credentials.
+- Raw credential values and keychain item names are never written to settings, receipts, logs, prompts, or source-rendered labels; fields are cleared after a successful save or cancel.
+- Source guards now cover credential input mapping, keychain-only storage, no forbidden upstream plugin sources, no raw secret-key terms in modal/UI surfaces, and focused bridge file-size boundaries.
+
+PASSED:
+- `rustfmt --edition 2024 --check` on the touched Rust files.
+- `node --test script/dx-agent-bridge-source.test.ts script/dx-agent-workspaces-source.test.ts script/dx-agent-thread-view-source.test.ts script/dx-plugin-catalog-source.test.ts script/dx-plugin-credentials-source.test.ts`
+- Focused forbidden-upstream and raw-secret scans over the touched Plugins credential files returned no matches.
+- Focused conflict-marker scan over touched docs, source, and guard files returned no matches.
+- `git diff --check`
+
+NOTES:
+- Cargo, `just run`, local servers, native launch, visual runtime proof, and live keychain write proof remain deferred by instruction.
+
+[2026-06-11] - DX Plugins Configure Bridge And Catalog Provenance
+
+CHANGED:
+- Workflow-node catalog discovery now records the actual receipt path that was loaded, including alternate plugin catalog filenames and the nested `plugins/workflow-node-catalog-latest.json` receipt.
+- Plugin configured state now reconciles visible node chips from `configured_plugins`/`enabled_plugins` receipt data before falling back to per-node metadata, so stale node booleans do not create fake configured UI.
+- The Plugins Configure menu now drafts a DX Agent setup/review request through the active Agent panel instead of executing plugin commands, writing credential state, or marking credentials configured locally.
+
+HARDENED:
+- Missing workflow-node schema and serializer metadata now render as explicit missing fields instead of defaulting to a claimed serializer contract.
+- Configured-plugin receipt parsing accepts both `writes_receipt` and `writes_receipts` while continuing to fail closed for unapproved or secret-exposed plugin options.
+- Focused source guards now cover path-aware catalog reads, configured-state reconciliation, no direct receipt IO in the Plugins panel, no upstream plugin source references, and no raw command execution from the Configure action.
+
+PASSED:
+- `node --test script/dx-agent-bridge-source.test.ts script/dx-agent-workspaces-source.test.ts script/dx-agent-thread-view-source.test.ts script/dx-plugin-catalog-source.test.ts`
+- `rustfmt --edition 2024 --check` on the touched Rust files.
+- Focused production-source scan for forbidden upstream plugin source references returned no matches.
+- Focused Plugins UI scan for raw secret-key display terms returned no matches.
+- Focused conflict-marker scan over touched docs, source, and guard files returned no matches.
+- `git diff --check`
+
+NOTES:
+- Cargo, `just run`, local servers, native launch, and visual runtime proof remain deferred by instruction.
+
+[2026-06-11] - DX Plugins Extensions-Style GPUI Parity
+
+CHANGED:
+- The visible Plugins workspace now follows the real Zed Extensions screen structure more closely: large page headline, compact source-backed catalog summary stats, search plus segmented filters, bordered horizontal category filters, and a virtualized plugin-card list.
+- Workflow-node plugin cards now use the same fixed-height elevated card shell as Extension cards while preserving the DX/SVGL icon asset path, config popover, selected state, and serializer-backed plugin metadata with bounded labels and a calmer three-row card rhythm.
+- Plugin cards now surface runtime, trust, inputs, outputs, parameters, credential status, dynamic-option count, source package, and source path through GPUI `Chip`, `Label`, `Headline`, `Button`, and icon components instead of badge-heavy text rows or disabled state buttons.
+- Workflow-node icon resolution now keeps explicit `svgl:` slug underscores, resolves common brand aliases such as GitHub and Google Drive to local SVGL pack keys, and can materialize unlisted explicit SVGL slugs on demand.
+
+HARDENED:
+- Focused source guards now pin the Plugins catalog to the Extensions-style GPUI shape and prevent the workflow-node card from regressing to badge-based chrome.
+- Category filters no longer hide categories after a fixed 24-item cap.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates/agent_ui/src/dx_launch_workspace/tools_screen/catalog.rs crates/agent_ui/src/dx_launch_workspace/tools_screen/workflow_nodes.rs crates/agent_ui/src/workflow_node_icons.rs`
+- `node --test script\dx-agent-workspaces-source.test.ts script\dx-plugin-catalog-source.test.ts`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" DX.md changelog.txt todo.txt crates/agent_ui/src/dx_launch_workspace/tools_screen/catalog.rs crates/agent_ui/src/dx_launch_workspace/tools_screen/workflow_nodes.rs crates/agent_ui/src/workflow_node_icons.rs script/dx-agent-workspaces-source.test.ts` returned no matches.
+- `git diff --check`
+
+NOTES:
+- Cargo, `just run`, local servers, native launch, and visual runtime proof remain deferred by instruction.
+
+[2026-06-11] - DX Plugins Source Integrity and Runtime Aliases
+
+ADDED:
+- `crates/agent/src/tools/dx_plugin_manifest.rs` now emits `zed.dx_plugins.source_root_integrity.v1` with manifest/runtime source-root validation, existing-ancestor canonicalization, runtime-entrypoint containment, and fail-closed catalog/default-enabled behavior when violations exist.
+- First-party plugin manifests now include `zed.dx_plugins.runtime_status_alias.v1` metadata for `dx.browser`, `dx.computer`, and `dx.driven`.
+- `inspect_agent_plugin_runtime_status` now emits `dx_plugin_runtime_aliases` with `dx.browser`, `dx.computer`, and `dx.driven` mappings to existing Browser/WebPreview, managed Chrome, PC-use, and guarded workflow surfaces.
+- `crates/agent/src/tools/dx_plugin_runtime_aliases.rs` owns the alias packet builder so the already-large runtime-status tool does not absorb the new contract logic.
+- `script/dx-agent-plugin-runtime-status-source.test.ts` guards the runtime alias schema, lane mappings, non-authorization policy, Computer safety flags, and Driven no-executor claim.
+- `docs/superpowers/plans/2026-06-11-dx-plugins-source-integrity-runtime-aliases.md` records the source-only implementation plan and verification boundary.
+
+CHANGED:
+- `dx.computer` now declares the managed Playwright runner as `workspace_playwright_runner` instead of pointing its runtime entrypoint at the DXJS root.
+- `dx.driven` now uses the `repo_agent_ui_bridge_module` source root for its `crates/agent_ui/src/dx_agent_bridge.rs` runtime entrypoint while still declaring the bridge directory for related source.
+- Agent plugin catalog output derives `dx_default_enabled_plugins` from the validated DX plugin catalog summary instead of hard-coding first-party DX plugins when source integrity fails.
+
+HARDENED:
+- Source guards now prove every first-party manifest/runtime source root resolves through `allowlisted_source_roots` and that runtime-status aliases do not invent runtime-green readiness.
+- Runtime aliases remain display/lookup metadata only: they do not authorize actions, do not dispatch input, do not launch browsers, and do not claim `dx.driven` executor runtime readiness.
+
+PASSED:
+- `rustfmt --edition 2024 --check crates/agent/src/tools.rs crates/agent/src/tools/dx_plugin_manifest.rs crates/agent/src/tools/dx_plugin_manifest/entries.rs crates/agent/src/tools/dx_plugin_runtime_aliases.rs crates/agent/src/tools/agent_plugin_catalog_tool.rs crates/agent/src/tools/agent_plugin_runtime_status_tool.rs`
+- `node --test script\dx-agent-workspaces-source.test.ts script\dx-agent-thread-view-source.test.ts script\dx-agent-bridge-source.test.ts script\dx-plugin-catalog-source.test.ts script\dx-agent-plugin-runtime-status-source.test.ts`
+- Focused forbidden-upstream scan over touched plugin source files returned no matches.
+- Focused conflict-marker scan over touched source, guard, and plan files returned no matches.
+- `git diff --check`
+
+NOTES:
+- Cargo, `just run`, local servers, native launch, and visual runtime proof remain deferred by instruction. Next source pass should tighten configured-plugin source-root/source-path authorization and trusted-bridge status gating before AI runtime-tool claims.
+
+[2026-06-11] - DX Plugins Rich Metadata and Receipt-Gated Composer
+
+CHANGED:
+- The Plugins workspace now renders a persistent selected workflow-node detail pane beside the virtualized catalog, showing credential setup, declared credential types, serializer contract, runtime/trust/source, permissions, inputs, outputs, credentials, dynamic options, receipts, actions, and trust from `dx.serializer.machine` metadata.
+- Workflow-node cards are selectable GPUI cards with selected styling while preserving the existing SVGL/DX icon rendering path and virtualized list behavior.
+- Configured plugin composer shortcuts now come from an AgentPanel-owned background cache that syncs safe options into the active ThreadView instead of reading bridge receipts during chat composer render.
+- Workflow-node bridge parsing is split across focused coordinator, metadata-contract, and configured-plugin modules so the catalog, detail pane, and composer gate share typed metadata without growing a monster file.
+
+HARDENED:
+- Configured plugin composer options are filtered through the trusted tool bridge, requiring receipt-authorized policy, trusted action id, bounded safe ids, allowlisted ready states, per-plugin trusted approval, receipt-writing proof, and no secret exposure before they become prompt options.
+- ThreadView now renders only cached configured plugin options and has a source guard preventing bridge snapshot, receipt-root, or direct filesystem reads in the composer strip.
+- Workflow-node parser defaults now fail closed for missing source package version, source root id, source path, permissions, trust policy, credential status, receipt id, and configured-plugin action id metadata.
+- The runtime-status artifact label no longer references `inspirations/`, keeping the DX plugin source scan free of forbidden upstream/source-root names.
+- Source guards now scan manifest, bridge, Plugins panel, and composer surfaces for forbidden upstream plugin sources and raw secret-key JSON exposure.
+
+PASSED:
+- `rustfmt crates/agent_ui/src/agent_panel.rs crates/agent_ui/src/dx_agent_bridge.rs crates/agent_ui/src/dx_agent_bridge/workflow_nodes.rs crates/agent_ui/src/dx_agent_bridge/workflow_nodes/contract.rs crates/agent_ui/src/dx_agent_bridge/workflow_nodes/configured.rs crates/agent_ui/src/dx_launch_workspace/tools_screen/details.rs`
+- `rustfmt --check crates/agent_ui/src/agent_panel.rs crates/agent_ui/src/dx_agent_bridge.rs crates/agent_ui/src/dx_agent_bridge/workflow_nodes.rs crates/agent_ui/src/dx_agent_bridge/workflow_nodes/contract.rs crates/agent_ui/src/dx_agent_bridge/workflow_nodes/configured.rs crates/agent_ui/src/dx_launch_workspace/tools_screen/details.rs`
+- `node --test script\dx-agent-workspaces-source.test.ts script\dx-agent-thread-view-source.test.ts script\dx-agent-bridge-source.test.ts script\dx-plugin-catalog-source.test.ts`
+- Focused forbidden-upstream scan over DX plugin manifest/catalog source plus bridge, Plugins panel, and composer guard surfaces.
+- Focused render-path IO scan over Plugins panel and workflow-node bridge surfaces; a broader exploratory scan still reports unrelated existing AgentPanel persistence and ThreadView audio cleanup IO outside this patch.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)"` across touched source, guard, todo, changelog, and DX files returned no real conflict markers.
+- `git diff --check`
+
+NOTES:
+- Cargo, `just run`, local servers, native launch, and visual runtime proof remain deferred by instruction. Next source pass should add canonical source-root integrity checks and explicit `dx.browser` / `dx.computer` / `dx.driven` runtime-status aliases.
+
+[2026-06-10] - DX Plugins Extension-Style Catalog and SVGL Icons
+
+CHANGED:
+- The Plugins workspace now owns persistent Extensions-style catalog state with a search editor, All/Configured/Needs Setup filters, category filters, and a virtualized workflow-node list backed by the existing serializer catalog receipt.
+- Workflow-node plugin cards and configured plugin composer shortcuts now resolve icons through the DX icon data path, materializing allowlisted SVGL brand SVGs into a bounded target cache and rendering them with original colors.
+- Configured plugin prompt insertion now uses plugin id, node id, action id, receipt id, and credential status instead of inserting a shell run command into the Agent composer.
+
+HARDENED:
+- Workflow-node and category element ids now use bounded sanitized ids with stable hashes, so catalog-provided labels do not become raw GPUI ids.
+- The bridge keeps configured plugin defaults fail-closed for missing status/credential/receipt fields while preserving the existing redacted `run_command` display field for receipt compatibility.
+- Focused source guards now pin the persistent Plugins catalog state, virtualized list, SVGL icon pipeline, and configured-plugin prompt contract.
+
+PASSED:
+- `rustfmt --edition 2024 crates\agent_ui\src\workflow_node_icons.rs crates\agent_ui\src\dx_launch_workspace.rs crates\agent_ui\src\dx_launch_workspace\tools_screen.rs crates\agent_ui\src\dx_launch_workspace\tools_screen\catalog.rs crates\agent_ui\src\dx_launch_workspace\tools_screen\workflow_nodes.rs crates\agent_ui\src\agent_panel.rs crates\agent_ui\src\conversation_view\thread_view.rs crates\agent_ui\src\dx_agent_bridge\workflow_nodes.rs`
+- `node --test script\dx-agent-workspaces-source.test.ts script\dx-agent-thread-view-source.test.ts script\dx-agent-bridge-source.test.ts script\dx-title-bar-source.test.ts`
+- `git diff --check`
+- Focused forbidden-upstream scan over the touched source and guard files.
+
+NOTES:
+- Cargo, `just run`, local servers, native launch, and visual runtime proof remain deferred by instruction.
+
+[2026-06-10] - DX Plugins Workflow Node Catalog Surface
+
+ADDED:
+- The Plugins workspace now renders a serializer-backed Workflow Nodes section as GPUI cards, using bounded `dx.serializer.machine` catalog receipts before Browser, Computer, MCP, Receipts, and Permissions.
+- The DX Agents bridge now summarizes workflow-node catalog receipts, including node cards, configured plugin options, serializer/source metadata, trust/runtime details, and redacted credential status.
+- The Agent composer now shows configured workflow-node plugins above the input with icon-backed GPUI menus that insert a structured plugin-use prompt for the AI bridge.
+
+CHANGED:
+- Visible Tools copy now presents as Plugins across the workspace tab, title-bar screen dock, and carousel while keeping compatibility action/types intact.
+- Focused source guards now pin the serializer-backed catalog path, non-badge plugin cards, credential menu behavior, configured composer strip, and forbidden upstream source exclusions.
+
+PASSED:
+- `rustfmt --edition 2024 --config skip_children=true --check crates\agent_ui\src\dx_agent_bridge.rs crates\agent_ui\src\dx_agent_bridge\workflow_nodes.rs crates\agent_ui\src\dx_agent_bridge\receipts\trusted_tool_bridge.rs crates\agent_ui\src\dx_launch_workspace\tools_screen.rs crates\agent_ui\src\dx_launch_workspace\tools_screen\workflow_nodes.rs crates\agent_ui\src\tools_screen.rs crates\title_bar\src\title_bar.rs crates\workspace\src\screen_carousel.rs crates\agent_ui\src\conversation_view\thread_view.rs`
+- `node --test script\dx-plugin-catalog-source.test.ts script\dx-agent-workspaces-source.test.ts script\dx-agent-bridge-source.test.ts script\dx-agent-thread-view-source.test.ts script\dx-title-bar-source.test.ts`
+- Focused forbidden-source and raw-secret scans over the touched production files.
+
+NOTES:
+- Cargo, `just run`, local servers, native launch, and visual runtime proof remain deferred by instruction. This slice is a source-verified bridge/UI foundation for the DX Code Plugins panel and Agent composer handoff.
 
 [2026-06-10] - Authorized J6 Voice and Forge Follow-up
 

@@ -85,6 +85,9 @@ test("DX Automations remain receipt-backed and do not fake scheduled execution",
   const automationScreenSections = read(
     "crates/agent_ui/src/dx_launch_workspace/automation_screen/sections.rs",
   );
+  const automationScreenDrafts = read(
+    "crates/agent_ui/src/dx_launch_workspace/automation_screen/sections/drafts.rs",
+  );
   const automationScreenRows = read(
     "crates/agent_ui/src/dx_launch_workspace/automation_screen/sections/rows.rs",
   );
@@ -126,19 +129,18 @@ test("DX Automations remain receipt-backed and do not fake scheduled execution",
   assert.match(rail, /dx_agent_automation_composer_contract/);
   assert.match(rail, /"dx agents automate list --json"/);
   assert.match(rail, /muted_card\("Run automation list receipt"/);
+  assert.match(agentPanel, /new_automation_workspace/);
   assert.match(agentPanel, /render_automation_workspace_screen/);
-  assert.match(agentPanel, /render_automation_screen\(status\.as_ref\(\), cx\)/);
-  assert.match(agentPanel, /register_action\(\|workspace, _:\s*&OpenAutomations, window, cx\|/);
-  assert.match(agentPanel, /AutomationScreen::open_or_focus\(workspace, window, cx\)/);
+  assert.match(agentPanel, /register_action\(\|workspace, _: &OpenAutomations[\s\S]*?AutomationScreen::open_or_focus/);
   assert.doesNotMatch(
     agentPanel,
-    /render_automation_workspace_screen[\s\S]*?OpenProjectDebugTasks/,
+    /AgentPanelHostKind::AutomationWorkspace[\s\S]{0,1200}OpenProjectDebugTasks/,
     "Automations launch rail action must not route to debugger tasks",
   );
-  assert.match(launchWorkspace, /pub\(crate\) use automation_screen::render_automation_screen;/);
+  assert.match(launchWorkspace, /pub\(crate\) use automation_screen::\{[\s\S]*render_automation_screen/);
   assert.doesNotMatch(launchWorkspace, /pub\(crate\) fn render_automation_screen/);
   for (const section of ["Drafts", "Schedules", "Runs", "History", "Failures"]) {
-    assert.match(automationScreenView, new RegExp(`section_title\\("${section}"`));
+    assert.match(automationScreenView, new RegExp(`screen_section\\(\\s*"dx-automation-${section.toLowerCase()}"`));
   }
   assert.match(automationScreenView, /Composer receipt state, schedule contracts, history, and handoff evidence/);
   assert.doesNotMatch(automationScreenView, /Receipt-backed composer/);
@@ -160,7 +162,7 @@ test("DX Automations remain receipt-backed and do not fake scheduled execution",
   assert.match(automationScreenSections, /No failed automation run receipts in the current list/);
   assert.match(automationScreenSections, /has_successful_execution_proof\(\)/);
   assert.match(automationScreenSections, /has_failed_execution_proof\(\)/);
-  assert.match(automationScreenSections, /AiSettingItem::new/);
+  assert.match(automationScreenDrafts, /AiSettingItem::new/);
   assert.match(automationScreenRows, /has_successful_execution_proof\(\)/);
   assert.match(automationScreenRows, /has_failed_execution_proof\(\)/);
   assert.match(automationScreenRows, /AiSettingItem::new/);
@@ -170,9 +172,9 @@ test("DX Automations remain receipt-backed and do not fake scheduled execution",
   assert.match(composer, /composer\.unavailable_reason/);
   assert.match(composer, /composer\.field_summary\(4\)/);
   assert.match(composer, /composer\.field_summary_label\(\)/);
-  assert.match(automationScreenSections, /composer\.field_summary\(5\)/);
-  assert.match(automationScreenSections, /composer\.field_summary_label\(\)/);
-  assert.match(automationScreenSections, /composer\.empty_field_summary_label\(\)/);
+  assert.match(automationScreenDrafts, /composer\.field_summary\(5\)/);
+  assert.match(automationScreenDrafts, /composer\.field_summary_label\(\)/);
+  assert.match(automationScreenDrafts, /composer\.empty_field_summary_label\(\)/);
   assert.match(configuration, /composer\.field_summary\(4\)/);
   assert.match(configuration, /composer\.field_summary_label\(\)/);
   assert.doesNotMatch(composer, /Fields: \{field_summary\}/);
@@ -273,6 +275,78 @@ test("DX Automations have a first-class workspace tab contract", () => {
   assert.doesNotMatch(automationScreen, /dummy|fake|OpenProjectDebugTasks/);
 });
 
+test("DX Automation workspace follows the Extensions-style GPUI page pattern", () => {
+  const launchWorkspace = read("crates/agent_ui/src/dx_launch_workspace.rs");
+  const chrome = read("crates/agent_ui/src/dx_launch_workspace/screen_chrome.rs");
+  const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
+  const catalogChrome = read("crates/agent_ui/src/dx_launch_workspace/catalog_chrome.rs");
+  const automationScreen = read(
+    "crates/agent_ui/src/dx_launch_workspace/automation_screen.rs",
+  );
+  const automationCatalog = read(
+    "crates/agent_ui/src/dx_launch_workspace/automation_screen/catalog.rs",
+  );
+  const automationCatalogEntry = read(
+    "crates/agent_ui/src/dx_launch_workspace/automation_screen/catalog/entry.rs",
+  );
+  const automationCatalogDetails = read(
+    "crates/agent_ui/src/dx_launch_workspace/automation_screen/catalog/details.rs",
+  );
+  const automationCatalogSources = `${automationCatalog}\n${automationCatalogEntry}\n${automationCatalogDetails}`;
+  const sections = read(
+    "crates/agent_ui/src/dx_launch_workspace/automation_screen/sections.rs",
+  );
+  const drafts = read(
+    "crates/agent_ui/src/dx_launch_workspace/automation_screen/sections/drafts.rs",
+  );
+  const rows = read(
+    "crates/agent_ui/src/dx_launch_workspace/automation_screen/sections/rows.rs",
+  );
+
+  assert.match(launchWorkspace, /^mod screen_chrome;$/m);
+  assert.match(launchWorkspace, /DxAutomationCatalogState/);
+  assert.match(chrome, /Headline::new\(title\)\.size\(HeadlineSize::Large\)/);
+  assert.match(chrome, /ListHeader::new\(title\)/);
+  assert.match(chrome, /elevated_surface_background\.opacity\(0\.5\)/);
+  assert.match(catalogChrome, /pub\(super\) fn render_catalog_row_labels/);
+  assert.match(catalogChrome, /pub\(super\) fn render_catalog_status_chip/);
+  assert.match(catalogChrome, /Chip::new\(label\)/);
+
+  assert.match(agentPanel, /automation_catalog_state: DxAutomationCatalogState/);
+  assert.match(agentPanel, /_automation_catalog_query_subscription: Subscription/);
+  assert.match(agentPanel, /render_automation_catalog_rows/);
+  assert.match(agentPanel, /set_automation_catalog_filter/);
+  assert.match(agentPanel, /set_automation_catalog_selected_entry/);
+
+  assert.match(automationScreen, /^mod catalog;$/m);
+  assert.match(automationScreen, /workspace_page_header\(\s*dx_icon\(DxUiIcon::Automations\)/);
+  assert.match(automationScreen, /render_automation_catalog\(/);
+  assert.match(automationScreen, /workspace_stat\(/);
+  assert.doesNotMatch(automationScreen, /section_title\(/);
+  assert.match(automationCatalogSources, /Editor::single_line/);
+  assert.match(automationCatalogSources, /ToggleButtonGroup::single_row/);
+  assert.match(automationCatalogSources, /UniformListScrollHandle/);
+  assert.match(automationCatalogSources, /uniform_list\(/);
+  assert.match(automationCatalog, /"dx-automation-catalog-list"/);
+  assert.match(automationCatalog, /"Automation Catalog"/);
+  assert.match(automationCatalog, /render_catalog_row_labels\(/);
+  assert.match(automationCatalog, /\.start_slot\(\s*Icon::new\(entry\.icon\(\)\)/);
+  assert.match(automationCatalog, /\.end_slot\(render_catalog_status_chip\(entry\.status\(snapshot\)\)\)/);
+  assert.match(automationCatalog, /\.tooltip\(Tooltip::text\(tooltip\)\)/);
+  assert.match(automationCatalogSources, /render_selected_automation_detail/);
+  assert.match(automationCatalogSources, /Composer contract/);
+  assert.match(automationCatalogSources, /Execution proof/);
+  assert.match(automationCatalogSources, /screen_detail_row\(/);
+  assert.doesNotMatch(automationCatalog, /AiSettingItem::new/);
+  assert.doesNotMatch(automationCatalog, /AiSettingItemSource/);
+  assert.doesNotMatch(automationCatalogSources, /\b(?:Button::new|IconButton::new|run_dx_agent_public_command|run_dx_agents_public_action|DxAgentPublicCommand::Run)\b/);
+  assert.match(sections, /screen_detail_row\(/);
+  assert.match(sections, /screen_empty_state\(/);
+  assert.match(drafts, /screen_detail_stack\(/);
+  assert.match(rows, /screen_detail_row\(/);
+  assert.doesNotMatch(rows, /ListItemSpacing::ExtraDense/);
+});
+
 test("DX Automation source stays split into focused files", () => {
   for (const file of [
     "crates/agent_ui/src/automation_screen.rs",
@@ -283,8 +357,13 @@ test("DX Automation source stays split into focused files", () => {
     "crates/agent_ui/src/dx_agent_bridge/automation_contract_safety_tests.rs",
     "crates/agent_ui/src/dx_agent_bridge/automation_contract_tests.rs",
     "crates/agent_ui/src/dx_agent_bridge/command_args_tests.rs",
+    "crates/agent_ui/src/dx_launch_workspace/screen_chrome.rs",
     "crates/agent_ui/src/dx_launch_workspace/automation_screen.rs",
+    "crates/agent_ui/src/dx_launch_workspace/automation_screen/catalog.rs",
+    "crates/agent_ui/src/dx_launch_workspace/automation_screen/catalog/entry.rs",
+    "crates/agent_ui/src/dx_launch_workspace/automation_screen/catalog/details.rs",
     "crates/agent_ui/src/dx_launch_workspace/automation_screen/sections.rs",
+    "crates/agent_ui/src/dx_launch_workspace/automation_screen/sections/drafts.rs",
     "crates/agent_ui/src/dx_launch_workspace/automation_screen/sections/rows.rs",
     "crates/agent_ui/src/dx_launch_workspace/agents/automations/composer.rs",
     "crates/agent_ui/src/dx_launch_workspace/agents/automations/labels.rs",
@@ -295,8 +374,20 @@ test("DX Automation source stays split into focused files", () => {
 
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge.rs") < 880);
   assert.ok(lineCount("crates/agent_ui/src/automation_screen.rs") < 115);
-  assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/automation_screen.rs") < 120);
+  assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/automation_screen.rs") < 150);
+  assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/automation_screen/catalog.rs") < 430);
+  assert.ok(
+    lineCount("crates/agent_ui/src/dx_launch_workspace/automation_screen/catalog/entry.rs") < 260,
+  );
+  assert.ok(
+    lineCount("crates/agent_ui/src/dx_launch_workspace/automation_screen/catalog/details.rs") <
+      360,
+  );
+  assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/screen_chrome.rs") < 180);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/automation_screen/sections.rs") < 230);
+  assert.ok(
+    lineCount("crates/agent_ui/src/dx_launch_workspace/automation_screen/sections/drafts.rs") < 90,
+  );
   assert.ok(
     lineCount("crates/agent_ui/src/dx_launch_workspace/automation_screen/sections/rows.rs") < 260,
   );

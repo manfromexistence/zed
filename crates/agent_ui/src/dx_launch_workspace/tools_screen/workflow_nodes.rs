@@ -1,0 +1,453 @@
+use gpui::{AnyElement, App, ClickEvent, IntoElement, SharedString, WeakEntity, Window};
+use ui::{
+    Button, ButtonStyle, Chip, ContextMenu, IconName, ListItem, PopoverMenu, Tooltip, prelude::*,
+};
+
+use crate::AgentPanel;
+use crate::dx_agent_bridge::{DxConfiguredPluginSummary, DxWorkflowNodeSummary};
+use crate::workflow_node_icons::{workflow_node_element_id, workflow_node_icon_asset_for};
+
+const MAX_PLUGIN_CARD_TITLE_CHARS: usize = 48;
+const MAX_PLUGIN_CARD_CATEGORY_CHARS: usize = 28;
+const MAX_PLUGIN_MENU_DETAIL_CHARS: usize = 80;
+
+pub(super) fn workflow_node_card(
+    node: &DxWorkflowNodeSummary,
+    selected: bool,
+    panel: WeakEntity<AgentPanel>,
+    on_select: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+    cx: &App,
+) -> AnyElement {
+    let icon = workflow_node_icon_asset_for(
+        node.icon.as_deref(),
+        Some(node.category.as_str()),
+        node.display_name.as_str(),
+    );
+    div()
+        .w_full()
+        .mt_4()
+        .child(
+            v_flex()
+                .w_full()
+                .min_h(rems_from_px(110.))
+                .p_3()
+                .gap_2()
+                .rounded_md()
+                .border_1()
+                .border_color(if selected {
+                    cx.theme().colors().border
+                } else {
+                    cx.theme().colors().border_variant
+                })
+                .bg(if selected {
+                    cx.theme().colors().element_selected
+                } else {
+                    cx.theme().colors().elevated_surface_background.opacity(0.5)
+                })
+                .hover(|this| this.bg(cx.theme().colors().element_hover))
+                .on_click(on_select)
+                .tooltip(Tooltip::text(plugin_card_tooltip(node)))
+                .child(
+                    h_flex()
+                        .justify_between()
+                        .gap_2()
+                        .items_start()
+                        .child(
+                            h_flex()
+                                .min_w_0()
+                                .flex_1()
+                                .gap_2()
+                                .items_start()
+                                .child(icon.render(IconSize::Medium, Color::Muted))
+                                .child(plugin_title_block(node)),
+                        )
+                        .child(plugin_action_stack(node.clone(), panel)),
+                )
+                .child(
+                    h_flex()
+                        .min_w_0()
+                        .w_full()
+                        .justify_between()
+                        .gap_3()
+                        .child(
+                            Label::new(node.description.clone())
+                                .size(LabelSize::Small)
+                                .color(Color::Default)
+                                .truncate(),
+                        )
+                        .child(plugin_contract_chips(node)),
+                )
+                .child(
+                    h_flex()
+                        .min_w_0()
+                        .w_full()
+                        .justify_between()
+                        .gap_2()
+                        .child(plugin_source_row(node))
+                        .child(plugin_status_chips(node)),
+                ),
+        )
+        .into_any_element()
+}
+
+fn plugin_title_block(node: &DxWorkflowNodeSummary) -> AnyElement {
+    h_flex()
+        .min_w_0()
+        .gap_2()
+        .child(
+            Headline::new(bounded_plugin_card_text(
+                &node.display_name,
+                MAX_PLUGIN_CARD_TITLE_CHARS,
+            ))
+            .size(HeadlineSize::Small),
+        )
+        .child(
+            Label::new(bounded_plugin_card_text(
+                &node.category,
+                MAX_PLUGIN_CARD_CATEGORY_CHARS,
+            ))
+            .size(LabelSize::Small)
+            .color(Color::Muted)
+            .truncate(),
+        )
+        .into_any_element()
+}
+
+fn plugin_action_stack(node: DxWorkflowNodeSummary, panel: WeakEntity<AgentPanel>) -> AnyElement {
+    h_flex()
+        .gap_1()
+        .flex_none()
+        .child(render_plugin_config_menu(node, panel))
+        .into_any_element()
+}
+
+fn plugin_source_row(node: &DxWorkflowNodeSummary) -> AnyElement {
+    let tooltip = format!("{} / {}", node.source_package, node.source_path);
+    h_flex()
+        .min_w_0()
+        .gap_1()
+        .child(
+            Icon::new(dx_icon(DxUiIcon::Source))
+                .size(IconSize::XSmall)
+                .color(Color::Muted),
+        )
+        .child(
+            Label::new(format!("{} / {}", node.source_package, node.source_path))
+                .size(LabelSize::Small)
+                .color(Color::Muted)
+                .truncate(),
+        )
+        .tooltip(Tooltip::text(tooltip))
+        .into_any_element()
+}
+
+fn plugin_contract_chips(node: &DxWorkflowNodeSummary) -> AnyElement {
+    h_flex()
+        .gap_1()
+        .flex_none()
+        .child(
+            Chip::new(format!("{} in", node.input_count))
+                .icon(IconName::ArrowRightLeft)
+                .truncate(),
+        )
+        .child(
+            Chip::new(format!("{} out", node.output_count))
+                .icon(IconName::ArrowRightLeft)
+                .truncate(),
+        )
+        .child(
+            Chip::new(format!("{} params", node.parameter_count))
+                .icon(dx_icon(DxUiIcon::Settings))
+                .truncate(),
+        )
+        .into_any_element()
+}
+
+fn plugin_status_chips(node: &DxWorkflowNodeSummary) -> AnyElement {
+    h_flex()
+        .gap_1()
+        .flex_none()
+        .child(Chip::new(plugin_configured_state_label(node)).truncate())
+        .child(Chip::new(node.runtime.clone()).truncate())
+        .child(Chip::new(node.trust_status.clone()).truncate())
+        .child(Chip::new(node.credential_status.clone()).truncate())
+        .child(Chip::new(format!("{} dynamic", node.dynamic_option_count)).truncate())
+        .into_any_element()
+}
+
+fn plugin_configured_state_label(node: &DxWorkflowNodeSummary) -> &'static str {
+    if node.configured {
+        "Configured"
+    } else if node.credential_status == "not_required" {
+        "No Credentials"
+    } else {
+        "Needs Setup"
+    }
+}
+
+fn plugin_card_tooltip(node: &DxWorkflowNodeSummary) -> String {
+    format!(
+        "{} - {}. Runtime {}, trust {}, credentials {}, {} inputs, {} outputs, {} parameters, {} dynamic options. Source: {} / {}",
+        node.display_name,
+        node.description,
+        node.runtime,
+        node.trust_status,
+        node.credential_status,
+        node.input_count,
+        node.output_count,
+        node.parameter_count,
+        node.dynamic_option_count,
+        node.source_package,
+        node.source_path
+    )
+}
+
+pub(super) fn missing_workflow_node_card(message: &'static str) -> AnyElement {
+    ListItem::new(SharedString::from(message))
+        .spacing(ui::ListItemSpacing::Dense)
+        .selectable(false)
+        .start_slot(
+            Icon::new(dx_icon(DxUiIcon::Plugins))
+                .size(IconSize::Small)
+                .color(Color::Muted),
+        )
+        .child(
+            Label::new(message)
+                .size(LabelSize::Small)
+                .color(Color::Muted),
+        )
+        .into_any_element()
+}
+
+fn render_plugin_config_menu(
+    node: DxWorkflowNodeSummary,
+    panel: WeakEntity<AgentPanel>,
+) -> AnyElement {
+    let trigger_id = workflow_node_element_id("dx-workflow-node-configure", &node.id);
+    PopoverMenu::new(workflow_node_element_id(
+        "dx-workflow-node-config-menu",
+        &node.id,
+    ))
+    .trigger_with_tooltip(
+        Button::new(trigger_id, plugin_config_menu_action_label(&node))
+            .style(ButtonStyle::Subtle)
+            .label_size(LabelSize::Small)
+            .start_icon(Icon::new(dx_icon(DxUiIcon::Credentials)).size(IconSize::Small)),
+        Tooltip::text(plugin_config_tooltip(&node)),
+    )
+    .anchor(gpui::Anchor::BottomRight)
+    .menu(move |window, cx| {
+        let node = node.clone();
+        let panel = panel.clone();
+        Some(ContextMenu::build(window, cx, move |menu, _window, _cx| {
+            let action_label = plugin_config_menu_action_label(&node);
+            menu.header(node.display_name.clone())
+                .custom_row({
+                    let node = node.clone();
+                    move |_window, _cx| plugin_config_status_row(&node)
+                })
+                .custom_row({
+                    let node = node.clone();
+                    move |_window, _cx| plugin_config_requirements_row(&node)
+                })
+                .custom_row({
+                    let node = node.clone();
+                    move |_window, _cx| plugin_config_next_action_row(&node)
+                })
+                .entry(action_label, None, {
+                    let node = node.clone();
+                    let panel = panel.clone();
+                    move |window, cx| {
+                        if let Some(panel) = panel.upgrade() {
+                            panel.update(cx, |this, cx| {
+                                if node.configured
+                                    || node.credential_status == "not_required"
+                                    || node.credentials.is_empty()
+                                {
+                                    this.draft_dx_workflow_node_configuration_prompt(
+                                        node.clone(),
+                                        window,
+                                        cx,
+                                    );
+                                } else {
+                                    this.open_dx_workflow_node_credentials_modal(
+                                        node.clone(),
+                                        window,
+                                        cx,
+                                    );
+                                }
+                            });
+                        }
+                    }
+                })
+        }))
+    })
+    .into_any_element()
+}
+
+fn plugin_config_menu_action_label(node: &DxWorkflowNodeSummary) -> &'static str {
+    if node.configured {
+        "Review configuration"
+    } else if node.credential_status == "not_required" {
+        "Review plugin contract"
+    } else {
+        "Configure credentials"
+    }
+}
+
+fn plugin_config_tooltip(node: &DxWorkflowNodeSummary) -> String {
+    format!(
+        "{}: credentials {}, action {}, receipt-backed metadata only",
+        node.display_name, node.credential_status, node.configure_action
+    )
+}
+
+fn plugin_config_status_row(node: &DxWorkflowNodeSummary) -> AnyElement {
+    plugin_config_menu_row(
+        workflow_node_element_id("dx-workflow-node-config-menu-row-status", &node.id),
+        dx_icon(DxUiIcon::Credentials),
+        "Credential status",
+        node.credential_status.clone(),
+    )
+}
+
+fn plugin_config_requirements_row(node: &DxWorkflowNodeSummary) -> AnyElement {
+    plugin_config_menu_row(
+        workflow_node_element_id("dx-workflow-node-config-menu-row-requirements", &node.id),
+        IconName::FileTextOutlined,
+        "Required types",
+        if node.credential_types.is_empty() {
+            "None".to_string()
+        } else {
+            node.credential_types.join(", ")
+        },
+    )
+}
+
+fn plugin_config_next_action_row(node: &DxWorkflowNodeSummary) -> AnyElement {
+    plugin_config_menu_row(
+        workflow_node_element_id("dx-workflow-node-config-menu-row-action", &node.id),
+        IconName::PlayOutlined,
+        "Action",
+        node.configure_action.clone(),
+    )
+}
+
+pub(super) fn configured_plugin_row(plugin: &DxConfiguredPluginSummary) -> AnyElement {
+    let icon = workflow_node_icon_asset_for(
+        plugin.icon.as_deref(),
+        Some(plugin.node_id.as_str()),
+        plugin.display_name.as_str(),
+    );
+    ListItem::new(workflow_node_element_id("dx-configured-plugin", &plugin.id))
+        .spacing(ui::ListItemSpacing::Dense)
+        .selectable(false)
+        .start_slot(icon.render(IconSize::Small, Color::Muted))
+        .child(
+            h_flex()
+                .min_w_0()
+                .justify_between()
+                .gap_2()
+                .child(
+                    Label::new(plugin.display_name.clone())
+                        .size(LabelSize::Small)
+                        .color(Color::Default)
+                        .truncate(),
+                )
+                .child(configured_plugin_status_chips(plugin)),
+        )
+        .tooltip(Tooltip::text(configured_plugin_tooltip(plugin)))
+        .into_any_element()
+}
+
+fn configured_plugin_status_chips(plugin: &DxConfiguredPluginSummary) -> AnyElement {
+    h_flex()
+        .gap_1()
+        .flex_none()
+        .child(Chip::new(plugin.status.clone()).truncate())
+        .child(Chip::new(plugin.credential_status.clone()).truncate())
+        .child(Chip::new(configured_plugin_authorization_label(plugin)).truncate())
+        .into_any_element()
+}
+
+fn configured_plugin_authorization_label(plugin: &DxConfiguredPluginSummary) -> &'static str {
+    if plugin.secrets_exposed {
+        "Secrets Blocked"
+    } else if !plugin.approved_by_trusted_bridge {
+        "Needs Approval"
+    } else if !plugin.writes_receipt {
+        "Receipt Missing"
+    } else if plugin.trust_policy != "receipt_authorized_only" {
+        "Policy Blocked"
+    } else {
+        "Bridge Approved"
+    }
+}
+
+fn configured_plugin_tooltip(plugin: &DxConfiguredPluginSummary) -> String {
+    format!(
+        "{}: node {}, status {}, credentials {}, action {}, receipt {}, trust policy {}, bridge approved {}, writes receipt {}, secrets exposed {}",
+        plugin.display_name,
+        plugin.node_id,
+        plugin.status,
+        plugin.credential_status,
+        plugin.action_id,
+        plugin.receipt_id,
+        plugin.trust_policy,
+        yes_no(plugin.approved_by_trusted_bridge),
+        yes_no(plugin.writes_receipt),
+        yes_no(plugin.secrets_exposed)
+    )
+}
+
+fn plugin_config_menu_row(
+    id: SharedString,
+    icon: IconName,
+    label: &'static str,
+    detail: String,
+) -> AnyElement {
+    let tooltip = format!("{label}: {detail}");
+    ListItem::new(id)
+        .inset(true)
+        .spacing(ui::ListItemSpacing::Sparse)
+        .selectable(false)
+        .start_slot(Icon::new(icon).size(IconSize::Small).color(Color::Muted))
+        .child(
+            v_flex()
+                .min_w_0()
+                .gap_0p5()
+                .child(
+                    Label::new(label)
+                        .size(LabelSize::XSmall)
+                        .color(Color::Muted),
+                )
+                .child(
+                    Label::new(bounded_plugin_menu_detail(&detail))
+                        .size(LabelSize::XSmall)
+                        .color(Color::Default)
+                        .line_height_style(LineHeightStyle::UiLabel),
+                ),
+        )
+        .tooltip(Tooltip::text(tooltip))
+        .into_any_element()
+}
+
+fn bounded_plugin_menu_detail(value: &str) -> String {
+    bounded_plugin_card_text(value, MAX_PLUGIN_MENU_DETAIL_CHARS)
+}
+
+fn bounded_plugin_card_text(value: &str, max_chars: usize) -> String {
+    let trimmed = value.trim();
+    if trimmed.chars().count() <= max_chars {
+        return trimmed.to_string();
+    }
+
+    let keep = max_chars.saturating_sub(3);
+    let mut bounded = trimmed.chars().take(keep).collect::<String>();
+    bounded.push_str("...");
+    bounded
+}
+
+fn yes_no(value: bool) -> &'static str {
+    if value { "yes" } else { "no" }
+}
