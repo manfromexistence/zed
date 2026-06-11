@@ -1,0 +1,13 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Whiteboard light transparent logo dx-ecosystem-logos</title>
+  <desc>light monochrome geometric symbol with transparent background for Whiteboard.</desc>
+  <metadata><![CDATA[{"kind":"light-transparent","tool":"whiteboard","label":"Whiteboard","letter":"W","primary_repo":"G:/Whiteboard","legacy_repo":"","collection":"web-preview","source_project":"Whiteboard","asset_family":"dx-ecosystem-logos","brand":"DX pure symbol logo family: transparent smooth rainbow marks plus monochrome background and transparent light/dark variants"}]]></metadata>
+  <g color="#000000">
+    <g color="currentColor" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M284 206H740C767 206 794 233 794 260V564C794 591 767 618 740 618H284C257 618 230 591 230 564V260C230 233 257 206 284 206Z" stroke-width="80"/>
+      <path d="M326 342L420 522L512 382L604 522L698 342" stroke-width="72"/>
+      <path d="M512 618V772M398 772H626" stroke-width="72"/>
+      <path d="M338 704H686" stroke-width="44"/>
+    </g>
+  </g>
+</svg>

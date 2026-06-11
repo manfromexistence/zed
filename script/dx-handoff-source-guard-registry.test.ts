@@ -228,9 +228,13 @@ test("current handoff names the no-runtime-proof production-readiness boundary",
     currentVerificationLane.match(/- Current DX logo and icon-theme source slice:[^\n]+/)?.[0] ?? "";
 
   assert.ok(currentLogoIconLane, "expected current DX logo and icon-theme source lane");
-  assert.match(currentLogoIconLane, /Agent chat input Add Context `\+` trigger/);
-  assert.match(currentLogoIconLane, /seven official transparent DX web-tool logos/);
+  assert.match(currentLogoIconLane, /Agent chat input toolbar now centers/);
+  assert.match(
+    currentLogoIconLane,
+    /Design, Graphics, Presentations, Spreadsheets, Video, Whiteboard, and Shader/,
+  );
   assert.match(currentLogoIconLane, /theme-aware light\/dark variants/);
+  assert.match(currentLogoIconLane, /real Add Context `\+` trigger stays on the left control cluster/);
   assert.match(currentLogoIconLane, /Project Panel to the vendored `DX Icon` theme/);
   assert.match(currentLogoIconLane, /zed-extensions\/material-icon-theme` v1\.3\.1/);
   assert.match(currentLogoIconLane, /Focused Node source guards/);

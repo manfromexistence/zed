@@ -739,9 +739,9 @@ const DX_WEB_TOOL_LOGOS: &[DxWebToolLogo] = &[
         dark_path: "icons/dx_web_tools/video-dark-transparent.svg",
     },
     DxWebToolLogo {
-        label: "Music",
-        light_path: "icons/dx_web_tools/music-light-transparent.svg",
-        dark_path: "icons/dx_web_tools/music-dark-transparent.svg",
+        label: "Whiteboard",
+        light_path: "icons/dx_web_tools/whiteboard-light-transparent.svg",
+        dark_path: "icons/dx_web_tools/whiteboard-dark-transparent.svg",
     },
     DxWebToolLogo {
         label: "Shader",
@@ -4070,12 +4070,15 @@ impl ThreadView {
                                     .w_full()
                                     .flex_none()
                                     .flex_wrap()
+                                    .items_center()
                                     .gap_1()
-                                    .justify_between()
                                     .child(
                                         h_flex()
+                                            .flex_1()
+                                            .min_w_0()
                                             .gap_0p5()
                                             .flex_wrap()
+                                            .items_center()
                                             .child(self.render_add_context_button(cx))
                                             .children(self.profile_selector.clone())
                                             .children(self.render_profile_option_slots(cx))
@@ -4085,10 +4088,14 @@ impl ThreadView {
                                             .children(self.render_mode_shortcuts(cx))
                                             .child(self.render_follow_toggle(cx)),
                                     )
+                                    .child(self.render_dx_web_tool_logo_strip(cx))
                                     .child(
                                         h_flex()
+                                            .flex_1()
+                                            .min_w_0()
                                             .flex_wrap()
                                             .items_center()
+                                            .justify_end()
                                             .gap_1()
                                             .children(self.render_token_usage(cx))
                                             .children(self.render_fast_mode_control(cx))
@@ -5793,19 +5800,19 @@ impl ThreadView {
 
         h_flex()
             .id("dx-web-tool-logo-strip")
+            .h_6()
+            .px_1()
+            .flex_none()
             .gap_0p5()
             .items_center()
+            .justify_center()
             .children(DX_WEB_TOOL_LOGOS.iter().map(|logo| {
                 div()
                     .id(("dx-web-tool-logo", logo.label))
                     .size_5()
                     .flex_none()
                     .rounded_sm()
-                    .child(
-                        Icon::from_path(logo.path_for_theme(is_light))
-                            .size(IconSize::Small)
-                            .color(Color::Muted),
-                    )
+                    .child(Icon::from_path(logo.path_for_theme(is_light)).size(IconSize::Small))
                     .tooltip(Tooltip::text(logo.label))
             }))
     }
@@ -5814,40 +5821,33 @@ impl ThreadView {
         let focus_handle = self.message_editor.focus_handle(cx);
         let weak_self = cx.weak_entity();
 
-        h_flex()
-            .id("dx-add-context-web-tools")
-            .gap_0p5()
-            .items_center()
-            .child(self.render_dx_web_tool_logo_strip(cx))
-            .child(
-                PopoverMenu::new("add-context-menu")
-                    .trigger_with_tooltip(
-                        IconButton::new("add-context", IconName::Plus)
-                            .icon_size(IconSize::Small)
-                            .icon_color(Color::Muted),
-                        {
-                            move |_window, cx| {
-                                Tooltip::for_action_in(
-                                    "Add Context",
-                                    &OpenAddContextMenu,
-                                    &focus_handle,
-                                    cx,
-                                )
-                            }
-                        },
-                    )
-                    .anchor(gpui::Anchor::BottomLeft)
-                    .with_handle(self.add_context_menu_handle.clone())
-                    .offset(gpui::Point {
-                        x: px(0.0),
-                        y: px(-2.0),
-                    })
-                    .menu(move |window, cx| {
-                        weak_self
-                            .update(cx, |this, cx| this.build_add_context_menu(window, cx))
-                            .ok()
-                    }),
+        PopoverMenu::new("add-context-menu")
+            .trigger_with_tooltip(
+                IconButton::new("add-context", IconName::Plus)
+                    .icon_size(IconSize::Small)
+                    .icon_color(Color::Muted),
+                {
+                    move |_window, cx| {
+                        Tooltip::for_action_in(
+                            "Add Context",
+                            &OpenAddContextMenu,
+                            &focus_handle,
+                            cx,
+                        )
+                    }
+                },
             )
+            .anchor(gpui::Anchor::BottomLeft)
+            .with_handle(self.add_context_menu_handle.clone())
+            .offset(gpui::Point {
+                x: px(0.0),
+                y: px(-2.0),
+            })
+            .menu(move |window, cx| {
+                weak_self
+                    .update(cx, |this, cx| this.build_add_context_menu(window, cx))
+                    .ok()
+            })
     }
 
     fn build_add_context_menu(

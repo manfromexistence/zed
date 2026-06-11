@@ -300,6 +300,7 @@ test("Agent panel and fullscreen AI screen share the Liquid Glass chat input con
 });
 
 test("Agent chat input add-context trigger carries DX web tool transparent logos", () => {
+  const renderMessageEditor = functionBody(threadView, "render_message_editor");
   const addContextButton = functionBody(threadView, "render_add_context_button");
   const logoStrip = functionBody(threadView, "render_dx_web_tool_logo_strip");
 
@@ -309,7 +310,7 @@ test("Agent chat input add-context trigger carries DX web tool transparent logos
     "presentations",
     "spreadsheets",
     "video",
-    "music",
+    "whiteboard",
     "shader",
   ]) {
     for (const appearance of ["light", "dark"]) {
@@ -331,7 +332,12 @@ test("Agent chat input add-context trigger carries DX web tool transparent logos
   assert.match(logoStrip, /cx\.theme\(\)\.appearance\.is_light\(\)/);
   assert.match(logoStrip, /Icon::from_path\(logo\.path_for_theme\(is_light\)\)/);
   assert.match(logoStrip, /\.id\("dx-web-tool-logo-strip"\)/);
-  assert.match(addContextButton, /self\.render_dx_web_tool_logo_strip\(cx\)/);
+  assert.match(renderMessageEditor, /\.child\(self\.render_dx_web_tool_logo_strip\(cx\)\)/);
+  assert.match(
+    renderMessageEditor,
+    /self\.render_add_context_button\(cx\)[\s\S]*self\.render_dx_web_tool_logo_strip\(cx\)[\s\S]*self\.render_send_button\(cx\)/,
+  );
+  assert.doesNotMatch(addContextButton, /render_dx_web_tool_logo_strip/);
   assert.match(addContextButton, /IconButton::new\("add-context", IconName::Plus\)/);
 });
 

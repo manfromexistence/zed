@@ -1,12 +1,25 @@
+[2026-06-11] - DX Chat Input Logo Centering
+
+CHANGED:
+- Centered the Agent chat input DX web-tool logo strip in the bottom toolbar while keeping the real Add Context `+` trigger in the left control cluster.
+- Replaced the earlier Music logo slot with the requested Whiteboard light/dark transparent logo pair.
+- The centered strip now uses the source SVG colors from the transparent variants instead of forcing a muted icon tint.
+
+PASSED:
+- `node --test script\dx-agent-composer-liquid-glass-source.test.ts`
+
+NOTES:
+- Cargo/build/native visual proof remains deferred by instruction.
+
 [2026-06-11] - DX Logos And Icon Theme Branding
 
 ADDED:
-- Added seven official DX web-tool transparent light/dark logo pairs under `assets/icons/dx_web_tools` for Design, Graphics, Presentations, Spreadsheets, Video, Music, and Shader.
+- Added seven official DX web-tool transparent light/dark logo pairs under `assets/icons/dx_web_tools` for Design, Graphics, Presentations, Spreadsheets, Video, Whiteboard, and Shader.
 - Added `extensions/dx-icon` as a DX-branded, vendored copy of `zed-extensions/material-icon-theme` tag `v1.3.1`, preserving upstream license and attribution.
 - Added `script\dx-icon-theme-source.test.ts` to guard the DX Icon default, vendored extension contract, generator rebrand path, and registry-discoverable source guard entry.
 
 CHANGED:
-- The Agent chat input Add Context `+` trigger now carries a compact DX web-tool logo strip using the real `G:\logo` transparent assets and theme-aware light/dark variants.
+- The Agent chat input toolbar carries a compact centered DX web-tool logo strip using the real `G:\logo` transparent assets and theme-aware light/dark variants.
 - The default icon theme is now `DX Icon`, with the built-in fallback renamed and the vendored icon extension exposing the matching theme name for Project Panel file/folder icons.
 - The vendored icon generator metadata now writes `dx-icon.json` and preserves `DX Icon` / `DX Icon Light` names instead of regenerating upstream Material theme names.
 
