@@ -1,4 +1,6 @@
-use gpui::{AnyElement, App, ClickEvent, IntoElement, SharedString, WeakEntity, Window};
+use gpui::{
+    AnyElement, App, ClickEvent, InteractiveElement, IntoElement, SharedString, WeakEntity, Window,
+};
 use ui::{
     Button, ButtonStyle, Chip, ContextMenu, IconName, ListItem, PopoverMenu, Tooltip, prelude::*,
 };
@@ -28,6 +30,7 @@ pub(super) fn workflow_node_card(
         .mt_4()
         .child(
             v_flex()
+                .id(workflow_node_element_id("dx-workflow-node-card", &node.id))
                 .w_full()
                 .min_h(rems_from_px(110.))
                 .p_3()
@@ -124,6 +127,10 @@ fn plugin_action_stack(node: DxWorkflowNodeSummary, panel: WeakEntity<AgentPanel
 fn plugin_source_row(node: &DxWorkflowNodeSummary) -> AnyElement {
     let tooltip = format!("{} / {}", node.source_package, node.source_path);
     h_flex()
+        .id(workflow_node_element_id(
+            "dx-workflow-node-source",
+            &node.id,
+        ))
         .min_w_0()
         .gap_1()
         .child(

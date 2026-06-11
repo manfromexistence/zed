@@ -52,26 +52,30 @@ pub(super) fn status_strip(
     let tooltip_title = SharedString::from(label);
     let tooltip_meta = format!("{detail}\n{workspace_scope}");
 
-    ListItem::new("dx-forge-status")
-        .inset(true)
-        .selectable(false)
-        .height(rems(1.75))
+    div()
+        .w_full()
         .border_t_1()
         .border_color(cx.theme().colors().border)
-        .spacing(ListItemSpacing::Sparse)
-        .start_slot(Icon::new(icon).size(IconSize::Small).color(color))
         .child(
-            h_flex().w_full().min_w_0().gap_1p5().child(
-                Label::new(label)
-                    .size(LabelSize::Small)
-                    .color(color)
-                    .truncate(),
-            ),
+            ListItem::new("dx-forge-status")
+                .inset(true)
+                .selectable(false)
+                .height(rems(1.75))
+                .spacing(ListItemSpacing::Sparse)
+                .start_slot(Icon::new(icon).size(IconSize::Small).color(color))
+                .child(
+                    h_flex().w_full().min_w_0().gap_1p5().child(
+                        Label::new(label)
+                            .size(LabelSize::Small)
+                            .color(color)
+                            .truncate(),
+                    ),
+                )
+                .end_slot(h_flex().flex_none().gap_0p5().child(actions))
+                .tooltip(move |_, cx| {
+                    Tooltip::with_meta(tooltip_title.clone(), None, tooltip_meta.clone(), cx)
+                }),
         )
-        .end_slot(h_flex().flex_none().gap_0p5().child(actions))
-        .tooltip(move |_, cx| {
-            Tooltip::with_meta(tooltip_title.clone(), None, tooltip_meta.clone(), cx)
-        })
         .into_any_element()
 }
 

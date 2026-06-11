@@ -3,7 +3,7 @@ use serde_json::Value;
 use super::super::{DxAgentTrustedToolBridgeSummary, array_field, usize_field};
 use super::receipt_strings::{receipt_string_array_field, receipt_string_field};
 
-pub(super) fn trusted_tool_bridge_summary(
+pub(crate) fn trusted_tool_bridge_summary(
     status_value: Option<&Value>,
     contract_value: Option<&Value>,
     import_summary_value: Option<&Value>,

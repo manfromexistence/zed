@@ -5,7 +5,7 @@ use crate::dx_agent_bridge::DxAgentBridgeSnapshot;
 
 use super::super::super::screen_chrome::{screen_detail_row, screen_detail_stack};
 
-pub(super) fn drafts_state(snapshot: &DxAgentBridgeSnapshot, _cx: &App) -> AnyElement {
+pub(crate) fn drafts_state(snapshot: &DxAgentBridgeSnapshot, _cx: &App) -> AnyElement {
     let composer = &snapshot.automation_composer;
     let status = if composer.save_draft_available {
         AiSettingItemStatus::Running

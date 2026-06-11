@@ -9,8 +9,6 @@ const MAX_PLUGIN_CREDENTIAL_KEY_SEGMENT_CHARS: usize = 16;
 const DX_PLUGIN_CREDENTIAL_KEYCHAIN_PREFIX: &str = "zed://dx/plugins/credentials";
 
 struct DxPluginCredentialWrite {
-    credential_id: String,
-    input_id: String,
     keychain_handle: String,
     username: String,
     value: String,
@@ -133,8 +131,6 @@ fn credential_writes(
             continue;
         };
         writes.push(DxPluginCredentialWrite {
-            credential_id: field.credential_id.clone(),
-            input_id: field.input_id.clone(),
             keychain_handle: field.keychain_handle.clone(),
             username: credential_keychain_username(&field.credential_id, &field.input_id),
             value,

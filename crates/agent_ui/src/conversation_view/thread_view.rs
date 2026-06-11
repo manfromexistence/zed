@@ -4141,20 +4141,21 @@ impl ThreadView {
             ))
             .style(ButtonStyle::Subtle)
             .size(ButtonSize::Compact)
-            .h(rems(1.75))
-            .max_w(rems(10.))
-            .overflow_hidden()
+            .height(rems(1.75).into())
+            .width(rems(10.))
             .child(
-                h_flex()
-                    .min_w_0()
-                    .gap_1()
-                    .child(icon.render(IconSize::Small, Color::Muted))
-                    .child(
-                        Label::new(configured_plugin_trigger_label(&plugin))
-                            .size(LabelSize::XSmall)
-                            .color(Color::Muted)
-                            .truncate(),
-                    ),
+                div().min_w_0().overflow_hidden().child(
+                    h_flex()
+                        .min_w_0()
+                        .gap_1()
+                        .child(icon.render(IconSize::Small, Color::Muted))
+                        .child(
+                            Label::new(configured_plugin_trigger_label(&plugin))
+                                .size(LabelSize::XSmall)
+                                .color(Color::Muted)
+                                .truncate(),
+                        ),
+                ),
             ),
             Tooltip::text(configured_plugin_tooltip(&plugin)),
         )
@@ -4210,7 +4211,7 @@ impl ThreadView {
                 ButtonLike::new("agent-configured-plugin-overflow-trigger")
                     .style(ButtonStyle::Subtle)
                     .size(ButtonSize::Compact)
-                    .h(rems(1.75))
+                    .height(rems(1.75).into())
                     .child(
                         h_flex()
                             .gap_1()

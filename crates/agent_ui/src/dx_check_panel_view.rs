@@ -285,86 +285,93 @@ impl DxCheckPanel {
         let receipt_path = snapshot.receipt_path.clone();
         let receipt_enabled = snapshot.receipt_present && receipt_path.exists();
 
-        ListItem::new("dx-check-status")
-            .inset(true)
-            .spacing(ListItemSpacing::Sparse)
-            .selectable(false)
+        div()
+            .w_full()
             .border_b_1()
             .border_color(cx.theme().colors().border)
-            .start_slot(Indicator::dot().color(color))
             .child(
-                h_flex()
-                    .min_w_0()
-                    .gap_2()
-                    .justify_between()
+                ListItem::new("dx-check-status")
+                    .inset(true)
+                    .spacing(ListItemSpacing::Sparse)
+                    .selectable(false)
+                    .start_slot(Indicator::dot().color(color))
                     .child(
-                        Label::new(snapshot.score_label())
-                            .size(LabelSize::Small)
-                            .color(color)
-                            .truncate(),
+                        h_flex()
+                            .min_w_0()
+                            .gap_2()
+                            .justify_between()
+                            .child(
+                                Label::new(snapshot.score_label())
+                                    .size(LabelSize::Small)
+                                    .color(color)
+                                    .truncate(),
+                            )
+                            .child(
+                                Label::new(snapshot.status.clone())
+                                    .size(LabelSize::Small)
+                                    .color(Color::Muted)
+                                    .truncate(),
+                            ),
                     )
-                    .child(
-                        Label::new(snapshot.status.clone())
-                            .size(LabelSize::Small)
-                            .color(Color::Muted)
-                            .truncate(),
-                    ),
-            )
-            .end_slot(
-                h_flex()
-                    .id("dx-check-status-actions")
-                    .flex_none()
-                    .gap_0p5()
-                    .occlude()
-                    .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
-                        cx.stop_propagation();
-                    })
-                    .on_mouse_up(gpui::MouseButton::Left, |_, _, cx| {
-                        cx.stop_propagation();
-                    })
-                    .child(
-                        IconButton::new("dx-check-open-receipt", IconName::FileTextOutlined)
-                            .shape(IconButtonShape::Square)
-                            .icon_size(IconSize::Small)
-                            .icon_color(Color::Muted)
-                            .style(ButtonStyle::Subtle)
-                            .tab_index(0_isize)
-                            .track_focus(&focus_handle)
-                            .disabled(!receipt_enabled)
-                            .tooltip(Tooltip::text(if receipt_enabled {
-                                "Open latest Check receipt"
-                            } else {
-                                "Latest Check receipt is not available"
-                            }))
-                            .on_click({
-                                let workspace = self.workspace.clone();
-                                move |_, window, cx| {
-                                    if receipt_path.exists() {
-                                        open_workspace_path(
-                                            workspace.clone(),
-                                            receipt_path.clone(),
-                                            window,
-                                            cx,
-                                        );
+                    .end_slot(
+                        h_flex()
+                            .id("dx-check-status-actions")
+                            .flex_none()
+                            .gap_0p5()
+                            .occlude()
+                            .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
+                                cx.stop_propagation();
+                            })
+                            .on_mouse_up(gpui::MouseButton::Left, |_, _, cx| {
+                                cx.stop_propagation();
+                            })
+                            .child(
+                                IconButton::new(
+                                    "dx-check-open-receipt",
+                                    IconName::FileTextOutlined,
+                                )
+                                .shape(IconButtonShape::Square)
+                                .icon_size(IconSize::Small)
+                                .icon_color(Color::Muted)
+                                .style(ButtonStyle::Subtle)
+                                .tab_index(0_isize)
+                                .track_focus(&focus_handle)
+                                .disabled(!receipt_enabled)
+                                .tooltip(Tooltip::text(if receipt_enabled {
+                                    "Open latest Check receipt"
+                                } else {
+                                    "Latest Check receipt is not available"
+                                }))
+                                .on_click({
+                                    let workspace = self.workspace.clone();
+                                    move |_, window, cx| {
+                                        if receipt_path.exists() {
+                                            open_workspace_path(
+                                                workspace.clone(),
+                                                receipt_path.clone(),
+                                                window,
+                                                cx,
+                                            );
+                                        }
                                     }
-                                }
-                            }),
+                                }),
+                            )
+                            .child(
+                                IconButton::new("dx-check-refresh", IconName::RotateCw)
+                                    .shape(IconButtonShape::Square)
+                                    .icon_size(IconSize::Small)
+                                    .icon_color(Color::Muted)
+                                    .style(ButtonStyle::Subtle)
+                                    .tab_index(0_isize)
+                                    .track_focus(&focus_handle)
+                                    .tooltip(Tooltip::text("Refresh Check panel"))
+                                    .on_click(move |_, _, cx| {
+                                        panel.update(cx, |panel, cx| panel.refresh(cx)).ok();
+                                    }),
+                            ),
                     )
-                    .child(
-                        IconButton::new("dx-check-refresh", IconName::RotateCw)
-                            .shape(IconButtonShape::Square)
-                            .icon_size(IconSize::Small)
-                            .icon_color(Color::Muted)
-                            .style(ButtonStyle::Subtle)
-                            .tab_index(0_isize)
-                            .track_focus(&focus_handle)
-                            .tooltip(Tooltip::text("Refresh Check panel"))
-                            .on_click(move |_, _, cx| {
-                                panel.update(cx, |panel, cx| panel.refresh(cx)).ok();
-                            }),
-                    ),
+                    .tooltip(Tooltip::text(tooltip)),
             )
-            .tooltip(Tooltip::text(tooltip))
             .into_any_element()
     }
 

@@ -1,5 +1,6 @@
 use editor::{Editor, EditorElement, EditorStyle};
 use gpui::{AnyElement, Context, Entity, IntoElement, KeyContext, TextStyle};
+use settings::Settings;
 use theme_settings::ThemeSettings;
 use ui::{AiSettingItemStatus, Chip, IconName, prelude::*};
 

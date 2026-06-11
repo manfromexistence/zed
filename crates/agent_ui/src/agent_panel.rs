@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     fmt,
     ops::Range,
     path::PathBuf,
@@ -75,7 +76,7 @@ use crate::dx_launch_workspace::{
     render_connections_screen, render_tools_screen, render_workflow_node_catalog_rows,
     render_workspace_chrome,
 };
-use crate::dx_plugin_credentials::DxPluginCredentialModal;
+use crate::dx_plugin_credentials::{self, DxPluginCredentialModal};
 use crate::dx_proof_freshness::proof_freshness_snapshot;
 use crate::dx_receipt_history::tool_history_snapshot;
 use crate::dx_receipts::receipt_snapshot_for_roots;
@@ -1749,7 +1750,7 @@ impl AgentPanel {
         })
         .detach();
 
-        let panel = Self {
+        let mut panel = Self {
             workspace_id,
             base_view,
             last_created_entry_kind: AgentPanelEntryKind::Thread,
@@ -4071,10 +4072,11 @@ impl AgentPanel {
 
     fn show_deferred_toast(
         workspace: &WeakEntity<workspace::Workspace>,
-        message: &'static str,
+        message: impl Into<Cow<'static, str>>,
         cx: &mut App,
     ) {
         let workspace = workspace.clone();
+        let message = message.into();
         cx.defer(move |cx| {
             if let Some(workspace) = workspace.upgrade() {
                 workspace.update(cx, |workspace, cx| {
@@ -4082,7 +4084,7 @@ impl AgentPanel {
                     workspace.show_toast(
                         workspace::Toast::new(
                             workspace::notifications::NotificationId::unique::<ClipboardToast>(),
-                            message,
+                            message.clone(),
                         )
                         .autohide(),
                         cx,
@@ -7640,7 +7642,7 @@ impl AgentPanel {
         }
 
         if let Some(reason) = dx_plugin_credentials::credential_storage_unavailable_reason(&node) {
-            Self::show_deferred_toast(&self.workspace, reason, cx);
+            Self::show_deferred_toast(&self.workspace, reason.to_string(), cx);
             self.insert_dx_launch_prompt(
                 Self::workflow_node_configuration_prompt(&node),
                 window,

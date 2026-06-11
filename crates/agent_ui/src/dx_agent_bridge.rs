@@ -56,10 +56,8 @@ pub(crate) use self::commands::{
     run_dx_agent_public_command,
 };
 pub(crate) use self::workflow_nodes::{
-    DxConfiguredPluginSummary, DxWorkflowNodeActionSummary, DxWorkflowNodeCatalogSummary,
-    DxWorkflowNodeCredentialSummary, DxWorkflowNodeDynamicOptionSummary,
-    DxWorkflowNodePermissionSummary, DxWorkflowNodePortSummary, DxWorkflowNodeReceiptSummary,
-    DxWorkflowNodeSummary, DxWorkflowNodeTrustSummary,
+    DxConfiguredPluginSummary, DxWorkflowNodeCatalogSummary, DxWorkflowNodeCredentialInputSummary,
+    DxWorkflowNodeCredentialSummary, DxWorkflowNodeSummary,
 };
 
 use self::{

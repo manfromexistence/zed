@@ -3,8 +3,8 @@ use gpui::{
     DismissEvent, EventEmitter, FocusHandle, Focusable, Render, ScrollHandle, TaskExt, WeakEntity,
 };
 use ui::{
-    Banner, KeyBinding, Modal, ModalFooter, ModalHeader, Section, Severity, WithScrollbar,
-    prelude::*,
+    Banner, KeyBinding, ListItem, ListItemSpacing, Modal, ModalFooter, ModalHeader, Section,
+    Severity, WithScrollbar, prelude::*,
 };
 use workspace::ModalView;
 
@@ -106,7 +106,7 @@ impl DxPluginCredentialModal {
                 .any(|field| !field.input.read(cx).is_empty(cx))
     }
 
-    fn render_input_section(&self, cx: &mut Context<Self>) -> AnyElement {
+    fn render_input_section(&self, _cx: &mut Context<Self>) -> AnyElement {
         if self.inputs.is_empty() {
             return ListItem::new("dx-plugin-credential-modal-no-inputs")
                 .spacing(ListItemSpacing::Dense)
@@ -128,6 +128,19 @@ impl DxPluginCredentialModal {
             .gap_2()
             .children(self.inputs.iter().map(|field| field.input.clone()))
             .into_any_element()
+    }
+
+    fn on_tab(&mut self, _: &menu::SelectNext, window: &mut Window, cx: &mut Context<Self>) {
+        window.focus_next(cx);
+    }
+
+    fn on_tab_prev(
+        &mut self,
+        _: &menu::SelectPrevious,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        window.focus_prev(cx);
     }
 }
 
@@ -260,18 +273,5 @@ impl Render for DxPluginCredentialModal {
                             ),
                     )),
             )
-    }
-
-    fn on_tab(&mut self, _: &menu::SelectNext, window: &mut Window, cx: &mut Context<Self>) {
-        window.focus_next(cx);
-    }
-
-    fn on_tab_prev(
-        &mut self,
-        _: &menu::SelectPrevious,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        window.focus_prev(cx);
     }
 }
