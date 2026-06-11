@@ -932,6 +932,7 @@ impl ShadcnUiPanel {
             item.category.clone()
         };
         let row_id = shadcn_element_id("shadcn-item-", item.id.as_ref());
+        let drag_row_id = shadcn_element_id("shadcn-drag-item-", item.id.as_ref());
         let insert_id = shadcn_element_id("shadcn-insert-", item.id.as_ref());
         let copy_id = shadcn_element_id("shadcn-copy-", item.id.as_ref());
         let preview_id = shadcn_element_id("shadcn-preview-", item.id.as_ref());
@@ -1047,6 +1048,7 @@ impl ShadcnUiPanel {
             );
 
         div()
+            .id(drag_row_id)
             .when(can_drag, |this| {
                 let payload = self.payload_for_item(&item);
                 this.on_drag(payload, |asset, position, _, cx| {
@@ -1331,7 +1333,7 @@ impl ShadcnUiPanel {
         let row_tooltip = format!(
             "{}\n{}\n{}",
             item.title.as_ref(),
-            source_label.as_ref(),
+            source_label,
             category_label.as_ref()
         );
 

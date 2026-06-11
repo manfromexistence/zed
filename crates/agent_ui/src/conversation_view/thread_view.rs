@@ -3854,13 +3854,20 @@ impl ThreadView {
         let max_content_width = AgentSettings::get_global(cx).max_content_width;
         let has_messages = self.list_state.item_count() > 0;
         let expands_editor_area = editor_expanded && has_messages;
-        let colors = cx.theme().colors();
+        let (border_focused, border, panel_background) = {
+            let colors = cx.theme().colors();
+            (
+                colors.border_focused,
+                colors.border,
+                colors.panel_background,
+            )
+        };
         let glass_surface = self.render_liquid_glass_chat_input_surface(cx);
         let uses_liquid_glass = glass_surface.is_some();
         let chat_input_border = if focus_handle.is_focused(window) {
-            colors.border_focused
+            border_focused
         } else {
-            colors.border
+            border
         };
 
         h_flex()
@@ -3870,9 +3877,7 @@ impl ThreadView {
             .when(has_messages, |this| {
                 this.absolute().left_0().right_0().bottom_0()
             })
-            .when(!has_messages, |this| {
-                this.bg(cx.theme().colors().panel_background)
-            })
+            .when(!has_messages, |this| this.bg(panel_background))
             .justify_center()
             .items_end()
             .map(|this| {
@@ -3894,9 +3899,9 @@ impl ThreadView {
                     .border_1()
                     .border_color(chat_input_border)
                     .bg(if uses_liquid_glass {
-                        colors.panel_background.opacity(0.08)
+                        panel_background.opacity(0.08)
                     } else {
-                        colors.panel_background.opacity(0.72)
+                        panel_background.opacity(0.72)
                     })
                     .p_1p5()
                     .shadow_sm()

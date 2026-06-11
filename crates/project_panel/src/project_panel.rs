@@ -7380,8 +7380,12 @@ impl ProjectPanel {
             .flex_none()
             .max_w(rems(9.))
             .overflow_hidden()
-            .tooltip(Tooltip::text(tooltip))
-            .child(Chip::new(label).label_color(Color::Muted).truncate())
+            .child(
+                Chip::new(label)
+                    .label_color(Color::Muted)
+                    .truncate()
+                    .tooltip(Tooltip::text(tooltip)),
+            )
             .into_any_element()
     }
 

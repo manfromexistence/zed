@@ -1440,6 +1440,7 @@ impl MediaPanel {
         let pin_payload = payload.clone();
         let drag_payload = payload.clone();
         let row_id = media_element_id("media-panel-row-", relative_display.as_ref());
+        let drag_row_id = media_element_id("media-panel-drag-row-", relative_display.as_ref());
         let preview_id = media_element_id("media-panel-preview-", relative_display.as_ref());
         let copy_id = media_element_id("media-panel-copy-path-", relative_display.as_ref());
         let pin_id = media_element_id("media-panel-pin-local-", relative_display.as_ref());
@@ -1487,6 +1488,7 @@ impl MediaPanel {
             );
 
         div()
+            .id(drag_row_id)
             .on_drag(drag_payload, |media, position, _, cx| {
                 cx.new(|_| MediaDragPreview {
                     media: media.clone(),
@@ -1808,7 +1810,7 @@ impl MediaPanel {
             .inset(true)
             .spacing(ListItemSpacing::Sparse)
             .selectable(false)
-            .tooltip(Tooltip::text(description.clone()))
+            .tooltip(Tooltip::text(description))
             .start_slot(
                 Icon::new(IconName::RotateCw)
                     .size(IconSize::Small)

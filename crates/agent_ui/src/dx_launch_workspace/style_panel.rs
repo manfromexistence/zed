@@ -123,7 +123,7 @@ pub(super) fn dx_style_panel_state(snapshot: &DxStylePanelSnapshot, _cx: &App) -
         ));
     } else if !snapshot.grouped_contract_ready {
         stack = stack.child(style_note_row(
-            "dx-style-contract-warning".into(),
+            "dx-style-contract-warning",
             IconName::Warning,
             Color::Warning,
             "Grouped-class contract is not available for editor writes",

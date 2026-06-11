@@ -76,71 +76,74 @@ fn render_storage_root_strip_row(
     let status_label = shortcut.status_label();
     let capacity_progress = drive_capacity_progress(&shortcut);
 
-    ButtonLike::new(SharedString::from(format!(
-        "dx-explorer-storage-root-{}",
-        shortcut.id
-    )))
-    .style(ButtonStyle::Subtle)
-    .size(ButtonSize::Compact)
-    .max_w(rems(18.))
-    .disabled(!available)
-    .when(available, |this| {
-        let row_focus_handle = focus_handle.clone();
-        let click_focus_handle = row_focus_handle.clone();
-        this.on_click(move |_, window, cx| {
-            window.focus(&click_focus_handle, cx);
-            panel
-                .update_in(cx, |this, window, cx| {
-                    this.open_dx_explorer_storage_root(path.clone(), window, cx);
+    div()
+        .max_w(rems(18.))
+        .child(
+            ButtonLike::new(SharedString::from(format!(
+                "dx-explorer-storage-root-{}",
+                shortcut.id
+            )))
+            .style(ButtonStyle::Subtle)
+            .size(ButtonSize::Compact)
+            .disabled(!available)
+            .when(available, |this| {
+                let row_focus_handle = focus_handle.clone();
+                let click_focus_handle = row_focus_handle.clone();
+                this.on_click(move |_, window, cx| {
+                    window.focus(&click_focus_handle, cx);
+                    panel
+                        .update_in(cx, |this, window, cx| {
+                            this.open_dx_explorer_storage_root(path.clone(), window, cx);
+                        })
+                        .log_err();
                 })
-                .log_err();
-        })
-        .tab_index(0_isize)
-        .track_focus(&row_focus_handle)
-    })
-    .child(Icon::new(icon).size(IconSize::Small).color(if available {
-        Color::Muted
-    } else {
-        Color::Disabled
-    }))
-    .child(
-        div().min_w_0().flex_1().child(
-            Label::new(shortcut.label)
-                .size(LabelSize::Small)
-                .color(if available {
-                    Color::Default
+                .tab_index(0_isize)
+                .track_focus(&row_focus_handle)
+            })
+            .child(Icon::new(icon).size(IconSize::Small).color(if available {
+                Color::Muted
+            } else {
+                Color::Disabled
+            }))
+            .child(
+                div().min_w_0().flex_1().child(
+                    Label::new(shortcut.label)
+                        .size(LabelSize::Small)
+                        .color(if available {
+                            Color::Default
+                        } else {
+                            Color::Muted
+                        })
+                        .truncate(),
+                ),
+            )
+            .when_some(capacity_progress, |this, capacity_progress| {
+                let progress_color = if capacity_progress.used_percent >= 95.0 {
+                    Color::Error.color(cx)
+                } else if capacity_progress.used_percent >= 85.0 {
+                    Color::Warning.color(cx)
                 } else {
-                    Color::Muted
-                })
-                .truncate(),
-        ),
-    )
-    .when_some(capacity_progress, |this, capacity_progress| {
-        let progress_color = if capacity_progress.used_percent >= 95.0 {
-            Color::Error.color(cx)
-        } else if capacity_progress.used_percent >= 85.0 {
-            Color::Warning.color(cx)
-        } else {
-            Color::Info.color(cx)
-        };
+                    Color::Info.color(cx)
+                };
 
-        this.child(
-            div().w(rems(3.5)).flex_none().child(
-                ProgressBar::new(
-                    capacity_progress.id,
-                    capacity_progress.used_percent,
-                    100.0_f32,
-                    cx,
+                this.child(
+                    div().w(rems(3.5)).flex_none().child(
+                        ProgressBar::new(
+                            capacity_progress.id,
+                            capacity_progress.used_percent,
+                            100.0_f32,
+                            cx,
+                        )
+                        .fg_color(progress_color)
+                        .bg_color(cx.theme().colors().border.opacity(0.35)),
+                    ),
                 )
-                .fg_color(progress_color)
-                .bg_color(cx.theme().colors().border.opacity(0.35)),
-            ),
+            })
+            .tooltip(move |_window, cx| {
+                Tooltip::with_meta("Storage", None, format!("{tooltip}\n{status_label}"), cx)
+            }),
         )
-    })
-    .tooltip(move |_window, cx| {
-        Tooltip::with_meta("Storage", None, format!("{tooltip}\n{status_label}"), cx)
-    })
-    .into_any_element()
+        .into_any_element()
 }
 
 fn drive_capacity_progress(
