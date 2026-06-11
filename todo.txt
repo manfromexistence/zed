@@ -1,8 +1,8 @@
 IN PROGRESS:
-- None. Latest DX Connections and Automations GPUI polish pass is source-verified.
+- None. Latest DX Connections and Automations catalog-state pass is source-verified.
 
 PENDING:
-- Run governed runtime/visual proof for the Connections and Automations workspace tabs after an authorized Zed launch, covering page header stats, section-card scrolling, provider/social rows, automation draft/schedule/run/history/failure rows, and narrow or stacked panel behavior.
+- Run governed runtime/visual proof for the Connections and Automations workspace tabs after an authorized Zed launch, covering page header stats, catalog search/filter behavior, selected detail panes, section-card scrolling, provider/social rows, automation draft/schedule/run/history/failure rows, and narrow or stacked panel behavior.
 - Run governed runtime proof for the Plugins selected-detail/configuration pane, safe configured-plugin composer options, and trusted-tool bridge filtering when Cargo/`just run` validation is explicitly authorized.
 - Tighten configured-plugin composer authorization with source-root/source-path validation and trusted-bridge status gating before treating configured workflow nodes as AI-usable runtime tools.
 - Add a persistent Flow STT host/daemon integration so transcription can avoid per-clip process/model startup and match the cached Kokoro TTS path.
@@ -16,6 +16,7 @@ PENDING:
 - Continue the DX/Zed ecosystem integration with bounded source-only slices for remaining receipt scans, semantic icon hotspots, and governed runtime proof when explicitly authorized.
 
 COMPLETED:
+- DX Connections and Automations catalog-state pass is source-verified: both DX-owned workspace tabs now own persistent Extensions-style search editors, segmented filters, virtualized catalog rows, selectable `AiSettingItem` entries, and receipt-backed inspector panes through `AgentPanel` state. Connections surfaces receipt authority and trusted-tool bridge details without unsafe command buttons; Automations surfaces composer contract, runtime evidence, and execution proof details while keeping scheduler/runtime claims honest.
 - DX Connections and Automations GPUI polish pass is source-verified: both DX-owned workspace tabs now use shared Extension-style GPUI page chrome with large `Headline` headers, source-backed summary stat cards, bordered `ListHeader` section cards, readable `ListItemSpacing::Sparse` detail rows, honest empty states, and subsection cleanup for provider/social metrics without touching Zed's MCP, Extensions, or ACP surfaces.
 - DX Plugins credential modal pass is source-verified: workflow-node credential metadata now carries bounded credential input rows from serializer `inputs`/`fields`/nested properties with secure fallback fields; credential-backed Configure actions open a GPUI modal with masked `InputField` controls; values are bounded, fail closed for untrusted/non-DX plugin sources, saved only through internal platform-keychain item names, cleared after save, and Agent receives only a non-secret local save summary plus plugin/source metadata.
 - DX Plugins configure-bridge and catalog-provenance pass is source-verified: the bridge now records the actual workflow-node catalog receipt path that was loaded, reports missing schema/serializer fields honestly, reconciles node configured chips from configured-plugin receipts, tolerates singular/plural receipt-write metadata, and the visible Configure menu drafts a safe DX Agent setup/review request instead of executing commands or pretending credentials are configured.

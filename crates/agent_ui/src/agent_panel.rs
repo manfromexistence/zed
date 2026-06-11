@@ -65,11 +65,15 @@ use crate::dx_launch_receipts::launch_receipt_review_snapshot_for_roots;
 use crate::dx_launch_source_audit::launch_source_audit_snapshot_for_roots;
 use crate::dx_launch_status::launch_status_snapshot_for_roots;
 use crate::dx_launch_workspace::{
-    DxLaunchRailControls, DxLaunchRailSection, DxLaunchRailSide, DxLaunchRailState,
-    DxLaunchWorkspaceStatus, DxPluginsCatalogState, DxSourceRowControl, DxSubagentStatus,
-    DxSubagentStatusRow, PluginCatalogFilter, has_progress_rail_content, has_sources_rail_content,
-    render_automation_screen, render_connections_screen, render_tools_screen,
-    render_workflow_node_catalog_rows, render_workspace_chrome,
+    AutomationCatalogFilter, ConnectionCatalogFilter, DxAutomationCatalogState,
+    DxConnectionsCatalogState, DxLaunchRailControls, DxLaunchRailSection, DxLaunchRailSide,
+    DxLaunchRailState, DxLaunchWorkspaceStatus, DxPluginsCatalogState, DxSourceRowControl,
+    DxSubagentStatus, DxSubagentStatusRow, PluginCatalogFilter, has_progress_rail_content,
+    has_sources_rail_content, render_automation_catalog_rows as render_dx_automation_catalog_rows,
+    render_automation_screen,
+    render_connections_catalog_rows as render_dx_connections_catalog_rows,
+    render_connections_screen, render_tools_screen, render_workflow_node_catalog_rows,
+    render_workspace_chrome,
 };
 use crate::dx_plugin_credentials::DxPluginCredentialModal;
 use crate::dx_proof_freshness::proof_freshness_snapshot;
@@ -1199,7 +1203,11 @@ pub struct AgentPanel {
     _workspace_subscription: Option<Subscription>,
     _project_subscription: Subscription,
     dx_workspace_snapshot: DxWorkspaceSnapshot,
+    automation_catalog_state: DxAutomationCatalogState,
+    connections_catalog_state: DxConnectionsCatalogState,
     tools_catalog_state: DxPluginsCatalogState,
+    _automation_catalog_query_subscription: Subscription,
+    _connections_catalog_query_subscription: Subscription,
     _tools_catalog_query_subscription: Subscription,
     dx_launch_workspace_status_cache: Option<DxLaunchWorkspaceStatusCache>,
     dx_launch_workspace_status_refresh_pending: bool,
@@ -1709,6 +1717,26 @@ impl AgentPanel {
             },
         );
 
+        let automation_catalog_state = DxAutomationCatalogState::new(window, cx);
+        let automation_catalog_query_editor = automation_catalog_state.query_editor();
+        let _automation_catalog_query_subscription = cx.subscribe(
+            &automation_catalog_query_editor,
+            |this, _editor, event, cx| {
+                this.automation_catalog_state
+                    .on_query_editor_event(event, cx);
+            },
+        );
+
+        let connections_catalog_state = DxConnectionsCatalogState::new(window, cx);
+        let connections_catalog_query_editor = connections_catalog_state.query_editor();
+        let _connections_catalog_query_subscription = cx.subscribe(
+            &connections_catalog_query_editor,
+            |this, _editor, event, cx| {
+                this.connections_catalog_state
+                    .on_query_editor_event(event, cx);
+            },
+        );
+
         let tools_catalog_state = DxPluginsCatalogState::new(window, cx);
         let tools_catalog_query_editor = tools_catalog_state.query_editor();
         let _tools_catalog_query_subscription =
@@ -1747,7 +1775,11 @@ impl AgentPanel {
             _workspace_subscription: workspace_subscription,
             _project_subscription,
             dx_workspace_snapshot,
+            automation_catalog_state,
+            connections_catalog_state,
             tools_catalog_state,
+            _automation_catalog_query_subscription,
+            _connections_catalog_query_subscription,
             _tools_catalog_query_subscription,
             dx_launch_workspace_status_cache: None,
             dx_launch_workspace_status_refresh_pending: false,
@@ -6983,14 +7015,32 @@ impl AgentPanel {
         )
     }
 
-    fn render_automation_workspace_screen(&mut self, cx: &mut Context<Self>) -> AnyElement {
+    fn render_automation_workspace_screen(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let status = self.cached_dx_launch_workspace_status(cx);
-        render_automation_screen(status.as_ref(), cx)
+        render_automation_screen(
+            status.as_ref(),
+            &mut self.automation_catalog_state,
+            window,
+            cx,
+        )
     }
 
-    fn render_connections_workspace_screen(&mut self, cx: &mut Context<Self>) -> AnyElement {
+    fn render_connections_workspace_screen(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let status = self.cached_dx_launch_workspace_status(cx);
-        render_connections_screen(status.as_ref(), cx)
+        render_connections_screen(
+            status.as_ref(),
+            &mut self.connections_catalog_state,
+            window,
+            cx,
+        )
     }
 
     fn render_tools_workspace_screen(
@@ -7015,6 +7065,70 @@ impl AgentPanel {
             range,
             cx,
         )
+    }
+
+    pub(crate) fn render_automation_catalog_rows(
+        &mut self,
+        range: Range<usize>,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Vec<AnyElement> {
+        let status = self.cached_dx_launch_workspace_status(cx);
+        render_dx_automation_catalog_rows(
+            &self.automation_catalog_state,
+            status.as_ref().map(|status| &status.agent_bridge),
+            range,
+            cx,
+        )
+    }
+
+    pub(crate) fn render_connections_catalog_rows(
+        &mut self,
+        range: Range<usize>,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Vec<AnyElement> {
+        let status = self.cached_dx_launch_workspace_status(cx);
+        render_dx_connections_catalog_rows(
+            &self.connections_catalog_state,
+            status.as_ref().map(|status| &status.agent_bridge),
+            range,
+            cx,
+        )
+    }
+
+    pub(crate) fn set_automation_catalog_filter(
+        &mut self,
+        filter: AutomationCatalogFilter,
+        cx: &mut Context<Self>,
+    ) {
+        self.automation_catalog_state.set_filter(filter, cx);
+    }
+
+    pub(crate) fn set_automation_catalog_selected_entry(
+        &mut self,
+        entry_id: String,
+        cx: &mut Context<Self>,
+    ) {
+        self.automation_catalog_state
+            .set_selected_entry(entry_id, cx);
+    }
+
+    pub(crate) fn set_connections_catalog_filter(
+        &mut self,
+        filter: ConnectionCatalogFilter,
+        cx: &mut Context<Self>,
+    ) {
+        self.connections_catalog_state.set_filter(filter, cx);
+    }
+
+    pub(crate) fn set_connections_catalog_selected_entry(
+        &mut self,
+        entry_id: String,
+        cx: &mut Context<Self>,
+    ) {
+        self.connections_catalog_state
+            .set_selected_entry(entry_id, cx);
     }
 
     pub(crate) fn set_plugin_catalog_filter(
@@ -8377,10 +8491,10 @@ impl Render for AgentPanel {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         match self.host_kind {
             AgentPanelHostKind::AutomationWorkspace => {
-                return self.render_automation_workspace_screen(cx);
+                return self.render_automation_workspace_screen(window, cx);
             }
             AgentPanelHostKind::ConnectionsWorkspace => {
-                return self.render_connections_workspace_screen(cx);
+                return self.render_connections_workspace_screen(window, cx);
             }
             AgentPanelHostKind::ToolsWorkspace => {
                 return self.render_tools_workspace_screen(window, cx);

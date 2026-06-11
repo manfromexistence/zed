@@ -1,16 +1,25 @@
-use gpui::{AnyElement, App, IntoElement};
+use gpui::{AnyElement, Context, IntoElement, Window};
 use ui::prelude::*;
+
+use crate::AgentPanel;
 
 use super::DxLaunchWorkspaceStatus;
 use super::screen_chrome::{
     screen_empty_state, screen_section, workspace_page_header, workspace_stat,
 };
 
+mod catalog;
 mod sections;
+
+pub(crate) use catalog::{
+    AutomationCatalogFilter, DxAutomationCatalogState, render_automation_catalog_rows,
+};
 
 pub(crate) fn render_automation_screen(
     status: Option<&DxLaunchWorkspaceStatus>,
-    cx: &mut App,
+    state: &mut DxAutomationCatalogState,
+    window: &mut Window,
+    cx: &mut Context<AgentPanel>,
 ) -> AnyElement {
     let (header_stats, body) = if let Some(status) = status {
         let snapshot = &status.agent_bridge;
@@ -43,6 +52,9 @@ pub(crate) fn render_automation_screen(
             ],
             v_flex()
                 .gap_3()
+                .child(catalog::render_automation_catalog(
+                    snapshot, state, window, cx,
+                ))
                 .child(screen_section(
                     "dx-automation-drafts",
                     "Drafts",

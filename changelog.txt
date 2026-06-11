@@ -1,3 +1,24 @@
+[2026-06-11] - DX Connections And Automations Catalog State
+
+ADDED:
+- Connections and Automations now have persistent Extensions-style catalog state owned by `AgentPanel`: single-line search editors, segmented filters, selected row state, virtualized catalog rows, and right-side inspector panes.
+- Connections catalog rows expose receipt authority, trusted-tool bridge, channels, gateway, credential health, providers, and social accounts as selectable `AiSettingItem` rows backed by the existing DX Agents bridge snapshot.
+- Automations catalog rows expose the composer contract, runtime evidence, automation rows, and failure evidence with execution-proof details tied to parsed receipts/history instead of scheduler assumptions.
+
+CHANGED:
+- Connections and Automations workspace screens render the catalog/inspector first while preserving the existing receipt-backed section breakdowns below it.
+- Shared catalog search chrome now lives in `catalog_chrome.rs` so the new pages use the same Zed editor styling without duplicating input rendering.
+
+HARDENED:
+- Source guards now require the stateful catalog wiring, virtualized row processors, selected detail panes, no fake runtime command buttons, and small focused catalog files.
+
+PASSED:
+- `rustfmt --edition 2024 --check` on the touched Rust files.
+- `node --test script/dx-agent-workspaces-source.test.ts script/dx-plugin-catalog-source.test.ts script/dx-agent-bridge-source.test.ts script/dx-plugin-credentials-source.test.ts script/dx-agent-connections-ui-source.test.ts script/dx-automations-source.test.ts`
+
+NOTES:
+- Cargo, `just run`, full builds, native launch, visual runtime proof, local servers, and browser automation remain deferred by instruction.
+
 [2026-06-11] - DX Connections And Automations GPUI Polish
 
 ADDED:

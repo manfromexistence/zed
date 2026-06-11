@@ -1,6 +1,7 @@
-use gpui::{AnyElement, App, IntoElement, SharedString};
+use gpui::{AnyElement, App, Context, IntoElement, SharedString, Window};
 use ui::{AiSettingItem, AiSettingItemSource, AiSettingItemStatus, IconName, prelude::*};
 
+use crate::AgentPanel;
 use crate::dx_agent_bridge::DxAgentBridgeSnapshot;
 
 use super::screen_chrome::{
@@ -9,9 +10,17 @@ use super::screen_chrome::{
 };
 use super::{DxLaunchWorkspaceStatus, agents};
 
+mod catalog;
+
+pub(crate) use catalog::{
+    ConnectionCatalogFilter, DxConnectionsCatalogState, render_connections_catalog_rows,
+};
+
 pub(crate) fn render_connections_screen(
     status: Option<&DxLaunchWorkspaceStatus>,
-    cx: &mut App,
+    state: &mut DxConnectionsCatalogState,
+    window: &mut Window,
+    cx: &mut Context<AgentPanel>,
 ) -> AnyElement {
     let (header_stats, body) = if let Some(status) = status {
         let snapshot = &status.agent_bridge;
@@ -44,6 +53,9 @@ pub(crate) fn render_connections_screen(
             ],
             v_flex()
                 .gap_3()
+                .child(catalog::render_connections_catalog(
+                    snapshot, state, window, cx,
+                ))
                 .child(screen_section(
                     "dx-connections-providers",
                     "Providers",

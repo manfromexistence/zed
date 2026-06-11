@@ -137,7 +137,7 @@ test("DX Automations remain receipt-backed and do not fake scheduled execution",
     /AgentPanelHostKind::AutomationWorkspace[\s\S]{0,1200}OpenProjectDebugTasks/,
     "Automations launch rail action must not route to debugger tasks",
   );
-  assert.match(launchWorkspace, /pub\(crate\) use automation_screen::render_automation_screen;/);
+  assert.match(launchWorkspace, /pub\(crate\) use automation_screen::\{[\s\S]*render_automation_screen/);
   assert.doesNotMatch(launchWorkspace, /pub\(crate\) fn render_automation_screen/);
   for (const section of ["Drafts", "Schedules", "Runs", "History", "Failures"]) {
     assert.match(automationScreenView, new RegExp(`screen_section\\(\\s*"dx-automation-${section.toLowerCase()}"`));
@@ -278,9 +278,20 @@ test("DX Automations have a first-class workspace tab contract", () => {
 test("DX Automation workspace follows the Extensions-style GPUI page pattern", () => {
   const launchWorkspace = read("crates/agent_ui/src/dx_launch_workspace.rs");
   const chrome = read("crates/agent_ui/src/dx_launch_workspace/screen_chrome.rs");
+  const agentPanel = read("crates/agent_ui/src/agent_panel.rs");
   const automationScreen = read(
     "crates/agent_ui/src/dx_launch_workspace/automation_screen.rs",
   );
+  const automationCatalog = read(
+    "crates/agent_ui/src/dx_launch_workspace/automation_screen/catalog.rs",
+  );
+  const automationCatalogEntry = read(
+    "crates/agent_ui/src/dx_launch_workspace/automation_screen/catalog/entry.rs",
+  );
+  const automationCatalogDetails = read(
+    "crates/agent_ui/src/dx_launch_workspace/automation_screen/catalog/details.rs",
+  );
+  const automationCatalogSources = `${automationCatalog}\n${automationCatalogEntry}\n${automationCatalogDetails}`;
   const sections = read(
     "crates/agent_ui/src/dx_launch_workspace/automation_screen/sections.rs",
   );
@@ -292,14 +303,31 @@ test("DX Automation workspace follows the Extensions-style GPUI page pattern", (
   );
 
   assert.match(launchWorkspace, /^mod screen_chrome;$/m);
+  assert.match(launchWorkspace, /DxAutomationCatalogState/);
   assert.match(chrome, /Headline::new\(title\)\.size\(HeadlineSize::Large\)/);
   assert.match(chrome, /ListHeader::new\(title\)/);
   assert.match(chrome, /elevated_surface_background\.opacity\(0\.5\)/);
 
+  assert.match(agentPanel, /automation_catalog_state: DxAutomationCatalogState/);
+  assert.match(agentPanel, /_automation_catalog_query_subscription: Subscription/);
+  assert.match(agentPanel, /render_automation_catalog_rows/);
+  assert.match(agentPanel, /set_automation_catalog_filter/);
+  assert.match(agentPanel, /set_automation_catalog_selected_entry/);
+
+  assert.match(automationScreen, /^mod catalog;$/m);
   assert.match(automationScreen, /workspace_page_header\(\s*dx_icon\(DxUiIcon::Automations\)/);
-  assert.match(automationScreen, /screen_section\(\s*"dx-automation-drafts"/);
+  assert.match(automationScreen, /render_automation_catalog\(/);
   assert.match(automationScreen, /workspace_stat\(/);
   assert.doesNotMatch(automationScreen, /section_title\(/);
+  assert.match(automationCatalogSources, /Editor::single_line/);
+  assert.match(automationCatalogSources, /ToggleButtonGroup::single_row/);
+  assert.match(automationCatalogSources, /UniformListScrollHandle/);
+  assert.match(automationCatalogSources, /uniform_list\(/);
+  assert.match(automationCatalogSources, /render_selected_automation_detail/);
+  assert.match(automationCatalogSources, /Composer contract/);
+  assert.match(automationCatalogSources, /Execution proof/);
+  assert.match(automationCatalogSources, /screen_detail_row\(/);
+  assert.doesNotMatch(automationCatalogSources, /\b(?:Button::new|IconButton::new|run_dx_agent_public_command|run_dx_agents_public_action|DxAgentPublicCommand::Run)\b/);
   assert.match(sections, /screen_detail_row\(/);
   assert.match(sections, /screen_empty_state\(/);
   assert.match(drafts, /screen_detail_stack\(/);
@@ -319,6 +347,9 @@ test("DX Automation source stays split into focused files", () => {
     "crates/agent_ui/src/dx_agent_bridge/command_args_tests.rs",
     "crates/agent_ui/src/dx_launch_workspace/screen_chrome.rs",
     "crates/agent_ui/src/dx_launch_workspace/automation_screen.rs",
+    "crates/agent_ui/src/dx_launch_workspace/automation_screen/catalog.rs",
+    "crates/agent_ui/src/dx_launch_workspace/automation_screen/catalog/entry.rs",
+    "crates/agent_ui/src/dx_launch_workspace/automation_screen/catalog/details.rs",
     "crates/agent_ui/src/dx_launch_workspace/automation_screen/sections.rs",
     "crates/agent_ui/src/dx_launch_workspace/automation_screen/sections/drafts.rs",
     "crates/agent_ui/src/dx_launch_workspace/automation_screen/sections/rows.rs",
@@ -331,7 +362,15 @@ test("DX Automation source stays split into focused files", () => {
 
   assert.ok(lineCount("crates/agent_ui/src/dx_agent_bridge.rs") < 880);
   assert.ok(lineCount("crates/agent_ui/src/automation_screen.rs") < 115);
-  assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/automation_screen.rs") < 130);
+  assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/automation_screen.rs") < 150);
+  assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/automation_screen/catalog.rs") < 430);
+  assert.ok(
+    lineCount("crates/agent_ui/src/dx_launch_workspace/automation_screen/catalog/entry.rs") < 260,
+  );
+  assert.ok(
+    lineCount("crates/agent_ui/src/dx_launch_workspace/automation_screen/catalog/details.rs") <
+      360,
+  );
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/screen_chrome.rs") < 180);
   assert.ok(lineCount("crates/agent_ui/src/dx_launch_workspace/automation_screen/sections.rs") < 230);
   assert.ok(

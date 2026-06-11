@@ -48,7 +48,10 @@ test("DX agent workspace taxonomy has first-class Zed screens", () => {
   assert.match(agentPanel, /new_tools_workspace/);
   assert.match(agentPanel, /render_connections_workspace_screen/);
   assert.match(agentPanel, /render_tools_workspace_screen/);
-  assert.match(agentPanel, /render_connections_screen\(status\.as_ref\(\), cx\)/);
+  assert.match(
+    agentPanel,
+    /render_connections_screen\(\s*status\.as_ref\(\),\s*&mut self\.connections_catalog_state,\s*window,\s*cx,\s*\)/,
+  );
   assert.match(
     agentPanel,
     /render_tools_screen\(status\.as_ref\(\), &mut self\.tools_catalog_state, window, cx\)/,
@@ -142,7 +145,7 @@ test("Connections workspace is wired to provider, channel, social, gateway, and 
   assert.ok(existsSync("crates/agent_ui/src/dx_launch_workspace/screen_chrome.rs"));
   assert.match(dxWorkspace, /^mod screen_chrome;$/m);
   assert.match(dxWorkspace, /^mod connections_screen;$/m);
-  assert.match(dxWorkspace, /pub\(crate\) use connections_screen::render_connections_screen;/);
+  assert.match(dxWorkspace, /pub\(crate\) use connections_screen::\{[\s\S]*render_connections_screen/);
   assert.match(connectionsScreen, /AgentPanel::new_connections_workspace\(workspace, window, cx\)/);
   assert.match(connectionsScreen, /WorkspaceScreenKind::Connections/);
   assert.match(connectionsScreen, /fn show_toolbar\(&self\) -> bool \{\s*false\s*\}/);
