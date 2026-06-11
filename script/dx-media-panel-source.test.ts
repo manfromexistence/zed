@@ -158,6 +158,8 @@ test("media panel renders bridge state and filters fetched remote rows by query"
   const renderRemoteHealthRow = functionBody(panelSource, "render_remote_health_row");
   const renderRemoteLoadingRow = functionBody(panelSource, "render_remote_loading_row");
   const renderUrlInsert = functionBody(panelSource, "render_url_insert");
+  const renderAssetRow = functionBody(panelSource, "render_asset_row");
+  const renderRemoteAssetRow = functionBody(panelSource, "render_remote_asset_row");
   const renderRecentMediaSection = functionBody(panelSource, "render_recent_media_section");
   const renderPinnedMediaSection = functionBody(panelSource, "render_pinned_media_section");
   const renderMediaHistoryRow = functionBody(panelSource, "render_media_history_row");
@@ -222,6 +224,23 @@ test("media panel renders bridge state and filters fetched remote rows by query"
   assert.match(renderUrlInsert, /IconButton::new\("media-panel-insert-url", IconName::Plus\)/);
   assert.match(renderUrlInsert, /\.style\(ButtonStyle::Filled\)/);
   assert.match(renderUrlInsert, /\.tooltip\(Tooltip::text\(row_tooltip\)\)/);
+  for (const assetRow of [renderAssetRow, renderRemoteAssetRow]) {
+    assert.match(assetRow, /\.occlude\(\)/);
+    assert.match(assetRow, /gpui::MouseButton::Left/);
+    assert.match(assetRow, /cx\.stop_propagation\(\);/);
+    assert.match(assetRow, /\.shape\(ui::IconButtonShape::Square\)/);
+    assert.match(assetRow, /\.icon_size\(IconSize::Small\)/);
+    assert.match(assetRow, /IconButton::new\(preview_id, IconName::Eye\)/);
+    assert.match(assetRow, /IconButton::new\(copy_id, IconName::Copy\)/);
+    assert.match(assetRow, /IconButton::new\(pin_id, IconName::Pin\)/);
+  }
+  assert.match(renderAssetRow, /\.on_drag\(payload,/);
+  assert.match(renderRemoteAssetRow, /IconButton::new\(insert_id, IconName::Plus\)/);
+  assert.match(renderRemoteAssetRow, /\.style\(ButtonStyle::Filled\)/);
+  assert.doesNotMatch(
+    `${renderAssetRow}\n${renderRemoteAssetRow}`,
+    /Button::new\((?:preview_id|copy_id|pin_id|insert_id), "(?:Preview|Copy|Pin|Insert URL)"\)/,
+  );
   assert.doesNotMatch(
     renderUrlInsert,
     /Button::new\("media-panel-(?:preview|copy|pin|insert)-url", "(?:Preview|Copy|Pin|Insert URL)"\)/,

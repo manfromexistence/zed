@@ -7278,6 +7278,8 @@ impl ProjectPanel {
         div()
             .visible_on_hover("list_item")
             .flex_none()
+            .max_w(rems(9.))
+            .overflow_hidden()
             .tooltip(Tooltip::text(tooltip))
             .child(Chip::new(label).label_color(Color::Muted).truncate())
             .into_any_element()

@@ -82,7 +82,7 @@ fn render_storage_root_strip_row(
     )))
     .style(ButtonStyle::Subtle)
     .size(ButtonSize::Compact)
-    .width(rems(18.))
+    .max_w(rems(18.))
     .disabled(!available)
     .when(available, |this| {
         let row_focus_handle = focus_handle.clone();

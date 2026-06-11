@@ -67,6 +67,20 @@ test("UI panel history rows use shared GPUI list primitives", () => {
     installPlanChrome,
     /\.p_1\(\)|\.rounded_sm\(\)|\.border_1\(\)|\.bg\(cx\.theme\(\)\.colors\(\)\.elevated_surface_background\)|IconSize::XSmall|LabelSize::XSmall/,
   );
+  assert.match(renderItemRow, /Button::new\(insert_id, primary_action\)/);
+  assert.match(renderItemRow, /\.occlude\(\)/);
+  assert.match(renderItemRow, /gpui::MouseButton::Left/);
+  assert.match(renderItemRow, /cx\.stop_propagation\(\);/);
+  assert.match(renderItemRow, /IconButton::new\(copy_id, IconName::Copy\)/);
+  assert.match(renderItemRow, /IconButton::new\(preview_id, IconName::Eye\)/);
+  assert.match(renderItemRow, /IconButton::new\(docs_id, IconName::ArrowUpRight\)/);
+  assert.match(renderItemRow, /IconButton::new\(pin_id, IconName::Pin\)/);
+  assert.match(renderItemRow, /\.shape\(ui::IconButtonShape::Square\)/);
+  assert.match(renderItemRow, /\.icon_size\(IconSize::Small\)/);
+  assert.doesNotMatch(
+    renderItemRow,
+    /Button::new\((?:copy_id|preview_id|docs_id|pin_id), (?:copy_action|"Preview"|"Docs"|"Pin")\)|\.flex_wrap\(\)/,
+  );
   const historySectionChrome = `${renderRecentUiSection}\n${renderPinnedUiSection}`;
   assert.match(historySectionChrome, /\.end_slot\([\s\S]*Label::new\(availability_label\)/);
   assert.match(

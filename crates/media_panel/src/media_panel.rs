@@ -1475,30 +1475,48 @@ impl MediaPanel {
                     .color(Color::Muted),
             )
             .child(
-                Button::new(preview_id, "Preview")
-                    .style(ButtonStyle::Subtle)
-                    .size(ButtonSize::Compact)
-                    .on_click(cx.listener(move |panel, _, window, cx| {
-                        panel.preview_media_asset(preview_payload.clone(), window, cx);
-                    })),
-            )
-            .child(
-                Button::new(copy_id, "Copy")
-                    .style(ButtonStyle::Subtle)
-                    .size(ButtonSize::Compact)
-                    .on_click(cx.listener(move |panel, _, _, cx| {
-                        panel.record_recent_local_media(&copy_payload);
-                        let copy_path = copy_path.to_string_lossy().into_owned();
-                        panel.copy_media_source(copy_path, copy_label.clone(), cx);
-                    })),
-            )
-            .child(
-                Button::new(pin_id, "Pin")
-                    .style(ButtonStyle::Subtle)
-                    .size(ButtonSize::Compact)
-                    .on_click(cx.listener(move |panel, _, _, cx| {
-                        panel.pin_local_media(&pin_payload, cx);
-                    })),
+                h_flex()
+                    .flex_none()
+                    .gap_0p5()
+                    .occlude()
+                    .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
+                        cx.stop_propagation();
+                    })
+                    .on_mouse_up(gpui::MouseButton::Left, |_, _, cx| {
+                        cx.stop_propagation();
+                    })
+                    .child(
+                        IconButton::new(preview_id, IconName::Eye)
+                            .shape(ui::IconButtonShape::Square)
+                            .style(ButtonStyle::Subtle)
+                            .icon_size(IconSize::Small)
+                            .tooltip(Tooltip::text("Preview media"))
+                            .on_click(cx.listener(move |panel, _, window, cx| {
+                                panel.preview_media_asset(preview_payload.clone(), window, cx);
+                            })),
+                    )
+                    .child(
+                        IconButton::new(copy_id, IconName::Copy)
+                            .shape(ui::IconButtonShape::Square)
+                            .style(ButtonStyle::Subtle)
+                            .icon_size(IconSize::Small)
+                            .tooltip(Tooltip::text("Copy media path"))
+                            .on_click(cx.listener(move |panel, _, _, cx| {
+                                panel.record_recent_local_media(&copy_payload);
+                                let copy_path = copy_path.to_string_lossy().into_owned();
+                                panel.copy_media_source(copy_path, copy_label.clone(), cx);
+                            })),
+                    )
+                    .child(
+                        IconButton::new(pin_id, IconName::Pin)
+                            .shape(ui::IconButtonShape::Square)
+                            .style(ButtonStyle::Subtle)
+                            .icon_size(IconSize::Small)
+                            .tooltip(Tooltip::text("Pin media"))
+                            .on_click(cx.listener(move |panel, _, _, cx| {
+                                panel.pin_local_media(&pin_payload, cx);
+                            })),
+                    ),
             )
     }
 
@@ -1558,49 +1576,81 @@ impl MediaPanel {
                     .color(Color::Accent),
             )
             .child(
-                Button::new(preview_id, "Preview")
-                    .style(ButtonStyle::Subtle)
-                    .size(ButtonSize::Compact)
-                    .on_click(cx.listener({
-                        let url = url.clone();
-                        let label = label.clone();
-                        move |panel, _, window, cx| {
-                            panel.preview_media_url(url.clone(), kind, label.clone(), window, cx);
-                        }
-                    })),
-            )
-            .child(
-                Button::new(copy_id, "Copy")
-                    .style(ButtonStyle::Subtle)
-                    .size(ButtonSize::Compact)
-                    .on_click(cx.listener({
-                        let url = url.clone();
-                        let label = label.clone();
-                        move |panel, _, _, cx| {
-                            panel.record_recent_remote_media(&url, kind, &label);
-                            panel.copy_media_source(url.clone(), label.clone(), cx);
-                        }
-                    })),
-            )
-            .child(
-                Button::new(pin_id, "Pin")
-                    .style(ButtonStyle::Subtle)
-                    .size(ButtonSize::Compact)
-                    .on_click(cx.listener({
-                        let url = url.clone();
-                        let label = label.clone();
-                        move |panel, _, _, cx| {
-                            panel.pin_remote_media(&url, kind, &label, cx);
-                        }
-                    })),
-            )
-            .child(
-                Button::new(insert_id, "Insert URL")
-                    .style(ButtonStyle::Subtle)
-                    .size(ButtonSize::Compact)
-                    .on_click(cx.listener(move |panel, _, window, cx| {
-                        panel.insert_media_url(url.clone(), kind, label.clone(), window, cx);
-                    })),
+                h_flex()
+                    .flex_none()
+                    .gap_0p5()
+                    .occlude()
+                    .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
+                        cx.stop_propagation();
+                    })
+                    .on_mouse_up(gpui::MouseButton::Left, |_, _, cx| {
+                        cx.stop_propagation();
+                    })
+                    .child(
+                        IconButton::new(preview_id, IconName::Eye)
+                            .shape(ui::IconButtonShape::Square)
+                            .style(ButtonStyle::Subtle)
+                            .icon_size(IconSize::Small)
+                            .tooltip(Tooltip::text("Preview remote media"))
+                            .on_click(cx.listener({
+                                let url = url.clone();
+                                let label = label.clone();
+                                move |panel, _, window, cx| {
+                                    panel.preview_media_url(
+                                        url.clone(),
+                                        kind,
+                                        label.clone(),
+                                        window,
+                                        cx,
+                                    );
+                                }
+                            })),
+                    )
+                    .child(
+                        IconButton::new(copy_id, IconName::Copy)
+                            .shape(ui::IconButtonShape::Square)
+                            .style(ButtonStyle::Subtle)
+                            .icon_size(IconSize::Small)
+                            .tooltip(Tooltip::text("Copy remote media URL"))
+                            .on_click(cx.listener({
+                                let url = url.clone();
+                                let label = label.clone();
+                                move |panel, _, _, cx| {
+                                    panel.record_recent_remote_media(&url, kind, &label);
+                                    panel.copy_media_source(url.clone(), label.clone(), cx);
+                                }
+                            })),
+                    )
+                    .child(
+                        IconButton::new(pin_id, IconName::Pin)
+                            .shape(ui::IconButtonShape::Square)
+                            .style(ButtonStyle::Subtle)
+                            .icon_size(IconSize::Small)
+                            .tooltip(Tooltip::text("Pin remote media"))
+                            .on_click(cx.listener({
+                                let url = url.clone();
+                                let label = label.clone();
+                                move |panel, _, _, cx| {
+                                    panel.pin_remote_media(&url, kind, &label, cx);
+                                }
+                            })),
+                    )
+                    .child(
+                        IconButton::new(insert_id, IconName::Plus)
+                            .shape(ui::IconButtonShape::Square)
+                            .style(ButtonStyle::Filled)
+                            .icon_size(IconSize::Small)
+                            .tooltip(Tooltip::text("Insert remote media URL"))
+                            .on_click(cx.listener(move |panel, _, window, cx| {
+                                panel.insert_media_url(
+                                    url.clone(),
+                                    kind,
+                                    label.clone(),
+                                    window,
+                                    cx,
+                                );
+                            })),
+                    ),
             )
     }
 

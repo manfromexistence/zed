@@ -927,11 +927,6 @@ impl ShadcnUiPanel {
         let docs_id = shadcn_element_id("shadcn-docs-", item.id.as_ref());
         let pin_id = shadcn_element_id("shadcn-pin-", item.id.as_ref());
         let install_plan_id = shadcn_element_id("shadcn-install-plan-", item.id.as_ref());
-        let copy_action = if item.install_only {
-            "Copy Command"
-        } else {
-            "Copy"
-        };
         let install_plan = item.install_only.then(|| shadcn_install_plan_label(&item));
 
         div()
@@ -1028,8 +1023,15 @@ impl ShadcnUiPanel {
             })
             .child(
                 h_flex()
-                    .gap_1()
-                    .flex_wrap()
+                    .gap_0p5()
+                    .flex_none()
+                    .occlude()
+                    .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {
+                        cx.stop_propagation();
+                    })
+                    .on_mouse_up(gpui::MouseButton::Left, |_, _, cx| {
+                        cx.stop_propagation();
+                    })
                     .child(
                         Button::new(insert_id, primary_action)
                             .style(ButtonStyle::Subtle)
@@ -1047,9 +1049,10 @@ impl ShadcnUiPanel {
                             })),
                     )
                     .child(
-                        Button::new(copy_id, copy_action)
+                        IconButton::new(copy_id, IconName::Copy)
+                            .shape(ui::IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
-                            .size(ButtonSize::Compact)
+                            .icon_size(IconSize::Small)
                             .tooltip(Tooltip::text(ui_catalog_copy_tooltip(&item)))
                             .on_click(cx.listener({
                                 let item = item.clone();
@@ -1059,9 +1062,10 @@ impl ShadcnUiPanel {
                             })),
                     )
                     .child(
-                        Button::new(preview_id, "Preview")
+                        IconButton::new(preview_id, IconName::Eye)
+                            .shape(ui::IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
-                            .size(ButtonSize::Compact)
+                            .icon_size(IconSize::Small)
                             .tooltip(Tooltip::text("Preview in Web Preview"))
                             .on_click(cx.listener({
                                 let item = item.clone();
@@ -1071,9 +1075,11 @@ impl ShadcnUiPanel {
                             })),
                     )
                     .child(
-                        Button::new(docs_id, "Docs")
+                        IconButton::new(docs_id, IconName::ArrowUpRight)
+                            .shape(ui::IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
-                            .size(ButtonSize::Compact)
+                            .icon_size(IconSize::Small)
+                            .tooltip(Tooltip::text("Open documentation"))
                             .on_click(cx.listener({
                                 let item = item.clone();
                                 move |panel, _, _, cx| {
@@ -1082,9 +1088,11 @@ impl ShadcnUiPanel {
                             })),
                     )
                     .child(
-                        Button::new(pin_id, "Pin")
+                        IconButton::new(pin_id, IconName::Pin)
+                            .shape(ui::IconButtonShape::Square)
                             .style(ButtonStyle::Subtle)
-                            .size(ButtonSize::Compact)
+                            .icon_size(IconSize::Small)
+                            .tooltip(Tooltip::text("Pin UI item"))
                             .on_click(cx.listener({
                                 let item = item.clone();
                                 move |panel, _, _, cx| {

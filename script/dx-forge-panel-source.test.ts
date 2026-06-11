@@ -571,6 +571,11 @@ test("Forge panel reads Forge remote registry and makes provider targets concret
   assert.match(providersState, /configured_provider_count_for_group\(group\.key\(\)\)/);
   assert.match(providersState, /"Not configured"/);
   assert.match(providersState, /"Configured"/);
+  assert.match(
+    providersState,
+    /fn target_state\(label: &'static str, detail: impl Into<String>, color: Color\)/,
+  );
+  assert.doesNotMatch(providersState, /IconName::|_icon: IconName/);
   assert.doesNotMatch(
     providersState,
     /health unchecked[\s\S]{0,260}Color::Success|Color::Success[\s\S]{0,260}health unchecked/,
@@ -1202,6 +1207,10 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.doesNotMatch(providerGroupControlsBody, /Label::new\(state\.detail\.clone\(\)\)/);
   assert.match(providerGroupControlsBody, /remote_target_tooltip\(group, &state, target_path\.as_deref\(\), enabled\)/);
   assert.match(providerGroupControlsBody, /Indicator::dot\(\)\.color\(state\.color\)/);
+  assert.equal(
+    (providerGroupControlsBody.match(/Indicator::dot\(\)\.color\(state\.color\)/g) ?? []).length,
+    1,
+  );
   assert.match(providerGroupControlsBody, /format!\("Open \{\}", group\.title\(\)\)/);
   assert.match(providerGroupActionsBody, /status_color: Color/);
   assert.match(providerGroupActionsBody, /\.gap_0p5\(\)/);
@@ -1215,6 +1224,10 @@ test("Forge panel renders DX icon provider targets with snapshot-driven readines
   assert.match(providerGroupActionsBody, /\.on_mouse_down\(MouseButton::Left/);
   assert.match(providerGroupActionsBody, /\.on_mouse_up\(MouseButton::Left/);
   assert.match(providerGroupActionsBody, /Indicator::dot\(\)\.color\(status_color\)/);
+  assert.equal(
+    (providerGroupActionsBody.match(/Indicator::dot\(\)\.color\(status_color\)/g) ?? []).length,
+    1,
+  );
   assert.match(providerGroupActionsBody, /\.child\(open_button\)/);
   assert.match(providerGroupActionsBody, /cx\.stop_propagation\(\);/);
   assert.match(providersView, /IconButtonShape::Square/);

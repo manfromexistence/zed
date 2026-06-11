@@ -224,10 +224,18 @@ test("DX Check panel view uses shared panel primitives instead of badge chrome",
   assert.match(noticeRow, /Tooltip::text\(tooltip\)/);
   for (const infoRow of [noticeRow, quickFixRow, adapterPlanRow, webAuditRow]) {
     assert.match(infoRow, /\.selectable\(false\)/);
+    assert.match(infoRow, /\.spacing\(ListItemSpacing::Sparse\)/);
+    assert.match(infoRow, /Tooltip::text\(tooltip\)/);
+    assert.doesNotMatch(infoRow, /let mut content = v_flex|\.child\(\s*v_flex\(\)/);
   }
+  assert.match(quickFixRow, /ListItem::new\(SharedString::from\(format!\("dx-check-quick-fix-\{index\}"\)\)\)/);
+  assert.match(quickFixRow, /\.end_slot\([\s\S]*fix\.next_action[\s\S]*\.truncate_start\(\)/);
+  assert.match(adapterPlanRow, /ListItem::new\(SharedString::from\(format!\("dx-check-adapter-plan-\{index\}"\)\)\)/);
+  assert.match(adapterPlanRow, /\.end_slot\([\s\S]*plan\.target[\s\S]*plan\.command[\s\S]*\.truncate_start\(\)/);
   assert.match(webAuditRow, /let normalized_status = audit\.status\.to_ascii_lowercase\(\);/);
   assert.match(webAuditRow, /match normalized_status\.as_str\(\)/);
   assert.match(webAuditRow, /Label::new\(audit\.status\.clone\(\)\)/);
+  assert.match(webAuditRow, /\.end_slot\([\s\S]*Label::new\(audit\.status\.clone\(\)\)[\s\S]*Label::new\(source\.to_string\(\)\)/);
   assert.doesNotMatch(webAuditRow, /\.end_slot\(\s*Icon::new\(icon\)/);
   assert.match(overflowRow, /ListItem::new\(id\.into\(\)\)/);
   assert.match(overflowRow, /IconName::Ellipsis/);

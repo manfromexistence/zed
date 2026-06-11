@@ -910,6 +910,8 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   assert.match(source, /fn render_dx_explorer_storage_heat_indicator\(/);
   assert.match(source, /fn dx_explorer_storage_heat_indicator_width\(/);
   assert.match(source, /fn dx_explorer_storage_heat_color\(/);
+  assert.match(renderEntryInfoBadge, /\.max_w\(rems\(9\.\)\)/);
+  assert.match(renderEntryInfoBadge, /\.overflow_hidden\(\)/);
   assert.match(
     cachedFolderStorageSummary,
     /folder_storage_summaries[\s\S]*get\(&cache_key\)[\s\S]*cloned\(\)/,
@@ -1362,7 +1364,8 @@ test("project panel storage overview and root shortcuts stay cached and professi
   assert.match(renderRootStripRow, /ButtonLike::new\(/);
   assert.match(renderRootStripRow, /\.style\(ButtonStyle::Subtle\)/);
   assert.match(renderRootStripRow, /\.size\(ButtonSize::Compact\)/);
-  assert.match(renderRootStripRow, /\.(?:width|max_w)\(rems\(18\.\)\)/);
+  assert.match(renderRootStripRow, /\.max_w\(rems\(18\.\)\)/);
+  assert.doesNotMatch(renderRootStripRow, /\.width\(rems\(18\.\)\)/);
   assert.match(
     renderRootStripRow,
     /\.when\(available,[\s\S]*\.tab_index\(0(?:_isize)?\)[\s\S]*\.track_focus\(&row_focus_handle\)/,

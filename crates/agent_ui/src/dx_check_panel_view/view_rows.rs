@@ -90,27 +90,26 @@ pub(super) fn notice_row(
     let tooltip = next_action
         .map(|next_action| format!("{message}\n{next_action}"))
         .unwrap_or_else(|| message.to_string());
-    let mut content = v_flex().min_w_0().gap_0p5().child(
-        Label::new(message.to_string())
-            .size(LabelSize::Small)
-            .truncate(),
-    );
-
-    if let Some(next_action) = next_action {
-        content = content.child(
-            Label::new(next_action.to_string())
-                .size(LabelSize::Small)
-                .color(Color::Muted)
-                .truncate(),
-        );
-    }
+    let next_action = next_action.map(String::from);
 
     ListItem::new(id)
         .inset(true)
         .spacing(ListItemSpacing::Sparse)
         .selectable(false)
         .start_slot(Icon::new(icon).size(IconSize::Small).color(color))
-        .child(content)
+        .child(
+            Label::new(message.to_string())
+                .size(LabelSize::Small)
+                .truncate(),
+        )
+        .when_some(next_action, |this, next_action| {
+            this.end_slot(
+                Label::new(next_action)
+                    .size(LabelSize::Small)
+                    .color(Color::Muted)
+                    .truncate(),
+            )
+        })
         .tooltip(Tooltip::text(tooltip))
         .into_any_element()
 }
@@ -136,29 +135,7 @@ pub(super) fn quick_fix_row(index: usize, fix: &DxCheckPanelQuickFix) -> AnyElem
         fix.next_action,
         fix.command.as_deref().unwrap_or("No command")
     );
-    let mut content = v_flex()
-        .min_w_0()
-        .gap_0p5()
-        .child(
-            Label::new(fix.label.clone())
-                .size(LabelSize::Small)
-                .truncate(),
-        )
-        .child(
-            Label::new(fix.next_action.clone())
-                .size(LabelSize::Small)
-                .color(Color::Muted)
-                .truncate(),
-        );
-
-    if let Some(command) = fix.command.as_ref() {
-        content = content.child(
-            Label::new(command.clone())
-                .size(LabelSize::Small)
-                .color(Color::Accent)
-                .truncate(),
-        );
-    }
+    let command = fix.command.clone();
 
     ListItem::new(SharedString::from(format!("dx-check-quick-fix-{index}")))
         .inset(true)
@@ -169,7 +146,34 @@ pub(super) fn quick_fix_row(index: usize, fix: &DxCheckPanelQuickFix) -> AnyElem
                 .size(IconSize::Small)
                 .color(Color::Muted),
         )
-        .child(content)
+        .child(
+            Label::new(fix.label.clone())
+                .size(LabelSize::Small)
+                .truncate(),
+        )
+        .end_slot(
+            h_flex()
+                .min_w_0()
+                .gap_1()
+                .child(
+                    div().max_w(rems(16.)).overflow_hidden().child(
+                        Label::new(fix.next_action.clone())
+                            .size(LabelSize::Small)
+                            .color(Color::Muted)
+                            .truncate(),
+                    ),
+                )
+                .when_some(command, |this, command| {
+                    this.child(
+                        div().max_w(rems(16.)).overflow_hidden().child(
+                            Label::new(command)
+                                .size(LabelSize::Small)
+                                .color(Color::Accent)
+                                .truncate_start(),
+                        ),
+                    )
+                }),
+        )
         .tooltip(Tooltip::text(tooltip))
         .into_any_element()
 }
@@ -192,35 +196,7 @@ pub(super) fn adapter_plan_row(index: usize, plan: &DxCheckPanelAdapterPlan) -> 
             .as_deref()
             .unwrap_or("No run command configured")
     );
-    let mut content = v_flex()
-        .min_w_0()
-        .gap_0p5()
-        .child(
-            Label::new(plan.label.clone())
-                .size(LabelSize::Small)
-                .truncate(),
-        )
-        .child(
-            Label::new(plan.target.clone())
-                .size(LabelSize::Small)
-                .color(Color::Muted)
-                .truncate(),
-        )
-        .child(
-            Label::new(plan.command.clone())
-                .size(LabelSize::Small)
-                .color(Color::Accent)
-                .truncate_start(),
-        );
-
-    if let Some(run_command) = plan.run_command.as_ref() {
-        content = content.child(
-            Label::new(run_command.clone())
-                .size(LabelSize::Small)
-                .color(Color::Muted)
-                .truncate_start(),
-        );
-    }
+    let run_command = plan.run_command.clone();
 
     ListItem::new(SharedString::from(format!("dx-check-adapter-plan-{index}")))
         .inset(true)
@@ -231,7 +207,42 @@ pub(super) fn adapter_plan_row(index: usize, plan: &DxCheckPanelAdapterPlan) -> 
                 .size(IconSize::Small)
                 .color(Color::Muted),
         )
-        .child(content)
+        .child(
+            Label::new(plan.label.clone())
+                .size(LabelSize::Small)
+                .truncate(),
+        )
+        .end_slot(
+            h_flex()
+                .min_w_0()
+                .gap_1()
+                .child(
+                    div().max_w(rems(12.)).overflow_hidden().child(
+                        Label::new(plan.target.clone())
+                            .size(LabelSize::Small)
+                            .color(Color::Muted)
+                            .truncate(),
+                    ),
+                )
+                .child(
+                    div().max_w(rems(18.)).overflow_hidden().child(
+                        Label::new(plan.command.clone())
+                            .size(LabelSize::Small)
+                            .color(Color::Accent)
+                            .truncate_start(),
+                    ),
+                )
+                .when_some(run_command, |this, run_command| {
+                    this.child(
+                        div().max_w(rems(16.)).overflow_hidden().child(
+                            Label::new(run_command)
+                                .size(LabelSize::Small)
+                                .color(Color::Muted)
+                                .truncate_start(),
+                        ),
+                    )
+                }),
+        )
         .tooltip(Tooltip::text(tooltip))
         .into_any_element()
 }
@@ -274,33 +285,28 @@ pub(super) fn web_audit_row(index: usize, audit: &DxCheckPanelWebAudit, _cx: &Ap
         .selectable(false)
         .start_slot(Icon::new(icon).size(IconSize::Small).color(color))
         .child(
-            v_flex()
-                .min_w_0()
-                .flex_1()
-                .gap_0p5()
-                .child(
-                    Label::new(audit.label.clone())
-                        .size(LabelSize::Small)
-                        .truncate(),
-                )
-                .child(
-                    Label::new(audit.detail.clone())
-                        .size(LabelSize::Small)
-                        .color(Color::Muted)
-                        .truncate(),
-                )
-                .child(
-                    Label::new(source.to_string())
-                        .size(LabelSize::Small)
-                        .color(Color::Muted)
-                        .truncate_start(),
-                ),
+            Label::new(audit.label.clone())
+                .size(LabelSize::Small)
+                .truncate(),
         )
         .end_slot(
-            Label::new(audit.status.clone())
-                .size(LabelSize::Small)
-                .color(color)
-                .truncate(),
+            h_flex()
+                .min_w_0()
+                .gap_1()
+                .child(
+                    Label::new(audit.status.clone())
+                        .size(LabelSize::Small)
+                        .color(color)
+                        .truncate(),
+                )
+                .child(
+                    div().max_w(rems(18.)).overflow_hidden().child(
+                        Label::new(source.to_string())
+                            .size(LabelSize::Small)
+                            .color(Color::Muted)
+                            .truncate_start(),
+                    ),
+                ),
         )
         .tooltip(Tooltip::text(tooltip))
         .into_any_element()

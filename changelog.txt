@@ -1,3 +1,23 @@
+[2026-06-11] - DX Panel GPUI Sixth-Pass Polish
+
+CHANGED:
+- `crates\agent_ui\src\dx_check_panel_view\view_rows.rs` now renders Check notice, quick-fix, adapter-plan, and web-audit rows as compact sparse `ListItem` rows with bounded end-slot detail instead of stacked visible text blocks.
+- `crates\media_panel\src\media_panel.rs` now keeps local/remote media row behavior intact while moving row actions to tooltip-backed square icon controls with click-propagation guards.
+- `crates\shadcn_ui_panel\src\shadcn_ui_panel.rs` now keeps the catalog primary action readable and moves secondary Copy, Preview, Docs, and Pin actions to compact square icon controls.
+- `crates\project_panel\src\storage_roots_view.rs` and `crates\project_panel\src\project_panel.rs` now cap storage shortcuts and hover metadata chips so compact Project rows do not crowd file labels.
+- `crates\agent_ui\src\dx_forge_panel\providers\state.rs` now removes unused provider-state icon plumbing, with Forge guards preserving compact readiness-dot continuity.
+- Focused source guards and the handoff registry now cover the sixth-pass GPUI component contracts for Media, UI, Check, Project, and Forge.
+
+PASSED:
+- `rustfmt --edition 2024` on touched Rust files
+- `rustfmt --edition 2024 --check` on touched Rust files
+- `node --test script\dx-forge-panel-source.test.ts script\dx-media-panel-source.test.ts script\dx-ui-panel-source.test.ts script\dx-check-panel-source.test.ts script\dx-project-panel-source.test.ts script\dx-handoff-source-guard-registry.test.ts`
+- Anchored conflict-marker scan across touched files returned no matches
+- `git diff --check`
+
+NOTES:
+- Source-only by instruction. `just run`, Cargo build/check/test/clippy, native launch, browser automation, local servers, and runtime visual proof were not run.
+
 [2026-06-11] - DX Panel GPUI Fifth-Pass Polish
 
 CHANGED:
