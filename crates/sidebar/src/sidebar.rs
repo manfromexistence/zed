@@ -6135,6 +6135,88 @@ impl Sidebar {
         metadata.interacted_at.unwrap_or(metadata.updated_at)
     }
 
+    fn render_thread_context_menu(
+        sidebar: WeakEntity<Self>,
+        ix: usize,
+        thread_id: ThreadId,
+        session_id: Option<acp::SessionId>,
+        title: SharedString,
+        dragged_thread: DraggedSidebarThread,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> Entity<ContextMenu> {
+        ContextMenu::build(window, cx, move |menu, _window, _cx| {
+            let sidebar_for_open = sidebar.clone();
+            let sidebar_for_rename = sidebar.clone();
+            let sidebar_for_pin = sidebar.clone();
+            let sidebar_for_archive = sidebar;
+            let title_for_rename = title.clone();
+            let pin_context = dragged_thread.clone();
+
+            let menu = menu
+                .item(
+                    ContextMenuEntry::new("Open Chat")
+                        .icon(IconName::Chat)
+                        .icon_color(Color::Muted)
+                        .handler(move |window, cx| {
+                            sidebar_for_open
+                                .update(cx, |sidebar, cx| {
+                                    sidebar.open_thread_grid_shortcut(thread_id, window, cx);
+                                })
+                                .ok();
+                        }),
+                )
+                .item(
+                    ContextMenuEntry::new("Rename Chat")
+                        .icon(IconName::Pencil)
+                        .icon_color(Color::Muted)
+                        .handler(move |window, cx| {
+                            sidebar_for_rename
+                                .update(cx, |sidebar, cx| {
+                                    sidebar.activity_bar_expanded = true;
+                                    sidebar.start_renaming_thread(
+                                        ix,
+                                        thread_id,
+                                        title_for_rename.clone(),
+                                        window,
+                                        cx,
+                                    );
+                                })
+                                .ok();
+                        }),
+                )
+                .item(
+                    ContextMenuEntry::new("Pin to Top Grid")
+                        .icon(IconName::Pin)
+                        .icon_color(Color::Muted)
+                        .handler(move |_window, cx| {
+                            sidebar_for_pin
+                                .update(cx, |sidebar, cx| {
+                                    sidebar.pin_thread_grid_shortcut(&pin_context, cx);
+                                })
+                                .ok();
+                        }),
+                );
+
+            if let Some(session_id) = session_id {
+                menu.separator().item(
+                    ContextMenuEntry::new("Archive Chat")
+                        .icon(IconName::Archive)
+                        .icon_color(Color::Muted)
+                        .handler(move |window, cx| {
+                            sidebar_for_archive
+                                .update(cx, |sidebar, cx| {
+                                    sidebar.archive_thread(&session_id, window, cx);
+                                })
+                                .ok();
+                        }),
+                )
+            } else {
+                menu
+            }
+        })
+    }
+
     fn reorder_thread_around(
         &mut self,
         dragged_thread_id: ThreadId,
@@ -6725,6 +6807,8 @@ impl Sidebar {
             cx.flag_value::<AgentThreadWorktreeLabelFlag>(),
         );
 
+        let used_icons = self.thread_display_icons_before(ix);
+        let fallback_icon = self.thread_display_icon(thread, &used_icons);
         let overridden_icon = self
             .thread_icon_overrides
             .get(&thread.metadata.thread_id)
@@ -6734,7 +6818,7 @@ impl Sidebar {
         } else if let Some(icon) = overridden_icon {
             (icon, None)
         } else {
-            (thread.icon, thread.icon_from_external_svg.clone())
+            (fallback_icon, None)
         };
         let icon_picker_handle = self
             .thread_icon_picker_handles
@@ -6747,8 +6831,34 @@ impl Sidebar {
             thread_id: thread.metadata.thread_id,
             icon,
             label: title.clone(),
-            subtitle: None,
+            subtitle: (!timestamp.is_empty()).then_some(timestamp.clone()),
         };
+        let thread_menu_sidebar = cx.weak_entity();
+        let thread_more_dragged = dragged_thread.clone();
+        let thread_context_dragged = dragged_thread.clone();
+        let thread_menu_title = title.clone();
+        let thread_menu_session_id = session_id_for_delete.clone();
+        let thread_more_menu = PopoverMenu::new(format!("thread-more-menu-{ix}"))
+            .anchor(gpui::Anchor::TopRight)
+            .trigger_with_tooltip(
+                IconButton::new(("thread-more", ix), IconName::Ellipsis)
+                    .icon_size(IconSize::Small)
+                    .icon_color(Color::Muted)
+                    .selected_style(ButtonStyle::Tinted(TintColor::Accent)),
+                Tooltip::text("Chat actions"),
+            )
+            .menu(move |window, cx| {
+                Some(Self::render_thread_context_menu(
+                    thread_menu_sidebar.clone(),
+                    ix,
+                    thread_id_for_actions,
+                    thread_menu_session_id.clone(),
+                    thread_menu_title.clone(),
+                    thread_more_dragged.clone(),
+                    window,
+                    cx,
+                ))
+            });
 
         let thread_item = ThreadItem::new(id, title.clone())
             .base_bg(sidebar_bg)
@@ -6923,7 +7033,8 @@ impl Sidebar {
                             .gap_0p5()
                             .when_some(icon_picker, |this, picker| this.child(picker))
                             .child(rename_button)
-                            .when_some(contextual_action, |this, action| this.child(action)),
+                            .when_some(contextual_action, |this, action| this.child(action))
+                            .child(thread_more_menu),
                     )
                 },
             )
@@ -6951,7 +7062,7 @@ impl Sidebar {
             })
             .into_any_element();
 
-        div()
+        let row = div()
             .id(("thread-drag-source", ix))
             .when(can_reorder_thread, |this| {
                 let target_thread_id = thread.metadata.thread_id;
@@ -6975,6 +7086,28 @@ impl Sidebar {
                 cx.new(|_| dragged.clone())
             })
             .child(thread_item)
+            .into_any_element();
+
+        right_click_menu::<ContextMenu>(format!("thread-row-menu-{ix}"))
+            .trigger(move |_, _, _| row)
+            .menu({
+                let sidebar = cx.weak_entity();
+                let title = title.clone();
+                let dragged_thread = thread_context_dragged.clone();
+                let session_id = session_id_for_delete.clone();
+                move |window, cx| {
+                    Self::render_thread_context_menu(
+                        sidebar.clone(),
+                        ix,
+                        thread_id_for_actions,
+                        session_id.clone(),
+                        title.clone(),
+                        dragged_thread.clone(),
+                        window,
+                        cx,
+                    )
+                }
+            })
             .into_any_element()
     }
 
@@ -7106,7 +7239,7 @@ impl Sidebar {
                 })
             })
             .trigger_with_tooltip(
-                IconButton::new("open-project", IconName::Plus)
+                IconButton::new("open-project", dx_icon(DxUiIcon::OpenProject))
                     .icon_size(IconSize::Small)
                     .shape(IconButtonShape::Square)
                     .selected_style(ButtonStyle::Tinted(TintColor::Accent)),
@@ -7858,7 +7991,7 @@ impl Sidebar {
                     ))
                     .child(button(
                         "sidebar-toolbar-mobile",
-                        IconName::Screen,
+                        dx_icon(DxUiIcon::Browser),
                         "Mobile Preview",
                         |this, _, window, cx| {
                             this.activate_workspace_screen(
@@ -7870,7 +8003,7 @@ impl Sidebar {
                     ))
                     .child(button(
                         "sidebar-toolbar-cli",
-                        IconName::Terminal,
+                        dx_icon(DxUiIcon::Commands),
                         "CLI",
                         |this, _, window, cx| {
                             this.activate_workspace_screen(
@@ -7996,7 +8129,7 @@ impl Sidebar {
             button(
                 cx,
                 "sidebar-activity-mobile",
-                IconName::Screen,
+                dx_icon(DxUiIcon::Browser),
                 "Mobile Preview",
                 |this, _, window, cx| {
                     this.activate_workspace_screen(WorkspaceScreenKind::Browser, window, cx);
@@ -8006,7 +8139,7 @@ impl Sidebar {
             button(
                 cx,
                 "sidebar-activity-cli",
-                IconName::Terminal,
+                dx_icon(DxUiIcon::Commands),
                 "CLI",
                 |this, _, window, cx| {
                     this.activate_workspace_screen(WorkspaceScreenKind::Terminal, window, cx);
@@ -8082,7 +8215,7 @@ impl Sidebar {
         ((available / 36.0).floor().max(0.0) as usize).min(MAX_COLLAPSED_THREAD_SHORTCUTS)
     }
 
-    fn collapsed_thread_icon(&self, thread: &ThreadEntry, used_icons: &[IconName]) -> IconName {
+    fn thread_display_icon(&self, thread: &ThreadEntry, used_icons: &[IconName]) -> IconName {
         if let Some(icon) = self
             .thread_icon_overrides
             .get(&thread.metadata.thread_id)
@@ -8131,6 +8264,18 @@ impl Sidebar {
         palette[hash % palette.len()]
     }
 
+    fn thread_display_icons_before(&self, ix: usize) -> Vec<IconName> {
+        let mut used_icons = Vec::new();
+        for entry in self.contents.entries.iter().take(ix) {
+            let ListEntry::Thread(thread) = entry else {
+                continue;
+            };
+            let icon = self.thread_display_icon(thread, &used_icons);
+            used_icons.push(icon);
+        }
+        used_icons
+    }
+
     fn render_collapsed_thread_shortcuts(
         &mut self,
         shortcut_limit: usize,
@@ -8143,7 +8288,7 @@ impl Sidebar {
         let mut shortcuts = Vec::new();
         let mut used_icons = Vec::new();
 
-        for entry in &self.contents.entries {
+        for (entry_ix, entry) in self.contents.entries.iter().enumerate() {
             let ListEntry::Thread(thread) = entry else {
                 continue;
             };
@@ -8160,10 +8305,26 @@ impl Sidebar {
                 .active_entry
                 .as_ref()
                 .is_some_and(|entry| entry.is_active_thread(&thread_id));
-            let icon = self.collapsed_thread_icon(thread, &used_icons);
+            let icon = self.thread_display_icon(thread, &used_icons);
             used_icons.push(icon);
 
-            shortcuts.push((thread_id, icon, tooltip, is_active));
+            let dragged_thread = DraggedSidebarThread {
+                thread_id,
+                icon,
+                label: title.clone(),
+                subtitle: (!timestamp.is_empty()).then_some(timestamp.clone()),
+            };
+
+            shortcuts.push((
+                entry_ix,
+                thread_id,
+                icon,
+                title,
+                tooltip,
+                is_active,
+                dragged_thread,
+                thread.metadata.session_id.clone(),
+            ));
         }
 
         if shortcuts.is_empty() {
@@ -8184,28 +8345,78 @@ impl Sidebar {
                 .into_any_element(),
         );
 
-        elements.extend(
+        let can_reorder_shortcuts = !self.has_filter_query(cx);
+        let drop_target_background = cx.theme().colors().element_hover;
+        let drop_target_border = cx.theme().colors().text_accent;
+        for (entry_ix, thread_id, icon, title, tooltip, is_active, dragged_thread, session_id) in
             shortcuts
-                .into_iter()
-                .map(|(thread_id, icon, tooltip, is_active)| {
-                    IconButton::new(
-                        format!(
-                            "sidebar-activity-thread-shortcut-{}",
-                            thread_id.to_key_string()
-                        ),
-                        icon,
-                    )
-                    .shape(IconButtonShape::Square)
-                    .style(ButtonStyle::Subtle)
-                    .icon_size(IconSize::Medium)
-                    .toggle_state(is_active)
-                    .tooltip(Tooltip::text(tooltip))
-                    .on_click(cx.listener(move |this, _, window, cx| {
-                        this.open_thread_grid_shortcut(thread_id, window, cx);
-                    }))
-                    .into_any_element()
-                }),
-        );
+        {
+            let thread_key = thread_id.to_key_string();
+            let shortcut_button = IconButton::new(
+                format!("sidebar-activity-thread-shortcut-{thread_key}"),
+                icon,
+            )
+            .shape(IconButtonShape::Square)
+            .style(ButtonStyle::Subtle)
+            .icon_size(IconSize::Medium)
+            .toggle_state(is_active)
+            .tooltip(Tooltip::text(tooltip))
+            .on_click(cx.listener(move |this, _, window, cx| {
+                this.open_thread_grid_shortcut(thread_id, window, cx);
+            }));
+
+            let drag_context = dragged_thread.clone();
+            let shortcut = div()
+                .id(("sidebar-activity-thread-drag-source", thread_key.clone()))
+                .when(can_reorder_shortcuts, |this| {
+                    let target_thread_id = thread_id;
+                    this.drag_over::<DraggedSidebarThread>(move |row, dragged, _, _cx| {
+                        if dragged.thread_id == target_thread_id {
+                            row
+                        } else {
+                            row.bg(drop_target_background)
+                                .border_l_2()
+                                .border_color(drop_target_border)
+                        }
+                    })
+                    .on_drop(cx.listener(
+                        move |this, dragged: &DraggedSidebarThread, _window, cx| {
+                            this.reorder_thread_around(dragged.thread_id, target_thread_id, cx);
+                        },
+                    ))
+                })
+                .on_drag(drag_context, |dragged, _, _, cx| {
+                    Audio::play_dx_sound(DxSoundEvent::DragWatchTick, cx);
+                    cx.new(|_| dragged.clone())
+                })
+                .child(shortcut_button)
+                .into_any_element();
+
+            elements.push(
+                right_click_menu::<ContextMenu>(format!(
+                    "sidebar-activity-thread-menu-{thread_key}"
+                ))
+                .trigger(move |_, _, _| shortcut)
+                .menu({
+                    let sidebar = cx.weak_entity();
+                    let title = title.clone();
+                    let dragged_thread = dragged_thread.clone();
+                    move |window, cx| {
+                        Self::render_thread_context_menu(
+                            sidebar.clone(),
+                            entry_ix,
+                            thread_id,
+                            session_id.clone(),
+                            title.clone(),
+                            dragged_thread.clone(),
+                            window,
+                            cx,
+                        )
+                    }
+                })
+                .into_any_element(),
+            );
+        }
 
         if overflow_count > 0 {
             elements.push(
@@ -9253,7 +9464,7 @@ impl Sidebar {
             .bg(cx.theme().colors().status_bar_background)
             .child(left_slot)
             .child(
-                IconButton::new("sidebar-bottom-add-folder", IconName::SquarePlus)
+                IconButton::new("sidebar-bottom-add-folder", IconName::FolderOpenAdd)
                     .icon_size(IconSize::Small)
                     .tooltip(Tooltip::text("Add Folder to Project"))
                     .on_click(cx.listener(|this, _, window, cx| {

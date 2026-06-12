@@ -1,3 +1,21 @@
+[2026-06-12] - Sidebar Chat Actions And Agent Chrome Polish
+
+CHANGED:
+- Added real hover and right-click thread menus for expanded chat rows with open, rename, pin-to-grid, and archive actions.
+- Made collapsed chat shortcuts support the same drag/drop reorder and right-click menu path as expanded rows.
+- Unified expanded/collapsed chat icons through deterministic unique thread icons and improved timestamp visibility with theme-derived muted text.
+- Kept fullscreen Agent rails visible through workspace-status refresh churn, made fullscreen toolbar chrome transparent, and kept the sidechat panel button available whenever Agent is enabled.
+- Remapped duplicate/generic plus, browser, terminal, icon-picker, and open-project glyphs through central DX semantic icon aliases.
+
+PASSED:
+- `node --test script\dx-launch-workspace-source.test.ts script\dx-icon-system-source.test.ts script\dx-workspace-ui-state-source.test.ts script\dx-project-panel-source.test.ts`
+- `rustfmt --edition 2024 --check crates\sidebar\src\sidebar.rs crates\agent_ui\src\agent_panel.rs crates\title_bar\src\title_bar.rs crates\ui\src\dx_icons.rs crates\ui\src\components\ai\thread_item.rs`
+- `git diff --check`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" ...` returned no matches across touched source, guard, and handoff files.
+
+NOTES:
+- Cargo/build/native visual proof and `just run` remain deferred by instruction.
+
 [2026-06-12] - Agent UI J6 Compile Repair
 
 CHANGED:

@@ -535,7 +535,7 @@ test("agent fullscreen keeps editor docks while sidebar button remains dock-scop
   );
   assert.match(agentPanel, /"agent-toolbar-toggle-sources-rail"/);
   assert.match(agentPanel, /"agent-toolbar-toggle-progress-rail"/);
-  assert.match(agentPanel, /let rails_available = is_full_screen && self\.dx_launch_workspace_status_cache\.is_some\(\);/);
+  assert.match(agentPanel, /let rails_available = is_full_screen;/);
   assert.doesNotMatch(toolbar, /has_sources_rail_content|has_progress_rail_content/);
   for (const [button, label] of [
     [toolbarBackButton, "Agent toolbar overlay back button"],
@@ -1167,7 +1167,10 @@ test("sidebar chat groups expose persistent sort and icon override controls", ()
   assert.match(sidebar, /impl Render for DraggedSidebarThread[\s\S]*Label::new\(self\.label\.clone\(\)\)/);
   assert.match(sidebar, /impl Render for DraggedSidebarThread[\s\S]*\.w\(px\(236\.0\)\)/);
   assert.match(sidebar, /impl Render for DraggedSidebarThread[\s\S]*\.color\(Color::Default\)/);
-  assert.match(sidebar, /let dragged_thread = DraggedSidebarThread \{[\s\S]*?subtitle: None,/);
+  assert.match(
+    sidebar,
+    /let dragged_thread = DraggedSidebarThread \{[\s\S]*?subtitle: \(!timestamp\.is_empty\(\)\)\.then_some\(timestamp\.clone\(\)\),/,
+  );
   assert.match(sidebar, /subtitle: None,\s*action: SerializedSidebarGridAction::OpenThread/s);
   assert.match(sidebar, /matches!\(action, SidebarGridAction::OpenThread\(_\)\)/);
   assert.match(sidebar, /struct ThreadIconPickerMenu/);
@@ -1360,7 +1363,7 @@ test("agent rails and project badges keep compact production layout", () => {
   assert.doesNotMatch(toolbar, /Sources rail has no sources yet|Progress rail has no agent activity yet/);
   assert.match(
     toolbar,
-    /let rails_available = is_full_screen && self\.dx_launch_workspace_status_cache\.is_some\(\);/,
+    /let rails_available = is_full_screen;/,
     "fullscreen rail toolbar availability must not clone or rebuild launch status during render",
   );
   const renderActivityBar = functionBody(threadView, "render_activity_bar");

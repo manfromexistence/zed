@@ -157,8 +157,8 @@ test("collapsed workspace activity bar stays icon-only with hover details", () =
   assert.match(sidebar, /"Collapse to Activity Bar"/);
   assert.match(sidebar, /"sidebar-toolbar-new-chat"[\s\S]*?IconName::Plus[\s\S]*?"New Chat"/);
   assert.match(sidebar, /"sidebar-toolbar-search"[\s\S]*?dx_icon\(DxUiIcon::Search\)[\s\S]*?"Search"/);
-  assert.match(sidebar, /"sidebar-toolbar-mobile"[\s\S]*?IconName::Screen[\s\S]*?"Mobile Preview"/);
-  assert.match(sidebar, /"sidebar-toolbar-cli"[\s\S]*?IconName::Terminal[\s\S]*?"CLI"/);
+  assert.match(sidebar, /"sidebar-toolbar-mobile"[\s\S]*?dx_icon\(DxUiIcon::Browser\)[\s\S]*?"Mobile Preview"/);
+  assert.match(sidebar, /"sidebar-toolbar-cli"[\s\S]*?dx_icon\(DxUiIcon::Commands\)[\s\S]*?"CLI"/);
   assert.match(sidebar, /"sidebar-toolbar-plugins"[\s\S]*?dx_icon\(DxUiIcon::Plugins\)/);
   assert.match(sidebar, /"sidebar-toolbar-connections"[\s\S]*?dx_icon\(DxUiIcon::Connections\)/);
   assert.match(sidebar, /"sidebar-toolbar-automations"[\s\S]*?dx_icon\(DxUiIcon::Automations\)/);

@@ -157,7 +157,7 @@ test("DX shell chrome uses semantic icons instead of scattered literals", () => 
 
   assert.match(dxIcons, /DxUiIcon::Agent \| DxUiIcon::Ai => IconName::Sparkle/);
   assert.match(dxIcons, /DxUiIcon::Check => IconName::ToolDiagnostics/);
-  assert.match(dxIcons, /DxUiIcon::Icons => IconName::SquareDot/);
+  assert.match(dxIcons, /DxUiIcon::Icons => IconName::Library/);
   assert.match(forgePanel, /dx_icon\(DxUiIcon::Forge\)/);
   assert.match(forgePanelView, /icon: dx_icon\(DxUiIcon::Media\)/);
   assert.match(forgeProviderView, /ProviderGroup::Media => dx_icon\(DxUiIcon::Media\)/);

@@ -5211,7 +5211,7 @@ impl Panel for AgentPanel {
     }
 
     fn icon(&self, _window: &Window, cx: &App) -> Option<IconName> {
-        (self.enabled(cx) && AgentSettings::get_global(cx).button).then_some(IconName::Chat)
+        self.enabled(cx).then_some(IconName::Chat)
     }
 
     fn icon_tooltip(&self, _window: &Window, _cx: &App) -> Option<&'static str> {
@@ -5504,7 +5504,12 @@ impl AgentPanel {
             && !self.is_title_editor_focused(window, cx)
     }
 
-    fn render_title_view(&self, window: &mut Window, cx: &Context<Self>) -> AnyElement {
+    fn render_title_view(
+        &self,
+        window: &mut Window,
+        cx: &Context<Self>,
+        toolbar_bg: gpui::Hsla,
+    ) -> AnyElement {
         let content = match self.visible_surface() {
             VisibleSurface::AgentThread(conversation_view) => {
                 let server_view_ref = conversation_view.read(cx);
@@ -5632,7 +5637,6 @@ impl AgentPanel {
             VisibleSurface::Uninitialized => Label::new("Agent").truncate().into_any_element(),
         };
 
-        let toolbar_bg = cx.theme().colors().tab_bar_background;
         let gradient_overlay = GradientFade::new(toolbar_bg, toolbar_bg, toolbar_bg)
             .width(px(64.0))
             .right(px(0.0))
@@ -5654,7 +5658,7 @@ impl AgentPanel {
                         .absolute()
                         .right_0()
                         .h_full()
-                        .bg(cx.theme().colors().tab_bar_background)
+                        .bg(toolbar_bg)
                         .child(
                             IconButton::new("edit_tile", IconName::Pencil)
                                 .icon_size(IconSize::Small)
@@ -6228,9 +6232,14 @@ impl AgentPanel {
         };
 
         let is_full_screen = self.should_render_dx_launch_chrome(cx);
-        let rails_available = is_full_screen && self.dx_launch_workspace_status_cache.is_some();
+        let rails_available = is_full_screen;
         let sources_rail_open = self.fullscreen_sources_rail_open && rails_available;
         let progress_rail_open = self.fullscreen_progress_rail_open && rails_available;
+        let toolbar_bg = if is_full_screen {
+            gpui::transparent_black()
+        } else {
+            cx.theme().colors().tab_bar_background
+        };
         let agent_sources_rail_button = IconButton::new(
             "agent-toolbar-toggle-sources-rail",
             IconName::ThreadsSidebarLeftClosed,
@@ -6397,7 +6406,7 @@ impl AgentPanel {
                         } else {
                             selected_agent.into_any_element()
                         })
-                        .child(self.render_title_view(window, cx)),
+                        .child(self.render_title_view(window, cx, toolbar_bg)),
                 )
                 .child(
                     h_flex()
@@ -6423,9 +6432,10 @@ impl AgentPanel {
             .h(Tab::container_height(cx) + px(4.))
             .flex_shrink_0()
             .max_w_full()
-            .bg(cx.theme().colors().tab_bar_background)
-            .border_b_1()
-            .border_color(cx.theme().colors().border)
+            .bg(toolbar_bg)
+            .when(!is_full_screen, |this| {
+                this.border_b_1().border_color(cx.theme().colors().border)
+            })
             .child(toolbar_content)
             .when(is_full_screen, |this| {
                 this.child(self.render_toolbar_response_indicator(cx))
@@ -7816,7 +7826,10 @@ impl AgentPanel {
                 panel.update(cx, |panel, cx| {
                     if panel.dx_workspace_snapshot != snapshot {
                         panel.dx_workspace_snapshot = snapshot;
-                        panel.dx_launch_workspace_status_cache = None;
+                        // Keep the previous rail snapshot visible while the
+                        // replacement refresh is in flight, so fullscreen
+                        // Agent chrome does not disappear during workspace
+                        // snapshot churn.
                         panel.dx_launch_workspace_status_refresh_pending = false;
                         panel.dx_launch_workspace_status_refresh_generation = panel
                             .dx_launch_workspace_status_refresh_generation
@@ -8589,7 +8602,8 @@ impl Render for AgentPanel {
                 VisibleSurface::Uninitialized => parent,
                 VisibleSurface::AgentThread(conversation_view) => {
                     conversation_view.update(cx, |conversation_view, cx| {
-                        conversation_view.set_chat_input_full_width(false, cx);
+                        conversation_view
+                            .set_chat_input_full_width(self.should_render_dx_launch_chrome(cx), cx);
                     });
                     parent
                         .child(self.render_dx_launch_workspace(

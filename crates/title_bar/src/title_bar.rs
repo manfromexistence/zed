@@ -670,7 +670,15 @@ impl TitleBar {
         active_screen_kind: WorkspaceScreenKind,
         _cx: &mut Context<Self>,
     ) -> AnyElement {
-        IconButton::new("screen-dock-add-trigger", IconName::Plus)
+        let icon = match active_screen_kind {
+            WorkspaceScreenKind::Agent => IconName::NewThread,
+            WorkspaceScreenKind::Browser => dx_icon(DxUiIcon::Browser),
+            WorkspaceScreenKind::Terminal => dx_icon(DxUiIcon::Commands),
+            WorkspaceScreenKind::Editor => IconName::File,
+            _ => IconName::Plus,
+        };
+
+        IconButton::new("screen-dock-add-trigger", icon)
             .size(ButtonSize::Default)
             .icon_size(IconSize::Medium)
             .tooltip(Tooltip::text(Self::screen_kind_create_label(
@@ -899,7 +907,7 @@ impl TitleBar {
             WorkspaceScreenKind::Tools => dx_icon(DxUiIcon::Plugins),
             WorkspaceScreenKind::Editor => IconName::Code,
             WorkspaceScreenKind::Browser => dx_icon(DxUiIcon::Browser),
-            WorkspaceScreenKind::Terminal => IconName::Terminal,
+            WorkspaceScreenKind::Terminal => dx_icon(DxUiIcon::Commands),
             WorkspaceScreenKind::Onboarding => dx_icon(DxUiIcon::Ai),
             WorkspaceScreenKind::Other => IconName::Circle,
         }

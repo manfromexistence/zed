@@ -266,7 +266,7 @@ test("project panel DX Explorer header is source-backed and action-wired", () =>
     "Project Panel should call the shared Dock controls only from the helper",
   );
   assert.match(renderDxExplorerHeader, /dx_icon\(DxUiIcon::OpenProject\)/);
-  assert.match(dxIcons, /DxUiIcon::OpenProject => IconName::OpenFolder/);
+  assert.match(dxIcons, /DxUiIcon::OpenProject => IconName::FolderOpenAdd/);
   assert.match(renderDxExplorerHeader, /dx_icon\(DxUiIcon::OpenFile\)/);
   assert.match(dxIcons, /DxUiIcon::OpenFile => IconName::MagnifyingGlass/);
   assert.doesNotMatch(
@@ -921,7 +921,10 @@ test("project panel folder storage summaries are cache-only on the visible-row p
   assert.match(source, /fn render_dx_explorer_storage_drilldown_row\(/);
   assert.doesNotMatch(source, /fn dx_explorer_storage_heat_level\(/);
   assert.match(renderEntryInfoBadge, /\.visible_on_hover\("list_item"\)/);
-  assert.match(renderEntryInfoBadge, /Chip::new\(label\)\.label_color\(Color::Muted\)\.truncate\(\)/);
+  assert.match(
+    renderEntryInfoBadge,
+    /Chip::new\(label\)[\s\S]*?\.label_color\(Color::Muted\)[\s\S]*?\.truncate\(\)/,
+  );
   assert.doesNotMatch(renderEntryInfoBadge, /\.ml_1\(\)/);
   assert.match(renderEntry, /\.end_slot::<AnyElement>\([\s\S]*h_flex\(\)[\s\S]*\.gap_0p5\(\)[\s\S]*\.pr_0p5\(\)[\s\S]*\.child\(hover_badge\)/);
   assert.doesNotMatch(

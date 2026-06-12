@@ -375,7 +375,7 @@ impl RenderOnce for ThreadItem {
         let timestamp_color = if self.selected || self.hovered {
             Color::Default
         } else {
-            Color::Muted
+            Color::Custom(color.text_muted.blend(color.text.opacity(0.45)))
         };
 
         let show_tooltip = matches!(
