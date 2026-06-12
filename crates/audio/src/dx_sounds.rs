@@ -52,7 +52,7 @@ impl DxSoundEvent {
 
     pub(crate) fn policy(self) -> DxSoundPolicy {
         match self {
-            Self::HoverSoft => DxSoundPolicy::ExplicitOptIn,
+            Self::TypingKey | Self::DeleteSoft | Self::HoverSoft => DxSoundPolicy::ExplicitOptIn,
             _ => DxSoundPolicy::EnabledByDefault,
         }
     }

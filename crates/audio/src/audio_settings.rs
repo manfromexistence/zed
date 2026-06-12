@@ -21,6 +21,8 @@ pub struct AudioSettings {
     pub output_audio_device: Option<DeviceId>,
     /// Select specific input audio device.
     pub input_audio_device: Option<DeviceId>,
+    /// Play high-frequency DX interaction sounds while typing, deleting, or hovering.
+    pub dx_interaction_sounds: bool,
 }
 
 /// Configuration of audio in Zed
@@ -37,6 +39,7 @@ impl Settings for AudioSettings {
                 .input_audio_device
                 .as_ref()
                 .and_then(|x| x.0.as_ref().and_then(|id| DeviceId::from_str(&id).ok())),
+            dx_interaction_sounds: audio.dx_interaction_sounds.unwrap_or(false),
         }
     }
 }

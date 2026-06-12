@@ -545,6 +545,8 @@
     // `null` means use system default.
     // Any unrecognized input device will fall back to system default.
     "experimental.input_audio_device": null,
+    // Play high-frequency DX interaction sounds while typing, deleting, or hovering.
+    "dx.interaction_sounds": false,
   },
   // Scrollbar related settings
   "scrollbar": {

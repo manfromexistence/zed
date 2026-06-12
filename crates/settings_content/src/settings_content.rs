@@ -486,6 +486,9 @@ pub struct AudioSettingsContent {
     /// Select specific input audio device.
     #[serde(rename = "experimental.input_audio_device")]
     pub input_audio_device: Option<AudioInputDeviceName>,
+    /// Play high-frequency DX interaction sounds while typing, deleting, or hovering.
+    #[serde(rename = "dx.interaction_sounds")]
+    pub dx_interaction_sounds: Option<bool>,
 }
 
 #[derive(Clone, Default, Debug, Serialize, Deserialize, JsonSchema, MergeFrom, PartialEq, Eq)]

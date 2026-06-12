@@ -187,11 +187,18 @@ impl Audio {
     }
 
     pub fn play_dx_sound(event: DxSoundEvent, cx: &mut App) {
-        if event.policy() == DxSoundPolicy::ExplicitOptIn {
+        let (output_audio_device, dx_interaction_sounds) = {
+            let settings = AudioSettings::get_global(cx);
+            (
+                settings.output_audio_device.clone(),
+                settings.dx_interaction_sounds,
+            )
+        };
+
+        if event.policy() == DxSoundPolicy::ExplicitOptIn && !dx_interaction_sounds {
             return;
         }
 
-        let output_audio_device = AudioSettings::get_global(cx).output_audio_device.clone();
         cx.update_default_global(|this: &mut Self, cx| {
             if !this.should_play_dx_sound(event) {
                 return Some(());

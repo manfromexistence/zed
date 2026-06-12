@@ -1,5 +1,5 @@
 IN PROGRESS:
-- None. Plugin catalog visible-source label hardening is source-resolved: workflow-node cards/tooltips now use neutral DX source labels, source/status chips hide missing/debug states, catalog summaries use receipt-status labels and reject path-like source package fallbacks, and visible Plugins UI no longer touches raw source paths. Governed runtime proof remains pending where explicitly noted.
+- None. DX sound hot-path preference gating is source-resolved: typing, delete, and hover interaction sounds now require the default-off `audio.dx.interaction_sounds` setting before playback, while lower-frequency semantic DX sounds keep the existing five-percent gain and cooldown path. Governed runtime proof remains pending where explicitly noted.
 
 PENDING:
 - Run governed runtime/visual proof for the Connections and Automations workspace tabs after an authorized Zed launch, covering page header stats, catalog search/filter behavior, selected detail panes, section-card scrolling, provider/social rows, automation draft/schedule/run/history/failure rows, and narrow or stacked panel behavior.
@@ -8,7 +8,7 @@ PENDING:
 - Add a persistent Flow STT host/daemon integration so transcription can avoid per-clip process/model startup and match the cached Kokoro TTS path.
 - Run governed runtime proof for the response copy icon, animated voice loader, warmed TTS path, sidebar Plugins/Connections/Automations routing, and Forge Packages tab when `just run` is explicitly authorized.
 - Run governed runtime proof for the DX Agent prompt identity and Copy Agent Response action after the next authorized launch.
-- Add user-facing DX sound preferences before enabling hot-path typing and hover playback.
+- Run governed runtime proof for the default-off `audio.dx.interaction_sounds` preference before enabling hot-path typing, delete, or hover playback in user sessions.
 - Run governed runtime proof for the sidebar screen/panel action routing, Project Panel chrome cleanup, and Sparkles/Dx Agent branding polish when `just run` is explicitly requested.
 - Run governed DX Agents connection/plugin runtime proof once authorized, covering main sidebar Connections and Plugins routing, workflow-node catalog receipts, real social/provider receipts, QR payload display, credential expiry/error visuals, trusted tool bridge approvals, configured plugin options above the Agent composer, and native workspace-tab layout.
 - Run governed DX Agents runtime proof once authorized, covering real provider receipt ingestion, QR-flow receipt handling, trusted tool bridge import, and launch/settings visual behavior.
@@ -16,6 +16,7 @@ PENDING:
 - Continue the DX/Zed ecosystem integration with bounded source-only slices for remaining receipt scans, semantic icon hotspots, and governed runtime proof when explicitly authorized.
 
 COMPLETED:
+- DX sound hot-path preference gating is source-verified: `audio.dx.interaction_sounds` is exposed through settings/default schema with a default-off value, `TypingKey`, `DeleteSoft`, and `HoverSoft` are explicit-opt-in policy events, and the central audio pipeline refuses those events unless the preference is enabled. Heavy Cargo/native runtime proof remains deferred by instruction.
 - Plugin catalog visible-source label hardening is source-verified: workflow-node cards/tooltips now render normalized DX source and state labels instead of raw source paths or missing/debug receipt states, configured-plugin tooltips summarize bridge status without raw trust booleans, and catalog summaries use human receipt-status labels plus path-like source-package filtering. Heavy Cargo/native runtime proof remains deferred by instruction.
 - Catalog action/prompt metadata boundary hardening is source-verified: configured-plugin composer options now re-check allowlisted source roots, safe relative source paths, trusted bridge approval, usable states, and a live catalog `(node_id, source_root_id, source_path)` match before syncing into ThreadView; Agent prompt insertion keeps only prompt-only, display-name, credential-status, and trusted-receipt instructions; and Plugins workspace render paths use neutral bridge/count labels instead of raw configure actions, action ids, receipt ids, or trusted tool id lists. Heavy Cargo/native runtime proof remains deferred by instruction.
 - Social receipt display redaction is source-verified: visible social/provider account and action summary fields now route through the DX Agent bridge display helpers before rendering, receipt history is bounded and redacted, and source guards pin the account/action redaction contract. Heavy Cargo/native runtime proof remains deferred by instruction.

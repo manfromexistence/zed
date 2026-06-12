@@ -1,3 +1,20 @@
+[2026-06-12] - DX Sound Hot-Path Preference Gate
+
+CHANGED:
+- Added the default-off `audio.dx.interaction_sounds` setting for high-frequency typing, delete, and hover sounds.
+- Routed `TypingKey`, `DeleteSoft`, and `HoverSoft` through explicit opt-in playback policy instead of default playback.
+- Updated the central DX sound pipeline so explicit-opt-in events are ignored unless the interaction-sound setting is enabled.
+- Source guards now pin the settings/default value, hot-path sound policy, and central playback gate.
+
+PASSED:
+- `node --test script\dx-sound-source.test.ts`
+- `rustfmt --edition 2024 --check crates\audio\src\dx_sounds.rs crates\audio\src\audio_pipeline.rs crates\audio\src\audio_settings.rs crates\settings_content\src\settings_content.rs`
+- `git diff --check`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" ...` returned no matches across touched source, guard, and handoff files.
+
+NOTES:
+- Cargo/build/native visual proof and `just run` remain deferred by instruction.
+
 [2026-06-12] - Plugin Catalog Source Label Hardening
 
 CHANGED:

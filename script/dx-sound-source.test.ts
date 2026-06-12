@@ -3,10 +3,16 @@ import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const audio = readFileSync("crates/audio/src/audio.rs", "utf8");
+const audioSettings = readFileSync("crates/audio/src/audio_settings.rs", "utf8");
 const audioPipeline = readFileSync("crates/audio/src/audio_pipeline.rs", "utf8");
+const defaultSettings = readFileSync("assets/settings/default.json", "utf8");
 const dxSounds = existsSync("crates/audio/src/dx_sounds.rs")
   ? readFileSync("crates/audio/src/dx_sounds.rs", "utf8")
   : "";
+const settingsContent = readFileSync(
+  "crates/settings_content/src/settings_content.rs",
+  "utf8",
+);
 const sidebar = readFileSync("crates/sidebar/src/sidebar.rs", "utf8");
 const workspace = readFileSync("crates/workspace/src/workspace.rs", "utf8");
 const dock = readFileSync("crates/workspace/src/dock.rs", "utf8");
@@ -74,11 +80,24 @@ test("DX sound playback uses semantic events with throttling", () => {
   assert.match(audio, /pub use dx_sounds::\{DxSoundEvent, DxSoundPolicy\};/);
   assert.match(dxSounds, /pub enum DxSoundEvent/);
   assert.match(dxSounds, /pub enum DxSoundPolicy/);
-  assert.doesNotMatch(dxSounds, /Self::TypingKey \| Self::HoverSoft => DxSoundPolicy::ExplicitOptIn/);
-  assert.match(dxSounds, /HoverSoft[\s\S]+DxSoundPolicy::ExplicitOptIn/);
+  assert.match(
+    dxSounds,
+    /Self::TypingKey\s*\|\s*Self::DeleteSoft\s*\|\s*Self::HoverSoft\s*=>\s*DxSoundPolicy::ExplicitOptIn/,
+  );
+  assert.match(settingsContent, /pub dx_interaction_sounds: Option<bool>/);
+  assert.match(audioSettings, /pub dx_interaction_sounds: bool/);
+  assert.match(
+    audioSettings,
+    /dx_interaction_sounds:\s*audio\.dx_interaction_sounds\.unwrap_or\(false\)/,
+  );
+  assert.match(defaultSettings, /"dx\.interaction_sounds": false/);
   assert.match(dxSounds, /pub\(crate\) fn gain\(self\) -> f32 \{\s*0\.05\s*\}/);
   assert.match(audioPipeline, /dx_sound_last_played: HashMap<DxSoundEvent, Instant>/);
   assert.match(audioPipeline, /pub fn play_dx_sound\(event: DxSoundEvent, cx: &mut App\)/);
+  assert.match(
+    audioPipeline,
+    /event\.policy\(\) == DxSoundPolicy::ExplicitOptIn && !dx_interaction_sounds/,
+  );
   assert.match(audioPipeline, /fn should_play_dx_sound/);
   assert.match(audioPipeline, /source\.amplify\(event\.gain\(\)\)/);
   assert.match(audioPipeline, /event\.cooldown\(\)/);
