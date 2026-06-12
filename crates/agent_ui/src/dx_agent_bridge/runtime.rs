@@ -4,8 +4,8 @@ use self::runtime_display::{display_string_array_field, display_string_field};
 use super::{
     DxAgentRowAction, DxAgentSocialAccount, DxAgentSocialActionSummary, DxConnectedAccountsSummary,
     array_field, bool_field, is_dx_agents_command, is_public_dx_agents_command,
-    is_safe_platform_arg, is_secret_like_arg, public_command_for_runtime, string_array_field,
-    string_field, usize_field,
+    is_safe_platform_arg, is_secret_like_arg, public_command_for_runtime, string_field,
+    usize_field,
 };
 
 #[path = "runtime_catalog.rs"]

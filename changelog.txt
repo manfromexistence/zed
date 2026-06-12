@@ -1,3 +1,19 @@
+[2026-06-12] - Agent UI J6 Compile Repair
+
+CHANGED:
+- Narrowed the trusted-tool bridge summary helper visibility so the DX Agent bridge re-export compiles.
+- Removed a stale DX Agent runtime import that produced a warning.
+- Added the stable Forge panel scroll-content id required before tracking its scroll handle.
+
+PASSED:
+- `rustfmt --edition 2024 crates\agent_ui\src\dx_agent_bridge\receipts\trusted_tool_bridge.rs crates\agent_ui\src\dx_agent_bridge\runtime.rs crates\agent_ui\src\dx_forge_panel\panel_view.rs`
+- `CARGO_BUILD_JOBS=6 just run`
+- `git diff --check`
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" ...` returned no matches across touched source files.
+
+NOTES:
+- Cleared the rebuildable `G:\Dx\code\target\debug\incremental` cache first because the configured G-drive target had only 1.53 GB free and the `just run` headroom gate requires 4 GB.
+
 [2026-06-12] - DX Sound Hot-Path Preference Gate
 
 CHANGED:

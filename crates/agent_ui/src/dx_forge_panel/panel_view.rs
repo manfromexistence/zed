@@ -45,6 +45,7 @@ pub(super) fn render_panel(
                 .overflow_hidden()
                 .child(
                     v_flex()
+                        .id("dx-forge-panel-scroll-content")
                         .flex_1()
                         .min_h_0()
                         .min_w_0()
