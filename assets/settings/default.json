@@ -547,6 +547,8 @@
     "experimental.input_audio_device": null,
     // Play high-frequency DX interaction sounds while typing, deleting, or hovering.
     "dx.interaction_sounds": false,
+    // Play DX editor and workspace sound effects.
+    "dx.sounds": true,
   },
   // Scrollbar related settings
   "scrollbar": {

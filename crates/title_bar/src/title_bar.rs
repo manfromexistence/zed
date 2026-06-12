@@ -339,29 +339,25 @@ impl Render for TitleBar {
                 this.child(self.render_user_menu_button(cx))
             });
 
-        let content_row = div()
-            .relative()
+        let content_row = h_flex()
             .w_full()
             .h_full()
+            .items_center()
+            .gap_1()
+            .child(left_content)
+            // The screen dock is placed inside the flex_1 "remaining space" between the left
+            // and right clusters and explicitly centered within that space (justify_center on
+            // the middle flex area). This puts the dock (AI/Code/Browser/Terminal + add/list)
+            // in the center of the topbar's remaining space.
             .child(
-                h_flex()
-                    .w_full()
-                    .h_full()
+                div()
+                    .flex_1()
+                    .flex()
                     .items_center()
-                    .gap_1()
-                    .child(left_content)
-                    .child(
-                        // Center dock - flex-1 takes remaining space and centers content
-                        div()
-                            .flex_1()
-                            .h_full()
-                            .flex()
-                            .items_center()
-                            .justify_center()
-                            .child(center_dock),
-                    )
-                    .child(right_content),
+                    .justify_center()
+                    .child(center_dock),
             )
+            .child(right_content)
             .into_any_element();
 
         self.platform_titlebar.update(cx, |this, _| {
@@ -953,6 +949,14 @@ impl TitleBar {
                 zed_actions::dx_check_panel::ToggleFocus.boxed_clone(),
                 active_right_panel == Some("Check"),
             ),
+            // commented the icon button (only) for forge per request; forge panel icon still provided via Panel trait for internal dock use
+            // self.render_title_right_panel_button(
+            //     "titlebar-dx-forge-panel",
+            //     dx_icon(DxUiIcon::Forge),
+            //     "Forge",
+            //     /* appropriate forge toggle action */,
+            //     active_right_panel == Some("Forge"),
+            // ),
             self.render_hidden_feature_menu(cx),
         ]
     }

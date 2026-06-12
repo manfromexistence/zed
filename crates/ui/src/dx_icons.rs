@@ -5,6 +5,7 @@ use crate::{Color, Icon, IconName, IconSize};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DxUiIcon {
+    Acp,
     Agent,
     Ai,
     Automations,
@@ -39,6 +40,7 @@ pub enum DxUiIcon {
     Receipts,
     Search,
     Settings,
+    Space,
     Source,
     Style,
     Storage,
@@ -48,6 +50,7 @@ pub enum DxUiIcon {
 
 pub fn dx_icon(icon: DxUiIcon) -> IconName {
     match icon {
+        DxUiIcon::Acp => IconName::AcpRegistry,
         DxUiIcon::Agent | DxUiIcon::Ai => IconName::Sparkle,
         DxUiIcon::Automations => IconName::ListTodo,
         DxUiIcon::Browser | DxUiIcon::WebPreview => IconName::ToolWeb,
@@ -82,6 +85,7 @@ pub fn dx_icon(icon: DxUiIcon) -> IconName {
         DxUiIcon::Receipts => IconName::FileTextOutlined,
         DxUiIcon::Search => IconName::MagnifyingGlass,
         DxUiIcon::Settings => IconName::DxCog,
+        DxUiIcon::Space => IconName::Space,
         DxUiIcon::Source => IconName::FolderSearch,
         DxUiIcon::Style => IconName::Sliders,
         DxUiIcon::Storage => IconName::DatabaseZap,

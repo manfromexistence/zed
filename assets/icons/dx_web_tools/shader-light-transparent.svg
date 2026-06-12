@@ -4,9 +4,7 @@
   <metadata><![CDATA[{"kind":"light-transparent","tool":"shader","label":"Shader","letter":"S","primary_repo":"G:/Shader","legacy_repo":"","collection":"web-preview","source_project":"Shader","asset_family":"dx-ecosystem-logos","brand":"DX pure symbol logo family: transparent smooth rainbow marks plus monochrome background and transparent light/dark variants"}]]></metadata>
   <g color="#000000">
     <g color="currentColor" fill="currentColor" stroke="none">
-      <path d="M348 198H640L788 346L650 488H428L300 360H560L626 296H430Z"/>
-      <path d="M384 514H636L760 638L628 760H386L252 626H514L580 574H438Z"/>
-      <path d="M386 786H638L766 884L636 948H340L226 834H506L578 786Z"/>
+      <path fill-rule="evenodd" clip-rule="evenodd" d="M402 188H682L820 326L704 442H448L394 496H658L786 624L610 800H342L214 672L330 556H590L642 504H382L258 380ZM342 800H610L738 928L638 980H344L222 858ZM682 188L820 326H666L552 442H448L562 326ZM658 496L786 624H626L452 800H342L516 624ZM610 800L738 928H584L482 980H344L446 928Z"/>
     </g>
   </g>
 </svg>

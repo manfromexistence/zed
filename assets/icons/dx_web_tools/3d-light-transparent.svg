@@ -1,0 +1,13 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>3D light transparent logo dx-ecosystem-logos</title>
+  <desc>light monochrome geometric symbol with transparent background for 3D.</desc>
+  <metadata><![CDATA[{"kind":"light-transparent","tool":"3d","label":"3D","letter":"3","primary_repo":"G:/Spline","legacy_repo":"","collection":"web-preview","source_project":"Spline","asset_family":"dx-ecosystem-logos","brand":"DX pure symbol logo family: transparent smooth rainbow marks plus monochrome background and transparent light/dark variants"}]]></metadata>
+  <g color="#000000">
+    <g color="currentColor" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M292 260H584C704 260 778 322 778 414C778 498 714 550 594 550H420M594 550C724 550 802 614 802 710C802 812 718 876 584 876H292" stroke-width="92"/>
+      <path d="M394 360L512 292L648 370L528 438Z" stroke-width="52"/>
+      <path d="M394 360V520L528 598L648 526V370" stroke-width="52"/>
+      <path d="M528 438V598" stroke-width="44"/>
+    </g>
+  </g>
+</svg>

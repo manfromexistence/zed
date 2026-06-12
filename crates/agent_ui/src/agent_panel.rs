@@ -1840,8 +1840,8 @@ impl AgentPanel {
             last_context_source: None,
             show_trust_workspace_message: false,
             is_active: false,
-            fullscreen_sources_rail_open: true,
-            fullscreen_progress_rail_open: true,
+            fullscreen_sources_rail_open: false,
+            fullscreen_progress_rail_open: false,
             fullscreen_sources_rail_pinned: false,
             fullscreen_progress_rail_pinned: false,
             collapsed_dx_launch_rail_sections: Self::default_collapsed_dx_launch_rail_sections(),
@@ -1860,8 +1860,8 @@ impl AgentPanel {
         let mut panel = Self::new(workspace, window, cx);
         panel.host_kind = AgentPanelHostKind::BuilderWorkspace;
         panel.manual_zoom_override = Some(true);
-        panel.fullscreen_sources_rail_open = true;
-        panel.fullscreen_progress_rail_open = true;
+        panel.fullscreen_sources_rail_open = false;
+        panel.fullscreen_progress_rail_open = false;
         panel.fullscreen_sources_rail_pinned = false;
         panel.fullscreen_progress_rail_pinned = false;
         panel.ensure_thread_initialized(window, cx);
@@ -5265,8 +5265,8 @@ impl AgentPanel {
     pub(crate) fn ensure_builder_workspace_chrome(&mut self) {
         self.host_kind = AgentPanelHostKind::BuilderWorkspace;
         self.manual_zoom_override = Some(true);
-        self.fullscreen_sources_rail_open = true;
-        self.fullscreen_progress_rail_open = true;
+        self.fullscreen_sources_rail_open = false;
+        self.fullscreen_progress_rail_open = false;
     }
 
     fn wrap_agent_panel_body(content: AnyElement) -> AnyElement {
@@ -6265,45 +6265,48 @@ impl AgentPanel {
 
         let is_full_screen = self.should_render_dx_launch_chrome(cx);
         let rails_available = is_full_screen;
-        let sources_rail_open = self.fullscreen_sources_rail_open && rails_available;
-        let progress_rail_open = self.fullscreen_progress_rail_open && rails_available;
+        let _sources_rail_open = self.fullscreen_sources_rail_open && rails_available;
+        let _progress_rail_open = self.fullscreen_progress_rail_open && rails_available;
         let toolbar_bg = if is_full_screen {
             gpui::transparent_black()
         } else {
             cx.theme().colors().tab_bar_background
         };
-        let agent_sources_rail_button = IconButton::new(
-            "agent-toolbar-toggle-sources-rail",
-            IconName::ThreadsSidebarLeftClosed,
-        )
-        .icon_size(IconSize::Small)
-        .tab_index(0_isize)
-        .toggle_state(sources_rail_open)
-        .tooltip(Tooltip::text(if sources_rail_open {
-            "Hide sources rail"
-        } else {
-            "Show sources rail"
-        }))
-        .on_click(cx.listener(|this, _, _window, cx| {
-            this.fullscreen_sources_rail_open = !this.fullscreen_sources_rail_open;
-            cx.notify();
-        }));
-        let agent_progress_rail_button = IconButton::new(
-            "agent-toolbar-toggle-progress-rail",
-            IconName::ThreadsSidebarRightClosed,
-        )
-        .icon_size(IconSize::Small)
-        .tab_index(0_isize)
-        .toggle_state(progress_rail_open)
-        .tooltip(Tooltip::text(if progress_rail_open {
-            "Hide progress rail"
-        } else {
-            "Show progress rail"
-        }))
-        .on_click(cx.listener(|this, _, _window, cx| {
-            this.fullscreen_progress_rail_open = !this.fullscreen_progress_rail_open;
-            cx.notify();
-        }));
+        // commented only the icon buttons (left/right floating rail toggles in AI topbar); logic/state kept
+        // let agent_sources_rail_button = IconButton::new(
+        //     "agent-toolbar-toggle-sources-rail",
+        //     IconName::ThreadsSidebarLeftClosed,
+        // )
+        // .icon_size(IconSize::Small)
+        // .tab_index(0_isize)
+        // .toggle_state(sources_rail_open)
+        // .tooltip(Tooltip::text(if sources_rail_open {
+        //     "Hide sources rail"
+        // } else {
+        //     "Show sources rail"
+        // }))
+        // .on_click(cx.listener(|this, _, _window, cx| {
+        //     this.fullscreen_sources_rail_open = !this.fullscreen_sources_rail_open;
+        //     cx.notify();
+        // }));
+        let _agent_sources_rail_button = div().into_any_element(); // placeholder to keep compile surface (button commented)
+        // let agent_progress_rail_button = IconButton::new(
+        //     "agent-toolbar-toggle-progress-rail",
+        //     IconName::ThreadsSidebarRightClosed,
+        // )
+        // .icon_size(IconSize::Small)
+        // .tab_index(0_isize)
+        // .toggle_state(progress_rail_open)
+        // .tooltip(Tooltip::text(if progress_rail_open {
+        //     "Hide progress rail"
+        // } else {
+        //     "Show progress rail"
+        // }))
+        // .on_click(cx.listener(|this, _, _window, cx| {
+        //     this.fullscreen_progress_rail_open = !this.fullscreen_progress_rail_open;
+        //     cx.notify();
+        // }));
+        let _agent_progress_rail_button = div().into_any_element(); // placeholder (button commented)
         let panel_id = cx.entity().entity_id();
         let workspace = self.workspace.clone();
         let close_panel_button = IconButton::new("agent-panel-close-side-panel", IconName::Close)
@@ -6396,8 +6399,10 @@ impl AgentPanel {
                         .pl_1()
                         .pr_1()
                         .when(is_full_screen, |this| {
-                            this.child(agent_sources_rail_button)
-                                .child(agent_progress_rail_button)
+                            // commented only the floating rail icon buttons (left + right) insertion
+                            // this.child(agent_sources_rail_button)
+                            //     .child(agent_progress_rail_button)
+                            this
                         })
                         .child(self.render_panel_options_menu(window, cx))
                         .when(!is_full_screen, |this| this.child(close_panel_button)),
@@ -6449,8 +6454,10 @@ impl AgentPanel {
                         .pr_1()
                         .when(can_create_entries, |this| this.child(new_thread_menu))
                         .when(is_full_screen, |this| {
-                            this.child(agent_sources_rail_button)
-                                .child(agent_progress_rail_button)
+                            // commented only the floating rail icon buttons (left + right) insertion
+                            // this.child(agent_sources_rail_button)
+                            //     .child(agent_progress_rail_button)
+                            this
                         })
                         .child(self.render_panel_options_menu(window, cx))
                         .when(!is_full_screen, |this| this.child(close_panel_button)),
@@ -6461,6 +6468,9 @@ impl AgentPanel {
         h_flex()
             .id("agent-panel-toolbar")
             .relative()
+            .when(is_full_screen, |this| {
+                this.absolute().top_0().left_0().right_0()
+            })
             .h(Tab::container_height(cx) + px(4.))
             .flex_shrink_0()
             .max_w_full()
@@ -8631,7 +8641,9 @@ impl Render for AgentPanel {
                     })
                 }
             }))
-            .child(self.render_toolbar(window, cx))
+            .when(!self.should_render_dx_launch_chrome(cx), |this| {
+                this.child(self.render_toolbar(window, cx))
+            })
             .children(self.render_workspace_trust_message(cx))
             .children(self.render_new_user_onboarding(window, cx))
             .map(|parent| match self.visible_surface() {
@@ -8641,10 +8653,17 @@ impl Render for AgentPanel {
                 }
                 VisibleSurface::Uninitialized => parent,
                 VisibleSurface::AgentThread(conversation_view) => {
-                    conversation_view.update(cx, |conversation_view, cx| {
-                        conversation_view
-                            .set_chat_input_full_width(self.should_render_dx_launch_chrome(cx), cx);
-                    });
+                    let is_full_screen = self.should_render_dx_launch_chrome(cx);
+                    if is_full_screen {
+                        let header_h = Tab::container_height(cx) + px(4.);
+                        conversation_view.update(cx, |conversation_view, cx| {
+                            conversation_view.set_transparent_header_height(Some(header_h), cx);
+                        });
+                    } else {
+                        conversation_view.update(cx, |conversation_view, cx| {
+                            conversation_view.set_transparent_header_height(None, cx);
+                        });
+                    }
                     parent
                         .child(self.render_dx_launch_workspace(
                             conversation_view.clone().into_any_element(),
@@ -8660,7 +8679,10 @@ impl Render for AgentPanel {
                     parent.children(configuration.cloned())
                 }
             })
-            .children(self.render_trial_end_upsell(window, cx));
+            .children(self.render_trial_end_upsell(window, cx))
+            .when(self.should_render_dx_launch_chrome(cx), |this| {
+                this.child(self.render_toolbar(window, cx))
+            });
 
         match self.visible_font_size() {
             WhichFontSize::AgentFont => {

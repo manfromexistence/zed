@@ -85,19 +85,26 @@ test("DX sound playback uses semantic events with throttling", () => {
     /Self::TypingKey\s*\|\s*Self::DeleteSoft\s*\|\s*Self::HoverSoft\s*=>\s*DxSoundPolicy::ExplicitOptIn/,
   );
   assert.match(settingsContent, /pub dx_interaction_sounds: Option<bool>/);
+  assert.match(settingsContent, /pub dx_sounds: Option<bool>/);
   assert.match(audioSettings, /pub dx_interaction_sounds: bool/);
+  assert.match(audioSettings, /pub dx_sounds: bool/);
   assert.match(
     audioSettings,
     /dx_interaction_sounds:\s*audio\.dx_interaction_sounds\.unwrap_or\(false\)/,
   );
+  assert.match(audioSettings, /dx_sounds:\s*audio\.dx_sounds\.unwrap_or\(true\)/);
   assert.match(defaultSettings, /"dx\.interaction_sounds": false/);
+  assert.match(defaultSettings, /"dx\.sounds": true/);
   assert.match(dxSounds, /pub\(crate\) fn gain\(self\) -> f32 \{\s*0\.05\s*\}/);
   assert.match(audioPipeline, /dx_sound_last_played: HashMap<DxSoundEvent, Instant>/);
   assert.match(audioPipeline, /pub fn play_dx_sound\(event: DxSoundEvent, cx: &mut App\)/);
+  assert.match(audioPipeline, /if !dx_sounds \{\s*return;\s*\}/);
   assert.match(
     audioPipeline,
     /event\.policy\(\) == DxSoundPolicy::ExplicitOptIn && !dx_interaction_sounds/,
   );
+  assert.match(sidebar, /toggle_dx_sounds/);
+  assert.match(sidebar, /AudioOn|AudioOff/);
   assert.match(audioPipeline, /fn should_play_dx_sound/);
   assert.match(audioPipeline, /source\.amplify\(event\.gain\(\)\)/);
   assert.match(audioPipeline, /event\.cooldown\(\)/);

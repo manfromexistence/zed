@@ -22,7 +22,7 @@ use agent_ui::{
     NewThread, RemoveSelectedThread, RenameSelectedThread, TerminalId, ThreadId, ThreadImportModal,
     channels_with_threads, import_threads_from_other_channels,
 };
-use audio::{Audio, DxSoundEvent};
+use audio::{Audio, AudioSettings, DxSoundEvent};
 use chrono::{DateTime, Utc};
 use editor::Editor;
 use feature_flags::{
@@ -31,7 +31,7 @@ use feature_flags::{
 use gpui::{
     Action as _, AnyElement, App, ClickEvent, Context, DismissEvent, Entity, EntityId,
     EventEmitter, FocusHandle, Focusable, KeyContext, ListState, Modifiers, Pixels, Render,
-    SharedString, Task, TaskExt, WeakEntity, Window, WindowHandle, linear_color_stop,
+    SharedString, Task, TaskExt, UpdateGlobal, WeakEntity, Window, WindowHandle, linear_color_stop,
     linear_gradient, list, prelude::*, px,
 };
 use menu::{
@@ -45,7 +45,7 @@ use remote::{RemoteConnectionOptions, same_remote_connection_identity};
 use ui::utils::platform_title_bar_height;
 
 use serde::{Deserialize, Serialize};
-use settings::Settings as _;
+use settings::{Settings as _, SettingsStore, update_settings_file};
 use std::cell::RefCell;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
@@ -76,8 +76,8 @@ use workspace::{
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 use web_preview::web_preview_view::WebPreviewView;
 
-use zed_actions::OpenRecent;
 use zed_actions::editor::{MoveDown, MoveUp};
+use zed_actions::{AcpRegistry, ExtensionCategoryFilter, Extensions, OpenRecent, OpenSettings};
 
 use zed_actions::agents_sidebar::{FocusSidebarFilter, ToggleThreadSwitcher};
 
@@ -117,6 +117,12 @@ const MAX_VISIBLE_SPACE_DOTS: usize = 7;
 const MAX_SIDEBAR_GRID_SHORTCUTS: usize = 24;
 const MAX_SIDEBAR_MANUAL_THREAD_ORDER: usize = 512;
 const MAX_COLLAPSED_THREAD_SHORTCUTS: usize = 8;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum SpaceCarouselOrientation {
+    Horizontal,
+    Vertical,
+}
 
 #[derive(Clone, Serialize, Deserialize)]
 struct SerializedSpaceLabel {
@@ -7942,9 +7948,149 @@ impl Sidebar {
         })
     }
 
+    fn open_acp_registry(&self, window: &mut Window, cx: &mut Context<Self>) {
+        window.dispatch_action(Box::new(AcpRegistry), cx);
+    }
+
+    fn open_mcp_extensions(&self, window: &mut Window, cx: &mut Context<Self>) {
+        window.dispatch_action(
+            Box::new(Extensions {
+                category_filter: Some(ExtensionCategoryFilter::ContextServers),
+                id: None,
+            }),
+            cx,
+        );
+    }
+
+    fn open_extensions(&self, window: &mut Window, cx: &mut Context<Self>) {
+        window.dispatch_action(Box::new(Extensions::default()), cx);
+    }
+
+    fn open_settings(&self, window: &mut Window, cx: &mut Context<Self>) {
+        window.dispatch_action(Box::new(OpenSettings), cx);
+    }
+
+    fn dx_sounds_enabled(&self, cx: &App) -> bool {
+        AudioSettings::get_global(cx).dx_sounds
+    }
+
+    fn toggle_dx_sounds(&self, cx: &mut Context<Self>) {
+        let enabled = self.dx_sounds_enabled(cx);
+        let target = !enabled;
+
+        // Apply change immediately to the in-memory store (via direct set on cloned user content)
+        // so that AudioSettings::get_global and sound playback gates observe the flip right away.
+        // We also persist via the production update_settings_file API (which requires an Fs and
+        // performs the formatted on-disk write + eventual re-apply).
+        SettingsStore::update_global(cx, |store, cx| {
+            let mut user = store.raw_user_settings().cloned().unwrap_or_default();
+            user.content.audio.get_or_insert_default().dx_sounds = Some(target);
+            let new_text = serde_json::to_string(&user).unwrap();
+            let _ = store.set_user_settings(&new_text, cx);
+        });
+
+        let workspace_for_fs = self.active_workspace(cx).or_else(|| {
+            self.multi_workspace
+                .upgrade()
+                .and_then(|mw| mw.read(cx).workspaces().cloned().next())
+        });
+        if let Some(workspace) = workspace_for_fs {
+            let fs = workspace.read(cx).project().read(cx).fs().clone();
+            update_settings_file(fs, cx, move |content, _| {
+                content.audio.get_or_insert_default().dx_sounds = Some(target);
+            });
+        }
+
+        cx.notify();
+    }
+
+    fn render_dx_sounds_toggle_button(
+        &self,
+        id: &'static str,
+        icon_size: IconSize,
+        cx: &mut Context<Self>,
+    ) -> IconButton {
+        let sounds_enabled = self.dx_sounds_enabled(cx);
+        let icon = if sounds_enabled {
+            IconName::AudioOn
+        } else {
+            IconName::AudioOff
+        };
+        let tooltip = if sounds_enabled {
+            "Mute Editor Sounds"
+        } else {
+            "Unmute Editor Sounds"
+        };
+
+        IconButton::new(id, icon)
+            .shape(IconButtonShape::Square)
+            .style(ButtonStyle::Subtle)
+            .icon_size(icon_size)
+            .toggle_state(!sounds_enabled)
+            .tooltip(Tooltip::text(tooltip))
+            .on_click(cx.listener(|this, _, _window, cx| {
+                this.toggle_dx_sounds(cx);
+            }))
+    }
+
+    fn render_sidebar_panel_buttons(
+        &self,
+        cx: &mut Context<Self>,
+        id_prefix: &'static str,
+        icon_size: IconSize,
+    ) -> Vec<AnyElement> {
+        let button = |cx: &mut Context<Self>,
+                      id: &'static str,
+                      icon,
+                      tooltip: &'static str,
+                      on_click: fn(
+            &mut Self,
+            &gpui::ClickEvent,
+            &mut Window,
+            &mut Context<Self>,
+        )| {
+            IconButton::new(id, icon)
+                .shape(IconButtonShape::Square)
+                .style(ButtonStyle::Subtle)
+                .icon_size(icon_size)
+                .tooltip(Tooltip::text(tooltip))
+                .on_click(cx.listener(on_click))
+                .into_any_element()
+        };
+
+        let acp_id: &'static str = Box::leak(format!("{id_prefix}-acp-registry").into_boxed_str());
+        let mcp_id: &'static str = Box::leak(format!("{id_prefix}-mcp").into_boxed_str());
+        let ext_id: &'static str = Box::leak(format!("{id_prefix}-extensions").into_boxed_str());
+        vec![
+            button(
+                cx,
+                acp_id,
+                dx_icon(DxUiIcon::Acp),
+                "ACP Registry",
+                |this, _, window, cx| this.open_acp_registry(window, cx),
+            ),
+            button(
+                cx,
+                mcp_id,
+                dx_icon(DxUiIcon::Mcp),
+                "MCP Servers",
+                |this, _, window, cx| this.open_mcp_extensions(window, cx),
+            ),
+            button(
+                cx,
+                ext_id,
+                dx_icon(DxUiIcon::Extensions),
+                "Extensions",
+                |this, _, window, cx| this.open_extensions(window, cx),
+            ),
+        ]
+    }
+
     fn render_gen_toolbar(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let is_archive = matches!(self.view, SidebarView::Archive(..));
         let show_import_button = is_archive && !self.should_render_acp_import_onboarding(cx);
+        let panel_buttons =
+            self.render_sidebar_panel_buttons(cx, "sidebar-toolbar", IconSize::Medium);
         let button = |id,
                       icon,
                       tooltip,
@@ -7967,87 +8113,90 @@ impl Sidebar {
             .justify_between()
             .px_2()
             .child(
-                h_flex().gap_1().child(button(
-                    "sidebar-toolbar-new-chat",
-                    IconName::Plus,
-                    "New Chat",
-                    |this, _, window, cx| {
-                        if let Some(workspace) = this.active_workspace(cx) {
-                            this.create_new_thread(&workspace, window, cx);
-                        }
-                    },
-                )), // TODO(dx-sidebar): Commented out Search button
-                    // .child(button(
-                    //     "sidebar-toolbar-search",
-                    //     dx_icon(DxUiIcon::Search),
-                    //     "Search",
-                    //     |this, _, window, cx| {
-                    //         this.activity_bar_expanded = true;
-                    //         this.show_thread_list(window, cx);
-                    //         this.focus_sidebar_filter(&FocusSidebarFilter, window, cx);
-                    //     },
-                    // ))
-                    // TODO(dx-sidebar): Commented out Mobile Preview button
-                    // .child(button(
-                    //     "sidebar-toolbar-mobile",
-                    //     dx_icon(DxUiIcon::Browser),
-                    //     "Mobile Preview",
-                    //     |this, _, window, cx| {
-                    //         this.activate_workspace_screen(
-                    //             WorkspaceScreenKind::Browser,
-                    //             window,
-                    //             cx,
-                    //         );
-                    //     },
-                    // ))
-                    // TODO(dx-sidebar): Commented out CLI button
-                    // .child(button(
-                    //     "sidebar-toolbar-cli",
-                    //     dx_icon(DxUiIcon::Commands),
-                    //     "CLI",
-                    //     |this, _, window, cx| {
-                    //         this.activate_workspace_screen(
-                    //             WorkspaceScreenKind::Terminal,
-                    //             window,
-                    //             cx,
-                    //         );
-                    //     },
-                    // ))
-                    // TODO(dx-sidebar): Commented out Plugins button
-                    // .child(button(
-                    //     "sidebar-toolbar-plugins",
-                    //     dx_icon(DxUiIcon::Plugins),
-                    //     "Plugins",
-                    //     |this, _, window, cx| {
-                    //         this.activate_workspace_screen(WorkspaceScreenKind::Tools, window, cx);
-                    //     },
-                    // ))
-                    // TODO(dx-sidebar): Commented out Connections button
-                    // .child(button(
-                    //     "sidebar-toolbar-connections",
-                    //     dx_icon(DxUiIcon::Connections),
-                    //     "Connections",
-                    //     |this, _, window, cx| {
-                    //         this.activate_workspace_screen(
-                    //             WorkspaceScreenKind::Connections,
-                    //             window,
-                    //             cx,
-                    //         );
-                    //     },
-                    // ))
-                    // TODO(dx-sidebar): Commented out Automations button
-                    // .child(button(
-                    //     "sidebar-toolbar-automations",
-                    //     dx_icon(DxUiIcon::Automations),
-                    //     "Automations",
-                    //     |this, _, window, cx| {
-                    //         this.activate_workspace_screen(
-                    //             WorkspaceScreenKind::Automations,
-                    //             window,
-                    //             cx,
-                    //         );
-                    //     },
-                    // )),
+                h_flex()
+                    .gap_1()
+                    .child(button(
+                        "sidebar-toolbar-new-chat",
+                        IconName::Plus,
+                        "New Chat",
+                        |this, _, window, cx| {
+                            if let Some(workspace) = this.active_workspace(cx) {
+                                this.create_new_thread(&workspace, window, cx);
+                            }
+                        },
+                    ))
+                    .children(panel_buttons), // TODO(dx-sidebar): Commented out Search button
+                                              // .child(button(
+                                              //     "sidebar-toolbar-search",
+                                              //     dx_icon(DxUiIcon::Search),
+                                              //     "Search",
+                                              //     |this, _, window, cx| {
+                                              //         this.activity_bar_expanded = true;
+                                              //         this.show_thread_list(window, cx);
+                                              //         this.focus_sidebar_filter(&FocusSidebarFilter, window, cx);
+                                              //     },
+                                              // ))
+                                              // TODO(dx-sidebar): Commented out Mobile Preview button
+                                              // .child(button(
+                                              //     "sidebar-toolbar-mobile",
+                                              //     dx_icon(DxUiIcon::Browser),
+                                              //     "Mobile Preview",
+                                              //     |this, _, window, cx| {
+                                              //         this.activate_workspace_screen(
+                                              //             WorkspaceScreenKind::Browser,
+                                              //             window,
+                                              //             cx,
+                                              //         );
+                                              //     },
+                                              // ))
+                                              // TODO(dx-sidebar): Commented out CLI button
+                                              // .child(button(
+                                              //     "sidebar-toolbar-cli",
+                                              //     dx_icon(DxUiIcon::Commands),
+                                              //     "CLI",
+                                              //     |this, _, window, cx| {
+                                              //         this.activate_workspace_screen(
+                                              //             WorkspaceScreenKind::Terminal,
+                                              //             window,
+                                              //             cx,
+                                              //         );
+                                              //     },
+                                              // ))
+                                              // TODO(dx-sidebar): Commented out Plugins button
+                                              // .child(button(
+                                              //     "sidebar-toolbar-plugins",
+                                              //     dx_icon(DxUiIcon::Plugins),
+                                              //     "Plugins",
+                                              //     |this, _, window, cx| {
+                                              //         this.activate_workspace_screen(WorkspaceScreenKind::Tools, window, cx);
+                                              //     },
+                                              // ))
+                                              // TODO(dx-sidebar): Commented out Connections button
+                                              // .child(button(
+                                              //     "sidebar-toolbar-connections",
+                                              //     dx_icon(DxUiIcon::Connections),
+                                              //     "Connections",
+                                              //     |this, _, window, cx| {
+                                              //         this.activate_workspace_screen(
+                                              //             WorkspaceScreenKind::Connections,
+                                              //             window,
+                                              //             cx,
+                                              //         );
+                                              //     },
+                                              // ))
+                                              // TODO(dx-sidebar): Commented out Automations button
+                                              // .child(button(
+                                              //     "sidebar-toolbar-automations",
+                                              //     dx_icon(DxUiIcon::Automations),
+                                              //     "Automations",
+                                              //     |this, _, window, cx| {
+                                              //         this.activate_workspace_screen(
+                                              //             WorkspaceScreenKind::Automations,
+                                              //             window,
+                                              //             cx,
+                                              //         );
+                                              //     },
+                                              // )),
             )
             .child(
                 h_flex()
@@ -8104,6 +8253,9 @@ impl Sidebar {
                 .on_click(cx.listener(on_click))
         };
 
+        let panel_buttons =
+            self.render_sidebar_panel_buttons(cx, "sidebar-activity", IconSize::Medium);
+
         let primary_actions =
             vec![
                 button(
@@ -8130,6 +8282,10 @@ impl Sidebar {
                     },
                 )
                 .into_any_element(),
+            ]
+            .into_iter()
+            .chain(panel_buttons)
+            .chain([
                 // TODO(dx-sidebar): Commented out Mobile Preview button
                 // button(
                 //     cx,
@@ -8185,8 +8341,7 @@ impl Sidebar {
                 //     },
                 // )
                 // .into_any_element(),
-            ]
-            .into_iter()
+            ])
             .chain(self.render_collapsed_thread_shortcuts(
                 Self::collapsed_thread_shortcut_limit(window),
                 cx,
@@ -8194,14 +8349,16 @@ impl Sidebar {
             .collect();
 
         let secondary_actions = vec![
+            self.render_space_carousel(SpaceCarouselOrientation::Vertical, cx)
+                .into_any_element(),
+            self.render_dx_sounds_toggle_button("sidebar-activity-sounds", IconSize::Medium, cx)
+                .into_any_element(),
             button(
                 cx,
                 "sidebar-activity-settings",
                 dx_icon(DxUiIcon::Settings),
                 "Settings",
-                |_this, _, window, cx| {
-                    window.dispatch_action(Box::new(zed_actions::OpenSettings), cx);
-                },
+                |this, _, window, cx| this.open_settings(window, cx),
             )
             .into_any_element(),
             self.render_recent_projects_button(cx).into_any_element(),
@@ -8213,8 +8370,8 @@ impl Sidebar {
 
     fn collapsed_thread_shortcut_limit(window: &Window) -> usize {
         let viewport_height = f32::from(window.viewport_size().height);
-        let reserved_top_actions = 7.0 * 36.0;
-        let reserved_secondary_actions = 3.0 * 36.0;
+        let reserved_top_actions = 8.0 * 36.0;
+        let reserved_secondary_actions = 6.0 * 36.0;
         let reserved_padding = 40.0;
         let available =
             viewport_height - reserved_top_actions - reserved_secondary_actions - reserved_padding;
@@ -9174,37 +9331,74 @@ impl Sidebar {
             })
     }
 
-    fn render_space_carousel(&mut self, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render_space_carousel(
+        &mut self,
+        orientation: SpaceCarouselOrientation,
+        cx: &mut Context<Self>,
+    ) -> impl IntoElement {
         let spaces = self.space_entries(cx);
         let active_space_id = self.active_space_id;
         let start = self
             .space_page_start
             .min(spaces.len().saturating_sub(MAX_VISIBLE_SPACE_DOTS));
-        let can_go_left = start > 0;
-        let can_go_right = start + MAX_VISIBLE_SPACE_DOTS < spaces.len();
+        let can_go_previous = start > 0;
+        let can_go_next = start + MAX_VISIBLE_SPACE_DOTS < spaces.len();
         let is_dragging = self.carousel_drag_start.is_some();
         let sidebar = cx.weak_entity();
+        let vertical = orientation == SpaceCarouselOrientation::Vertical;
 
         // Show arrows only when there are more dots than can fit
         let show_arrows = spaces.len() > MAX_VISIBLE_SPACE_DOTS;
         // Hide entire carousel when there's only one space
         let show_carousel = spaces.len() > 1;
+        let previous_arrow_id = if vertical {
+            "space-carousel-up"
+        } else {
+            "space-carousel-left"
+        };
+        let next_arrow_id = if vertical {
+            "space-carousel-down"
+        } else {
+            "space-carousel-right"
+        };
+        let previous_arrow_icon = if vertical {
+            IconName::ChevronUp
+        } else {
+            IconName::ChevronLeft
+        };
+        let next_arrow_icon = if vertical {
+            IconName::ChevronDown
+        } else {
+            IconName::ChevronRight
+        };
+        let previous_tooltip = if vertical {
+            "Show previous spaces (scroll up)"
+        } else {
+            "Show previous spaces (scroll left)"
+        };
+        let next_tooltip = if vertical {
+            "Show more spaces (scroll down)"
+        } else {
+            "Show more spaces (scroll right)"
+        };
 
-        h_flex()
-            .gap_0() // No gap - dots should be as close as possible
+        div()
+            .flex()
+            .gap_0()
             .items_center()
             .justify_center()
+            .when(vertical, |this| this.flex_col())
+            .when(!vertical, |this| this.flex_row())
             .when(!show_carousel, |this| this.invisible()) // Hide when only 1 space
-            // Left arrow - only show when needed
             .when(show_arrows, |this| {
                 this.child(
-                    IconButton::new("space-carousel-left", IconName::ChevronLeft)
+                    IconButton::new(previous_arrow_id, previous_arrow_icon)
                         .shape(IconButtonShape::Square)
                         .style(ButtonStyle::Transparent)
                         .icon_size(IconSize::Small)
-                        .tooltip(Tooltip::text("Show previous spaces (scroll left)"))
-                        .disabled(!can_go_left)
-                        .when(can_go_left, |btn| {
+                        .tooltip(Tooltip::text(previous_tooltip))
+                        .disabled(!can_go_previous)
+                        .when(can_go_previous, |btn| {
                             btn.on_click(cx.listener(|this, _, _window, cx| {
                                 this.show_previous_space_page(cx);
                             }))
@@ -9212,10 +9406,12 @@ impl Sidebar {
                 )
             })
             .child(
-                h_flex()
-                    .gap_0() // No gap between dots
+                div()
+                    .flex()
+                    .gap_0()
                     .items_center()
-                    .px_1() // Keep horizontal padding
+                    .when(vertical, |this| this.flex_col().py_1())
+                    .when(!vertical, |this| this.flex_row().px_1())
                     .cursor(if is_dragging {
                         gpui::CursorStyle::ClosedHand
                     } else {
@@ -9223,9 +9419,13 @@ impl Sidebar {
                     })
                     .on_mouse_down(
                         gpui::MouseButton::Left,
-                        cx.listener(|this, event: &gpui::MouseDownEvent, _window, cx| {
-                            let x: f32 = event.position.x.into();
-                            this.carousel_drag_start = Some((x, this.space_page_start));
+                        cx.listener(move |this, event: &gpui::MouseDownEvent, _window, cx| {
+                            let position: f32 = if vertical {
+                                event.position.y.into()
+                            } else {
+                                event.position.x.into()
+                            };
+                            this.carousel_drag_start = Some((position, this.space_page_start));
                             this.carousel_did_drag = false;
                             cx.notify();
                         }),
@@ -9238,11 +9438,15 @@ impl Sidebar {
                         }),
                     )
                     .on_mouse_move(cx.listener(
-                        |this, event: &gpui::MouseMoveEvent, _window, cx| {
-                            if let Some((start_x, start_page)) = this.carousel_drag_start {
-                                let current_x: f32 = event.position.x.into();
-                                let delta_x = current_x - start_x;
-                                let dots_moved = (delta_x / 20.0).round() as i32;
+                        move |this, event: &gpui::MouseMoveEvent, _window, cx| {
+                            if let Some((start_position, start_page)) = this.carousel_drag_start {
+                                let current_position: f32 = if vertical {
+                                    event.position.y.into()
+                                } else {
+                                    event.position.x.into()
+                                };
+                                let delta = current_position - start_position;
+                                let dots_moved = (delta / 20.0).round() as i32;
                                 let max_start = this
                                     .space_entries
                                     .len()
@@ -9250,13 +9454,13 @@ impl Sidebar {
                                 let new_page = (start_page as i32 - dots_moved).max(0) as usize;
                                 let new_page = new_page.min(max_start);
 
-                                if delta_x.abs() > 3.0 {
+                                if delta.abs() > 3.0 {
                                     this.carousel_did_drag = true;
                                 }
                                 if this.space_page_start != new_page {
                                     this.space_page_start = new_page;
                                     cx.notify();
-                                } else if delta_x.abs() > 3.0 {
+                                } else if delta.abs() > 3.0 {
                                     cx.notify();
                                 }
                             }
@@ -9430,16 +9634,15 @@ impl Sidebar {
                             }),
                     ),
             )
-            // Right arrow - only show when needed
             .when(show_arrows, |this| {
                 this.child(
-                    IconButton::new("space-carousel-right", IconName::ChevronRight)
+                    IconButton::new(next_arrow_id, next_arrow_icon)
                         .shape(IconButtonShape::Square)
                         .style(ButtonStyle::Transparent)
                         .icon_size(IconSize::Small)
-                        .tooltip(Tooltip::text("Show more spaces (scroll right)"))
-                        .disabled(!can_go_right)
-                        .when(can_go_right, |btn| {
+                        .tooltip(Tooltip::text(next_tooltip))
+                        .disabled(!can_go_next)
+                        .when(can_go_next, |btn| {
                             btn.on_click(cx.listener(|this, _, _window, cx| {
                                 this.show_next_space_page(cx);
                             }))
@@ -9470,8 +9673,9 @@ impl Sidebar {
             .border_color(cx.theme().colors().border)
             .bg(cx.theme().colors().status_bar_background)
             .child(left_slot)
+            // project (add/open) and time (history/clock) icons grouped on the left of expanded sidebar bottom
             .child(
-                IconButton::new("sidebar-bottom-add-folder", IconName::FolderOpenAdd)
+                IconButton::new("sidebar-bottom-add-folder", dx_icon(DxUiIcon::OpenProject))
                     .icon_size(IconSize::Small)
                     .tooltip(Tooltip::text("Add Folder to Project"))
                     .on_click(cx.listener(|this, _, window, cx| {
@@ -9494,11 +9698,34 @@ impl Sidebar {
                         this.toggle_archive(&ToggleThreadHistory, window, cx);
                     })),
             )
+            // Forge panel icon button commented out per request (from bottombar left side)
+            // .child(
+            //     IconButton::new("sidebar-bottom-forge", dx_icon(DxUiIcon::Forge))
+            //         .icon_size(IconSize::Small)
+            //         .tooltip(Tooltip::text("Forge"))
+            //         .on_click(cx.listener(|this, _, window, cx| {
+            //             // appropriate forge action would go here
+            //         })),
+            // )
             .child(
                 h_flex()
                     .flex_1()
                     .justify_center()
-                    .child(self.render_space_carousel(cx)),
+                    .child(self.render_space_carousel(SpaceCarouselOrientation::Horizontal, cx)),
+            )
+            // only settings cog and speaker (sounds) kept on the right of expanded sidebar bottom
+            .child(self.render_dx_sounds_toggle_button(
+                "sidebar-bottom-sounds",
+                IconSize::Small,
+                cx,
+            ))
+            .child(
+                IconButton::new("sidebar-bottom-settings", dx_icon(DxUiIcon::Settings))
+                    .icon_size(IconSize::Small)
+                    .tooltip(Tooltip::text("Settings"))
+                    .on_click(cx.listener(|this, _, window, cx| {
+                        this.open_settings(window, cx);
+                    })),
             )
             .child(right_slot)
     }
@@ -9507,6 +9734,7 @@ impl Sidebar {
         self.active_workspace.clone()
     }
 
+    #[allow(dead_code)]
     fn dispatch_workspace_action(
         &self,
         action: &dyn gpui::Action,
@@ -9521,6 +9749,7 @@ impl Sidebar {
         focus_handle.dispatch_action(action, window, cx);
     }
 
+    #[allow(dead_code)]
     fn activate_workspace_screen(
         &self,
         kind: WorkspaceScreenKind,

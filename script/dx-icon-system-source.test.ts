@@ -86,7 +86,9 @@ test("DX semantic icon layer owns rebrand-specific aliases", () => {
   assert.match(dxIcons, /pub fn dx_icon\(icon: DxUiIcon\) -> IconName/);
   assert.match(dxIcons, /pub fn dx_loading_icon\(size: IconSize, color: Color, duration_secs: u64\) -> AnyElement/);
   assert.match(dxIcons, /DxUiIcon::Loading => IconName::DxLoader/);
+  assert.match(dxIcons, /DxUiIcon::Acp => IconName::ZedAgent/);
   assert.match(dxIcons, /DxUiIcon::Settings => IconName::DxCog/);
+  assert.match(dxIcons, /DxUiIcon::Space => IconName::Space/);
   assert.match(dxIcons, /DxUiIcon::Evidence => IconName::Public/);
   assert.match(dxIcons, /DxUiIcon::Source => IconName::FolderSearch/);
   assert.match(dxIcons, /DxUiIcon::Storage => IconName::DatabaseZap/);
@@ -225,7 +227,7 @@ test("DX loading and tool surfaces use semantic icon helpers", () => {
   assert.match(voiceControls, /dx_loading_icon\(IconSize::XSmall, tone, 1\)/);
   assert.doesNotMatch(voiceControls, /IconName::LoadCircle/);
 
-  for (const icon of ["Plugins", "Connections", "Automations", "Settings"]) {
+  for (const icon of ["Acp", "Mcp", "Extensions", "Plugins", "Connections", "Automations", "Settings", "Space"]) {
     assert.ok(
       sidebar.includes(`dx_icon(DxUiIcon::${icon})`),
       `sidebar should use semantic DX icon ${icon}`,

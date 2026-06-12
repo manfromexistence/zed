@@ -140,6 +140,7 @@ test("collapsed workspace activity bar stays icon-only with hover details", () =
   const expectedActions = [
     ["sidebar-activity-new-chat", "New Chat"],
     ["sidebar-activity-search", "Search"],
+
     ["sidebar-activity-mobile", "Mobile Preview"],
     ["sidebar-activity-cli", "CLI"],
     ["sidebar-activity-plugins", "Plugins"],
@@ -181,10 +182,24 @@ test("collapsed workspace activity bar stays icon-only with hover details", () =
   assert.match(sidebar, /"sidebar-toolbar-automations"[\s\S]*?activate_workspace_screen\(\s*WorkspaceScreenKind::Automations/);
   assert.match(sidebar, /"sidebar-activity-automations"[\s\S]*?activate_workspace_screen\(WorkspaceScreenKind::Automations/);
   assert.doesNotMatch(sidebar, /zed_actions::agent::OpenSettings/);
-  assert.doesNotMatch(sidebar, /"sidebar-toolbar-acp-registry"/);
-  assert.doesNotMatch(sidebar, /"sidebar-toolbar-mcp"/);
-  assert.doesNotMatch(sidebar, /"sidebar-toolbar-extensions"/);
-  assert.doesNotMatch(sidebar, /"sidebar-toolbar-settings"/);
+  assert.match(sidebar, /format!\("\{id_prefix\}-acp-registry"\)[\s\S]*?dx_icon\(DxUiIcon::Acp\)[\s\S]*?"ACP Registry"/);
+  assert.match(sidebar, /format!\("\{id_prefix\}-mcp"\)[\s\S]*?dx_icon\(DxUiIcon::Mcp\)[\s\S]*?"MCP Servers"/);
+  assert.match(sidebar, /format!\("\{id_prefix\}-extensions"\)[\s\S]*?dx_icon\(DxUiIcon::Extensions\)[\s\S]*?"Extensions"/);
+  assert.match(sidebar, /render_sidebar_panel_buttons\(cx, "sidebar-activity"/);
+  assert.match(sidebar, /render_sidebar_panel_buttons\(cx, "sidebar-toolbar"/);
+  assert.match(sidebar, /"sidebar-toolbar-settings"[\s\S]*?dx_icon\(DxUiIcon::Settings\)[\s\S]*?"Settings"/);
+  assert.match(sidebar, /"sidebar-activity-sounds"/);
+  assert.match(sidebar, /"sidebar-toolbar-sounds"[\s\S]*?AudioOn|AudioOff/);
+  assert.match(sidebar, /"Mute Editor Sounds"/);
+  assert.match(sidebar, /"Unmute Editor Sounds"/);
+  assert.match(sidebar, /open_acp_registry[\s\S]*?Box::new\(AcpRegistry\)/);
+  assert.match(sidebar, /open_mcp_extensions[\s\S]*?ExtensionCategoryFilter::ContextServers/);
+  assert.match(sidebar, /open_extensions[\s\S]*?Extensions::default\(\)/);
+  assert.match(sidebar, /SpaceCarouselOrientation::Vertical/);
+  assert.match(sidebar, /SpaceCarouselOrientation::Horizontal/);
+  assert.match(sidebar, /"sidebar-bottom-add-folder"[\s\S]*?IconName::FolderOpen/);
+  assert.match(sidebar, /"open-project"[\s\S]*?dx_icon\(DxUiIcon::Space\)/);
+  assert.match(bottomBar, /"sidebar-bottom-settings"[\s\S]*?dx_icon\(DxUiIcon::Settings\)/);
   assert.doesNotMatch(sidebar, /"sidebar-toolbar-refresh"/);
 });
 

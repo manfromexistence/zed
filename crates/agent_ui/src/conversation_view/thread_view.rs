@@ -662,7 +662,7 @@ pub struct ThreadView {
     pub show_codex_windows_warning: bool,
     pub multi_root_callout_dismissed: bool,
     pub generating_indicator_in_list: bool,
-    chat_input_full_width: bool,
+    transparent_header_height: Option<gpui::Pixels>,
     pub skill_loading_errors: Vec<SkillLoadingError>,
     response_anchor_scroll_request: Option<ResponseAnchorScrollRequest>,
     active_response_anchor_entry_ix: Option<usize>,
@@ -754,6 +754,12 @@ const DX_WEB_TOOL_LOGOS: &[DxWebToolLogo] = &[
         label: "Whiteboard",
         light_path: "icons/dx_web_tools/whiteboard-light-transparent.svg",
         dark_path: "icons/dx_web_tools/whiteboard-dark-transparent.svg",
+    },
+    DxWebToolLogo {
+        id: "3d",
+        label: "3D",
+        light_path: "icons/dx_web_tools/3d-light-transparent.svg",
+        dark_path: "icons/dx_web_tools/3d-dark-transparent.svg",
     },
     DxWebToolLogo {
         id: "shader",
@@ -1095,7 +1101,7 @@ impl ThreadView {
             show_codex_windows_warning,
             multi_root_callout_dismissed: false,
             generating_indicator_in_list: false,
-            chat_input_full_width: false,
+            transparent_header_height: None,
             skill_loading_errors: Vec::new(),
             response_anchor_scroll_request: None,
             active_response_anchor_entry_ix: None,
@@ -3936,9 +3942,8 @@ impl ThreadView {
 
         let max_content_width = AgentSettings::get_global(cx).max_content_width;
         let has_messages = self.list_state.item_count() > 0;
-        let chat_input_full_width = self.chat_input_full_width;
         let expands_editor_area = editor_expanded && has_messages;
-        let (border_focused, border, panel_background) = {
+        let (_border_focused, border, panel_background) = {
             let colors = cx.theme().colors();
             (
                 colors.border_focused,
@@ -3948,11 +3953,10 @@ impl ThreadView {
         };
         let glass_surface = self.render_liquid_glass_chat_input_surface(cx);
         let uses_liquid_glass = glass_surface.is_some();
-        let chat_input_border = if focus_handle.is_focused(window) {
-            border_focused
-        } else {
-            border
-        };
+        // Always use a visible border for the chatinputbox frame in AI screen (including fullscreen/liquid glass states).
+        // Previously focus-gated selection could result in border not appearing reliably in some renders/states.
+        // Use the standard border color unconditionally for the outer container frame (inner editor focus uses its own treatment).
+        let chat_input_border = border;
 
         h_flex()
             .id("agent-chat-input-lane")
@@ -3976,16 +3980,9 @@ impl ThreadView {
             .child(
                 v_flex()
                     .id("agent-liquid-glass-chat-input-container")
-                    .map(|this| {
-                        if chat_input_full_width {
-                            this.w_full().flex_1()
-                        } else {
-                            this.w_full()
-                                .max_w(rems(56.))
-                                .mx_auto()
-                                .when_some(max_content_width, |this, max_w| this.max_w(max_w))
-                        }
-                    })
+                    .w_full()
+                    .max_w(rems(56.))
+                    .when_some(max_content_width, |this, max_w| this.max_w(max_w))
                     .relative()
                     .overflow_hidden()
                     .rounded_md()
@@ -3999,8 +3996,7 @@ impl ThreadView {
                     .p_1p5()
                     .shadow_sm()
                     .flex_shrink_1()
-                    .when(chat_input_full_width, |this| this.flex_grow_1())
-                    .when(!chat_input_full_width, |this| this.flex_grow_0())
+                    .flex_grow_0()
                     .when(has_messages && !expands_editor_area, |this| {
                         this.max_h(rems(COMPOSER_COLLAPSED_MAX_HEIGHT_REMS))
                     })
@@ -4094,8 +4090,6 @@ impl ThreadView {
                                     .gap_1()
                                     .child(
                                         h_flex()
-                                            .flex_1()
-                                            .min_w_0()
                                             .gap_0p5()
                                             .flex_wrap()
                                             .items_center()
@@ -4108,11 +4102,11 @@ impl ThreadView {
                                             .children(self.render_mode_shortcuts(cx))
                                             .child(self.render_follow_toggle(cx)),
                                     )
+                                    .child(div().flex_1().min_w_0())
                                     .child(self.render_dx_web_tool_logo_strip(cx))
+                                    .child(div().flex_1().min_w_0())
                                     .child(
                                         h_flex()
-                                            .flex_1()
-                                            .min_w_0()
                                             .flex_wrap()
                                             .items_center()
                                             .justify_end()
@@ -4144,12 +4138,16 @@ impl ThreadView {
         Some(render_agent_liquid_glass_chat_input_surface(&settings))
     }
 
-    pub(crate) fn set_chat_input_full_width(&mut self, full_width: bool, cx: &mut Context<Self>) {
-        if self.chat_input_full_width == full_width {
+    pub(crate) fn set_transparent_header_height(
+        &mut self,
+        height: Option<gpui::Pixels>,
+        cx: &mut Context<Self>,
+    ) {
+        if self.transparent_header_height == height {
             return;
         }
 
-        self.chat_input_full_width = full_width;
+        self.transparent_header_height = height;
         cx.notify();
     }
 
@@ -6270,6 +6268,8 @@ impl ThreadView {
             )
         };
 
+        let transparent_header_height = self.transparent_header_height.unwrap_or(px(0.));
+
         list(
             self.list_state.clone(),
             cx.processor(move |this, index: usize, window, cx| {
@@ -6283,7 +6283,11 @@ impl ThreadView {
                         window,
                         cx,
                     );
-                    centered_container(rendered.into_any_element()).into_any_element()
+                    let mut container = centered_container(rendered.into_any_element());
+                    if index == 0 && transparent_header_height > px(0.) {
+                        container = container.pt(transparent_header_height);
+                    }
+                    container.into_any_element()
                 } else if this.generating_indicator_in_list {
                     let confirmation = entries
                         .last()

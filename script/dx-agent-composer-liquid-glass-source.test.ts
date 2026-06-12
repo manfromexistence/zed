@@ -315,6 +315,7 @@ test("Agent chat input add-context trigger carries DX web tool transparent logos
     "video",
     "music",
     "whiteboard",
+    "3d",
     "shader",
     "www",
   ]) {
@@ -336,8 +337,8 @@ test("Agent chat input add-context trigger carries DX web tool transparent logos
   assert.match(threadView, /const DX_WEB_TOOL_LOGOS: &\[DxWebToolLogo\]/);
   assert.equal(
     (logoTable.match(/DxWebToolLogo \{/g) ?? []).length,
-    9,
-    "expected the chat input strip to carry nine DX web tool logos",
+    10,
+    "expected the chat input strip to carry DX web tool logos (incl. shader light/dark transparent variant next to the others)",
   );
   assert.match(logoStrip, /cx\.theme\(\)\.appearance\.is_light\(\)/);
   assert.match(logoStrip, /Icon::from_path\(logo\.path_for_theme\(is_light\)\)/);

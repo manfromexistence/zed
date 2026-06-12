@@ -489,6 +489,9 @@ pub struct AudioSettingsContent {
     /// Play high-frequency DX interaction sounds while typing, deleting, or hovering.
     #[serde(rename = "dx.interaction_sounds")]
     pub dx_interaction_sounds: Option<bool>,
+    /// Play DX editor and workspace sound effects.
+    #[serde(rename = "dx.sounds")]
+    pub dx_sounds: Option<bool>,
 }
 
 #[derive(Clone, Default, Debug, Serialize, Deserialize, JsonSchema, MergeFrom, PartialEq, Eq)]
