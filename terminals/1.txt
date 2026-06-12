@@ -1,0 +1,7 @@
+---
+pid: 4464
+cwd: "G:\Dx\code"
+command: "rustfmt --edition 2024 crates/sidebar/src/sidebar.rs && cargo check -p sidebar 2>&1 | tail -15"
+started_at: 2026-06-12T12:34:15.269Z
+running_for_ms: 240015   
+---

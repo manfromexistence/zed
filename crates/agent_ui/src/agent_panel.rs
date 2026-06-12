@@ -5246,12 +5246,12 @@ impl Panel for AgentPanel {
 
     fn set_zoomed(&mut self, zoomed: bool, _window: &mut Window, cx: &mut Context<Self>) {
         self.zoomed = zoomed;
-        self.host_kind = if zoomed {
-            AgentPanelHostKind::BuilderWorkspace
+        if zoomed {
+            self.ensure_builder_workspace_chrome();
         } else {
-            AgentPanelHostKind::Sidechat
-        };
-        self.manual_zoom_override = Some(zoomed);
+            self.host_kind = AgentPanelHostKind::Sidechat;
+            self.manual_zoom_override = Some(false);
+        }
         cx.notify();
     }
 }
@@ -5260,6 +5260,38 @@ impl AgentPanel {
     fn activate_sidechat_host(&mut self) {
         self.host_kind = AgentPanelHostKind::Sidechat;
         self.manual_zoom_override = Some(false);
+    }
+
+    pub(crate) fn ensure_builder_workspace_chrome(&mut self) {
+        self.host_kind = AgentPanelHostKind::BuilderWorkspace;
+        self.manual_zoom_override = Some(true);
+        self.fullscreen_sources_rail_open = true;
+        self.fullscreen_progress_rail_open = true;
+    }
+
+    fn wrap_agent_panel_body(content: AnyElement) -> AnyElement {
+        div()
+            .id("agent-panel-body")
+            .flex_grow_1()
+            .min_h_0()
+            .w_full()
+            .overflow_hidden()
+            .child(content)
+            .into_any_element()
+    }
+
+    fn minimal_dx_launch_workspace_status_for_rails(
+        &self,
+        cx: &Context<Self>,
+    ) -> DxLaunchWorkspaceStatus {
+        Self::build_dx_launch_workspace_status_from_input(DxLaunchWorkspaceStatusInput {
+            workspace_roots: Vec::new(),
+            visible_worktree_count: 0,
+            background_task_count: self.retained_threads.len(),
+            active_status: self.dx_active_status(cx),
+            subagent_rows: self.dx_subagent_status_rows(cx),
+            agent_settings: dx_agent_bridge_settings_snapshot(cx),
+        })
     }
 
     fn ensure_thread_initialized(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -6956,16 +6988,16 @@ impl AgentPanel {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         if !self.should_render_dx_launch_chrome(cx) {
-            return center;
+            return Self::wrap_agent_panel_body(center);
         }
         let center = self.render_fullscreen_agent_center(center, cx);
         if !self.fullscreen_sources_rail_open && !self.fullscreen_progress_rail_open {
-            return center;
+            return Self::wrap_agent_panel_body(center);
         }
 
-        let Some(status) = self.cached_dx_launch_workspace_status(cx) else {
-            return center;
-        };
+        let status = self
+            .cached_dx_launch_workspace_status(cx)
+            .unwrap_or_else(|| self.minimal_dx_launch_workspace_status_for_rails(cx));
         let source_row_controls =
             self.render_dx_launch_source_row_controls(&status.source_sets, cx);
         let source_actions =
@@ -7010,7 +7042,7 @@ impl AgentPanel {
                     .ok();
             }),
         };
-        render_workspace_chrome(
+        Self::wrap_agent_panel_body(render_workspace_chrome(
             center,
             source_row_controls,
             source_actions,
@@ -7021,7 +7053,7 @@ impl AgentPanel {
             status,
             window,
             cx,
-        )
+        ))
     }
 
     fn render_automation_workspace_screen(
@@ -7198,10 +7230,18 @@ impl AgentPanel {
         div()
             .id("agent-fullscreen-center")
             .size_full()
+            .min_h_0()
             .min_w_0()
             .overflow_hidden()
             .bg(cx.theme().colors().panel_background)
-            .child(div().size_full().min_w_0().overflow_hidden().child(center))
+            .child(
+                div()
+                    .size_full()
+                    .min_h_0()
+                    .min_w_0()
+                    .overflow_hidden()
+                    .child(center),
+            )
             .into_any_element()
     }
 

@@ -1,3 +1,19 @@
+[2026-06-12] - AI Fullscreen Rails And Chat Input Layout Restore
+
+CHANGED:
+- Agent panel body now flex-grows so fullscreen AI content, floating rails, and the bottom Liquid Glass chat input lane receive real height instead of collapsing under `justify_between`.
+- Fullscreen DX launch rails now fall back to a lightweight cold-cache status placeholder so Sources and Agents rails still render before the async status refresh completes.
+- Refocusing the AI screen and zooming the Agent panel now re-enable builder chrome and reopen both floating rails.
+- Chat input lane now occludes correctly above thread content while preserving the Liquid Glass surface mount.
+
+PASSED:
+- `rustfmt --edition 2024 crates/agent_ui/src/agent_panel.rs crates/agent_ui/src/agent_screen.rs crates/agent_ui/src/dx_launch_workspace.rs crates/agent_ui/src/conversation_view/thread_view.rs`
+- `node --test script/dx-agent-workspaces-source.test.ts script/dx-workspace-ui-state-source.test.ts`
+- `git diff --check`
+
+NOTES:
+- Cargo/native visual proof and `just run` remain deferred by instruction.
+
 [2026-06-12] - Sidebar Chat Actions And Agent Chrome Polish
 
 CHANGED:

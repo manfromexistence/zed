@@ -7967,84 +7967,87 @@ impl Sidebar {
             .justify_between()
             .px_2()
             .child(
-                h_flex()
-                    .gap_1()
-                    .child(button(
-                        "sidebar-toolbar-new-chat",
-                        IconName::Plus,
-                        "New Chat",
-                        |this, _, window, cx| {
-                            if let Some(workspace) = this.active_workspace(cx) {
-                                this.create_new_thread(&workspace, window, cx);
-                            }
-                        },
-                    ))
-                    .child(button(
-                        "sidebar-toolbar-search",
-                        dx_icon(DxUiIcon::Search),
-                        "Search",
-                        |this, _, window, cx| {
-                            this.activity_bar_expanded = true;
-                            this.show_thread_list(window, cx);
-                            this.focus_sidebar_filter(&FocusSidebarFilter, window, cx);
-                        },
-                    ))
-                    .child(button(
-                        "sidebar-toolbar-mobile",
-                        dx_icon(DxUiIcon::Browser),
-                        "Mobile Preview",
-                        |this, _, window, cx| {
-                            this.activate_workspace_screen(
-                                WorkspaceScreenKind::Browser,
-                                window,
-                                cx,
-                            );
-                        },
-                    ))
-                    .child(button(
-                        "sidebar-toolbar-cli",
-                        dx_icon(DxUiIcon::Commands),
-                        "CLI",
-                        |this, _, window, cx| {
-                            this.activate_workspace_screen(
-                                WorkspaceScreenKind::Terminal,
-                                window,
-                                cx,
-                            );
-                        },
-                    ))
-                    .child(button(
-                        "sidebar-toolbar-plugins",
-                        dx_icon(DxUiIcon::Plugins),
-                        "Plugins",
-                        |this, _, window, cx| {
-                            this.activate_workspace_screen(WorkspaceScreenKind::Tools, window, cx);
-                        },
-                    ))
-                    .child(button(
-                        "sidebar-toolbar-connections",
-                        dx_icon(DxUiIcon::Connections),
-                        "Connections",
-                        |this, _, window, cx| {
-                            this.activate_workspace_screen(
-                                WorkspaceScreenKind::Connections,
-                                window,
-                                cx,
-                            );
-                        },
-                    ))
-                    .child(button(
-                        "sidebar-toolbar-automations",
-                        dx_icon(DxUiIcon::Automations),
-                        "Automations",
-                        |this, _, window, cx| {
-                            this.activate_workspace_screen(
-                                WorkspaceScreenKind::Automations,
-                                window,
-                                cx,
-                            );
-                        },
-                    )),
+                h_flex().gap_1().child(button(
+                    "sidebar-toolbar-new-chat",
+                    IconName::Plus,
+                    "New Chat",
+                    |this, _, window, cx| {
+                        if let Some(workspace) = this.active_workspace(cx) {
+                            this.create_new_thread(&workspace, window, cx);
+                        }
+                    },
+                )), // TODO(dx-sidebar): Commented out Search button
+                    // .child(button(
+                    //     "sidebar-toolbar-search",
+                    //     dx_icon(DxUiIcon::Search),
+                    //     "Search",
+                    //     |this, _, window, cx| {
+                    //         this.activity_bar_expanded = true;
+                    //         this.show_thread_list(window, cx);
+                    //         this.focus_sidebar_filter(&FocusSidebarFilter, window, cx);
+                    //     },
+                    // ))
+                    // TODO(dx-sidebar): Commented out Mobile Preview button
+                    // .child(button(
+                    //     "sidebar-toolbar-mobile",
+                    //     dx_icon(DxUiIcon::Browser),
+                    //     "Mobile Preview",
+                    //     |this, _, window, cx| {
+                    //         this.activate_workspace_screen(
+                    //             WorkspaceScreenKind::Browser,
+                    //             window,
+                    //             cx,
+                    //         );
+                    //     },
+                    // ))
+                    // TODO(dx-sidebar): Commented out CLI button
+                    // .child(button(
+                    //     "sidebar-toolbar-cli",
+                    //     dx_icon(DxUiIcon::Commands),
+                    //     "CLI",
+                    //     |this, _, window, cx| {
+                    //         this.activate_workspace_screen(
+                    //             WorkspaceScreenKind::Terminal,
+                    //             window,
+                    //             cx,
+                    //         );
+                    //     },
+                    // ))
+                    // TODO(dx-sidebar): Commented out Plugins button
+                    // .child(button(
+                    //     "sidebar-toolbar-plugins",
+                    //     dx_icon(DxUiIcon::Plugins),
+                    //     "Plugins",
+                    //     |this, _, window, cx| {
+                    //         this.activate_workspace_screen(WorkspaceScreenKind::Tools, window, cx);
+                    //     },
+                    // ))
+                    // TODO(dx-sidebar): Commented out Connections button
+                    // .child(button(
+                    //     "sidebar-toolbar-connections",
+                    //     dx_icon(DxUiIcon::Connections),
+                    //     "Connections",
+                    //     |this, _, window, cx| {
+                    //         this.activate_workspace_screen(
+                    //             WorkspaceScreenKind::Connections,
+                    //             window,
+                    //             cx,
+                    //         );
+                    //     },
+                    // ))
+                    // TODO(dx-sidebar): Commented out Automations button
+                    // .child(button(
+                    //     "sidebar-toolbar-automations",
+                    //     dx_icon(DxUiIcon::Automations),
+                    //     "Automations",
+                    //     |this, _, window, cx| {
+                    //         this.activate_workspace_screen(
+                    //             WorkspaceScreenKind::Automations,
+                    //             window,
+                    //             cx,
+                    //         );
+                    //     },
+                    // )),
             )
             .child(
                 h_flex()
@@ -8101,90 +8104,94 @@ impl Sidebar {
                 .on_click(cx.listener(on_click))
         };
 
-        let primary_actions = vec![
-            button(
-                cx,
-                "sidebar-activity-new-chat",
-                IconName::Plus,
-                "New Chat",
-                |this, _, window, cx| {
-                    if let Some(workspace) = this.active_workspace(cx) {
-                        this.create_new_thread(&workspace, window, cx);
-                    }
-                },
-            )
-            .into_any_element(),
-            button(
-                cx,
-                "sidebar-activity-search",
-                dx_icon(DxUiIcon::Search),
-                "Search",
-                |this, _, window, cx| {
-                    this.activity_bar_expanded = true;
-                    this.show_thread_list(window, cx);
-                    this.focus_sidebar_filter(&FocusSidebarFilter, window, cx);
-                },
-            )
-            .into_any_element(),
-            button(
-                cx,
-                "sidebar-activity-mobile",
-                dx_icon(DxUiIcon::Browser),
-                "Mobile Preview",
-                |this, _, window, cx| {
-                    this.activate_workspace_screen(WorkspaceScreenKind::Browser, window, cx);
-                },
-            )
-            .into_any_element(),
-            button(
-                cx,
-                "sidebar-activity-cli",
-                dx_icon(DxUiIcon::Commands),
-                "CLI",
-                |this, _, window, cx| {
-                    this.activate_workspace_screen(WorkspaceScreenKind::Terminal, window, cx);
-                },
-            )
-            .into_any_element(),
-            button(
-                cx,
-                "sidebar-activity-plugins",
-                dx_icon(DxUiIcon::Plugins),
-                "Plugins",
-                |this, _, window, cx| {
-                    this.activate_workspace_screen(WorkspaceScreenKind::Tools, window, cx);
-                },
-            )
-            .into_any_element(),
-            button(
-                cx,
-                "sidebar-activity-connections",
-                dx_icon(DxUiIcon::Connections),
-                "Connections",
-                |this, _, window, cx| {
-                    this.activate_workspace_screen(WorkspaceScreenKind::Connections, window, cx);
-                },
-            )
-            .into_any_element(),
-            button(
-                cx,
-                "sidebar-activity-automations",
-                dx_icon(DxUiIcon::Automations),
-                "Automations",
-                |this, _, window, cx| {
-                    this.activate_workspace_screen(WorkspaceScreenKind::Automations, window, cx);
-                },
-            )
-            .into_any_element(),
-        ]
-        .into_iter()
-        .chain(
-            self.render_collapsed_thread_shortcuts(
+        let primary_actions =
+            vec![
+                button(
+                    cx,
+                    "sidebar-activity-new-chat",
+                    IconName::Plus,
+                    "New Chat",
+                    |this, _, window, cx| {
+                        if let Some(workspace) = this.active_workspace(cx) {
+                            this.create_new_thread(&workspace, window, cx);
+                        }
+                    },
+                )
+                .into_any_element(),
+                button(
+                    cx,
+                    "sidebar-activity-search",
+                    dx_icon(DxUiIcon::Search),
+                    "Search",
+                    |this, _, window, cx| {
+                        this.activity_bar_expanded = true;
+                        this.show_thread_list(window, cx);
+                        this.focus_sidebar_filter(&FocusSidebarFilter, window, cx);
+                    },
+                )
+                .into_any_element(),
+                // TODO(dx-sidebar): Commented out Mobile Preview button
+                // button(
+                //     cx,
+                //     "sidebar-activity-mobile",
+                //     dx_icon(DxUiIcon::Browser),
+                //     "Mobile Preview",
+                //     |this, _, window, cx| {
+                //         this.activate_workspace_screen(WorkspaceScreenKind::Browser, window, cx);
+                //     },
+                // )
+                // .into_any_element(),
+                // TODO(dx-sidebar): Commented out CLI button
+                // button(
+                //     cx,
+                //     "sidebar-activity-cli",
+                //     dx_icon(DxUiIcon::Commands),
+                //     "CLI",
+                //     |this, _, window, cx| {
+                //         this.activate_workspace_screen(WorkspaceScreenKind::Terminal, window, cx);
+                //     },
+                // )
+                // .into_any_element(),
+                // TODO(dx-sidebar): Commented out Plugins button
+                // button(
+                //     cx,
+                //     "sidebar-activity-plugins",
+                //     dx_icon(DxUiIcon::Plugins),
+                //     "Plugins",
+                //     |this, _, window, cx| {
+                //         this.activate_workspace_screen(WorkspaceScreenKind::Tools, window, cx);
+                //     },
+                // )
+                // .into_any_element(),
+                // TODO(dx-sidebar): Commented out Connections button
+                // button(
+                //     cx,
+                //     "sidebar-activity-connections",
+                //     dx_icon(DxUiIcon::Connections),
+                //     "Connections",
+                //     |this, _, window, cx| {
+                //         this.activate_workspace_screen(WorkspaceScreenKind::Connections, window, cx);
+                //     },
+                // )
+                // .into_any_element(),
+                // TODO(dx-sidebar): Commented out Automations button
+                // button(
+                //     cx,
+                //     "sidebar-activity-automations",
+                //     dx_icon(DxUiIcon::Automations),
+                //     "Automations",
+                //     |this, _, window, cx| {
+                //         this.activate_workspace_screen(WorkspaceScreenKind::Automations, window, cx);
+                //     },
+                // )
+                // .into_any_element(),
+            ]
+            .into_iter()
+            .chain(self.render_collapsed_thread_shortcuts(
                 Self::collapsed_thread_shortcut_limit(window),
                 cx,
-            ),
-        )
-        .collect();
+            ))
+            .collect();
 
         let secondary_actions = vec![
             button(

@@ -324,6 +324,7 @@ pub(crate) fn render_workspace_chrome(
         .id("dx-launch-workspace")
         .relative()
         .size_full()
+        .min_h_0()
         .min_w_0()
         .overflow_hidden()
         .bg(cx.theme().colors().panel_background)

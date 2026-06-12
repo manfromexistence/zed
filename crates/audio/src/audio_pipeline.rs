@@ -250,7 +250,8 @@ impl Audio {
                 .ensure_output_exists(output_audio_device)
                 .context("Could not get output mixer")?;
 
-            output_mixer.add(source);
+            // TTS (Kokoro read-aloud) volume is set to 5% to keep it non-intrusive.
+            output_mixer.add(source.amplify(0.05));
             Ok(handle)
         })
     }

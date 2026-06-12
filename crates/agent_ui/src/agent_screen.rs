@@ -34,6 +34,14 @@ impl AgentScreen {
                 })
             });
         if let Some(item) = existing_item {
+            if let Some(agent_screen) = item.downcast::<AgentScreen>() {
+                agent_screen.update(cx, |agent_screen, cx| {
+                    agent_screen.panel.update(cx, |panel, cx| {
+                        panel.ensure_builder_workspace_chrome();
+                        cx.notify();
+                    });
+                });
+            }
             workspace.activate_item(&*item, true, true, window, cx);
             return;
         }

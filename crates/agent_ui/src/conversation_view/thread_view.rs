@@ -3955,11 +3955,12 @@ impl ThreadView {
         };
 
         h_flex()
+            .id("agent-chat-input-lane")
             .px_2()
             .pt_0p5()
             .pb_2()
             .when(has_messages, |this| {
-                this.absolute().left_0().right_0().bottom_0()
+                this.absolute().left_0().right_0().bottom_0().occlude()
             })
             .when(!has_messages, |this| this.bg(panel_background))
             .justify_center()
