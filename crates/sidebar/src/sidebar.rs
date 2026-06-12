@@ -6813,7 +6813,7 @@ impl Sidebar {
             .thread_icon_overrides
             .get(&thread.metadata.thread_id)
             .copied();
-        let (icon, icon_svg) = if is_draft {
+        let (icon, icon_svg): (IconName, Option<SharedString>) = if is_draft {
             (IconName::Circle, None)
         } else if let Some(icon) = overridden_icon {
             (icon, None)
@@ -8312,7 +8312,7 @@ impl Sidebar {
                 thread_id,
                 icon,
                 label: title.clone(),
-                subtitle: (!timestamp.is_empty()).then_some(timestamp.clone()),
+                subtitle: (!timestamp.is_empty()).then_some(timestamp.clone().into()),
             };
 
             shortcuts.push((
@@ -8367,7 +8367,7 @@ impl Sidebar {
 
             let drag_context = dragged_thread.clone();
             let shortcut = div()
-                .id(("sidebar-activity-thread-drag-source", thread_key.clone()))
+                .id(("sidebar-activity-thread-drag-source", entry_ix))
                 .when(can_reorder_shortcuts, |this| {
                     let target_thread_id = thread_id;
                     this.drag_over::<DraggedSidebarThread>(move |row, dragged, _, _cx| {
