@@ -926,6 +926,14 @@ impl TitleBar {
                 font_panel::ToggleFocus.boxed_clone(),
                 active_right_panel == Some("Font Panel"),
             ),
+            // Forge panel icon button commented out per request (in bottombar / editor chrome right panel cluster, as the 3rd item in the left-of-right group)
+            // self.render_title_right_panel_button(
+            //     "titlebar-dx-forge-panel",
+            //     dx_icon(DxUiIcon::Forge),
+            //     "Forge",
+            //     /* appropriate forge toggle action */,
+            //     active_right_panel == Some("Forge"),
+            // ),
             self.render_title_right_panel_button(
                 "titlebar-media-panel",
                 dx_icon(DxUiIcon::Media),
@@ -949,14 +957,6 @@ impl TitleBar {
                 zed_actions::dx_check_panel::ToggleFocus.boxed_clone(),
                 active_right_panel == Some("Check"),
             ),
-            // commented the icon button (only) for forge per request; forge panel icon still provided via Panel trait for internal dock use
-            // self.render_title_right_panel_button(
-            //     "titlebar-dx-forge-panel",
-            //     dx_icon(DxUiIcon::Forge),
-            //     "Forge",
-            //     /* appropriate forge toggle action */,
-            //     active_right_panel == Some("Forge"),
-            // ),
             self.render_hidden_feature_menu(cx),
         ]
     }

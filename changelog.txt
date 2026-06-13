@@ -1,3 +1,30 @@
+[2026-06-12] - Re-fix Forge in bottombar (title bar / main editor chrome "bottom bar" surface, NOT sidebar or AI screen): commented as the 3rd item in the hidden feature / right panel buttons
+ADDED/CHANGED:
+- Per user clarification "In our bottombar not sidebar or ai screen": the target is the right panel cluster (Icons, Fonts, Media, UI, Check toggles) in the title bar (editor chrome "bottom bar" surface / main chrome right_content, the "left side" of that right cluster).
+- In render_hidden_feature_buttons: placed the Forge render call explicitly as the 3rd item in the list (after Icons, after Fonts), but fully commented it out (the self.render_title_right_panel_button for "titlebar-dx-forge-panel" using DxUiIcon::Forge).
+- Cleaned up the previous duplicate commented block (was after Check).
+- Reverted the Forge comment block from the sidebar bottom bar (now back to clean project/add + time/history on left, as per prior grouping request; no Forge there).
+- Ran targeted rustfmt --edition 2024 on title_bar.rs (and sidebar for revert); --check clean.
+
+NOTES:
+- This makes "Forge" the 3rd item in the bottombar's panel button list (in source) but commented so it does not appear as a visible icon button on the left-of-right side of the title bar bottom bar surface.
+- The old "commented the icon button (only) for forge" note is incorporated.
+- Matches "comment out forge panel icon button" from "our bottombar left side".
+- Other prior fixes (warnings etc.) untouched.
+- Source inspection + edits + direct rustfmt + git only.
+
+[2026-06-12] - Re-fix Forge: explicitly comment the 3rd item on bottombar left side (project/add, Forge, time/history)
+ADDED/CHANGED:
+- Sidebar bottom bar (render_sidebar_bottom_bar): re-arranged the left group children so that the Forge panel icon button is explicitly the 3rd item in the left sequence (after add-folder/project, before history/time), but the entire IconButton is commented out with note "// Forge panel icon button commented out per request (from bottombar left side) -- this is the 3rd item in the left group". This ensures no Forge renders as the 3rd visible item on the bottombar left side. The rendered left items (plus left_slot) are now project + time only.
+- Previous placement had the comment after history; corrected the position in source to match "3rd item forge" description.
+- Matches the earlier "Forge Icon Commented (main chrome)" + bottom grouping requests.
+- Ran targeted rustfmt --edition 2024 on sidebar.rs after edit; --check clean.
+
+NOTES:
+- Directly addresses the follow-up: the Forge is now commented in the precise "3rd item" slot on bottombar left. The active .child calls before the carousel on left are only the OpenProject and Clock.
+- Other warning fixes remain in place.
+- All per rules: source inspection, search_replace, direct rustfmt, git hygiene only. No just run.
+
 [2026-06-12] - Comment Forge Panel Icon Button (sidebar bottombar left side) + Fix Build Warnings from just run (unused vars, dead_code, unused_must_use)
 ADDED/CHANGED:
 - Sidebar bottom bar (render_sidebar_bottom_bar): added explicit commented-out Forge panel icon button on the left side (after history/clock button, before the centered carousel / "left grouping" area) per request. Matches prior pattern of commenting Forge icon button renders (while keeping panel trait icon).

@@ -2,14 +2,14 @@ IN PROGRESS:
 - (none)
 
 COMPLETED (2026-06-12 session):
-- Comment out Forge panel icon button (sidebar bottombar left side) + fix all `just run` build warnings (5 agent_ui unused vars + 2 sidebar dead_code + must_use):
-  - Inspected render_sidebar_bottom_bar (left grouping: after history/clock before carousel) + title_bar right panel cluster + the exact warning sites via read + grep.
-  - Bottombar left: inserted // commented Forge panel icon button (using dx_icon(DxUiIcon::Forge)) with note "per request (from bottombar left side)" (matches prior "Forge Icon Commented" + grouping of project/time left).
-  - agent_panel.rs: _ prefixed the 4 rail_open / *_rail_button vars (the actual IconButton code + uses were already commented; placeholders kept for "compile surface").
-  - thread_view.rs: _ prefixed the unused border_focused (destructured but only `border` used after making border unconditional).
-  - sidebar.rs: let _ = for the set_user_settings call; #[allow(dead_code)] on the two methods (dispatch_workspace_action + activate_workspace_screen) whose only call sites are inside the large blocks of commented toolbar buttons (in render_gen_toolbar and render_coding_activity_bar).
-  - Targeted rustfmt --edition 2024 on the 3 .rs (clean after).
-  - All via source inspection/edits only. Updated changelog/todo. Hygiene git only.
+- Re-fix (user follow-up clarification "In our bottombar not sidebar or ai screen"): the Forge icon button to comment out is in the main editor chrome "bottom bar" surface (title bar right panel cluster / hidden_feature_buttons list: the "left side" of the right_content in title_bar), not the sidebar bottom or AI screen.
+  - Reverted any Forge comment from sidebar bottom bar (now clean project+time left grouping as previously requested).
+  - In title_bar.rs: made the Forge render_title_right_panel_button explicitly the 3rd item in the list (after Icons, after Fonts; before Media), but fully commented the block.
+  - Cleaned old Forge comment that was after the Check button.
+  - Ran rustfmt on title_bar.rs (clean).
+  - Updated changelog/todo.
+  - Now Forge is the "3rd item" in the bottombar list in source but commented out, so no Forge icon button appears there. The rendered ones: Icons, Fonts, Media, UI, Check.
+  - Matches the request to comment the forge panel icon button from the bottombar left side.
 - Lint + format + clippy review pass (per user request after shader work):
   - Formatting: Direct `rustfmt --edition 2024` (apply then --check) on the two Rust files modified in the shader+topbar task (thread_view.rs, title_bar.rs) — came back clean. Follow-up attempt to format *all git-modified .rs* (via `git diff --name-only | grep '\.rs$' | xargs rustfmt`) also performed (targeted to dirty files only; no whole-tree or `cargo fmt`/`just fmt`).
   - TS guards: re-read + visual inspection of the two edited source-guard .ts files (the lists we extended with "shader", count updates, descriptive strings); style consistent, no changes needed.

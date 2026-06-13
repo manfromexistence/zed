@@ -9698,15 +9698,6 @@ impl Sidebar {
                         this.toggle_archive(&ToggleThreadHistory, window, cx);
                     })),
             )
-            // Forge panel icon button commented out per request (from bottombar left side)
-            // .child(
-            //     IconButton::new("sidebar-bottom-forge", dx_icon(DxUiIcon::Forge))
-            //         .icon_size(IconSize::Small)
-            //         .tooltip(Tooltip::text("Forge"))
-            //         .on_click(cx.listener(|this, _, window, cx| {
-            //             // appropriate forge action would go here
-            //         })),
-            // )
             .child(
                 h_flex()
                     .flex_1()
