@@ -1,3 +1,4 @@
+#[allow(unused_imports)]
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -10,7 +11,9 @@ use workspace::Workspace;
 pub const AGENT_WWW_TOOL_WHITEBOARD: &str = "whiteboard";
 pub const AGENT_WWW_TOOL_SHADER: &str = "shader";
 
+#[allow(dead_code)]
 const DEFAULT_DEV_HOST: &str = "127.0.0.1";
+#[allow(dead_code)]
 const DEFAULT_DEV_PORT: u16 = 3000;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -42,8 +45,20 @@ pub fn agent_thread_www_preview_hooks() -> Option<&'static AgentThreadWwwPreview
 }
 
 pub fn is_agent_www_tool_preview_enabled(tool_id: &str) -> bool {
-    matches!(tool_id, AGENT_WWW_TOOL_WHITEBOARD | AGENT_WWW_TOOL_SHADER)
-        && agent_thread_www_preview_hooks().is_some()
+    // All web tool buttons are enabled for hardcoded HTML preview
+    matches!(
+        tool_id,
+        "design"
+            | "graphics"
+            | "presentations"
+            | "spreadsheets"
+            | "video"
+            | "music"
+            | AGENT_WWW_TOOL_WHITEBOARD
+            | "3d"
+            | AGENT_WWW_TOOL_SHADER
+            | "dx-web"
+    ) && agent_thread_www_preview_hooks().is_some()
 }
 
 pub fn project_root_for_agent_www_tool(tool_id: &str) -> Option<PathBuf> {
@@ -62,13 +77,30 @@ pub fn project_root_for_agent_www_tool(tool_id: &str) -> Option<PathBuf> {
 }
 
 pub fn preview_url_for_agent_www_tool(tool_id: &str) -> Option<String> {
-    let project_root = project_root_for_agent_www_tool(tool_id)?;
-    Some(format!(
-        "{}/",
-        dev_server_origin(&project_root).trim_end_matches('/')
-    ))
+    // Serve a hardcoded HTML page with the tool name centered for all web tool buttons.
+    let display_name = match tool_id {
+        "design" => "Design",
+        "graphics" => "Graphics",
+        "presentations" => "Presentations",
+        "spreadsheets" => "Spreadsheets",
+        "video" => "Video",
+        "music" => "Music",
+        AGENT_WWW_TOOL_WHITEBOARD => "Whiteboard",
+        "3d" => "3D",
+        AGENT_WWW_TOOL_SHADER => "Shader",
+        "dx-web" => "DX Web",
+        _ => return None,
+    };
+
+    let html = format!(
+        "<html><head><style>*{{margin:0;padding:0;box-sizing:border-box}}body{{display:flex;justify-content:center;align-items:center;height:100vh;width:100vw;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#1e1e2e;color:#cdd6f4}}h1{{font-size:3rem;font-weight:700;letter-spacing:0.02em}}</style></head><body><h1>{}</h1></body></html>",
+        display_name
+    );
+
+    Some(format!("data:text/html,{}", html))
 }
 
+#[allow(dead_code)]
 fn dev_server_origin(root: &Path) -> String {
     let mut host = DEFAULT_DEV_HOST.to_string();
     let mut port = DEFAULT_DEV_PORT;
@@ -98,11 +130,13 @@ fn dev_server_origin(root: &Path) -> String {
     format!("http://{host}:{port}")
 }
 
+#[allow(dead_code)]
 struct DevClauseValues {
     host: Option<String>,
     port: Option<u16>,
 }
 
+#[allow(dead_code)]
 fn parse_dev_clause(line: &str) -> Option<DevClauseValues> {
     let line = line.split('#').next()?.trim();
     let args = line.strip_prefix("dev(")?.strip_suffix(')')?;
@@ -122,6 +156,7 @@ fn parse_dev_clause(line: &str) -> Option<DevClauseValues> {
     Some(DevClauseValues { host, port })
 }
 
+#[allow(dead_code)]
 fn strip_quotes(value: &str) -> &str {
     value
         .strip_prefix('"')
@@ -134,11 +169,7 @@ fn strip_quotes(value: &str) -> &str {
         .unwrap_or(value)
 }
 
-/// Discover the canonical DX WWW root (the directory that contains `examples/whiteboard` and `examples/shader`
-/// with their `dx` project manifests). This is independent of any open Zed worktree so that the agent-thread
-/// whiteboard/shader previews work even when the user has `G:\Dx\code` (or any other folder) open.
-/// Walks ancestors of CWD and current_exe looking for sibling `www` or direct `www` match.
-/// Supports DX_WWW_ROOT env override. Falls back to the known G:\Dx\www for this environment.
+#[allow(dead_code)]
 fn find_dx_www_root() -> Option<PathBuf> {
     // Env override takes precedence
     if let Ok(env) = std::env::var("DX_WWW_ROOT") {
@@ -182,6 +213,7 @@ fn find_dx_www_root() -> Option<PathBuf> {
     None
 }
 
+#[allow(dead_code)]
 fn is_dx_www_root(p: &Path) -> bool {
     p.join("examples").join("whiteboard").join("dx").is_file()
         && p.join("examples").join("shader").join("dx").is_file()
@@ -190,6 +222,7 @@ fn is_dx_www_root(p: &Path) -> bool {
 /// Scan recent dev server logs (at project root and .dx/) for the "Development server running at http://host:port"
 /// line (emitted by `dx dev`). Returns the last seen host/port so the preview can target the live instance
 /// even if dx chose a free port other than the one declared in the project's `dx` manifest.
+#[allow(dead_code)]
 fn scan_dev_server_port_from_logs(root: &Path) -> Option<(String, u16)> {
     let mut log_files: Vec<PathBuf> = Vec::new();
 
@@ -247,6 +280,7 @@ fn scan_dev_server_port_from_logs(root: &Path) -> Option<(String, u16)> {
     None
 }
 
+#[allow(dead_code)]
 fn parse_running_at_line(line: &str) -> Option<(String, u16)> {
     let lower = line.to_ascii_lowercase();
     let marker = "running at http://";
