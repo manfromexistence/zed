@@ -343,13 +343,39 @@ test("Agent chat input add-context trigger carries DX web tool transparent logos
   assert.match(logoStrip, /cx\.theme\(\)\.appearance\.is_light\(\)/);
   assert.match(logoStrip, /Icon::from_path\(logo\.path_for_theme\(is_light\)\)/);
   assert.match(logoStrip, /\.id\("dx-web-tool-logo-strip"\)/);
-  assert.match(renderMessageEditor, /\.child\(self\.render_dx_web_tool_logo_strip\(cx\)\)/);
+  assert.match(logoStrip, /is_agent_www_tool_preview_enabled\(tool_id\)/);
+  assert.match(logoStrip, /open_agent_www_tool_preview\(tool_id, window, cx\)/);
+  assert.match(renderMessageEditor, /render_dx_web_tool_logo_strip\(cx\)/);
+  assert.match(renderMessageEditor, /render_agent_thread_messages_back_button/);
+  assert.match(renderMessageEditor, /showing_www_preview/);
   assert.match(
     renderMessageEditor,
     /self\.render_add_context_button\(cx\)[\s\S]*self\.render_dx_web_tool_logo_strip\(cx\)[\s\S]*self\.render_send_button\(cx\)/,
   );
   assert.doesNotMatch(addContextButton, /render_dx_web_tool_logo_strip/);
   assert.match(addContextButton, /IconButton::new\("add-context", IconName::Plus\)/);
+});
+
+test("Agent thread embeds DX WWW preview for whiteboard and shader without leaving chat input", () => {
+  const agentThreadPreview = read("crates/agent_ui/src/agent_thread_www_preview.rs");
+  const webPreviewInit = read("crates/web_preview/src/web_preview.rs");
+  const render = functionBodyAfter(threadView, "impl Render for ThreadView", "render");
+  const openPreview = functionBody(threadView, "open_agent_www_tool_preview");
+  const closePreview = functionBody(threadView, "close_agent_www_tool_preview");
+  const previewSurface = functionBody(threadView, "render_agent_www_preview_surface");
+
+  assert.match(agentThreadPreview, /AGENT_WWW_TOOL_WHITEBOARD/);
+  assert.match(agentThreadPreview, /AGENT_WWW_TOOL_SHADER/);
+  assert.match(agentThreadPreview, /register_agent_thread_www_preview_hooks/);
+  assert.match(webPreviewInit, /agent_thread_www_preview::register_hooks\(\)/);
+  assert.match(render, /render_agent_www_preview_surface/);
+  assert.match(render, /AgentThreadCenterSurface::WwwPreview/);
+  assert.match(openPreview, /preview_url_for_agent_www_tool/);
+  assert.match(openPreview, /agent_thread_www_preview_hooks\(\)/);
+  assert.match(closePreview, /AgentThreadCenterSurface::Messages/);
+  assert.match(previewSurface, /id\("agent-thread-www-preview"\)/);
+  assert.match(previewSurface, /FLOATING_MESSAGE_EDITOR_SAFE_PADDING_PX/);
+  assert.match(threadView, /IconButton::new\("agent-thread-messages-back", IconName::ArrowLeft\)/);
 });
 
 test("Agent Liquid Glass settings preserve the tuned recovered Rust effect values", () => {

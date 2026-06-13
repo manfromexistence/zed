@@ -1,3 +1,39 @@
+[2026-06-13] - Fix whiteboard/shader agent-thread WWW preview connection to real DX WWW framework projects (examples/ + dx dev)
+
+ADDED:
+- (none; logic extensions inside existing agent_thread_www_preview)
+
+CHANGED:
+- `crates/agent_ui/src/agent_thread_www_preview.rs`: rewrote URL resolution for agent www previews. `project_root_for_agent_www_tool` / `preview_url_for_agent_www_tool` no longer take (or use) workspace_root. Instead `find_dx_www_root()` discovers the canonical location containing `examples/whiteboard` + `examples/shader` (env DX_WWW_ROOT, ancestor walk from cwd/current_exe looking for sibling `www` or direct, + G:\Dx\www fallback). Targets `G:\Dx\www\examples\...` which hold the real `dx` project manifests used by the www framework. `dev_server_origin` now also calls `scan_dev_server_port_from_logs` / `parse_running_at_line` to extract the live "Development server running at http://host:port" from project/*.log or .dx/* logs (so auto port selection e.g. 3001 wins over declared port=3000).
+- `crates/agent_ui/src/conversation_view/thread_view.rs`: deleted unused `workspace_root_for_www_preview`; `open_agent_www_tool_preview` now calls the 1-arg `preview_url_for_agent_www_tool(tool_id)` (no worktree dep, works even if code/ folder is the open workspace).
+
+FIXED:
+- Whiteboard and shader logo clicks in chat input center strip now correctly resolve and load the dx-www whiteboard/shader apps instead of silently returning (no project_root) or navigating a bogus URL. Resolves "Web preview navigation failed before the page became ready".
+- Port/host mismatch when `dx dev` (from the example package "dev": "dx dev") picks a free port other than the one in the project's `dx` manifest file.
+
+NOTES:
+- DX WWW projects live at `G:\Dx\www\examples\whiteboard` and `.../shader` (not `web/`). They are launched with `dx dev` (honors dev(host=... port=...) clause in the `dx` file at project root; serves the app router at /). The embedded agent preview uses the chromeless onboarding-style WebPreviewView to render the live dev server output inside the thread (chat input stays docked at bottom).
+- The prior "web/" relative-to-worktree assumption was incorrect for the G:\Dx layout (www/ is sibling to code/).
+- Direct rustfmt --edition 2024 applied to touched .rs; git hygiene (no cargo, no just run, per AGENTS.md). User runs `just run` for validation.
+- Updated todo + changelog (error-trail + handoff).
+
+[2026-06-13] - Agent AI screen embedded whiteboard/shader web preview in thread (chat input stays)
+
+ADDED:
+- `crates/agent_ui/src/agent_thread_www_preview.rs`: hook bridge + URL resolution for `web/whiteboard` and `web/shader` DX-WWW projects (parses `dx` dev host/port, default `127.0.0.1:3000`).
+- `crates/web_preview/src/agent_thread_www_preview.rs`, `crates/web_preview_macos/src/agent_thread_www_preview.rs`, `crates/web_preview_linux/src/agent_thread_www_preview.rs`: register hooks at web preview init; embed `WebPreviewView` via `new_for_agent_thread` / `load_agent_thread_url` (chromeless like onboarding, no URL bar).
+- ThreadView state: `center_surface`, `www_preview`; whiteboard/shader logo clicks open preview; back arrow (`agent-thread-messages-back`) returns to message list; preview replaces message list area with bottom padding for floating chat input.
+
+CHANGED:
+- `crates/agent_ui/src/conversation_view/thread_view.rs`: interactive logo strip for whiteboard/shader, embedded preview surface render, overlay chat input when preview active.
+- `crates/web_preview/src/web_preview.rs`, macOS/Linux `lib.rs`: call `register_hooks()` during init.
+- `script/dx-agent-composer-liquid-glass-source.test.ts`: guard for preview wiring + back button.
+
+NOTES:
+- Avoided `agent_ui` → `web_preview` dependency (cycle on Windows) using OnceLock hooks registered from web_preview init.
+- (Superseded) Required DX-WWW dev server running for the selected project (whiteboard or shader). See follow-up 2026-06-13 fix entry for correct examples/ resolution + live port scan.
+- Source inspection + rustfmt only; user validates with `just run`.
+
 [2026-06-12] - Re-fix Forge in bottombar (title bar / main editor chrome "bottom bar" surface, NOT sidebar or AI screen): commented as the 3rd item in the hidden feature / right panel buttons
 ADDED/CHANGED:
 - Per user clarification "In our bottombar not sidebar or ai screen": the target is the right panel cluster (Icons, Fonts, Media, UI, Check toggles) in the title bar (editor chrome "bottom bar" surface / main chrome right_content, the "left side" of that right cluster).

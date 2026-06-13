@@ -5,6 +5,8 @@ use gpui::actions;
 use workspace::Workspace;
 
 #[cfg(target_os = "linux")]
+pub(crate) mod agent_thread_www_preview;
+#[cfg(target_os = "linux")]
 pub(crate) mod wayland_host;
 #[cfg(target_os = "linux")]
 pub mod web_preview_view;
@@ -24,6 +26,7 @@ actions!(
 
 #[cfg(target_os = "linux")]
 pub fn init(cx: &mut App) {
+    agent_thread_www_preview::register_hooks();
     cx.observe_new(|workspace: &mut Workspace, window, cx| {
         let Some(window) = window else {
             return;

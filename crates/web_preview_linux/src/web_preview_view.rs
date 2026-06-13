@@ -386,6 +386,24 @@ impl WebPreviewView {
         self.load_requested_url(url, window, cx);
     }
 
+    pub fn new_for_agent_thread(
+        workspace: WeakEntity<Workspace>,
+        current_url: String,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Self {
+        Self::new_for_onboarding(workspace, current_url, None, None, window, cx)
+    }
+
+    pub fn load_agent_thread_url(
+        &mut self,
+        url: &str,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        self.load_onboarding_url(url, window, cx);
+    }
+
     fn new_for_url(
         workspace: WeakEntity<Workspace>,
         workspace_context: PreviewWorkspaceContext,

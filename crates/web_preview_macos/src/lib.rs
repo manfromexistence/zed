@@ -5,6 +5,8 @@ use gpui::actions;
 use workspace::Workspace;
 
 #[cfg(target_os = "macos")]
+pub(crate) mod agent_thread_www_preview;
+#[cfg(target_os = "macos")]
 pub(crate) mod macos_host;
 #[cfg(target_os = "macos")]
 pub mod web_preview_view;
@@ -22,6 +24,7 @@ actions!(
 
 #[cfg(target_os = "macos")]
 pub fn init(cx: &mut App) {
+    agent_thread_www_preview::register_hooks();
     cx.observe_new(|workspace: &mut Workspace, window, cx| {
         let Some(window) = window else {
             return;

@@ -8,6 +8,8 @@ use workspace::{Workspace, register_project_item};
 #[cfg(target_os = "windows")]
 pub(crate) mod agent_browser_contracts;
 #[cfg(target_os = "windows")]
+pub(crate) mod agent_thread_www_preview;
+#[cfg(target_os = "windows")]
 pub mod dx_studio;
 #[cfg(target_os = "windows")]
 pub(crate) mod dx_studio_bridge;
@@ -39,6 +41,7 @@ actions!(
 
 #[cfg(target_os = "windows")]
 pub fn init(cx: &mut App) {
+    agent_thread_www_preview::register_hooks();
     register_project_item::<web_preview_view::WebPreviewView>(cx);
     cx.observe_new(|workspace: &mut Workspace, window, cx| {
         let Some(window) = window else {

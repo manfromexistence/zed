@@ -1,6 +1,10 @@
 use crate::{
     DEFAULT_THREAD_TITLE, SelectPermissionGranularity,
     agent_configuration::configure_context_server_modal::default_markdown_style,
+    agent_thread_www_preview::{
+        AgentThreadCenterSurface, agent_thread_www_preview_hooks,
+        is_agent_www_tool_preview_enabled, preview_url_for_agent_www_tool,
+    },
     dx_agent_bridge::DxConfiguredPluginSummary,
     open_abs_path_at_point,
     thread_metadata_store::{ThreadId, ThreadMetadataStore},
@@ -673,6 +677,8 @@ pub struct ThreadView {
     /// dropped from this set so a future regression of the same kind would
     /// re-show.
     dismissed_skill_loading_errors: HashSet<SkillLoadingError>,
+    center_surface: AgentThreadCenterSurface,
+    www_preview: Option<gpui::AnyEntity>,
 }
 
 #[derive(Clone)]
@@ -1107,6 +1113,8 @@ impl ThreadView {
             active_response_anchor_entry_ix: None,
             visible_entry_range: None,
             dismissed_skill_loading_errors: HashSet::default(),
+            center_surface: AgentThreadCenterSurface::Messages,
+            www_preview: None,
         };
 
         this.sync_generating_indicator(cx);
@@ -3942,7 +3950,12 @@ impl ThreadView {
 
         let max_content_width = AgentSettings::get_global(cx).max_content_width;
         let has_messages = self.list_state.item_count() > 0;
-        let expands_editor_area = editor_expanded && has_messages;
+        let showing_www_preview = matches!(
+            self.center_surface,
+            AgentThreadCenterSurface::WwwPreview { .. }
+        );
+        let overlay_chat_input = has_messages || showing_www_preview;
+        let expands_editor_area = editor_expanded && overlay_chat_input;
         let (_border_focused, border, panel_background) = {
             let colors = cx.theme().colors();
             (
@@ -3963,14 +3976,14 @@ impl ThreadView {
             .px_2()
             .pt_0p5()
             .pb_2()
-            .when(has_messages, |this| {
+            .when(overlay_chat_input, |this| {
                 this.absolute().left_0().right_0().bottom_0().occlude()
             })
-            .when(!has_messages, |this| this.bg(panel_background))
+            .when(!overlay_chat_input, |this| this.bg(panel_background))
             .justify_center()
             .items_end()
             .map(|this| {
-                if has_messages {
+                if overlay_chat_input {
                     this.on_action(cx.listener(Self::expand_message_editor))
                         .when(editor_expanded, |this| this.h(vh(0.8, window)))
                 } else {
@@ -3997,7 +4010,7 @@ impl ThreadView {
                     .shadow_sm()
                     .flex_shrink_1()
                     .flex_grow_0()
-                    .when(has_messages && !expands_editor_area, |this| {
+                    .when(overlay_chat_input && !expands_editor_area, |this| {
                         this.max_h(rems(COMPOSER_COLLAPSED_MAX_HEIGHT_REMS))
                     })
                     .when(expands_editor_area, |this| this.h_full())
@@ -4019,7 +4032,7 @@ impl ThreadView {
                                     .w_full()
                                     .min_h_0()
                                     .when(expands_editor_area, |this| this.flex_1())
-                                    .when(has_messages && !expands_editor_area, |this| {
+                                    .when(overlay_chat_input && !expands_editor_area, |this| {
                                         this.overflow_y_scroll()
                                             .max_h(rems(COMPOSER_COLLAPSED_EDITOR_MAX_HEIGHT_REMS))
                                     })
@@ -4103,7 +4116,19 @@ impl ThreadView {
                                             .child(self.render_follow_toggle(cx)),
                                     )
                                     .child(div().flex_1().min_w_0())
-                                    .child(self.render_dx_web_tool_logo_strip(cx))
+                                    .child(
+                                        h_flex()
+                                            .gap_2()
+                                            .items_center()
+                                            .when(showing_www_preview, |this| {
+                                                this.child(
+                                                    self.render_agent_thread_messages_back_button(
+                                                        cx,
+                                                    ),
+                                                )
+                                            })
+                                            .child(self.render_dx_web_tool_logo_strip(cx)),
+                                    )
                                     .child(div().flex_1().min_w_0())
                                     .child(
                                         h_flex()
@@ -5812,6 +5837,10 @@ impl ThreadView {
 
     fn render_dx_web_tool_logo_strip(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let is_light = cx.theme().appearance.is_light();
+        let active_tool_id = match self.center_surface {
+            AgentThreadCenterSurface::WwwPreview { tool_id } => Some(tool_id),
+            AgentThreadCenterSurface::Messages => None,
+        };
 
         h_flex()
             .id("dx-web-tool-logo-strip")
@@ -5822,14 +5851,121 @@ impl ThreadView {
             .items_center()
             .justify_center()
             .children(DX_WEB_TOOL_LOGOS.iter().map(|logo| {
+                let tool_id = logo.id;
+                let preview_enabled = is_agent_www_tool_preview_enabled(tool_id);
+                let is_active = active_tool_id == Some(tool_id);
+
                 div()
                     .id(format!("dx-web-tool-logo-{}", logo.id))
                     .size_5()
                     .flex_none()
                     .rounded_sm()
+                    .when(is_active, |this| {
+                        this.bg(cx.theme().colors().element_selected)
+                    })
+                    .when(preview_enabled, |this| {
+                        this.cursor_pointer()
+                            .hover(|style| style.bg(cx.theme().colors().element_hover))
+                    })
                     .child(Icon::from_path(logo.path_for_theme(is_light)).size(IconSize::Small))
                     .tooltip(Tooltip::text(logo.label))
+                    .when(preview_enabled, |this| {
+                        this.on_click(cx.listener(move |this, _, window, cx| {
+                            this.open_agent_www_tool_preview(tool_id, window, cx);
+                        }))
+                    })
             }))
+    }
+
+    fn render_agent_thread_messages_back_button(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        IconButton::new("agent-thread-messages-back", IconName::ArrowLeft)
+            .icon_size(IconSize::Small)
+            .icon_color(Color::Muted)
+            .tooltip(Tooltip::text("Back to messages"))
+            .on_click(cx.listener(|this, _, window, cx| {
+                this.close_agent_www_tool_preview(window, cx);
+            }))
+    }
+
+    fn open_agent_www_tool_preview(
+        &mut self,
+        tool_id: &'static str,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if !is_agent_www_tool_preview_enabled(tool_id) {
+            return;
+        }
+
+        // URL discovery is independent of the current Zed worktree (finds G:\Dx\www\examples\... via
+        // ancestor walk + known layout + DX_WWW_ROOT). This ensures clicks on whiteboard/shader logos
+        // correctly target the dx www framework projects regardless of which folder is open in Zed.
+        let Some(url) = preview_url_for_agent_www_tool(tool_id) else {
+            return;
+        };
+        let Some(hooks) = agent_thread_www_preview_hooks() else {
+            return;
+        };
+
+        let preview = (hooks.open_url)(
+            self.workspace.clone(),
+            url,
+            self.www_preview.clone(),
+            window,
+            cx,
+        );
+        if let Some(preview) = preview {
+            self.www_preview = Some(preview);
+            self.center_surface = AgentThreadCenterSurface::WwwPreview { tool_id };
+            cx.notify();
+        }
+    }
+
+    fn close_agent_www_tool_preview(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if let (Some(hooks), Some(preview)) =
+            (agent_thread_www_preview_hooks(), self.www_preview.as_ref())
+        {
+            (hooks.deactivate)(preview, window, cx);
+        }
+
+        self.center_surface = AgentThreadCenterSurface::Messages;
+        cx.notify();
+    }
+
+    fn render_agent_www_preview_surface(
+        &self,
+        has_messages: bool,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let Some(preview) = self.www_preview.as_ref() else {
+            return v_flex()
+                .size_full()
+                .items_center()
+                .justify_center()
+                .child(
+                    Label::new("Web preview is unavailable")
+                        .size(LabelSize::Small)
+                        .color(Color::Muted),
+                )
+                .into_any_element();
+        };
+
+        let Some(hooks) = agent_thread_www_preview_hooks() else {
+            return Empty.into_any();
+        };
+
+        div()
+            .id("agent-thread-www-preview")
+            .relative()
+            .flex_1()
+            .size_full()
+            .overflow_hidden()
+            .when(has_messages, |this| {
+                this.pb(px(FLOATING_MESSAGE_EDITOR_SAFE_PADDING_PX))
+            })
+            .child((hooks.render)(preview, window, cx))
+            .into_any_element()
     }
 
     fn render_add_context_button(&mut self, cx: &mut Context<Self>) -> impl IntoElement {
@@ -11335,6 +11471,10 @@ impl ThreadView {
 impl Render for ThreadView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let has_messages = self.list_state.item_count() > 0;
+        let showing_www_preview = matches!(
+            self.center_surface,
+            AgentThreadCenterSurface::WwwPreview { .. }
+        );
         let list_state = self.list_state.clone();
 
         let conversation = v_flex()
@@ -11342,7 +11482,12 @@ impl Render for ThreadView {
                 this.child(Self::render_resume_notice(cx))
             })
             .map(|this| {
-                if has_messages {
+                if showing_www_preview {
+                    this.flex_1()
+                        .size_full()
+                        .child(self.render_agent_www_preview_surface(has_messages, window, cx))
+                        .into_any()
+                } else if has_messages {
                     this.flex_1()
                         .size_full()
                         .child(self.render_entries(cx))
@@ -11538,7 +11683,7 @@ impl Render for ThreadView {
             .children(self.render_thread_retry_status_callout())
             .children(self.render_thread_error(window, cx))
             .when_some(
-                match has_messages {
+                match has_messages || showing_www_preview {
                     true => None,
                     false => self.new_server_version_available.clone(),
                 },
