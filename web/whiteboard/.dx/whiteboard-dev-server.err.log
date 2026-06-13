@@ -1,0 +1,10 @@
+Starting development server...
+
+Development server running at http://127.0.0.1:3000
+   Hot reload: enabled
+   Devtools: enabled
+   Dev server: axum (hot reload uses Axum dev endpoints)
+   Project: dx-www-whiteboard
+
+Press Ctrl+C to stop
+

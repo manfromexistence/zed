@@ -1,0 +1,2455 @@
+{
+  "schema": "dx.www.deploy.cache_manifest",
+  "schema_revision": 1,
+  "manifest_hash": "blake3:3ac644e3e98d413e51f8d6a8a99d86ae9a12ae64964ba7fa3c8c5b730d6e54d5",
+  "public_runtime_artifacts": [
+    {
+      "path": "_dx/styles/react-route-a79f628ac70b9d4f.css",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "_dx/styles/react-route-a79f628ac70b9d4f.css.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "_dx/styles/react-route-a79f628ac70b9d4f.css",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "text/css; charset=utf-8"
+      }
+    },
+    {
+      "path": "_dx/styles/react-route-a79f628ac70b9d4f.css.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "_dx/styles/react-route-a79f628ac70b9d4f.css",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "text/css; charset=utf-8"
+      }
+    },
+    {
+      "path": "app/index.dxpk",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/octet-stream",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "app/index.dxpk.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/octet-stream",
+      "content_encoding": "br",
+      "encoded_from": "app/index.dxpk",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/octet-stream"
+      }
+    },
+    {
+      "path": "app/index.dxpk.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/octet-stream",
+      "content_encoding": "gzip",
+      "encoded_from": "app/index.dxpk",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/octet-stream"
+      }
+    },
+    {
+      "path": "app/index.html",
+      "kind": "route-html",
+      "cache_control": "public, max-age=0, must-revalidate",
+      "content_type": "text/html; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "dx-shader/assets/apple-touch-icon.png",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "dx-shader/assets/favicon.png",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "dx-shader/assets/icon-512.png",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "dx-shader/assets/og.png",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "dx-shader/docs/preview-chrome.png",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "dx-shader/docs/preview-glyphs.png",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "dx-shader/docs/preview-silk.png",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "dx-shader/fonts/jetbrains-mono-latin-400-normal.woff2",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "font/woff2",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "dx-shader/fonts/jetbrains-mono-latin-500-normal.woff2",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "font/woff2",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "dx-shader/fonts/jetbrains-mono-latin-600-normal.woff2",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "font/woff2",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "dx-shader/fonts/jetbrains-mono-latin-700-normal.woff2",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "font/woff2",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "dx-shader/js/engine.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "dx-shader/js/engine.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "dx-shader/js/engine.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "dx-shader/js/engine.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "dx-shader/js/engine.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "dx-shader/js/exporter.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "dx-shader/js/exporter.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "dx-shader/js/exporter.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "dx-shader/js/exporter.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "dx-shader/js/exporter.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "dx-shader/js/fx.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "dx-shader/js/fx.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "dx-shader/js/fx.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "dx-shader/js/fx.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "dx-shader/js/fx.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "dx-shader/js/gifenc.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "dx-shader/js/gifenc.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "dx-shader/js/gifenc.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "dx-shader/js/gifenc.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "dx-shader/js/gifenc.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "dx-shader/js/main.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "dx-shader/js/main.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "dx-shader/js/main.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "dx-shader/js/main.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "dx-shader/js/main.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "dx-shader/js/modals.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "dx-shader/js/modals.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "dx-shader/js/modals.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "dx-shader/js/modals.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "dx-shader/js/modals.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "dx-shader/js/palettes.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "dx-shader/js/palettes.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "dx-shader/js/palettes.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "dx-shader/js/palettes.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "dx-shader/js/palettes.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "dx-shader/js/shaders.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "dx-shader/js/shaders.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "dx-shader/js/shaders.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "dx-shader/js/shaders.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "dx-shader/js/shaders.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "dx-shader/js/ui.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "dx-shader/js/ui.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "dx-shader/js/ui.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "dx-shader/js/ui.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "dx-shader/js/ui.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "dx-shader/js/webmmux.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "dx-shader/js/webmmux.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "dx-shader/js/webmmux.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "dx-shader/js/webmmux.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "dx-shader/js/webmmux.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "dx-shader/js/zip.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "dx-shader/js/zip.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "dx-shader/js/zip.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "dx-shader/js/zip.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "dx-shader/js/zip.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "dx-shader/styles.css",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "dx-shader/styles.css.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "dx-shader/styles.css",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "text/css; charset=utf-8"
+      }
+    },
+    {
+      "path": "dx-shader/styles.css.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "dx-shader/styles.css",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "text/css; charset=utf-8"
+      }
+    },
+    {
+      "path": "favicon.svg",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "favicon.svg.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "favicon.svg",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "favicon.svg.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "favicon.svg",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "icon.svg",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "icon.svg.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "icon.svg",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "icon.svg.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "icon.svg",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/apple-touch-icon-653d1ed174ed39da.placeholder.svg",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/apple-touch-icon-653d1ed174ed39da.placeholder.svg.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "image-placeholders/public/dx-shader/assets/apple-touch-icon-653d1ed174ed39da.placeholder.svg",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/apple-touch-icon-653d1ed174ed39da.placeholder.svg.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "image-placeholders/public/dx-shader/assets/apple-touch-icon-653d1ed174ed39da.placeholder.svg",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/favicon-95cdf2c6b75c0830.placeholder.svg",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/favicon-95cdf2c6b75c0830.placeholder.svg.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "image-placeholders/public/dx-shader/assets/favicon-95cdf2c6b75c0830.placeholder.svg",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/favicon-95cdf2c6b75c0830.placeholder.svg.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "image-placeholders/public/dx-shader/assets/favicon-95cdf2c6b75c0830.placeholder.svg",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/icon-512-cb505b913bce0505.placeholder.svg",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/icon-512-cb505b913bce0505.placeholder.svg.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "image-placeholders/public/dx-shader/assets/icon-512-cb505b913bce0505.placeholder.svg",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/icon-512-cb505b913bce0505.placeholder.svg.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "image-placeholders/public/dx-shader/assets/icon-512-cb505b913bce0505.placeholder.svg",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/og-1bf376c84ef0d032.placeholder.svg",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/og-1bf376c84ef0d032.placeholder.svg.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "image-placeholders/public/dx-shader/assets/og-1bf376c84ef0d032.placeholder.svg",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/og-1bf376c84ef0d032.placeholder.svg.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "image-placeholders/public/dx-shader/assets/og-1bf376c84ef0d032.placeholder.svg",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/docs/preview-chrome-7b63194fdf61b810.placeholder.svg",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/docs/preview-chrome-7b63194fdf61b810.placeholder.svg.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "image-placeholders/public/dx-shader/docs/preview-chrome-7b63194fdf61b810.placeholder.svg",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/docs/preview-chrome-7b63194fdf61b810.placeholder.svg.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "image-placeholders/public/dx-shader/docs/preview-chrome-7b63194fdf61b810.placeholder.svg",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/docs/preview-glyphs-7b63194fdf61b810.placeholder.svg",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/docs/preview-glyphs-7b63194fdf61b810.placeholder.svg.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "image-placeholders/public/dx-shader/docs/preview-glyphs-7b63194fdf61b810.placeholder.svg",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/docs/preview-glyphs-7b63194fdf61b810.placeholder.svg.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "image-placeholders/public/dx-shader/docs/preview-glyphs-7b63194fdf61b810.placeholder.svg",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/docs/preview-silk-7b63194fdf61b810.placeholder.svg",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/docs/preview-silk-7b63194fdf61b810.placeholder.svg.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "image-placeholders/public/dx-shader/docs/preview-silk-7b63194fdf61b810.placeholder.svg",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/docs/preview-silk-7b63194fdf61b810.placeholder.svg.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "image-placeholders/public/dx-shader/docs/preview-silk-7b63194fdf61b810.placeholder.svg",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "image-placeholders/public/favicon-b0698a08bf67b748.placeholder.svg",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "image-placeholders/public/favicon-b0698a08bf67b748.placeholder.svg.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "image-placeholders/public/favicon-b0698a08bf67b748.placeholder.svg",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "image-placeholders/public/favicon-b0698a08bf67b748.placeholder.svg.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "image-placeholders/public/favicon-b0698a08bf67b748.placeholder.svg",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "image-placeholders/public/icon-653d1ed174ed39da.placeholder.svg",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "image-placeholders/public/icon-653d1ed174ed39da.placeholder.svg.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "image-placeholders/public/icon-653d1ed174ed39da.placeholder.svg",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "image-placeholders/public/icon-653d1ed174ed39da.placeholder.svg.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "image-placeholders/public/icon-653d1ed174ed39da.placeholder.svg",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "image-placeholders/public/logo-b0698a08bf67b748.placeholder.svg",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "image-placeholders/public/logo-b0698a08bf67b748.placeholder.svg.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "image-placeholders/public/logo-b0698a08bf67b748.placeholder.svg",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "image-placeholders/public/logo-b0698a08bf67b748.placeholder.svg.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "image-placeholders/public/logo-b0698a08bf67b748.placeholder.svg",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "logo.svg",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "logo.svg.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "logo.svg",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "logo.svg.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "logo.svg",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "public/dx-shader/assets/apple-touch-icon-8fd723367b340dd3.png",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/assets/apple-touch-icon.png",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/assets/favicon-6bdf81e333572f09.png",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/assets/favicon.png",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/assets/icon-512-e36bc88500149466.png",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/assets/icon-512.png",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/assets/og-c6e50395e4e4bd5c.png",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/assets/og.png",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/docs/preview-chrome-b9351771d83a6471.png",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/docs/preview-chrome.png",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/docs/preview-glyphs-a970ec9b0be1c989.png",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/docs/preview-glyphs.png",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/docs/preview-silk-2eb9372696e7cf11.png",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/docs/preview-silk.png",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-400-normal-7ebe91be3924c914.woff2",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "font/woff2",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-400-normal.woff2",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "font/woff2",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-500-normal-061a05a153795ba8.woff2",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "font/woff2",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-500-normal.woff2",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "font/woff2",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-600-normal-c88f1794b1c2e43f.woff2",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "font/woff2",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-600-normal.woff2",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "font/woff2",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-700-normal-97a57d0f7bd23ede.woff2",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "font/woff2",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-700-normal.woff2",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "font/woff2",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/js/engine-dff24fe05e5af3e7.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/js/engine-dff24fe05e5af3e7.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/engine-dff24fe05e5af3e7.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/engine-dff24fe05e5af3e7.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/engine-dff24fe05e5af3e7.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/engine.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/js/engine.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/engine.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/engine.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/engine.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/exporter-73ddb9fa52baeafc.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/js/exporter-73ddb9fa52baeafc.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/exporter-73ddb9fa52baeafc.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/exporter-73ddb9fa52baeafc.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/exporter-73ddb9fa52baeafc.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/exporter.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/js/exporter.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/exporter.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/exporter.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/exporter.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/fx-b31f960999d6a128.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/js/fx-b31f960999d6a128.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/fx-b31f960999d6a128.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/fx-b31f960999d6a128.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/fx-b31f960999d6a128.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/fx.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/js/fx.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/fx.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/fx.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/fx.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/gifenc-5cebe3877a2b70ca.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/js/gifenc-5cebe3877a2b70ca.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/gifenc-5cebe3877a2b70ca.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/gifenc-5cebe3877a2b70ca.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/gifenc-5cebe3877a2b70ca.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/gifenc.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/js/gifenc.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/gifenc.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/gifenc.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/gifenc.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/main-c672ad09dbb888a5.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/js/main-c672ad09dbb888a5.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/main-c672ad09dbb888a5.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/main-c672ad09dbb888a5.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/main-c672ad09dbb888a5.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/main.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/js/main.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/main.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/main.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/main.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/modals-e9bcbb916d868602.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/js/modals-e9bcbb916d868602.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/modals-e9bcbb916d868602.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/modals-e9bcbb916d868602.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/modals-e9bcbb916d868602.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/modals.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/js/modals.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/modals.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/modals.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/modals.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/palettes-204eb72c49f46650.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/js/palettes-204eb72c49f46650.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/palettes-204eb72c49f46650.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/palettes-204eb72c49f46650.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/palettes-204eb72c49f46650.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/palettes.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/js/palettes.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/palettes.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/palettes.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/palettes.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/shaders-33901d228423d859.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/js/shaders-33901d228423d859.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/shaders-33901d228423d859.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/shaders-33901d228423d859.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/shaders-33901d228423d859.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/shaders.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/js/shaders.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/shaders.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/shaders.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/shaders.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/ui-73bbfbb4d88bf693.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/js/ui-73bbfbb4d88bf693.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/ui-73bbfbb4d88bf693.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/ui-73bbfbb4d88bf693.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/ui-73bbfbb4d88bf693.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/ui.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/js/ui.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/ui.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/ui.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/ui.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/webmmux-476036d65130dc35.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/js/webmmux-476036d65130dc35.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/webmmux-476036d65130dc35.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/webmmux-476036d65130dc35.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/webmmux-476036d65130dc35.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/webmmux.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/js/webmmux.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/webmmux.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/webmmux.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/webmmux.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/zip-bc4e3341bafceec9.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/js/zip-bc4e3341bafceec9.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/zip-bc4e3341bafceec9.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/zip-bc4e3341bafceec9.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/zip-bc4e3341bafceec9.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/zip.js",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/js/zip.js.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/zip.js",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/js/zip.js.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/zip.js",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "application/javascript; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/styles-7f2fc338a5e8d265.css",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/styles-7f2fc338a5e8d265.css.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/styles-7f2fc338a5e8d265.css",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "text/css; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/styles-7f2fc338a5e8d265.css.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/styles-7f2fc338a5e8d265.css",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "text/css; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/styles.css",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/dx-shader/styles.css.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/styles.css",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "text/css; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/dx-shader/styles.css.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/styles.css",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "text/css; charset=utf-8"
+      }
+    },
+    {
+      "path": "public/favicon-cfb09e06980b21ac.svg",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/favicon-cfb09e06980b21ac.svg.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "public/favicon-cfb09e06980b21ac.svg",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "public/favicon-cfb09e06980b21ac.svg.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "public/favicon-cfb09e06980b21ac.svg",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "public/favicon.svg",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/favicon.svg.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "public/favicon.svg",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "public/favicon.svg.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "public/favicon.svg",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "public/icon-32341047d202fbff.svg",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/icon-32341047d202fbff.svg.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "public/icon-32341047d202fbff.svg",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "public/icon-32341047d202fbff.svg.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "public/icon-32341047d202fbff.svg",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "public/icon.svg",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/icon.svg.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "public/icon.svg",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "public/icon.svg.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "public/icon.svg",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "public/logo-2afe23f6d7f297ab.svg",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/logo-2afe23f6d7f297ab.svg.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "public/logo-2afe23f6d7f297ab.svg",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "public/logo-2afe23f6d7f297ab.svg.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "public/logo-2afe23f6d7f297ab.svg",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "public/logo.svg",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "public/logo.svg.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "public/logo.svg",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "public/logo.svg.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "public/logo.svg",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "image/svg+xml"
+      }
+    },
+    {
+      "path": "styles/dx-shader.css",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "styles/dx-shader.css.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "styles/dx-shader.css",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "text/css; charset=utf-8"
+      }
+    },
+    {
+      "path": "styles/dx-shader.css.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "styles/dx-shader.css",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "text/css; charset=utf-8"
+      }
+    },
+    {
+      "path": "styles/generated.css",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "styles/generated.css.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "styles/generated.css",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "text/css; charset=utf-8"
+      }
+    },
+    {
+      "path": "styles/generated.css.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "styles/generated.css",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "text/css; charset=utf-8"
+      }
+    },
+    {
+      "path": "styles/globals.css",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "styles/globals.css.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "styles/globals.css",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "text/css; charset=utf-8"
+      }
+    },
+    {
+      "path": "styles/globals.css.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "styles/globals.css",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "text/css; charset=utf-8"
+      }
+    },
+    {
+      "path": "styles/theme.css",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null,
+      "cdn_headers": {}
+    },
+    {
+      "path": "styles/theme.css.br",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "styles/theme.css",
+      "cdn_headers": {
+        "Content-Encoding": "br",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "text/css; charset=utf-8"
+      }
+    },
+    {
+      "path": "styles/theme.css.gz",
+      "kind": "immutable-asset",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "styles/theme.css",
+      "cdn_headers": {
+        "Content-Encoding": "gzip",
+        "Vary": "Accept-Encoding",
+        "Content-Type": "text/css; charset=utf-8"
+      }
+    }
+  ],
+  "html_cache_control": "public, max-age=0, must-revalidate",
+  "immutable_cache_control": "public, max-age=31536000, immutable",
+  "precompressed_encodings": [
+    "br",
+    "gzip"
+  ],
+  "evidence_cache_control": "no-store"
+}

@@ -243,7 +243,7 @@ impl Panel for DxForgePanel {
     }
 
     fn icon_tooltip(&self, _: &Window, _: &App) -> Option<&'static str> {
-        Some("Forge")
+        Some("Forge This is it??")
     }
 
     fn toggle_action(&self) -> Box<dyn gpui::Action> {

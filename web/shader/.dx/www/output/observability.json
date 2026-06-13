@@ -1,0 +1,1564 @@
+{
+  "version": 1,
+  "generated": "2026-06-11T15:10:08.549817300+00:00",
+  "manifest_hash": "blake3:3ac644e3e98d413e51f8d6a8a99d86ae9a12ae64964ba7fa3c8c5b730d6e54d5",
+  "runtime": "dx-www-production-contract",
+  "secret_fields_collected": false,
+  "privacy": {
+    "collects_request_headers": false,
+    "collects_request_payloads": false,
+    "collects_cookies": false,
+    "collects_query_strings": false,
+    "collects_environment_secrets": false
+  },
+  "health_checks": [],
+  "ready_check": {
+    "path": "/.dx/ready",
+    "method": "GET",
+    "cache_control": "no-store",
+    "required_artifacts": [
+      "app/app-router-execution.json",
+      "app/index.html",
+      "deploy-adapter.json",
+      "manifest.json",
+      "observability.json",
+      "rollback.json"
+    ]
+  },
+  "route_timings": [
+    {
+      "path": "/",
+      "html": "app/index.html",
+      "metric": "route.duration_ms",
+      "unit": "milliseconds",
+      "hook": "preview-contract-route-handler",
+      "collects_query": false,
+      "collects_headers": false,
+      "collects_payload": false
+    }
+  ],
+  "packet_byte_sizes": [
+    {
+      "path": "_dx/styles/react-route-a79f628ac70b9d4f.css",
+      "metric": "packet.bytes",
+      "bytes": 33057,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "_dx/styles/react-route-a79f628ac70b9d4f.css.br",
+      "metric": "packet.bytes",
+      "bytes": 5970,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "_dx/styles/react-route-a79f628ac70b9d4f.css.gz",
+      "metric": "packet.bytes",
+      "bytes": 6785,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "app/index.dxpk",
+      "metric": "packet.bytes",
+      "bytes": 31351,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "app/index.dxpk.br",
+      "metric": "packet.bytes",
+      "bytes": 8245,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "app/index.dxpk.gz",
+      "metric": "packet.bytes",
+      "bytes": 9946,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/assets/apple-touch-icon.png",
+      "metric": "packet.bytes",
+      "bytes": 63857,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/assets/favicon.png",
+      "metric": "packet.bytes",
+      "bytes": 9285,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/assets/icon-512.png",
+      "metric": "packet.bytes",
+      "bytes": 452852,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/assets/og.png",
+      "metric": "packet.bytes",
+      "bytes": 2082002,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/docs/preview-chrome.png",
+      "metric": "packet.bytes",
+      "bytes": 2745569,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/docs/preview-glyphs.png",
+      "metric": "packet.bytes",
+      "bytes": 978265,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/docs/preview-silk.png",
+      "metric": "packet.bytes",
+      "bytes": 2469238,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/fonts/jetbrains-mono-latin-400-normal.woff2",
+      "metric": "packet.bytes",
+      "bytes": 21168,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/fonts/jetbrains-mono-latin-500-normal.woff2",
+      "metric": "packet.bytes",
+      "bytes": 21832,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/fonts/jetbrains-mono-latin-600-normal.woff2",
+      "metric": "packet.bytes",
+      "bytes": 21860,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/fonts/jetbrains-mono-latin-700-normal.woff2",
+      "metric": "packet.bytes",
+      "bytes": 21908,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/engine.js",
+      "metric": "packet.bytes",
+      "bytes": 10683,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/engine.js.br",
+      "metric": "packet.bytes",
+      "bytes": 2784,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/engine.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 3143,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/exporter.js",
+      "metric": "packet.bytes",
+      "bytes": 12581,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/exporter.js.br",
+      "metric": "packet.bytes",
+      "bytes": 3373,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/exporter.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 3851,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/fx.js",
+      "metric": "packet.bytes",
+      "bytes": 3294,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/fx.js.br",
+      "metric": "packet.bytes",
+      "bytes": 1134,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/fx.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 1357,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/gifenc.js",
+      "metric": "packet.bytes",
+      "bytes": 8378,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/gifenc.js.br",
+      "metric": "packet.bytes",
+      "bytes": 2522,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/gifenc.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 2834,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/main.js",
+      "metric": "packet.bytes",
+      "bytes": 39180,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/main.js.br",
+      "metric": "packet.bytes",
+      "bytes": 9268,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/main.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 10678,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/modals.js",
+      "metric": "packet.bytes",
+      "bytes": 13587,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/modals.js.br",
+      "metric": "packet.bytes",
+      "bytes": 3360,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/modals.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 3810,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/palettes.js",
+      "metric": "packet.bytes",
+      "bytes": 3784,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/palettes.js.br",
+      "metric": "packet.bytes",
+      "bytes": 1325,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/palettes.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 1490,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/shaders.js",
+      "metric": "packet.bytes",
+      "bytes": 21579,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/shaders.js.br",
+      "metric": "packet.bytes",
+      "bytes": 6127,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/shaders.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 6903,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/ui.js",
+      "metric": "packet.bytes",
+      "bytes": 7717,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/ui.js.br",
+      "metric": "packet.bytes",
+      "bytes": 1862,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/ui.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 2150,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/webmmux.js",
+      "metric": "packet.bytes",
+      "bytes": 4676,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/webmmux.js.br",
+      "metric": "packet.bytes",
+      "bytes": 1451,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/webmmux.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 1615,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/zip.js",
+      "metric": "packet.bytes",
+      "bytes": 3952,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/zip.js.br",
+      "metric": "packet.bytes",
+      "bytes": 1140,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/js/zip.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 1294,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/styles.css",
+      "metric": "packet.bytes",
+      "bytes": 32957,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/styles.css.br",
+      "metric": "packet.bytes",
+      "bytes": 5844,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "dx-shader/styles.css.gz",
+      "metric": "packet.bytes",
+      "bytes": 6731,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "favicon.svg",
+      "metric": "packet.bytes",
+      "bytes": 874,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "favicon.svg.br",
+      "metric": "packet.bytes",
+      "bytes": 373,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "favicon.svg.gz",
+      "metric": "packet.bytes",
+      "bytes": 440,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "icon.svg",
+      "metric": "packet.bytes",
+      "bytes": 869,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "icon.svg.br",
+      "metric": "packet.bytes",
+      "bytes": 378,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "icon.svg.gz",
+      "metric": "packet.bytes",
+      "bytes": 439,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/apple-touch-icon-653d1ed174ed39da.placeholder.svg",
+      "metric": "packet.bytes",
+      "bytes": 169,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/apple-touch-icon-653d1ed174ed39da.placeholder.svg.br",
+      "metric": "packet.bytes",
+      "bytes": 106,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/apple-touch-icon-653d1ed174ed39da.placeholder.svg.gz",
+      "metric": "packet.bytes",
+      "bytes": 146,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/favicon-95cdf2c6b75c0830.placeholder.svg",
+      "metric": "packet.bytes",
+      "bytes": 165,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/favicon-95cdf2c6b75c0830.placeholder.svg.br",
+      "metric": "packet.bytes",
+      "bytes": 124,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/favicon-95cdf2c6b75c0830.placeholder.svg.gz",
+      "metric": "packet.bytes",
+      "bytes": 148,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/icon-512-cb505b913bce0505.placeholder.svg",
+      "metric": "packet.bytes",
+      "bytes": 169,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/icon-512-cb505b913bce0505.placeholder.svg.br",
+      "metric": "packet.bytes",
+      "bytes": 113,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/icon-512-cb505b913bce0505.placeholder.svg.gz",
+      "metric": "packet.bytes",
+      "bytes": 148,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/og-1bf376c84ef0d032.placeholder.svg",
+      "metric": "packet.bytes",
+      "bytes": 173,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/og-1bf376c84ef0d032.placeholder.svg.br",
+      "metric": "packet.bytes",
+      "bytes": 118,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/og-1bf376c84ef0d032.placeholder.svg.gz",
+      "metric": "packet.bytes",
+      "bytes": 152,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/docs/preview-chrome-7b63194fdf61b810.placeholder.svg",
+      "metric": "packet.bytes",
+      "bytes": 173,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/docs/preview-chrome-7b63194fdf61b810.placeholder.svg.br",
+      "metric": "packet.bytes",
+      "bytes": 119,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/docs/preview-chrome-7b63194fdf61b810.placeholder.svg.gz",
+      "metric": "packet.bytes",
+      "bytes": 154,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/docs/preview-glyphs-7b63194fdf61b810.placeholder.svg",
+      "metric": "packet.bytes",
+      "bytes": 173,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/docs/preview-glyphs-7b63194fdf61b810.placeholder.svg.br",
+      "metric": "packet.bytes",
+      "bytes": 119,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/docs/preview-glyphs-7b63194fdf61b810.placeholder.svg.gz",
+      "metric": "packet.bytes",
+      "bytes": 154,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/docs/preview-silk-7b63194fdf61b810.placeholder.svg",
+      "metric": "packet.bytes",
+      "bytes": 173,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/docs/preview-silk-7b63194fdf61b810.placeholder.svg.br",
+      "metric": "packet.bytes",
+      "bytes": 119,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/docs/preview-silk-7b63194fdf61b810.placeholder.svg.gz",
+      "metric": "packet.bytes",
+      "bytes": 154,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/favicon-b0698a08bf67b748.placeholder.svg",
+      "metric": "packet.bytes",
+      "bytes": 173,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/favicon-b0698a08bf67b748.placeholder.svg.br",
+      "metric": "packet.bytes",
+      "bytes": 109,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/favicon-b0698a08bf67b748.placeholder.svg.gz",
+      "metric": "packet.bytes",
+      "bytes": 148,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/icon-653d1ed174ed39da.placeholder.svg",
+      "metric": "packet.bytes",
+      "bytes": 169,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/icon-653d1ed174ed39da.placeholder.svg.br",
+      "metric": "packet.bytes",
+      "bytes": 106,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/icon-653d1ed174ed39da.placeholder.svg.gz",
+      "metric": "packet.bytes",
+      "bytes": 146,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/logo-b0698a08bf67b748.placeholder.svg",
+      "metric": "packet.bytes",
+      "bytes": 173,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/logo-b0698a08bf67b748.placeholder.svg.br",
+      "metric": "packet.bytes",
+      "bytes": 109,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "image-placeholders/public/logo-b0698a08bf67b748.placeholder.svg.gz",
+      "metric": "packet.bytes",
+      "bytes": 148,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "logo.svg",
+      "metric": "packet.bytes",
+      "bytes": 910,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "logo.svg.br",
+      "metric": "packet.bytes",
+      "bytes": 371,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "logo.svg.gz",
+      "metric": "packet.bytes",
+      "bytes": 454,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/assets/apple-touch-icon-8fd723367b340dd3.png",
+      "metric": "packet.bytes",
+      "bytes": 63857,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/assets/apple-touch-icon.png",
+      "metric": "packet.bytes",
+      "bytes": 63857,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/assets/favicon-6bdf81e333572f09.png",
+      "metric": "packet.bytes",
+      "bytes": 9285,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/assets/favicon.png",
+      "metric": "packet.bytes",
+      "bytes": 9285,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/assets/icon-512-e36bc88500149466.png",
+      "metric": "packet.bytes",
+      "bytes": 452852,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/assets/icon-512.png",
+      "metric": "packet.bytes",
+      "bytes": 452852,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/assets/og-c6e50395e4e4bd5c.png",
+      "metric": "packet.bytes",
+      "bytes": 2082002,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/assets/og.png",
+      "metric": "packet.bytes",
+      "bytes": 2082002,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/docs/preview-chrome-b9351771d83a6471.png",
+      "metric": "packet.bytes",
+      "bytes": 2745569,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/docs/preview-chrome.png",
+      "metric": "packet.bytes",
+      "bytes": 2745569,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/docs/preview-glyphs-a970ec9b0be1c989.png",
+      "metric": "packet.bytes",
+      "bytes": 978265,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/docs/preview-glyphs.png",
+      "metric": "packet.bytes",
+      "bytes": 978265,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/docs/preview-silk-2eb9372696e7cf11.png",
+      "metric": "packet.bytes",
+      "bytes": 2469238,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/docs/preview-silk.png",
+      "metric": "packet.bytes",
+      "bytes": 2469238,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-400-normal-7ebe91be3924c914.woff2",
+      "metric": "packet.bytes",
+      "bytes": 21168,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-400-normal.woff2",
+      "metric": "packet.bytes",
+      "bytes": 21168,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-500-normal-061a05a153795ba8.woff2",
+      "metric": "packet.bytes",
+      "bytes": 21832,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-500-normal.woff2",
+      "metric": "packet.bytes",
+      "bytes": 21832,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-600-normal-c88f1794b1c2e43f.woff2",
+      "metric": "packet.bytes",
+      "bytes": 21860,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-600-normal.woff2",
+      "metric": "packet.bytes",
+      "bytes": 21860,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-700-normal-97a57d0f7bd23ede.woff2",
+      "metric": "packet.bytes",
+      "bytes": 21908,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-700-normal.woff2",
+      "metric": "packet.bytes",
+      "bytes": 21908,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/engine-dff24fe05e5af3e7.js",
+      "metric": "packet.bytes",
+      "bytes": 10683,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/engine-dff24fe05e5af3e7.js.br",
+      "metric": "packet.bytes",
+      "bytes": 2784,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/engine-dff24fe05e5af3e7.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 3143,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/engine.js",
+      "metric": "packet.bytes",
+      "bytes": 10683,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/engine.js.br",
+      "metric": "packet.bytes",
+      "bytes": 2784,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/engine.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 3143,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/exporter-73ddb9fa52baeafc.js",
+      "metric": "packet.bytes",
+      "bytes": 12581,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/exporter-73ddb9fa52baeafc.js.br",
+      "metric": "packet.bytes",
+      "bytes": 3373,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/exporter-73ddb9fa52baeafc.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 3851,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/exporter.js",
+      "metric": "packet.bytes",
+      "bytes": 12581,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/exporter.js.br",
+      "metric": "packet.bytes",
+      "bytes": 3373,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/exporter.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 3851,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/fx-b31f960999d6a128.js",
+      "metric": "packet.bytes",
+      "bytes": 3294,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/fx-b31f960999d6a128.js.br",
+      "metric": "packet.bytes",
+      "bytes": 1134,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/fx-b31f960999d6a128.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 1357,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/fx.js",
+      "metric": "packet.bytes",
+      "bytes": 3294,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/fx.js.br",
+      "metric": "packet.bytes",
+      "bytes": 1134,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/fx.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 1357,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/gifenc-5cebe3877a2b70ca.js",
+      "metric": "packet.bytes",
+      "bytes": 8378,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/gifenc-5cebe3877a2b70ca.js.br",
+      "metric": "packet.bytes",
+      "bytes": 2522,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/gifenc-5cebe3877a2b70ca.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 2834,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/gifenc.js",
+      "metric": "packet.bytes",
+      "bytes": 8378,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/gifenc.js.br",
+      "metric": "packet.bytes",
+      "bytes": 2522,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/gifenc.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 2834,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/main-c672ad09dbb888a5.js",
+      "metric": "packet.bytes",
+      "bytes": 39180,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/main-c672ad09dbb888a5.js.br",
+      "metric": "packet.bytes",
+      "bytes": 9268,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/main-c672ad09dbb888a5.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 10678,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/main.js",
+      "metric": "packet.bytes",
+      "bytes": 39180,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/main.js.br",
+      "metric": "packet.bytes",
+      "bytes": 9268,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/main.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 10678,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/modals-e9bcbb916d868602.js",
+      "metric": "packet.bytes",
+      "bytes": 13587,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/modals-e9bcbb916d868602.js.br",
+      "metric": "packet.bytes",
+      "bytes": 3360,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/modals-e9bcbb916d868602.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 3810,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/modals.js",
+      "metric": "packet.bytes",
+      "bytes": 13587,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/modals.js.br",
+      "metric": "packet.bytes",
+      "bytes": 3360,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/modals.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 3810,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/palettes-204eb72c49f46650.js",
+      "metric": "packet.bytes",
+      "bytes": 3784,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/palettes-204eb72c49f46650.js.br",
+      "metric": "packet.bytes",
+      "bytes": 1325,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/palettes-204eb72c49f46650.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 1490,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/palettes.js",
+      "metric": "packet.bytes",
+      "bytes": 3784,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/palettes.js.br",
+      "metric": "packet.bytes",
+      "bytes": 1325,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/palettes.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 1490,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/shaders-33901d228423d859.js",
+      "metric": "packet.bytes",
+      "bytes": 21579,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/shaders-33901d228423d859.js.br",
+      "metric": "packet.bytes",
+      "bytes": 6127,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/shaders-33901d228423d859.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 6903,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/shaders.js",
+      "metric": "packet.bytes",
+      "bytes": 21579,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/shaders.js.br",
+      "metric": "packet.bytes",
+      "bytes": 6127,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/shaders.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 6903,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/ui-73bbfbb4d88bf693.js",
+      "metric": "packet.bytes",
+      "bytes": 7717,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/ui-73bbfbb4d88bf693.js.br",
+      "metric": "packet.bytes",
+      "bytes": 1862,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/ui-73bbfbb4d88bf693.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 2150,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/ui.js",
+      "metric": "packet.bytes",
+      "bytes": 7717,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/ui.js.br",
+      "metric": "packet.bytes",
+      "bytes": 1862,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/ui.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 2150,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/webmmux-476036d65130dc35.js",
+      "metric": "packet.bytes",
+      "bytes": 4676,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/webmmux-476036d65130dc35.js.br",
+      "metric": "packet.bytes",
+      "bytes": 1451,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/webmmux-476036d65130dc35.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 1615,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/webmmux.js",
+      "metric": "packet.bytes",
+      "bytes": 4676,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/webmmux.js.br",
+      "metric": "packet.bytes",
+      "bytes": 1451,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/webmmux.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 1615,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/zip-bc4e3341bafceec9.js",
+      "metric": "packet.bytes",
+      "bytes": 3952,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/zip-bc4e3341bafceec9.js.br",
+      "metric": "packet.bytes",
+      "bytes": 1140,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/zip-bc4e3341bafceec9.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 1294,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/zip.js",
+      "metric": "packet.bytes",
+      "bytes": 3952,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/zip.js.br",
+      "metric": "packet.bytes",
+      "bytes": 1140,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/js/zip.js.gz",
+      "metric": "packet.bytes",
+      "bytes": 1294,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/styles-7f2fc338a5e8d265.css",
+      "metric": "packet.bytes",
+      "bytes": 32957,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/styles-7f2fc338a5e8d265.css.br",
+      "metric": "packet.bytes",
+      "bytes": 5844,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/styles-7f2fc338a5e8d265.css.gz",
+      "metric": "packet.bytes",
+      "bytes": 6731,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/styles.css",
+      "metric": "packet.bytes",
+      "bytes": 32957,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/styles.css.br",
+      "metric": "packet.bytes",
+      "bytes": 5844,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/dx-shader/styles.css.gz",
+      "metric": "packet.bytes",
+      "bytes": 6731,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/favicon-cfb09e06980b21ac.svg",
+      "metric": "packet.bytes",
+      "bytes": 874,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/favicon-cfb09e06980b21ac.svg.br",
+      "metric": "packet.bytes",
+      "bytes": 373,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/favicon-cfb09e06980b21ac.svg.gz",
+      "metric": "packet.bytes",
+      "bytes": 440,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/favicon.svg",
+      "metric": "packet.bytes",
+      "bytes": 874,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/favicon.svg.br",
+      "metric": "packet.bytes",
+      "bytes": 373,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/favicon.svg.gz",
+      "metric": "packet.bytes",
+      "bytes": 440,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/icon-32341047d202fbff.svg",
+      "metric": "packet.bytes",
+      "bytes": 869,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/icon-32341047d202fbff.svg.br",
+      "metric": "packet.bytes",
+      "bytes": 378,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/icon-32341047d202fbff.svg.gz",
+      "metric": "packet.bytes",
+      "bytes": 439,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/icon.svg",
+      "metric": "packet.bytes",
+      "bytes": 869,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/icon.svg.br",
+      "metric": "packet.bytes",
+      "bytes": 378,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/icon.svg.gz",
+      "metric": "packet.bytes",
+      "bytes": 439,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/logo-2afe23f6d7f297ab.svg",
+      "metric": "packet.bytes",
+      "bytes": 910,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/logo-2afe23f6d7f297ab.svg.br",
+      "metric": "packet.bytes",
+      "bytes": 371,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/logo-2afe23f6d7f297ab.svg.gz",
+      "metric": "packet.bytes",
+      "bytes": 454,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/logo.svg",
+      "metric": "packet.bytes",
+      "bytes": 910,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/logo.svg.br",
+      "metric": "packet.bytes",
+      "bytes": 371,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "public/logo.svg.gz",
+      "metric": "packet.bytes",
+      "bytes": 454,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "styles/dx-shader.css",
+      "metric": "packet.bytes",
+      "bytes": 26026,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "styles/dx-shader.css.br",
+      "metric": "packet.bytes",
+      "bytes": 4917,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "styles/dx-shader.css.gz",
+      "metric": "packet.bytes",
+      "bytes": 5638,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "styles/generated.css",
+      "metric": "packet.bytes",
+      "bytes": 1470,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "styles/generated.css.br",
+      "metric": "packet.bytes",
+      "bytes": 483,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "styles/generated.css.gz",
+      "metric": "packet.bytes",
+      "bytes": 600,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "styles/globals.css",
+      "metric": "packet.bytes",
+      "bytes": 27951,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "styles/globals.css.br",
+      "metric": "packet.bytes",
+      "bytes": 5393,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "styles/globals.css.gz",
+      "metric": "packet.bytes",
+      "bytes": 6140,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "styles/theme.css",
+      "metric": "packet.bytes",
+      "bytes": 512,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "styles/theme.css.br",
+      "metric": "packet.bytes",
+      "bytes": 259,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    },
+    {
+      "path": "styles/theme.css.gz",
+      "metric": "packet.bytes",
+      "bytes": 310,
+      "cache_control": "public, max-age=31536000, immutable",
+      "collects_content": false
+    }
+  ],
+  "packet_bytes_total": 27603477,
+  "server_action_receipts": [],
+  "hooks": {
+    "health": [],
+    "ready": "/.dx/ready",
+    "observability": "/.dx/observability",
+    "route_timing_metric": "route.duration_ms",
+    "packet_byte_metric": "packet.bytes",
+    "server_action_receipt_metric": "server_action.receipts_total"
+  }
+}

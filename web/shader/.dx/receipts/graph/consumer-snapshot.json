@@ -1,0 +1,174 @@
+{
+  "schema": "dx.build.graph.consumerSnapshot",
+  "sourceSchema": "dx.build.graph",
+  "generatedAt": "2026-06-11T15:10:00.075371700+00:00",
+  "coreConceptMap": {
+    "conceptCount": 9,
+    "coveredNodeKinds": [
+      "deploy-output",
+      "dx-check-receipt",
+      "dx-style-css",
+      "forge-surface",
+      "public-asset",
+      "route-shell-chunk",
+      "source-module",
+      "source-module-chunk",
+      "tsx-component",
+      "tsx-route"
+    ],
+    "coveredEdgeKinds": [
+      "checks",
+      "compiled-from-source",
+      "emits",
+      "emitted-from",
+      "expects-receipt",
+      "imports",
+      "imports-source-module",
+      "links-entry-module",
+      "maps-generated-to-source",
+      "owns-source"
+    ],
+    "nodeModulesRequired": false,
+    "adapterBoundary": true,
+    "publicArchitecture": false
+  },
+  "graph": {
+    "nodeCount": 54,
+    "edgeCount": 30,
+    "nodeKindCounts": {
+      "dx-style-css": 4,
+      "dx-style-import-source": 3,
+      "dx-style-source-map": 4,
+      "image-placeholder-asset": 10,
+      "public-asset": 29,
+      "route-shell-chunk": 1,
+      "server-data-route": 1,
+      "source-module-chunk": 1,
+      "tsx-route": 1
+    },
+    "styleOptimization": {
+      "styleNodeCount": 4,
+      "originalRuleCount": 467,
+      "retainedRuleCount": 467,
+      "prunedRuleCount": 0,
+      "minifiedStyleCount": 4,
+      "sourceMapCount": 4,
+      "sourceMapSourceCount": 7,
+      "sourceMapSourceHashCount": 7,
+      "sourceMapEntryStyleSourceCount": 4,
+      "sourceMapFlattenedImportSourceCount": 3,
+      "sourceMapRetainedImportSourceCount": 0,
+      "sourceMapSegmentCount": 0,
+      "sourceMapExactSegmentMapCount": 0,
+      "sourceMapEvidenceOnlyCount": 4,
+      "sourceMapLinkCount": 4,
+      "sourceMapHashCount": 4,
+      "sourceMapArtifactCount": 4,
+      "flattenedImportCount": 3,
+      "retainedImportCount": 0,
+      "assetReferenceCount": 8,
+      "entryStyleAssetReferenceCount": 0,
+      "flattenedImportAssetReferenceCount": 4,
+      "retainedImportAssetReferenceCount": 0
+    },
+    "imageOptimization": {
+      "imageAssetCount": 10,
+      "metadataAssetCount": 10,
+      "optimizedVariantCount": 0,
+      "placeholderCount": 10,
+      "placeholderArtifactCount": 10,
+      "placeholderArtifactBytes": 1710,
+      "placeholderArtifactOutputs": [
+        ".dx/www/output/image-placeholders/public/dx-shader/assets/apple-touch-icon-653d1ed174ed39da.placeholder.svg",
+        ".dx/www/output/image-placeholders/public/dx-shader/assets/favicon-95cdf2c6b75c0830.placeholder.svg",
+        ".dx/www/output/image-placeholders/public/dx-shader/assets/icon-512-cb505b913bce0505.placeholder.svg",
+        ".dx/www/output/image-placeholders/public/dx-shader/assets/og-1bf376c84ef0d032.placeholder.svg",
+        ".dx/www/output/image-placeholders/public/dx-shader/docs/preview-chrome-7b63194fdf61b810.placeholder.svg",
+        ".dx/www/output/image-placeholders/public/dx-shader/docs/preview-glyphs-7b63194fdf61b810.placeholder.svg",
+        ".dx/www/output/image-placeholders/public/dx-shader/docs/preview-silk-7b63194fdf61b810.placeholder.svg",
+        ".dx/www/output/image-placeholders/public/favicon-b0698a08bf67b748.placeholder.svg",
+        ".dx/www/output/image-placeholders/public/icon-653d1ed174ed39da.placeholder.svg",
+        ".dx/www/output/image-placeholders/public/logo-b0698a08bf67b748.placeholder.svg"
+      ],
+      "placeholderArtifactEdgeCount": 10,
+      "routeReferenceCount": 0,
+      "styleReferenceCount": 0,
+      "formatCounts": {
+        "png": 7,
+        "svg": 3
+      },
+      "dimensionSourceCounts": {
+        "png-ihdr": 7,
+        "svg-root-attributes": 3
+      },
+      "status": "metadata-plus-placeholder-artifacts-boundary",
+      "fullPipelineParity": false
+    },
+    "serverData": {
+      "routeCount": 1,
+      "entryCount": 0,
+      "statusCounts": {
+        "no-loader-bindings": 1
+      },
+      "emitsEdgeCount": 1,
+      "linksEdgeCount": 1,
+      "routesWithRouteParams": 0,
+      "routesWithSearchParams": 0,
+      "routeParamKeys": [],
+      "searchParamKeys": [],
+      "nodeModulesRequired": false,
+      "lifecycleScriptsExecuted": false,
+      "sourceOwnedContract": true,
+      "externalRuntimeRequired": false,
+      "externalRuntimeExecuted": false
+    },
+    "contentPipeline": {
+      "documentCount": 0,
+      "mdxDocumentCount": 0,
+      "nodeModulesRequired": false,
+      "runtimeProof": false
+    },
+    "ecmascriptAnalysis": {
+      "sourceModuleCount": 1,
+      "dynamicImportCount": 0,
+      "dynamicImportOptionBoundaryCount": 0,
+      "dynamicImportOptionUnsupportedCount": 0,
+      "unresolvedDynamicImportCount": 0,
+      "unsupportedDynamicImportCount": 0,
+      "unsupportedDynamicImportReasonCounts": {},
+      "dynamicImportAnalysisStatusCounts": {
+        "none-observed": 1
+      },
+      "clientBoundaryCount": 0,
+      "serverBoundaryCount": 0,
+      "topLevelAwaitCount": 0,
+      "nextRuntimeRequired": false,
+      "reactRuntimeRequired": false,
+      "rscRequired": false,
+      "nodeModulesRequired": false,
+      "fullNextjsParity": false
+    }
+  },
+  "invalidation": {
+    "changedNodeIds": [],
+    "affectedNodeIds": [],
+    "emittedOutputNodeIds": [],
+    "emittedOutputArtifacts": [],
+    "rebuildNodeIds": [],
+    "changedRoutes": [],
+    "affectedRoutes": [],
+    "rebuildRoutes": []
+  },
+  "consumers": {
+    "zedPreview": {
+      "primaryField": "invalidation.affectedNodeIds",
+      "fallbackField": "graph.nodeKindCounts",
+      "routeShellChunkKind": "route-shell-chunk",
+      "sourceModuleKind": "source-module",
+      "sourceModuleChunkKind": "source-module-chunk"
+    },
+    "dxCli": {
+      "primaryField": "graph.nodeKindCounts"
+    }
+  }
+}

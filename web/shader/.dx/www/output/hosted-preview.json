@@ -1,0 +1,3787 @@
+{
+  "version": 1,
+  "deployment_kind": "dx-www-hosted-preview-bundle",
+  "provider": "dx-www-cloud-local",
+  "adapter_kind": "account-free-preview",
+  "generated": "2026-06-11T15:10:08.593562700+00:00",
+  "requires_provider_account": false,
+  "account_bound": false,
+  "network_required": false,
+  "secrets_required": false,
+  "node_modules_required": false,
+  "package_installs_executed": false,
+  "lifecycle_scripts_executed": false,
+  "build": {
+    "dir": ".dx/build",
+    "manifest_hash": "blake3:3ac644e3e98d413e51f8d6a8a99d86ae9a12ae64964ba7fa3c8c5b730d6e54d5",
+    "route_count": 1,
+    "immutable_asset_count": 216,
+    "server_action_count": 0,
+    "observability_path": "observability.json"
+  },
+  "deploy_adapter": {
+    "path": "deploy-adapter.json",
+    "adapter": "dx-www-static-hosting",
+    "no_node_modules_required": true,
+    "cache_headers": [
+      {
+        "glob": "**/*.html",
+        "cache_control": "public, max-age=0, must-revalidate"
+      },
+      {
+        "glob": "**/*.dxpk",
+        "cache_control": "public, max-age=31536000, immutable"
+      },
+      {
+        "glob": "public/**/*",
+        "cache_control": "public, max-age=31536000, immutable"
+      }
+    ]
+  },
+  "provider_adapter": {
+    "path": "provider-adapter.dx-cloud.json",
+    "provider": "dx-www-cloud-local",
+    "requires_provider_account": false,
+    "network_required": false
+  },
+  "forge": {
+    "root": "forge",
+    "source_manifest": {
+      "path": ".dx/forge/source-manifest.json",
+      "bundle_path": "forge/source-manifest.json",
+      "kind": "forge-source-manifest",
+      "hash": "blake3:fcd2e52c6ea20bcdc38b6ce97074d334677d7bc62d4bbce6af9b4538ba4ae2a2",
+      "source_owned": true,
+      "package_installs_executed": false,
+      "lifecycle_scripts_executed": false
+    },
+    "template_manifest": {
+      "path": ".dx/forge/template-manifest.json",
+      "bundle_path": "forge/template-manifest.json",
+      "kind": "forge-template-manifest",
+      "hash": "blake3:6a93f10ad805d82a4421cd19df583d9a796eb99a31ea1ab47401c98caa25a177",
+      "source_owned": true,
+      "package_installs_executed": false,
+      "lifecycle_scripts_executed": false
+    },
+    "package_count": 1,
+    "receipt_count": 2,
+    "receipts_copied": true,
+    "receipts": [
+      {
+        "path": ".dx/forge/receipts/20260611T122031351813900Z-www-minimal-starter.json",
+        "bundle_path": "forge/receipts/20260611T122031351813900Z-www-minimal-starter.json",
+        "kind": "forge-receipt",
+        "package_id": "www/minimal-starter",
+        "variant": "default",
+        "action": "track-write",
+        "file_count": 13,
+        "risk_score": 100,
+        "hash": "blake3:3ac51ef8515e716f382e24ea52d5e558bb681053bcee5b2ba5a1166e0b835899",
+        "source_owned": true,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": ".dx/forge/receipts/20260611T122031469502300Z-www-minimal-starter.json",
+        "bundle_path": "forge/receipts/20260611T122031469502300Z-www-minimal-starter.json",
+        "kind": "forge-receipt",
+        "package_id": "www/minimal-starter",
+        "variant": "default",
+        "action": "track-write",
+        "file_count": 13,
+        "risk_score": 100,
+        "hash": "blake3:91478ed344a865add36632ce50089c0a42b7f3ed2ac5206fc3bfb19a2659c658",
+        "source_owned": true,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      }
+    ],
+    "source_owned": true,
+    "package_installs_executed": false,
+    "lifecycle_scripts_executed": false
+  },
+  "routes": [
+    {
+      "path": "/",
+      "html": "app/index.html",
+      "execution_contract": "app/app-router-execution.json"
+    }
+  ],
+  "server_actions": [],
+  "health_checks": [],
+  "immutable_assets": [
+    {
+      "path": "_dx/styles/react-route-a79f628ac70b9d4f.css",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "_dx/styles/react-route-a79f628ac70b9d4f.css.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "_dx/styles/react-route-a79f628ac70b9d4f.css"
+    },
+    {
+      "path": "_dx/styles/react-route-a79f628ac70b9d4f.css.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "_dx/styles/react-route-a79f628ac70b9d4f.css"
+    },
+    {
+      "path": "app/index.dxpk",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/octet-stream",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "app/index.dxpk.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/octet-stream",
+      "content_encoding": "br",
+      "encoded_from": "app/index.dxpk"
+    },
+    {
+      "path": "app/index.dxpk.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/octet-stream",
+      "content_encoding": "gzip",
+      "encoded_from": "app/index.dxpk"
+    },
+    {
+      "path": "dx-shader/assets/apple-touch-icon.png",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "dx-shader/assets/favicon.png",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "dx-shader/assets/icon-512.png",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "dx-shader/assets/og.png",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "dx-shader/docs/preview-chrome.png",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "dx-shader/docs/preview-glyphs.png",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "dx-shader/docs/preview-silk.png",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "dx-shader/fonts/jetbrains-mono-latin-400-normal.woff2",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "font/woff2",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "dx-shader/fonts/jetbrains-mono-latin-500-normal.woff2",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "font/woff2",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "dx-shader/fonts/jetbrains-mono-latin-600-normal.woff2",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "font/woff2",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "dx-shader/fonts/jetbrains-mono-latin-700-normal.woff2",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "font/woff2",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "dx-shader/js/engine.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "dx-shader/js/engine.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "dx-shader/js/engine.js"
+    },
+    {
+      "path": "dx-shader/js/engine.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "dx-shader/js/engine.js"
+    },
+    {
+      "path": "dx-shader/js/exporter.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "dx-shader/js/exporter.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "dx-shader/js/exporter.js"
+    },
+    {
+      "path": "dx-shader/js/exporter.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "dx-shader/js/exporter.js"
+    },
+    {
+      "path": "dx-shader/js/fx.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "dx-shader/js/fx.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "dx-shader/js/fx.js"
+    },
+    {
+      "path": "dx-shader/js/fx.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "dx-shader/js/fx.js"
+    },
+    {
+      "path": "dx-shader/js/gifenc.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "dx-shader/js/gifenc.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "dx-shader/js/gifenc.js"
+    },
+    {
+      "path": "dx-shader/js/gifenc.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "dx-shader/js/gifenc.js"
+    },
+    {
+      "path": "dx-shader/js/main.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "dx-shader/js/main.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "dx-shader/js/main.js"
+    },
+    {
+      "path": "dx-shader/js/main.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "dx-shader/js/main.js"
+    },
+    {
+      "path": "dx-shader/js/modals.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "dx-shader/js/modals.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "dx-shader/js/modals.js"
+    },
+    {
+      "path": "dx-shader/js/modals.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "dx-shader/js/modals.js"
+    },
+    {
+      "path": "dx-shader/js/palettes.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "dx-shader/js/palettes.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "dx-shader/js/palettes.js"
+    },
+    {
+      "path": "dx-shader/js/palettes.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "dx-shader/js/palettes.js"
+    },
+    {
+      "path": "dx-shader/js/shaders.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "dx-shader/js/shaders.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "dx-shader/js/shaders.js"
+    },
+    {
+      "path": "dx-shader/js/shaders.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "dx-shader/js/shaders.js"
+    },
+    {
+      "path": "dx-shader/js/ui.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "dx-shader/js/ui.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "dx-shader/js/ui.js"
+    },
+    {
+      "path": "dx-shader/js/ui.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "dx-shader/js/ui.js"
+    },
+    {
+      "path": "dx-shader/js/webmmux.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "dx-shader/js/webmmux.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "dx-shader/js/webmmux.js"
+    },
+    {
+      "path": "dx-shader/js/webmmux.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "dx-shader/js/webmmux.js"
+    },
+    {
+      "path": "dx-shader/js/zip.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "dx-shader/js/zip.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "dx-shader/js/zip.js"
+    },
+    {
+      "path": "dx-shader/js/zip.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "dx-shader/js/zip.js"
+    },
+    {
+      "path": "dx-shader/styles.css",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "dx-shader/styles.css.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "dx-shader/styles.css"
+    },
+    {
+      "path": "dx-shader/styles.css.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "dx-shader/styles.css"
+    },
+    {
+      "path": "favicon.svg",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "favicon.svg.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "favicon.svg"
+    },
+    {
+      "path": "favicon.svg.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "favicon.svg"
+    },
+    {
+      "path": "icon.svg",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "icon.svg.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "icon.svg"
+    },
+    {
+      "path": "icon.svg.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "icon.svg"
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/apple-touch-icon-653d1ed174ed39da.placeholder.svg",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/apple-touch-icon-653d1ed174ed39da.placeholder.svg.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "image-placeholders/public/dx-shader/assets/apple-touch-icon-653d1ed174ed39da.placeholder.svg"
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/apple-touch-icon-653d1ed174ed39da.placeholder.svg.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "image-placeholders/public/dx-shader/assets/apple-touch-icon-653d1ed174ed39da.placeholder.svg"
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/favicon-95cdf2c6b75c0830.placeholder.svg",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/favicon-95cdf2c6b75c0830.placeholder.svg.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "image-placeholders/public/dx-shader/assets/favicon-95cdf2c6b75c0830.placeholder.svg"
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/favicon-95cdf2c6b75c0830.placeholder.svg.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "image-placeholders/public/dx-shader/assets/favicon-95cdf2c6b75c0830.placeholder.svg"
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/icon-512-cb505b913bce0505.placeholder.svg",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/icon-512-cb505b913bce0505.placeholder.svg.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "image-placeholders/public/dx-shader/assets/icon-512-cb505b913bce0505.placeholder.svg"
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/icon-512-cb505b913bce0505.placeholder.svg.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "image-placeholders/public/dx-shader/assets/icon-512-cb505b913bce0505.placeholder.svg"
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/og-1bf376c84ef0d032.placeholder.svg",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/og-1bf376c84ef0d032.placeholder.svg.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "image-placeholders/public/dx-shader/assets/og-1bf376c84ef0d032.placeholder.svg"
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/assets/og-1bf376c84ef0d032.placeholder.svg.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "image-placeholders/public/dx-shader/assets/og-1bf376c84ef0d032.placeholder.svg"
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/docs/preview-chrome-7b63194fdf61b810.placeholder.svg",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/docs/preview-chrome-7b63194fdf61b810.placeholder.svg.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "image-placeholders/public/dx-shader/docs/preview-chrome-7b63194fdf61b810.placeholder.svg"
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/docs/preview-chrome-7b63194fdf61b810.placeholder.svg.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "image-placeholders/public/dx-shader/docs/preview-chrome-7b63194fdf61b810.placeholder.svg"
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/docs/preview-glyphs-7b63194fdf61b810.placeholder.svg",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/docs/preview-glyphs-7b63194fdf61b810.placeholder.svg.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "image-placeholders/public/dx-shader/docs/preview-glyphs-7b63194fdf61b810.placeholder.svg"
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/docs/preview-glyphs-7b63194fdf61b810.placeholder.svg.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "image-placeholders/public/dx-shader/docs/preview-glyphs-7b63194fdf61b810.placeholder.svg"
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/docs/preview-silk-7b63194fdf61b810.placeholder.svg",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/docs/preview-silk-7b63194fdf61b810.placeholder.svg.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "image-placeholders/public/dx-shader/docs/preview-silk-7b63194fdf61b810.placeholder.svg"
+    },
+    {
+      "path": "image-placeholders/public/dx-shader/docs/preview-silk-7b63194fdf61b810.placeholder.svg.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "image-placeholders/public/dx-shader/docs/preview-silk-7b63194fdf61b810.placeholder.svg"
+    },
+    {
+      "path": "image-placeholders/public/favicon-b0698a08bf67b748.placeholder.svg",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "image-placeholders/public/favicon-b0698a08bf67b748.placeholder.svg.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "image-placeholders/public/favicon-b0698a08bf67b748.placeholder.svg"
+    },
+    {
+      "path": "image-placeholders/public/favicon-b0698a08bf67b748.placeholder.svg.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "image-placeholders/public/favicon-b0698a08bf67b748.placeholder.svg"
+    },
+    {
+      "path": "image-placeholders/public/icon-653d1ed174ed39da.placeholder.svg",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "image-placeholders/public/icon-653d1ed174ed39da.placeholder.svg.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "image-placeholders/public/icon-653d1ed174ed39da.placeholder.svg"
+    },
+    {
+      "path": "image-placeholders/public/icon-653d1ed174ed39da.placeholder.svg.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "image-placeholders/public/icon-653d1ed174ed39da.placeholder.svg"
+    },
+    {
+      "path": "image-placeholders/public/logo-b0698a08bf67b748.placeholder.svg",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "image-placeholders/public/logo-b0698a08bf67b748.placeholder.svg.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "image-placeholders/public/logo-b0698a08bf67b748.placeholder.svg"
+    },
+    {
+      "path": "image-placeholders/public/logo-b0698a08bf67b748.placeholder.svg.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "image-placeholders/public/logo-b0698a08bf67b748.placeholder.svg"
+    },
+    {
+      "path": "logo.svg",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "logo.svg.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "logo.svg"
+    },
+    {
+      "path": "logo.svg.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "logo.svg"
+    },
+    {
+      "path": "public/dx-shader/assets/apple-touch-icon-8fd723367b340dd3.png",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/assets/apple-touch-icon.png",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/assets/favicon-6bdf81e333572f09.png",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/assets/favicon.png",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/assets/icon-512-e36bc88500149466.png",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/assets/icon-512.png",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/assets/og-c6e50395e4e4bd5c.png",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/assets/og.png",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/docs/preview-chrome-b9351771d83a6471.png",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/docs/preview-chrome.png",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/docs/preview-glyphs-a970ec9b0be1c989.png",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/docs/preview-glyphs.png",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/docs/preview-silk-2eb9372696e7cf11.png",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/docs/preview-silk.png",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/png",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-400-normal-7ebe91be3924c914.woff2",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "font/woff2",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-400-normal.woff2",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "font/woff2",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-500-normal-061a05a153795ba8.woff2",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "font/woff2",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-500-normal.woff2",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "font/woff2",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-600-normal-c88f1794b1c2e43f.woff2",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "font/woff2",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-600-normal.woff2",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "font/woff2",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-700-normal-97a57d0f7bd23ede.woff2",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "font/woff2",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-700-normal.woff2",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "font/woff2",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/js/engine-dff24fe05e5af3e7.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/js/engine-dff24fe05e5af3e7.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/engine-dff24fe05e5af3e7.js"
+    },
+    {
+      "path": "public/dx-shader/js/engine-dff24fe05e5af3e7.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/engine-dff24fe05e5af3e7.js"
+    },
+    {
+      "path": "public/dx-shader/js/engine.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/js/engine.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/engine.js"
+    },
+    {
+      "path": "public/dx-shader/js/engine.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/engine.js"
+    },
+    {
+      "path": "public/dx-shader/js/exporter-73ddb9fa52baeafc.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/js/exporter-73ddb9fa52baeafc.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/exporter-73ddb9fa52baeafc.js"
+    },
+    {
+      "path": "public/dx-shader/js/exporter-73ddb9fa52baeafc.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/exporter-73ddb9fa52baeafc.js"
+    },
+    {
+      "path": "public/dx-shader/js/exporter.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/js/exporter.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/exporter.js"
+    },
+    {
+      "path": "public/dx-shader/js/exporter.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/exporter.js"
+    },
+    {
+      "path": "public/dx-shader/js/fx-b31f960999d6a128.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/js/fx-b31f960999d6a128.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/fx-b31f960999d6a128.js"
+    },
+    {
+      "path": "public/dx-shader/js/fx-b31f960999d6a128.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/fx-b31f960999d6a128.js"
+    },
+    {
+      "path": "public/dx-shader/js/fx.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/js/fx.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/fx.js"
+    },
+    {
+      "path": "public/dx-shader/js/fx.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/fx.js"
+    },
+    {
+      "path": "public/dx-shader/js/gifenc-5cebe3877a2b70ca.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/js/gifenc-5cebe3877a2b70ca.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/gifenc-5cebe3877a2b70ca.js"
+    },
+    {
+      "path": "public/dx-shader/js/gifenc-5cebe3877a2b70ca.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/gifenc-5cebe3877a2b70ca.js"
+    },
+    {
+      "path": "public/dx-shader/js/gifenc.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/js/gifenc.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/gifenc.js"
+    },
+    {
+      "path": "public/dx-shader/js/gifenc.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/gifenc.js"
+    },
+    {
+      "path": "public/dx-shader/js/main-c672ad09dbb888a5.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/js/main-c672ad09dbb888a5.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/main-c672ad09dbb888a5.js"
+    },
+    {
+      "path": "public/dx-shader/js/main-c672ad09dbb888a5.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/main-c672ad09dbb888a5.js"
+    },
+    {
+      "path": "public/dx-shader/js/main.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/js/main.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/main.js"
+    },
+    {
+      "path": "public/dx-shader/js/main.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/main.js"
+    },
+    {
+      "path": "public/dx-shader/js/modals-e9bcbb916d868602.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/js/modals-e9bcbb916d868602.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/modals-e9bcbb916d868602.js"
+    },
+    {
+      "path": "public/dx-shader/js/modals-e9bcbb916d868602.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/modals-e9bcbb916d868602.js"
+    },
+    {
+      "path": "public/dx-shader/js/modals.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/js/modals.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/modals.js"
+    },
+    {
+      "path": "public/dx-shader/js/modals.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/modals.js"
+    },
+    {
+      "path": "public/dx-shader/js/palettes-204eb72c49f46650.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/js/palettes-204eb72c49f46650.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/palettes-204eb72c49f46650.js"
+    },
+    {
+      "path": "public/dx-shader/js/palettes-204eb72c49f46650.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/palettes-204eb72c49f46650.js"
+    },
+    {
+      "path": "public/dx-shader/js/palettes.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/js/palettes.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/palettes.js"
+    },
+    {
+      "path": "public/dx-shader/js/palettes.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/palettes.js"
+    },
+    {
+      "path": "public/dx-shader/js/shaders-33901d228423d859.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/js/shaders-33901d228423d859.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/shaders-33901d228423d859.js"
+    },
+    {
+      "path": "public/dx-shader/js/shaders-33901d228423d859.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/shaders-33901d228423d859.js"
+    },
+    {
+      "path": "public/dx-shader/js/shaders.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/js/shaders.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/shaders.js"
+    },
+    {
+      "path": "public/dx-shader/js/shaders.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/shaders.js"
+    },
+    {
+      "path": "public/dx-shader/js/ui-73bbfbb4d88bf693.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/js/ui-73bbfbb4d88bf693.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/ui-73bbfbb4d88bf693.js"
+    },
+    {
+      "path": "public/dx-shader/js/ui-73bbfbb4d88bf693.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/ui-73bbfbb4d88bf693.js"
+    },
+    {
+      "path": "public/dx-shader/js/ui.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/js/ui.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/ui.js"
+    },
+    {
+      "path": "public/dx-shader/js/ui.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/ui.js"
+    },
+    {
+      "path": "public/dx-shader/js/webmmux-476036d65130dc35.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/js/webmmux-476036d65130dc35.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/webmmux-476036d65130dc35.js"
+    },
+    {
+      "path": "public/dx-shader/js/webmmux-476036d65130dc35.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/webmmux-476036d65130dc35.js"
+    },
+    {
+      "path": "public/dx-shader/js/webmmux.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/js/webmmux.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/webmmux.js"
+    },
+    {
+      "path": "public/dx-shader/js/webmmux.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/webmmux.js"
+    },
+    {
+      "path": "public/dx-shader/js/zip-bc4e3341bafceec9.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/js/zip-bc4e3341bafceec9.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/zip-bc4e3341bafceec9.js"
+    },
+    {
+      "path": "public/dx-shader/js/zip-bc4e3341bafceec9.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/zip-bc4e3341bafceec9.js"
+    },
+    {
+      "path": "public/dx-shader/js/zip.js",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/js/zip.js.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/js/zip.js"
+    },
+    {
+      "path": "public/dx-shader/js/zip.js.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "application/javascript; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/js/zip.js"
+    },
+    {
+      "path": "public/dx-shader/styles-7f2fc338a5e8d265.css",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/styles-7f2fc338a5e8d265.css.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/styles-7f2fc338a5e8d265.css"
+    },
+    {
+      "path": "public/dx-shader/styles-7f2fc338a5e8d265.css.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/styles-7f2fc338a5e8d265.css"
+    },
+    {
+      "path": "public/dx-shader/styles.css",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/dx-shader/styles.css.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "public/dx-shader/styles.css"
+    },
+    {
+      "path": "public/dx-shader/styles.css.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "public/dx-shader/styles.css"
+    },
+    {
+      "path": "public/favicon-cfb09e06980b21ac.svg",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/favicon-cfb09e06980b21ac.svg.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "public/favicon-cfb09e06980b21ac.svg"
+    },
+    {
+      "path": "public/favicon-cfb09e06980b21ac.svg.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "public/favicon-cfb09e06980b21ac.svg"
+    },
+    {
+      "path": "public/favicon.svg",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/favicon.svg.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "public/favicon.svg"
+    },
+    {
+      "path": "public/favicon.svg.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "public/favicon.svg"
+    },
+    {
+      "path": "public/icon-32341047d202fbff.svg",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/icon-32341047d202fbff.svg.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "public/icon-32341047d202fbff.svg"
+    },
+    {
+      "path": "public/icon-32341047d202fbff.svg.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "public/icon-32341047d202fbff.svg"
+    },
+    {
+      "path": "public/icon.svg",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/icon.svg.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "public/icon.svg"
+    },
+    {
+      "path": "public/icon.svg.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "public/icon.svg"
+    },
+    {
+      "path": "public/logo-2afe23f6d7f297ab.svg",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/logo-2afe23f6d7f297ab.svg.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "public/logo-2afe23f6d7f297ab.svg"
+    },
+    {
+      "path": "public/logo-2afe23f6d7f297ab.svg.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "public/logo-2afe23f6d7f297ab.svg"
+    },
+    {
+      "path": "public/logo.svg",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "public/logo.svg.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "br",
+      "encoded_from": "public/logo.svg"
+    },
+    {
+      "path": "public/logo.svg.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "image/svg+xml",
+      "content_encoding": "gzip",
+      "encoded_from": "public/logo.svg"
+    },
+    {
+      "path": "styles/dx-shader.css",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "styles/dx-shader.css.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "styles/dx-shader.css"
+    },
+    {
+      "path": "styles/dx-shader.css.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "styles/dx-shader.css"
+    },
+    {
+      "path": "styles/generated.css",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "styles/generated.css.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "styles/generated.css"
+    },
+    {
+      "path": "styles/generated.css.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "styles/generated.css"
+    },
+    {
+      "path": "styles/globals.css",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "styles/globals.css.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "styles/globals.css"
+    },
+    {
+      "path": "styles/globals.css.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "styles/globals.css"
+    },
+    {
+      "path": "styles/theme.css",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": null,
+      "encoded_from": null
+    },
+    {
+      "path": "styles/theme.css.br",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "br",
+      "encoded_from": "styles/theme.css"
+    },
+    {
+      "path": "styles/theme.css.gz",
+      "cache_control": "public, max-age=31536000, immutable",
+      "content_type": "text/css; charset=utf-8",
+      "content_encoding": "gzip",
+      "encoded_from": "styles/theme.css"
+    }
+  ],
+  "rollback": {
+    "metadata_path": "rollback.json",
+    "strategy": "manifest-pinned-asset-rollback"
+  },
+  "observability": {
+    "metadata_path": "observability.json",
+    "ready_path": "/.dx/ready",
+    "metrics_path": "/.dx/observability",
+    "collects_secrets": false,
+    "collects_request_headers": false,
+    "collects_request_payloads": false,
+    "cache_control": "no-store"
+  },
+  "forge_hosting_manifest": {
+    "path": "forge-hosting-manifest.json",
+    "manifest_kind": "dx-www-forge-hosting-release-gate",
+    "coverage_score": 100,
+    "account_free_preview_ready": true,
+    "hosted_release_ready": false,
+    "provider_portability": true,
+    "cache_header_count": 3,
+    "observability_metadata_path": "observability.json",
+    "rollback_metadata_path": "rollback.json"
+  },
+  "bundle": {
+    "format": "directory-manifest",
+    "root": ".dx/build",
+    "artifact_count": 235,
+    "artifacts": [
+      {
+        "path": "_dx/styles/react-route-a79f628ac70b9d4f.css",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "_dx/styles/react-route-a79f628ac70b9d4f.css.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "_dx/styles/react-route-a79f628ac70b9d4f.css.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "app/app-router-execution.json",
+        "kind": "app-router-execution",
+        "cache_control": "no-store",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "app/index.dxpk",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "app/index.dxpk.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "app/index.dxpk.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "app/index.html",
+        "kind": "route-html",
+        "cache_control": "public, max-age=0, must-revalidate",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "deploy-adapter.json",
+        "kind": "deploy-contract",
+        "cache_control": "no-store",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/assets/apple-touch-icon.png",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/assets/favicon.png",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/assets/icon-512.png",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/assets/og.png",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/docs/preview-chrome.png",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/docs/preview-glyphs.png",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/docs/preview-silk.png",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/fonts/jetbrains-mono-latin-400-normal.woff2",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/fonts/jetbrains-mono-latin-500-normal.woff2",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/fonts/jetbrains-mono-latin-600-normal.woff2",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/fonts/jetbrains-mono-latin-700-normal.woff2",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/engine.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/engine.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/engine.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/exporter.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/exporter.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/exporter.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/fx.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/fx.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/fx.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/gifenc.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/gifenc.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/gifenc.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/main.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/main.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/main.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/modals.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/modals.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/modals.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/palettes.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/palettes.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/palettes.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/shaders.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/shaders.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/shaders.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/ui.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/ui.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/ui.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/webmmux.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/webmmux.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/webmmux.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/zip.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/zip.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/js/zip.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/styles.css",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/styles.css.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "dx-shader/styles.css.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "favicon.svg",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "favicon.svg.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "favicon.svg.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "forge-hosting-manifest.json",
+        "kind": "forge-hosting-manifest",
+        "cache_control": "no-store",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "forge/receipts/20260611T122031351813900Z-www-minimal-starter.json",
+        "kind": "forge-receipt",
+        "cache_control": "no-store",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "forge/receipts/20260611T122031469502300Z-www-minimal-starter.json",
+        "kind": "forge-receipt",
+        "cache_control": "no-store",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "forge/source-manifest.json",
+        "kind": "forge-source-manifest",
+        "cache_control": "no-store",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "forge/template-manifest.json",
+        "kind": "forge-template-manifest",
+        "cache_control": "no-store",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "hosted-preview.json",
+        "kind": "hosted-preview-contract",
+        "cache_control": "no-store",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "icon.svg",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "icon.svg.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "icon.svg.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/dx-shader/assets/apple-touch-icon-653d1ed174ed39da.placeholder.svg",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/dx-shader/assets/apple-touch-icon-653d1ed174ed39da.placeholder.svg.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/dx-shader/assets/apple-touch-icon-653d1ed174ed39da.placeholder.svg.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/dx-shader/assets/favicon-95cdf2c6b75c0830.placeholder.svg",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/dx-shader/assets/favicon-95cdf2c6b75c0830.placeholder.svg.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/dx-shader/assets/favicon-95cdf2c6b75c0830.placeholder.svg.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/dx-shader/assets/icon-512-cb505b913bce0505.placeholder.svg",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/dx-shader/assets/icon-512-cb505b913bce0505.placeholder.svg.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/dx-shader/assets/icon-512-cb505b913bce0505.placeholder.svg.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/dx-shader/assets/og-1bf376c84ef0d032.placeholder.svg",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/dx-shader/assets/og-1bf376c84ef0d032.placeholder.svg.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/dx-shader/assets/og-1bf376c84ef0d032.placeholder.svg.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/dx-shader/docs/preview-chrome-7b63194fdf61b810.placeholder.svg",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/dx-shader/docs/preview-chrome-7b63194fdf61b810.placeholder.svg.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/dx-shader/docs/preview-chrome-7b63194fdf61b810.placeholder.svg.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/dx-shader/docs/preview-glyphs-7b63194fdf61b810.placeholder.svg",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/dx-shader/docs/preview-glyphs-7b63194fdf61b810.placeholder.svg.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/dx-shader/docs/preview-glyphs-7b63194fdf61b810.placeholder.svg.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/dx-shader/docs/preview-silk-7b63194fdf61b810.placeholder.svg",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/dx-shader/docs/preview-silk-7b63194fdf61b810.placeholder.svg.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/dx-shader/docs/preview-silk-7b63194fdf61b810.placeholder.svg.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/favicon-b0698a08bf67b748.placeholder.svg",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/favicon-b0698a08bf67b748.placeholder.svg.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/favicon-b0698a08bf67b748.placeholder.svg.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/icon-653d1ed174ed39da.placeholder.svg",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/icon-653d1ed174ed39da.placeholder.svg.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/icon-653d1ed174ed39da.placeholder.svg.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/logo-b0698a08bf67b748.placeholder.svg",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/logo-b0698a08bf67b748.placeholder.svg.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "image-placeholders/public/logo-b0698a08bf67b748.placeholder.svg.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "import-resolution.json",
+        "kind": "import-resolution",
+        "cache_control": "no-store",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "logo.svg",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "logo.svg.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "logo.svg.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "manifest.json",
+        "kind": "build-manifest",
+        "cache_control": "no-store",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "observability.json",
+        "kind": "production-observability",
+        "cache_control": "no-store",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "provider-adapter.dx-cloud.json",
+        "kind": "provider-adapter",
+        "cache_control": "no-store",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/assets/apple-touch-icon-8fd723367b340dd3.png",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/assets/apple-touch-icon.png",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/assets/favicon-6bdf81e333572f09.png",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/assets/favicon.png",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/assets/icon-512-e36bc88500149466.png",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/assets/icon-512.png",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/assets/og-c6e50395e4e4bd5c.png",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/assets/og.png",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/docs/preview-chrome-b9351771d83a6471.png",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/docs/preview-chrome.png",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/docs/preview-glyphs-a970ec9b0be1c989.png",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/docs/preview-glyphs.png",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/docs/preview-silk-2eb9372696e7cf11.png",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/docs/preview-silk.png",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/fonts/jetbrains-mono-latin-400-normal-7ebe91be3924c914.woff2",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/fonts/jetbrains-mono-latin-400-normal.woff2",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/fonts/jetbrains-mono-latin-500-normal-061a05a153795ba8.woff2",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/fonts/jetbrains-mono-latin-500-normal.woff2",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/fonts/jetbrains-mono-latin-600-normal-c88f1794b1c2e43f.woff2",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/fonts/jetbrains-mono-latin-600-normal.woff2",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/fonts/jetbrains-mono-latin-700-normal-97a57d0f7bd23ede.woff2",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/fonts/jetbrains-mono-latin-700-normal.woff2",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/engine-dff24fe05e5af3e7.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/engine-dff24fe05e5af3e7.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/engine-dff24fe05e5af3e7.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/engine.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/engine.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/engine.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/exporter-73ddb9fa52baeafc.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/exporter-73ddb9fa52baeafc.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/exporter-73ddb9fa52baeafc.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/exporter.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/exporter.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/exporter.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/fx-b31f960999d6a128.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/fx-b31f960999d6a128.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/fx-b31f960999d6a128.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/fx.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/fx.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/fx.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/gifenc-5cebe3877a2b70ca.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/gifenc-5cebe3877a2b70ca.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/gifenc-5cebe3877a2b70ca.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/gifenc.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/gifenc.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/gifenc.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/main-c672ad09dbb888a5.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/main-c672ad09dbb888a5.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/main-c672ad09dbb888a5.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/main.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/main.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/main.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/modals-e9bcbb916d868602.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/modals-e9bcbb916d868602.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/modals-e9bcbb916d868602.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/modals.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/modals.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/modals.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/palettes-204eb72c49f46650.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/palettes-204eb72c49f46650.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/palettes-204eb72c49f46650.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/palettes.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/palettes.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/palettes.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/shaders-33901d228423d859.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/shaders-33901d228423d859.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/shaders-33901d228423d859.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/shaders.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/shaders.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/shaders.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/ui-73bbfbb4d88bf693.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/ui-73bbfbb4d88bf693.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/ui-73bbfbb4d88bf693.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/ui.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/ui.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/ui.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/webmmux-476036d65130dc35.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/webmmux-476036d65130dc35.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/webmmux-476036d65130dc35.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/webmmux.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/webmmux.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/webmmux.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/zip-bc4e3341bafceec9.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/zip-bc4e3341bafceec9.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/zip-bc4e3341bafceec9.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/zip.js",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/zip.js.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/js/zip.js.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/styles-7f2fc338a5e8d265.css",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/styles-7f2fc338a5e8d265.css.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/styles-7f2fc338a5e8d265.css.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/styles.css",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/styles.css.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/dx-shader/styles.css.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/favicon-cfb09e06980b21ac.svg",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/favicon-cfb09e06980b21ac.svg.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/favicon-cfb09e06980b21ac.svg.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/favicon.svg",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/favicon.svg.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/favicon.svg.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/icon-32341047d202fbff.svg",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/icon-32341047d202fbff.svg.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/icon-32341047d202fbff.svg.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/icon.svg",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/icon.svg.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/icon.svg.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/logo-2afe23f6d7f297ab.svg",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/logo-2afe23f6d7f297ab.svg.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/logo-2afe23f6d7f297ab.svg.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/logo.svg",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/logo.svg.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "public/logo.svg.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "rollback.json",
+        "kind": "rollback-metadata",
+        "cache_control": "no-store",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "server-action-protocols.json",
+        "kind": "server-action-protocols",
+        "cache_control": "no-store",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "server-action-runtime.json",
+        "kind": "server-action-runtime",
+        "cache_control": "no-store",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "server-contracts.json",
+        "kind": "server-contracts",
+        "cache_control": "no-store",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "source-build-manifest.json",
+        "kind": "source-build-manifest",
+        "cache_control": "no-store",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "source-build-receipt.json",
+        "kind": "source-build-receipt",
+        "cache_control": "no-store",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "styles/dx-shader.css",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "styles/dx-shader.css.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "styles/dx-shader.css.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "styles/generated.css",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "styles/generated.css.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "styles/generated.css.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "styles/globals.css",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "styles/globals.css.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "styles/globals.css.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "styles/theme.css",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "styles/theme.css.br",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      },
+      {
+        "path": "styles/theme.css.gz",
+        "kind": "immutable-asset",
+        "cache_control": "public, max-age=31536000, immutable",
+        "account_required": false,
+        "network_required": false,
+        "package_installs_executed": false,
+        "lifecycle_scripts_executed": false
+      }
+    ]
+  },
+  "release_gate": {
+    "account_free_preview_ready": true,
+    "hosted_release_ready": false,
+    "manifest_signature_required": true,
+    "manifest_signed": false,
+    "rollback_metadata_required": true,
+    "forge_receipts_copied": true,
+    "no_node_modules": true
+  },
+  "next_commands": [
+    "dx preview --production-contract",
+    "dx promote --key <private-key.json>",
+    "dx rollback verify --previous-build <path> --current-build .dx/build"
+  ]
+}

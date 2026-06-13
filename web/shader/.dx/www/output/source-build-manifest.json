@@ -1,0 +1,1168 @@
+{
+  "schema": "dx.www.sourceBuildManifest",
+  "schema_revision": 1,
+  "project_root": "G:/Dx/www/examples/shader",
+  "routes": [
+    {
+      "route": "/",
+      "path": "app/page.tsx",
+      "output": ".dx/www/output/source/app/page.tsx",
+      "hash": "b0c8cc3fa1f80137",
+      "imports": [],
+      "parser_backend": "oxc-parser",
+      "diagnostics": 0,
+      "ecmascript_analysis": {
+        "schema": "dx.ecmascript.analysis",
+        "schema_revision": 1,
+        "source_path": "app/page.tsx",
+        "source_kind": "tsx",
+        "parser_backend": "oxc-parser",
+        "diagnostics": 0,
+        "compatibility_reference": {
+          "upstream_crates": [
+            "turbopack-ecmascript"
+          ],
+          "reference_only": true,
+          "runtime_build_adoption": false,
+          "public_runtime_dependency": false,
+          "vendor_root": "vendor/next-rust",
+          "vendor_commit": "f3f56ecec2f3f8cefa0f0a1323ea406740251d5c",
+          "next_transform_references": [
+            "next-custom-transforms::track_dynamic_imports",
+            "next-custom-transforms::react_server_components"
+          ],
+          "copied_code": false
+        },
+        "output_model": {
+          "contract": "dx.www.moduleGraph",
+          "compiler_owns_output": true,
+          "public_architecture": "DX-owned source graph analysis"
+        },
+        "runtime_boundaries": {
+          "next_runtime_required": false,
+          "react_runtime_required": false,
+          "rsc_required": false,
+          "node_modules_required": false
+        },
+        "directives": [],
+        "static_imports": [],
+        "dynamic_imports": [],
+        "unresolved_dynamic_imports": [],
+        "unsupported_dynamic_imports": [],
+        "dynamic_import_analysis": {
+          "status": "none-observed",
+          "static_count": 0,
+          "unresolved_count": 0,
+          "unsupported_count": 0,
+          "boundary": "source-owned dynamic import analysis; static specifiers become evidence, expressions remain unresolved, and unsupported call forms stay as adapter-boundary receipts"
+        },
+        "export_names": [
+          "HomePage",
+          "metadata"
+        ],
+        "jsx": true,
+        "top_level_await": false,
+        "full_nextjs_parity": false,
+        "analysis_boundary": "Uses vendored Turbopack ECMAScript and selected Next transform behavior as compatibility references while emitting DX-owned source graph receipts."
+      }
+    }
+  ],
+  "route_handlers": [],
+  "route_handler_receipts": {
+    "output": ".dx/www/output/route-handler-receipts.json",
+    "receipt_count": 0,
+    "skipped_count": 0,
+    "node_modules_required": false,
+    "lifecycle_scripts_executed": false
+  },
+  "route_outputs": [
+    {
+      "route": "/",
+      "source_path": "app/page.tsx",
+      "html_output": ".dx/www/output/source-routes/root/index.html",
+      "packet_output": ".dx/www/output/source-routes/root/index.dxpk",
+      "page_graph_output": ".dx/www/output/source-routes/root/page-graph.json",
+      "route_unit_output": ".dx/www/output/source-routes/root/route-unit.json",
+      "shell_chunk_output": ".dx/www/output/source-routes/root/route-shell-bc87634efbf258c8.mjs",
+      "entry_module_chunk_output": ".dx/www/output/source-routes/root/modules/app-page-tsx-b0c8cc3fa1f80137.mjs",
+      "server_data_output": ".dx/www/output/source-routes/root/server-data.json",
+      "source_module_chunks": [
+        {
+          "source_path": "app/page.tsx",
+          "chunk_output": ".dx/www/output/source-routes/root/modules/app-page-tsx-b0c8cc3fa1f80137.mjs",
+          "kind": "tsx",
+          "hash": "b0c8cc3fa1f80137",
+          "dependencies": [],
+          "browser_executable": true,
+          "source_transformed": false,
+          "transform_kind": "metadata-only",
+          "runtime_exports": [],
+          "ecmascript_analysis": {
+            "schema": "dx.ecmascript.analysis",
+            "schema_revision": 1,
+            "source_path": "app/page.tsx",
+            "source_kind": "tsx",
+            "parser_backend": "oxc-parser",
+            "diagnostics": 0,
+            "compatibility_reference": {
+              "upstream_crates": [
+                "turbopack-ecmascript"
+              ],
+              "reference_only": true,
+              "runtime_build_adoption": false,
+              "public_runtime_dependency": false,
+              "vendor_root": "vendor/next-rust",
+              "vendor_commit": "f3f56ecec2f3f8cefa0f0a1323ea406740251d5c",
+              "next_transform_references": [
+                "next-custom-transforms::track_dynamic_imports",
+                "next-custom-transforms::react_server_components"
+              ],
+              "copied_code": false
+            },
+            "output_model": {
+              "contract": "dx.www.moduleGraph",
+              "compiler_owns_output": true,
+              "public_architecture": "DX-owned source graph analysis"
+            },
+            "runtime_boundaries": {
+              "next_runtime_required": false,
+              "react_runtime_required": false,
+              "rsc_required": false,
+              "node_modules_required": false
+            },
+            "directives": [],
+            "static_imports": [],
+            "dynamic_imports": [],
+            "unresolved_dynamic_imports": [],
+            "unsupported_dynamic_imports": [],
+            "dynamic_import_analysis": {
+              "status": "none-observed",
+              "static_count": 0,
+              "unresolved_count": 0,
+              "unsupported_count": 0,
+              "boundary": "source-owned dynamic import analysis; static specifiers become evidence, expressions remain unresolved, and unsupported call forms stay as adapter-boundary receipts"
+            },
+            "export_names": [
+              "HomePage",
+              "metadata"
+            ],
+            "jsx": true,
+            "top_level_await": false,
+            "full_nextjs_parity": false,
+            "analysis_boundary": "Uses vendored Turbopack ECMAScript and selected Next transform behavior as compatibility references while emitting DX-owned source graph receipts."
+          },
+          "node_modules_required": false
+        }
+      ],
+      "fallback_hash": "bc87634efbf258c8",
+      "fallback_bytes": 7562,
+      "packet_bytes": 31289,
+      "node_modules_required": false
+    }
+  ],
+  "server_data_routes": [
+    {
+      "route": "/",
+      "route_source_path": "app/page.tsx",
+      "output": ".dx/www/output/source-routes/root/server-data.json",
+      "status": "no-loader-bindings",
+      "entry_count": 0,
+      "entry_source_paths": [],
+      "request": {
+        "mode": "static-route-contract-inputs",
+        "route_params": {},
+        "search_params": {},
+        "build_time_contract_inputs": true,
+        "runtime_request_values": false,
+        "source_owned_contract": true,
+        "external_runtime_request_values": false
+      },
+      "execution_model": "not-required",
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false
+    }
+  ],
+  "server_data_route_manifest": {
+    "source_build_routes": 1,
+    "manifest_routes": 1,
+    "source_build_entries": 0,
+    "manifest_entries": 0,
+    "routes_with_route_params": 0,
+    "routes_with_search_params": 0,
+    "route_param_keys": [],
+    "search_param_keys": [],
+    "manifest_includes_source_build_routes": true,
+    "missing_source_build_routes": []
+  },
+  "styles": [
+    {
+      "path": "styles/dx-shader.css",
+      "output": ".dx/www/output/styles/dx-shader.css",
+      "source_map_output": ".dx/www/output/styles/dx-shader.css.map",
+      "source_map_source_count": 1,
+      "source_map_source_hash_count": 1,
+      "source_map_entry_style_source_count": 1,
+      "source_map_flattened_import_source_count": 0,
+      "source_map_retained_import_source_count": 0,
+      "source_map_segment_count": 0,
+      "source_map_exact_segment_mapping": false,
+      "source_map_evidence_only": true,
+      "source_map_linked": true,
+      "source_map_hash": "d028db15e9ae3d91",
+      "hash": "e9c3736395a1bb34",
+      "rule_count": 217,
+      "original_rule_count": 217,
+      "retained_rule_count": 217,
+      "pruned_rule_count": 0,
+      "minified": true,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false,
+      "import_count": 0,
+      "flattened_imports": [],
+      "retained_imports": [],
+      "asset_references": [
+        {
+          "specifier": "/dx-shader/fonts/jetbrains-mono-latin-400-normal.woff2",
+          "path": "public/dx-shader/fonts/jetbrains-mono-latin-400-normal.woff2",
+          "source_path": "styles/dx-shader.css",
+          "kind": "css-url",
+          "node_modules_required": false
+        },
+        {
+          "specifier": "/dx-shader/fonts/jetbrains-mono-latin-500-normal.woff2",
+          "path": "public/dx-shader/fonts/jetbrains-mono-latin-500-normal.woff2",
+          "source_path": "styles/dx-shader.css",
+          "kind": "css-url",
+          "node_modules_required": false
+        },
+        {
+          "specifier": "/dx-shader/fonts/jetbrains-mono-latin-600-normal.woff2",
+          "path": "public/dx-shader/fonts/jetbrains-mono-latin-600-normal.woff2",
+          "source_path": "styles/dx-shader.css",
+          "kind": "css-url",
+          "node_modules_required": false
+        },
+        {
+          "specifier": "/dx-shader/fonts/jetbrains-mono-latin-700-normal.woff2",
+          "path": "public/dx-shader/fonts/jetbrains-mono-latin-700-normal.woff2",
+          "source_path": "styles/dx-shader.css",
+          "kind": "css-url",
+          "node_modules_required": false
+        }
+      ]
+    },
+    {
+      "path": "styles/generated.css",
+      "output": ".dx/www/output/styles/generated.css",
+      "source_map_output": ".dx/www/output/styles/generated.css.map",
+      "source_map_source_count": 1,
+      "source_map_source_hash_count": 1,
+      "source_map_entry_style_source_count": 1,
+      "source_map_flattened_import_source_count": 0,
+      "source_map_retained_import_source_count": 0,
+      "source_map_segment_count": 0,
+      "source_map_exact_segment_mapping": false,
+      "source_map_evidence_only": true,
+      "source_map_linked": true,
+      "source_map_hash": "f407296768ebdac6",
+      "hash": "2e0a98c810207792",
+      "rule_count": 15,
+      "original_rule_count": 15,
+      "retained_rule_count": 15,
+      "pruned_rule_count": 0,
+      "minified": true,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false,
+      "import_count": 0,
+      "flattened_imports": [],
+      "retained_imports": [],
+      "asset_references": []
+    },
+    {
+      "path": "styles/globals.css",
+      "output": ".dx/www/output/styles/globals.css",
+      "source_map_output": ".dx/www/output/styles/globals.css.map",
+      "source_map_source_count": 4,
+      "source_map_source_hash_count": 4,
+      "source_map_entry_style_source_count": 1,
+      "source_map_flattened_import_source_count": 3,
+      "source_map_retained_import_source_count": 0,
+      "source_map_segment_count": 0,
+      "source_map_exact_segment_mapping": false,
+      "source_map_evidence_only": true,
+      "source_map_linked": true,
+      "source_map_hash": "b2cabfd690a44d15",
+      "hash": "f6b85793ca6adc3a",
+      "rule_count": 234,
+      "original_rule_count": 234,
+      "retained_rule_count": 234,
+      "pruned_rule_count": 0,
+      "minified": true,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false,
+      "import_count": 0,
+      "flattened_imports": [
+        {
+          "specifier": "./theme.css",
+          "path": "styles/theme.css",
+          "inlined": true
+        },
+        {
+          "specifier": "./generated.css",
+          "path": "styles/generated.css",
+          "inlined": true
+        },
+        {
+          "specifier": "./dx-shader.css",
+          "path": "styles/dx-shader.css",
+          "inlined": true
+        }
+      ],
+      "retained_imports": [],
+      "asset_references": [
+        {
+          "specifier": "/dx-shader/fonts/jetbrains-mono-latin-400-normal.woff2",
+          "path": "public/dx-shader/fonts/jetbrains-mono-latin-400-normal.woff2",
+          "source_path": "styles/dx-shader.css",
+          "source_role": "flattened-import",
+          "import_specifier": "./dx-shader.css",
+          "kind": "css-url",
+          "node_modules_required": false
+        },
+        {
+          "specifier": "/dx-shader/fonts/jetbrains-mono-latin-500-normal.woff2",
+          "path": "public/dx-shader/fonts/jetbrains-mono-latin-500-normal.woff2",
+          "source_path": "styles/dx-shader.css",
+          "source_role": "flattened-import",
+          "import_specifier": "./dx-shader.css",
+          "kind": "css-url",
+          "node_modules_required": false
+        },
+        {
+          "specifier": "/dx-shader/fonts/jetbrains-mono-latin-600-normal.woff2",
+          "path": "public/dx-shader/fonts/jetbrains-mono-latin-600-normal.woff2",
+          "source_path": "styles/dx-shader.css",
+          "source_role": "flattened-import",
+          "import_specifier": "./dx-shader.css",
+          "kind": "css-url",
+          "node_modules_required": false
+        },
+        {
+          "specifier": "/dx-shader/fonts/jetbrains-mono-latin-700-normal.woff2",
+          "path": "public/dx-shader/fonts/jetbrains-mono-latin-700-normal.woff2",
+          "source_path": "styles/dx-shader.css",
+          "source_role": "flattened-import",
+          "import_specifier": "./dx-shader.css",
+          "kind": "css-url",
+          "node_modules_required": false
+        }
+      ]
+    },
+    {
+      "path": "styles/theme.css",
+      "output": ".dx/www/output/styles/theme.css",
+      "source_map_output": ".dx/www/output/styles/theme.css.map",
+      "source_map_source_count": 1,
+      "source_map_source_hash_count": 1,
+      "source_map_entry_style_source_count": 1,
+      "source_map_flattened_import_source_count": 0,
+      "source_map_retained_import_source_count": 0,
+      "source_map_segment_count": 0,
+      "source_map_exact_segment_mapping": false,
+      "source_map_evidence_only": true,
+      "source_map_linked": true,
+      "source_map_hash": "680f8231e64ed77f",
+      "hash": "7f613a7ba8ef31a4",
+      "rule_count": 1,
+      "original_rule_count": 1,
+      "retained_rule_count": 1,
+      "pruned_rule_count": 0,
+      "minified": true,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false,
+      "import_count": 0,
+      "flattened_imports": [],
+      "retained_imports": [],
+      "asset_references": []
+    }
+  ],
+  "content_documents": [],
+  "assets": [
+    {
+      "path": "public/dx-shader/LICENSE",
+      "output": ".dx/www/output/public/dx-shader/LICENSE-02ac006c1279a777",
+      "hash": "02ac006c1279a777",
+      "size": 1086,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false
+    },
+    {
+      "path": "public/dx-shader/assets/apple-touch-icon.png",
+      "output": ".dx/www/output/public/dx-shader/assets/apple-touch-icon-8fd723367b340dd3.png",
+      "hash": "8fd723367b340dd3",
+      "size": 63857,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false,
+      "image_metadata": {
+        "format": "png",
+        "mime_type": "image/png",
+        "width": 180,
+        "height": 180,
+        "dimension_source": "png-ihdr",
+        "status": "metadata-read",
+        "optimization": {
+          "status": "metadata-plus-raster-svg-placeholder",
+          "variants_emitted": 0,
+          "optimizer_invoked": false,
+          "resize_emitted": false,
+          "encoding_emitted": false,
+          "blur_placeholder_emitted": false,
+          "placeholder": {
+            "kind": "raster-svg-placeholder-artifact",
+            "data_url": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22180%22%20height%3D%22180%22%20viewBox%3D%220%200%20180%20180%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23f3f4f6%22%2F%3E%3C%2Fsvg%3E",
+            "width": 180,
+            "height": 180,
+            "bytes": 290,
+            "source": "dx-source-owned-raster-svg-placeholder",
+            "output": ".dx/www/output/image-placeholders/public/dx-shader/assets/apple-touch-icon-653d1ed174ed39da.placeholder.svg",
+            "hash": "653d1ed174ed39da",
+            "artifact_bytes": 169
+          },
+          "boundary": "metadata-plus-raster-svg-placeholder-no-resize-or-encoding",
+          "informed_by": [
+            "turbopack-image::process::get_meta_data"
+          ]
+        }
+      }
+    },
+    {
+      "path": "public/dx-shader/assets/favicon.png",
+      "output": ".dx/www/output/public/dx-shader/assets/favicon-6bdf81e333572f09.png",
+      "hash": "6bdf81e333572f09",
+      "size": 9285,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false,
+      "image_metadata": {
+        "format": "png",
+        "mime_type": "image/png",
+        "width": 64,
+        "height": 64,
+        "dimension_source": "png-ihdr",
+        "status": "metadata-read",
+        "optimization": {
+          "status": "metadata-plus-raster-svg-placeholder",
+          "variants_emitted": 0,
+          "optimizer_invoked": false,
+          "resize_emitted": false,
+          "encoding_emitted": false,
+          "blur_placeholder_emitted": false,
+          "placeholder": {
+            "kind": "raster-svg-placeholder-artifact",
+            "data_url": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23f3f4f6%22%2F%3E%3C%2Fsvg%3E",
+            "width": 64,
+            "height": 64,
+            "bytes": 286,
+            "source": "dx-source-owned-raster-svg-placeholder",
+            "output": ".dx/www/output/image-placeholders/public/dx-shader/assets/favicon-95cdf2c6b75c0830.placeholder.svg",
+            "hash": "95cdf2c6b75c0830",
+            "artifact_bytes": 165
+          },
+          "boundary": "metadata-plus-raster-svg-placeholder-no-resize-or-encoding",
+          "informed_by": [
+            "turbopack-image::process::get_meta_data"
+          ]
+        }
+      }
+    },
+    {
+      "path": "public/dx-shader/assets/icon-512.png",
+      "output": ".dx/www/output/public/dx-shader/assets/icon-512-e36bc88500149466.png",
+      "hash": "e36bc88500149466",
+      "size": 452852,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false,
+      "image_metadata": {
+        "format": "png",
+        "mime_type": "image/png",
+        "width": 512,
+        "height": 512,
+        "dimension_source": "png-ihdr",
+        "status": "metadata-read",
+        "optimization": {
+          "status": "metadata-plus-raster-svg-placeholder",
+          "variants_emitted": 0,
+          "optimizer_invoked": false,
+          "resize_emitted": false,
+          "encoding_emitted": false,
+          "blur_placeholder_emitted": false,
+          "placeholder": {
+            "kind": "raster-svg-placeholder-artifact",
+            "data_url": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22512%22%20height%3D%22512%22%20viewBox%3D%220%200%20512%20512%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23f3f4f6%22%2F%3E%3C%2Fsvg%3E",
+            "width": 512,
+            "height": 512,
+            "bytes": 290,
+            "source": "dx-source-owned-raster-svg-placeholder",
+            "output": ".dx/www/output/image-placeholders/public/dx-shader/assets/icon-512-cb505b913bce0505.placeholder.svg",
+            "hash": "cb505b913bce0505",
+            "artifact_bytes": 169
+          },
+          "boundary": "metadata-plus-raster-svg-placeholder-no-resize-or-encoding",
+          "informed_by": [
+            "turbopack-image::process::get_meta_data"
+          ]
+        }
+      }
+    },
+    {
+      "path": "public/dx-shader/assets/og.png",
+      "output": ".dx/www/output/public/dx-shader/assets/og-c6e50395e4e4bd5c.png",
+      "hash": "c6e50395e4e4bd5c",
+      "size": 2082002,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false,
+      "image_metadata": {
+        "format": "png",
+        "mime_type": "image/png",
+        "width": 1536,
+        "height": 1024,
+        "dimension_source": "png-ihdr",
+        "status": "metadata-read",
+        "optimization": {
+          "status": "metadata-plus-raster-svg-placeholder",
+          "variants_emitted": 0,
+          "optimizer_invoked": false,
+          "resize_emitted": false,
+          "encoding_emitted": false,
+          "blur_placeholder_emitted": false,
+          "placeholder": {
+            "kind": "raster-svg-placeholder-artifact",
+            "data_url": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%221536%22%20height%3D%221024%22%20viewBox%3D%220%200%201536%201024%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23f3f4f6%22%2F%3E%3C%2Fsvg%3E",
+            "width": 1536,
+            "height": 1024,
+            "bytes": 294,
+            "source": "dx-source-owned-raster-svg-placeholder",
+            "output": ".dx/www/output/image-placeholders/public/dx-shader/assets/og-1bf376c84ef0d032.placeholder.svg",
+            "hash": "1bf376c84ef0d032",
+            "artifact_bytes": 173
+          },
+          "boundary": "metadata-plus-raster-svg-placeholder-no-resize-or-encoding",
+          "informed_by": [
+            "turbopack-image::process::get_meta_data"
+          ]
+        }
+      }
+    },
+    {
+      "path": "public/dx-shader/docs/preview-chrome.png",
+      "output": ".dx/www/output/public/dx-shader/docs/preview-chrome-b9351771d83a6471.png",
+      "hash": "b9351771d83a6471",
+      "size": 2745569,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false,
+      "image_metadata": {
+        "format": "png",
+        "mime_type": "image/png",
+        "width": 2497,
+        "height": 1458,
+        "dimension_source": "png-ihdr",
+        "status": "metadata-read",
+        "optimization": {
+          "status": "metadata-plus-raster-svg-placeholder",
+          "variants_emitted": 0,
+          "optimizer_invoked": false,
+          "resize_emitted": false,
+          "encoding_emitted": false,
+          "blur_placeholder_emitted": false,
+          "placeholder": {
+            "kind": "raster-svg-placeholder-artifact",
+            "data_url": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%222497%22%20height%3D%221458%22%20viewBox%3D%220%200%202497%201458%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23f3f4f6%22%2F%3E%3C%2Fsvg%3E",
+            "width": 2497,
+            "height": 1458,
+            "bytes": 294,
+            "source": "dx-source-owned-raster-svg-placeholder",
+            "output": ".dx/www/output/image-placeholders/public/dx-shader/docs/preview-chrome-7b63194fdf61b810.placeholder.svg",
+            "hash": "7b63194fdf61b810",
+            "artifact_bytes": 173
+          },
+          "boundary": "metadata-plus-raster-svg-placeholder-no-resize-or-encoding",
+          "informed_by": [
+            "turbopack-image::process::get_meta_data"
+          ]
+        }
+      }
+    },
+    {
+      "path": "public/dx-shader/docs/preview-glyphs.png",
+      "output": ".dx/www/output/public/dx-shader/docs/preview-glyphs-a970ec9b0be1c989.png",
+      "hash": "a970ec9b0be1c989",
+      "size": 978265,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false,
+      "image_metadata": {
+        "format": "png",
+        "mime_type": "image/png",
+        "width": 2497,
+        "height": 1458,
+        "dimension_source": "png-ihdr",
+        "status": "metadata-read",
+        "optimization": {
+          "status": "metadata-plus-raster-svg-placeholder",
+          "variants_emitted": 0,
+          "optimizer_invoked": false,
+          "resize_emitted": false,
+          "encoding_emitted": false,
+          "blur_placeholder_emitted": false,
+          "placeholder": {
+            "kind": "raster-svg-placeholder-artifact",
+            "data_url": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%222497%22%20height%3D%221458%22%20viewBox%3D%220%200%202497%201458%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23f3f4f6%22%2F%3E%3C%2Fsvg%3E",
+            "width": 2497,
+            "height": 1458,
+            "bytes": 294,
+            "source": "dx-source-owned-raster-svg-placeholder",
+            "output": ".dx/www/output/image-placeholders/public/dx-shader/docs/preview-glyphs-7b63194fdf61b810.placeholder.svg",
+            "hash": "7b63194fdf61b810",
+            "artifact_bytes": 173
+          },
+          "boundary": "metadata-plus-raster-svg-placeholder-no-resize-or-encoding",
+          "informed_by": [
+            "turbopack-image::process::get_meta_data"
+          ]
+        }
+      }
+    },
+    {
+      "path": "public/dx-shader/docs/preview-silk.png",
+      "output": ".dx/www/output/public/dx-shader/docs/preview-silk-2eb9372696e7cf11.png",
+      "hash": "2eb9372696e7cf11",
+      "size": 2469238,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false,
+      "image_metadata": {
+        "format": "png",
+        "mime_type": "image/png",
+        "width": 2497,
+        "height": 1458,
+        "dimension_source": "png-ihdr",
+        "status": "metadata-read",
+        "optimization": {
+          "status": "metadata-plus-raster-svg-placeholder",
+          "variants_emitted": 0,
+          "optimizer_invoked": false,
+          "resize_emitted": false,
+          "encoding_emitted": false,
+          "blur_placeholder_emitted": false,
+          "placeholder": {
+            "kind": "raster-svg-placeholder-artifact",
+            "data_url": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%222497%22%20height%3D%221458%22%20viewBox%3D%220%200%202497%201458%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23f3f4f6%22%2F%3E%3C%2Fsvg%3E",
+            "width": 2497,
+            "height": 1458,
+            "bytes": 294,
+            "source": "dx-source-owned-raster-svg-placeholder",
+            "output": ".dx/www/output/image-placeholders/public/dx-shader/docs/preview-silk-7b63194fdf61b810.placeholder.svg",
+            "hash": "7b63194fdf61b810",
+            "artifact_bytes": 173
+          },
+          "boundary": "metadata-plus-raster-svg-placeholder-no-resize-or-encoding",
+          "informed_by": [
+            "turbopack-image::process::get_meta_data"
+          ]
+        }
+      }
+    },
+    {
+      "path": "public/dx-shader/docs.html",
+      "output": ".dx/www/output/public/dx-shader/docs-968b0afa2c817f2c.html",
+      "hash": "968b0afa2c817f2c",
+      "size": 8449,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false,
+      "referenced_by_routes": [
+        {
+          "route": "/",
+          "source_path": "app/page.tsx",
+          "specifier": "/dx-shader/docs.html",
+          "kind": "static-image-url"
+        }
+      ]
+    },
+    {
+      "path": "public/dx-shader/fonts/JETBRAINS_MONO_LICENSE",
+      "output": ".dx/www/output/public/dx-shader/fonts/JETBRAINS_MONO_LICENSE-c90bfe6768c9bc6e",
+      "hash": "c90bfe6768c9bc6e",
+      "size": 4524,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-400-normal.woff2",
+      "output": ".dx/www/output/public/dx-shader/fonts/jetbrains-mono-latin-400-normal-7ebe91be3924c914.woff2",
+      "hash": "7ebe91be3924c914",
+      "size": 21168,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false,
+      "referenced_by_styles": [
+        {
+          "style_path": "styles/dx-shader.css",
+          "specifier": "/dx-shader/fonts/jetbrains-mono-latin-400-normal.woff2",
+          "kind": "css-url",
+          "node_modules_required": false
+        },
+        {
+          "style_path": "styles/globals.css",
+          "specifier": "/dx-shader/fonts/jetbrains-mono-latin-400-normal.woff2",
+          "kind": "css-url",
+          "node_modules_required": false
+        }
+      ]
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-500-normal.woff2",
+      "output": ".dx/www/output/public/dx-shader/fonts/jetbrains-mono-latin-500-normal-061a05a153795ba8.woff2",
+      "hash": "061a05a153795ba8",
+      "size": 21832,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false,
+      "referenced_by_styles": [
+        {
+          "style_path": "styles/dx-shader.css",
+          "specifier": "/dx-shader/fonts/jetbrains-mono-latin-500-normal.woff2",
+          "kind": "css-url",
+          "node_modules_required": false
+        },
+        {
+          "style_path": "styles/globals.css",
+          "specifier": "/dx-shader/fonts/jetbrains-mono-latin-500-normal.woff2",
+          "kind": "css-url",
+          "node_modules_required": false
+        }
+      ]
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-600-normal.woff2",
+      "output": ".dx/www/output/public/dx-shader/fonts/jetbrains-mono-latin-600-normal-c88f1794b1c2e43f.woff2",
+      "hash": "c88f1794b1c2e43f",
+      "size": 21860,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false,
+      "referenced_by_styles": [
+        {
+          "style_path": "styles/dx-shader.css",
+          "specifier": "/dx-shader/fonts/jetbrains-mono-latin-600-normal.woff2",
+          "kind": "css-url",
+          "node_modules_required": false
+        },
+        {
+          "style_path": "styles/globals.css",
+          "specifier": "/dx-shader/fonts/jetbrains-mono-latin-600-normal.woff2",
+          "kind": "css-url",
+          "node_modules_required": false
+        }
+      ]
+    },
+    {
+      "path": "public/dx-shader/fonts/jetbrains-mono-latin-700-normal.woff2",
+      "output": ".dx/www/output/public/dx-shader/fonts/jetbrains-mono-latin-700-normal-97a57d0f7bd23ede.woff2",
+      "hash": "97a57d0f7bd23ede",
+      "size": 21908,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false,
+      "referenced_by_styles": [
+        {
+          "style_path": "styles/dx-shader.css",
+          "specifier": "/dx-shader/fonts/jetbrains-mono-latin-700-normal.woff2",
+          "kind": "css-url",
+          "node_modules_required": false
+        },
+        {
+          "style_path": "styles/globals.css",
+          "specifier": "/dx-shader/fonts/jetbrains-mono-latin-700-normal.woff2",
+          "kind": "css-url",
+          "node_modules_required": false
+        }
+      ]
+    },
+    {
+      "path": "public/dx-shader/js/engine.js",
+      "output": ".dx/www/output/public/dx-shader/js/engine-dff24fe05e5af3e7.js",
+      "hash": "dff24fe05e5af3e7",
+      "size": 10683,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false,
+      "referenced_by_routes": [
+        {
+          "route": "/",
+          "source_path": "app/page.tsx",
+          "specifier": "/dx-shader/js/engine.js",
+          "kind": "static-image-url"
+        }
+      ]
+    },
+    {
+      "path": "public/dx-shader/js/exporter.js",
+      "output": ".dx/www/output/public/dx-shader/js/exporter-73ddb9fa52baeafc.js",
+      "hash": "73ddb9fa52baeafc",
+      "size": 12581,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false,
+      "referenced_by_routes": [
+        {
+          "route": "/",
+          "source_path": "app/page.tsx",
+          "specifier": "/dx-shader/js/exporter.js",
+          "kind": "static-image-url"
+        }
+      ]
+    },
+    {
+      "path": "public/dx-shader/js/fx.js",
+      "output": ".dx/www/output/public/dx-shader/js/fx-b31f960999d6a128.js",
+      "hash": "b31f960999d6a128",
+      "size": 3294,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false,
+      "referenced_by_routes": [
+        {
+          "route": "/",
+          "source_path": "app/page.tsx",
+          "specifier": "/dx-shader/js/fx.js",
+          "kind": "static-image-url"
+        }
+      ]
+    },
+    {
+      "path": "public/dx-shader/js/gifenc.js",
+      "output": ".dx/www/output/public/dx-shader/js/gifenc-5cebe3877a2b70ca.js",
+      "hash": "5cebe3877a2b70ca",
+      "size": 8378,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false
+    },
+    {
+      "path": "public/dx-shader/js/main.js",
+      "output": ".dx/www/output/public/dx-shader/js/main-c672ad09dbb888a5.js",
+      "hash": "c672ad09dbb888a5",
+      "size": 39180,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false,
+      "referenced_by_routes": [
+        {
+          "route": "/",
+          "source_path": "app/page.tsx",
+          "specifier": "/dx-shader/js/main.js",
+          "kind": "static-image-url"
+        }
+      ]
+    },
+    {
+      "path": "public/dx-shader/js/modals.js",
+      "output": ".dx/www/output/public/dx-shader/js/modals-e9bcbb916d868602.js",
+      "hash": "e9bcbb916d868602",
+      "size": 13587,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false,
+      "referenced_by_routes": [
+        {
+          "route": "/",
+          "source_path": "app/page.tsx",
+          "specifier": "/dx-shader/js/modals.js",
+          "kind": "static-image-url"
+        }
+      ]
+    },
+    {
+      "path": "public/dx-shader/js/palettes.js",
+      "output": ".dx/www/output/public/dx-shader/js/palettes-204eb72c49f46650.js",
+      "hash": "204eb72c49f46650",
+      "size": 3784,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false,
+      "referenced_by_routes": [
+        {
+          "route": "/",
+          "source_path": "app/page.tsx",
+          "specifier": "/dx-shader/js/palettes.js",
+          "kind": "static-image-url"
+        }
+      ]
+    },
+    {
+      "path": "public/dx-shader/js/shaders.js",
+      "output": ".dx/www/output/public/dx-shader/js/shaders-33901d228423d859.js",
+      "hash": "33901d228423d859",
+      "size": 21579,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false,
+      "referenced_by_routes": [
+        {
+          "route": "/",
+          "source_path": "app/page.tsx",
+          "specifier": "/dx-shader/js/shaders.js",
+          "kind": "static-image-url"
+        }
+      ]
+    },
+    {
+      "path": "public/dx-shader/js/ui.js",
+      "output": ".dx/www/output/public/dx-shader/js/ui-73bbfbb4d88bf693.js",
+      "hash": "73bbfbb4d88bf693",
+      "size": 7717,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false,
+      "referenced_by_routes": [
+        {
+          "route": "/",
+          "source_path": "app/page.tsx",
+          "specifier": "/dx-shader/js/ui.js",
+          "kind": "static-image-url"
+        }
+      ]
+    },
+    {
+      "path": "public/dx-shader/js/webmmux.js",
+      "output": ".dx/www/output/public/dx-shader/js/webmmux-476036d65130dc35.js",
+      "hash": "476036d65130dc35",
+      "size": 4676,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false
+    },
+    {
+      "path": "public/dx-shader/js/zip.js",
+      "output": ".dx/www/output/public/dx-shader/js/zip-bc4e3341bafceec9.js",
+      "hash": "bc4e3341bafceec9",
+      "size": 3952,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false
+    },
+    {
+      "path": "public/dx-shader/styles.css",
+      "output": ".dx/www/output/public/dx-shader/styles-7f2fc338a5e8d265.css",
+      "hash": "7f2fc338a5e8d265",
+      "size": 32957,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false
+    },
+    {
+      "path": "public/favicon.svg",
+      "output": ".dx/www/output/public/favicon-cfb09e06980b21ac.svg",
+      "hash": "cfb09e06980b21ac",
+      "size": 874,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false,
+      "image_metadata": {
+        "format": "svg",
+        "mime_type": "image/svg+xml",
+        "width": 1024,
+        "height": 1024,
+        "dimension_source": "svg-root-attributes",
+        "status": "metadata-read",
+        "optimization": {
+          "status": "metadata-plus-svg-placeholder",
+          "variants_emitted": 0,
+          "optimizer_invoked": false,
+          "resize_emitted": false,
+          "encoding_emitted": false,
+          "blur_placeholder_emitted": false,
+          "placeholder": {
+            "kind": "svg-placeholder-data-url",
+            "data_url": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%221024%22%20height%3D%221024%22%20viewBox%3D%220%200%201024%201024%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23f3f4f6%22%2F%3E%3C%2Fsvg%3E",
+            "width": 1024,
+            "height": 1024,
+            "bytes": 294,
+            "source": "dx-source-owned-svg-placeholder",
+            "output": ".dx/www/output/image-placeholders/public/favicon-b0698a08bf67b748.placeholder.svg",
+            "hash": "b0698a08bf67b748",
+            "artifact_bytes": 173
+          },
+          "boundary": "metadata-plus-svg-placeholder-no-resize-or-encoding",
+          "informed_by": [
+            "turbopack-image::process::get_meta_data",
+            "turbopack-image::process::svg"
+          ]
+        }
+      }
+    },
+    {
+      "path": "public/icon.svg",
+      "output": ".dx/www/output/public/icon-32341047d202fbff.svg",
+      "hash": "32341047d202fbff",
+      "size": 869,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false,
+      "image_metadata": {
+        "format": "svg",
+        "mime_type": "image/svg+xml",
+        "width": 180,
+        "height": 180,
+        "dimension_source": "svg-root-attributes",
+        "status": "metadata-read",
+        "optimization": {
+          "status": "metadata-plus-svg-placeholder",
+          "variants_emitted": 0,
+          "optimizer_invoked": false,
+          "resize_emitted": false,
+          "encoding_emitted": false,
+          "blur_placeholder_emitted": false,
+          "placeholder": {
+            "kind": "svg-placeholder-data-url",
+            "data_url": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22180%22%20height%3D%22180%22%20viewBox%3D%220%200%20180%20180%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23f3f4f6%22%2F%3E%3C%2Fsvg%3E",
+            "width": 180,
+            "height": 180,
+            "bytes": 290,
+            "source": "dx-source-owned-svg-placeholder",
+            "output": ".dx/www/output/image-placeholders/public/icon-653d1ed174ed39da.placeholder.svg",
+            "hash": "653d1ed174ed39da",
+            "artifact_bytes": 169
+          },
+          "boundary": "metadata-plus-svg-placeholder-no-resize-or-encoding",
+          "informed_by": [
+            "turbopack-image::process::get_meta_data",
+            "turbopack-image::process::svg"
+          ]
+        }
+      }
+    },
+    {
+      "path": "public/logo.svg",
+      "output": ".dx/www/output/public/logo-2afe23f6d7f297ab.svg",
+      "hash": "2afe23f6d7f297ab",
+      "size": 910,
+      "node_modules_required": false,
+      "lifecycle_scripts_executed": false,
+      "source_owned_contract": true,
+      "external_runtime_required": false,
+      "external_runtime_executed": false,
+      "image_metadata": {
+        "format": "svg",
+        "mime_type": "image/svg+xml",
+        "width": 1024,
+        "height": 1024,
+        "dimension_source": "svg-root-attributes",
+        "status": "metadata-read",
+        "optimization": {
+          "status": "metadata-plus-svg-placeholder",
+          "variants_emitted": 0,
+          "optimizer_invoked": false,
+          "resize_emitted": false,
+          "encoding_emitted": false,
+          "blur_placeholder_emitted": false,
+          "placeholder": {
+            "kind": "svg-placeholder-data-url",
+            "data_url": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%221024%22%20height%3D%221024%22%20viewBox%3D%220%200%201024%201024%22%20preserveAspectRatio%3D%22none%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23f3f4f6%22%2F%3E%3C%2Fsvg%3E",
+            "width": 1024,
+            "height": 1024,
+            "bytes": 294,
+            "source": "dx-source-owned-svg-placeholder",
+            "output": ".dx/www/output/image-placeholders/public/logo-b0698a08bf67b748.placeholder.svg",
+            "hash": "b0698a08bf67b748",
+            "artifact_bytes": 173
+          },
+          "boundary": "metadata-plus-svg-placeholder-no-resize-or-encoding",
+          "informed_by": [
+            "turbopack-image::process::get_meta_data",
+            "turbopack-image::process::svg"
+          ]
+        }
+      }
+    }
+  ],
+  "node_modules_required": false
+}

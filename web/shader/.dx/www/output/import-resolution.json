@@ -1,0 +1,10 @@
+[
+  {
+    "importer_path": "app/layout.tsx",
+    "specifier": "../styles/globals.css",
+    "kind": "relative-local",
+    "resolved_path": "styles/globals.css",
+    "package_id": null,
+    "requires_node_modules": false
+  }
+]
